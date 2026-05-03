@@ -10,6 +10,18 @@ yarn-error.log
 node_modules/
 output/
 
+### React build artifacts
+dist/
+build/
+.cache/
+.parcel-cache/
+*.tsbuildinfo
+npm-debug.log*
+
+### Webpack/Babel
+.eslintcache
+coverage/
+
 ### Python template
 # Byte-compiled / optimized / DLL files
 __pycache__/

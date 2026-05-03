@@ -1,0 +1,147 @@
+# @splunk/splunk-cisco-dashboards
+
+React-based Splunk app that ships four dashboards for Cisco data:
+
+| View      | Purpose                                                                 | Stack                          |
+| --------- | ----------------------------------------------------------------------- | ------------------------------ |
+| Overview  | Florida Executive Control Center design (FDEM) — sections + regional map | TypeScript, Tailwind, Leaflet, Recharts, Motion |
+| Devices   | Inventory + per-device status badges (filterable)                       | `@splunk/react-ui`             |
+| Network   | Aggregate bandwidth time-series + per-device CPU bars                   | `@splunk/react-ui`             |
+| Security  | Severity KPIs, time-window selector, alert timeline                     | `@splunk/react-ui`             |
+
+> The Overview dashboard is a faithful port of the design in
+> `reference_design/splunk-executive-florida-dashboard/` (Vite + React 19 +
+> Tailwind v4 + react-leaflet v5 + recharts v3). It has been adapted to
+> the Splunk app build pipeline: React 18, Tailwind v3, react-leaflet v4,
+> recharts v2 (so it works with `@splunk/react-ui` v5's React peer dep).
+> Visual output is identical.
+
+Each view is a Simple XML dashboard whose only panel is an `<html>` block
+containing `<div id="scan-root">`. A small RequireJS bootstrap (in
+`appserver/static/<view>_bootstrap.js`) loads the matching React bundle
+from `appserver/static/pages/<view>.js`, which mounts into `#scan-root`.
+
+Two mount helpers exist:
+
+* `common/render.jsx` (`mountPage`) — wraps the page in
+  `SplunkThemeProvider` (Prisma family). Used by Devices/Network/Security.
+* `common/render-raw.tsx` (`mountPageRaw`) — bare mount, no theme
+  provider. Used by Overview so Tailwind owns 100% of the styling.
+
+Tailwind is scoped to `#scan-root` (via `important: '#scan-root'` and
+disabled Preflight) so the utilities and resets never bleed into the
+surrounding Splunk Web chrome.
+
+## Layout
+
+```
+packages/splunk-cisco-dashboards/
+├── package.json
+├── webpack.config.js
+├── .babelrc.js                   # @splunk/babel-preset + @babel/preset-typescript
+├── tsconfig.json
+├── tailwind.config.js
+├── postcss.config.js
+├── .eslintrc.js
+├── stylelint.config.js
+├── bin/
+│   └── build.js                  # webpack + stage + tarball orchestrator
+└── src/
+    └── main/
+        ├── webapp/
+        │   ├── common/
+        │   │   ├── components/
+        │   │   │   ├── florida/  # DashboardSection, MetricItem, Sparkline, FloridaMap
+        │   │   │   └── *.jsx     # @splunk/react-ui based shared cards
+        │   │   ├── hooks/        # useSplunkSearch
+        │   │   ├── lib/          # cn() and other utilities
+        │   │   ├── services/     # splunkSearchService (SPL allow-list + mock)
+        │   │   ├── styles/       # tailwind.css (scoped)
+        │   │   ├── types.ts
+        │   │   ├── render.jsx    # @splunk/themes mount helper
+        │   │   └── render-raw.tsx# bare mount helper (Tailwind dashboards)
+        │   └── pages/
+        │       ├── overview/{index,render}.tsx   # Florida Executive design
+        │       ├── devices/{index,render}.jsx
+        │       ├── network/{index,render}.jsx
+        │       └── security/{index,render}.jsx
+        └── resources/
+            └── splunk/
+                ├── default/
+                │   ├── app.conf
+                │   └── data/ui/{nav,views}/
+                ├── appserver/static/      # bootstrap loaders
+                └── metadata/default.meta
+```
+
+## Development
+
+```bash
+yarn install                 # from the workspace root
+yarn workspace @splunk/splunk-cisco-dashboards start
+# or simply, from the workspace root:
+yarn start                   # webpack --watch
+```
+
+The webpack build emits to `stage/`, mirroring the deployed Splunk app
+structure (`appserver/`, `default/`, `metadata/`). A production build
+gives you a directory you can symlink into `$SPLUNK_HOME/etc/apps/` or
+package as a tarball.
+
+## Production build & packaging
+
+```bash
+yarn build                   # webpack build → ./stage
+node bin/build.js pack       # build + tar → ./splunk-cisco-dashboards.tar.gz
+```
+
+## Mounting model
+
+Each Simple XML view contains:
+
+```xml
+<dashboard version="1.1" hideEdit="true" hideExport="true" hideTitle="true"
+           script="overview_bootstrap.js">
+    <label>Overview</label>
+    <row>
+        <panel>
+            <html>
+                <div id="scan-root"></div>
+            </html>
+        </panel>
+    </row>
+</dashboard>
+```
+
+`overview_bootstrap.js` is a 4-line RequireJS shim:
+
+```js
+require(['/static/app/splunk-cisco-dashboards/pages/overview.js'], function () {});
+```
+
+That bundle calls `mountPage(<PageComponent>)`, which retries until
+`#scan-root` exists (Splunk Web's RequireJS sometimes runs ahead of the
+panel) and then renders inside a `SplunkThemeProvider`.
+
+## Splunk runtime detection
+
+`common/services/splunkSearchService.js` is the single entry point for
+SPL execution.
+
+* In Splunk Web (detected by presence of `window.$C` or a Splunkd CSRF
+  cookie) it lazily imports `@splunk/splunk-utils/SearchJob` and runs
+  real searches.
+* Outside Splunk it falls back to deterministic fixtures so pages still
+  render.
+
+You can force one mode or the other with `window.__SPLUNK_RUNTIME__`.
+
+### Security notes
+
+* SPL strings are validated against an allow-list before they ever reach
+  the search runtime — defense-in-depth against accidental or malicious
+  injection through string concatenation.
+* The Security page time-window selector is allow-listed with an
+  enumerated list and re-validated before the search params are formed.
+* No Splunk credentials are held by the client — Splunk Web manages auth
+  via HttpOnly cookies; the app never touches `localStorage`.

@@ -1,0 +1,7 @@
+<nav search_view="search" color="#049fd9">
+    <view name="overview" default="true" label="Overview" />
+    <view name="devices" label="Devices" />
+    <view name="network" label="Network" />
+    <view name="security" label="Security" />
+    <a href="search" target="_blank" rel="noopener" />
+</nav>

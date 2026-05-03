@@ -1,0 +1,72 @@
+/*
+ * Tailwind entry point for the React-mounted dashboards.
+ *
+ * Tailwind's Preflight is disabled in tailwind.config.js to avoid
+ * stomping on Splunk Web's base styles; the limited resets we need
+ * are reintroduced below, scoped to `#scan-root` so they only apply
+ * inside our mount point.
+ *
+ * Utility classes are also scoped via the `important: '#scan-root'`
+ * selector in tailwind.config.js, which prefixes every generated
+ * utility with `#scan-root` (e.g. `#scan-root .bg-white`). This keeps
+ * Splunk Web's surrounding chrome unaffected.
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+#scan-root,
+#scan-root * {
+    box-sizing: border-box;
+}
+
+#scan-root {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    color: rgb(15 23 42); /* slate-900 */
+    font-family:
+        ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+        'Helvetica Neue', Arial, sans-serif;
+}
+
+#scan-root h1,
+#scan-root h2,
+#scan-root h3,
+#scan-root h4,
+#scan-root h5,
+#scan-root h6,
+#scan-root p {
+    margin: 0;
+}
+
+#scan-root button {
+    font-family: inherit;
+    cursor: pointer;
+    background: none;
+    border: 0;
+    padding: 0;
+    color: inherit;
+}
+
+#scan-root input {
+    font-family: inherit;
+}
+
+#scan-root a {
+    text-decoration: none;
+    color: inherit;
+}
+
+#scan-root ul,
+#scan-root ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/*
+ * Leaflet's default CSS is imported separately in the page's render
+ * entrypoint. We keep this file Tailwind-only so it can be reused by
+ * other React-mounted dashboards.
+ */
