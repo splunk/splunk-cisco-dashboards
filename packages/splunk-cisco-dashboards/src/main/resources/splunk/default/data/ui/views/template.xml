@@ -1,0 +1,557 @@
+
+<dashboard version="2" theme="light">
+ <label>Template</label>
+ <description>Standard Dashboard Template — clone this to create new dashboards with consistent styling</description>
+ <definition><![CDATA[
+{
+	"title": "Template",
+	"description": "Standard Dashboard Template — clone this to create new dashboards with consistent styling",
+	"inputs": {
+		"input_global_trp": {
+			"options": {
+				"defaultValue": "-24h,now",
+				"token": "global_time"
+			},
+			"type": "input.timerange"
+		}
+	},
+	"defaults": {
+		"dataSources": {
+			"ds.search": {
+				"options": {
+					"queryParameters": {
+						"earliest": "$global_time.earliest$",
+						"latest": "$global_time.latest$"
+					}
+				}
+			},
+			"ds.spl2": {
+				"options": {
+					"queryParameters": {
+						"earliest": "$global_time.earliest$",
+						"latest": "$global_time.latest$"
+					}
+				}
+			}
+		}
+	},
+	"visualizations": {
+		"p_hdr_bg": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.88)",
+				"rx": 0,
+				"strokeColor": "rgba(0,0,0,0.06)"
+			},
+			"type": "splunk.rectangle"
+		},
+		"p_hdr_title": {
+			"options": {
+				"markdown": "## Your Dashboard Title\n*Short description of what this dashboard shows*"
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_about_bg": {
+			"options": {
+				"fillColor": "#ffffff",
+				"rx": 10,
+				"strokeColor": "transparent"
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_about_box": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.78)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.08)"
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_about_md": {
+			"options": {
+				"markdown": "### Metric Reference\n\n---\n\n**KPI 1** — Description of this metric and where the data comes from\n\n**KPI 2** — Description of this metric and where the data comes from\n\n**KPI 3** — Description of this metric and where the data comes from\n\n---\n\n### Data Sources\n\n| Saved Search | Schedule | Description |\n|---|---|---|\n| `Your Dashboard - ds_example` | `*/4 * * * *` | Replace with your search description |\n\n---\n\n### Architecture Notes\n\n- **ds.savedSearch** — References a scheduled saved search (uses cached artifacts)\n- **ds.chain** — Post-processes a parent data source without dispatching a new search\n- **ds.search** — Inline ad-hoc search (no caching, runs every time)"
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_about_section": {
+			"options": {
+				"fillColor": "#F5F5F5",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.05)"
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_about_title": {
+			"options": {
+				"markdown": "## About This Dashboard"
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_banner": {
+			"options": {
+				"src": "/static/app/splunk-cisco-dashboards/images/background_statewide.png"
+			},
+			"type": "splunk.image"
+		},
+		"viz_box_row1": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.78)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.08)"
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_box_row2": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.78)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.08)"
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_chart": {
+			"dataSources": {
+				"primary": "ds_placeholder_chart"
+			},
+			"title": "Trend Chart",
+			"type": "splunk.line"
+		},
+		"viz_d_banner": {
+			"options": {
+				"src": "/static/app/splunk-cisco-dashboards/images/background_statewide.png"
+			},
+			"type": "splunk.image"
+		},
+		"viz_d_box": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.78)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.08)"
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_d_hdr_bg": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.88)",
+				"rx": 0,
+				"strokeColor": "rgba(0,0,0,0.06)"
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_d_hdr_title": {
+			"options": {
+				"markdown": "## Detail View\n*Add drill-down tables, expanded charts, or raw event views here*"
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_d_section": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.45)",
+				"rx": 12,
+				"strokeColor": "rgba(0,0,0,0.06)"
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_d_table": {
+			"dataSources": {
+				"primary": "ds_placeholder_table"
+			},
+			"options": {
+				"count": 50
+			},
+			"title": "Detailed Table — Replace with your data",
+			"type": "splunk.table"
+		},
+		"viz_kpi1": {
+			"dataSources": {
+				"primary": "ds_placeholder_kpi"
+			},
+			"options": {
+				"majorColor": "#049fd9"
+			},
+			"title": "KPI 1",
+			"type": "splunk.singlevalue"
+		},
+		"viz_kpi2": {
+			"dataSources": {
+				"primary": "ds_placeholder_kpi"
+			},
+			"options": {
+				"majorColor": "#049fd9"
+			},
+			"title": "KPI 2",
+			"type": "splunk.singlevalue"
+		},
+		"viz_kpi3": {
+			"dataSources": {
+				"primary": "ds_placeholder_kpi"
+			},
+			"options": {
+				"majorColor": "#049fd9"
+			},
+			"title": "KPI 3",
+			"type": "splunk.singlevalue"
+		},
+		"viz_section": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.45)",
+				"rx": 12,
+				"strokeColor": "rgba(0,0,0,0.06)"
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_section_header": {
+			"options": {
+				"markdown": "## Overview\n*Replace with your section title*"
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_table": {
+			"dataSources": {
+				"primary": "ds_placeholder_table"
+			},
+			"options": {
+				"count": 20
+			},
+			"title": "Detail Table",
+			"type": "splunk.table"
+		}
+	},
+	"dataSources": {
+		"ds_placeholder_chain": {
+			"name": "Placeholder Chain",
+			"options": {
+				"extend": "ds_placeholder_saved",
+				"query": "| head 10"
+			},
+			"type": "ds.chain"
+		},
+		"ds_placeholder_chart": {
+			"name": "Placeholder Chart",
+			"options": {
+				"query": "| makeresults count=24 | streamstats count as hour | eval _time=relative_time(now(), \"-24h\") + (hour * 3600), clients=random() % 500 | table _time, clients"
+			},
+			"type": "ds.search"
+		},
+		"ds_placeholder_kpi": {
+			"name": "Placeholder KPI",
+			"options": {
+				"query": "| makeresults | eval metric=\"Replace Me\", value=42 | fields metric, value"
+			},
+			"type": "ds.search"
+		},
+		"ds_placeholder_saved": {
+			"name": "YOUR SAVED SEARCH NAME HERE",
+			"options": {
+				"app": "splunk-cisco-dashboards",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				},
+				"ref": "YOUR SAVED SEARCH NAME HERE",
+				"useSavedTimeRange": false
+			},
+			"type": "ds.savedSearch"
+		},
+		"ds_placeholder_table": {
+			"name": "Placeholder Table",
+			"options": {
+				"query": "| makeresults count=5 | streamstats count as row | eval Device=\"device-\".row, Status=if(row<4, \"Healthy\", \"Critical\"), Health=if(row<4, round(random()%30+70), round(random()%30+20)) | table Device, Status, Health"
+			},
+			"type": "ds.search"
+		}
+	},
+	"layout": {
+		"globalInputs": [
+			"input_global_trp"
+		],
+		"layoutDefinitions": {
+			"layout_about": {
+				"options": {
+					"backgroundColor": "transparent",
+					"display": "auto-scale",
+					"height": 620,
+					"width": 1440
+				},
+				"structure": [
+					{
+						"item": "viz_about_bg",
+						"position": {
+							"h": 60,
+							"w": 1420,
+							"x": 10,
+							"y": 10
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_about_title",
+						"position": {
+							"h": 52,
+							"w": 600,
+							"x": 30,
+							"y": 18
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_about_section",
+						"position": {
+							"h": 530,
+							"w": 1420,
+							"x": 10,
+							"y": 80
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_about_box",
+						"position": {
+							"h": 510,
+							"w": 1400,
+							"x": 20,
+							"y": 90
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_about_md",
+						"position": {
+							"h": 490,
+							"w": 1380,
+							"x": 30,
+							"y": 100
+						},
+						"type": "block"
+					}
+				],
+				"type": "absolute"
+			},
+			"layout_details": {
+				"options": {
+					"backgroundColor": "transparent",
+					"display": "auto-scale",
+					"height": 620,
+					"width": 1440
+				},
+				"structure": [
+					{
+						"item": "viz_d_banner",
+						"position": {
+							"h": 620,
+							"w": 1440,
+							"x": 0,
+							"y": 0
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_d_hdr_bg",
+						"position": {
+							"h": 70,
+							"w": 1440,
+							"x": 0,
+							"y": 0
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_d_hdr_title",
+						"position": {
+							"h": 58,
+							"w": 700,
+							"x": 30,
+							"y": 12
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_d_section",
+						"position": {
+							"h": 530,
+							"w": 1420,
+							"x": 10,
+							"y": 80
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_d_box",
+						"position": {
+							"h": 510,
+							"w": 1400,
+							"x": 20,
+							"y": 90
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_d_table",
+						"position": {
+							"h": 490,
+							"w": 1380,
+							"x": 30,
+							"y": 100
+						},
+						"type": "block"
+					}
+				],
+				"type": "absolute"
+			},
+			"layout_overview": {
+				"options": {
+					"backgroundColor": "transparent",
+					"display": "auto-scale",
+					"height": 620,
+					"width": 1440
+				},
+				"structure": [
+					{
+						"item": "viz_banner",
+						"position": {
+							"h": 620,
+							"w": 1440,
+							"x": 0,
+							"y": 0
+						},
+						"type": "block"
+					},
+					{
+						"item": "p_hdr_bg",
+						"position": {
+							"h": 70,
+							"w": 1440,
+							"x": 0,
+							"y": 0
+						},
+						"type": "block"
+					},
+					{
+						"item": "p_hdr_title",
+						"position": {
+							"h": 58,
+							"w": 700,
+							"x": 30,
+							"y": 12
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_section",
+						"position": {
+							"h": 530,
+							"w": 1420,
+							"x": 10,
+							"y": 80
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_section_header",
+						"position": {
+							"h": 45,
+							"w": 500,
+							"x": 30,
+							"y": 85
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_box_row1",
+						"position": {
+							"h": 130,
+							"w": 1400,
+							"x": 20,
+							"y": 130
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_kpi1",
+						"position": {
+							"h": 110,
+							"w": 420,
+							"x": 40,
+							"y": 140
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_kpi2",
+						"position": {
+							"h": 110,
+							"w": 420,
+							"x": 510,
+							"y": 140
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_kpi3",
+						"position": {
+							"h": 110,
+							"w": 420,
+							"x": 980,
+							"y": 140
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_box_row2",
+						"position": {
+							"h": 330,
+							"w": 1400,
+							"x": 20,
+							"y": 270
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_chart",
+						"position": {
+							"h": 310,
+							"w": 680,
+							"x": 30,
+							"y": 280
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_table",
+						"position": {
+							"h": 310,
+							"w": 680,
+							"x": 730,
+							"y": 280
+						},
+						"type": "block"
+					}
+				],
+				"type": "absolute"
+			}
+		},
+		"options": {
+			"showTitleAndDescription": false
+		},
+		"tabs": {
+			"items": [
+				{
+					"label": "Overview",
+					"layoutId": "layout_overview"
+				},
+				{
+					"label": "Details",
+					"layoutId": "layout_details"
+				},
+				{
+					"label": "About",
+					"layoutId": "layout_about"
+				}
+			]
+		}
+	},
+	"applicationProperties": {
+		"hideEdit": false
+	}
+}
+ ]]></definition>
+</dashboard>

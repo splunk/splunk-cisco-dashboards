@@ -4,6 +4,10 @@ module.exports = {
     // (Preflight) and utility classes don't bleed into Splunk Web's own
     // chrome around the dashboard panel.
     important: '#scan-root',
+    // Class-based dark mode. We toggle the `dark` class on the page-level
+    // wrapper (still inside #scan-root), so Splunk Web's own chrome is
+    // unaffected — only the dashboard surface flips between palettes.
+    darkMode: 'class',
     corePlugins: {
         // Disable Preflight to avoid stomping on Splunk Web's base styles
         // for headings, buttons, etc. We re-introduce only the resets we

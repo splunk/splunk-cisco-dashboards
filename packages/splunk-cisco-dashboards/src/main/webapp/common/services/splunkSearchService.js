@@ -10,10 +10,45 @@
  * for the presence of a CSRF token. Either is sufficient to assume we're
  * inside Splunk Web. Set `window.__SPLUNK_RUNTIME__ = false` to force the
  * mock path during development.
+ *
+ * Namespace: every dispatch is scoped to the splunk-cisco-dashboards
+ * app, hitting `/servicesNS/-/splunk-cisco-dashboards/...`. This is
+ * critical because:
+ *   - Our saved searches (Executive Dashboard - ds_*) are bundled with
+ *     the app and not exported globally — calls to `/services/` (no
+ *     namespace) would 404 every `| savedsearch "..."` reference.
+ *   - The customer_name macro is also app-scoped and must be resolved
+ *     in the app context.
+ *
+ * Use `setSearchAppContext('<other-app>')` in dev/tests to override.
  */
 import { oneShot } from '@splunk/splunk-utils/search';
 
-const SAFE_SPL_PATTERN = /^[\w\s\-=,.:|*"'<>()/&!?[\]{}@%+]+$/;
+// Allow-listed characters for SPL strings. We include backticks because
+// Splunk macro invocations look like `macro_name(arg1)`. Strings are
+// always constructed in code (never from user input), so the surface is
+// narrow.
+const SAFE_SPL_PATTERN = /^[\w\s\-=,.:|*"'<>()/&!?[\]{}@%+`]+$/;
+
+// Splunk app the dispatcher should resolve saved searches in. Mutable
+// only via setSearchAppContext to keep the invariant that all dispatches
+// hit the same namespace.
+const APP_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_\-.]{0,127}$/;
+let CURRENT_APP_CONTEXT = 'splunk-cisco-dashboards';
+
+/**
+ * Override the namespace every search runs in. Useful for tests and for
+ * embedding the React surface inside another Splunk app. Throws on
+ * invalid app names.
+ */
+export const setSearchAppContext = (appName) => {
+    if (typeof appName !== 'string' || !APP_NAME_PATTERN.test(appName)) {
+        throw new Error('Invalid Splunk app name.');
+    }
+    CURRENT_APP_CONTEXT = appName;
+};
+
+export const getSearchAppContext = () => CURRENT_APP_CONTEXT;
 
 const isInSplunkRuntime = () => {
     if (typeof window === 'undefined') return false;
@@ -135,13 +170,22 @@ export const runSearch = async ({
     // `oneShot` runs a search synchronously on the server and returns
     // the parsed result rows. It accepts the same parameters documented
     // for the search/v2/jobs endpoint.
-    const response = await oneShot({
-        search: spl,
-        earliest_time: earliestTime,
-        latest_time: latestTime,
-        output_mode: 'json',
-        count: 1000,
-    });
+    //
+    // The second argument is the namespace tuple that drives the URL
+    // path: passing `app` here pins the request to
+    //   /servicesNS/-/<app>/search/v2/jobs
+    // which lets `| savedsearch "..."` resolve any saved search bundled
+    // with the app, even though the app isn't exported globally.
+    const response = await oneShot(
+        {
+            search: spl,
+            earliest_time: earliestTime,
+            latest_time: latestTime,
+            output_mode: 'json',
+            count: 1000,
+        },
+        { app: CURRENT_APP_CONTEXT }
+    );
     return { results: (response && response.results) || [] };
 };
 

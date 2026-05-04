@@ -1,27 +1,70 @@
-import React from 'react';
-import { MapContainer, TileLayer, Marker, Polyline, ZoomControl } from 'react-leaflet';
+/**
+ * FloridaMap — regional health overlay with executive chrome.
+ *
+ * Restores the original UI surface (search overlay, SITE NODES legend,
+ * basemap/layer buttons, zoom control) and layers the dashboard
+ * improvements on top:
+ *
+ *   1. Auto-rotating spotlight — every `spotlightIntervalMs` (default
+ *      11 s) we mark the worst-status site as "spotlighted". The
+ *      marker gets a sky ring + a tiny status pill in the top-left,
+ *      but the camera never pans (so the well-composed Florida frame
+ *      is preserved). Hovering the map pauses rotation; clicking a
+ *      marker pins it.
+ *   2. Animated dashed flow polyline between primary sites — CSS
+ *      stroke-dashoffset shimmer suggests live data flow.
+ *   3. Pulsing heat halo around the spotlighted non-stable site —
+ *      thin ring, no fill, so it accents rather than drowning labels.
+ *   4. Theme-aware tile layer — CARTO Voyager (light) /
+ *      Dark Matter (dark).
+ *
+ * The popup card is Splunk-search-styled (mono font, dark surface)
+ * regardless of theme so it visually mirrors the Search app.
+ */
+
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+    MapContainer,
+    TileLayer,
+    Marker,
+    Polyline,
+    Circle,
+    ZoomControl,
+} from 'react-leaflet';
 import L from 'leaflet';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Activity, Terminal, Code2, Map as MapIcon, Layers } from 'lucide-react';
+import {
+    Activity,
+    Code2,
+    ExternalLink,
+    Layers,
+    Map as MapIcon,
+    Terminal,
+    X,
+} from 'lucide-react';
 import { cn } from '@/common/lib/utils';
 import type { City } from '@/common/types';
 import 'leaflet/dist/leaflet.css';
 
-// Fix for default marker icons in Leaflet under bundlers (Vite/Webpack).
-// We point Leaflet at the CDN-hosted marker assets so it doesn't try to
-// resolve them through bundler-specific URL resolution.
-//
-// NOTE: This loads three small images from a public CDN at runtime.
-// If your environment forbids third-party asset loading, replace these
-// URLs with assets shipped in your Splunk app's appserver/static/ folder.
+// ----------------------------------------------------------------------------
+// Default Leaflet marker shim (CDN-hosted assets)
+// ----------------------------------------------------------------------------
 delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
 L.Icon.Default.mergeOptions({
     iconRetinaUrl:
         'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
     iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+    shadowUrl:
+        'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
+// ----------------------------------------------------------------------------
+// Catalogue
+// ----------------------------------------------------------------------------
+
+// Site catalogue. Intentionally restricted to the 3 strategic locations
+// the dashboard cares about (matches the SITE NODES legend below). Add
+// more here only if they get a corresponding row in the legend + table.
 const cities: City[] = [
     {
         id: 'tlh',
@@ -53,41 +96,16 @@ const cities: City[] = [
         metrics: { events: 8200, alerts: 42, latency: 310 },
         query: 'index=security action=blocked src_ip="*" dest_ip="AUB-LOG-01" | top limit=10 src_ip',
     },
-    {
-        id: 'jax',
-        name: 'Jacksonville',
-        lat: 30.3322,
-        lng: -81.6557,
-        status: 'stable',
-        importance: 'secondary',
-        metrics: { events: 450, alerts: 0, latency: 32 },
-        query: 'index=cloud_ops region="US-EAST-1" status=active',
-    },
-    {
-        id: 'tpa',
-        name: 'Tampa',
-        lat: 27.9506,
-        lng: -82.4572,
-        status: 'stable',
-        importance: 'secondary',
-        metrics: { events: 920, alerts: 1, latency: 45 },
-        query: 'index=app_logs city="Tampa" | stats avg(response_time)',
-    },
-    {
-        id: 'mia',
-        name: 'Miami',
-        lat: 25.7617,
-        lng: -80.1918,
-        status: 'stable',
-        importance: 'secondary',
-        metrics: { events: 1540, alerts: 2, latency: 52 },
-        query: 'index=iot_sensors type=occupancy building="MIA-STRAT"',
-    },
 ];
 
-// Simple HTML escape so city names rendered into Leaflet's divIcon HTML
-// can never inject markup. The catalogue is hard-coded today, but
-// guarding the boundary keeps us safe if `cities` ever becomes dynamic.
+const STATUS_RANK: Record<City['status'], number> = {
+    critical: 3,
+    warning: 2,
+    stable: 1,
+};
+
+// HTML-escape so divIcon contents can never inject markup if the city
+// catalogue ever becomes dynamic.
 const escapeHtml = (value: string): string =>
     value.replace(/[&<>"']/g, (ch) => {
         switch (ch) {
@@ -106,22 +124,48 @@ const escapeHtml = (value: string): string =>
         }
     });
 
-const createCustomIcon = (city: City, isHovered: boolean) => {
+// ----------------------------------------------------------------------------
+// Custom marker
+// ----------------------------------------------------------------------------
+
+const createCustomIcon = (
+    city: City,
+    isSelected: boolean,
+    isSpotlight: boolean,
+    isDark: boolean
+) => {
     const safeName = escapeHtml(city.name);
+    const ring = isSelected
+        ? 'ring-4 ring-sky-300/60 scale-125'
+        : isSpotlight
+        ? 'ring-4 ring-sky-400/40 scale-110'
+        : '';
+    const surface = isDark ? 'bg-slate-900 border' : 'bg-white border-2';
+    const labelChrome = isDark
+        ? 'bg-slate-900/90 backdrop-blur-sm border-slate-700'
+        : 'bg-white/90 backdrop-blur-sm border-slate-200';
+    const labelType =
+        city.importance === 'primary'
+            ? isDark
+                ? 'text-[11px] text-slate-100'
+                : 'text-[11px] text-slate-800'
+            : isDark
+            ? 'text-[9px] text-slate-400'
+            : 'text-[9px] text-slate-500';
     return L.divIcon({
         className: 'custom-div-icon',
         html: `
       <div class="relative flex flex-col items-center group">
-        <div class="flex items-center justify-center rounded-full border-2 transition-all p-1 shadow-lg bg-white
+        <div class="flex items-center justify-center rounded-full transition-all p-1 shadow-lg ${surface}
           ${city.importance === 'primary' ? 'w-8 h-8' : 'w-5 h-5'}
           ${
               city.status === 'critical'
-                  ? 'border-red-500 text-red-600'
+                  ? 'border-red-500 text-red-500'
                   : city.status === 'warning'
-                  ? 'border-amber-500 text-amber-600'
-                  : 'border-sky-500 text-sky-600'
+                  ? 'border-amber-500 text-amber-500'
+                  : 'border-sky-500 text-sky-500'
           }
-          ${isHovered ? 'scale-125 ring-4 ring-sky-100' : ''}">
+          ${ring}">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${
               city.importance === 'primary' ? 'w-5 h-5' : 'w-3 h-3'
           }">
@@ -142,12 +186,7 @@ const createCustomIcon = (city: City, isHovered: boolean) => {
                   : ''
           }
         </div>
-        <div class="mt-1 whitespace-nowrap font-black bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded shadow-sm border border-slate-200
-          ${
-              city.importance === 'primary'
-                  ? 'text-[11px] text-slate-800'
-                  : 'text-[9px] text-slate-500'
-          }">
+        <div class="mt-1 whitespace-nowrap font-black px-2 py-0.5 rounded shadow-sm border ${labelChrome} ${labelType}">
           ${safeName}
         </div>
       </div>
@@ -160,139 +199,412 @@ const createCustomIcon = (city: City, isHovered: boolean) => {
     });
 };
 
-export const FloridaMap: React.FC = () => {
-    const [hoveredCity, setHoveredCity] = React.useState<City | null>(null);
-    const floridaCenter: [number, number] = [27.964157, -81.764832]; // Geocenter of Florida
+// ----------------------------------------------------------------------------
+// Animated CSS
+// ----------------------------------------------------------------------------
+
+// Animated dashed-line marching ants + heat halo pulse. Class-scoped so
+// they don't bleed onto Splunk's own SVG paths.
+const flowAnimationCss = `
+    @keyframes florida-map-flow {
+        from { stroke-dashoffset: 0; }
+        to { stroke-dashoffset: -32; }
+    }
+    @keyframes florida-map-heat-pulse {
+        0%, 100% { stroke-opacity: 0.55; }
+        50% { stroke-opacity: 0.85; }
+    }
+    .florida-map-flow-line {
+        animation: florida-map-flow 2.4s linear infinite;
+    }
+    .florida-map-heat-ring {
+        animation: florida-map-heat-pulse 2.6s ease-in-out infinite;
+    }
+`;
+
+// ----------------------------------------------------------------------------
+// Tile layer presets — toggled by the Layers button.
+// ----------------------------------------------------------------------------
+
+interface TileLayerPreset {
+    id: 'voyager' | 'positron' | 'satellite';
+    label: string;
+    light: string;
+    dark: string;
+    attribution: string;
+}
+
+const TILE_LAYER_PRESETS: TileLayerPreset[] = [
+    {
+        id: 'voyager',
+        label: 'Default',
+        light: 'https://{s}.basemaps.cartocdn.com/voyager/{z}/{x}/{y}{r}.png',
+        dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+        attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    },
+    {
+        id: 'positron',
+        label: 'Minimal',
+        light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+        dark: 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',
+        attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    },
+    {
+        id: 'satellite',
+        label: 'Satellite',
+        light:
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        dark:
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        attribution:
+            'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye',
+    },
+];
+
+// ----------------------------------------------------------------------------
+// Component
+// ----------------------------------------------------------------------------
+
+interface FloridaMapProps {
+    /** When true, switches to the dark tile + dark marker chrome. */
+    isDark?: boolean;
+    /** Auto-rotation interval. Set to 0 to disable. */
+    spotlightIntervalMs?: number;
+    /** How long to pause auto-rotation after a user click. */
+    spotlightPauseMs?: number;
+    /**
+     * Drilldown handler — invoked with a SPL string when the user
+     * clicks "Open in Splunk Search" or the SPL preview block on the
+     * pinned site card. The container is expected to open the SPL in
+     * Splunk's Search & Reporting view under this app's namespace (so
+     * saved-search references resolve). When omitted, those
+     * affordances are rendered as no-ops.
+     */
+    onOpenInSearch?: (spl: string) => void;
+}
+
+// Bounding box that frames the entire state with a little breathing
+// room on each side. Using `bounds` (instead of center+zoom) means the
+// framing stays correct regardless of how wide the container is — the
+// previous fixed `zoom=7` would over-zoom on small panes and show too
+// much Georgia / Bahamas on wide ones.
+const FLORIDA_BOUNDS: [[number, number], [number, number]] = [
+    [24.4, -87.7], // SW — west panhandle / Key West
+    [31.1, -79.9], // NE — Atlantic coast at Georgia line
+];
+
+export const FloridaMap: React.FC<FloridaMapProps> = ({
+    isDark = false,
+    spotlightIntervalMs = 11000,
+    spotlightPauseMs = 25000,
+    onOpenInSearch,
+}) => {
+    const [selectedCity, setSelectedCity] = useState<City | null>(null);
+    const [spotlightCity, setSpotlightCity] = useState<City | null>(null);
+    const [paused, setPaused] = useState(false);
+    const [tilePresetId, setTilePresetId] = useState<TileLayerPreset['id']>(
+        TILE_LAYER_PRESETS[0].id
+    );
+    const pauseUntilRef = useRef<number>(0);
+
+    // Sites ordered worst-first so spotlight starts on the most urgent one.
+    const rotationOrder = useMemo(
+        () =>
+            [...cities].sort(
+                (a, b) =>
+                    STATUS_RANK[b.status] - STATUS_RANK[a.status] ||
+                    b.metrics.alerts - a.metrics.alerts
+            ),
+        []
+    );
+
+    // Auto-rotation: bump spotlight every `spotlightIntervalMs`, but
+    // skip if the user is actively interacting (selectedCity set or
+    // we're inside the post-click pause window).
+    useEffect(() => {
+        if (spotlightIntervalMs <= 0 || rotationOrder.length === 0) return undefined;
+        let idx = 0;
+        const tick = () => {
+            const now = Date.now();
+            if (paused || pauseUntilRef.current > now || selectedCity) return;
+            const next = rotationOrder[idx % rotationOrder.length];
+            idx += 1;
+            setSpotlightCity(next);
+        };
+        tick();
+        const id = window.setInterval(tick, spotlightIntervalMs);
+        return () => window.clearInterval(id);
+    }, [rotationOrder, spotlightIntervalMs, paused, selectedCity]);
+
+    // ESC closes the pinned popup.
+    useEffect(() => {
+        if (!selectedCity) return undefined;
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setSelectedCity(null);
+        };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [selectedCity]);
+
+    const handleMarkerClick = (city: City) => {
+        // Bump the pause window and toggle selection.
+        pauseUntilRef.current = Date.now() + spotlightPauseMs;
+        setSelectedCity((current) => (current?.id === city.id ? null : city));
+    };
+
+    const handleOpenSelectedInSearch = () => {
+        if (selectedCity && onOpenInSearch) onOpenInSearch(selectedCity.query);
+    };
+
+    const cycleTilePreset = () => {
+        const i = TILE_LAYER_PRESETS.findIndex((p) => p.id === tilePresetId);
+        const next = TILE_LAYER_PRESETS[(i + 1) % TILE_LAYER_PRESETS.length];
+        setTilePresetId(next.id);
+    };
+
+    const resetView = () => {
+        // Visual cue — also drops any pinned site so spotlight resumes.
+        setSelectedCity(null);
+        pauseUntilRef.current = 0;
+    };
+
+    const tilePreset =
+        TILE_LAYER_PRESETS.find((p) => p.id === tilePresetId) ?? TILE_LAYER_PRESETS[0];
+    const tileUrl = isDark ? tilePreset.dark : tilePreset.light;
+    const flowColor = isDark ? '#38bdf8' : '#0ea5e9';
+    const containerBg = isDark
+        ? 'bg-slate-900 border-slate-800'
+        : 'bg-slate-100 border-slate-200';
+    const overlayChrome = isDark
+        ? 'bg-slate-900/90 border-slate-700 text-slate-200 backdrop-blur-md'
+        : 'bg-white/95 border-slate-200 text-slate-700 backdrop-blur-md';
+    const buttonChrome = isDark
+        ? 'bg-slate-900/90 border-slate-700 hover:bg-slate-800 text-slate-200'
+        : 'bg-white/95 border-slate-200 hover:bg-slate-50 text-slate-600';
 
     return (
-        <div className="relative w-full aspect-[4/5] bg-slate-100 overflow-hidden border border-slate-200 rounded-xl shadow-inner group">
-            {/* Search Header Overlay */}
-            <div className="absolute top-4 left-4 z-[1000] flex items-center gap-2 bg-white/95 backdrop-blur-md border border-slate-200 px-3 py-2 rounded-lg shadow-xl">
-                <Search className="w-4 h-4 text-sky-600" />
-                <input
-                    type="text"
-                    placeholder="Run Regional Search..."
-                    className="bg-transparent border-none text-xs font-mono focus:outline-none w-40 text-slate-700"
-                />
-            </div>
+        <div
+            className={cn(
+                'relative w-full h-full min-h-[320px] overflow-hidden border rounded-xl shadow-inner group',
+                containerBg
+            )}
+            onMouseEnter={() => setPaused(true)}
+            onMouseLeave={() => setPaused(false)}
+        >
+            <style>{flowAnimationCss}</style>
+
+            {/* Spotlight pill — hidden when the user has pinned a site. */}
+            {!selectedCity && spotlightCity && (
+                <div
+                    className={cn(
+                        'absolute top-3 left-3 z-[999] px-2 py-1 rounded-md border text-[9px] font-bold uppercase tracking-widest pointer-events-none',
+                        isDark
+                            ? 'bg-slate-900/70 border-slate-700 text-slate-300 backdrop-blur'
+                            : 'bg-white/85 border-slate-200 text-slate-500 backdrop-blur'
+                    )}
+                >
+                    <span className="inline-flex items-center gap-1.5">
+                        <span
+                            className={cn(
+                                'w-1.5 h-1.5 rounded-full',
+                                paused
+                                    ? 'bg-slate-400'
+                                    : 'bg-emerald-500 animate-pulse'
+                            )}
+                        />
+                        {paused
+                            ? 'Spotlight paused'
+                            : `Spotlight · ${spotlightCity.id}`}
+                    </span>
+                </div>
+            )}
 
             <MapContainer
-                center={floridaCenter}
-                zoom={7}
+                bounds={FLORIDA_BOUNDS}
+                boundsOptions={{ padding: [10, 10] }}
                 style={{ height: '100%', width: '100%' }}
                 zoomControl={false}
                 scrollWheelZoom={false}
                 className="z-10"
             >
                 <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                    url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+                    key={tileUrl}
+                    attribution={tilePreset.attribution}
+                    url={tileUrl}
                 />
 
                 <ZoomControl position="bottomright" />
 
-                {/* Primary Network Lines */}
+                {/* Animated flow lines between primary sites. */}
                 <Polyline
                     positions={cities
                         .filter((c) => c.importance === 'primary')
                         .map((c) => [c.lat, c.lng])}
                     pathOptions={{
-                        color: '#0ea5e9',
-                        weight: 2,
-                        dashArray: '5, 10',
-                        opacity: 0.4,
+                        color: flowColor,
+                        weight: 1.8,
+                        dashArray: '6 10',
+                        opacity: 0.55,
+                        className: 'florida-map-flow-line',
                     }}
                 />
+
+                {/* Heat halo — only on the currently-spotlighted
+                    non-stable site so we never have multiple
+                    overlapping rings competing for the centre of the
+                    state. Subtle ring only (no fill) so it doesn't
+                    obscure city labels. */}
+                {spotlightCity &&
+                    spotlightCity.status !== 'stable' &&
+                    !selectedCity && (
+                        <Circle
+                            key={`heat-${spotlightCity.id}`}
+                            center={[spotlightCity.lat, spotlightCity.lng]}
+                            radius={28000}
+                            pathOptions={{
+                                color:
+                                    spotlightCity.status === 'critical'
+                                        ? '#ef4444'
+                                        : '#f59e0b',
+                                fillOpacity: 0,
+                                weight: 1.2,
+                                opacity: 0.55,
+                                dashArray: '4 5',
+                                className: 'florida-map-heat-ring',
+                            }}
+                        />
+                    )}
 
                 {cities.map((city) => (
                     <Marker
                         key={city.id}
                         position={[city.lat, city.lng]}
-                        icon={createCustomIcon(city, hoveredCity?.id === city.id)}
+                        icon={createCustomIcon(
+                            city,
+                            selectedCity?.id === city.id,
+                            spotlightCity?.id === city.id && !selectedCity,
+                            isDark
+                        )}
                         eventHandlers={{
-                            mouseover: () => setHoveredCity(city),
-                            mouseout: () => setHoveredCity(null),
+                            click: () => handleMarkerClick(city),
                         }}
                     />
                 ))}
             </MapContainer>
 
-            {/* Tooltip Card - Splunk Search Style */}
+            {/* Pinned site card — Splunk Search styled, kept dark in
+                both themes because it visually mirrors the Search app. */}
             <AnimatePresence>
-                {hoveredCity && (
+                {selectedCity && (
                     <motion.div
                         initial={{ opacity: 0, x: 20, scale: 0.9 }}
                         animate={{ opacity: 1, x: 0, scale: 1 }}
                         exit={{ opacity: 0, x: 20, scale: 0.9 }}
-                        className="absolute top-20 right-6 z-[2000] w-80 bg-[#1a1c1e] text-slate-300 rounded-lg border border-slate-700 shadow-2xl p-0 overflow-hidden"
+                        className="absolute top-3 right-3 z-[2000] w-72 bg-[#1a1c1e] text-slate-300 rounded-lg border border-slate-700 shadow-2xl overflow-hidden"
                     >
                         <div className="bg-slate-800/50 px-4 py-2 border-b border-slate-700 flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <Terminal className="w-3.5 h-3.5 text-sky-400" />
                                 <span className="text-[10px] font-mono font-bold tracking-tight text-slate-400 uppercase">
-                                    District Analysis: {hoveredCity.id}
+                                    Site analysis: {selectedCity.id}
                                 </span>
+                                <div
+                                    className={cn(
+                                        'w-2 h-2 rounded-full',
+                                        selectedCity.status === 'critical'
+                                            ? 'bg-red-500'
+                                            : selectedCity.status === 'warning'
+                                            ? 'bg-amber-500'
+                                            : 'bg-sky-500'
+                                    )}
+                                />
                             </div>
-                            <div
-                                className={cn(
-                                    'w-2 h-2 rounded-full',
-                                    hoveredCity.status === 'critical'
-                                        ? 'bg-red-500'
-                                        : hoveredCity.status === 'warning'
-                                        ? 'bg-amber-500'
-                                        : 'bg-sky-500'
-                                )}
-                            />
+                            <button
+                                type="button"
+                                aria-label="Close site details"
+                                onClick={() => setSelectedCity(null)}
+                                className="text-slate-500 hover:text-white transition-colors p-0.5 rounded hover:bg-white/5 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                            >
+                                <X className="w-3.5 h-3.5" />
+                            </button>
                         </div>
 
-                        <div className="p-4 space-y-4">
+                        <div className="p-3 space-y-3">
                             <div className="space-y-1">
                                 <div className="flex items-center justify-between">
                                     <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
-                                        Active SPL Query
+                                        Active SPL query
                                     </span>
                                     <Activity className="w-3 h-3 text-slate-600" />
                                 </div>
-                                <div className="bg-black/60 rounded p-2.5 border border-slate-800 font-mono">
-                                    <p className="text-[10px] text-sky-200 leading-relaxed break-all">
-                                        {hoveredCity.query}
-                                    </p>
-                                </div>
+                                {onOpenInSearch ? (
+                                    <button
+                                        type="button"
+                                        onClick={handleOpenSelectedInSearch}
+                                        title="Open this query in Splunk Search"
+                                        className="w-full text-left bg-black/60 hover:bg-black/80 rounded p-2 border border-slate-800 hover:border-sky-700 font-mono transition-colors focus:outline-none focus:ring-1 focus:ring-sky-500"
+                                    >
+                                        <p className="text-[10px] text-sky-200 leading-relaxed break-all">
+                                            {selectedCity.query}
+                                        </p>
+                                    </button>
+                                ) : (
+                                    <div className="bg-black/60 rounded p-2 border border-slate-800 font-mono">
+                                        <p className="text-[10px] text-sky-200 leading-relaxed break-all">
+                                            {selectedCity.query}
+                                        </p>
+                                    </div>
+                                )}
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-2">
                                 <div className="flex flex-col bg-white/5 p-2 rounded border border-white/5">
                                     <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-1">
-                                        Total Ingest (EPS)
+                                        Total ingest (EPS)
                                     </span>
-                                    <span className="text-xl font-black font-mono text-white leading-none">
-                                        {hoveredCity.metrics.events.toLocaleString()}
+                                    <span className="text-lg font-black font-mono text-white leading-none">
+                                        {selectedCity.metrics.events.toLocaleString()}
                                     </span>
                                 </div>
                                 <div className="flex flex-col bg-white/5 p-2 rounded border border-white/5">
                                     <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-1">
-                                        Triggered Alerts
+                                        Triggered alerts
                                     </span>
                                     <span
                                         className={cn(
-                                            'text-xl font-black font-mono leading-none',
-                                            hoveredCity.metrics.alerts > 0
+                                            'text-lg font-black font-mono leading-none',
+                                            selectedCity.metrics.alerts > 0
                                                 ? 'text-red-500'
                                                 : 'text-white'
                                         )}
                                     >
-                                        {hoveredCity.metrics.alerts}
+                                        {selectedCity.metrics.alerts}
                                     </span>
                                 </div>
                             </div>
 
-                            <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 px-1 pt-2">
-                                <div className="flex items-center gap-2">
+                            <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 px-1 pt-1">
+                                <div className="flex items-center gap-1.5">
                                     <Code2 className="w-3 h-3" />
-                                    <span>LATENCY: {hoveredCity.metrics.latency}ms</span>
+                                    <span>
+                                        Latency: {selectedCity.metrics.latency} ms
+                                    </span>
                                 </div>
-                                <button className="text-sky-500 hover:text-sky-400 transition-colors bg-sky-500/10 px-2 py-0.5 rounded cursor-pointer">
-                                    FULL REPORT
+                                <button
+                                    type="button"
+                                    onClick={handleOpenSelectedInSearch}
+                                    disabled={!onOpenInSearch}
+                                    className={cn(
+                                        'inline-flex items-center gap-1 px-2 py-0.5 rounded transition-colors focus:outline-none focus:ring-1 focus:ring-sky-500',
+                                        onOpenInSearch
+                                            ? 'text-sky-400 hover:text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 cursor-pointer'
+                                            : 'text-slate-500 bg-slate-700/30 cursor-not-allowed'
+                                    )}
+                                >
+                                    <ExternalLink className="w-3 h-3" />
+                                    Open in Splunk Search
                                 </button>
                             </div>
                         </div>
@@ -300,46 +612,105 @@ export const FloridaMap: React.FC = () => {
                 )}
             </AnimatePresence>
 
-            {/* Map Control Shortcuts Overlay */}
-            <div className="absolute bottom-6 left-6 z-[1000] space-y-3">
-                <div className="bg-white/90 backdrop-blur-sm border border-slate-200 p-3 rounded-lg shadow-lg max-w-[150px]">
-                    <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">
-                        FDEM Nodes
+            {/* Bottom-left: SITE NODES legend + map/layers buttons. */}
+            <div className="absolute bottom-6 left-4 z-[1000] space-y-3 pointer-events-auto">
+                <div
+                    className={cn(
+                        'border p-3 rounded-lg shadow-lg max-w-[150px]',
+                        overlayChrome
+                    )}
+                >
+                    <h5
+                        className={cn(
+                            'text-[10px] font-black uppercase tracking-[0.2em] mb-3',
+                            isDark ? 'text-slate-400' : 'text-slate-400'
+                        )}
+                    >
+                        Site Nodes
                     </h5>
                     <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full bg-sky-500" />
-                                <span className="text-[10px] font-bold text-slate-600">STATE HQ</span>
-                            </div>
-                            <span className="text-[10px] font-mono text-slate-400">TLH</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full bg-amber-500" />
-                                <span className="text-[10px] font-bold text-slate-600">REGIONAL</span>
-                            </div>
-                            <span className="text-[10px] font-mono text-slate-400">MCO</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full bg-red-500" />
-                                <span className="text-[10px] font-bold text-slate-600">LOGISTICS</span>
-                            </div>
-                            <span className="text-[10px] font-mono text-slate-400">AUB</span>
-                        </div>
+                        <LegendRow
+                            color="bg-sky-500"
+                            label="STATE HQ"
+                            id="TLH"
+                            isDark={isDark}
+                        />
+                        <LegendRow
+                            color="bg-amber-500"
+                            label="REGIONAL"
+                            id="MCO"
+                            isDark={isDark}
+                        />
+                        <LegendRow
+                            color="bg-red-500"
+                            label="LOGISTICS"
+                            id="AUB"
+                            isDark={isDark}
+                        />
                     </div>
                 </div>
 
                 <div className="flex gap-2">
-                    <button className="bg-white/95 border border-slate-200 p-2 rounded-lg shadow-md hover:bg-slate-50 transition-colors">
-                        <MapIcon className="w-4 h-4 text-slate-600" />
+                    <button
+                        type="button"
+                        onClick={resetView}
+                        title="Reset view"
+                        aria-label="Reset map view"
+                        className={cn(
+                            'border p-2 rounded-lg shadow-md transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                            buttonChrome
+                        )}
+                    >
+                        <MapIcon className="w-4 h-4" />
                     </button>
-                    <button className="bg-white/95 border border-slate-200 p-2 rounded-lg shadow-md hover:bg-slate-50 transition-colors">
-                        <Layers className="w-4 h-4 text-slate-600" />
+                    <button
+                        type="button"
+                        onClick={cycleTilePreset}
+                        title={`Tiles · ${tilePreset.label}. Click to cycle.`}
+                        aria-label={`Switch base map (current: ${tilePreset.label})`}
+                        className={cn(
+                            'border p-2 rounded-lg shadow-md transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400 relative',
+                            buttonChrome
+                        )}
+                    >
+                        <Layers className="w-4 h-4" />
+                        <span className="absolute -bottom-1 -right-1 px-1 py-0.5 rounded text-[7px] font-bold uppercase tracking-widest bg-sky-500 text-white shadow-sm">
+                            {tilePreset.id.charAt(0)}
+                        </span>
                     </button>
                 </div>
             </div>
         </div>
     );
 };
+
+interface LegendRowProps {
+    color: string;
+    label: string;
+    id: string;
+    isDark: boolean;
+}
+
+const LegendRow: React.FC<LegendRowProps> = ({ color, label, id, isDark }) => (
+    <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+            <div className={cn('w-2 h-2 rounded-full', color)} />
+            <span
+                className={cn(
+                    'text-[10px] font-bold',
+                    isDark ? 'text-slate-300' : 'text-slate-600'
+                )}
+            >
+                {label}
+            </span>
+        </div>
+        <span
+            className={cn(
+                'text-[10px] font-mono',
+                isDark ? 'text-slate-500' : 'text-slate-400'
+            )}
+        >
+            {id}
+        </span>
+    </div>
+);

@@ -4,7 +4,7 @@ React-based Splunk app that ships four dashboards for Cisco data:
 
 | View      | Purpose                                                                 | Stack                          |
 | --------- | ----------------------------------------------------------------------- | ------------------------------ |
-| Overview  | Florida Executive Control Center design (FDEM) — sections + regional map | TypeScript, Tailwind, Leaflet, Recharts, Motion |
+| Overview  | Executive Control Center — branded title/logo, three-section layout, regional map | TypeScript, Tailwind, Leaflet, Recharts, Motion |
 | Devices   | Inventory + per-device status badges (filterable)                       | `@splunk/react-ui`             |
 | Network   | Aggregate bandwidth time-series + per-device CPU bars                   | `@splunk/react-ui`             |
 | Security  | Severity KPIs, time-window selector, alert timeline                     | `@splunk/react-ui`             |
@@ -12,9 +12,31 @@ React-based Splunk app that ships four dashboards for Cisco data:
 > The Overview dashboard is a faithful port of the design in
 > `reference_design/splunk-executive-florida-dashboard/` (Vite + React 19 +
 > Tailwind v4 + react-leaflet v5 + recharts v3). It has been adapted to
-> the Splunk app build pipeline: React 18, Tailwind v3, react-leaflet v4,
-> recharts v2 (so it works with `@splunk/react-ui` v5's React peer dep).
+> the Splunk app build pipeline: React 19, Tailwind v3, react-leaflet v4,
+> recharts v2 (the latter two stay on their react-18-peer majors to avoid
+> breaking-API rewrites; they work fine on React 19 with peer warnings).
 > Visual output is identical.
+
+## Branding (customer name + logo)
+
+The home dashboard (`home_launchpad_v3`) and the React Overview both pull
+the customer name from a single Splunk macro called `customer_name`,
+defined in `default/macros.conf`:
+
+```ini
+[customer_name]
+definition = "Acme Corporation"
+iseval = 1
+```
+
+Override the default in `local/macros.conf` per deployment.
+
+The customer logo is loaded from
+`appserver/static/images/customer_logo.png`. We ship a generic placeholder
+(seeded from the app icon) so the dashboard never shows a broken image.
+To brand a deployment, replace the file in place — the React Overview
+falls back to an inline SVG glyph via an `onError` handler if the file is
+ever missing.
 
 Each view is a Simple XML dashboard whose only panel is an `<html>` block
 containing `<div id="scan-root">`. A small RequireJS bootstrap (in

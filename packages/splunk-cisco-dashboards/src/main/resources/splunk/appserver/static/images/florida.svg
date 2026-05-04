@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 540" preserveAspectRatio="xMidYMid meet">
+  <defs>
+    <linearGradient id="floridaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#e3f2fd"/>
+      <stop offset="100%" stop-color="#bbdefb"/>
+    </linearGradient>
+    <filter id="dropshadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+      <feOffset dx="2" dy="3" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.25"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="600" height="540" fill="#fafafa"/>
+
+  <path d="M 45,118
+           Q 70,110 105,107
+           L 175,102
+           Q 250,97 320,94
+           L 410,92
+           Q 475,93 530,98
+           L 540,106
+           Q 545,118 540,128
+           L 525,138
+           Q 505,148 480,160
+           Q 460,172 450,192
+           Q 444,212 446,238
+           Q 450,272 452,302
+           Q 451,338 442,368
+           Q 428,398 408,422
+           Q 380,448 348,462
+           Q 312,475 278,475
+           Q 248,470 226,452
+           Q 210,432 200,402
+           Q 188,365 175,328
+           Q 160,288 146,250
+           Q 132,215 117,188
+           Q 99,168 80,155
+           Q 62,142 48,130
+           Z"
+        fill="url(#floridaGradient)"
+        stroke="#0d47a1"
+        stroke-width="3"
+        stroke-linejoin="round"
+        stroke-linecap="round"
+        filter="url(#dropshadow)"/>
+
+  <text x="300" y="500" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#0d47a1" text-anchor="middle" font-weight="700" letter-spacing="3">FLORIDA</text>
+</svg>

@@ -1,7 +1,23 @@
-<nav search_view="search" color="#049fd9">
-    <view name="overview" default="true" label="Overview" />
-    <view name="devices" label="Devices" />
-    <view name="network" label="Network" />
-    <view name="security" label="Security" />
-    <a href="search" target="_blank" rel="noopener" />
+<nav color="#049fd9">
+    <view name="overview" default="true" label="Overview"/>
+    <view name="home_launchpad_v3" label="Home Launchpad"/>
+    <a href="it_health_v2">IT Health</a>
+    <a href="security_v2">Security</a>
+    <a href="user_experience_v2">User Experience</a>
+    <a href="building_v2">Cisco Spaces - Building Intelligence</a>
+    <!-- <a href="spaces_intelligence_v2">New</a> -->
+    <a href="statewide_exercise_v2">Network Activation Report</a>
+    <a href="asset_inventory_v2">Inventory</a>
+    <collection label="Tools">
+        <a href="admin_guide_v21">Admin Guide</a>
+        <divider/>
+        <view name="netops_readiness_v2"/>
+        <view name="spaces_intelligence_v2"/>
+        <view name="workplace_spog_v2"/>
+        <divider/>
+        <a href="template">Template</a>
+        <divider/>
+        <view name="reports"/>
+        <view name="dashboards"/>
+    </collection>
 </nav>
