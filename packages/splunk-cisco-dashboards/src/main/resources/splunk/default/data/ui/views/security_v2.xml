@@ -193,7 +193,9 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "ISE Failures",
 			"type": "splunk.singlevalue"
@@ -225,7 +227,9 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "Email Threats",
 			"type": "splunk.singlevalue"
@@ -241,7 +245,9 @@
 				"majorColor": "#049FD9",
 				"majorFontSize": 36,
 				"showTrendIndicator": false,
-				"sparklineDisplay": "off"
+				"sparklineDisplay": "off",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "Cloud FW Blocked",
 			"type": "splunk.singlevalue"
@@ -384,7 +390,9 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "Failed (ISE+AD)",
 			"type": "splunk.singlevalue"
@@ -416,7 +424,9 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "Allowed",
 			"type": "splunk.singlevalue"
@@ -448,7 +458,9 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "Blocked",
 			"type": "splunk.singlevalue"
@@ -574,7 +586,9 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "IDS/IPS Alerts",
 			"type": "splunk.singlevalue"
@@ -609,7 +623,9 @@
 				"majorFontSize": 36,
 				"showTrendIndicator": false,
 				"sparklineDisplay": "off",
-				"unit": "%"
+				"unit": "%",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "ISE Auth",
 			"type": "splunk.singlevalue"
@@ -693,7 +709,9 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "Lockouts (AD)",
 			"type": "splunk.singlevalue"
@@ -807,7 +825,9 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "Privileged (AD)",
 			"type": "splunk.singlevalue"
@@ -823,7 +843,9 @@
 				"majorColor": "#049FD9",
 				"majorFontSize": 36,
 				"showTrendIndicator": false,
-				"sparklineDisplay": "off"
+				"sparklineDisplay": "off",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "Security Advisories",
 			"type": "splunk.singlevalue"
@@ -869,7 +891,9 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "Rogue Devices",
 			"type": "splunk.singlevalue"
@@ -901,7 +925,9 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "SD-WAN UTD",
 			"type": "splunk.singlevalue"
@@ -963,7 +989,9 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "Unauth Wireless",
 			"type": "splunk.singlevalue"
@@ -995,7 +1023,9 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "Web Blocked",
 			"type": "splunk.singlevalue"
@@ -1027,28 +1057,24 @@
 		"ds_cloud_fw_blocked": {
 			"name": "Security Resilience - ds_cloud_fw_blocked",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "`index_security` sourcetype=\"cisco:cloud_security:firewall\" action=\"Blocked\"\n| stats count by src, dest, dest_port\n| stats count as count",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Security Resilience - ds_cloud_fw_blocked",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_email_threats": {
 			"name": "Security Resilience - ds_email_threats",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "`index_security` (sourcetype=\"cisco:esa:amp\" OR sourcetype=\"cisco:esa:antispam\" OR sourcetype=\"cisco:esa:content_scanner\") ((MALICIOUS OR Unscannable) OR (SPAM OR SUSPECT OR POSITIVE OR quarantine) OR (virus OR malware OR DETECTED))\n| stats count",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Security Resilience - ds_email_threats",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_email_threats_trend": {
 			"name": "Email Threats Trend",
@@ -1064,28 +1090,24 @@
 		"ds_failed_detail_sources": {
 			"name": "Security Resilience - ds_failed_detail_sources",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "| tstats `summariesonly` count from datamodel=Authentication where Authentication.action=\"failure\" Authentication.src!=\"\" Authentication.src!=\"-\" Authentication.src!=\"::1\" Authentication.src!=\"127.0.0.1\" sourcetype=\"XmlWinEventLog\" BY Authentication.src\n| rename Authentication.src as \"Source IP\", count as Failures\n| sort -Failures\n| head 10",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Security Resilience - ds_failed_detail_sources",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_failed_detail_users": {
 			"name": "Security Resilience - ds_failed_detail_users",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "| tstats `summariesonly` count from datamodel=Authentication where Authentication.action=\"failure\" sourcetype=\"XmlWinEventLog\" BY Authentication.user\n| rename Authentication.user as User, count as Failures\n| where NOT match(User, \"\\$$\")\n| sort -Failures\n| head 10",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Security Resilience - ds_failed_detail_users",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_failed_logons": {
 			"name": "Executive Dashboard - ds_failed_logons",
@@ -1120,15 +1142,13 @@
 		"ds_fw_allowed": {
 			"name": "Security Resilience - ds_fw_allowed",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "| tstats `summariesonly` count from datamodel=Network_Traffic where All_Traffic.action=\"allowed\" by All_Traffic.src, All_Traffic.dest, All_Traffic.dest_port\n| stats count as allowed",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Security Resilience - ds_fw_allowed",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_fw_allowed_trend": {
 			"name": "Firewall Allowed Trend",
@@ -1144,15 +1164,13 @@
 		"ds_fw_blocked": {
 			"name": "Executive Dashboard - ds_fw_blocked",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "| tstats `summariesonly` count from datamodel=Network_Traffic where All_Traffic.action=\"blocked\" by All_Traffic.src, All_Traffic.dest, All_Traffic.dest_port\n| stats count as blocked",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Executive Dashboard - ds_fw_blocked",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_fw_blocked_trend": {
 			"name": "Firewall Blocked Trend",
@@ -1168,15 +1186,13 @@
 		"ds_fw_top_blocked": {
 			"name": "Security Resilience - ds_fw_top_blocked",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "| tstats `summariesonly` count as blocked_connections from datamodel=Network_Traffic where All_Traffic.action=\"blocked\" by All_Traffic.dest\n| rename All_Traffic.dest as \"Destination IP\", blocked_connections as \"Blocked Connections\"\n| where isnotnull('Destination IP')\n| sort -\"Blocked Connections\"\n| head 10",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Security Resilience - ds_fw_top_blocked",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_fw_trend": {
 			"name": "Firewall Trend",
@@ -1189,41 +1205,35 @@
 		"ds_identity_detail_trend": {
 			"name": "Security Resilience - ds_identity_detail_trend",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "(`index_windows` sourcetype=\"XmlWinEventLog\" (EventCode=4624 OR EventCode=4625 OR EventCode=4740)) OR (`index_identity` sourcetype=\"cisco:ise:syslog\" (\"5200\" OR \"5400\"))\n| eval evt=case(EventCode==4624,\"AD_Success\", EventCode==4625,\"AD_Failed\", EventCode==4740,\"AD_Lockout\", match(_raw,\"5200\"),\"ISE_Success\", match(_raw,\"5400\"),\"ISE_Failed\", 1==1,\"Other\")\n| where evt!=\"Other\"\n| timechart count by evt",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Security Resilience - ds_identity_detail_trend",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_identity_trend": {
 			"name": "Security Resilience - ds_identity_trend",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "| tstats `summariesonly` count from datamodel=Authentication BY _time Authentication.action, sourcetype\n| rename Authentication.action as action\n| eval evt=case( action==\"success\" AND sourcetype==\"cisco:ise:syslog\",\"ISE_Pass\", action==\"failure\" AND sourcetype==\"cisco:ise:syslog\",\"ISE_Fail\", action==\"success\",\"AD_Success\", action==\"failure\",\"AD_Failure\", action==\"lockout\",\"Lockout\", 1==1,\"Other\")\n| timechart count by evt",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Security Resilience - ds_identity_trend",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_ids_alerts": {
 			"name": "Security Resilience - ds_ids_alerts",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "| tstats `summariesonly` count FROM datamodel=Cisco_Security WHERE nodename=Cisco_Security.Secure_Firewall_Dataset.Intrusion_Events",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Security Resilience - ds_ids_alerts",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_ids_trend": {
 			"name": "IDS/IPS Alerts Trend",
@@ -1239,41 +1249,35 @@
 		"ds_ise_auth": {
 			"name": "Security Resilience - ds_ise_auth",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "`index_identity` sourcetype=\"cisco:ise:syslog\" (\"5200\" OR \"5401\")\n| eval passed=if(match(_raw,\"5200\"),1,0)\n| stats sum(passed) as pass, count as total\n| eval score=if(total>0, round(pass/total*100, 1), 0)\n| fields score",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Security Resilience - ds_ise_auth",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_ise_by_nas": {
 			"name": "Security Resilience - ds_ise_by_nas",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "`index_identity` sourcetype=\"cisco:ise:syslog\" (\"5200\" OR \"5401\")\n| rex \"NetworkDeviceName=(?<nas>[^,;]+)\"\n| fillnull nas value=\"Unknown\"\n| eval passed=if(match(_raw,\"5200\"),1,0)\n| stats count as Total, sum(passed) as Pass by nas\n| eval Fail=Total-Pass, \"Pass %\"=round(Pass/Total*100, 1)\n| sort -Total\n| head 10\n| rename nas as \"Network Access Server\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Security Resilience - ds_ise_by_nas",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_ise_fail_count": {
 			"name": "Security Resilience - ds_ise_fail_count",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "`index_identity` sourcetype=\"cisco:ise:syslog\" \"5401\"\n| stats count as score",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Security Resilience - ds_ise_fail_count",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_ise_fail_trend": {
 			"name": "ISE Failures Trend",
@@ -1289,15 +1293,13 @@
 		"ds_ise_failure_reasons": {
 			"name": "Security Resilience - ds_ise_failure_reasons",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "`index_identity` sourcetype=\"cisco:ise:syslog\" \"5401\"\n| rex \"FailureReason=(?<reason>[^,;]+)\"\n| fillnull reason value=\"Unknown\"\n| stats count by reason\n| sort -count\n| head 10\n| rename reason as \"Failure Reason\", count as Count",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Security Resilience - ds_ise_failure_reasons",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_ise_trend": {
 			"name": "ISE Auth Trend",
@@ -1409,28 +1411,24 @@
 		"ds_lockout_detail": {
 			"name": "Security Resilience - ds_lockout_detail",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "`index_windows` sourcetype=\"XmlWinEventLog\" EventCode=4740\n| stats count as Lockouts, latest(_time) as last_seen, values(TargetDomainName) as sources by TargetUserName\n| eval last_seen=strftime(last_seen, \"%Y-%m-%d %H:%M\"), sources=mvjoin(sources, \", \")\n| sort -Lockouts\n| head 10\n| rename TargetUserName as \"Locked User\", sources as \"Source Hosts\", last_seen as \"Last Lockout\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Security Resilience - ds_lockout_detail",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_lockouts": {
 			"name": "Security Resilience - ds_lockouts",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "| tstats `summariesonly` dc(Authentication.user) as count from datamodel=Authentication where Authentication.action=\"lockout\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Security Resilience - ds_lockouts",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_lockouts_trend": {
 			"name": "Lockouts Trend",
@@ -1446,15 +1444,13 @@
 		"ds_priv_detail": {
 			"name": "Security Resilience - ds_priv_detail",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "| tstats `summariesonly` count from datamodel=Authentication where Authentication.signature_id=4672 sourcetype=\"XmlWinEventLog\" BY Authentication.user\n| rename Authentication.user as User, count as \"Priv Logons\"\n| sort -\"Priv Logons\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Security Resilience - ds_priv_detail",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_priv_trend": {
 			"name": "Privileged Logon Trend",
@@ -1470,15 +1466,13 @@
 		"ds_privileged_logons": {
 			"name": "Security Resilience - ds_privileged_logons",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "| tstats `summariesonly` count from datamodel=Authentication where (Authentication.signature_id=4672 OR Authentication.signature_id=4673) sourcetype=\"XmlWinEventLog\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Security Resilience - ds_privileged_logons",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_privileged_trend": {
 			"name": "Privileged Logons Trend",
@@ -1502,28 +1496,24 @@
 		"ds_rogue_device_detail": {
 			"name": "Security Resilience - ds_rogue_device_detail",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "(`index_network` sourcetype=\"cisco:ios\" (\"%SISF-4-MAC_STEAL\" OR \"%DOT1X-5-FAIL\" OR \"Rogue\")) OR (`index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueName=\"*rogue*\")\n| eval event_type=case(match(_raw,\"%SISF-4-MAC_STEAL\"),\"MAC Steal\", match(_raw,\"%DOT1X-5-FAIL\"),\"802.1X Failure\", match(_raw,\"(?i)rogue\") AND sourcetype==\"cisco:dnac:issue\",\"DNAC Rogue Alert\", match(_raw,\"(?i)rogue\"),\"Rogue Detected\", 1==1,\"Other\")\n| eval device=coalesce(host, DeviceName, \"unknown\")\n| stats count as events, latest(_time) as last_seen by device, event_type\n| eval last_seen=strftime(last_seen, \"%Y-%m-%d %H:%M:%S\")\n| sort -events\n| rename device as \"Device\", event_type as \"Event Type\", events as \"Events\", last_seen as \"Last Seen\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Security Resilience - ds_rogue_device_detail",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_rogue_devices": {
 			"name": "Security Resilience - ds_rogue_devices",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "(`index_network` sourcetype=\"cisco:ios\" (\"%SISF-4-MAC_STEAL\" OR \"%DOT1X-5-FAIL\" OR \"Rogue\")) OR (`index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueName=\"*rogue*\")\n| stats count",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Security Resilience - ds_rogue_devices",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_rogue_trend": {
 			"name": "Rogue Devices Trend",
@@ -1539,15 +1529,13 @@
 		"ds_sdwan_utd": {
 			"name": "Security Resilience - ds_sdwan_utd",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "`index_security` sourcetype=\"cisco:sdwan:utd:logs\"\n| rex field=_raw \"\\]\\s+(?<utd_action>\\w+)\\s+\\[\\*\\*\\]\\s+UTD\"\n| where utd_action=\"Drop\" OR utd_action=\"Block\" OR isnotnull(utd_action)\n| stats count",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Security Resilience - ds_sdwan_utd",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_sdwan_utd_trend": {
 			"name": "SD-WAN UTD Trend",
@@ -1587,28 +1575,24 @@
 		"ds_unauthorized_wireless": {
 			"name": "Security Resilience - ds_unauthorized_wireless",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "(`index_network` sourcetype=\"cisco:ios\" (\"%DOT11-4-MAXRETRIES\" OR \"%LWAPP-3-\" OR \"Rogue AP\")) OR (`index_catalyst` sourcetype=\"cisco:dnac:client\" \"connection.authType\"=\"Open\")\n| stats count",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Security Resilience - ds_unauthorized_wireless",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_web_threats": {
 			"name": "Security Resilience - ds_web_threats",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "`index_security` (sourcetype=\"cisco:wsa:squid\" OR sourcetype=\"cisco:wsa:l4tm\")\n| stats count(eval(match(sc_filter_result,\"(?i)block\") OR match(_raw,\"(?i)BLOCK\"))) as count",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Security Resilience - ds_web_threats",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_web_threats_trend": {
 			"name": "Web Blocked Trend",
@@ -2248,5 +2232,5 @@
 		"hideEdit": false
 	}
 }
- ]]></definition>
+]]></definition>
 </dashboard>

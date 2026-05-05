@@ -121,7 +121,9 @@
 				"majorColor": "> majorValue | rangeValue(rangeColorsEditorConfig)",
 				"majorValue": "> primary | seriesByName(\"used_pct\") | lastPoint()",
 				"unit": "%",
-				"unitPosition": "after"
+				"unitPosition": "after",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "Network Capacity Utilization",
 			"type": "splunk.singlevalueradial"
@@ -433,7 +435,9 @@
 				"backgroundColor": "transparent",
 				"majorColor": "#1a1a1a",
 				"majorFontSize": 16,
-				"majorValue": "Network capacity utilization at a glance"
+				"majorValue": "Network capacity utilization at a glance",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"type": "splunk.singlevalue"
 		},
@@ -559,7 +563,9 @@
 				"backgroundColor": "#FFFFFF",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
 				"unit": "%",
-				"unitPosition": "after"
+				"unitPosition": "after",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "A — Attainability",
 			"type": "splunk.singlevalue"
@@ -590,7 +596,9 @@
 				"backgroundColor": "#FFFFFF",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
 				"unit": "%",
-				"unitPosition": "after"
+				"unitPosition": "after",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "D_risk — Risk Multiplier",
 			"type": "splunk.singlevalue"
@@ -677,7 +685,9 @@
 				"backgroundColor": "#FFFFFF",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
 				"unit": "%",
-				"unitPosition": "after"
+				"unitPosition": "after",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "Q — Quality",
 			"type": "splunk.singlevalue"
@@ -708,7 +718,9 @@
 				"backgroundColor": "#FFFFFF",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
 				"unit": "%",
-				"unitPosition": "after"
+				"unitPosition": "after",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "R — Retainability",
 			"type": "splunk.singlevalue"
@@ -742,7 +754,9 @@
 				"sparklineDisplay": "below",
 				"sparklineSeriesColor": "#049FD9",
 				"unit": "%",
-				"unitPosition": "after"
+				"unitPosition": "after",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "Network Readiness Score",
 			"type": "splunk.singlevalue"
@@ -972,7 +986,9 @@
 				"majorColor": "> primary | seriesByName('at_risk') | lastPoint() | rangeValue(majorColorEditorConfig)",
 				"majorValue": "> primary | seriesByName('label') | lastPoint()",
 				"unit": " APs over saturation",
-				"unitPosition": "after"
+				"unitPosition": "after",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "Q5 — Saturated APs (> 30 clients) / total",
 			"type": "splunk.singlevalue"
@@ -1175,7 +1191,7 @@
 		"ds_a_nrs_forecast": {
 			"name": "NRS hourly with 24h forecast",
 			"options": {
-				"query": "| union [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" OverallHealth=* \n | search DeviceFamily=\"Unified AP\" OR DeviceFamily=\"Wireless Controller\" \n | where OverallHealth >= 0 \n | bin _time span=1h \n | stats latest(Reachability) as reach, latest(OverallHealth) as oh by _time, DeviceName \n | eval is_reach=if(upper(reach)=\"REACHABLE\", 1, 0), ap_ok=if(oh>=`nrs_th_ap_health`, 1, 0) \n | stats avg(is_reach) as ap_reach, avg(ap_ok) as ap_health_ok, count as ap_n by _time ]\n| union [ search `index_catalyst` sourcetype=\"cisco:dnac:client\" \n | eval cl_health = 'health.overallScore' \n | bin _time span=1h \n | stats avg(cl_health) as health_avg, count(eval(cl_health>=`nrs_th_cl_health`)) as ok_n, count as cl_n by _time \n | eval cl_ok=if(cl_n>0, ok_n/cl_n, null()), health100=coalesce(health_avg,8)*10 ] \n| stats values(ap_reach) as ap_reach, values(ap_health_ok) as ap_ok,\n values(cl_ok) as cl_ok, values(health100) as h100,\n values(ap_n) as ap_n, values(cl_n) as cl_n by _time \n| eval ap_reach=coalesce(ap_reach,1), ap_ok=coalesce(ap_ok,1),\n cl_ok=coalesce(cl_ok,1), h100=coalesce(h100,80) \n| eval A=ap_reach*100, R=(ap_ok*0.5 + cl_ok*0.5)*100, Q=h100 \n| eval NRS=A*`nrs_w_nrs_a` + R*`nrs_w_nrs_r` + Q*`nrs_w_nrs_q` \n| timechart span=1h max(eval(round(NRS, 2))) as NRS \n| predict NRS as predicted future_timespan=24 \n| rename \"upper95(prediction(NRS))\" as upper95,\n \"lower95(prediction(NRS))\" as lower95 \n| eval predicted=round(predicted, 2), upper95=round(upper95, 2), lower95=round(lower95, 2)",
+				"query": "| union [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" OverallHealth=* \n | search DeviceFamily=\"Unified AP\" OR DeviceFamily=\"Wireless Controller\" \n | where OverallHealth >= 0 \n | bin _time \n | stats latest(Reachability) as reach, latest(OverallHealth) as oh by _time, DeviceName \n | eval is_reach=if(upper(reach)=\"REACHABLE\", 1, 0), ap_ok=if(oh>=`nrs_th_ap_health`, 1, 0) \n | stats avg(is_reach) as ap_reach, avg(ap_ok) as ap_health_ok, count as ap_n by _time ]\n| union [ search `index_catalyst` sourcetype=\"cisco:dnac:client\" \n | eval cl_health = 'health.overallScore' \n | bin _time \n | stats avg(cl_health) as health_avg, count(eval(cl_health>=`nrs_th_cl_health`)) as ok_n, count as cl_n by _time \n | eval cl_ok=if(cl_n>0, ok_n/cl_n, null()), health100=coalesce(health_avg,8)*10 ] \n| stats values(ap_reach) as ap_reach, values(ap_health_ok) as ap_ok,\n values(cl_ok) as cl_ok, values(health100) as h100,\n values(ap_n) as ap_n, values(cl_n) as cl_n by _time \n| eval ap_reach=coalesce(ap_reach,1), ap_ok=coalesce(ap_ok,1),\n cl_ok=coalesce(cl_ok,1), h100=coalesce(h100,80) \n| eval A=ap_reach*100, R=(ap_ok*0.5 + cl_ok*0.5)*100, Q=h100 \n| eval NRS=A*`nrs_w_nrs_a` + R*`nrs_w_nrs_r` + Q*`nrs_w_nrs_q` \n| timechart max(eval(round(NRS, 2))) as NRS \n| predict NRS as predicted future_timespan=24 \n| rename \"upper95(prediction(NRS))\" as upper95,\n \"lower95(prediction(NRS))\" as lower95 \n| eval predicted=round(predicted, 2), upper95=round(upper95, 2), lower95=round(lower95, 2)",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1199,7 +1215,7 @@
 		"ds_c_issues_forecast": {
 			"name": "Active issues hourly with 24h forecast",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueStatus=\"active\"\n| timechart span=1h dc(IssueID) as \"Active Issues\"\n| predict \"Active Issues\" as predicted future_timespan=24\n| rename \"upper95(prediction(Active Issues))\" as upper95,\n \"lower95(prediction(Active Issues))\" as lower95\n| eval predicted=round(predicted, 2), upper95=round(upper95, 2), lower95=round(lower95, 2)",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueStatus=\"active\"\n| timechart dc(IssueID) as \"Active Issues\"\n| predict \"Active Issues\" as predicted future_timespan=24\n| rename \"upper95(prediction(Active Issues))\" as upper95,\n \"lower95(prediction(Active Issues))\" as lower95\n| eval predicted=round(predicted, 2), upper95=round(upper95, 2), lower95=round(lower95, 2)",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1223,7 +1239,7 @@
 		"ds_d_wow_users": {
 			"name": "Spaces concurrent users this week vs last week",
 			"options": {
-				"query": "| union \n [ search `index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_PRESENCE\"\n earliest=-7d@h latest=@h\n | eval mac=coalesce('devicePresence.device.macAddress','devicePresence.macAddress')\n | where isnotnull(mac) AND mac!=\"\"\n | bin _time span=1h\n | stats dc(mac) as \"This week\" by _time ]\n [ search `index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_PRESENCE\"\n earliest=-14d@h latest=-7d@h\n | eval mac=coalesce('devicePresence.device.macAddress','devicePresence.macAddress')\n | where isnotnull(mac) AND mac!=\"\"\n | eval _time = _time + 604800\n | bin _time span=1h\n | stats dc(mac) as \"Last week\" by _time ]\n| timechart span=1h max(\"This week\") as \"This week\", max(\"Last week\") as \"Last week\"\n",
+				"query": "| union \n [ search `index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_PRESENCE\"\n earliest=-7d@h latest=@h\n | eval mac=coalesce('devicePresence.device.macAddress','devicePresence.macAddress')\n | where isnotnull(mac) AND mac!=\"\"\n | bin _time \n | stats dc(mac) as \"This week\" by _time ]\n [ search `index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_PRESENCE\"\n earliest=-14d@h latest=-7d@h\n | eval mac=coalesce('devicePresence.device.macAddress','devicePresence.macAddress')\n | where isnotnull(mac) AND mac!=\"\"\n | eval _time = _time + 604800\n | bin _time \n | stats dc(mac) as \"Last week\" by _time ]\n| timechart max(\"This week\") as \"This week\", max(\"Last week\") as \"Last week\"\n",
 				"refresh": "300s",
 				"refreshType": "delay"
 			},
@@ -1232,15 +1248,13 @@
 		"ds_annotations": {
 			"name": "Shared - ds_annotations",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "| noop",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Shared - ds_annotations",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_q10_recovery_health": {
 			"name": "Q10a - DNAC avg client health over time",
@@ -2479,5 +2493,5 @@
 		}
 	}
 }
- ]]></definition>
+]]></definition>
 </dashboard>

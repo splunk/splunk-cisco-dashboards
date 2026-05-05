@@ -70,12 +70,9 @@ L.Icon.Default.mergeOptions({
 // the dashboard cares about (matches the SITE NODES legend below). Add
 // more here only if they get a corresponding row in the legend + table.
 //
-// `savedSearch` is the *only* link to the actual SPL — the search lives
-// in `default/savedsearches.conf` (`Overview - site_<id>` stanzas) so
-// executives can tune the analysis without redeploying the React
-// bundle. The popup card pulls the resolved SPL from the saved-search
-// catalogue cache (shared with the KPI picker), so what you see is
-// exactly what the conf currently defines.
+// `savedSearch` is the searchbase.conf `search_name` for the site SPL.
+// The popup card pulls the resolved SPL from the searchbase catalogue,
+// so what you see is exactly what the app dispatches.
 const cities: City[] = [
     {
         id: 'tlh',

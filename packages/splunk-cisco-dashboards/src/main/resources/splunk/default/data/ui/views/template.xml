@@ -68,7 +68,7 @@
 		},
 		"viz_about_md": {
 			"options": {
-				"markdown": "### Metric Reference\n\n---\n\n**KPI 1** — Description of this metric and where the data comes from\n\n**KPI 2** — Description of this metric and where the data comes from\n\n**KPI 3** — Description of this metric and where the data comes from\n\n---\n\n### Data Sources\n\n| Saved Search | Schedule | Description |\n|---|---|---|\n| `Your Dashboard - ds_example` | `*/4 * * * *` | Replace with your search description |\n\n---\n\n### Architecture Notes\n\n- **ds.savedSearch** — References a scheduled saved search (uses cached artifacts)\n- **ds.chain** — Post-processes a parent data source without dispatching a new search\n- **ds.search** — Inline ad-hoc search (no caching, runs every time)"
+				"markdown": "### Metric Reference\n\n---\n\n**KPI 1** — Description of this metric and where the data comes from\n\n**KPI 2** — Description of this metric and where the data comes from\n\n**KPI 3** — Description of this metric and where the data comes from\n\n---\n\n### Data Sources\n\n| Searchbase Entry | Execution | Description |\n|---|---|---|\n| `Your Dashboard - ds_example` | Inline `ds.search` | Replace with your real searchbase-backed SPL |\n\n---\n\n### Architecture Notes\n\n- **searchbase.conf** — Source of truth for dashboard SPL and picker metadata\n- **ds.search** — Inline ad-hoc search copied from searchbase.conf\n- **ds.savedSearch** — Use only for scheduled/materialized searches with cached artifacts\n- **ds.chain** — Post-processes a parent data source without dispatching a new search"
 			},
 			"type": "splunk.markdown"
 		},
@@ -166,7 +166,9 @@
 				"primary": "ds_placeholder_kpi"
 			},
 			"options": {
-				"majorColor": "#049fd9"
+				"majorColor": "#049fd9",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "KPI 1",
 			"type": "splunk.singlevalue"
@@ -176,7 +178,9 @@
 				"primary": "ds_placeholder_kpi"
 			},
 			"options": {
-				"majorColor": "#049fd9"
+				"majorColor": "#049fd9",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "KPI 2",
 			"type": "splunk.singlevalue"
@@ -186,7 +190,9 @@
 				"primary": "ds_placeholder_kpi"
 			},
 			"options": {
-				"majorColor": "#049fd9"
+				"majorColor": "#049fd9",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "KPI 3",
 			"type": "splunk.singlevalue"
@@ -228,34 +234,32 @@
 		"ds_placeholder_chart": {
 			"name": "Placeholder Chart",
 			"options": {
-				"query": "| makeresults count=24 | streamstats count as hour | eval _time=relative_time(now(), \"-24h\") + (hour * 3600), clients=random() % 500 | table _time, clients"
+				"query": "| noop"
 			},
 			"type": "ds.search"
 		},
 		"ds_placeholder_kpi": {
 			"name": "Placeholder KPI",
 			"options": {
-				"query": "| makeresults | eval metric=\"Replace Me\", value=42 | fields metric, value"
+				"query": "| noop"
 			},
 			"type": "ds.search"
 		},
 		"ds_placeholder_saved": {
-			"name": "YOUR SAVED SEARCH NAME HERE",
+			"name": "Template placeholder - replace with searchbase entry",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "| noop",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "YOUR SAVED SEARCH NAME HERE",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_placeholder_table": {
 			"name": "Placeholder Table",
 			"options": {
-				"query": "| makeresults count=5 | streamstats count as row | eval Device=\"device-\".row, Status=if(row<4, \"Healthy\", \"Critical\"), Health=if(row<4, round(random()%30+70), round(random()%30+20)) | table Device, Status, Health"
+				"query": "| noop"
 			},
 			"type": "ds.search"
 		}
@@ -553,5 +557,5 @@
 		"hideEdit": false
 	}
 }
- ]]></definition>
+]]></definition>
 </dashboard>

@@ -1,11 +1,11 @@
 /**
  * IncidentTicker — auto-cycling strip of recent critical events.
  *
- * Driven by a Splunk saved search whose result rows look like
+ * Optionally driven by a Splunk saved search whose result rows look like
  *
  *     _time, severity, source, message
  *
- * Falls back to a static placeholder list if the search isn't wired or
+ * Falls back to a non-data configured state if the search isn't wired or
  * returns no rows. Each row is shown for `intervalMs` (default 5 s) and
  * the ticker pauses on hover so executives can read.
  */
@@ -39,7 +39,7 @@ const FALLBACK_INCIDENTS: IncidentRow[] = [
     {
         severity: 'medium',
         source: 'Catalyst Center',
-        message: 'Awaiting incident feed — wire `Overview - ds_recent_incidents` to populate.',
+        message: 'Incident feed not configured.',
         when: '—',
     },
 ];

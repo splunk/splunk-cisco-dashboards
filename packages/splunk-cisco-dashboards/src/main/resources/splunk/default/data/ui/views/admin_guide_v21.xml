@@ -126,7 +126,9 @@
 				"primary": "ds_kpi_total"
 			},
 			"options": {
-				"majorColor": "#049fd9"
+				"majorColor": "#049fd9",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "Total Searches",
 			"description": "All search dispatches across dashboards"
@@ -137,7 +139,9 @@
 				"primary": "ds_kpi_scheduled"
 			},
 			"options": {
-				"majorColor": "#049fd9"
+				"majorColor": "#049fd9",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "Scheduled",
 			"description": "Searches triggered by a saved schedule"
@@ -148,7 +152,9 @@
 				"primary": "ds_kpi_ondemand"
 			},
 			"options": {
-				"majorColor": "#E5A823"
+				"majorColor": "#E5A823",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "On-Demand",
 			"description": "Searches triggered by user interaction"
@@ -160,7 +166,9 @@
 			},
 			"options": {
 				"majorColor": "#049fd9",
-				"unit": "%"
+				"unit": "%",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "Scheduled %",
 			"description": "Percentage of searches running on schedule"
@@ -195,7 +203,7 @@
 		"viz_ts_info": {
 			"type": "splunk.markdown",
 			"options": {
-				"markdown": "### How to Read This Report\n\n---\n\n**CACHE HIT** — Dashboard reused a pre-computed scheduler artifact (fast, no new search dispatched)\n\n**CACHE MISS** — Dashboard dispatched a fresh search because no cached artifact was found\n\n---\n\n**Why would a search miss?**\n- The saved search is **not scheduled** (`NOT SCHEDULED`)\n- The scheduler artifact **expired** (check Age vs schedule interval)\n- The search was an **inline search** (`INLINE`)\n\n**How to fix misses:** Go to **Settings > Searches, Reports, and Alerts**, find the search, click **Edit > Edit Schedule**, enable scheduling and set the cron expression.\n\n---\n\n### How Saved Search Caching Works\n\nAll dashboards use `ds.savedSearch` data sources that reference scheduled saved searches. When a dashboard loads:\n\n1. **Scheduled + `ds.savedSearch` (`ref`)** — Splunk loads the latest cached result from the scheduler. No new search runs. This is what produces a **CACHE HIT**.\n2. **Non-scheduled + `ds.savedSearch` (`ref`)** — Splunk runs a fresh search since no cached artifact exists. This is a **CACHE MISS**.\n3. **`ds.search` with `| savedsearch`** — Always runs a new search regardless of schedule. Use only when tokens are needed.\n\nConcurrency limits apply: if a dashboard has more `ds.savedSearch` data sources than the concurrency limit allows, excess searches will not execute. Scheduling all searches ensures cached artifacts are always ready.\n\nFor full details, see the Splunk documentation: [Call saved searches — Dashboard Studio](https://help.splunk.com/en/splunk-cloud-platform/create-dashboards-and-reports/dashboard-studio/10.3.2512/use-data-sources/call-saved-searches)",
+				"markdown": "### How to Read This Report\n\n---\n\n**CACHE HIT** — Dashboard reused a pre-computed scheduler artifact (fast, no new search dispatched)\n\n**CACHE MISS** — Dashboard dispatched a fresh search because no cached artifact was found\n\n---\n\n**Why would a search miss?**\n- The saved search is **not scheduled** (`NOT SCHEDULED`)\n- The scheduler artifact **expired** (check Age vs schedule interval)\n- The search was an **inline search** (`INLINE`)\n\n**How to fix misses:** Only schedule searches that should be materialized or reused as cached artifacts. Ad-hoc dashboard searches should live in `searchbase.conf` and run as inline `ds.search`.\n\n---\n\n### How Search Execution Works\n\nMost dashboards now use inline `ds.search` copied from `searchbase.conf`. `savedsearches.conf` is limited to scheduled/materialized jobs and explicit compatibility dependencies. When a dashboard loads:\n\n1. **Scheduled + `ds.savedSearch` (`ref`)** — Splunk loads the latest cached result from the scheduler. No new search runs. This is what produces a **CACHE HIT**.\n2. **Inline `ds.search`** — Splunk runs the literal SPL from the dashboard/searchbase catalogue. This is expected for ad-hoc panels.\n3. **`ds.search` with `| savedsearch`** — Always runs a new search regardless of schedule. Use only when tokens or compatibility require it.\n\nConcurrency limits still apply to inline searches. Schedule only the heavy or reusable searches where cached artifacts genuinely improve load time.\n\nFor full details, see the Splunk documentation: [Call saved searches — Dashboard Studio](https://help.splunk.com/en/splunk-cloud-platform/create-dashboards-and-reports/dashboard-studio/10.3.2512/use-data-sources/call-saved-searches)",
 				"backgroundColor": "#ffffff"
 			}
 		},
@@ -743,7 +751,7 @@
 		"ds_dashboard_usage": {
 			"type": "ds.search",
 			"options": {
-				"query": "index=_internal sourcetype=splunk_web_access user!=\"-\" app=* view=* \n| bin _time span=1d \n| stats dc(user) as daily_users values(user) as Users by _time, app, view \n| stats sparkline(sum(daily_users), 1d) as trend, dc(user) as \"Unique Users\", values(Users) as Users by app, view \n| rename app as App, view as Dashboard \n| sort - \"Unique Users\"",
+				"query": "index=_internal sourcetype=splunk_web_access user!=\"-\" app=* view=* \n| bin _time \n| stats dc(user) as daily_users values(user) as Users by _time, app, view \n| stats sparkline(sum(daily_users), 1d) as trend, dc(user) as \"Unique Users\", values(Users) as Users by app, view \n| rename app as App, view as Dashboard \n| sort - \"Unique Users\"",
 				"queryParameters": {
 					"earliest": "-30d@d",
 					"latest": "now"
@@ -1303,5 +1311,5 @@
 		"collapseNavigation": false
 	}
 }
- ]]></definition>
+]]></definition>
 </dashboard>

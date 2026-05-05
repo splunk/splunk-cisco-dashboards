@@ -2,19 +2,18 @@
  * searchbaseCatalogue — fetches the rich KPI metadata catalogue out of
  * the app's `searchbase.conf` file.
  *
- * Why this exists: `savedsearches.conf` only carries `description` and
- * the SPL itself. `searchbase.conf` carries the things executives want
- * to filter on — `category`, `sub_category`, `tags`, friendly
- * `search_name`, and a curated long-form `description`. By keeping
- * the dispatch path on saved-searches and using `searchbase.conf` as
- * a *metadata layer*, the picker gets:
+ * Why this exists: `searchbase.conf` is the single catalogue for
+ * dashboard-adjacent SPL and rich picker metadata — `category`,
+ * `sub_category`, `tags`, friendly `search_name`, descriptions, and
+ * the literal `search` body. By using this file as the dispatch
+ * catalogue, the picker gets:
  *
  *   • Category / sub-category facet chips out of the box
  *   • Tag chip filters
  *   • Richer per-row descriptions
  *
- * …without touching saved-search names (which would break dashboards
- * and scheduled-search references).
+ * …without requiring every ad-hoc dashboard query to also exist as a
+ * saved search.
  *
  * REST endpoint: Splunk serves any custom conf file at
  *   /servicesNS/<owner>/<app>/configs/conf-<name>
@@ -22,11 +21,8 @@
  * for `count=0` to get the whole catalogue in one call (currently ~100
  * stanzas, so well within reason).
  *
- * The bridge field is `search_name`. searchbase entries declare it
- * explicitly, and 100% of overlapping entries match a stanza in
- * `savedsearches.conf` (verified at build-time via grep diff). When
- * the picker enriches a saved-search row, the join key is
- * `savedsearches[].name === searchbase[].search_name`.
+ * The stable external key is `search_name`; `aliases` keep older keys
+ * resolving after metadata-only renames.
  */
 
 import { getSearchAppContext } from './splunkSearchService';
@@ -34,8 +30,10 @@ import { getSearchAppContext } from './splunkSearchService';
 export interface SearchbaseRecord {
     /** Stanza id in searchbase.conf (lowercase, snake_case). */
     id: string;
-    /** Friendly label and join key against savedsearches.conf. */
+    /** Friendly label and stable runtime key. */
     searchName: string;
+    /** Legacy search_name values that should resolve to this entry. */
+    aliases: string[];
     /** Top-level grouping (e.g. "Building", "Network", "Security"). */
     category: string;
     /** Free-form sub-grouping (e.g. "Environmental Sensors"). */
@@ -55,6 +53,7 @@ interface SearchbaseEntry {
     acl?: { app?: string };
     content?: {
         search_name?: string;
+        aliases?: string;
         category?: string;
         sub_category?: string;
         tags?: string;
@@ -103,6 +102,15 @@ const splitTags = (raw: string | undefined): string[] => {
         .slice(0, 20);
 };
 
+const splitAliases = (raw: string | undefined): string[] => {
+    if (typeof raw !== 'string' || raw.length === 0) return [];
+    return raw
+        .split(',')
+        .map((t) => t.trim())
+        .filter((t) => t.length > 0 && t.length <= 256)
+        .slice(0, 20);
+};
+
 let CACHED_PROMISE: Promise<SearchbaseRecord[]> | null = null;
 
 const fetchSearchbase = async (): Promise<SearchbaseRecord[]> => {
@@ -129,6 +137,7 @@ const fetchSearchbase = async (): Promise<SearchbaseRecord[]> => {
         out.push({
             id: typeof e.name === 'string' ? e.name : '',
             searchName,
+            aliases: splitAliases(content.aliases),
             category: typeof content.category === 'string' ? content.category : '',
             subCategory: typeof content.sub_category === 'string' ? content.sub_category : '',
             tags: splitTags(content.tags),

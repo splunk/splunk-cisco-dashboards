@@ -1,16 +1,16 @@
 /**
- * KpiPickerPanel — slide-in panel that lets the user swap which saved
- * search powers a given metric tile.
+ * KpiPickerPanel — slide-in panel that lets the user swap which
+ * searchbase entry powers a given metric tile.
  *
  * Source of truth
  * ---------------
  * The panel browses `searchbase.conf` (rich KPI catalogue with
  * category / sub_category / tags / description / inline SPL).
- * `savedsearches.conf` is the dispatch SoT — when the user applies a
- * pick, the metric tile fires `| savedsearch "<search_name>"`, which
- * resolves against `savedsearches.conf` in this app's namespace. The
- * `scripts/trueup_savedsearches.py` script keeps both in sync so
- * every browseable entry is dispatchable.
+ * `searchbase.conf` is the dispatch source of truth. When the user
+ * applies a pick, the overview page resolves `search_name` back to the
+ * literal `search` field from this catalogue and dispatches that SPL.
+ * `savedsearches.conf` is intentionally limited to scheduled,
+ * materialized, or explicit compatibility dependencies.
  *
  * Filter model
  * ------------
@@ -180,9 +180,29 @@ const matchesQuery = (entry: SearchbaseRecord, query: string): boolean => {
     const plainDescription = plainTextFromHtml(entry.description);
     return (
         entry.searchName.toLowerCase().includes(trimmed) ||
+        (entry.aliases ?? []).some((alias) => alias.toLowerCase().includes(trimmed)) ||
         plainDescription.toLowerCase().includes(trimmed) ||
         entry.subCategory.toLowerCase().includes(trimmed) ||
         entry.tags.some((t) => t.toLowerCase().includes(trimmed))
+    );
+};
+
+const entryMatchesKey = (entry: SearchbaseRecord, key: string | null | undefined): boolean => {
+    const trimmed = key?.trim();
+    if (!trimmed) return false;
+    return (
+        entry.id === trimmed ||
+        entry.searchName === trimmed ||
+        (entry.aliases ?? []).includes(trimmed)
+    );
+};
+
+const entryIsUsed = (entry: SearchbaseRecord, used: Set<string> | undefined): boolean => {
+    if (!used) return false;
+    return (
+        used.has(entry.id) ||
+        used.has(entry.searchName) ||
+        (entry.aliases ?? []).some((alias) => used.has(alias))
     );
 };
 
@@ -307,12 +327,19 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     useEffect(() => {
         setShowSpl(false);
         if (!context) return;
-        if (selectedId && selectedId !== context.currentSavedSearch) {
+        const selectedIsCurrent =
+            selectedId === context.currentSavedSearch ||
+            catalogue.some(
+                (entry) =>
+                    entryMatchesKey(entry, selectedId) &&
+                    entryMatchesKey(entry, context.currentSavedSearch)
+            );
+        if (selectedId && !selectedIsCurrent) {
             setValueField('');
         } else {
             setValueField(context.currentValueField ?? '');
         }
-    }, [selectedId, context]);
+    }, [selectedId, context, catalogue]);
 
     // Close the tag dropdown when the user clicks outside the
     // multi-select. Mirrors the standard combobox pattern.
@@ -421,9 +448,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     const selectedEntry = useMemo(
         () =>
             selectedId
-                ? catalogue.find(
-                      (e) => e.id === selectedId || e.searchName === selectedId
-                  ) ?? null
+                ? catalogue.find((e) => entryMatchesKey(e, selectedId)) ?? null
                 : null,
         [catalogue, selectedId]
     );
@@ -452,11 +477,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     const currentBoundEntry = useMemo(() => {
         if (!context?.currentSavedSearch) return null;
         return (
-            catalogue.find(
-                (e) =>
-                    e.searchName === context.currentSavedSearch ||
-                    e.id === context.currentSavedSearch
-            ) ?? null
+            catalogue.find((e) => entryMatchesKey(e, context.currentSavedSearch)) ?? null
         );
     }, [catalogue, context]);
 
@@ -554,9 +575,9 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
 
     const handleApply = () => {
         if (!selectedEntry || !canApply) return;
-        // The dispatch path goes through `| savedsearch "<searchName>"`
-        // — this is why the trueup script must guarantee every
-        // searchbase entry has a corresponding savedsearches stanza.
+        // Persist the catalogue key. The page resolves it through
+        // searchbase.conf before dispatching, so the picker and runtime
+        // use the same SPL.
         const payload: MetricOverride = { savedSearch: selectedEntry.searchName };
         if (valueField) payload.valueField = valueField;
         if (labelOverride.trim()) payload.label = labelOverride.trim();
@@ -884,13 +905,11 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
 
                     {loadState === 'idle' &&
                         filtered.map((entry) => {
-                            const isSelected =
-                                selectedId === entry.id || selectedId === entry.searchName;
+                            const isSelected = entryMatchesKey(entry, selectedId);
                             const isCurrent =
                                 currentBoundEntry !== null &&
                                 currentBoundEntry.id === entry.id;
-                            const isInUse =
-                                context.usedSavedSearches?.has(entry.searchName) ?? false;
+                            const isInUse = entryIsUsed(entry, context.usedSavedSearches);
                             const plainDesc = plainTextFromHtml(entry.description);
                             return (
                                 <button

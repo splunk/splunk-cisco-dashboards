@@ -1,19 +1,18 @@
 /**
  * Splunk Cisco Dashboards — Overview Page
  *
- * Executive landing page. Direct port of the Florida Executive design,
- * adapted for Splunk and pumped full of dashboards-tooling niceties:
+ * Executive landing page adapted for Splunk and pumped full of
+ * dashboards-tooling niceties:
  *   * Time-range picker (default Last 7 days)
  *   * Auto-refresh interval picker + manual refresh button
- *   * Per-metric saved-search wiring (convention `Overview - ds_<id>`
- *     or override via {@link MetricConfig.savedSearch})
+ *   * Per-metric searchbase wiring, with saved-search dispatch used only
+ *     for searches that are intentionally scheduled
  *   * Threshold-driven status colouring on every metric
  *   * Aggregate health badge derived from those statuses
  *   * Comparison overlay (previous-period dashed line) on every spark
  *   * Click-sparkline → opens the SPL in Splunk Search
- *   * Mini incident ticker driven by `Overview - ds_recent_incidents`
- *   * KPI cards under the map driven by `Overview - ds_top_incident`
- *     and `Overview - ds_operational_lead`
+ *   * Mini incident ticker, currently empty until a real incident feed is wired
+ *   * KPI cards under the topology map driven by searchbase or inline SPL
  *   * PNG / PDF export of the entire page
  *   * Keyboard shortcuts (g i, g s, g b, t, r, ?, /)
  *   * Click-to-pin map popups (ESC or X to close)
@@ -36,7 +35,11 @@ import {
 } from 'lucide-react';
 import { DashboardSection } from '@/common/components/florida/DashboardSection';
 import { MetricItem } from '@/common/components/florida/MetricItem';
-import { FloridaMap } from '@/common/components/florida/FloridaMap';
+import {
+    CustomerTopologyMap,
+    FDEM_TOPOLOGY,
+    TopologySiteTable,
+} from '@/common/components/florida/CustomerTopologyMap';
 import { HealthBadge } from '@/common/components/florida/HealthBadge';
 import { IncidentTicker } from '@/common/components/florida/IncidentTicker';
 import { HelpOverlay } from '@/common/components/florida/HelpOverlay';
@@ -116,13 +119,10 @@ const AUTO_REFRESH_OPTIONS: { label: string; seconds: number }[] = [
 // Metric configuration
 // =============================================================================
 //
-// Each metric is bound to an existing saved search in
-// `default/savedsearches.conf`. These were hand-picked from the bundled
-// Cisco-app saved searches that already produce single-row "current
-// value" results — see comments next to each binding for the field
-// shape. Binding via `savedSearch` dispatches `| savedsearch "Name"`
-// honouring the page-level time range, so changing the time picker
-// re-runs every wire automatically.
+// Each metric is bound to a `search_name` in `default/searchbase.conf`.
+// The page resolves the binding to the literal SPL before dispatch so
+// searchbase remains the runtime source of truth. `savedSearch` is kept
+// as the config property name for persisted override compatibility.
 //
 // `comparePeriod` is intentionally off for every metric below: these
 // "current value" searches return a single row, so the dashed
@@ -142,7 +142,7 @@ const METRIC_CONFIG: MetricConfig[] = [
             'category. Combines link state, throughput and protocol metrics into a ' +
             "0-100 grade. Healthy >= 95; Critical < 80.",
         // Single row: { score: 0..100 }
-        savedSearch: 'Executive Dashboard - ds_network_health_current',
+        savedSearch: 'Executive Dashboard - Current Network Health',
         valueField: 'score',
         unit: '%',
         thresholds: { warning: 95, critical: 80, direction: 'higher_is_better' },
@@ -158,7 +158,7 @@ const METRIC_CONFIG: MetricConfig[] = [
             'Catalyst Center. Devices that are reachable AND managed score 100, ' +
             'reachable-only score 50, otherwise 0. Healthy >= 98; Critical < 90.',
         // Single row: { score: 0..100 }
-        savedSearch: 'Executive Dashboard - ds_device_health_current',
+        savedSearch: 'Executive Dashboard - Current Device Health',
         valueField: 'score',
         unit: '%',
         thresholds: { warning: 98, critical: 90, direction: 'higher_is_better' },
@@ -174,7 +174,7 @@ const METRIC_CONFIG: MetricConfig[] = [
             'Source: cisco:dnac:issue. Crosses warning at 500 active issues and is ' +
             'critical above 1,000.',
         // Single row: { total, critical, high, affected_devices, affected_sites }
-        savedSearch: 'Executive Dashboard - ds_base_issues',
+        savedSearch: 'Executive Dashboard - Active Catalyst Center Issues',
         valueField: 'total',
         thresholds: { warning: 500, critical: 1000, direction: 'lower_is_better' },
         mock: { seed: 13, sparkMin: 100, sparkMax: 800, value: 650, change: -50 },
@@ -189,7 +189,7 @@ const METRIC_CONFIG: MetricConfig[] = [
             'health (scoreType=ALL, clientType=ALL) blended with the device ' +
             'reachability/manageability score. 0-100. Healthy >= 95; Critical < 75.',
         // Single row: { score: 0..100 }
-        savedSearch: 'Executive Dashboard - ds_ux_score',
+        savedSearch: 'Executive Dashboard - User Experience Score',
         valueField: 'score',
         unit: '%',
         thresholds: { warning: 95, critical: 75, direction: 'higher_is_better' },
@@ -205,7 +205,7 @@ const METRIC_CONFIG: MetricConfig[] = [
             '(COMPLIANT or COMPLIANT_WARNING). NOT_APPLICABLE checks are ' +
             'excluded. Healthy >= 95; Critical < 80.',
         // Single row: { pct: 0..100 }
-        savedSearch: 'Executive Dashboard - ds_compliance',
+        savedSearch: 'Executive Dashboard - Compliance Rate',
         valueField: 'pct',
         unit: '%',
         thresholds: { warning: 95, critical: 80, direction: 'higher_is_better' },
@@ -222,7 +222,7 @@ const METRIC_CONFIG: MetricConfig[] = [
             'firewall, accelerated via the Network_Traffic data model. A spike ' +
             'usually signals a scan or active exploit attempt.',
         // Single row: { blocked }
-        savedSearch: 'Executive Dashboard - ds_fw_blocked',
+        savedSearch: 'Executive Dashboard - Firewall Blocked Connections',
         valueField: 'blocked',
         color: '#f59e0b',
         thresholds: { warning: 5000, critical: 25000, direction: 'lower_is_better' },
@@ -258,7 +258,7 @@ const METRIC_CONFIG: MetricConfig[] = [
             'in the window, as reported by the Authentication data model (ISE + AD). ' +
             'Sustained values may indicate credential-stuffing.',
         // Single row: { count }
-        savedSearch: 'Executive Dashboard - ds_failed_logons',
+        savedSearch: 'Executive Dashboard - Failed Logons',
         valueField: 'count',
         color: '#0ea5e9',
         thresholds: { warning: 25, critical: 100, direction: 'lower_is_better' },
@@ -274,7 +274,7 @@ const METRIC_CONFIG: MetricConfig[] = [
             'window. Includes both real-time and summary incident sourcetypes. ' +
             'Warning at 5 active incidents, critical at 20.',
         // Single row: { total }
-        savedSearch: 'Executive Dashboard - ds_xdr_incidents',
+        savedSearch: 'Executive Dashboard - XDR Incidents',
         valueField: 'total',
         color: '#ef4444',
         thresholds: { warning: 5, critical: 20, direction: 'lower_is_better' },
@@ -290,7 +290,7 @@ const METRIC_CONFIG: MetricConfig[] = [
             '(CISE_Passed_Authentications vs CISE_Failed_Attempts) with ' +
             'Windows AD events (4624 vs 4625). 0-100. Healthy >= 95; Critical < 80.',
         // Single row: { score: 0..100 }
-        savedSearch: 'Executive Dashboard - ds_sec_score',
+        savedSearch: 'Executive Dashboard - Security Domain Score',
         valueField: 'score',
         unit: '%',
         color: '#10b981',
@@ -307,9 +307,9 @@ const METRIC_CONFIG: MetricConfig[] = [
             'Total active tracked devices summed across every monitored location, ' +
             'derived from the latest DEVICE_PRESENCE event per location in Cisco ' +
             'Spaces. Reflects how busy the campus is right now.',
-        // Single row: { score }
-        savedSearch: 'Executive Dashboard - ds_active_devices',
-        valueField: 'score',
+        // Time series: { active_devices }
+        savedSearch: 'Executive Dashboard - Active Devices',
+        valueField: 'active_devices',
         color: '#10b981',
         mock: { seed: 31, sparkMin: 30, sparkMax: 60, value: 54, change: 2600 },
     },
@@ -322,7 +322,7 @@ const METRIC_CONFIG: MetricConfig[] = [
             'Distinct Wi-Fi MAC addresses currently associated to access points, ' +
             'taken from Cisco Spaces DEVICE_ASSOCIATION ASSOCIATE events.',
         // Single row: { score }
-        savedSearch: 'Executive Dashboard - ds_wifi_clients',
+        savedSearch: 'Executive Dashboard - Wifi Clients',
         valueField: 'score',
         mock: { seed: 32, sparkMin: 1, sparkMax: 5, value: 2, change: 0 },
     },
@@ -336,7 +336,7 @@ const METRIC_CONFIG: MetricConfig[] = [
             'derived from Cisco Spaces SPACE_OCCUPANCY events. 0% may indicate either ' +
             'an empty building or a stalled feed — check the source dot.',
         // Single row: { score: 0..100 }
-        savedSearch: 'Executive Dashboard - ds_building_occupancy',
+        savedSearch: 'Executive Dashboard - Building Occupancy (Dashboard Tile)',
         valueField: 'score',
         unit: '%',
         mock: { seed: 33, sparkMin: 0, sparkMax: 10, value: 0, change: 0 },
@@ -351,7 +351,7 @@ const METRIC_CONFIG: MetricConfig[] = [
             'device-presence connectivity (Cisco Spaces) + room occupancy + ' +
             'compliance pass-rate, averaged. 0-100. Healthy >= 90; Critical < 70.',
         // Single row: { score: 0..100 }
-        savedSearch: 'Executive Dashboard - ds_bldg_score',
+        savedSearch: 'Executive Dashboard - Building Score',
         valueField: 'score',
         unit: '%',
         color: '#10b981',
@@ -368,7 +368,7 @@ const METRIC_CONFIG: MetricConfig[] = [
             '(WEBEX_TELEMETRY events) from Cisco Spaces. Drops in this number can ' +
             'indicate a feed issue or large-scale device offline event.',
         // Single row: { score }
-        savedSearch: 'Executive Dashboard - ds_collab_devices',
+        savedSearch: 'Executive Dashboard - Collab Devices',
         valueField: 'score',
         color: '#0ea5e9',
         mock: { seed: 35, sparkMin: 5, sparkMax: 50, value: 32, change: 0 },
@@ -379,10 +379,10 @@ const METRIC_CONFIG: MetricConfig[] = [
 // Right-column KPI cards
 // =============================================================================
 //
-// "Top incident volume" — site producing the most XDR/SecureX
-// incident IDs. We wrap the existing aggregator with `top 1`.
+// "Top incident volume" - site producing the most XDR/SecureX
+// incident IDs. Uses eventstats to avoid post-aggregation sort/head.
 //
-// "Operational lead" — site with the strongest IT health. Derived
+// "Operational lead" - site with the strongest IT health. Derived
 // from per-device health rolled up by Site (since there isn't a
 // pre-built single-row "best site" stanza).
 //
@@ -397,7 +397,9 @@ const KPI_CONFIG: KpiConfig[] = [
             '`index_security` (sourcetype="cisco:xdr:incidents" OR ' +
             'sourcetype="cisco:xdr:incidents-summary") ' +
             '| stats dc(id) as incidents by site ' +
-            '| sort -incidents | head 1 | rename site as value | fields value',
+            '| eventstats max(incidents) as max_incidents ' +
+            '| where incidents=max_incidents ' +
+            '| stats first(site) as value | fields value',
         valueField: 'value',
         mockValue: 'Awaiting data',
     },
@@ -411,8 +413,9 @@ const KPI_CONFIG: KpiConfig[] = [
             '| where Site!="" ' +
             '| eval h=case(Reachability=="Reachable" AND match(Manageability,"^Managed"),100, ' +
             'Reachability=="Reachable",50, 1==1,0) ' +
-            '| stats avg(h) as score by Site | sort -score | head 1 ' +
-            '| rename Site as value | fields value',
+            '| stats avg(h) as score by Site ' +
+            '| eventstats max(score) as max_score | where score=max_score ' +
+            '| stats first(Site) as value | fields value',
         valueField: 'value',
         mockValue: 'Awaiting data',
     },
@@ -483,12 +486,12 @@ interface MetricCardProps {
      * Lookup of `searchbase.conf` entries keyed by `search_name`.
      *
      * - `null`        → still loading (defer dispatch; show mock).
-     * - `Map (size 0)` → finished loading but empty (fetch failed or
-     *                   conf empty). Falls back to `| savedsearch`.
+     * - `Map (size 0)` -> finished loading but empty (fetch failed or
+     *                   conf empty). Falls back to the configured binding.
      * - `Map`          → loaded; tile dispatches the literal `search`
      *                   from the matching entry.
      *
-     * When a tile's effective saved-search matches an entry, the
+     * When a tile's effective binding matches an entry, the
      * dashboard *runtime* dispatches that entry's `search` field
      * (what the executive sees in the picker preview) and the
      * drilldown follows the same SPL — keeping the runtime, the
@@ -500,14 +503,14 @@ interface MetricCardProps {
 /**
  * Returns a cloned MetricConfig with user picker overrides merged in.
  *
- * Only overridable fields are touched (saved-search binding, value
+ * Only overridable fields are touched (search binding, value
  * field, label, description). Everything else — thresholds, mock
  * fallback, section, colour — stays put so the threshold-driven
  * status logic and visual identity stay consistent with the static
  * config.
  *
  * `valueField` does NOT fall back to `cfg.valueField` when an override
- * is in play. When the user binds a different saved search, the
+ * is in play. When the user binds a different searchbase entry, the
  * original tile's field name almost certainly doesn't exist in the
  * new search's output — carrying it forward used to make `useMetric`
  * read undefined values, filter to an empty series, and silently fall
@@ -559,7 +562,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
     // Runtime dispatch config (the SPL the dashboard actually runs)
     // ---------------------------------------------------------------
     // searchbase.conf is the source of truth for SPL the user sees and
-    // tweaks. When a tile's effective saved-search has a matching
+    // tweaks. When a tile's effective binding has a matching
     // searchbase entry, we replace the dispatch with the literal
     // `search` field — same SPL the picker preview renders, same SPL
     // the "Open in Search" drilldown opens. This keeps everything the
@@ -568,12 +571,11 @@ const MetricCard: React.FC<MetricCardProps> = ({
     // While `searchbaseByName === null` (still loading), we defer the
     // dispatch by stripping spl + savedSearch — useMetric short-circuits
     // to mock and waits. That avoids a "ghost dispatch" that fires
-    // `| savedsearch "..."` on first paint and gets superseded a
+    // compatibility binding on first paint and gets superseded a
     // second later by the real searchbase SPL (double network round-trip).
     //
-    // When a saved-search tile has *no* matching searchbase entry
-    // (rare after the true-up, but possible), we fall back to the
-    // saved-search dispatch path so the tile still runs.
+    // When a compatibility dependency has no matching searchbase
+    // entry, we fall back to the configured binding.
     const dispatchedConfig = useMemo<typeof effective>(() => {
         if (!effective.savedSearch) return effective;
         if (searchbaseByName === null || searchbaseByName === undefined) {
@@ -679,7 +681,7 @@ const OverviewPage: React.FC = () => {
     // ------------------------------ Searchbase metadata ------------------------------
     // Loaded once at page mount and shared across all metric tiles via
     // a Map keyed by `search_name`. Drives the *runtime dispatch* of
-    // each metric tile — when a tile's effective saved-search matches
+    // each metric tile. When a tile's effective binding matches
     // an entry, we run that entry's literal SPL instead of the
     // `| savedsearch "..."` indirection. The drilldown / hover preview
     // / picker all read from the same SPL, so they're guaranteed to
@@ -687,9 +689,11 @@ const OverviewPage: React.FC = () => {
     //
     // `null` is the loading sentinel — tiles defer their dispatch
     // until the catalogue resolves so we don't fire a ghost
-    // `| savedsearch` request that gets superseded a moment later.
+    // compatibility request that gets superseded a moment later.
+    // The map includes `aliases` so older persisted overrides survive
+    // search_name cleanups without falling back to scheduled searches.
     // On fetch failure we set an empty Map so tiles fall back to the
-    // saved-search dispatch path (still functional, just less
+    // configured dispatch path (still functional, just less
     // executive-friendly drilldowns).
     const [searchbaseByName, setSearchbaseByName] = useState<
         Map<string, SearchbaseRecord> | null
@@ -702,6 +706,9 @@ const OverviewPage: React.FC = () => {
                 const map = new Map<string, SearchbaseRecord>();
                 for (const entry of list) {
                     if (entry.searchName) map.set(entry.searchName, entry);
+                    for (const alias of entry.aliases ?? []) {
+                        if (alias && !map.has(alias)) map.set(alias, entry);
+                    }
                 }
                 setSearchbaseByName(map);
             })
@@ -1169,7 +1176,7 @@ const OverviewPage: React.FC = () => {
                                     !window.confirm(
                                         `Reset ${overrideCount} customised tile${
                                             overrideCount === 1 ? '' : 's'
-                                        } to their default saved searches?`
+                                        } to their default search bindings?`
                                     )
                                 ) {
                                     return;
@@ -1223,11 +1230,7 @@ const OverviewPage: React.FC = () => {
             </header>
 
             {/* Mini incident ticker */}
-            <IncidentTicker
-                savedSearch="Overview - ds_recent_incidents"
-                range={timeRange}
-                refreshToken={refreshToken}
-            />
+            <IncidentTicker range={timeRange} refreshToken={refreshToken} />
 
             {/* Edge-to-edge layout: no `max-w` clamp and only a thin
                 horizontal gutter. The previous `max-w-[1600px] mx-auto`
@@ -1358,10 +1361,10 @@ const OverviewPage: React.FC = () => {
                             <div className="flex items-center justify-between mb-2 flex-shrink-0">
                                 <div>
                                     <h3 className="text-base font-bold text-sky-900 dark:text-sky-200 uppercase tracking-wide leading-none">
-                                        Regional Overview
+                                        Network Topology
                                     </h3>
                                     <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium mt-0.5">
-                                        Site real-time status
+                                        Site connectivity and path health
                                     </p>
                                 </div>
                                 <RegionalViewToggle
@@ -1372,8 +1375,12 @@ const OverviewPage: React.FC = () => {
 
                             <div className="flex-1 min-h-0">
                                 {regionalView === 'map' ? (
-                                    <FloridaMap
+                                    <CustomerTopologyMap
+                                        topology={FDEM_TOPOLOGY}
                                         isDark={resolvedTheme === 'dark'}
+                                        earliestTime={timeRange.earliest}
+                                        latestTime={timeRange.latest}
+                                        refreshToken={refreshToken}
                                         onOpenInSearch={(spl) => {
                                             const url = splunkSearchAppUrl(spl, timeRange);
                                             if (typeof window !== 'undefined') {
@@ -1386,7 +1393,7 @@ const OverviewPage: React.FC = () => {
                                         }}
                                     />
                                 ) : (
-                                    <SiteTable />
+                                    <TopologySiteTable topology={FDEM_TOPOLOGY} />
                                 )}
                             </div>
 
@@ -1395,7 +1402,7 @@ const OverviewPage: React.FC = () => {
                                     label={effectiveTopIncidentCfg.label}
                                     value={topIncident.value}
                                     source={topIncident.source}
-                                    accentColor="text-red-500"
+                                    accentClassName="bg-red-500"
                                     onConfigure={() =>
                                         openPicker(KPI_CONFIG[0].id, KPI_CONFIG[0].label, {
                                             savedSearch: KPI_CONFIG[0].savedSearch,
@@ -1408,7 +1415,7 @@ const OverviewPage: React.FC = () => {
                                     label={effectiveOpLeadCfg.label}
                                     value={operationalLead.value}
                                     source={operationalLead.source}
-                                    accentColor="text-emerald-500"
+                                    accentClassName="bg-emerald-500"
                                     onConfigure={() =>
                                         openPicker(KPI_CONFIG[1].id, KPI_CONFIG[1].label, {
                                             savedSearch: KPI_CONFIG[1].savedSearch,
@@ -1473,7 +1480,7 @@ interface KpiCardProps {
     label: string;
     value: string;
     source: 'live' | 'mock' | 'loading';
-    accentColor: string;
+    accentClassName: string;
     /** When provided, renders a gear icon that opens the KPI picker. */
     onConfigure?: () => void;
     /** Marks the gear with a small dot when the tile is overridden. */
@@ -1501,7 +1508,7 @@ const RegionalViewToggle: React.FC<RegionalViewToggleProps> = ({ value, onChange
     return (
         <div
             role="tablist"
-            aria-label="Regional view"
+            aria-label="Topology view"
             className="flex bg-slate-100 dark:bg-slate-800/60 p-1 rounded-md"
         >
             <button
@@ -1526,105 +1533,11 @@ const RegionalViewToggle: React.FC<RegionalViewToggleProps> = ({ value, onChange
     );
 };
 
-// =============================================================================
-// Site status table — rendered when the user flips MAP -> TABLE
-// =============================================================================
-//
-// The catalogue mirrors the Florida cities baked into FloridaMap. Once a
-// `Cisco - ds_site_status` saved search is wired in, swap this static
-// list for a useMetric-style hook.
-
-interface SiteRow {
-    id: string;
-    name: string;
-    role: 'STATE HQ' | 'REGIONAL' | 'LOGISTICS';
-    status: 'stable' | 'warning' | 'critical';
-    events: number;
-    alerts: number;
-    latencyMs: number;
-}
-
-// Mirror of the 3 sites in FloridaMap. Keep the order in sync.
-const SITE_ROWS: SiteRow[] = [
-    { id: 'TLH', name: 'Tallahassee (State EOC)', role: 'STATE HQ', status: 'stable', events: 1240, alerts: 0, latencyMs: 28 },
-    { id: 'MCO', name: 'Orlando (Regional Hub)', role: 'REGIONAL', status: 'warning', events: 4100, alerts: 12, latencyMs: 145 },
-    { id: 'AUB', name: 'Auburndale (Logistics)', role: 'LOGISTICS', status: 'critical', events: 8200, alerts: 42, latencyMs: 310 },
-];
-
-const STATUS_DOT_CLASS: Record<SiteRow['status'], string> = {
-    critical: 'bg-red-500',
-    warning: 'bg-amber-500',
-    stable: 'bg-emerald-500',
-};
-
-const SiteTable: React.FC = () => (
-    <div className="h-full w-full overflow-auto rounded-xl border border-slate-200 dark:border-slate-800">
-        <table className="w-full text-left text-[11px] tabular-nums">
-            <thead className="sticky top-0 bg-slate-50 dark:bg-slate-900/95 backdrop-blur-sm">
-                <tr className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                    <th className="px-3 py-2 font-black">Site</th>
-                    <th className="px-3 py-2 font-black">Role</th>
-                    <th className="px-3 py-2 font-black text-right">Events</th>
-                    <th className="px-3 py-2 font-black text-right">Alerts</th>
-                    <th className="px-3 py-2 font-black text-right">Latency</th>
-                </tr>
-            </thead>
-            <tbody>
-                {SITE_ROWS.map((row) => (
-                    <tr
-                        key={row.id}
-                        className="border-t border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40"
-                    >
-                        <td className="px-3 py-1.5">
-                            <div className="flex items-center gap-2">
-                                <span
-                                    className={cn(
-                                        'w-2 h-2 rounded-full flex-shrink-0',
-                                        STATUS_DOT_CLASS[row.status]
-                                    )}
-                                    title={row.status}
-                                />
-                                <div className="flex flex-col leading-tight">
-                                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-100">
-                                        {row.name}
-                                    </span>
-                                    <span className="text-[9px] font-mono text-slate-400 dark:text-slate-500 uppercase">
-                                        {row.id}
-                                    </span>
-                                </div>
-                            </div>
-                        </td>
-                        <td className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                            {row.role}
-                        </td>
-                        <td className="px-3 py-1.5 text-right font-mono text-slate-700 dark:text-slate-200">
-                            {row.events.toLocaleString()}
-                        </td>
-                        <td
-                            className={cn(
-                                'px-3 py-1.5 text-right font-mono font-bold',
-                                row.alerts > 0
-                                    ? 'text-red-500 dark:text-red-400'
-                                    : 'text-slate-400 dark:text-slate-500'
-                            )}
-                        >
-                            {row.alerts}
-                        </td>
-                        <td className="px-3 py-1.5 text-right font-mono text-slate-700 dark:text-slate-200">
-                            {row.latencyMs}ms
-                        </td>
-                    </tr>
-                ))}
-            </tbody>
-        </table>
-    </div>
-);
-
 const KpiCard: React.FC<KpiCardProps> = ({
     label,
     value,
     source,
-    accentColor,
+    accentClassName,
     onConfigure,
     isCustomized = false,
 }) => (
@@ -1643,11 +1556,11 @@ const KpiCard: React.FC<KpiCardProps> = ({
                     ? 'Live'
                     : source === 'loading'
                     ? 'Loading…'
-                    : 'No saved search assigned'
+                    : 'No live source assigned'
             }
         />
         <div className="flex items-center gap-2 mb-0.5">
-            <div className={`w-1.5 h-1.5 rounded-full ${accentColor}`} />
+            <div className={cn('w-1.5 h-1.5 rounded-full', accentClassName)} />
             <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider truncate flex-1">
                 {label}
             </span>

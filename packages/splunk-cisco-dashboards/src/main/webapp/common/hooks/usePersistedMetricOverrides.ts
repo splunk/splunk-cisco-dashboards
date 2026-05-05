@@ -1,9 +1,9 @@
 /**
- * usePersistedMetricOverrides — per-user customisations of which saved
- * search powers each metric / KPI tile.
+ * usePersistedMetricOverrides — per-user customisations of which
+ * searchbase entry powers each metric / KPI tile.
  *
  * Each tile has a stable string id (`network_health`, `top_incident`,
- * etc.). The user can override the saved-search bound to that id via
+ * etc.). The user can override the searchbase entry bound to that id via
  * the KPI picker, and the override is mirrored into `localStorage` so
  * it survives reloads. Overrides are scoped to this app's storage key
  * to avoid leaking into / from other Splunk apps that might be loaded
@@ -15,7 +15,7 @@
  *     v: 1,
  *     overrides: {
  *       "<tileId>": {
- *         savedSearch: string,    // stanza name to dispatch
+ *         savedSearch: string,    // searchbase search_name to resolve
  *         label?: string,         // optional friendly label override
  *         valueField?: string,    // optional field to read as the value
  *         description?: string,   // optional info-tooltip override
@@ -36,7 +36,7 @@ const STORAGE_KEY = 'splunk-cisco-dashboards.metricOverrides.v1';
 const STORAGE_VERSION = 1;
 
 export interface MetricOverride {
-    /** Saved-search stanza name. The only required field. */
+    /** searchbase search_name. The property name is kept for compatibility. */
     savedSearch: string;
     /** Optional friendly label to override the metric's default. */
     label?: string;

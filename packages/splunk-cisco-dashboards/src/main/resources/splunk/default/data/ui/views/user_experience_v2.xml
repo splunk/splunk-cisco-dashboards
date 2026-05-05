@@ -142,7 +142,9 @@
 				"majorFontSize": 36,
 				"showTrendIndicator": false,
 				"sparklineDisplay": "off",
-				"unit": "%"
+				"unit": "%",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "Client Health",
 			"type": "splunk.singlevalue"
@@ -215,7 +217,9 @@
 				"majorColor": "#2B2B2B",
 				"majorFontSize": 28,
 				"showTrendIndicator": false,
-				"sparklineDisplay": "off"
+				"sparklineDisplay": "off",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "Total Clients",
 			"type": "splunk.singlevalue"
@@ -355,7 +359,9 @@
 				"majorFontSize": 28,
 				"showTrendIndicator": false,
 				"sparklineDisplay": "off",
-				"unit": ""
+				"unit": "",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "Internet Paths (ThousandEyes)",
 			"type": "splunk.singlevalue"
@@ -445,7 +451,9 @@
 				"majorFontSize": 48,
 				"showTrendIndicator": false,
 				"sparklineDisplay": "off",
-				"unit": "%"
+				"unit": "%",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "Wired Health",
 			"type": "splunk.singlevalue"
@@ -478,7 +486,9 @@
 				"majorFontSize": 48,
 				"showTrendIndicator": false,
 				"sparklineDisplay": "off",
-				"unit": "%"
+				"unit": "%",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "Wireless Health",
 			"type": "splunk.singlevalue"
@@ -488,15 +498,13 @@
 		"ds_active_clients": {
 			"name": "Executive Dashboard - ds_active_clients",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| stats latest(type) as type, latest('connection.ssid') as ssid by macAddress\n| stats count by type",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Executive Dashboard - ds_active_clients",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_base_client_ref": {
 			"name": "DNAC Client Base",
@@ -512,28 +520,24 @@
 		"ds_base_te_tests": {
 			"name": "User Experience - ds_te_tests",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "| tstats `summariesonly` latest(Test_Metrics.metric_name:network.latency) as latency, latest(Test_Metrics.metric_name:network.loss) as loss, latest(Test_Metrics.metric_name:http.server.request.availability) as http_avail, latest(Test_Metrics.metric_name:web.page_load.duration) as page_dur FROM datamodel=\"Cisco_ThousandEyes.Test_Metrics\" BY Test_Metrics.thousandeyes.test.name, Test_Metrics.thousandeyes.test.type, Test_Metrics.server.address\n| rename Test_Metrics.thousandeyes.test.name as test, Test_Metrics.thousandeyes.test.type as type, Test_Metrics.server.address as target\n| eval latency=round(latency,1), loss=round(loss,2), http_avail=round(http_avail,1), page_dur=round(page_dur,0), status=case(isnotnull(loss) AND (loss>=5 OR latency>=200), \"Critical\", isnotnull(loss) AND (loss>=1 OR latency>=100), \"Degraded\", isnotnull(http_avail) AND http_avail<95, \"Degraded\", 1==1, \"Healthy\")\n| fields test type target latency loss http_avail page_dur status",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "User Experience - ds_te_tests",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_client_health": {
 			"name": "User Experience - ds_client_health",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRED\" OR clientType=\"WIRELESS\") (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\")\n| bin _time\n| stats latest(clientCount) as cc by _time, clientType, scoreType\n| stats sum(cc) as cc by _time, scoreType\n| eval good=if(scoreType==\"GOOD\",cc,null()), fair=if(scoreType==\"FAIR\",cc,null()), poor=if(scoreType==\"POOR\",cc,null())\n| stats sum(good) as good, sum(fair) as fair, sum(poor) as poor by _time",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "User Experience - ds_client_health",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_client_health_by_type": {
 			"name": "Client Health by Type",
@@ -549,15 +553,13 @@
 		"ds_client_health_current": {
 			"name": "Executive Dashboard - ds_client_health_current",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| stats latest(Reachability) as Reachability, latest(Manageability) as Manageability by DeviceID\n| eval h=case(Reachability==\"Reachable\" AND match(Manageability,\"^Managed\"),100, Reachability==\"Reachable\",50, 1==1,0)\n| stats avg(h) as score\n| eval score=round(score)\n| fields score",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Executive Dashboard - ds_client_health_current",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_clients_total": {
 			"name": "Total Clients",
@@ -581,28 +583,24 @@
 		"ds_te_agents": {
 			"name": "User Experience - ds_te_agents",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "| tstats `summariesonly` avg(Test_Metrics.metric_name:network.latency) as latency_ms, avg(Test_Metrics.metric_name:network.loss) as loss_pct, avg(Test_Metrics.metric_name:network.jitter) as jitter_ms, dc(Test_Metrics.thousandeyes.test.name) as test_count FROM datamodel=\"Cisco_ThousandEyes.Test_Metrics\" BY Test_Metrics.thousandeyes.source.agent.name\n| rename Test_Metrics.thousandeyes.source.agent.name as agent\n| where isnotnull(agent) AND agent!=\"\"\n| eval latency_ms=round(latency_ms,1), loss_pct=round(loss_pct,2), jitter_ms=round(jitter_ms,1), status=if(loss_pct<1 AND latency_ms<100, \"Healthy\", \"Degraded\")",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "User Experience - ds_te_agents",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_te_health": {
 			"name": "Executive Dashboard - ds_te_health",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "| tstats `summariesonly` avg(Test_Metrics.metric_name:network.loss) as loss, avg(Test_Metrics.metric_name:network.latency) as latency, avg(Test_Metrics.metric_name:http.server.request.availability) as http_avail, avg(Test_Metrics.metric_name:web.page_load.completion) as page_completion FROM datamodel=\"Cisco_ThousandEyes.Test_Metrics\"\n| eval net_score=if(isnotnull(loss) AND isnotnull(latency), 100 - latency/2 - loss*10, null()), http_score=if(isnotnull(http_avail), http_avail, null()), page_score=if(isnotnull(page_completion), page_completion, null())\n| eventstats count as _dummy\n| eval n=0, total=0\n| eval n=if(isnotnull(net_score), n+1, n), total=if(isnotnull(net_score), total+net_score, total)\n| eval n=if(isnotnull(http_score), n+1, n), total=if(isnotnull(http_score), total+http_score, total)\n| eval n=if(isnotnull(page_score), n+1, n), total=if(isnotnull(page_score), total+page_score, total)\n| eval score=if(n>0, round(total/n), 0)",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Executive Dashboard - ds_te_health",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_te_health_summary": {
 			"name": "ThousandEyes Test Health Summary",
@@ -631,28 +629,24 @@
 		"ds_wired_health": {
 			"name": "User Experience - ds_wired_health",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" scoreType=\"ALL\"\n| stats latest(scoreValue) as sv\n| eval score=if(sv>=0, sv, 0)",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "User Experience - ds_wired_health",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_wireless_health": {
 			"name": "User Experience - ds_wireless_health",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" scoreType=\"ALL\"\n| stats latest(scoreValue) as sv\n| eval score=if(sv>=0, sv, 0)",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "User Experience - ds_wireless_health",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		}
 	},
 	"layout": {
@@ -1090,5 +1084,5 @@
 		"hideEdit": false
 	}
 }
- ]]></definition>
+]]></definition>
 </dashboard>

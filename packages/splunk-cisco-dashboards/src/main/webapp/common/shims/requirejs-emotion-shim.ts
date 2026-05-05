@@ -95,7 +95,7 @@ declare global {
         }
     }
 
-    w.require = patched;
+    (w as { require?: RequireJsLike }).require = patched;
 })();
 
 export {};

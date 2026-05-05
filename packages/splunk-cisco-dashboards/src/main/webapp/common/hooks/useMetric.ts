@@ -2,8 +2,8 @@
  * useMetric — single source of truth for an executive metric.
  *
  * Resolves a {@link MetricConfig} to a {@link MetricResult} by:
- *   1. Trying a Splunk saved search (named per the configured override
- *      or per the convention `Overview - ds_<id>`).
+ *   1. Dispatching literal SPL from searchbase.conf when available, or
+ *      a saved-search fallback when a scheduled search is intentional.
  *   2. Optionally running a second search shifted by the time-range
  *      span to populate {@link MetricResult.previousSparkData} for the
  *      "vs. previous period" overlay.
@@ -51,9 +51,10 @@ export interface MetricConfig {
      */
     description?: string;
     /**
-     * Splunk saved-search stanza to drive this metric. The hook will
-     * dispatch `| savedsearch "<savedSearch>"` honouring the page-level
-     * time range. Mutually exclusive with {@link MetricConfig.spl}.
+     * Search binding name. Historically this pointed at savedsearches.conf;
+     * new overview bindings resolve to searchbase.conf first and use
+     * saved-search dispatch only for deliberately scheduled searches.
+     * Mutually exclusive with {@link MetricConfig.spl}.
      */
     savedSearch?: string;
     /**
@@ -307,13 +308,10 @@ const autoDetectValueField = (
 };
 
 /**
- * Convert a single row's column value into a number, treating
- * null / undefined / empty string as 0. timechart fills empty buckets
- * with no value (Splunk omits the field entirely in JSON), and the
- * semantically correct headline + spark behaviour is "0 events in this
- * bucket" — not "drop this bucket from the series" (which collapses
- * the time axis) or "treat as NaN" (which we used to do, and which
- * caused the entire series to be filtered to empty on sparse data).
+ * Convert a single row's column value into a number, treating empty
+ * buckets as 0 for sparkline continuity. The headline is selected
+ * separately from the latest row that actually contains the metric
+ * field, so trailing empty `timechart` buckets don't become a fake 0.
  */
 const rowToNumber = (raw: unknown): number => {
     if (raw === null || raw === undefined || raw === '') return 0;
@@ -539,9 +537,45 @@ export const useMetric = (
                 // mock fallback. The truly-empty case is already
                 // covered by `autoDetectValueField` returning null
                 // when no row exposes a usable numeric column.
+                const rowHasNumericValue = (
+                    row: Record<string, unknown>
+                ): boolean => {
+                    const raw = row[valueField];
+                    return (
+                        raw !== null &&
+                        raw !== undefined &&
+                        raw !== '' &&
+                        Number.isFinite(Number(raw))
+                    );
+                };
+
                 const liveSeries = rows.map((r) => rowToNumber(r[valueField]));
+                const firstValueRow = rows.find(rowHasNumericValue);
+                const latestValueRow = [...rows].reverse().find(rowHasNumericValue);
+
+                if (!latestValueRow || !firstValueRow) {
+                    debugLog(cfg.id, 'all metric buckets empty after field detect', {
+                        rowCount: rows.length,
+                        valueField,
+                    });
+                    setResult(
+                        cfg.suppressMockOnEmpty
+                            ? buildNoData('no_numeric_column')
+                            : mock
+                    );
+                    return;
+                }
 
                 const changeField = cfg.changeField ?? 'change';
+                const latestChangeRow = [...rows].reverse().find((row) => {
+                    const raw = row[changeField];
+                    return (
+                        raw !== null &&
+                        raw !== undefined &&
+                        raw !== '' &&
+                        Number.isFinite(Number(raw))
+                    );
+                });
 
                 // Single-row searches (typical of "current value"
                 // saved searches like ds_network_health_current) give
@@ -549,21 +583,21 @@ export const useMetric = (
                 // We keep the live headline and substitute mock spark
                 // data so the trendline still has visual interest.
                 const isSingleRow = liveSeries.length < 2;
-                const value = liveSeries[liveSeries.length - 1];
+                const value = rowToNumber(latestValueRow[valueField]);
                 const sparkData = isSingleRow ? buildMockSparkline(cfg) : liveSeries;
                 const sparkTimestamps = isSingleRow
                     ? []
                     : rows
                           .map(extractRowTimestamp)
                           .filter((t): t is number => t !== null);
-                const lastRow = rows[rows.length - 1];
-                const explicitChange = Number(lastRow[changeField]);
+                const explicitChange = Number(latestChangeRow?.[changeField]);
+                const baseline = rowToNumber(firstValueRow[valueField]);
                 const change = Number.isFinite(explicitChange)
                     ? explicitChange
                     : isSingleRow
                     ? 0
-                    : liveSeries[0] !== 0
-                    ? Math.round(((value - liveSeries[0]) / liveSeries[0]) * 100)
+                    : baseline !== 0
+                    ? Math.round(((value - baseline) / baseline) * 100)
                     : 0;
 
                 const prevRows = (prevRes?.results ?? []) as Array<Record<string, unknown>>;
@@ -611,7 +645,7 @@ export const useMetric = (
 export interface KpiConfig {
     id: string;
     label: string;
-    /** Saved-search stanza driving the value. */
+    /** Search binding name; can resolve through searchbase or savedsearches. */
     savedSearch?: string;
     /** Inline SPL — preferred over savedSearch when no stanza fits. */
     spl?: string;

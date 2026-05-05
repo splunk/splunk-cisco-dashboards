@@ -1,55 +1,12 @@
 #!/usr/bin/env python3
 """
-trueup_savedsearches.py
-=======================
+Deprecated.
 
-Reconciles `searchbase.conf` and `savedsearches.conf` so every entry
-the picker can browse from `searchbase.conf` is dispatchable through
-`savedsearches.conf` (the single point of truth for SPL execution).
-
-It is idempotent: running multiple times only appends stanzas that
-are still missing.
-
-Why this exists
----------------
-- `searchbase.conf` is a curated KPI catalogue (~400 stanzas) with
-  rich metadata (category / sub_category / tags / description / SPL).
-- `savedsearches.conf` is what splunkd dispatches when the dashboard
-  fires `| savedsearch "<name>"`.
-- The two drift; some KPIs documented in `searchbase.conf` have no
-  matching saved-search stanza, so dispatch 404s.
-
-What this script does
----------------------
-1. Parse both conf files (they're INI-like with backslash line
-   continuations and multi-line values).
-2. Build the set of stanza names already in `savedsearches.conf`.
-3. For every `searchbase.conf` entry whose `search_name` is NOT in
-   that set, generate a minimal saved-search stanza:
-
-     [<search_name>]
-     description = <plain-text strip of searchbase.description>
-     dispatch.earliest_time = -4h
-     dispatch.latest_time = now
-     search = <searchbase.search>
-
-4. Append all generated stanzas to `savedsearches.conf` under a
-   "Picker true-up" banner so they're easy to identify.
-
-Safety
-------
-- Read-only on `searchbase.conf`.
-- Append-only on `savedsearches.conf`. Never edits or deletes
-  existing stanzas. A backup copy `savedsearches.conf.bak` is written
-  on first run.
-- `disabled = 0` is implied (default), so each new stanza is
-  dispatchable but not auto-scheduled (no `cron_schedule` set).
-
-Usage
------
-    python3 scripts/trueup_savedsearches.py [--dry-run]
-
-Without `--dry-run` it writes to disk.
+`searchbase.conf` is now the source of truth for ad-hoc dashboard SPL.
+`savedsearches.conf` is intentionally limited to scheduled,
+materialized, and explicit compatibility dependency searches. Do not
+run this script to mirror searchbase into savedsearches; it remains only
+as historical reference for the old design.
 """
 
 from __future__ import annotations
@@ -73,12 +30,11 @@ BACKUP = SAVEDSEARCHES.with_suffix(".conf.bak")
 
 TRUEUP_BANNER = (
     "\n# ======================================================================\n"
-    "# Picker true-up — auto-generated from searchbase.conf\n"
-    "# Do not hand-edit unless you also update the searchbase.conf source.\n"
-    "# Re-run scripts/trueup_savedsearches.py to refresh this section.\n"
+    "# Deprecated picker mirror — do not use with the current searchbase model.\n"
+    "# Dashboard ad-hoc SPL belongs in searchbase.conf and inline ds.search.\n"
     "# ======================================================================\n"
 )
-TRUEUP_MARKER = "# Picker true-up — auto-generated from searchbase.conf"
+TRUEUP_MARKER = "# Deprecated picker mirror"
 
 
 @dataclass
@@ -218,6 +174,14 @@ def main() -> int:
         help="Print what would be added without modifying files.",
     )
     args = parser.parse_args()
+    _ = args
+
+    print(
+        "Deprecated: searchbase.conf is the source of truth. "
+        "Do not mirror all searches into savedsearches.conf."
+    )
+    print("Use scripts/migrate_nav_savedsearches_to_searchbase.py for the limited migration path.")
+    return 2
 
     sb_stanzas = parse_conf(SEARCHBASE)
     ss_stanzas = parse_conf(SAVEDSEARCHES)

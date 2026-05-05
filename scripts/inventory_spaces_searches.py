@@ -7,7 +7,7 @@ Read-only inventory + classifier for every Cisco Spaces firehose
 search across the four layers we care about:
 
     1. packages/.../default/searchbase.conf       (browseable catalogue)
-    2. packages/.../default/savedsearches.conf    (dispatch SoT)
+    2. packages/.../default/savedsearches.conf    (scheduled/materialized subset)
     3. packages/.../default/data/ui/views/**/*.xml
     4. packages/.../webapp/pages/**/*.tsx
 

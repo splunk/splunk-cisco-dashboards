@@ -15,7 +15,7 @@ produces exactly one output column, with no per-group splitting:
   * ``| stats count``                                     -> single metric
   * ``| stats avg(latency_ms) as latency``                -> single metric
   * ``| stats latest(score) as score``                    -> single metric
-  * ``| timechart span=1h dc(macAddress) as clients``     -> single metric (1 series over time)
+  * ``| timechart dc(macAddress) as clients``              -> single metric (1 series over time)
   * ``| timechart count``                                 -> single metric
   * ``| stats count by host``                             -> NOT single (multi-row)
   * ``| stats avg(rssi), avg(snr)``                       -> NOT single (multi-metric)
@@ -246,7 +246,7 @@ def _is_single_agg_no_by(stage: str) -> bool:
     if not body:
         return False
 
-    # Strip leading `key=value` options on timechart, e.g. `span=1h fixedrange=false`.
+    # Strip leading `key=value` options on timechart, e.g. `fixedrange=false`.
     # These only attach to timechart at the start of the body.
     if is_timechart:
         body = re.sub(

@@ -257,7 +257,9 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "Connected Devices",
 			"type": "splunk.singlevalue"
@@ -290,7 +292,9 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "Rooms Occupied",
 			"type": "splunk.singlevalue"
@@ -323,7 +327,9 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "Active SSIDs",
 			"type": "splunk.singlevalue"
@@ -405,7 +411,9 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
 			},
 			"title": "Webex Devices",
 			"type": "splunk.singlevalue"
@@ -745,7 +753,7 @@
 		"ds_device_presence_trend": {
 			"name": "Device Presence Trend",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_PRESENCE\" devicePresence.location.inferredLocationTypes{}=FLOOR | eval active='devicePresence.activeDevicesCount', floor='devicePresence.location.name', city='devicePresence.location.parent.parent.name' | bin _time span=1h | stats max(active) as active by _time, floor, city | timechart fixedrange=false span=1h sum(active) by city",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_PRESENCE\" devicePresence.location.inferredLocationTypes{}=FLOOR | eval active='devicePresence.activeDevicesCount', floor='devicePresence.location.name', city='devicePresence.location.parent.parent.name' | bin _time | stats max(active) as active by _time, floor, city | timechart fixedrange=false sum(active) by city",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -821,15 +829,13 @@
 		"ds_room_detail": {
 			"name": "Building Resilience - ds_room_detail",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"SPACE_OCCUPANCY\"\n| stats latest(spaceOccupancy.peoplePresence) as Presence, latest(spaceOccupancy.peakPeopleCount) as \"Peak Count\", latest(spaceOccupancy.space.capacity) as Capacity, latest(spaceOccupancy.bookingStatus) as Booked, latest(spaceOccupancy.location.name) as Floor, latest(spaceOccupancy.location.parent.name) as Building by spaceOccupancy.space.name\n| rename spaceOccupancy.space.name as Room\n| eval Presence=if(Presence==\"true\", \"Occupied\", \"Empty\"), Booked=if(Booked==\"true\", \"Yes\", \"No\"), \"Utilization %\"=if(Capacity>0, round('Peak Count'/Capacity*100, 2), 0)\n| sort Building, Floor, Room",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Building Resilience - ds_room_detail",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_rooms": {
 			"name": "Room Utilization by Building",
@@ -842,15 +848,13 @@
 		"ds_ssid_clients": {
 			"name": "Building Resilience - ds_ssid_clients",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_ASSOCIATION\"\n| eval ssid='deviceAssociation.ssid', event='deviceAssociation.event', building=coalesce('deviceAssociation.location.parent.parent.name', 'deviceAssociation.location.parent.name', 'deviceAssociation.location.name')\n| search event=\"ASSOCIATE\"\n| stats dc(deviceAssociation.device.macAddress) as Clients by ssid\n| sort -Clients\n| rename ssid as SSID",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Building Resilience - ds_ssid_clients",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_ssid_trend": {
 			"name": "SSID Client Trend",
@@ -877,7 +881,7 @@
 		"ds_user_presence_total": {
 			"name": "User Presence Total",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"USER_PRESENCE\" userPresence.location.inferredLocationTypes{}=FLOOR | eval active='userPresence.activeUsersCount.totalUsers', floor='userPresence.location.name' | bin _time span=1h | stats max(active) as active by _time, floor | timechart fixedrange=false span=1h sum(active) as \"Active Users\"",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"USER_PRESENCE\" userPresence.location.inferredLocationTypes{}=FLOOR | eval active='userPresence.activeUsersCount.totalUsers', floor='userPresence.location.name' | bin _time | stats max(active) as active by _time, floor | timechart fixedrange=false sum(active) as \"Active Users\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -888,7 +892,7 @@
 		"ds_user_presence_trend": {
 			"name": "Building Resilience - ds_user_presence_trend",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"USER_PRESENCE\" userPresence.location.inferredLocationTypes{}=FLOOR | eval active='userPresence.activeUsersCount.totalUsers', floor='userPresence.location.name', city='userPresence.location.parent.parent.name' | bin _time span=1h | stats max(active) as active by _time, floor, city | timechart fixedrange=false span=1h sum(active) by city",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"USER_PRESENCE\" userPresence.location.inferredLocationTypes{}=FLOOR | eval active='userPresence.activeUsersCount.totalUsers', floor='userPresence.location.name', city='userPresence.location.parent.parent.name' | bin _time | stats max(active) as active by _time, floor, city | timechart fixedrange=false sum(active) by city",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -907,20 +911,18 @@
 		"ds_webex_devices": {
 			"name": "Building Resilience - ds_webex_devices",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"WEBEX_TELEMETRY\"\n| stats latest(webexTelemetryUpdate.deviceInfo.displayName) as Device, latest(webexTelemetryUpdate.deviceInfo.product) as Product, latest(webexTelemetryUpdate.deviceInfo.ipAddress) as IP, latest(webexTelemetryUpdate.deviceInfo.softwareVersion) as Firmware, latest(webexTelemetryUpdate.location.name) as Building, latest(webexTelemetryUpdate.location.parent.name) as Campus by webexTelemetryUpdate.deviceInfo.serialNumber\n| rename webexTelemetryUpdate.deviceInfo.serialNumber as Serial\n| sort Device",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Building Resilience - ds_webex_devices",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_webex_people_trend": {
 			"name": "Webex People Count Trend",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"WEBEX_TELEMETRY\" | eval people='webexTelemetryUpdate.telemetries{}.peopleCount', device='webexTelemetryUpdate.deviceInfo.serialNumber', location=coalesce('webexTelemetryUpdate.location.parent.name', 'webexTelemetryUpdate.location.name') | where isnotnull(people) AND people >= 0 AND isnotnull(location) | bin _time span=1h | stats max(people) as people by _time, device, location | timechart fixedrange=false span=1h sum(people) as \"People Detected\" by location",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"WEBEX_TELEMETRY\" | eval people='webexTelemetryUpdate.telemetries{}.peopleCount', device='webexTelemetryUpdate.deviceInfo.serialNumber', location=coalesce('webexTelemetryUpdate.location.parent.name', 'webexTelemetryUpdate.location.name') | where isnotnull(people) AND people >= 0 AND isnotnull(location) | bin _time | stats max(people) as people by _time, device, location | timechart fixedrange=false sum(people) as \"People Detected\" by location",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1506,5 +1508,5 @@
 		"hideEdit": false
 	}
 }
- ]]></definition>
+]]></definition>
 </dashboard>
