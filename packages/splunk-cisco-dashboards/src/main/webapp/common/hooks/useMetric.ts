@@ -75,6 +75,16 @@ export interface MetricConfig {
     unit?: string;
     color?: string;
     thresholds?: MetricThresholds;
+    /**
+     * When true, a successful search that returns zero rows renders an
+     * honest "no data" state (value = 0, source = 'live') instead of
+     * falling back to {@link MetricConfig.mock}. Used by the picker
+     * override path so a swapped tile never re-displays the *original*
+     * tile's hardcoded mock value when the new SPL has nothing to say
+     * on this Splunk instance — that would look identical to "the
+     * picker did nothing" even though the dispatch did change.
+     */
+    suppressMockOnEmpty?: boolean;
     mock: {
         seed: number;
         sparkMin: number;
@@ -94,6 +104,35 @@ export interface TimeRange {
      */
     spanSeconds: number;
 }
+
+/**
+ * Why a tile is rendering "no data". Populated only when `value` is
+ * `Number.NaN` — `MetricItem` uses it to draw a more diagnostic
+ * subtext (e.g. "0 rows returned in last 7 days") instead of a bare
+ * "no data" that looks identical to a code bug.
+ *
+ *   • 'empty_rows'         — Splunk returned 0 rows for the dispatched SPL.
+ *   • 'no_numeric_column'  — rows came back but no row exposed any
+ *                            usable numeric column (typical of a
+ *                            timechart whose every bucket was empty,
+ *                            or an `eventstats` that returned only
+ *                            string fields).
+ *   • 'column_missing'     — rows came back, the user explicitly
+ *                            specified a `valueField`, but no row
+ *                            exposed that column. We deliberately do
+ *                            NOT silently substitute another column —
+ *                            the user typed it on purpose, so we let
+ *                            them see the failure (and the picker
+ *                            chips guide them to a valid one).
+ *   • 'error'              — the dispatch itself rejected (e.g. CIM
+ *                            data model missing, app namespace mis-
+ *                            configuration, SPL validation failure).
+ */
+export type NoDataReason =
+    | 'empty_rows'
+    | 'no_numeric_column'
+    | 'column_missing'
+    | 'error';
 
 export interface MetricResult {
     value: number;
@@ -115,6 +154,14 @@ export interface MetricResult {
     spl: string;
     /** Resolved saved-search name (convention or override). */
     resolvedSavedSearch: string;
+    /** Set only when `Number.isNaN(value)` — see {@link NoDataReason}. */
+    noDataReason?: NoDataReason;
+    /**
+     * Echo of the time range we ran against. The UI uses this to show
+     * "no data in last 7 days" rather than "no data" alone, so it's
+     * obvious whether the swap actually dispatched.
+     */
+    rangeLabel?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -196,6 +243,107 @@ const buildMock = (cfg: MetricConfig, spl: string, savedSearch: string): MetricR
     };
 };
 
+// ---------------------------------------------------------------------------
+// Value-field auto-detection
+// ---------------------------------------------------------------------------
+//
+// When a tile is bound to a searchbase entry via the picker without an
+// explicit `valueField`, we don't know in advance what column the SPL
+// emits — `stats count`, `stats latest(score) as score`, `stats dc(x) as
+// active`, `timechart count`, etc. all have different output names.
+//
+// Critical: we MUST scan every row (not just rows[0]). Splunk's
+// timechart JSON output omits the value column from rows whose bucket
+// had no events. On a sparse search (e.g. one big spike on day N and
+// silence everywhere else), rows[0] is often just `{_time, _span}`
+// with no value column at all — inspecting only the first row makes
+// auto-detect fall through to the default 'value' and every subsequent
+// lookup returns undefined → NaN → empty series → "no data". That bug
+// made every picker-swapped tile show "no data" regardless of whether
+// the search had real data later in the window.
+const PREFERRED_VALUE_FIELDS: readonly string[] = [
+    'value',
+    'count',
+    'score',
+    'pct',
+    'total',
+    'health',
+    'rate',
+    'sum',
+    'avg',
+];
+
+/**
+ * Returns the name of a numeric column found anywhere in `rows`, or
+ * null when no row exposes a usable numeric value. The two-stage scan
+ * prefers conventional column names (`value`, `count`, `score`, …)
+ * across all rows before falling back to the first non-internal
+ * numeric column it finds.
+ */
+const autoDetectValueField = (
+    rows: ReadonlyArray<Record<string, unknown>>
+): string | null => {
+    if (rows.length === 0) return null;
+    const isUsable = (raw: unknown): boolean =>
+        raw !== null &&
+        raw !== undefined &&
+        raw !== '' &&
+        Number.isFinite(Number(raw));
+
+    for (const name of PREFERRED_VALUE_FIELDS) {
+        for (const r of rows) {
+            if (isUsable(r[name])) return name;
+        }
+    }
+    // Splunk uses leading underscore for system fields (_time, _span,
+    // _raw, etc.) which we never want to surface as a headline value.
+    for (const r of rows) {
+        for (const [key, val] of Object.entries(r)) {
+            if (key.startsWith('_')) continue;
+            if (isUsable(val)) return key;
+        }
+    }
+    return null;
+};
+
+/**
+ * Convert a single row's column value into a number, treating
+ * null / undefined / empty string as 0. timechart fills empty buckets
+ * with no value (Splunk omits the field entirely in JSON), and the
+ * semantically correct headline + spark behaviour is "0 events in this
+ * bucket" — not "drop this bucket from the series" (which collapses
+ * the time axis) or "treat as NaN" (which we used to do, and which
+ * caused the entire series to be filtered to empty on sparse data).
+ */
+const rowToNumber = (raw: unknown): number => {
+    if (raw === null || raw === undefined || raw === '') return 0;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : 0;
+};
+
+// ---------------------------------------------------------------------------
+// Diagnostic logging
+// ---------------------------------------------------------------------------
+//
+// Set `window.__SCD_DEBUG_METRICS__ = true` in the browser console
+// before swapping a tile to see exactly what the hook is doing —
+// dispatched SPL, row counts, detected value field, and which
+// branch the result took. Off by default so executives never see
+// debug spam in their console.
+const isMetricDebug = (): boolean => {
+    if (typeof window === 'undefined') return false;
+    return Boolean(
+        (window as unknown as { __SCD_DEBUG_METRICS__?: boolean })
+            .__SCD_DEBUG_METRICS__
+    );
+};
+
+const debugLog = (id: string, msg: string, payload: unknown): void => {
+    if (!isMetricDebug()) return;
+    // eslint-disable-next-line no-console
+    console.debug(`[scd-metric][${id}] ${msg}`, payload);
+};
+
 // Pull a Unix-epoch (ms) timestamp out of a search result row. Splunk
 // returns _time as either a numeric epoch (string), an ISO 8601 string,
 // or both depending on output_mode. We try epoch first, then ISO. Returns
@@ -273,23 +421,127 @@ export const useMetric = (
               }).catch(() => ({ results: [] as Array<Record<string, unknown>> }))
             : Promise.resolve({ results: [] as Array<Record<string, unknown>> });
 
+        const buildNoData = (reason: NoDataReason): MetricResult => ({
+            value: Number.NaN,
+            change: Number.NaN,
+            sparkData: [],
+            sparkTimestamps: [],
+            previousSparkData: [],
+            source: 'live',
+            status: 'unknown',
+            spl,
+            resolvedSavedSearch: savedSearchName,
+            noDataReason: reason,
+            rangeLabel: range.label,
+        });
+
+        debugLog(cfg.id, 'dispatching', {
+            spl,
+            earliest: range.earliest,
+            latest: range.latest,
+            label: range.label,
+            valueField: cfg.valueField,
+            suppressMockOnEmpty: Boolean(cfg.suppressMockOnEmpty),
+        });
+
         Promise.all([livePromise, previousPromise])
             .then(([liveRes, prevRes]) => {
                 if (cancelled) return;
                 const rows = (liveRes?.results ?? []) as Array<Record<string, unknown>>;
+
+                // Truly empty result (Splunk returned no rows at all).
                 if (rows.length === 0) {
-                    setResult(mock);
+                    debugLog(cfg.id, 'no rows returned', {
+                        rangeLabel: range.label,
+                    });
+                    setResult(
+                        cfg.suppressMockOnEmpty ? buildNoData('empty_rows') : mock
+                    );
                     return;
                 }
-                const valueField = cfg.valueField ?? 'value';
+
+                // Resolve which column we'll read for the headline /
+                // sparkline. Two paths:
+                //
+                //   A) cfg.valueField IS set — the user explicitly
+                //      typed a column in the picker. Honor it strictly:
+                //      if no row exposes it we surface 'column_missing'
+                //      rather than silently substituting another
+                //      column. Silently substituting is what made the
+                //      Value Field appear to "have no effect" — the
+                //      user types `num`, the SPL emits `score`, and
+                //      auto-detect kicks in to pick `score`. Looks
+                //      identical to ignoring the input.
+                //
+                //   B) cfg.valueField is NOT set — auto-detect scans
+                //      every row for a usable numeric column,
+                //      preferring well-known names (count / score /
+                //      pct / value) before falling back to the first
+                //      finite numeric column.
+                const fieldExists = (name: string): boolean =>
+                    rows.some((r) => {
+                        const v = r[name];
+                        return (
+                            v !== null &&
+                            v !== undefined &&
+                            v !== '' &&
+                            Number.isFinite(Number(v))
+                        );
+                    });
+
+                let detected: string | null;
+                let strictMissing = false;
+                if (cfg.valueField !== undefined && cfg.valueField !== '') {
+                    if (fieldExists(cfg.valueField)) {
+                        detected = cfg.valueField;
+                    } else {
+                        detected = null;
+                        strictMissing = true;
+                    }
+                } else {
+                    detected = autoDetectValueField(rows);
+                }
+
+                if (!detected) {
+                    debugLog(
+                        cfg.id,
+                        strictMissing
+                            ? 'configured valueField missing from results'
+                            : 'no numeric column found',
+                        {
+                            rowCount: rows.length,
+                            firstRowKeys: Object.keys(rows[0] ?? {}),
+                            configuredValueField: cfg.valueField,
+                        }
+                    );
+                    setResult(
+                        cfg.suppressMockOnEmpty
+                            ? buildNoData(
+                                  strictMissing ? 'column_missing' : 'no_numeric_column'
+                              )
+                            : mock
+                    );
+                    return;
+                }
+                const valueField: string = detected;
+                debugLog(cfg.id, 'rendering', {
+                    rowCount: rows.length,
+                    valueField,
+                    configuredValueField: cfg.valueField,
+                });
+
+                // Empty buckets become 0 (timechart convention) so the
+                // spark draws a continuous time axis; spikes still show.
+                // We deliberately do NOT special-case "all zero" — a
+                // real result of 0 (e.g. stats count over a quiet
+                // period, or "0 high-severity incidents this week") is
+                // legitimate and must render as 0, not as "no data" or
+                // mock fallback. The truly-empty case is already
+                // covered by `autoDetectValueField` returning null
+                // when no row exposes a usable numeric column.
+                const liveSeries = rows.map((r) => rowToNumber(r[valueField]));
+
                 const changeField = cfg.changeField ?? 'change';
-                const liveSeries = rows
-                    .map((r) => Number(r[valueField]))
-                    .filter((n) => Number.isFinite(n));
-                if (liveSeries.length === 0) {
-                    setResult(mock);
-                    return;
-                }
 
                 // Single-row searches (typical of "current value"
                 // saved searches like ds_network_health_current) give
@@ -299,9 +551,6 @@ export const useMetric = (
                 const isSingleRow = liveSeries.length < 2;
                 const value = liveSeries[liveSeries.length - 1];
                 const sparkData = isSingleRow ? buildMockSparkline(cfg) : liveSeries;
-                // Real timestamps from time-series searches; empty
-                // otherwise so the Sparkline can synthesise from the
-                // page's dispatched range.
                 const sparkTimestamps = isSingleRow
                     ? []
                     : rows
@@ -320,9 +569,7 @@ export const useMetric = (
                 const prevRows = (prevRes?.results ?? []) as Array<Record<string, unknown>>;
                 const previousSparkData = isSingleRow
                     ? []
-                    : prevRows
-                          .map((r) => Number(r[valueField]))
-                          .filter((n) => Number.isFinite(n));
+                    : prevRows.map((r) => rowToNumber(r[valueField]));
 
                 setResult({
                     value,
@@ -337,8 +584,13 @@ export const useMetric = (
                     resolvedSavedSearch: savedSearchName,
                 });
             })
-            .catch(() => {
-                if (!cancelled) setResult(mock);
+            .catch((err) => {
+                if (cancelled) return;
+                debugLog(cfg.id, 'dispatch threw', {
+                    error: err instanceof Error ? err.message : String(err),
+                    spl,
+                });
+                setResult(cfg.suppressMockOnEmpty ? buildNoData('error') : mock);
             });
 
         return () => {
@@ -367,6 +619,13 @@ export interface KpiConfig {
     valueField?: string;
     /** Mock fallback when no search wired. */
     mockValue: string;
+    /**
+     * Same semantics as {@link MetricConfig.suppressMockOnEmpty}: when
+     * true, an empty/erroring search renders "—" instead of the
+     * configured mock — used by override-bound KPI tiles so a swap
+     * never re-displays the original tile's mock string.
+     */
+    suppressMockOnEmpty?: boolean;
 }
 
 export interface KpiResult {
@@ -374,6 +633,8 @@ export interface KpiResult {
     source: DataSource;
     spl: string;
     resolvedSavedSearch: string;
+    noDataReason?: NoDataReason;
+    rangeLabel?: string;
 }
 
 export const useKpi = (
@@ -383,7 +644,9 @@ export const useKpi = (
 ): KpiResult => {
     const spl = resolveMetricSpl(cfg);
     const savedSearchName = cfg.savedSearch ?? '';
-    const valueField = cfg.valueField ?? 'value';
+    // Value field may be unset when the picker binds a fresh
+    // searchbase entry — defer to row inspection at result time.
+    const explicitValueField = cfg.valueField;
     const initialMock: KpiResult = {
         value: cfg.mockValue,
         source: 'mock',
@@ -405,6 +668,22 @@ export const useKpi = (
         }
         let cancelled = false;
         setResult({ ...mock, source: 'loading' });
+        const buildKpiNoData = (reason: NoDataReason): KpiResult => ({
+            value: '—',
+            source: 'live',
+            spl,
+            resolvedSavedSearch: savedSearchName,
+            noDataReason: reason,
+            rangeLabel: range.label,
+        });
+        debugLog(cfg.id, 'kpi dispatching', {
+            spl,
+            earliest: range.earliest,
+            latest: range.latest,
+            label: range.label,
+            valueField: explicitValueField,
+            suppressMockOnEmpty: Boolean(cfg.suppressMockOnEmpty),
+        });
         runSearch({
             spl,
             earliestTime: range.earliest,
@@ -415,21 +694,109 @@ export const useKpi = (
                 if (cancelled) return;
                 const rows = (res?.results ?? []) as Array<Record<string, unknown>>;
                 if (rows.length === 0) {
-                    setResult(mock);
+                    debugLog(cfg.id, 'kpi no rows', { rangeLabel: range.label });
+                    setResult(
+                        cfg.suppressMockOnEmpty
+                            ? buildKpiNoData('empty_rows')
+                            : mock
+                    );
                     return;
                 }
-                const last = rows[rows.length - 1];
-                const raw = last[valueField];
-                const value = raw === undefined || raw === null ? cfg.mockValue : String(raw);
+                // Multi-row scan: see useMetric for rationale (Splunk
+                // omits empty-bucket columns from JSON, breaking
+                // single-row sniffing on sparse timecharts). Same
+                // strict-vs-auto rule as useMetric: an explicit
+                // valueField is honored — if no row exposes it we
+                // surface 'column_missing' rather than silently
+                // substituting another column.
+                const fieldExists = (name: string): boolean =>
+                    rows.some((r) => {
+                        const v = r[name];
+                        return v !== null && v !== undefined && v !== '';
+                    });
+
+                let detected: string | null;
+                let strictMissing = false;
+                if (explicitValueField !== undefined && explicitValueField !== '') {
+                    if (fieldExists(explicitValueField)) {
+                        detected = explicitValueField;
+                    } else {
+                        detected = null;
+                        strictMissing = true;
+                    }
+                } else {
+                    detected = autoDetectValueField(rows);
+                }
+
+                if (!detected) {
+                    debugLog(
+                        cfg.id,
+                        strictMissing
+                            ? 'kpi configured valueField missing from results'
+                            : 'kpi no numeric column',
+                        {
+                            rowCount: rows.length,
+                            firstRowKeys: Object.keys(rows[0] ?? {}),
+                            configuredValueField: explicitValueField,
+                        }
+                    );
+                    setResult(
+                        cfg.suppressMockOnEmpty
+                            ? buildKpiNoData(
+                                  strictMissing ? 'column_missing' : 'no_numeric_column'
+                              )
+                            : mock
+                    );
+                    return;
+                }
+                const valueField: string = detected;
+                // Pick the last row that actually has a value, walking
+                // backwards through trailing empty buckets. This makes
+                // the headline reflect the most recent real reading
+                // rather than 0 from a final empty bucket.
+                let raw: unknown = undefined;
+                for (let i = rows.length - 1; i >= 0; i -= 1) {
+                    const candidate = rows[i][valueField];
+                    if (
+                        candidate !== undefined &&
+                        candidate !== null &&
+                        candidate !== ''
+                    ) {
+                        raw = candidate;
+                        break;
+                    }
+                }
+                if (raw === undefined) {
+                    debugLog(cfg.id, 'kpi all empty buckets', {
+                        rowCount: rows.length,
+                        valueField,
+                    });
+                    setResult(
+                        cfg.suppressMockOnEmpty
+                            ? buildKpiNoData('no_numeric_column')
+                            : mock
+                    );
+                    return;
+                }
+                debugLog(cfg.id, 'kpi rendering', {
+                    rowCount: rows.length,
+                    valueField,
+                    raw,
+                });
                 setResult({
-                    value,
+                    value: String(raw),
                     source: 'live',
                     spl,
                     resolvedSavedSearch: savedSearchName,
                 });
             })
-            .catch(() => {
-                if (!cancelled) setResult(mock);
+            .catch((err) => {
+                if (cancelled) return;
+                debugLog(cfg.id, 'kpi dispatch threw', {
+                    error: err instanceof Error ? err.message : String(err),
+                    spl,
+                });
+                setResult(cfg.suppressMockOnEmpty ? buildKpiNoData('error') : mock);
             });
         return () => {
             cancelled = true;

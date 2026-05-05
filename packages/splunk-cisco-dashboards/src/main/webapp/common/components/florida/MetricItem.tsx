@@ -6,11 +6,17 @@ import {
     AlertCircle,
     CheckCircle2,
     ExternalLink,
+    Settings2,
 } from 'lucide-react';
 import { Sparkline } from './Sparkline';
 import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
 import { cn } from '@/common/lib/utils';
-import type { MetricStatus, DataSource, TimeRange } from '@/common/hooks/useMetric';
+import type {
+    MetricStatus,
+    DataSource,
+    TimeRange,
+    NoDataReason,
+} from '@/common/hooks/useMetric';
 
 interface MetricItemProps {
     label: string;
@@ -56,7 +62,30 @@ interface MetricItemProps {
      * sparkline area. When omitted, both affordances are hidden.
      */
     onOpenInSearch?: () => void;
+    /**
+     * Click → opens the KPI picker for this tile. When omitted, the
+     * gear icon is hidden — useful for tiles that aren't user-editable.
+     */
+    onConfigure?: () => void;
+    /**
+     * When true, the tile is bound to a user-picked override; we render
+     * a small "modified" dot on the gear so it's obvious which tiles
+     * have been customised.
+     */
+    isCustomized?: boolean;
     sparkTitle?: string;
+    /**
+     * Populated when {@link value} is `Number.NaN` to explain *why* the
+     * tile is showing no data. The component uses this to render a
+     * diagnostic subtext (e.g. "0 rows returned in last 7 days")
+     * instead of a bare "no data" — that bare message is indistinguishable
+     * from a code bug and was the source of the user's "the swap is
+     * broken" complaint when in fact the search was running fine but
+     * had no events in the dispatched window.
+     */
+    noDataReason?: NoDataReason;
+    /** Label of the dispatched time range — used in the no-data subtext. */
+    rangeLabel?: string;
     className?: string;
 }
 
@@ -94,11 +123,30 @@ export const MetricItem: React.FC<MetricItemProps> = ({
     status = 'unknown',
     source,
     onOpenInSearch,
+    onConfigure,
+    isCustomized = false,
     sparkTitle,
+    noDataReason,
+    rangeLabel,
     className,
 }) => {
     return (
-        <div className={cn('flex flex-col min-w-[160px] px-2 py-1 relative', className)}>
+        // flex-1 + basis-0 makes every tile grab an equal share of the
+        // section's free width — without it the tiles sat at their
+        // natural content width and left a half-section of whitespace
+        // before the divider rule. min-w is a safety floor for very
+        // narrow panes / very long labels: tiles never collapse below
+        // 108px regardless of how the splitter is positioned.
+        // min-w tuned for 5 tiles per section: at the smallest xl
+        // breakpoint (1280px) each tile lands at ~118px usable width,
+        // and at 1600px we get ~176px. The 4xl headline + sparkline
+        // both still render legibly in that range.
+        <div
+            className={cn(
+                'flex flex-col flex-1 basis-0 min-w-[108px] px-1.5 py-1 relative',
+                className
+            )}
+        >
             {source && (
                 <span
                     className={cn(
@@ -146,6 +194,24 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                                 <ExternalLink className="w-3 h-3 stroke-[2.5px]" />
                             </button>
                         )}
+                        {onConfigure && (
+                            <button
+                                type="button"
+                                onClick={onConfigure}
+                                title={
+                                    isCustomized
+                                        ? `Configure ${label} (customised)`
+                                        : `Configure ${label}`
+                                }
+                                aria-label={`Configure ${label} tile`}
+                                className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400 relative"
+                            >
+                                <Settings2 className="w-3 h-3 stroke-[2.5px]" />
+                                {isCustomized && (
+                                    <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-sky-500 border border-white dark:border-slate-900" />
+                                )}
+                            </button>
+                        )}
                     </span>
                 </span>
                 {subLabel && (
@@ -155,32 +221,96 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                 )}
             </div>
 
-            <div className="flex items-baseline gap-2 mb-1">
-                <span
-                    className={cn(
-                        'text-4xl font-black tracking-tighter leading-none transition-colors',
-                        STATUS_TEXT_COLOR[status]
-                    )}
-                >
-                    {value}
-                    {unit}
-                </span>
-                {change !== undefined && (
-                    <div
-                        className={cn(
-                            'flex items-center text-[10px] font-black',
-                            change >= 0 ? 'text-green-500' : 'text-red-500'
+            {(() => {
+                // NaN is the sentinel `useMetric` emits when an
+                // override-bound tile's search ran successfully but
+                // returned nothing (or no numeric column). We render
+                // "—" with no unit and no change arrow so the user can
+                // tell at a glance "the swap took effect, the search
+                // just has no data on this Splunk env" — instead of
+                // misreading "0%" as the original tile's value.
+                const isNoData = typeof value === 'number' && Number.isNaN(value);
+                if (isNoData) {
+                    // Diagnostic subtext: tells the user *why* the tile
+                    // is empty. The bare "no data" we used to render
+                    // looked indistinguishable from a code bug, which
+                    // is what made every picker-bound tile look
+                    // "broken" even when the swap had dispatched
+                    // cleanly and Splunk had simply returned nothing
+                    // in the chosen window.
+                    let subtext: string;
+                    if (noDataReason === 'error') {
+                        subtext = 'search failed';
+                    } else if (noDataReason === 'column_missing') {
+                        // Honors the strict valueField rule in
+                        // useMetric: the user typed a column the SPL
+                        // doesn't emit. Picker chips show the real
+                        // column names — point them there.
+                        subtext = 'value field not emitted by search';
+                    } else if (noDataReason === 'no_numeric_column') {
+                        subtext = rangeLabel
+                            ? `no numeric values · ${rangeLabel.toLowerCase()}`
+                            : 'no numeric values returned';
+                    } else if (noDataReason === 'empty_rows') {
+                        subtext = rangeLabel
+                            ? `0 rows · ${rangeLabel.toLowerCase()}`
+                            : '0 rows returned';
+                    } else {
+                        subtext = rangeLabel
+                            ? `no data · ${rangeLabel.toLowerCase()}`
+                            : 'no data';
+                    }
+                    return (
+                        <div className="flex flex-col mb-1">
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-4xl font-black tracking-tighter leading-none text-slate-400 dark:text-slate-500">
+                                    —
+                                </span>
+                            </div>
+                            <span className="text-[9px] font-medium text-slate-400 dark:text-slate-500 mt-0.5 leading-tight">
+                                {subtext}
+                            </span>
+                        </div>
+                    );
+                }
+                const showChange =
+                    change !== undefined && Number.isFinite(change);
+                return (
+                    <div className="flex items-baseline gap-2 mb-1">
+                        <span
+                            className={cn(
+                                'text-4xl font-black tracking-tighter leading-none transition-colors',
+                                STATUS_TEXT_COLOR[status]
+                            )}
+                        >
+                            {value}
+                            {unit}
+                        </span>
+                        {showChange && (
+                            <div
+                                className={cn(
+                                    'flex items-center text-[10px] font-black',
+                                    (change as number) >= 0
+                                        ? 'text-green-500'
+                                        : 'text-red-500'
+                                )}
+                            >
+                                {(change as number) >= 0 ? (
+                                    <ArrowUp className="w-3 h-3 stroke-[3px]" />
+                                ) : (
+                                    <ArrowDown className="w-3 h-3 stroke-[3px]" />
+                                )}
+                                <span>
+                                    {(change as number) > 0
+                                        ? `+${change}`
+                                        : change}
+                                    %
+                                </span>
+                            </div>
                         )}
-                    >
-                        {change >= 0 ? (
-                            <ArrowUp className="w-3 h-3 stroke-[3px]" />
-                        ) : (
-                            <ArrowDown className="w-3 h-3 stroke-[3px]" />
-                        )}
-                        <span>{change > 0 ? `+${change}` : change}%</span>
                     </div>
-                )}
-            </div>
+                );
+            })()}
 
             <div className="h-10 mt-auto opacity-80 hover:opacity-100 transition-opacity">
                 <Sparkline

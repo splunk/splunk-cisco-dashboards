@@ -10,7 +10,8 @@
         "setup": "yarn && lerna run build",
         "start": "cd packages/splunk-cisco-dashboards && yarn start",
         "lint": "lerna run lint",
-        "clean": "lerna run clean --parallel"
+        "clean": "lerna run clean --parallel",
+        "clean:build": "lerna run clean:build"
     },
     "devDependencies": {
         "lerna": "^4.0.0"

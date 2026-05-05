@@ -5,6 +5,7 @@
     "scripts": {
         "build": "node bin/build.js build",
         "clean": "node bin/build.js clean",
+        "clean:build": "bash bin/clean_build.sh && node bin/build.js build",
         "pack:app": "node bin/build.js pack",
         "link:app": "node bin/build.js link",
         "unlink:app": "node bin/build.js unlink",

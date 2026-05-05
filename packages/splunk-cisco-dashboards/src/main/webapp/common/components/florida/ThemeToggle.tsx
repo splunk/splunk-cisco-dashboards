@@ -1,9 +1,11 @@
 /**
- * ThemeToggle — single-button cycle through light → dark → system.
+ * ThemeToggle — clearly-labeled pill button that cycles
+ *   light → dark → system → light …
  *
- * The icon reflects the *user preference*, not the resolved theme.
- * This way "system" always shows a monitor glyph so the user can
- * tell whether they've explicitly opted in or are auto-following.
+ * We show both an icon AND a text label so the control is impossible
+ * to overlook in the dashboard header. The label always reflects the
+ * user's *preference* (not the resolved theme), so "AUTO" stays
+ * visible when following the OS.
  */
 
 import React from 'react';
@@ -17,28 +19,55 @@ interface ThemeToggleProps {
     className?: string;
 }
 
-const NEXT_LABEL: Record<ThemePreference, string> = {
-    light: 'Switch to dark mode',
-    dark: 'Switch to follow system theme',
-    system: 'Switch to light mode',
+const PRESET: Record<
+    ThemePreference,
+    {
+        label: string;
+        nextLabel: string;
+        Icon: React.ComponentType<{ className?: string }>;
+        chrome: string;
+    }
+> = {
+    light: {
+        label: 'LIGHT',
+        nextLabel: 'Switch to dark mode',
+        Icon: Sun,
+        chrome:
+            'bg-amber-100 border-amber-300 text-amber-700 hover:bg-amber-200',
+    },
+    dark: {
+        label: 'DARK',
+        nextLabel: 'Switch to follow system theme',
+        Icon: Moon,
+        chrome:
+            'bg-indigo-900/60 border-indigo-700 text-indigo-200 hover:bg-indigo-900',
+    },
+    system: {
+        label: 'AUTO',
+        nextLabel: 'Switch to light mode',
+        Icon: MonitorSmartphone,
+        chrome:
+            'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700',
+    },
 };
 
 export const ThemeToggle: React.FC<ThemeToggleProps> = ({ theme, onCycle, className }) => {
-    const Icon = theme === 'light' ? Sun : theme === 'dark' ? Moon : MonitorSmartphone;
+    const preset = PRESET[theme];
+    const Icon = preset.Icon;
     return (
         <button
             type="button"
             onClick={onCycle}
-            title={NEXT_LABEL[theme]}
-            aria-label={NEXT_LABEL[theme]}
+            title={preset.nextLabel}
+            aria-label={preset.nextLabel}
             className={cn(
-                'p-1.5 rounded transition-colors',
-                'text-slate-500 hover:text-sky-600 hover:bg-slate-50',
-                'dark:text-slate-400 dark:hover:text-sky-300 dark:hover:bg-slate-800',
+                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400',
+                preset.chrome,
                 className
             )}
         >
-            <Icon className="w-4 h-4" />
+            <Icon className="w-3.5 h-3.5" />
+            {preset.label}
         </button>
     );
 };

@@ -10,7 +10,14 @@ export interface City {
         alerts: number;
         latency: number;
     };
-    query: string;
+    /**
+     * Splunk saved-search stanza that powers the "Active SPL Query"
+     * preview card and the "Open in Splunk Search" drilldown for this
+     * site. Defined in `default/savedsearches.conf` so executives can
+     * tweak the analysis without redeploying the React bundle. The
+     * map dispatches it as `| savedsearch "<savedSearch>"`.
+     */
+    savedSearch: string;
 }
 
 export interface SearchResult {

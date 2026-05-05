@@ -1,0 +1,948 @@
+
+<dashboard version="2" theme="light">
+ <label>Workplace — Single Pane of Glass</label>
+ <description></description>
+ <definition><![CDATA[
+{
+	"visualizations": {
+		"viz_about_box": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.85)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.08)",
+				"strokeWidth": 1
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_about_md": {
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#2B2B2B",
+				"fontSize": "small",
+				"markdown": "# Workplace — Single Pane of Glass\n\n**Audience:** Executive Sponsors, NetOps Leadership, Workplace Services, Cisco Account Team\n\nThis is the executive view aligned to the **Cisco Future-Proof Workplace** strategy paper . It rolls Catalyst Center + Cisco Spaces (Wi-Fi-based, not camera-based) into five Health Tiles. Two tiles are fully wired today; one is a Phase-3 placeholder pending data ingestion. Use this dashboard for monthly business reviews and incident-window readouts. Drill into `NetOps Readiness — Op Florida Ready` for operational detail."
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_corr": {
+			"dataSources": {
+				"annotation": "ds_annotations",
+				"primary": "ds_correlation"
+			},
+			"description": "When wired and wireless move together = full mobilization. Wireless-only spike = mobile/responder activity. Auth failures climbing post-event = AAR audit work. All signals quiet = a data-source problem, not a quiet day.",
+			"options": {
+				"annotationColor": "> annotation | seriesByName('annotation_color')",
+				"annotationLabel": "> annotation | seriesByName('label')",
+				"annotationX": "> annotation | seriesByName('_time')",
+				"legendDisplay": "bottom",
+				"lineCurveStyle": "smooth",
+				"markerDisplay": "outlined",
+				"nullValueDisplay": "connect",
+				"overlayFields": "AP Health (0-100), Spaces Concurrent Users, Auth Failures",
+				"seriesColors": [
+					"#005073",
+					"#049FD9",
+					"#6EBE4A",
+					"#FF8C25",
+					"#D64550"
+				],
+				"showLegend": true,
+				"showOverlayY2Axis": true,
+				"y2AxisAbbreviation": "auto",
+				"y2AxisTitleText": "AP Health / Spaces / Auth failures",
+				"yAxisAbbreviation": "auto",
+				"yAxisTitleText": "Wired / Wireless clients",
+				"xAxisTitleVisibility": "hide"
+			},
+			"title": "Cross-source correlation",
+			"type": "splunk.line"
+		},
+		"viz_corr_box": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.85)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.08)",
+				"strokeWidth": 1
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_corr_title": {
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#2B2B2B",
+				"markdown": "## Cross-source correlation strip\n\nWired clients, wireless clients, AP health (all DNAC), Spaces presence (post-Apr 17 only), and Windows auth failures on a shared time axis. \n<span style=\"color:#0B5394\">●</span> **Vertical blue markers:** Op Florida Ready exercise — *Day 1 (Apr 13), Day 2 (Apr 14), Day 3 (Apr 15)*. **Reading pattern:** wireless surges + wired stays flat = mobile-driven event. All signals moving together = full operational mobilization. The point: Splunk is the integration fabric tying disparate Cisco + non-Cisco signals into one story."
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_footer_box": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.85)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.08)",
+				"strokeWidth": 1
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_footer_md": {
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#2B2B2B",
+				"fontSize": "small",
+				"markdown": "## Phase roadmap *(per Cisco Future-Proof Workplace strategy)*\n\n**Phase 1 — Done:** NetOps Readiness for Op Florida Ready (separate dashboard) + this Workplace SPoG scaffold.\n\n**Phase 2 — In progress:** Tile 4 frictionless-access via badging integration; per-site Spaces hourly heatmap once firehose Apr 13–15 gap is escalated to vendor.\n\n**Phase 3 — Pending:** Tile 3 Energy Intensity (Catalyst 9300X PoE + utility meters); Tile 4 access-control system; Tile 5 OT life-safety / fire-panel integration via BACnet.\n\n**Phase 4 — Visionary:** AI Agents on the data lake — same agentic pattern Cisco deployed for CoreNet in Kuala Lumpur Malaysia. Splunk is the substrate.\n\n*Source: `reference_design/Cisco_FutureProof_Workplace.md`*"
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_issues": {
+			"dataSources": {
+				"primary": "ds_issues"
+			},
+			"options": {
+				"backgroundColor": "transparent",
+				"count": 12,
+				"headerVisibility": "fixed",
+				"columnFormat": {
+					"Priority": {
+						"rowBackgroundColors": "> table | seriesByName(\"Priority\") | matchValue(viz_issues_Priority_colors)"
+					}
+				}
+			},
+			"title": "Top active issues",
+			"type": "splunk.table",
+			"context": {
+				"viz_issues_Priority_colors": [
+					{
+						"match": "P1",
+						"value": "rgba(214,69,80,0.35)"
+					},
+					{
+						"match": "P2",
+						"value": "rgba(229,168,35,0.30)"
+					},
+					{
+						"match": "P3",
+						"value": "rgba(110,190,74,0.15)"
+					},
+					{
+						"match": "P4",
+						"value": "rgba(110,190,74,0.15)"
+					}
+				]
+			}
+		},
+		"viz_issues_box": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.85)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.08)",
+				"strokeWidth": 1
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_issues_title": {
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#2B2B2B",
+				"markdown": "## Active issues by category\n\nDNAC active issues grouped by category and priority. Top of the list is what's burning right now."
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_main_trend": {
+			"dataSources": {
+				"annotation": "ds_annotations",
+				"primary": "ds_main_trend"
+			},
+			"description": "Reading pattern: client load up + AP health steady = elastic capacity. Client load up + AP health dipping = the network is taking the strain. Client load up + issues spiking = something broke under stress.",
+			"options": {
+				"annotationColor": "> annotation | seriesByName('annotation_color')",
+				"annotationLabel": "> annotation | seriesByName('label')",
+				"annotationX": "> annotation | seriesByName('_time')",
+				"legendDisplay": "bottom",
+				"lineCurveStyle": "smooth",
+				"markerDisplay": "outlined",
+				"nullValueDisplay": "connect",
+				"overlayFields": "AP Health (0-100), Active Issues",
+				"seriesColors": [
+					"#005073",
+					"#049FD9",
+					"#6EBE4A",
+					"#D64550"
+				],
+				"showLegend": true,
+				"showOverlayY2Axis": true,
+				"y2AxisAbbreviation": "auto",
+				"y2AxisTitleText": "AP Health (0-100) / Active Issues",
+				"yAxisAbbreviation": "auto",
+				"yAxisTitleText": "Wired / Wireless clients",
+				"xAxisTitleVisibility": "hide"
+			},
+			"title": "Wireless occupancy & quality over time",
+			"type": "splunk.line"
+		},
+		"viz_main_trend_box": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.85)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.08)",
+				"strokeWidth": 1
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_main_trend_title": {
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#2B2B2B",
+				"markdown": "## Concurrent endpoints over time — wired vs wireless\n\nDaily concurrent endpoints from DNAC client-health rollup, split by **wired** (desktops, VoIP, kiosks) vs **wireless** (laptops, phones, tablets), overlaid with AP health and active issues. \n<span style=\"color:#0B5394\">●</span> **Vertical blue markers:** Op Florida Ready exercise — *Day 1 (Apr 13), Day 2 (Apr 14), Day 3 (Apr 15)*. **Reading pattern:** wireless surges + wired stays flat = mobile-driven event (responders roaming). Both surge = full-staff mobilization."
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_persite": {
+			"dataSources": {
+				"primary": "ds_persite"
+			},
+			"options": {
+				"backgroundColor": "transparent",
+				"count": 12,
+				"headerVisibility": "fixed",
+				"columnFormat": {
+					"Status": {
+						"rowBackgroundColors": "> table | seriesByName(\"Status\") | matchValue(viz_persite_Status_colors)"
+					}
+				}
+			},
+			"title": "Site quality leaderboard",
+			"type": "splunk.table",
+			"context": {
+				"viz_persite_Status_colors": [
+					{
+						"match": "At Risk",
+						"value": "rgba(214,69,80,0.35)"
+					},
+					{
+						"match": "Watch",
+						"value": "rgba(229,168,35,0.30)"
+					},
+					{
+						"match": "Good",
+						"value": "rgba(110,190,74,0.15)"
+					}
+				]
+			}
+		},
+		"viz_persite_box": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.85)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.08)",
+				"strokeWidth": 1
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_persite_title": {
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#2B2B2B",
+				"markdown": "## Per-site Network Quality\n\nNQI by site, sorted worst first. Worst sites are where the executive should ask 'why?'"
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_t1_box": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.85)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.08)",
+				"strokeWidth": 1
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_t1_title": {
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#2B2B2B",
+				"markdown": "**Tile 1 — Occupancy**\n\nTotal concurrent endpoints (wired + wireless) from DNAC client-health rollup. The authoritative count reported by Catalyst Center, not a per-AP estimate."
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_t1_value": {
+			"dataSources": {
+				"primary": "ds_t1_occupancy_kpi"
+			},
+			"options": {
+				"majorColor": "#049FD9",
+				"majorFontSize": 56,
+				"shouldUseThousandSeparators": true,
+				"sparklineDisplay": "below",
+				"sparklineStrokeColor": "#0B5394"
+			},
+			"title": "Total concurrent endpoints (wired + wireless)",
+			"type": "splunk.singlevalue"
+		},
+		"viz_t2_box": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.85)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.08)",
+				"strokeWidth": 1
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_t2_title": {
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#2B2B2B",
+				"markdown": "**Tile 2 — Network Quality**\n\nComposite Network Quality Index (NQI) blending DNAC AP health and client health, scaled 0–100. Replaces environmental tile (no MT/BMS data ingested)."
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_t2_value": {
+			"context": {
+				"majorColorEditorConfig": [
+					{
+						"to": 60,
+						"value": "#D64550"
+					},
+					{
+						"from": 60,
+						"to": 80,
+						"value": "#E5A823"
+					},
+					{
+						"from": 80,
+						"value": "#6EBE4A"
+					}
+				]
+			},
+			"dataSources": {
+				"primary": "ds_t2_nqi_kpi"
+			},
+			"options": {
+				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
+				"majorFontSize": 60,
+				"majorValue": "> primary | seriesByName('NQI') | lastPoint()",
+				"sparklineDisplay": "below",
+				"sparklineStrokeColor": "#2E9E4A",
+				"unit": "%",
+				"unitPosition": "after"
+			},
+			"title": "Network Quality Index",
+			"type": "splunk.singlevalue"
+		},
+		"viz_t3_box": {
+			"options": {
+				"fillColor": "rgba(245,245,245,0.85)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.12)",
+				"strokeDasharray": "4 4",
+				"strokeWidth": 1
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_t3_placeholder": {
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#777777",
+				"markdown": "## ⏳\n**Pending data**\nIngestion roadmap:\n- Catalyst 9300X PoE telemetry via DNAC API\n- BACnet / Modbus utility meters\n- Building floor area normalization table\n\nETA: dependent on facilities engagement."
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_t3_title": {
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#2B2B2B",
+				"markdown": "**Tile 3 — Energy Intensity** *(Phase 3 — pending)*\n\nReal-time kWh per square foot vs baseline. Requires Catalyst 9300X port-level PoE telemetry + utility meter ingestion. Not yet flowing into Splunk."
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_t4_box": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.85)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.08)",
+				"strokeWidth": 1
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_t4_title": {
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#2B2B2B",
+				"markdown": "**Tile 4 — Security Posture**\n\nActive P1+P2 DNAC issues plus Windows authentication failures. Frictionless badging deferred to Phase 3 (no access-control system ingested)."
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_t4_value": {
+			"context": {
+				"majorColorEditorConfig": [
+					{
+						"to": 10,
+						"value": "#6EBE4A"
+					},
+					{
+						"from": 10,
+						"to": 30,
+						"value": "#E5A823"
+					},
+					{
+						"from": 30,
+						"value": "#D64550"
+					}
+				]
+			},
+			"dataSources": {
+				"primary": "ds_t4_security_kpi"
+			},
+			"options": {
+				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
+				"majorFontSize": 60,
+				"majorValue": "> primary | seriesByName('Active Risks') | lastPoint()",
+				"shouldUseThousandSeparators": true,
+				"sparklineDisplay": "below",
+				"sparklineStrokeColor": "#D64550"
+			},
+			"title": "Active Risks",
+			"type": "splunk.singlevalue"
+		},
+		"viz_t5_box": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.85)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.08)",
+				"strokeWidth": 1
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_t5_title": {
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#2B2B2B",
+				"markdown": "**Tile 5 — Operational Resilience**\n\nNetwork Readiness Score (NRS) — composite of attainability, retainability, quality, and risk dampening. Same formula as the NetOps Readiness dashboard."
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_t5_value": {
+			"context": {
+				"majorColorEditorConfig": [
+					{
+						"to": 75,
+						"value": "#D64550"
+					},
+					{
+						"from": 75,
+						"to": 90,
+						"value": "#E5A823"
+					},
+					{
+						"from": 90,
+						"value": "#6EBE4A"
+					}
+				]
+			},
+			"dataSources": {
+				"primary": "ds_t5_nrs_kpi"
+			},
+			"options": {
+				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
+				"majorFontSize": 60,
+				"majorValue": "> primary | seriesByName('NRS') | lastPoint()",
+				"sparklineDisplay": "below",
+				"sparklineStrokeColor": "#0B5394",
+				"unit": "%",
+				"unitPosition": "after"
+			},
+			"title": "Network Readiness Score",
+			"type": "splunk.singlevalue"
+		},
+		"viz_bmxsRvR0": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.85)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.08)",
+				"strokeWidth": 1
+			},
+			"type": "splunk.rectangle"
+		}
+	},
+	"title": "Workplace — Single Pane of Glass",
+	"inputs": {
+		"input_global_trp": {
+			"options": {
+				"defaultValue": "-30d@d,now",
+				"token": "global_time"
+			},
+			"title": "Time range",
+			"type": "input.timerange"
+		}
+	},
+	"defaults": {
+		"dataSources": {
+			"ds.search": {
+				"options": {
+					"queryParameters": {
+						"earliest": "$global_time.earliest$",
+						"latest": "$global_time.latest$"
+					}
+				}
+			},
+			"ds.spl2": {
+				"options": {
+					"queryParameters": {
+						"earliest": "$global_time.earliest$",
+						"latest": "$global_time.latest$"
+					}
+				}
+			}
+		},
+		"tokens": {
+			"default": {}
+		}
+	},
+	"dataSources": {
+		"ds_correlation": {
+			"name": "Cross-source correlation - clienthealth wired+wireless + AP health + Spaces + auth failures (union pattern)",
+			"options": {
+				"query": "| union\n [ search `index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" scoreType=\"ALL\" clientType=\"WIRED\"\n | timechart span=1d fixedrange=false latest(clientCount) as \"Wired Clients\" ]\n [ search `index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" scoreType=\"ALL\" clientType=\"WIRELESS\"\n | timechart span=1d fixedrange=false latest(clientCount) as \"Wireless Clients\" ]\n [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" OverallHealth=*\n | search DeviceFamily=\"Unified AP\" OR DeviceFamily=\"Wireless Controller\"\n | where OverallHealth >= 0\n | timechart span=1d avg(OverallHealth) as ap_h_raw\n | eval \"AP Health (0-100)\" = round(ap_h_raw*10, 1)\n | fields - ap_h_raw ]\n [ search `index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_PRESENCE\"\n | eval mac=coalesce('devicePresence.device.macAddress','devicePresence.macAddress')\n | where isnotnull(mac) AND mac!=\"\"\n | timechart span=1d dc(mac) as \"Spaces Concurrent Users\" ]\n [ search `index_windows` sourcetype=\"WinEventLog:Security\" (EventCode=4625 OR EventCode=4771)\n | timechart span=1d count as \"Auth Failures\" ]\n| stats values(*) as * by _time\n| sort _time\n| table _time, \"Wired Clients\", \"Wireless Clients\", \"AP Health (0-100)\", \"Spaces Concurrent Users\", \"Auth Failures\"",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_annotations": {
+			"name": "Shared - ds_annotations",
+			"options": {
+				"app": "splunk-cisco-dashboards",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				},
+				"ref": "Shared - ds_annotations",
+				"useSavedTimeRange": false
+			},
+			"type": "ds.savedSearch"
+		},
+		"ds_issues": {
+			"name": "Top active DNAC issues by specific-category and priority",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueStatus=\"active\"\n| stats dc(IssueID) as Issues, latest(_time) as last_seen by IssueSpecificCategory, IssuePriority\n| eval \"Last seen\" = strftime(last_seen, \"%a %m/%d %H:%M\")\n| sort -Issues\n| rename IssueSpecificCategory as Category, IssuePriority as Priority\n| fields - last_seen\n| table Category Priority Issues \"Last seen\"",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_main_trend": {
+			"name": "Main trend - wired + wireless from clienthealth + AP health + issues daily (union pattern)",
+			"options": {
+				"query": "| union\n [ search `index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" scoreType=\"ALL\" clientType=\"WIRED\"\n | timechart span=1d fixedrange=false latest(clientCount) as \"Wired Clients\" ]\n [ search `index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" scoreType=\"ALL\" clientType=\"WIRELESS\"\n | timechart span=1d fixedrange=false latest(clientCount) as \"Wireless Clients\" ]\n [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" OverallHealth=*\n | search DeviceFamily=\"Unified AP\" OR DeviceFamily=\"Wireless Controller\"\n | where OverallHealth >= 0\n | timechart span=1d avg(OverallHealth) as ap_h_raw\n | eval \"AP Health (0-100)\" = round(ap_h_raw*10, 1)\n | fields - ap_h_raw ]\n [ search `index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueStatus=\"active\"\n | timechart span=1d dc(IssueID) as \"Active Issues\" ]\n| stats values(*) as * by _time\n| sort _time\n| table _time, \"Wired Clients\", \"Wireless Clients\", \"AP Health (0-100)\", \"Active Issues\"",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_persite": {
+			"name": "Per-site Network Quality leaderboard",
+			"options": {
+				"query": "| union\n [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n | search DeviceFamily=\"Unified AP\" OR DeviceFamily=\"Wireless Controller\"\n | eval site=coalesce(Site, Location)\n | where isnotnull(site) AND trim(site)!=\"\" AND lower(site)!=\"null\" AND NOT match(site, \"(?i)(^|/)null(/|$)\")\n | stats latest(Reachability) as reach, latest(OverallHealth) as oh by DeviceName, site\n | eval is_reach=if(upper(reach)=\"REACHABLE\", 1, 0)\n | eval ap_ok=case(isnull(oh), null(), oh<0, null(), oh>=7, 1, 1=1, 0)\n | stats avg(is_reach) as ap_reach, avg(ap_ok) as ap_health_ok, count as ap_n by site ]\n [ search `index_catalyst` sourcetype=\"cisco:dnac:client\" siteHierarchy=*\n | eval cl_health = 'health.overallScore', site = siteHierarchy\n | where isnotnull(site) AND trim(site)!=\"\" AND lower(site)!=\"null\" AND NOT match(site, \"(?i)(^|/)null(/|$)\")\n | stats avg(cl_health) as health_avg, count as cl_n by site\n | eval health100=coalesce(health_avg,8)*10 ]\n| stats values(ap_reach) as ap_reach, values(ap_health_ok) as ap_ok,\n values(health100) as h100, values(ap_n) as ap_n, values(cl_n) as cl_n by site\n| where (isnotnull(ap_n) AND ap_n>0) OR (isnotnull(cl_n) AND cl_n>0)\n| eval ap_reach=coalesce(ap_reach,1), ap_ok=coalesce(ap_ok,1), h100=coalesce(h100,80)\n| eval NQI = round((ap_ok*100)*0.6 + h100*0.4, 1)\n| eval Status = case(NQI>=85, \"Good\", NQI>=70, \"Watch\", 1=1, \"At Risk\")\n| eval site_short=replace(site, \"^Global/Florida/\", \"\")\n| sort + NQI\n| rename site_short as Site, ap_n as APs, cl_n as Clients\n| table Site NQI Status APs Clients",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_t1_occupancy_kpi": {
+			"name": "Tile 1 - total concurrent endpoints (wired+wireless via clienthealth)",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" scoreType=\"ALL\" (clientType=\"WIRED\" OR clientType=\"WIRELESS\")\n| timechart span=1d fixedrange=false latest(clientCount) by clientType\n| addtotals fieldname=\"Total Endpoints\"\n| fields _time, \"Total Endpoints\"",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_t2_nqi_kpi": {
+			"name": "Tile 2 - Network Quality Index with sparkline",
+			"options": {
+				"query": "| union\n [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" OverallHealth=*\n | search DeviceFamily=\"Unified AP\" OR DeviceFamily=\"Wireless Controller\"\n | where OverallHealth >= 0\n | bin _time span=1d\n | stats avg(OverallHealth) as ap_health by _time\n | eval ap100 = ap_health*10 ]\n [ search `index_catalyst` sourcetype=\"cisco:dnac:client\"\n | eval cs = 'health.overallScore'\n | bin _time span=1d\n | stats avg(cs) as cl_health by _time\n | eval cl100 = cl_health*10 ]\n| stats values(ap100) as ap100, values(cl100) as cl100 by _time\n| eval NQI = round(coalesce(ap100,80)*0.6 + coalesce(cl100,80)*0.4, 1)\n| timechart span=1d max(NQI) as NQI",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_t4_security_kpi": {
+			"name": "Tile 4 - active P1+P2 risks plus auth failures with sparkline",
+			"options": {
+				"query": "| union\n [ search `index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueStatus=\"active\" (IssuePriority=\"P1\" OR IssuePriority=\"P2\")\n | bin _time span=1d\n | stats dc(IssueID) as dnac_risk by _time ]\n [ search `index_windows` sourcetype=\"WinEventLog:Security\" (EventCode=4625 OR EventCode=4771)\n | bin _time span=1d\n | stats count as auth_fail by _time ]\n| stats values(dnac_risk) as dnac_risk, values(auth_fail) as auth_fail by _time\n| eval dnac_risk=coalesce(dnac_risk,0), auth_fail=coalesce(auth_fail,0)\n| eval auth_fail_norm = if(auth_fail>0, ceil(auth_fail/100), 0)\n| eval risks = dnac_risk + auth_fail_norm\n| timechart span=1d max(risks) as \"Active Risks\"",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_t5_nrs_kpi": {
+			"name": "Tile 5 - NRS daily with sparkline",
+			"options": {
+				"query": "| union\n [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" OverallHealth=*\n | search DeviceFamily=\"Unified AP\" OR DeviceFamily=\"Wireless Controller\"\n | where OverallHealth >= 0\n | bin _time span=1d\n | stats latest(Reachability) as reach, latest(OverallHealth) as oh by _time, DeviceName\n | eval is_reach=if(upper(reach)=\"REACHABLE\", 1, 0), ap_ok=if(oh>=`nrs_th_ap_health`, 1, 0)\n | stats avg(is_reach) as ap_reach, avg(ap_ok) as ap_health_ok, count as ap_n by _time ]\n [ search `index_catalyst` sourcetype=\"cisco:dnac:client\"\n | eval cl_health = 'health.overallScore'\n | bin _time span=1d\n | stats avg(cl_health) as health_avg, count(eval(cl_health>=`nrs_th_cl_health`)) as ok_n, count as cl_n by _time\n | eval cl_ok=if(cl_n>0, ok_n/cl_n, null()), health100=coalesce(health_avg,8)*10 ]\n| stats values(ap_reach) as ap_reach, values(ap_health_ok) as ap_ok,\n values(cl_ok) as cl_ok, values(health100) as h100,\n values(ap_n) as ap_n, values(cl_n) as cl_n by _time\n| where isnotnull(ap_n) AND ap_n>0\n| eval ap_reach=coalesce(ap_reach,1), ap_ok=coalesce(ap_ok,1),\n cl_ok=coalesce(cl_ok,1), h100=coalesce(h100,80)\n| eval A=ap_reach*100, R=(ap_ok*0.5 + cl_ok*0.5)*100, Q=h100\n| eval NRS=A*`nrs_w_nrs_a` + R*`nrs_w_nrs_r` + Q*`nrs_w_nrs_q`\n| timechart span=1d max(eval(round(NRS, 2))) as NRS",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		}
+	},
+	"layout": {
+		"globalInputs": [
+			"input_global_trp"
+		],
+		"layoutDefinitions": {
+			"layout_1": {
+				"options": {
+					"backgroundColor": "#F4F6FA",
+					"display": "auto-scale",
+					"height": 1800,
+					"width": 1640
+				},
+				"structure": [
+					{
+						"item": "viz_bmxsRvR0",
+						"position": {
+							"x": 670,
+							"y": 170,
+							"w": 312,
+							"h": 290
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_about_box",
+						"position": {
+							"h": 130,
+							"w": 1600,
+							"x": 20,
+							"y": 20
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_about_md",
+						"position": {
+							"h": 110,
+							"w": 1560,
+							"x": 40,
+							"y": 30
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_t1_box",
+						"position": {
+							"h": 290,
+							"w": 312,
+							"x": 20,
+							"y": 170
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_t1_title",
+						"position": {
+							"h": 100,
+							"w": 288,
+							"x": 32,
+							"y": 180
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_t1_value",
+						"position": {
+							"h": 150,
+							"w": 288,
+							"x": 30,
+							"y": 290
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_t2_box",
+						"position": {
+							"h": 290,
+							"w": 312,
+							"x": 344,
+							"y": 170
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_t2_title",
+						"position": {
+							"h": 100,
+							"w": 288,
+							"x": 356,
+							"y": 180
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_t2_value",
+						"position": {
+							"h": 150,
+							"w": 288,
+							"x": 350,
+							"y": 290
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_t3_box",
+						"position": {
+							"h": 240,
+							"w": 312,
+							"x": 668,
+							"y": 170
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_t3_title",
+						"position": {
+							"h": 100,
+							"w": 288,
+							"x": 680,
+							"y": 180
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_t3_placeholder",
+						"position": {
+							"h": 170,
+							"w": 288,
+							"x": 680,
+							"y": 280
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_t4_box",
+						"position": {
+							"h": 290,
+							"w": 312,
+							"x": 992,
+							"y": 170
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_t4_title",
+						"position": {
+							"h": 100,
+							"w": 288,
+							"x": 1004,
+							"y": 180
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_t4_value",
+						"position": {
+							"h": 150,
+							"w": 288,
+							"x": 1000,
+							"y": 290
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_t5_box",
+						"position": {
+							"h": 290,
+							"w": 304,
+							"x": 1316,
+							"y": 170
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_t5_title",
+						"position": {
+							"h": 100,
+							"w": 280,
+							"x": 1328,
+							"y": 180
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_t5_value",
+						"position": {
+							"h": 150,
+							"w": 280,
+							"x": 1330,
+							"y": 290
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_main_trend_box",
+						"position": {
+							"h": 330,
+							"w": 1600,
+							"x": 20,
+							"y": 470
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_main_trend_title",
+						"position": {
+							"h": 70,
+							"w": 1560,
+							"x": 40,
+							"y": 480
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_main_trend",
+						"position": {
+							"h": 240,
+							"w": 1560,
+							"x": 40,
+							"y": 550
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_persite_box",
+						"position": {
+							"h": 320,
+							"w": 790,
+							"x": 20,
+							"y": 820
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_persite_title",
+						"position": {
+							"h": 50,
+							"w": 750,
+							"x": 40,
+							"y": 830
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_persite",
+						"position": {
+							"h": 250,
+							"w": 750,
+							"x": 40,
+							"y": 880
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_issues_box",
+						"position": {
+							"h": 320,
+							"w": 790,
+							"x": 830,
+							"y": 820
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_issues_title",
+						"position": {
+							"h": 50,
+							"w": 750,
+							"x": 850,
+							"y": 830
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_issues",
+						"position": {
+							"h": 250,
+							"w": 750,
+							"x": 850,
+							"y": 880
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_corr_box",
+						"position": {
+							"h": 380,
+							"w": 1600,
+							"x": 20,
+							"y": 1160
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_corr_title",
+						"position": {
+							"h": 80,
+							"w": 1560,
+							"x": 40,
+							"y": 1170
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_corr",
+						"position": {
+							"h": 270,
+							"w": 1560,
+							"x": 40,
+							"y": 1260
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_footer_box",
+						"position": {
+							"h": 180,
+							"w": 1600,
+							"x": 20,
+							"y": 1560
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_footer_md",
+						"position": {
+							"h": 150,
+							"w": 1560,
+							"x": 40,
+							"y": 1580
+						},
+						"type": "block"
+					}
+				],
+				"type": "absolute"
+			}
+		},
+		"tabs": {
+			"items": [
+				{
+					"label": "New tab",
+					"layoutId": "layout_1"
+				}
+			]
+		}
+	}
+}
+ ]]></definition>
+</dashboard>

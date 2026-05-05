@@ -22,7 +22,7 @@
  *
  * Use `setSearchAppContext('<other-app>')` in dev/tests to override.
  */
-import { oneShot } from '@splunk/splunk-utils/search';
+import { oneShot, addLeadingSearchCommand } from '@splunk/splunk-utils/search';
 
 // Allow-listed characters for SPL strings. We include backticks because
 // Splunk macro invocations look like `macro_name(arg1)`. Strings are
@@ -145,6 +145,36 @@ const simulateLatency = (data, ms = 200) =>
 
 const mockSearch = ({ tag }) => simulateLatency(FIXTURES[tag] || []);
 
+// ---------------------------------------------------------------------------
+// SPL failure cache
+// ---------------------------------------------------------------------------
+//
+// Many cards in this dashboard dispatch SPL that depends on optional
+// data models (CIM Authentication, Network_Traffic, Cisco_ThousandEyes,
+// etc.). On a Splunk instance that hasn't installed those add-ons the
+// server returns HTTP 400 — the browser logs the failed XHR even
+// though the calling component catches the rejection and falls back to
+// mock data.
+//
+// We can't stop the browser from logging the *first* 400, but we can
+// stop the same SPL from being re-dispatched on every refresh-token
+// bump, time-range change, or component re-render. The cache below
+// remembers SPL that previously failed (and the approximate reason)
+// so subsequent calls short-circuit to mock without ever hitting the
+// network.
+//
+// The cache is process-lifetime (not localStorage). A page reload
+// gives us a clean slate, which is what an executive expects when
+// they hit refresh after a config change.
+const FAILED_SPL_CACHE = new Set();
+const cacheKey = (spl, earliestTime, latestTime) => `${earliestTime}|${latestTime}|${spl}`;
+
+/**
+ * Test-only: clear the failure cache. Exported so React tests can
+ * exercise retry paths without leaking state across test cases.
+ */
+export const __resetFailedSplCache = () => FAILED_SPL_CACHE.clear();
+
 /**
  * Run a Splunk search.
  *
@@ -167,26 +197,58 @@ export const runSearch = async ({
         return mockSearch({ tag });
     }
 
+    // Skip SPL that has already failed once in this session (typically
+    // because a CIM data model or macro isn't installed on this
+    // Splunk instance). Returning empty results lets the caller's
+    // mock-fallback path kick in without re-spamming the browser's
+    // network log.
+    const key = cacheKey(spl, earliestTime, latestTime);
+    if (FAILED_SPL_CACHE.has(key)) {
+        return { results: [] };
+    }
+
     // `oneShot` runs a search synchronously on the server and returns
     // the parsed result rows. It accepts the same parameters documented
     // for the search/v2/jobs endpoint.
+    //
+    // CRITICAL: oneShot does NOT auto-prepend the `search ` keyword
+    // (only `validateSearch` does — see node_modules/@splunk/splunk-
+    // utils/search.js). Splunk's REST parser rejects any search that
+    // doesn't begin with `|` or `search `, returning HTTP 400. Our
+    // searchbase.conf SPL starts with a backtick macro (e.g. `index_
+    // catalyst`) which IS a valid first character in SPL but NOT a
+    // valid first command, so without this wrapper every literal-SPL
+    // dispatch from searchbase 400s and the tile silently flips to
+    // no-data — that is the "every picker swap shows no data" bug.
+    // `| savedsearch "..."` dispatches escape this because they start
+    // with `|`, which is why the original tiles worked.
     //
     // The second argument is the namespace tuple that drives the URL
     // path: passing `app` here pins the request to
     //   /servicesNS/-/<app>/search/v2/jobs
     // which lets `| savedsearch "..."` resolve any saved search bundled
     // with the app, even though the app isn't exported globally.
-    const response = await oneShot(
-        {
-            search: spl,
-            earliest_time: earliestTime,
-            latest_time: latestTime,
-            output_mode: 'json',
-            count: 1000,
-        },
-        { app: CURRENT_APP_CONTEXT }
-    );
-    return { results: (response && response.results) || [] };
+    const dispatchedSpl = addLeadingSearchCommand(spl);
+    try {
+        const response = await oneShot(
+            {
+                search: dispatchedSpl,
+                earliest_time: earliestTime,
+                latest_time: latestTime,
+                output_mode: 'json',
+                count: 1000,
+            },
+            { app: CURRENT_APP_CONTEXT }
+        );
+        return { results: (response && response.results) || [] };
+    } catch (err) {
+        // Remember that this SPL fails so we don't re-dispatch it on
+        // the next refresh-tick. The hook layer already swallows the
+        // rejection and falls back to mock data, so the user-facing
+        // experience is unchanged — just quieter on subsequent loads.
+        FAILED_SPL_CACHE.add(key);
+        throw err;
+    }
 };
 
 export const SPL = Object.freeze({

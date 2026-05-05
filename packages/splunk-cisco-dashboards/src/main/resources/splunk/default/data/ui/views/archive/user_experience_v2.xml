@@ -1,0 +1,1094 @@
+
+<dashboard version="2" theme="light">
+ <label>User Experience</label>
+ <description>Client health, wireless, ThousandEyes, bandwidth performance</description>
+ <definition><![CDATA[
+{
+	"title": "User Experience",
+	"description": "Client health, wireless, ThousandEyes, bandwidth performance",
+	"inputs": {
+		"input_global_trp": {
+			"options": {
+				"defaultValue": "-4h@m,now",
+				"token": "global_time"
+			},
+			"title": "",
+			"type": "input.timerange"
+		}
+	},
+	"defaults": {
+		"dataSources": {
+			"ds.search": {
+				"options": {
+					"queryParameters": {
+						"earliest": "$global_time.earliest$",
+						"latest": "$global_time.latest$"
+					}
+				}
+			},
+			"ds.spl2": {
+				"options": {
+					"queryParameters": {
+						"earliest": "$global_time.earliest$",
+						"latest": "$global_time.latest$"
+					}
+				}
+			}
+		},
+		"tokens": {
+			"default": {}
+		}
+	},
+	"visualizations": {
+		"viz_about_bg": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.78)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.08)"
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_about_purpose": {
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#2B2B2B",
+				"fontSize": "small",
+				"markdown": "# User Experience\n\nReal-time view of **end-user connectivity health** across wireless, wired, and internet paths. Use this dashboard to confirm client experience is healthy, identify degradation sources, and correlate internal network health with external path performance.\n\n**Audience:** Network Operations, Service Desk, IT Leadership\n**Primary Sources:** Cisco Catalyst Center (Client Health), Cisco ThousandEyes (Path Health)\n**Refresh:** All panels follow the global time picker; client health refreshes every 15 minutes\n\n---\n\n## How to Navigate This Dashboard\n\n**Overview** — Client health scores, active client counts, and ThousandEyes internet path scores.\n*Start here — confirm end-user connectivity is healthy across all sites.*\n\n**Details & KPI Reference** — Wireless vs wired health, device types, client OS mix, and ThousandEyes test-level performance.\n*Drill in to identify which device categories or network paths are degrading the user experience.*\n\n> **Reading pattern:** Healthy client scores + green ThousandEyes paths = good UX. Degraded scores = check Details tab for wired/wireless split and ThousandEyes test results."
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_about_sources": {
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#2B2B2B",
+				"fontSize": "small",
+				"markdown": "## Data Sources & Troubleshooting\n\n---\n\n**Cisco Catalyst Center** — Cisco DNA Center App for Splunk\nSourcetypes: `cisco:dnac:clienthealth`\nFreshness: ~15 min\n\n**Cisco ThousandEyes** — Cisco ThousandEyes App for Splunk\nSourcetypes: ThousandEyes OTel stream data\nData Model: `Cisco_ThousandEyes.Test_Metrics`\nFreshness: ~5 min\n\n---\n\n**Panel showing \"No results\"?**\n\n1. **Widen the time range** — client health needs at least 4 hours\n2. **Verify ThousandEyes App is installed** — check *Manage Apps*\n3. **Confirm ThousandEyes data** — run `| tstats count FROM datamodel=\"Cisco_ThousandEyes.Test_Metrics\"`\n4. **Check data model acceleration** — ThousandEyes panels use accelerated data models."
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_box_detail": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.78)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.08)"
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_box_device_os": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.78)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.08)"
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_box_health": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.78)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.08)"
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_box_te": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.78)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.08)"
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_box_trends": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.78)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.08)"
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_box_wireless": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.78)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.08)"
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_client_health_gauge": {
+			"context": {
+				"majorColorEditorConfig": [
+					{
+						"to": 70,
+						"value": "#D64550"
+					},
+					{
+						"from": 70,
+						"to": 85,
+						"value": "#E5A823"
+					},
+					{
+						"from": 85,
+						"value": "#6EBE4A"
+					}
+				]
+			},
+			"dataSources": {
+				"primary": "ds_client_health_current"
+			},
+			"description": "Composite score from Catalyst Center — higher is better",
+			"options": {
+				"backgroundColor": "transparent",
+				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
+				"majorFontSize": 36,
+				"showTrendIndicator": false,
+				"sparklineDisplay": "off",
+				"unit": "%"
+			},
+			"title": "Client Health",
+			"type": "splunk.singlevalue"
+		},
+		"viz_client_os_pie": {
+			"dataSources": {
+				"primary": "ds_top_client_os"
+			},
+			"description": "Top 5 operating systems by unique MAC count",
+			"options": {
+				"backgroundColor": "transparent",
+				"labelDisplay": "valuesAndPercentage",
+				"seriesColors": [
+					"#6EBE4A",
+					"#049FD9",
+					"#E5A823",
+					"#D64550",
+					"#6E6E6E"
+				],
+				"showDonutHole": true
+			},
+			"title": "Client OS Distribution",
+			"type": "splunk.pie"
+		},
+		"viz_client_trend": {
+			"dataSources": {
+				"primary": "ds_client_health"
+			},
+			"description": "Health score distribution over time — stacked by Good / Fair / Poor",
+			"options": {
+				"backgroundColor": "transparent",
+				"legendDisplay": "off",
+				"seriesColors": [
+					"#6EBE4A",
+					"#E5A823",
+					"#D64550"
+				],
+				"stackMode": "stacked100",
+				"xAxisLabelVisibility": "hide",
+				"xAxisTitleVisibility": "hide"
+			},
+			"title": "Client Health Trend",
+			"type": "splunk.area"
+		},
+		"viz_clients_donut": {
+			"dataSources": {
+				"primary": "ds_active_clients"
+			},
+			"description": "Clients split by Wireless / Wired / other",
+			"options": {
+				"backgroundColor": "transparent",
+				"labelDisplay": "valuesAndPercentage",
+				"seriesColors": [
+					"#049FD9",
+					"#6EBE4A",
+					"#E5A823"
+				],
+				"showDonutHole": true
+			},
+			"title": "Active Clients",
+			"type": "splunk.pie"
+		},
+		"viz_clients_total": {
+			"dataSources": {
+				"primary": "ds_clients_total"
+			},
+			"description": "Total unique clients seen in the selected time range",
+			"options": {
+				"backgroundColor": "transparent",
+				"majorColor": "#2B2B2B",
+				"majorFontSize": 28,
+				"showTrendIndicator": false,
+				"sparklineDisplay": "off"
+			},
+			"title": "Total Clients",
+			"type": "splunk.singlevalue"
+		},
+		"viz_dev_types_bar": {
+			"dataSources": {
+				"primary": "ds_top_device_types"
+			},
+			"description": "By unique MAC count",
+			"options": {
+				"backgroundColor": "transparent",
+				"dataValuesDisplay": "all",
+				"legendDisplay": "off",
+				"seriesColors": [
+					"#6EBE4A"
+				],
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide"
+			},
+			"title": "Top 5 Device Types",
+			"type": "splunk.bar"
+		},
+		"viz_health_by_type_trend": {
+			"dataSources": {
+				"primary": "ds_client_health_by_type"
+			},
+			"description": "Wired vs wireless health scores over time",
+			"options": {
+				"backgroundColor": "transparent",
+				"legendDisplay": "off",
+				"seriesColors": [
+					"#6EBE4A",
+					"#049FD9"
+				],
+				"xAxisLabelVisibility": "hide",
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide"
+			},
+			"title": "Client Health by Type",
+			"type": "splunk.area"
+		},
+		"viz_info_details": {
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#2B2B2B",
+				"fontSize": "small",
+				"markdown": "## Metric Reference — Details & KPI Reference Tab\n\n---\n\n**Wireless Health** — Current wireless client health score\n**Wired Health** — Current wired client health score\n**Client Health by Type** — Health trend split by wired vs wireless clients\n**Top 5 Device Types** — Most common connected device types\n**Client OS Distribution** — Connected client operating system breakdown\n\n---\n\n**ThousandEyes — Test Results** — Per-test latency, loss, and jitter\n**ThousandEyes — Test Health** — Test status distribution (healthy / degraded / critical)\n**ThousandEyes — Agent Performance** — Agent-level metrics with latency, loss, jitter, and status"
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_info_overview": {
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#2B2B2B",
+				"fontSize": "small",
+				"markdown": "## Metric Reference — Overview Tab\n\n---\n\n**Client Health** — Composite client health score from Catalyst Center\n**Active Clients** — Total connected client count with type breakdown\n**Total Clients** — Single-value client count\n**Internet Paths (ThousandEyes)** — Composite test health from ThousandEyes agents\n\n---\n\n**ThousandEyes Agent Status** — Agent status table showing health per agent\n**Client Health Trend** — Client score over the selected time range"
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_narr_details": {
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#6E6E6E",
+				"fontSize": "small",
+				"markdown": "Detailed **client and network path analytics** — wireless vs wired health, device types, OS mix, and ThousandEyes test performance. Use this tab to isolate which client categories or paths are degrading experience."
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_narr_overview": {
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#6E6E6E",
+				"fontSize": "small",
+				"markdown": "Real-time view of **end-user connectivity health** across wireless, wired, and internet paths. Use this tab to confirm client experience is healthy and spot degradation before users report issues."
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_p_hdr_bg": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.88)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.06)"
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_p_hdr_title": {
+			"options": {
+				"fontColor": "#005073",
+				"fontSize": "large",
+				"markdown": "## User Experience"
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_te_agent_table": {
+			"dataSources": {
+				"primary": "ds_te_agent_perf"
+			},
+			"description": "Per-agent latency, loss, and jitter",
+			"options": {
+				"backgroundColor": "transparent",
+				"count": 10,
+				"fontSize": "small",
+				"headerVisibility": "fixed",
+				"tableFormat": {
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+				}
+			},
+			"title": "ThousandEyes — Agent Performance",
+			"type": "splunk.table"
+		},
+		"viz_te_detail_table": {
+			"dataSources": {
+				"primary": "ds_base_te_tests"
+			},
+			"description": "Per-test latency, loss, and jitter",
+			"options": {
+				"backgroundColor": "transparent",
+				"count": 10,
+				"fontSize": "small",
+				"headerVisibility": "fixed",
+				"tableFormat": {
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+				}
+			},
+			"title": "ThousandEyes — Test Results",
+			"type": "splunk.table"
+		},
+		"viz_te_gauge": {
+			"dataSources": {
+				"primary": "ds_te_health"
+			},
+			"description": "Composite score from latency, loss, HTTP availability, and page load",
+			"options": {
+				"backgroundColor": "transparent",
+				"field": "score",
+				"majorColor": "#6E6E6E",
+				"majorFontSize": 28,
+				"showTrendIndicator": false,
+				"sparklineDisplay": "off",
+				"unit": ""
+			},
+			"title": "Internet Paths (ThousandEyes)",
+			"type": "splunk.singlevalue"
+		},
+		"viz_te_health_donut": {
+			"dataSources": {
+				"primary": "ds_te_health_summary"
+			},
+			"description": "Test status distribution",
+			"options": {
+				"backgroundColor": "transparent",
+				"labelDisplay": "valuesAndPercentage",
+				"seriesColorsByField": {
+					"Critical": "#D64550",
+					"Degraded": "#E5A823",
+					"Healthy": "#6EBE4A"
+				},
+				"showDonutHole": true
+			},
+			"title": "ThousandEyes — Test Health",
+			"type": "splunk.pie"
+		},
+		"viz_te_table": {
+			"dataSources": {
+				"primary": "ds_te_agents"
+			},
+			"description": "Per-agent latency, loss, jitter, and health status",
+			"options": {
+				"backgroundColor": "transparent",
+				"count": 5,
+				"fontSize": "small",
+				"headerVisibility": "fixed",
+				"tableFormat": {
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+				}
+			},
+			"title": "ThousandEyes Agent Status",
+			"type": "splunk.table"
+		},
+		"viz_ux_section": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.45)",
+				"fillOpacity": 1,
+				"rx": 12,
+				"strokeColor": "rgba(0,0,0,0.06)",
+				"strokeOpacity": 0.3,
+				"strokeWidth": 1
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_ux_section2": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.45)",
+				"fillOpacity": 1,
+				"rx": 12,
+				"strokeColor": "rgba(0,0,0,0.06)",
+				"strokeOpacity": 0.3,
+				"strokeWidth": 1
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_wired_gauge": {
+			"context": {
+				"majorColorEditorConfig": [
+					{
+						"to": 70,
+						"value": "#D64550"
+					},
+					{
+						"from": 70,
+						"to": 85,
+						"value": "#E5A823"
+					},
+					{
+						"from": 85,
+						"value": "#6EBE4A"
+					}
+				]
+			},
+			"dataSources": {
+				"primary": "ds_wired_health"
+			},
+			"description": "Current wired client health — from Catalyst Center",
+			"options": {
+				"backgroundColor": "transparent",
+				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
+				"majorFontSize": 48,
+				"showTrendIndicator": false,
+				"sparklineDisplay": "off",
+				"unit": "%"
+			},
+			"title": "Wired Health",
+			"type": "splunk.singlevalue"
+		},
+		"viz_wireless_gauge": {
+			"context": {
+				"majorColorEditorConfig": [
+					{
+						"to": 70,
+						"value": "#D64550"
+					},
+					{
+						"from": 70,
+						"to": 85,
+						"value": "#E5A823"
+					},
+					{
+						"from": 85,
+						"value": "#6EBE4A"
+					}
+				]
+			},
+			"dataSources": {
+				"primary": "ds_wireless_health"
+			},
+			"description": "Current wireless client health — from Catalyst Center",
+			"options": {
+				"backgroundColor": "transparent",
+				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
+				"majorFontSize": 48,
+				"showTrendIndicator": false,
+				"sparklineDisplay": "off",
+				"unit": "%"
+			},
+			"title": "Wireless Health",
+			"type": "splunk.singlevalue"
+		}
+	},
+	"dataSources": {
+		"ds_active_clients": {
+			"name": "Executive Dashboard - ds_active_clients",
+			"options": {
+				"app": "splunk-cisco-dashboards",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				},
+				"ref": "Executive Dashboard - ds_active_clients",
+				"useSavedTimeRange": false
+			},
+			"type": "ds.savedSearch"
+		},
+		"ds_base_client_ref": {
+			"name": "DNAC Client Base",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| fields macAddress, osType, deviceType",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_base_te_tests": {
+			"name": "User Experience - ds_te_tests",
+			"options": {
+				"app": "splunk-cisco-dashboards",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				},
+				"ref": "User Experience - ds_te_tests",
+				"useSavedTimeRange": false
+			},
+			"type": "ds.savedSearch"
+		},
+		"ds_client_health": {
+			"name": "User Experience - ds_client_health",
+			"options": {
+				"app": "splunk-cisco-dashboards",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				},
+				"ref": "User Experience - ds_client_health",
+				"useSavedTimeRange": false
+			},
+			"type": "ds.savedSearch"
+		},
+		"ds_client_health_by_type": {
+			"name": "Client Health by Type",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRELESS\" OR clientType=\"WIRED\") scoreType=\"ALL\" | eval health=if(scoreValue>=0, scoreValue, 0) | timechart avg(eval(round(health, 2))) by clientType",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_client_health_current": {
+			"name": "Executive Dashboard - ds_client_health_current",
+			"options": {
+				"app": "splunk-cisco-dashboards",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				},
+				"ref": "Executive Dashboard - ds_client_health_current",
+				"useSavedTimeRange": false
+			},
+			"type": "ds.savedSearch"
+		},
+		"ds_clients_total": {
+			"name": "Total Clients",
+			"options": {
+				"extend": "ds_active_clients",
+				"query": "| stats sum(count) as total | fields total"
+			},
+			"type": "ds.chain"
+		},
+		"ds_te_agent_perf": {
+			"name": "ThousandEyes Agent Performance",
+			"options": {
+				"query": "| tstats `summariesonly` avg(Test_Metrics.metric_name:network.latency) as latency, avg(Test_Metrics.metric_name:network.loss) as loss, avg(Test_Metrics.metric_name:network.jitter) as jitter, dc(Test_Metrics.thousandeyes.test.name) as tests FROM datamodel=\"Cisco_ThousandEyes.Test_Metrics\" BY Test_Metrics.thousandeyes.source.agent.name | rename Test_Metrics.thousandeyes.source.agent.name as Agent | eval latency=round(latency,1), loss=round(loss,2), jitter=round(jitter,1), Status=case(loss>=5 OR latency>=200, \"Critical\", loss>=1 OR latency>=100, \"Degraded\", 1==1, \"Healthy\") | table Agent tests latency loss jitter Status | rename tests as Tests, latency as \"Latency (ms)\", loss as \"Loss %\", jitter as \"Jitter (ms)\" | sort Agent",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_te_agents": {
+			"name": "User Experience - ds_te_agents",
+			"options": {
+				"app": "splunk-cisco-dashboards",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				},
+				"ref": "User Experience - ds_te_agents",
+				"useSavedTimeRange": false
+			},
+			"type": "ds.savedSearch"
+		},
+		"ds_te_health": {
+			"name": "Executive Dashboard - ds_te_health",
+			"options": {
+				"app": "splunk-cisco-dashboards",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				},
+				"ref": "Executive Dashboard - ds_te_health",
+				"useSavedTimeRange": false
+			},
+			"type": "ds.savedSearch"
+		},
+		"ds_te_health_summary": {
+			"name": "ThousandEyes Test Health Summary",
+			"options": {
+				"extend": "ds_base_te_tests",
+				"query": "| stats count by status"
+			},
+			"type": "ds.chain"
+		},
+		"ds_top_client_os": {
+			"name": "Client OS Distribution",
+			"options": {
+				"extend": "ds_base_client_ref",
+				"query": "| where isnotnull(osType) AND osType!=\"null\" AND osType!=\"\" AND osType!=\"Unknown\" AND osType!=\"unknown\" | stats dc(macAddress) as count by osType | sort -count | head 5 | rename osType as os"
+			},
+			"type": "ds.chain"
+		},
+		"ds_top_device_types": {
+			"name": "Top Device Types",
+			"options": {
+				"extend": "ds_base_client_ref",
+				"query": "| where isnotnull(deviceType) AND deviceType!=\"null\" AND deviceType!=\"\" AND deviceType!=\"Un-Classified Device\" | stats dc(macAddress) as Clients by deviceType | sort -Clients | head 5 | rename deviceType as \"Device Type\""
+			},
+			"type": "ds.chain"
+		},
+		"ds_wired_health": {
+			"name": "User Experience - ds_wired_health",
+			"options": {
+				"app": "splunk-cisco-dashboards",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				},
+				"ref": "User Experience - ds_wired_health",
+				"useSavedTimeRange": false
+			},
+			"type": "ds.savedSearch"
+		},
+		"ds_wireless_health": {
+			"name": "User Experience - ds_wireless_health",
+			"options": {
+				"app": "splunk-cisco-dashboards",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				},
+				"ref": "User Experience - ds_wireless_health",
+				"useSavedTimeRange": false
+			},
+			"type": "ds.savedSearch"
+		}
+	},
+	"layout": {
+		"globalInputs": [],
+		"layoutDefinitions": {
+			"layout_about": {
+				"options": {
+					"backgroundColor": "#f5f6f8",
+					"display": "auto-scale",
+					"width": 1440
+				},
+				"structure": [
+					{
+						"item": "viz_p_hdr_bg",
+						"position": {
+							"h": 60,
+							"w": 1420,
+							"x": 10,
+							"y": 10
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_p_hdr_title",
+						"position": {
+							"h": 30,
+							"w": 430,
+							"x": 500,
+							"y": 20
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_about_bg",
+						"position": {
+							"h": 790,
+							"w": 1420,
+							"x": 10,
+							"y": 80
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_about_purpose",
+						"position": {
+							"h": 220,
+							"w": 1360,
+							"x": 40,
+							"y": 100
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_info_overview",
+						"position": {
+							"h": 190,
+							"w": 660,
+							"x": 40,
+							"y": 340
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_info_details",
+						"position": {
+							"h": 190,
+							"w": 680,
+							"x": 720,
+							"y": 340
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_about_sources",
+						"position": {
+							"h": 280,
+							"w": 1360,
+							"x": 40,
+							"y": 560
+						},
+						"type": "block"
+					}
+				],
+				"type": "absolute"
+			},
+			"layout_details": {
+				"options": {
+					"backgroundColor": "#f5f6f8",
+					"display": "auto-scale",
+					"height": 1000,
+					"width": 1440
+				},
+				"structure": [
+					{
+						"item": "viz_p_hdr_bg",
+						"position": {
+							"h": 60,
+							"w": 1420,
+							"x": 10,
+							"y": 10
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_p_hdr_title",
+						"position": {
+							"h": 30,
+							"w": 430,
+							"x": 500,
+							"y": 20
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_narr_details",
+						"position": {
+							"h": 35,
+							"w": 1130,
+							"x": 30,
+							"y": 75
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_ux_section2",
+						"position": {
+							"h": 880,
+							"w": 1420,
+							"x": 10,
+							"y": 110
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_box_device_os",
+						"position": {
+							"h": 260,
+							"w": 695,
+							"x": 720,
+							"y": 130
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_box_wireless",
+						"position": {
+							"h": 260,
+							"w": 695,
+							"x": 20,
+							"y": 130
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_box_detail",
+						"position": {
+							"h": 570,
+							"w": 1400,
+							"x": 20,
+							"y": 400
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_dev_types_bar",
+						"position": {
+							"h": 240,
+							"w": 330,
+							"x": 740,
+							"y": 140
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_client_os_pie",
+						"position": {
+							"h": 240,
+							"w": 320,
+							"x": 1080,
+							"y": 140
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_wireless_gauge",
+						"position": {
+							"h": 90,
+							"w": 387,
+							"x": 30,
+							"y": 150
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_wired_gauge",
+						"position": {
+							"h": 90,
+							"w": 365,
+							"x": 30,
+							"y": 280
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_health_by_type_trend",
+						"position": {
+							"h": 240,
+							"w": 280,
+							"x": 427,
+							"y": 140
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_te_detail_table",
+						"position": {
+							"h": 350,
+							"w": 680,
+							"x": 30,
+							"y": 600
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_te_health_donut",
+						"position": {
+							"h": 150,
+							"w": 350,
+							"x": 550,
+							"y": 420
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_te_agent_table",
+						"position": {
+							"h": 350,
+							"w": 690,
+							"x": 720,
+							"y": 600
+						},
+						"type": "block"
+					},
+					{
+						"item": "input_global_trp",
+						"position": {
+							"h": 70,
+							"w": 198,
+							"x": 30,
+							"y": -8
+						},
+						"type": "input"
+					}
+				],
+				"type": "absolute"
+			},
+			"layout_overview": {
+				"options": {
+					"backgroundColor": "#f5f6f8",
+					"display": "auto-scale",
+					"height": 835,
+					"width": 1440
+				},
+				"structure": [
+					{
+						"item": "viz_p_hdr_bg",
+						"position": {
+							"h": 60,
+							"w": 1420,
+							"x": 10,
+							"y": 10
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_p_hdr_title",
+						"position": {
+							"h": 30,
+							"w": 430,
+							"x": 500,
+							"y": 20
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_narr_overview",
+						"position": {
+							"h": 25,
+							"w": 1100,
+							"x": 30,
+							"y": 75
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_ux_section",
+						"position": {
+							"h": 710,
+							"w": 1420,
+							"x": 10,
+							"y": 100
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_box_te",
+						"position": {
+							"h": 380,
+							"w": 770,
+							"x": 645,
+							"y": 120
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_box_health",
+						"position": {
+							"h": 280,
+							"w": 610,
+							"x": 20,
+							"y": 120
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_box_trends",
+						"position": {
+							"h": 270,
+							"w": 1400,
+							"x": 20,
+							"y": 520
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_te_table",
+						"position": {
+							"h": 300,
+							"w": 750,
+							"x": 660,
+							"y": 220
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_client_health_gauge",
+						"position": {
+							"h": 80,
+							"w": 320,
+							"x": 30,
+							"y": 130
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_te_gauge",
+						"position": {
+							"h": 80,
+							"w": 380,
+							"x": 850,
+							"y": 130
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_clients_total",
+						"position": {
+							"h": 80,
+							"w": 320,
+							"x": 30,
+							"y": 220
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_clients_donut",
+						"position": {
+							"h": 220,
+							"w": 252,
+							"x": 370,
+							"y": 130
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_client_trend",
+						"position": {
+							"h": 240,
+							"w": 1370,
+							"x": 30,
+							"y": 530
+						},
+						"type": "block"
+					},
+					{
+						"item": "input_global_trp",
+						"position": {
+							"h": 70,
+							"w": 198,
+							"x": 30,
+							"y": -8
+						},
+						"type": "input"
+					}
+				],
+				"type": "absolute"
+			}
+		},
+		"options": {
+			"showTitleAndDescription": false
+		},
+		"tabs": {
+			"items": [
+				{
+					"label": "Overview",
+					"layoutId": "layout_overview"
+				},
+				{
+					"label": "Details & KPI Reference",
+					"layoutId": "layout_details"
+				},
+				{
+					"label": "About",
+					"layoutId": "layout_about"
+				}
+			]
+		}
+	},
+	"expressions": {
+		"conditions": {},
+		"eval": {}
+	},
+	"applicationProperties": {
+		"collapseNavigation": false,
+		"hideEdit": false
+	}
+}
+ ]]></definition>
+</dashboard>

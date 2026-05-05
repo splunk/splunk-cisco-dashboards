@@ -31,6 +31,8 @@ import {
     Pause,
     Download,
     Keyboard,
+    RotateCcw,
+    Settings2,
 } from 'lucide-react';
 import { DashboardSection } from '@/common/components/florida/DashboardSection';
 import { MetricItem } from '@/common/components/florida/MetricItem';
@@ -38,6 +40,10 @@ import { FloridaMap } from '@/common/components/florida/FloridaMap';
 import { HealthBadge } from '@/common/components/florida/HealthBadge';
 import { IncidentTicker } from '@/common/components/florida/IncidentTicker';
 import { HelpOverlay } from '@/common/components/florida/HelpOverlay';
+import {
+    KpiPickerPanel,
+    type KpiPickerContext,
+} from '@/common/components/florida/KpiPickerPanel';
 import {
     useMetric,
     useKpi,
@@ -50,8 +56,16 @@ import {
 import { useExportPage } from '@/common/hooks/useExportPage';
 import { useKeyboardShortcuts } from '@/common/hooks/useKeyboardShortcuts';
 import { useTheme } from '@/common/hooks/useTheme';
+import {
+    usePersistedMetricOverrides,
+    type MetricOverride,
+} from '@/common/hooks/usePersistedMetricOverrides';
 import { ThemeToggle } from '@/common/components/florida/ThemeToggle';
 import { runSearch } from '@/common/services/splunkSearchService';
+import {
+    getSearchbaseCatalogue,
+    type SearchbaseRecord,
+} from '@/common/services/searchbaseCatalogue';
 import { cn } from '@/common/lib/utils';
 
 // =============================================================================
@@ -165,6 +179,38 @@ const METRIC_CONFIG: MetricConfig[] = [
         thresholds: { warning: 500, critical: 1000, direction: 'lower_is_better' },
         mock: { seed: 13, sparkMin: 100, sparkMax: 800, value: 650, change: -50 },
     },
+    {
+        id: 'ux_score',
+        section: 'it_health',
+        label: 'UX score',
+        subLabel: 'Catalyst client + device blend',
+        description:
+            'Composite user-experience score derived from Catalyst Center client ' +
+            'health (scoreType=ALL, clientType=ALL) blended with the device ' +
+            'reachability/manageability score. 0-100. Healthy >= 95; Critical < 75.',
+        // Single row: { score: 0..100 }
+        savedSearch: 'Executive Dashboard - ds_ux_score',
+        valueField: 'score',
+        unit: '%',
+        thresholds: { warning: 95, critical: 75, direction: 'higher_is_better' },
+        mock: { seed: 14, sparkMin: 80, sparkMax: 100, value: 96, change: 1 },
+    },
+    {
+        id: 'compliance',
+        section: 'it_health',
+        label: 'Compliance',
+        subLabel: 'Catalyst compliance pass rate',
+        description:
+            'Percentage of Catalyst Center compliance checks that pass ' +
+            '(COMPLIANT or COMPLIANT_WARNING). NOT_APPLICABLE checks are ' +
+            'excluded. Healthy >= 95; Critical < 80.',
+        // Single row: { pct: 0..100 }
+        savedSearch: 'Executive Dashboard - ds_compliance',
+        valueField: 'pct',
+        unit: '%',
+        thresholds: { warning: 95, critical: 80, direction: 'higher_is_better' },
+        mock: { seed: 15, sparkMin: 70, sparkMax: 100, value: 92, change: -1 },
+    },
     // ----- Security -----
     {
         id: 'fw_blocked',
@@ -218,6 +264,39 @@ const METRIC_CONFIG: MetricConfig[] = [
         thresholds: { warning: 25, critical: 100, direction: 'lower_is_better' },
         mock: { seed: 23, sparkMin: 0, sparkMax: 5, value: 1, change: 0 },
     },
+    {
+        id: 'xdr_incidents',
+        section: 'security',
+        label: 'XDR incidents',
+        subLabel: 'Distinct Cisco XDR incident IDs',
+        description:
+            'Count of distinct Cisco XDR / SecureX incident IDs in the dispatched ' +
+            'window. Includes both real-time and summary incident sourcetypes. ' +
+            'Warning at 5 active incidents, critical at 20.',
+        // Single row: { total }
+        savedSearch: 'Executive Dashboard - ds_xdr_incidents',
+        valueField: 'total',
+        color: '#ef4444',
+        thresholds: { warning: 5, critical: 20, direction: 'lower_is_better' },
+        mock: { seed: 24, sparkMin: 0, sparkMax: 4, value: 2, change: 0 },
+    },
+    {
+        id: 'sec_score',
+        section: 'security',
+        label: 'Security score',
+        subLabel: 'ISE + AD auth success rate',
+        description:
+            'Authentication-success score blending ISE syslog ' +
+            '(CISE_Passed_Authentications vs CISE_Failed_Attempts) with ' +
+            'Windows AD events (4624 vs 4625). 0-100. Healthy >= 95; Critical < 80.',
+        // Single row: { score: 0..100 }
+        savedSearch: 'Executive Dashboard - ds_sec_score',
+        valueField: 'score',
+        unit: '%',
+        color: '#10b981',
+        thresholds: { warning: 95, critical: 80, direction: 'higher_is_better' },
+        mock: { seed: 25, sparkMin: 80, sparkMax: 100, value: 98, change: 0 },
+    },
     // ----- Building Intelligence -----
     {
         id: 'active_devices',
@@ -261,6 +340,38 @@ const METRIC_CONFIG: MetricConfig[] = [
         valueField: 'score',
         unit: '%',
         mock: { seed: 33, sparkMin: 0, sparkMax: 10, value: 0, change: 0 },
+    },
+    {
+        id: 'bldg_score',
+        section: 'building',
+        label: 'Building score',
+        subLabel: 'AP + presence + occupancy + comply',
+        description:
+            'Composite building-domain score: AP health (Catalyst Center) + ' +
+            'device-presence connectivity (Cisco Spaces) + room occupancy + ' +
+            'compliance pass-rate, averaged. 0-100. Healthy >= 90; Critical < 70.',
+        // Single row: { score: 0..100 }
+        savedSearch: 'Executive Dashboard - ds_bldg_score',
+        valueField: 'score',
+        unit: '%',
+        color: '#10b981',
+        thresholds: { warning: 90, critical: 70, direction: 'higher_is_better' },
+        mock: { seed: 34, sparkMin: 70, sparkMax: 100, value: 87, change: 1 },
+    },
+    {
+        id: 'collab_devices',
+        section: 'building',
+        label: 'Webex devices',
+        subLabel: 'Distinct serials in telemetry',
+        description:
+            'Count of unique Webex collaboration endpoints reporting telemetry ' +
+            '(WEBEX_TELEMETRY events) from Cisco Spaces. Drops in this number can ' +
+            'indicate a feed issue or large-scale device offline event.',
+        // Single row: { score }
+        savedSearch: 'Executive Dashboard - ds_collab_devices',
+        valueField: 'score',
+        color: '#0ea5e9',
+        mock: { seed: 35, sparkMin: 5, sparkMax: 50, value: 32, change: 0 },
     },
 ];
 
@@ -362,7 +473,75 @@ interface MetricCardProps {
      * overflow the card.
      */
     infoAnchor?: 'auto' | 'left' | 'right';
+    /**
+     * Optional override applied on top of the static config. When
+     * present, the gear icon is rendered with a "modified" dot.
+     */
+    override?: MetricOverride;
+    onConfigure: () => void;
+    /**
+     * Lookup of `searchbase.conf` entries keyed by `search_name`.
+     *
+     * - `null`        → still loading (defer dispatch; show mock).
+     * - `Map (size 0)` → finished loading but empty (fetch failed or
+     *                   conf empty). Falls back to `| savedsearch`.
+     * - `Map`          → loaded; tile dispatches the literal `search`
+     *                   from the matching entry.
+     *
+     * When a tile's effective saved-search matches an entry, the
+     * dashboard *runtime* dispatches that entry's `search` field
+     * (what the executive sees in the picker preview) and the
+     * drilldown follows the same SPL — keeping the runtime, the
+     * preview, and the drilldown in lockstep.
+     */
+    searchbaseByName: Map<string, SearchbaseRecord> | null;
 }
+
+/**
+ * Returns a cloned MetricConfig with user picker overrides merged in.
+ *
+ * Only overridable fields are touched (saved-search binding, value
+ * field, label, description). Everything else — thresholds, mock
+ * fallback, section, colour — stays put so the threshold-driven
+ * status logic and visual identity stay consistent with the static
+ * config.
+ *
+ * `valueField` does NOT fall back to `cfg.valueField` when an override
+ * is in play. When the user binds a different saved search, the
+ * original tile's field name almost certainly doesn't exist in the
+ * new search's output — carrying it forward used to make `useMetric`
+ * read undefined values, filter to an empty series, and silently fall
+ * back to the static mock (the "headline didn't change after a picker
+ * swap" bug). When `override.valueField` is undefined, `useMetric`
+ * auto-detects from the live result rows.
+ */
+const applyOverride = (cfg: MetricConfig, override?: MetricOverride): MetricConfig => {
+    if (!override) return cfg;
+    return {
+        ...cfg,
+        savedSearch: override.savedSearch,
+        spl: undefined,
+        valueField: override.valueField,
+        label: override.label ?? cfg.label,
+        description: override.description ?? cfg.description,
+        // Blank these when the user binds a different search. The
+        // original tile's `subLabel` (e.g. "Catalyst compliance pass
+        // rate") and `unit` (e.g. "%") have no business decorating a
+        // headline produced by an unrelated search — leaving them in
+        // is what made every picker swap look like "the search didn't
+        // change" even though it had: the user-visible chrome belonged
+        // to the prior metric.
+        subLabel: '',
+        unit: '',
+        // Flip the no-data behaviour: a tile bound by the user must
+        // never silently re-render the original tile's hardcoded mock
+        // value when its new SPL returns nothing on this Splunk env —
+        // that's the "I picked a new search but the number didn't
+        // change" bug. With this flag, useMetric emits a NaN sentinel
+        // so MetricItem renders "—" instead of falling back to mock.
+        suppressMockOnEmpty: true,
+    };
+};
 
 const MetricCard: React.FC<MetricCardProps> = ({
     cfg,
@@ -370,49 +549,93 @@ const MetricCard: React.FC<MetricCardProps> = ({
     refreshToken,
     onStatus,
     infoAnchor = 'auto',
+    override,
+    onConfigure,
+    searchbaseByName,
 }) => {
-    const result = useMetric(cfg, range, refreshToken);
+    const effective = useMemo(() => applyOverride(cfg, override), [cfg, override]);
+
+    // ---------------------------------------------------------------
+    // Runtime dispatch config (the SPL the dashboard actually runs)
+    // ---------------------------------------------------------------
+    // searchbase.conf is the source of truth for SPL the user sees and
+    // tweaks. When a tile's effective saved-search has a matching
+    // searchbase entry, we replace the dispatch with the literal
+    // `search` field — same SPL the picker preview renders, same SPL
+    // the "Open in Search" drilldown opens. This keeps everything the
+    // executive interacts with in lock-step.
+    //
+    // While `searchbaseByName === null` (still loading), we defer the
+    // dispatch by stripping spl + savedSearch — useMetric short-circuits
+    // to mock and waits. That avoids a "ghost dispatch" that fires
+    // `| savedsearch "..."` on first paint and gets superseded a
+    // second later by the real searchbase SPL (double network round-trip).
+    //
+    // When a saved-search tile has *no* matching searchbase entry
+    // (rare after the true-up, but possible), we fall back to the
+    // saved-search dispatch path so the tile still runs.
+    const dispatchedConfig = useMemo<typeof effective>(() => {
+        if (!effective.savedSearch) return effective;
+        if (searchbaseByName === null || searchbaseByName === undefined) {
+            return { ...effective, savedSearch: undefined, spl: undefined };
+        }
+        const sb = searchbaseByName.get(effective.savedSearch);
+        if (sb && sb.search) {
+            return { ...effective, spl: sb.search, savedSearch: undefined };
+        }
+        return effective;
+    }, [effective, searchbaseByName]);
+
+    const result = useMetric(dispatchedConfig, range, refreshToken);
 
     useEffect(() => {
-        onStatus(cfg.id, result.status);
-    }, [cfg.id, result.status, onStatus]);
+        onStatus(effective.id, result.status);
+    }, [effective.id, result.status, onStatus]);
+
+    // Drilldown SPL — what we open in Splunk Search when the user
+    // clicks the "open in search" icon or the sparkline. Always
+    // mirrors what `useMetric` dispatched (`result.spl`), so the click
+    // and the runtime are in sync.
+    const drilldownSpl = result.spl;
 
     const handleClick = useCallback(() => {
-        const url = splunkSearchAppUrl(result.spl, range);
+        if (!drilldownSpl) return;
+        const url = splunkSearchAppUrl(drilldownSpl, range);
         if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener,noreferrer');
-    }, [result.spl, range]);
+    }, [drilldownSpl, range]);
 
     return (
         <MetricItem
-            label={cfg.label}
-            subLabel={cfg.subLabel}
-            description={cfg.description}
-            descriptionFootnote={
-                cfg.savedSearch
-                    ? `savedsearch "${cfg.savedSearch}"`
-                    : cfg.spl
-                    ? cfg.spl.length > 120
-                        ? `${cfg.spl.slice(0, 117)}…`
-                        : cfg.spl
-                    : undefined
-            }
+            label={effective.label}
+            subLabel={effective.subLabel}
+            description={effective.description}
+            // Footnote intentionally omitted: surfacing the literal SPL
+            // in the info tooltip clutters the executive view and
+            // duplicates what the "Open in Search" icon already
+            // exposes. The SPL is one click away — we don't need to
+            // dump it into a hover popover too.
+            descriptionFootnote={undefined}
             infoAnchor={infoAnchor}
             value={result.value}
-            unit={cfg.unit}
+            unit={effective.unit}
             change={result.change}
             sparkData={result.sparkData}
             previousData={result.previousSparkData}
             sparkTimestamps={result.sparkTimestamps}
             timeRange={range}
-            color={cfg.color}
+            color={effective.color}
             status={result.status}
             source={result.source}
-            onOpenInSearch={result.spl ? handleClick : undefined}
+            onOpenInSearch={drilldownSpl ? handleClick : undefined}
+            onConfigure={onConfigure}
+            isCustomized={Boolean(override)}
             sparkTitle={
-                result.spl
-                    ? `Hover for date · click to open in Splunk Search:\n${result.spl}`
+                drilldownSpl
+                    ? 'Hover for date · click to open in Splunk Search'
                     : undefined
             }
+            noDataReason={result.noDataReason}
+            rangeLabel={result.rangeLabel}
         />
     );
 };
@@ -453,8 +676,148 @@ const OverviewPage: React.FC = () => {
     // ------------------------------ Help overlay ------------------------------
     const [helpOpen, setHelpOpen] = useState(false);
 
+    // ------------------------------ Searchbase metadata ------------------------------
+    // Loaded once at page mount and shared across all metric tiles via
+    // a Map keyed by `search_name`. Drives the *runtime dispatch* of
+    // each metric tile — when a tile's effective saved-search matches
+    // an entry, we run that entry's literal SPL instead of the
+    // `| savedsearch "..."` indirection. The drilldown / hover preview
+    // / picker all read from the same SPL, so they're guaranteed to
+    // agree with what's actually executing.
+    //
+    // `null` is the loading sentinel — tiles defer their dispatch
+    // until the catalogue resolves so we don't fire a ghost
+    // `| savedsearch` request that gets superseded a moment later.
+    // On fetch failure we set an empty Map so tiles fall back to the
+    // saved-search dispatch path (still functional, just less
+    // executive-friendly drilldowns).
+    const [searchbaseByName, setSearchbaseByName] = useState<
+        Map<string, SearchbaseRecord> | null
+    >(null);
+    useEffect(() => {
+        let cancelled = false;
+        getSearchbaseCatalogue()
+            .then((list) => {
+                if (cancelled) return;
+                const map = new Map<string, SearchbaseRecord>();
+                for (const entry of list) {
+                    if (entry.searchName) map.set(entry.searchName, entry);
+                }
+                setSearchbaseByName(map);
+            })
+            .catch(() => {
+                if (!cancelled) setSearchbaseByName(new Map());
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
     // ------------------------------ Regional view (map | table) ------------------------------
     const [regionalView, setRegionalView] = useState<RegionalView>('map');
+
+    // ------------------------------ Layout split (tiles ↔ map) ------------------------------
+    // Percentage of the dashboard width allocated to the left-hand
+    // metric tile column. The remainder goes to the map column. The
+    // splitter is the thin vertical handle between the two — drag it
+    // left to widen the map, right to widen the tiles. Default 58.33%
+    // matches the previous fixed 7-of-12 grid so the page boots
+    // identically until the user reaches for the handle. Persisted to
+    // localStorage so the operator's preference survives reloads.
+    //
+    // Clamped 35–80% to keep both columns usable: below 35% and the
+    // tiles can't even fit one row of headlines without truncating;
+    // above 80% and the map collapses to a slim band that's hard to
+    // read region labels on.
+    const SPLIT_KEY = 'scd_overview_split_pct';
+    const SPLIT_DEFAULT = 58.33;
+    const SPLIT_MIN = 35;
+    const SPLIT_MAX = 80;
+    const [leftPct, setLeftPct] = useState<number>(() => {
+        if (typeof window === 'undefined') return SPLIT_DEFAULT;
+        try {
+            const saved = window.localStorage.getItem(SPLIT_KEY);
+            const n = saved ? Number(saved) : NaN;
+            return Number.isFinite(n) && n >= SPLIT_MIN && n <= SPLIT_MAX
+                ? n
+                : SPLIT_DEFAULT;
+        } catch {
+            return SPLIT_DEFAULT;
+        }
+    });
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        try {
+            window.localStorage.setItem(SPLIT_KEY, String(leftPct));
+        } catch {
+            // localStorage may be disabled (private mode / quota); the
+            // split still works for the session, we just can't
+            // persist it. No-op rather than spamming console.errors.
+        }
+    }, [leftPct]);
+
+    // While the splitter is being dragged, every mousemove updates the
+    // percentage. We keep the handler attached to the window (not the
+    // splitter element) so the drag survives the cursor leaving the
+    // 4px-wide handle — same UX pattern as VS Code panel resizers.
+    const splitContainerRef = useRef<HTMLDivElement | null>(null);
+    const [dragging, setDragging] = useState(false);
+    const beginDrag = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        setDragging(true);
+    }, []);
+    useEffect(() => {
+        if (!dragging) return undefined;
+        const onMove = (ev: MouseEvent) => {
+            const el = splitContainerRef.current;
+            if (!el) return;
+            const rect = el.getBoundingClientRect();
+            if (rect.width <= 0) return;
+            const pct = ((ev.clientX - rect.left) / rect.width) * 100;
+            const clamped = Math.max(SPLIT_MIN, Math.min(SPLIT_MAX, pct));
+            setLeftPct(clamped);
+        };
+        const onUp = () => setDragging(false);
+        // Lock the cursor and suppress text-selection while dragging.
+        // Without this the cursor flickers between col-resize and the
+        // default arrow as the pointer crosses tile boundaries, and
+        // sustained drags accidentally select metric labels.
+        const prevCursor = document.body.style.cursor;
+        const prevUserSelect = document.body.style.userSelect;
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+        return () => {
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
+            document.body.style.cursor = prevCursor;
+            document.body.style.userSelect = prevUserSelect;
+        };
+    }, [dragging]);
+    // Keyboard nudge: arrow keys ±1, Shift+arrow ±5. Double-click
+    // restores the default split. Both make the handle keyboard- and
+    // touch-friendly without hijacking page-level shortcuts.
+    const onSplitterKeyDown = useCallback(
+        (e: React.KeyboardEvent) => {
+            const step = e.shiftKey ? 5 : 1;
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                setLeftPct((p) => Math.max(SPLIT_MIN, p - step));
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                setLeftPct((p) => Math.min(SPLIT_MAX, p + step));
+            } else if (e.key === 'Home') {
+                e.preventDefault();
+                setLeftPct(SPLIT_MIN);
+            } else if (e.key === 'End') {
+                e.preventDefault();
+                setLeftPct(SPLIT_MAX);
+            }
+        },
+        [SPLIT_MIN, SPLIT_MAX]
+    );
+    const resetSplit = useCallback(() => setLeftPct(SPLIT_DEFAULT), []);
 
     // ------------------------------ Export ------------------------------
     const exportRef = useRef<HTMLDivElement>(null);
@@ -496,9 +859,108 @@ const OverviewPage: React.FC = () => {
         };
     }, [refreshToken]);
 
+    // ------------------------------ Metric / KPI overrides (picker) ------------------------------
+    //
+    // Each tile stores its (optional) override under its `id`. The
+    // picker writes via `setOverride` and the gear icons read out of
+    // the same map so the customised dot stays in sync. Reset wipes
+    // every override and brings the dashboard back to the static
+    // config defined in this file.
+    const {
+        overrides,
+        setOverride,
+        clearOverride,
+        resetAll: resetAllOverrides,
+        overrideCount,
+    } = usePersistedMetricOverrides();
+    const [pickerContext, setPickerContext] = useState<KpiPickerContext | null>(null);
+
+    // Saved-search names already bound across the dashboard, so the
+    // picker can flag duplicates with an "in use" badge.
+    const usedSavedSearches = useMemo(() => {
+        const used = new Set<string>();
+        for (const m of METRIC_CONFIG) {
+            const ov = overrides[m.id];
+            const name = ov?.savedSearch ?? m.savedSearch;
+            if (name) used.add(name);
+        }
+        for (const k of KPI_CONFIG) {
+            const ov = overrides[k.id];
+            const name = ov?.savedSearch ?? k.savedSearch;
+            if (name) used.add(name);
+        }
+        return used;
+    }, [overrides]);
+
+    const openPicker = useCallback(
+        (
+            tileId: string,
+            defaultLabel: string,
+            current?: { savedSearch?: string; valueField?: string }
+        ) => {
+            const ov: MetricOverride | undefined = overrides[tileId];
+            // CRITICAL: when an override exists, an undefined
+            // `valueField` is the user's explicit "use auto-detect"
+            // choice and must NOT fall through to the original tile's
+            // valueField. The previous `??` did exactly that, which
+            // pre-filled the picker input with the original column
+            // name and caused every subsequent Apply to clobber the
+            // user's auto-detect intent.
+            setPickerContext({
+                tileId,
+                defaultLabel,
+                currentSavedSearch: ov ? ov.savedSearch : current?.savedSearch,
+                currentValueField: ov ? ov.valueField : current?.valueField,
+                currentLabel: ov?.label,
+                usedSavedSearches,
+            });
+        },
+        [overrides, usedSavedSearches]
+    );
+
+    const closePicker = useCallback(() => setPickerContext(null), []);
+
+    const handlePickerApply = useCallback(
+        (tileId: string, override: MetricOverride) => {
+            setOverride(tileId, override);
+            setPickerContext(null);
+        },
+        [setOverride]
+    );
+
     // ------------------------------ KPI cards ------------------------------
-    const topIncident = useKpi(KPI_CONFIG[0], timeRange, refreshToken);
-    const operationalLead = useKpi(KPI_CONFIG[1], timeRange, refreshToken);
+    // Same `valueField: ov.valueField` (no fallback) and
+    // `suppressMockOnEmpty: true` rules as `applyOverride` for the
+    // metric grid — see the long comment there. The fallback to the
+    // original tile's `valueField` was the same root cause: useKpi
+    // would read a column the new SPL doesn't emit, get undefined,
+    // and quietly fall back to the original tile's mock string.
+    const effectiveTopIncidentCfg = useMemo<KpiConfig>(() => {
+        const ov = overrides[KPI_CONFIG[0].id];
+        if (!ov) return KPI_CONFIG[0];
+        return {
+            ...KPI_CONFIG[0],
+            savedSearch: ov.savedSearch,
+            spl: undefined,
+            valueField: ov.valueField,
+            label: ov.label ?? KPI_CONFIG[0].label,
+            suppressMockOnEmpty: true,
+        };
+    }, [overrides]);
+    const effectiveOpLeadCfg = useMemo<KpiConfig>(() => {
+        const ov = overrides[KPI_CONFIG[1].id];
+        if (!ov) return KPI_CONFIG[1];
+        return {
+            ...KPI_CONFIG[1],
+            savedSearch: ov.savedSearch,
+            spl: undefined,
+            valueField: ov.valueField,
+            label: ov.label ?? KPI_CONFIG[1].label,
+            suppressMockOnEmpty: true,
+        };
+    }, [overrides]);
+    const topIncident = useKpi(effectiveTopIncidentCfg, timeRange, refreshToken);
+    const operationalLead = useKpi(effectiveOpLeadCfg, timeRange, refreshToken);
 
     // ------------------------------ Keyboard shortcuts ------------------------------
     // Drilldowns open in a new tab so the executive can keep the
@@ -698,6 +1160,36 @@ const OverviewPage: React.FC = () => {
                             </button>
                         </div>
                     </div>
+                    {overrideCount > 0 && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                if (
+                                    typeof window !== 'undefined' &&
+                                    !window.confirm(
+                                        `Reset ${overrideCount} customised tile${
+                                            overrideCount === 1 ? '' : 's'
+                                        } to their default saved searches?`
+                                    )
+                                ) {
+                                    return;
+                                }
+                                resetAllOverrides();
+                            }}
+                            title={`Reset ${overrideCount} customised tile${
+                                overrideCount === 1 ? '' : 's'
+                            }`}
+                            className={cn(
+                                iconBtnClass,
+                                'relative text-sky-600 dark:text-sky-300'
+                            )}
+                        >
+                            <RotateCcw className="w-4 h-4" />
+                            <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] rounded-full bg-sky-500 text-white text-[9px] font-black leading-[14px] text-center px-0.5 border border-white dark:border-slate-900">
+                                {overrideCount}
+                            </span>
+                        </button>
+                    )}
                     <ThemeToggle theme={theme} onCycle={cycleTheme} />
                     <button
                         type="button"
@@ -737,10 +1229,34 @@ const OverviewPage: React.FC = () => {
                 refreshToken={refreshToken}
             />
 
-            <main className="flex-1 min-h-0 px-4 py-2 max-w-[1600px] mx-auto w-full overflow-hidden">
-                <div className="grid grid-cols-1 xl:grid-cols-12 gap-2 h-full min-h-0">
-                    {/* Left column — three sections */}
-                    <div className="xl:col-span-7 flex flex-col gap-2 min-h-0">
+            {/* Edge-to-edge layout: no `max-w` clamp and only a thin
+                horizontal gutter. The previous `max-w-[1600px] mx-auto`
+                left half-inch margins on either side at executive-
+                display resolutions; widening lets the metric tiles and
+                map breathe to fill the screen. The viewport gets a 6px
+                gutter on each side (just enough to keep the section
+                cards from touching the chrome border) and the splitter
+                drives column widths from there.
+                
+                Below xl (<1280px) the layout collapses to a single
+                stacked column so the splitter never strands the map
+                or tiles in a slim phone-sized strip. */}
+            <main className="flex-1 min-h-0 px-1.5 py-2 w-full overflow-hidden">
+                <div
+                    ref={splitContainerRef}
+                    className="flex flex-col xl:flex-row gap-2 h-full min-h-0 relative"
+                    style={
+                        {
+                            '--scd-left-pct': `${leftPct}%`,
+                        } as React.CSSProperties
+                    }
+                >
+                    {/* Left column — three sections.
+                        On xl+ widths the column basis is driven by the
+                        --scd-left-pct CSS variable, which the splitter
+                        updates on drag. Below xl we ignore it and let
+                        flex-col stack at full width. */}
+                    <div className="flex flex-col gap-2 min-h-0 min-w-0 w-full xl:w-[var(--scd-left-pct)] xl:flex-shrink-0">
                         {(['it_health', 'security', 'building'] as const).map((section) => {
                             const meta = SECTION_META[section];
                             const sectionMetrics = METRIC_CONFIG.filter(
@@ -770,6 +1286,14 @@ const OverviewPage: React.FC = () => {
                                                     ? 'right'
                                                     : 'auto'
                                             }
+                                            override={overrides[cfg.id]}
+                                            searchbaseByName={searchbaseByName}
+                                            onConfigure={() =>
+                                                openPicker(cfg.id, cfg.label, {
+                                                    savedSearch: cfg.savedSearch,
+                                                    valueField: cfg.valueField,
+                                                })
+                                            }
                                         />
                                     ))}
                                 </DashboardSection>
@@ -777,8 +1301,59 @@ const OverviewPage: React.FC = () => {
                         })}
                     </div>
 
-                    {/* Right column — map */}
-                    <div className="xl:col-span-5 flex flex-col min-h-0">
+                    {/* Splitter handle — only renders at xl+ where the
+                        side-by-side layout is active. 4px hit-area
+                        (visually 2px) widens to 6px on hover/drag so
+                        it's easy to grab. Drag horizontally to
+                        rebalance tiles ↔ map; arrow keys nudge ±1%
+                        (Shift = ±5%); Home/End jump to the limits;
+                        double-click restores the default split.
+                        Persisted across reloads in localStorage. */}
+                    <button
+                        type="button"
+                        role="separator"
+                        aria-orientation="vertical"
+                        aria-label="Resize tiles vs map"
+                        aria-valuenow={Math.round(leftPct)}
+                        aria-valuemin={SPLIT_MIN}
+                        aria-valuemax={SPLIT_MAX}
+                        title="Drag to resize · arrows ±1% · double-click to reset"
+                        onMouseDown={beginDrag}
+                        onKeyDown={onSplitterKeyDown}
+                        onDoubleClick={resetSplit}
+                        className={cn(
+                            'hidden xl:flex flex-shrink-0 items-center justify-center group relative',
+                            'w-1.5 mx-0.5 rounded-full transition-colors cursor-col-resize',
+                            'focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
+                            dragging
+                                ? 'bg-sky-500'
+                                : 'bg-slate-200 dark:bg-slate-700 hover:bg-sky-400 dark:hover:bg-sky-500'
+                        )}
+                    >
+                        {/* Visible grip dots — three subtle dashes,
+                            centred vertically. Helps signal the handle
+                            is interactive at a glance. */}
+                        <span
+                            aria-hidden="true"
+                            className={cn(
+                                'flex flex-col gap-0.5 opacity-50 transition-opacity',
+                                dragging ? 'opacity-100' : 'group-hover:opacity-90'
+                            )}
+                        >
+                            <span className="block w-0.5 h-1 rounded-full bg-white" />
+                            <span className="block w-0.5 h-1 rounded-full bg-white" />
+                            <span className="block w-0.5 h-1 rounded-full bg-white" />
+                        </span>
+                    </button>
+
+                    {/* Right column — map.
+                        Width is the complement of leftPct on xl+; full
+                        width below xl. Both columns set min-w-0 so a
+                        long word in a metric label or a wide map tile
+                        can't blow the column wider than its share. */}
+                    <div
+                        className="flex flex-col min-h-0 min-w-0 w-full xl:flex-1"
+                    >
                         <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-3 shadow-sm flex flex-col">
                             <div className="flex items-center justify-between mb-2 flex-shrink-0">
                                 <div>
@@ -817,16 +1392,30 @@ const OverviewPage: React.FC = () => {
 
                             <div className="mt-3 grid grid-cols-2 gap-3 flex-shrink-0">
                                 <KpiCard
-                                    label={KPI_CONFIG[0].label}
+                                    label={effectiveTopIncidentCfg.label}
                                     value={topIncident.value}
                                     source={topIncident.source}
                                     accentColor="text-red-500"
+                                    onConfigure={() =>
+                                        openPicker(KPI_CONFIG[0].id, KPI_CONFIG[0].label, {
+                                            savedSearch: KPI_CONFIG[0].savedSearch,
+                                            valueField: KPI_CONFIG[0].valueField,
+                                        })
+                                    }
+                                    isCustomized={Boolean(overrides[KPI_CONFIG[0].id])}
                                 />
                                 <KpiCard
-                                    label={KPI_CONFIG[1].label}
+                                    label={effectiveOpLeadCfg.label}
                                     value={operationalLead.value}
                                     source={operationalLead.source}
                                     accentColor="text-emerald-500"
+                                    onConfigure={() =>
+                                        openPicker(KPI_CONFIG[1].id, KPI_CONFIG[1].label, {
+                                            savedSearch: KPI_CONFIG[1].savedSearch,
+                                            valueField: KPI_CONFIG[1].valueField,
+                                        })
+                                    }
+                                    isCustomized={Boolean(overrides[KPI_CONFIG[1].id])}
                                 />
                             </div>
                         </div>
@@ -847,6 +1436,31 @@ const OverviewPage: React.FC = () => {
                     description: s.description,
                 }))}
             />
+
+            <KpiPickerPanel
+                open={pickerContext !== null}
+                context={pickerContext}
+                onClose={closePicker}
+                onApply={handlePickerApply}
+                onClearOverride={(tileId) => {
+                    clearOverride(tileId);
+                    closePicker();
+                }}
+                onTestInSearch={(spl) => {
+                    // Open Splunk Search & Reporting with the *literal*
+                    // SPL pulled from `searchbase.conf` — the executive
+                    // sees-and-tests exactly what the picker is showing
+                    // them, no `| savedsearch` indirection. Open in a
+                    // new tab so the picker stays open for further
+                    // browsing. URLSearchParams handles encoding of
+                    // backticks, quotes, pipes, and embedded newlines.
+                    if (!spl) return;
+                    const url = splunkSearchAppUrl(spl, timeRange);
+                    if (typeof window !== 'undefined') {
+                        window.open(url, '_blank', 'noopener,noreferrer');
+                    }
+                }}
+            />
         </div>
     );
 };
@@ -860,6 +1474,10 @@ interface KpiCardProps {
     value: string;
     source: 'live' | 'mock' | 'loading';
     accentColor: string;
+    /** When provided, renders a gear icon that opens the KPI picker. */
+    onConfigure?: () => void;
+    /** Marks the gear with a small dot when the tile is overridden. */
+    isCustomized?: boolean;
 }
 
 // =============================================================================
@@ -1002,7 +1620,14 @@ const SiteTable: React.FC = () => (
     </div>
 );
 
-const KpiCard: React.FC<KpiCardProps> = ({ label, value, source, accentColor }) => (
+const KpiCard: React.FC<KpiCardProps> = ({
+    label,
+    value,
+    source,
+    accentColor,
+    onConfigure,
+    isCustomized = false,
+}) => (
     <div className="p-2 border border-slate-100 dark:border-slate-800 rounded-lg bg-slate-50/50 dark:bg-slate-800/40 relative">
         <span
             className={
@@ -1023,9 +1648,23 @@ const KpiCard: React.FC<KpiCardProps> = ({ label, value, source, accentColor }) 
         />
         <div className="flex items-center gap-2 mb-0.5">
             <div className={`w-1.5 h-1.5 rounded-full ${accentColor}`} />
-            <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+            <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider truncate flex-1">
                 {label}
             </span>
+            {onConfigure && (
+                <button
+                    type="button"
+                    onClick={onConfigure}
+                    title={isCustomized ? `Configure ${label} (customised)` : `Configure ${label}`}
+                    aria-label={`Configure ${label} tile`}
+                    className="p-0.5 -my-0.5 mr-2 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400 relative flex-shrink-0"
+                >
+                    <Settings2 className="w-3 h-3 stroke-[2.5px]" />
+                    {isCustomized && (
+                        <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-sky-500 border border-white dark:border-slate-900" />
+                    )}
+                </button>
+            )}
         </div>
         <p
             className="text-xs font-bold text-slate-700 dark:text-slate-200 leading-tight truncate"

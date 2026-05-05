@@ -5,6 +5,10 @@
 local/
 local.meta
 
+### Conf backups created by maintenance scripts (e.g. trueup_savedsearches.py)
+*.conf.bak
+backups/
+
 ### UCC UI extensions
 yarn-error.log
 node_modules/

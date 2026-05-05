@@ -30,6 +30,7 @@ import {
     Polyline,
     Circle,
     ZoomControl,
+    useMap,
 } from 'react-leaflet';
 import L from 'leaflet';
 import { motion, AnimatePresence } from 'motion/react';
@@ -38,12 +39,15 @@ import {
     Code2,
     ExternalLink,
     Layers,
-    Map as MapIcon,
     Terminal,
     X,
 } from 'lucide-react';
 import { cn } from '@/common/lib/utils';
 import type { City } from '@/common/types';
+import {
+    getSearchbaseCatalogue,
+    type SearchbaseRecord,
+} from '@/common/services/searchbaseCatalogue';
 import 'leaflet/dist/leaflet.css';
 
 // ----------------------------------------------------------------------------
@@ -65,6 +69,13 @@ L.Icon.Default.mergeOptions({
 // Site catalogue. Intentionally restricted to the 3 strategic locations
 // the dashboard cares about (matches the SITE NODES legend below). Add
 // more here only if they get a corresponding row in the legend + table.
+//
+// `savedSearch` is the *only* link to the actual SPL — the search lives
+// in `default/savedsearches.conf` (`Overview - site_<id>` stanzas) so
+// executives can tune the analysis without redeploying the React
+// bundle. The popup card pulls the resolved SPL from the saved-search
+// catalogue cache (shared with the KPI picker), so what you see is
+// exactly what the conf currently defines.
 const cities: City[] = [
     {
         id: 'tlh',
@@ -74,7 +85,7 @@ const cities: City[] = [
         status: 'stable',
         importance: 'primary',
         metrics: { events: 1240, alerts: 0, latency: 28 },
-        query: 'index=network_logs host="TLH-EOC-*" | stats count by status | where status="error"',
+        savedSearch: 'Overview - site_tlh',
     },
     {
         id: 'mco',
@@ -84,7 +95,7 @@ const cities: City[] = [
         status: 'warning',
         importance: 'primary',
         metrics: { events: 4100, alerts: 12, latency: 145 },
-        query: 'index=ops_metrics sourcetype=cisco_spaces location="ORL-HUB" | timechart span=1m avg(client_count)',
+        savedSearch: 'Overview - site_mco',
     },
     {
         id: 'aub',
@@ -94,9 +105,18 @@ const cities: City[] = [
         status: 'critical',
         importance: 'primary',
         metrics: { events: 8200, alerts: 42, latency: 310 },
-        query: 'index=security action=blocked src_ip="*" dest_ip="AUB-LOG-01" | top limit=10 src_ip',
+        savedSearch: 'Overview - site_aub',
     },
 ];
+
+/**
+ * Builds the SPL string we hand to the search bar when the user clicks
+ * "Open in Splunk Search". `| savedsearch "..."` dispatches the stanza
+ * inside the current app context, so any conf-side change to the
+ * stanza is what actually runs.
+ */
+const buildSiteDispatchSpl = (savedSearch: string): string =>
+    `| savedsearch "${savedSearch.replace(/"/g, '\\"')}"`;
 
 const STATUS_RANK: Record<City['status'], number> = {
     critical: 3,
@@ -227,27 +247,23 @@ const flowAnimationCss = `
 // ----------------------------------------------------------------------------
 
 interface TileLayerPreset {
-    id: 'voyager' | 'positron' | 'satellite';
+    id: 'positron' | 'satellite';
     label: string;
     light: string;
     dark: string;
     attribution: string;
 }
 
+// Two basemaps only:
+//   • Positron (street map, badge "P") — the clean default the user
+//     selected in screenshot 1.
+//   • Satellite (aerial imagery, badge "S") — screenshot 2.
 const TILE_LAYER_PRESETS: TileLayerPreset[] = [
     {
-        id: 'voyager',
-        label: 'Default',
-        light: 'https://{s}.basemaps.cartocdn.com/voyager/{z}/{x}/{y}{r}.png',
-        dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-        attribution:
-            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    },
-    {
         id: 'positron',
-        label: 'Minimal',
+        label: 'Default',
         light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-        dark: 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',
+        dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
         attribution:
             '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
     },
@@ -285,15 +301,66 @@ interface FloridaMapProps {
     onOpenInSearch?: (spl: string) => void;
 }
 
-// Bounding box that frames the entire state with a little breathing
-// room on each side. Using `bounds` (instead of center+zoom) means the
-// framing stays correct regardless of how wide the container is — the
-// previous fixed `zoom=7` would over-zoom on small panes and show too
-// much Georgia / Bahamas on wide ones.
-const FLORIDA_BOUNDS: [[number, number], [number, number]] = [
-    [24.4, -87.7], // SW — west panhandle / Key West
-    [31.1, -79.9], // NE — Atlantic coast at Georgia line
+// Default framing for the executive view. Driven by an explicit
+// center+zoom (not fitBounds) so the framing is identical regardless
+// of container aspect ratio — fitBounds was producing wildly
+// different views on portrait vs. landscape panels (sometimes showing
+// Atlanta and Cuba on tall-narrow layouts). Tuned to match the
+// executive sign-off screenshot: Tallahassee sits at the upper-left,
+// Key West at the bottom, and Freeport / Bahamas peeks in on the
+// right.
+const FLORIDA_DEFAULT_CENTER: [number, number] = [28.0, -83.5];
+const FLORIDA_DEFAULT_ZOOM = 6.5;
+
+// Pannable / draggable extent — generous enough that the user can
+// scoot east/west by a degree or two to hunt for sites without
+// drifting off into the Caribbean or southern Georgia.
+const FLORIDA_MAX_BOUNDS: [[number, number], [number, number]] = [
+    [22.5, -90.0], // SW — keeps the Gulf and Cuba clipped
+    [32.5, -77.0], // NE — keeps southern Georgia and the Bahamas just inside
 ];
+
+const FLORIDA_LATLNG_MAX_BOUNDS = L.latLngBounds(
+    FLORIDA_MAX_BOUNDS[0],
+    FLORIDA_MAX_BOUNDS[1]
+);
+
+/**
+ * Forces Leaflet to (a) re-measure its container after the dashboard
+ * grid has finished laying out, and (b) snap back to the executive
+ * default center+zoom on every resize.
+ *
+ * Without `invalidateSize` the map often boots before the parent flex
+ * column has a height, so Leaflet pegs zoom to the world (no tiles
+ * render — only the slate container background shows through) and
+ * the markers float over emptiness.
+ *
+ * We deliberately do NOT re-`setView` on every resize after mount —
+ * that would yank the map back from any spotlight pan/zoom the user
+ * has done. Only the initial layout commit and viewport size changes
+ * (e.g. window resize) re-apply the default framing.
+ */
+const MapFitter: React.FC = () => {
+    const map = useMap();
+    useEffect(() => {
+        let firstApply = true;
+        const apply = () => {
+            map.invalidateSize();
+            if (firstApply) {
+                map.setView(FLORIDA_DEFAULT_CENTER, FLORIDA_DEFAULT_ZOOM, {
+                    animate: false,
+                });
+                firstApply = false;
+            }
+        };
+        apply();
+        const container = map.getContainer();
+        const observer = new ResizeObserver(() => apply());
+        observer.observe(container);
+        return () => observer.disconnect();
+    }, [map]);
+    return null;
+};
 
 export const FloridaMap: React.FC<FloridaMapProps> = ({
     isDark = false,
@@ -308,6 +375,56 @@ export const FloridaMap: React.FC<FloridaMapProps> = ({
         TILE_LAYER_PRESETS[0].id
     );
     const pauseUntilRef = useRef<number>(0);
+
+    // Map of search_name → searchbase entry. Drives both the popup
+    // SPL preview and the "Open in Splunk Search" drilldown so the
+    // executive sees-and-clicks the literal SPL straight from
+    // searchbase.conf — no `| savedsearch "..."` indirection.
+    //
+    // State is `null` while the first fetch is in flight; we render
+    // a "Loading SPL…" placeholder instead of a stale invocation
+    // string. On fetch failure we fall back to an empty map and the
+    // dispatch form (so the popup still works, just with the
+    // saved-search reference).
+    const [catalogueByName, setCatalogueByName] = useState<Record<
+        string,
+        SearchbaseRecord
+    > | null>(null);
+    useEffect(() => {
+        let cancelled = false;
+        getSearchbaseCatalogue()
+            .then((list) => {
+                if (cancelled) return;
+                const byName: Record<string, SearchbaseRecord> = {};
+                for (const r of list) {
+                    if (r.searchName) byName[r.searchName] = r;
+                }
+                setCatalogueByName(byName);
+            })
+            .catch(() => {
+                if (cancelled) return;
+                setCatalogueByName({});
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    const selectedRecord = useMemo(() => {
+        if (!selectedCity || !catalogueByName) return null;
+        return catalogueByName[selectedCity.savedSearch] ?? null;
+    }, [selectedCity, catalogueByName]);
+
+    // SPL the popup card renders AND the "Open in Splunk Search"
+    // button dispatches — the literal `search` field from
+    // searchbase.conf when available, falling back to the
+    // `| savedsearch` invocation only if the stanza isn't in
+    // searchbase yet. Both consumers share the same string so what
+    // the executive reads is exactly what runs.
+    const selectedDisplaySpl = selectedCity
+        ? selectedRecord?.search?.trim() ||
+          buildSiteDispatchSpl(selectedCity.savedSearch)
+        : '';
 
     // Sites ordered worst-first so spotlight starts on the most urgent one.
     const rotationOrder = useMemo(
@@ -355,19 +472,18 @@ export const FloridaMap: React.FC<FloridaMapProps> = ({
     };
 
     const handleOpenSelectedInSearch = () => {
-        if (selectedCity && onOpenInSearch) onOpenInSearch(selectedCity.query);
+        // Drilldown sends the *literal* SPL (same string the popup
+        // is showing) so what the executive reads is exactly what
+        // runs in Splunk Search.
+        if (selectedCity && onOpenInSearch && selectedDisplaySpl) {
+            onOpenInSearch(selectedDisplaySpl);
+        }
     };
 
     const cycleTilePreset = () => {
         const i = TILE_LAYER_PRESETS.findIndex((p) => p.id === tilePresetId);
         const next = TILE_LAYER_PRESETS[(i + 1) % TILE_LAYER_PRESETS.length];
         setTilePresetId(next.id);
-    };
-
-    const resetView = () => {
-        // Visual cue — also drops any pinned site so spotlight resumes.
-        setSelectedCity(null);
-        pauseUntilRef.current = 0;
     };
 
     const tilePreset =
@@ -422,18 +538,25 @@ export const FloridaMap: React.FC<FloridaMapProps> = ({
             )}
 
             <MapContainer
-                bounds={FLORIDA_BOUNDS}
-                boundsOptions={{ padding: [10, 10] }}
+                center={FLORIDA_DEFAULT_CENTER}
+                zoom={FLORIDA_DEFAULT_ZOOM}
+                maxBounds={FLORIDA_LATLNG_MAX_BOUNDS}
+                maxBoundsViscosity={1.0}
+                minZoom={5}
+                maxZoom={11}
                 style={{ height: '100%', width: '100%' }}
                 zoomControl={false}
                 scrollWheelZoom={false}
+                // Hide the built-in "Leaflet | © OpenStreetMap …" credit.
+                // The CARTO/OSM tile licenses still apply — we keep
+                // attribution in the project's NOTICE file rather than
+                // burning real-estate in the executive view.
+                attributionControl={false}
                 className="z-10"
             >
-                <TileLayer
-                    key={tileUrl}
-                    attribution={tilePreset.attribution}
-                    url={tileUrl}
-                />
+                <MapFitter />
+
+                <TileLayer key={tileUrl} attribution="" url={tileUrl} />
 
                 <ZoomControl position="bottomright" />
 
@@ -546,17 +669,29 @@ export const FloridaMap: React.FC<FloridaMapProps> = ({
                                         title="Open this query in Splunk Search"
                                         className="w-full text-left bg-black/60 hover:bg-black/80 rounded p-2 border border-slate-800 hover:border-sky-700 font-mono transition-colors focus:outline-none focus:ring-1 focus:ring-sky-500"
                                     >
-                                        <p className="text-[10px] text-sky-200 leading-relaxed break-all">
-                                            {selectedCity.query}
-                                        </p>
+                                        {catalogueByName === null ? (
+                                            <p className="text-[10px] text-slate-500 italic leading-relaxed">
+                                                Loading saved-search SPL…
+                                            </p>
+                                        ) : (
+                                            <p className="text-[10px] text-sky-200 leading-relaxed whitespace-pre-wrap break-all">
+                                                {selectedDisplaySpl}
+                                            </p>
+                                        )}
                                     </button>
                                 ) : (
                                     <div className="bg-black/60 rounded p-2 border border-slate-800 font-mono">
-                                        <p className="text-[10px] text-sky-200 leading-relaxed break-all">
-                                            {selectedCity.query}
+                                        <p className="text-[10px] text-sky-200 leading-relaxed whitespace-pre-wrap break-all">
+                                            {selectedDisplaySpl}
                                         </p>
                                     </div>
                                 )}
+                                <p
+                                    className="text-[9px] font-mono text-slate-500 truncate"
+                                    title={`Source: searchbase.conf · search_name "${selectedCity.savedSearch}"`}
+                                >
+                                    via searchbase &quot;{selectedCity.savedSearch}&quot;
+                                </p>
                             </div>
 
                             <div className="grid grid-cols-2 gap-2">
@@ -650,35 +785,21 @@ export const FloridaMap: React.FC<FloridaMapProps> = ({
                     </div>
                 </div>
 
-                <div className="flex gap-2">
-                    <button
-                        type="button"
-                        onClick={resetView}
-                        title="Reset view"
-                        aria-label="Reset map view"
-                        className={cn(
-                            'border p-2 rounded-lg shadow-md transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
-                            buttonChrome
-                        )}
-                    >
-                        <MapIcon className="w-4 h-4" />
-                    </button>
-                    <button
-                        type="button"
-                        onClick={cycleTilePreset}
-                        title={`Tiles · ${tilePreset.label}. Click to cycle.`}
-                        aria-label={`Switch base map (current: ${tilePreset.label})`}
-                        className={cn(
-                            'border p-2 rounded-lg shadow-md transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400 relative',
-                            buttonChrome
-                        )}
-                    >
-                        <Layers className="w-4 h-4" />
-                        <span className="absolute -bottom-1 -right-1 px-1 py-0.5 rounded text-[7px] font-bold uppercase tracking-widest bg-sky-500 text-white shadow-sm">
-                            {tilePreset.id.charAt(0)}
-                        </span>
-                    </button>
-                </div>
+                <button
+                    type="button"
+                    onClick={cycleTilePreset}
+                    title={`Tiles · ${tilePreset.label}. Click to cycle.`}
+                    aria-label={`Switch base map (current: ${tilePreset.label})`}
+                    className={cn(
+                        'border p-2 rounded-lg shadow-md transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400 relative',
+                        buttonChrome
+                    )}
+                >
+                    <Layers className="w-4 h-4" />
+                    <span className="absolute -bottom-1 -right-1 px-1 py-0.5 rounded text-[7px] font-bold uppercase tracking-widest bg-sky-500 text-white shadow-sm">
+                        {tilePreset.id.charAt(0)}
+                    </span>
+                </button>
             </div>
         </div>
     );
