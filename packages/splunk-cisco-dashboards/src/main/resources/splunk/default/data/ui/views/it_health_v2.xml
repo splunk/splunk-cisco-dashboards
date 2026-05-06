@@ -1724,7 +1724,7 @@
 		"ds_base_devicehealth_ref": {
 			"name": "IT - Critical Systems - ds_base_devicehealth",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| stats latest(OverallHealth) as OverallHealth, latest(Reachability) as Reachability, latest(Manageability) as Manageability, latest(ReachabilityFailureReason) as ReachabilityFailureReason, latest(CPUUtilization) as CPUUtilization, latest(MemoryUtilization) as MemoryUtilization, latest(DeviceFamily) as DeviceFamily, latest(DeviceRole) as DeviceRole, latest(Platform) as Platform, latest(Site) as Site, latest(IpAddress) as IpAddress, latest(MACAddress) as MACAddress, latest(SerialNumber) as SerialNumber, latest(SoftwareVersion) as SoftwareVersion, latest(DeviceImgVersion) as DeviceImgVersion, latest(UpTime) as UpTime, latest(UptimeSeconds) as UptimeSeconds by DeviceName, DeviceID",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| stats latest(OverallHealth) as OverallHealth, latest(Reachability) as Reachability, latest(Manageability) as Manageability, latest(ReachabilityFailureReason) as ReachabilityFailureReason, latest(CPUUtilization) as CPUUtilization, latest(MemoryUtilization) as MemoryUtilization, latest(DeviceFamily) as DeviceFamily, latest(DeviceRole) as DeviceRole, latest(Platform) as Platform, latest(Site) as Site, latest(IpAddress) as IpAddress, latest(MACAddress) as MACAddress, latest(SerialNumber) as SerialNumber, latest(ImageVersion) as DeviceImgVersion, latest(Uptime) as UpTime, latest(UptimeSeconds) as UptimeSeconds by DeviceName, DeviceID\n| eval SoftwareVersion=DeviceImgVersion",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1735,7 +1735,7 @@
 		"ds_base_issues_ref": {
 			"name": "IT - Critical Systems - ds_base_issues",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\"\n| fields IssueID, IssueName, IssueCategory, IssueSpecificPriority, IssueStatus, IssueSpecificSeverity, IssueSpecificDescription, IssueSpecificSummary, IssueSpecificEntity, IssueSpecificEntityValue, IssueSpecificCategory, IssueSpecificName, IssueSpecificSource, IssueCount, IssueDeviceRole, DeviceName, DeviceFamily, DevicePlatform, DeviceRole, DeviceSerialNumber, DeviceSeries, DeviceIpAddress, DeviceImgVersion, DeviceMACAddress, SiteName, SiteNameHierarchy, SiteType, IssueClientMac, _time",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\"\n| eval DeviceImgVersion=DeviceImageVersion\n| fields IssueID, IssueName, IssueCategory, IssueSpecificPriority, IssueStatus, IssueSpecificSeverity, IssueSpecificDescription, IssueSpecificSummary, IssueSpecificEntity, IssueSpecificEntityValue, IssueSpecificCategory, IssueSpecificName, IssueSpecificSource, IssueCount, IssueDeviceRole, DeviceName, DeviceFamily, DevicePlatform, DeviceRole, DeviceSerialNumber, DeviceSeries, DeviceIpAddress, DeviceImgVersion, DeviceMACAddress, SiteName, SiteNameHierarchy, SiteType, IssueClientMac, _time",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"

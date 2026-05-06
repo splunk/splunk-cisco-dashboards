@@ -1016,7 +1016,7 @@
 		"ds_base_psirt": {
 			"name": "Security Resilience - ds_psirt",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:securityadvisory\" \n| stats latest(cvssBaseScore) as cvssBaseScore, dc(DeviceName) as affected_devices by advisoryId",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:securityadvisory\" \n| eval AdvisorySeverity=upper(AdvisorySir)\n| eval severity_rank=case(AdvisorySeverity==\"CRITICAL\",4, AdvisorySeverity==\"HIGH\",3, AdvisorySeverity==\"MEDIUM\",2, AdvisorySeverity==\"LOW\",1, 1==1,0)\n| stats latest(AdvisorySeverity) as AdvisorySeverity, max(severity_rank) as severity_rank, dc(DeviceName) as affected_devices by AdvisoryID\n| sort -severity_rank, -affected_devices\n| table AdvisoryID AdvisorySeverity affected_devices",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
