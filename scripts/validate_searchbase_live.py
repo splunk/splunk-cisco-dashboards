@@ -23,14 +23,21 @@ import re
 import ssl
 import sys
 import time
-from dataclasses import asdict, dataclass
-from pathlib import Path
+from dataclasses import asdict, dataclass, field
 from typing import Iterable
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, quote
 from urllib.request import Request, urlopen
 
-from audit_searchbase_quality import MACROS, SEARCHBASE, _MACRO_RE, parse_conf, parse_macros
+from audit_searchbase_quality import (
+    MACROS,
+    SEARCHBASE,
+    _MACRO_RE,
+    is_cisco_trend_candidate,
+    parse_conf,
+    parse_macros,
+    tag_tokens,
+)
 
 
 SIDE_EFFECT_RE = re.compile(r"\b(outputlookup|collect|sendemail|script|delete)\b", re.I)
@@ -45,6 +52,7 @@ class ValidationResult:
     detail: str
     result_count: int = 0
     elapsed_seconds: float = 0.0
+    result_fields: list[str] = field(default_factory=list)
 
 
 def splunk_search_text(spl: str) -> str:
@@ -133,11 +141,43 @@ def post_oneshot(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--stanza", action="append", help="Only validate matching stanza name.")
+    parser.add_argument(
+        "--tag",
+        action="append",
+        help="Only validate stanzas with this exact comma-separated tag token.",
+    )
     parser.add_argument("--limit", type=int, help="Stop after N runnable searches.")
+    parser.add_argument(
+        "--offset",
+        type=int,
+        default=0,
+        help="Skip N runnable searches after filters. Useful for batch/resume runs.",
+    )
+    parser.add_argument(
+        "--sleep-between",
+        type=float,
+        default=0.0,
+        help="Seconds to sleep between dispatched searches.",
+    )
+    parser.add_argument(
+        "--results-file",
+        help="Write JSON validation results to this path in addition to stdout summary.",
+    )
     parser.add_argument("--earliest", default="-4h")
     parser.add_argument("--latest", default="now")
     parser.add_argument("--timeout", type=int, default=45)
+    parser.add_argument(
+        "--require-final-timechart",
+        action="store_true",
+        help="Fail selected searches that do not end with a metric-producing timechart.",
+    )
+    parser.add_argument(
+        "--require-time-field",
+        action="store_true",
+        help="Fail selected searches when returned rows do not contain _time.",
+    )
     parser.add_argument("--include-side-effects", action="store_true")
+    parser.add_argument("--include-disabled", action="store_true")
     parser.add_argument("--include-missing-macros", action="store_true")
     parser.add_argument(
         "--no-expand-local-macros",
@@ -159,20 +199,46 @@ def main() -> int:
         return 2
 
     stanza_filter = set(args.stanza or [])
+    tag_filter = set(args.tag or [])
     macros = parse_macros(MACROS)
     macro_definitions = parse_macro_definitions()
     stanzas = parse_conf(SEARCHBASE)
     results: list[ValidationResult] = []
     runnable = 0
+    dispatched = 0
 
     for stanza in stanzas:
         if stanza_filter and stanza.name not in stanza_filter and stanza.search_name not in stanza_filter:
+            continue
+        if tag_filter and not (tag_filter & tag_tokens(stanza.fields.get("tags", ""))):
+            continue
+        if not args.include_disabled and stanza.fields.get("disabled", "0").strip() == "1":
+            results.append(
+                ValidationResult(
+                    stanza.name,
+                    stanza.search_name,
+                    stanza.line_start,
+                    "skip",
+                    "disabled search",
+                )
+            )
             continue
 
         spl = stanza.search.strip()
         if not spl:
             results.append(
                 ValidationResult(stanza.name, stanza.search_name, stanza.line_start, "skip", "missing search")
+            )
+            continue
+        if args.require_final_timechart and not is_cisco_trend_candidate(spl):
+            results.append(
+                ValidationResult(
+                    stanza.name,
+                    stanza.search_name,
+                    stanza.line_start,
+                    "fail",
+                    "selected search does not end with a metric-producing timechart",
+                )
             )
             continue
 
@@ -201,9 +267,14 @@ def main() -> int:
             )
             continue
 
-        if args.limit is not None and runnable >= args.limit:
+        if runnable < args.offset:
+            runnable += 1
+            continue
+
+        if args.limit is not None and dispatched >= args.limit:
             break
         runnable += 1
+        dispatched += 1
         spl_to_run = spl if args.no_expand_local_macros else expand_local_macros(spl, macro_definitions)
 
         start = time.monotonic()
@@ -232,6 +303,20 @@ def main() -> int:
                         "; ".join(m.get("text", "") for m in bad),
                         len(rows),
                         elapsed,
+                        sorted(rows[0].keys()) if rows else [],
+                    )
+                )
+            elif args.require_time_field and rows and "_time" not in rows[0]:
+                results.append(
+                    ValidationResult(
+                        stanza.name,
+                        stanza.search_name,
+                        stanza.line_start,
+                        "fail",
+                        "returned row does not contain _time",
+                        len(rows),
+                        elapsed,
+                        sorted(rows[0].keys()),
                     )
                 )
             else:
@@ -241,9 +326,10 @@ def main() -> int:
                         stanza.search_name,
                         stanza.line_start,
                         "pass",
-                        "ok",
+                        "ok" if rows else "ok (no rows returned)",
                         len(rows),
                         elapsed,
+                        sorted(rows[0].keys()) if rows else [],
                     )
                 )
         except HTTPError as exc:
@@ -272,6 +358,13 @@ def main() -> int:
                     elapsed,
                 )
             )
+        if args.sleep_between > 0 and (args.limit is None or dispatched < args.limit):
+            time.sleep(args.sleep_between)
+
+    if args.results_file:
+        with open(args.results_file, "w", encoding="utf-8") as fh:
+            json.dump([asdict(r) for r in results], fh, indent=2)
+            fh.write("\n")
 
     if args.json:
         print(json.dumps([asdict(r) for r in results], indent=2))
@@ -280,6 +373,11 @@ def main() -> int:
         for result in results:
             counts[result.status] = counts.get(result.status, 0) + 1
         print("validation status:", ", ".join(f"{k}={v}" for k, v in sorted(counts.items())))
+        print(
+            "result rows:",
+            f"with_rows={sum(1 for r in results if r.result_count > 0)}",
+            f"empty={sum(1 for r in results if r.result_count == 0 and r.status == 'pass')}",
+        )
         for result in results:
             if result.status != "pass":
                 print(f"{result.status.upper()} {result.line} {result.search_name}: {result.detail}")

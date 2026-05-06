@@ -49,6 +49,10 @@ export interface TopologySite {
         healthPct?: number;
         latencyMs?: number;
     };
+    lastUpdated?: string;
+    dataState?: 'static' | 'loading' | 'live' | 'error';
+    dataError?: string;
+    telemetrySource?: string;
     /**
      * searchbase.conf `search_name` used for the SPL preview and drilldown.
      */
@@ -83,6 +87,11 @@ export interface CustomerTopology {
     id: string;
     name: string;
     subtitle: string;
+    /**
+     * Optional searchbase.conf `search_name` that can return normalized
+     * topology rows for all sites, links, and map-adjacent summary cards.
+     */
+    telemetrySearchName?: string;
     map: {
         center: [number, number];
         zoom: number;

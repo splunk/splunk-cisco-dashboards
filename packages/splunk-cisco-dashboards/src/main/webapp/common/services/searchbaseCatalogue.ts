@@ -18,11 +18,10 @@
  * REST endpoint: Splunk serves any custom conf file at
  *   /servicesNS/<owner>/<app>/configs/conf-<name>
  * — same auth model as `saved/searches`. Records are paginated; we ask
- * for `count=0` to get the whole catalogue in one call (currently ~100
- * stanzas, so well within reason).
+ * for `count=0` to get the whole catalogue in one call (currently several
+ * hundred stanzas, so still within reason).
  *
- * The stable external key is `search_name`; `aliases` keep older keys
- * resolving after metadata-only renames.
+ * The stable external key is `search_name`.
  */
 
 import { getSearchAppContext } from './splunkSearchService';
@@ -32,8 +31,6 @@ export interface SearchbaseRecord {
     id: string;
     /** Friendly label and stable runtime key. */
     searchName: string;
-    /** Legacy search_name values that should resolve to this entry. */
-    aliases: string[];
     /** Top-level grouping (e.g. "Building", "Network", "Security"). */
     category: string;
     /** Free-form sub-grouping (e.g. "Environmental Sensors"). */
@@ -53,13 +50,14 @@ interface SearchbaseEntry {
     acl?: { app?: string };
     content?: {
         search_name?: string;
-        aliases?: string;
         category?: string;
         sub_category?: string;
         tags?: string;
         dispatch_context?: string;
         description?: string;
         search?: string;
+        disabled?: string;
+        search_hidden?: string;
     };
 }
 
@@ -102,14 +100,8 @@ const splitTags = (raw: string | undefined): string[] => {
         .slice(0, 20);
 };
 
-const splitAliases = (raw: string | undefined): string[] => {
-    if (typeof raw !== 'string' || raw.length === 0) return [];
-    return raw
-        .split(',')
-        .map((t) => t.trim())
-        .filter((t) => t.length > 0 && t.length <= 256)
-        .slice(0, 20);
-};
+const isTruthyConfValue = (raw: string | undefined): boolean =>
+    typeof raw === 'string' && /^(1|true|yes)$/i.test(raw.trim());
 
 let CACHED_PROMISE: Promise<SearchbaseRecord[]> | null = null;
 
@@ -132,12 +124,14 @@ const fetchSearchbase = async (): Promise<SearchbaseRecord[]> => {
     const out: SearchbaseRecord[] = [];
     for (const e of entries) {
         const content = e.content ?? {};
+        if (isTruthyConfValue(content.disabled) || isTruthyConfValue(content.search_hidden)) {
+            continue;
+        }
         const searchName = typeof content.search_name === 'string' ? content.search_name.trim() : '';
         if (searchName.length === 0) continue; // Without a join key we can't enrich anything.
         out.push({
             id: typeof e.name === 'string' ? e.name : '',
             searchName,
-            aliases: splitAliases(content.aliases),
             category: typeof content.category === 'string' ? content.category : '',
             subCategory: typeof content.sub_category === 'string' ? content.sub_category : '',
             tags: splitTags(content.tags),

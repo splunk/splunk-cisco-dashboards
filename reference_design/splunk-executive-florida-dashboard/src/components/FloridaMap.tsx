@@ -228,7 +228,7 @@ export const FloridaMap: React.FC = () => {
       {/* Map Control Shortcuts Overlay */}
       <div className="absolute bottom-6 left-6 z-[1000] space-y-3">
         <div className="bg-white/90 backdrop-blur-sm border border-slate-200 p-3 rounded-lg shadow-lg max-w-[150px]">
-          <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">FDEM Nodes</h5>
+          <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Site Nodes</h5>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">

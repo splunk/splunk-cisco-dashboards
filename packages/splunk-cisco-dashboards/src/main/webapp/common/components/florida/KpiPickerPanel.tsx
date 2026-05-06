@@ -180,7 +180,6 @@ const matchesQuery = (entry: SearchbaseRecord, query: string): boolean => {
     const plainDescription = plainTextFromHtml(entry.description);
     return (
         entry.searchName.toLowerCase().includes(trimmed) ||
-        (entry.aliases ?? []).some((alias) => alias.toLowerCase().includes(trimmed)) ||
         plainDescription.toLowerCase().includes(trimmed) ||
         entry.subCategory.toLowerCase().includes(trimmed) ||
         entry.tags.some((t) => t.toLowerCase().includes(trimmed))
@@ -190,20 +189,17 @@ const matchesQuery = (entry: SearchbaseRecord, query: string): boolean => {
 const entryMatchesKey = (entry: SearchbaseRecord, key: string | null | undefined): boolean => {
     const trimmed = key?.trim();
     if (!trimmed) return false;
-    return (
-        entry.id === trimmed ||
-        entry.searchName === trimmed ||
-        (entry.aliases ?? []).includes(trimmed)
-    );
+    return entry.id === trimmed || entry.searchName === trimmed;
 };
 
 const entryIsUsed = (entry: SearchbaseRecord, used: Set<string> | undefined): boolean => {
     if (!used) return false;
-    return (
-        used.has(entry.id) ||
-        used.has(entry.searchName) ||
-        (entry.aliases ?? []).some((alias) => used.has(alias))
-    );
+    return used.has(entry.id) || used.has(entry.searchName);
+};
+
+const labelFromSearchName = (searchName: string): string => {
+    const parts = searchName.split(/\s+[–—-]\s+/).map((part) => part.trim());
+    return (parts[parts.length - 1] || searchName).slice(0, 80);
 };
 
 export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
@@ -336,8 +332,11 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
             );
         if (selectedId && !selectedIsCurrent) {
             setValueField('');
+            const selected = catalogue.find((entry) => entryMatchesKey(entry, selectedId));
+            setLabelOverride(selected ? labelFromSearchName(selected.searchName) : '');
         } else {
             setValueField(context.currentValueField ?? '');
+            setLabelOverride(context.currentLabel ?? '');
         }
     }, [selectedId, context, catalogue]);
 
@@ -379,26 +378,42 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         );
     }, [catalogue, selectedCategory]);
 
-    // Full tag counts for the currently scoped slice (category +
-    // sub-category). Sorted by frequency desc, then alpha. Not capped
-    // — that happens in `visibleTagChips` so the filter input can
-    // lift the cap when narrowing.
-    const allTagsWithCounts = useMemo(() => {
-        const map = new Map<string, number>();
-        for (const e of catalogue) {
-            if (selectedCategory !== ALL_CATEGORIES && e.category !== selectedCategory) continue;
+    // Tag counts are scoped to the current result slice, including
+    // already-selected tags. This makes the tag picker progressive:
+    // after choosing "Cisco", the dropdown shows only tags that still
+    // co-occur in the narrowed results rather than the full catalogue.
+    const tagFacetEntries = useMemo(() => {
+        return catalogue.filter((entry) => {
+            if (selectedCategory !== ALL_CATEGORIES && entry.category !== selectedCategory) {
+                return false;
+            }
             if (
                 selectedSubCategory !== ALL_SUB_CATEGORIES &&
-                e.subCategory !== selectedSubCategory
+                entry.subCategory !== selectedSubCategory
             ) {
-                continue;
+                return false;
             }
-            for (const t of e.tags) map.set(t, (map.get(t) ?? 0) + 1);
+            if (activeTags.size > 0) {
+                for (const tag of activeTags) {
+                    if (!entry.tags.includes(tag)) return false;
+                }
+            }
+            return matchesQuery(entry, query);
+        });
+    }, [catalogue, query, selectedCategory, selectedSubCategory, activeTags]);
+
+    // Full tag counts for the narrowed slice. Sorted by frequency
+    // desc, then alpha. Not capped — that happens in
+    // `tagDropdownOptions` so typing can lift the cap.
+    const allTagsWithCounts = useMemo(() => {
+        const map = new Map<string, number>();
+        for (const entry of tagFacetEntries) {
+            for (const tag of entry.tags) map.set(tag, (map.get(tag) ?? 0) + 1);
         }
         return Array.from(map.entries()).sort(
             (a, b) => b[1] - a[1] || a[0].localeCompare(b[0])
         );
-    }, [catalogue, selectedCategory, selectedSubCategory]);
+    }, [tagFacetEntries]);
 
     // What renders in the tag dropdown — i.e. the *unselected*
     // tags the user can add. Selected tags are shown as pills inside
@@ -487,8 +502,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     // with `block: 'center'` keeps it from sitting flush against the
     // sticky filters at the top.
     const listScrollRef = useRef<HTMLDivElement | null>(null);
-    const itemRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
-    const setItemRef = (id: string) => (el: HTMLButtonElement | null) => {
+    const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+    const setItemRef = (id: string) => (el: HTMLDivElement | null) => {
         if (el) itemRefs.current.set(id, el);
         else itemRefs.current.delete(id);
     };
@@ -912,11 +927,18 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             const isInUse = entryIsUsed(entry, context.usedSavedSearches);
                             const plainDesc = plainTextFromHtml(entry.description);
                             return (
-                                <button
+                                <div
                                     key={entry.id}
-                                    type="button"
+                                    role="button"
+                                    tabIndex={0}
                                     ref={setItemRef(entry.id)}
                                     onClick={() => setSelectedId(entry.id)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            setSelectedId(entry.id);
+                                        }
+                                    }}
                                     className={cn(
                                         // Three visual states layered:
                                         //   isSelected (clicked, pending Apply)  → blue
@@ -943,7 +965,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         />
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-baseline gap-2 flex-wrap">
-                                                <span className="text-[11px] font-bold text-slate-800 dark:text-slate-100 break-all">
+                                                <span className="text-[11px] font-bold text-slate-800 dark:text-slate-100 break-all select-text cursor-text">
                                                     {highlightMatch(entry.searchName, query)}
                                                 </span>
                                                 {isCurrent && (
@@ -992,7 +1014,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             )}
                                         </div>
                                     </div>
-                                </button>
+                                </div>
                             );
                         })}
                 </div>
@@ -1001,6 +1023,18 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                 <div className="border-t border-slate-200 dark:border-slate-800 flex-shrink-0 px-4 py-3 space-y-2.5 max-h-[42%] overflow-auto">
                     {selectedEntry ? (
                         <>
+                            <div>
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
+                                    Search name
+                                </p>
+                                <p
+                                    className="select-text cursor-text text-[12px] font-bold text-slate-800 dark:text-slate-100 break-words leading-snug"
+                                    title="Drag to select part of the search name for copying."
+                                >
+                                    {selectedEntry.searchName}
+                                </p>
+                            </div>
+
                             {(selectedEntry.category || selectedEntry.tags.length > 0) && (
                                 <div className="flex flex-wrap items-center gap-1">
                                     {selectedEntry.category && (

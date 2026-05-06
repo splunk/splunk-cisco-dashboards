@@ -22,6 +22,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CONF_DIR = REPO_ROOT / "packages/splunk-cisco-dashboards/src/main/resources/splunk/default"
 SEARCHBASE = CONF_DIR / "searchbase.conf"
+SEARCHBASE_SPEC = CONF_DIR.parent / "README/searchbase.conf.spec"
 SAVEDSEARCHES = CONF_DIR / "savedsearches.conf"
 MACROS = CONF_DIR / "macros.conf"
 NAV = CONF_DIR / "data/ui/nav/default.xml"
@@ -80,6 +81,16 @@ _STANZA_RE = re.compile(r"^\[([^\]]+)\]\s*$")
 _KV_RE = re.compile(r"^([A-Za-z_][\w.]*)\s*=\s*(.*)$")
 _MACRO_RE = re.compile(r"`([A-Za-z_][\w-]*)(?:\([^`]*\))?`")
 _SAVEDSEARCH_RE = re.compile(r"\|\s*savedsearch\s+\"([^\"]+)\"", re.I)
+_CISCO_TAG = "Cisco"
+_TIMECHART_AGG_RE = re.compile(
+    r"\b(?:"
+    r"count|c|dc|distinct_count|estdc|sum|avg|mean|min|max|median|mode|"
+    r"range|stdev|stdevp|var|varp|latest|earliest|first|last|values|list|"
+    r"perc\d*|exactperc\d*|upperperc\d*|p\d+"
+    r")\s*\(",
+    re.I,
+)
+_BARE_TIMECHART_COUNT_RE = re.compile(r"(^|[\s,])(?:count|c)(?=$|[\s,])", re.I)
 
 KNOWN_ALLOWED_AFTER_TIMECHART = {
     # Threshold/reference-line decorators intentionally live after timechart.
@@ -145,6 +156,53 @@ def parse_conf(path: Path) -> list[Stanza]:
 
 def parse_macros(path: Path) -> set[str]:
     return {s.name.split("(", 1)[0] for s in parse_conf(path)}
+
+
+def parse_spec_keys(path: Path) -> set[str]:
+    keys: set[str] = set()
+    for line in path.read_text(encoding="utf-8").splitlines():
+        match = _KV_RE.match(line)
+        if match:
+            keys.add(match.group(1))
+    return keys
+
+
+def audit_conf_keys(conf_path: Path, spec_path: Path) -> list[Finding]:
+    allowed = parse_spec_keys(spec_path)
+    findings: list[Finding] = []
+    current_stanza = ""
+    current_search_name = ""
+
+    with conf_path.open("r", encoding="utf-8") as fh:
+        for lineno, raw in enumerate(fh, 1):
+            line = raw.rstrip("\n")
+            stripped = line.lstrip()
+            header = _STANZA_RE.match(line)
+            if header:
+                current_stanza = header.group(1)
+                current_search_name = current_stanza
+                continue
+            if not current_stanza or not stripped or stripped.startswith("#"):
+                continue
+            match = _KV_RE.match(line)
+            if not match:
+                continue
+            key = match.group(1)
+            if key == "search_name":
+                current_search_name = match.group(2).strip() or current_stanza
+            if key not in allowed:
+                findings.append(
+                    Finding(
+                        stanza=current_stanza,
+                        search_name=current_search_name,
+                        file=str(conf_path),
+                        line=lineno,
+                        concern="invalid_searchbase_key",
+                        detail=f"Key '{key}' is not declared in searchbase.conf.spec.",
+                        severity="error",
+                    )
+                )
+    return findings
 
 
 def parse_nav_dashboards() -> list[str]:
@@ -229,6 +287,47 @@ def split_spl_commands(spl: str) -> list[str]:
     return parts
 
 
+def tag_tokens(value: str) -> set[str]:
+    return {token.strip() for token in value.split(",") if token.strip()}
+
+
+def has_cisco_tag(stanza: Stanza) -> bool:
+    return _CISCO_TAG in tag_tokens(stanza.fields.get("tags", ""))
+
+
+def command_name(command: str) -> str:
+    match = re.match(r"^([A-Za-z][\w-]*)\b", command.strip())
+    return match.group(1).lower() if match else ""
+
+
+def is_synthetic_or_side_effecting(spl: str) -> bool:
+    lower = spl.lower()
+    return bool(
+        re.search(r"\bmakeresults\b|\brandom\s*\(", lower)
+        or re.search(r"\b(outputlookup|collect|sendemail|script|delete)\b", lower)
+    )
+
+
+def is_cisco_trend_candidate(spl: str) -> bool:
+    """Cisco-tagged searches must end with a metric-producing timechart."""
+    if not spl or is_synthetic_or_side_effecting(spl):
+        return False
+    parts = split_spl_commands(re.sub(r"\s+", " ", spl).strip())
+    if not parts:
+        return False
+    final = parts[-1]
+    if command_name(final) != "timechart":
+        return False
+    return bool(_TIMECHART_AGG_RE.search(final) or _BARE_TIMECHART_COUNT_RE.search(final))
+
+
+def final_command_name(spl: str) -> str:
+    parts = split_spl_commands(re.sub(r"\s+", " ", spl).strip())
+    if not parts:
+        return ""
+    return command_name(parts[-1]) or parts[-1][:40]
+
+
 def command_after_last_timechart(spl: str) -> str | None:
     parts = split_spl_commands(spl)
     last_timechart = None
@@ -240,6 +339,95 @@ def command_after_last_timechart(spl: str) -> str | None:
     next_part = parts[last_timechart + 1]
     match = re.match(r"^([A-Za-z][\w-]*)\b", next_part)
     return match.group(1).lower() if match else next_part
+
+
+def timechart_command_indexes(spl: str) -> list[int]:
+    return [
+        idx
+        for idx, part in enumerate(split_spl_commands(spl))
+        if re.match(r"^timechart\b", part, re.I)
+    ]
+
+
+def split_top_level_args(value: str) -> list[str]:
+    parts: list[str] = []
+    current: list[str] = []
+    quote: str | None = None
+    depth = 0
+    for char in value:
+        if quote:
+            current.append(char)
+            if char == quote:
+                quote = None
+            continue
+        if char in {"'", '"', "`"}:
+            current.append(char)
+            quote = char
+            continue
+        if char == "(":
+            depth += 1
+        elif char == ")":
+            depth = max(0, depth - 1)
+        if char == "," and depth == 0:
+            parts.append("".join(current).strip())
+            current = []
+            continue
+        current.append(char)
+    tail = "".join(current).strip()
+    if tail:
+        parts.append(tail)
+    return parts
+
+
+def iter_round_args(command: str) -> list[str]:
+    args: list[str] = []
+    for match in re.finditer(r"\bround\s*\(", command, re.I):
+        start = match.end()
+        depth = 1
+        quote: str | None = None
+        idx = start
+        while idx < len(command):
+            char = command[idx]
+            if quote:
+                if char == quote:
+                    quote = None
+                idx += 1
+                continue
+            if char in {"'", '"', "`"}:
+                quote = char
+                idx += 1
+                continue
+            if char == "(":
+                depth += 1
+            elif char == ")":
+                depth -= 1
+                if depth == 0:
+                    args.append(command[start:idx])
+                    break
+            idx += 1
+    return args
+
+
+def timechart_round_precision_issues(spl: str) -> list[str]:
+    if not timechart_command_indexes(spl):
+        return []
+    issues: list[str] = []
+    for command in split_spl_commands(spl):
+        for args in iter_round_args(command):
+            round_parts = split_top_level_args(args)
+            precision = round_parts[1].strip() if len(round_parts) > 1 else ""
+            if precision != "2":
+                issues.append(f"round({args})")
+    return issues
+
+
+def has_round_after_timechart(spl: str) -> bool:
+    parts = split_spl_commands(spl)
+    indexes = timechart_command_indexes(spl)
+    if not indexes:
+        return False
+    last_timechart = indexes[-1]
+    return any(re.search(r"\bround\s*\(", part, re.I) for part in parts[last_timechart + 1 :])
 
 
 def add_finding(
@@ -275,6 +463,26 @@ def audit_stanza(
         return findings
 
     lower = spl.lower()
+    cisco_tagged = has_cisco_tag(stanza)
+    cisco_candidate = is_cisco_trend_candidate(spl)
+    if cisco_tagged and not cisco_candidate:
+        add_finding(
+            findings,
+            stanza,
+            "cisco_tag_not_tile_ready_trend",
+            "Cisco tag is only for searches whose final command is a metric-producing timechart; "
+            f"final command is '{final_command_name(spl) or 'unknown'}'.",
+            "error",
+        )
+    elif cisco_candidate and not cisco_tagged:
+        add_finding(
+            findings,
+            stanza,
+            "missing_cisco_tag_for_tile_ready_trend",
+            "Search ends with a metric-producing timechart but is missing the Cisco tag.",
+            "error",
+        )
+
     used_macros = set(_MACRO_RE.findall(spl))
     missing = sorted(m for m in used_macros if m not in macros)
     if missing:
@@ -359,22 +567,24 @@ def audit_stanza(
             "warn",
         )
 
-    if re.search(r"\|\s*timechart\b[\s\S]*\|\s*eval\s+[^|]*round\s*\(", spl, re.I):
+    if has_round_after_timechart(spl):
         add_finding(
             findings,
             stanza,
             "round_after_timechart",
-            "Rounding happens after timechart; prefer eval(round(agg(...))) in timechart.",
+            "Rounding happens after timechart; put the two-decimal round in the timechart aggregate.",
             "warn",
         )
 
-    if re.search(r"\|\s*timechart\b[^|]*\beval\s*\(\s*round\s*\(", spl, re.I):
+    bad_rounds = timechart_round_precision_issues(spl)
+    if bad_rounds:
         add_finding(
             findings,
             stanza,
-            "unsupported_timechart_eval_round",
-            "Splunk 10.2 rejects timechart eval(round(...)) in this app; round before timechart instead.",
-            "error",
+            "timechart_round_precision",
+            "Timechart-bearing search uses round precision other than 2 decimals: "
+            + "; ".join(bad_rounds[:3]),
+            "warn",
         )
 
     if include_style:
@@ -436,7 +646,7 @@ def main() -> int:
         nav_saved_refs.extend(saved_refs)
         nav_inline_queries.extend(inline_queries)
 
-    findings = []
+    findings = audit_conf_keys(SEARCHBASE, SEARCHBASE_SPEC)
     for stanza in searchbase:
         findings.extend(audit_stanza(stanza, macros, saved_names, include_style=args.style))
 

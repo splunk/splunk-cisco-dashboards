@@ -246,16 +246,13 @@ These are not *math* macros, but they belong in this doc because every saved sea
 
 | Macro | Definition target | Purpose |
 |---|---|---|
-| `fdem_index_catalyst` | DNAC sourcetypes (`cisco:dnac:*`) | Canonical (per Gate 0 directive) |
-| `fdem_index_spaces` | Cisco Spaces firehose | Canonical |
-| `fdem_index_network` | `cisco:ios` (currently broken — see [Data inventory](#data-inventory)) | Canonical |
-| `fdem_index_thousandeyes` | `thousandeyes:*` (placeholder until wired) | Canonical |
-| `scd_index_catalyst` | alias → `fdem_index_catalyst` | New SCD-prefixed alias |
-| `scd_index_spaces` | alias → `fdem_index_spaces` | New SCD-prefixed alias |
-| `scd_index_network` | alias → `fdem_index_network` | New SCD-prefixed alias |
-| `scd_index_thousandeyes` | alias → `fdem_index_thousandeyes` | New SCD-prefixed alias |
+| `index_catalyst` | DNAC sourcetypes (`cisco:dnac:*`) | Canonical Catalyst Center search scope |
+| `index_spaces` | Cisco Spaces firehose | Canonical Spaces search scope |
+| `index_network` | `cisco:ios` (currently broken — see [Data inventory](#data-inventory)) | Canonical network search scope |
+| `index_security` | Security events | Canonical security search scope |
+| `index_thousandeyes` | `thousandeyes:*` (placeholder until wired) | Canonical ThousandEyes search scope |
 
-The existing un-prefixed macros (`index_catalyst`, `index_spaces`, `index_security`, etc.) are **not renamed** — the archived dashboards still reference them. New SCD code must call the `scd_index_*` form for clarity; the `fdem_index_*` form remains for compatibility with anything that currently uses it.
+Use the un-prefixed `index_*` macros as the stable app contract. Customer-specific aliases should not be introduced unless a migration requires them.
 
 ---
 

@@ -24,7 +24,6 @@
 
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
-    Bell,
     User,
     RefreshCw,
     Pause,
@@ -37,7 +36,8 @@ import { DashboardSection } from '@/common/components/florida/DashboardSection';
 import { MetricItem } from '@/common/components/florida/MetricItem';
 import {
     CustomerTopologyMap,
-    FDEM_TOPOLOGY,
+    CUSTOMER_TOPOLOGY,
+    type TopologySummaryMetricMap,
     TopologySiteTable,
 } from '@/common/components/florida/CustomerTopologyMap';
 import { HealthBadge } from '@/common/components/florida/HealthBadge';
@@ -91,6 +91,12 @@ const FALLBACK_LOGO_DATA_URI =
 const CUSTOMER_NAME_SPL =
     '| makeresults | eval customer_name = `customer_name` | fields customer_name';
 
+const splunkLocalePrefix = (): string => {
+    if (typeof window === 'undefined') return '/en-US';
+    const match = window.location.pathname.match(/^\/([a-z]{2}-[A-Z]{2})(?:\/|$)/);
+    return `/${match ? match[1] : 'en-US'}`;
+};
+
 // =============================================================================
 // Time range
 // =============================================================================
@@ -142,7 +148,7 @@ const METRIC_CONFIG: MetricConfig[] = [
             'category. Combines link state, throughput and protocol metrics into a ' +
             "0-100 grade. Healthy >= 95; Critical < 80.",
         // Single row: { score: 0..100 }
-        savedSearch: 'Executive Dashboard - Current Network Health',
+        savedSearch: 'IT - Critical Systems - Network Health Score',
         valueField: 'score',
         unit: '%',
         thresholds: { warning: 95, critical: 80, direction: 'higher_is_better' },
@@ -174,7 +180,7 @@ const METRIC_CONFIG: MetricConfig[] = [
             'Source: cisco:dnac:issue. Crosses warning at 500 active issues and is ' +
             'critical above 1,000.',
         // Single row: { total, critical, high, affected_devices, affected_sites }
-        savedSearch: 'Executive Dashboard - Active Catalyst Center Issues',
+        savedSearch: 'Executive Dashboard - Issue Summary KPIs',
         valueField: 'total',
         thresholds: { warning: 500, critical: 1000, direction: 'lower_is_better' },
         mock: { seed: 13, sparkMin: 100, sparkMax: 800, value: 650, change: -50 },
@@ -205,7 +211,7 @@ const METRIC_CONFIG: MetricConfig[] = [
             '(COMPLIANT or COMPLIANT_WARNING). NOT_APPLICABLE checks are ' +
             'excluded. Healthy >= 95; Critical < 80.',
         // Single row: { pct: 0..100 }
-        savedSearch: 'Executive Dashboard - Compliance Rate',
+        savedSearch: 'IT - Critical Systems - Compliance Rate',
         valueField: 'pct',
         unit: '%',
         thresholds: { warning: 95, critical: 80, direction: 'higher_is_better' },
@@ -653,6 +659,7 @@ const OverviewPage: React.FC = () => {
     // ------------------------------ Branding ------------------------------
     const [customerName, setCustomerName] = useState<string>('');
     const [logoSrc, setLogoSrc] = useState<string>(CUSTOMER_LOGO_URL);
+    const [splunkUsername, setSplunkUsername] = useState<string>('');
 
     // ------------------------------ Time + refresh ------------------------------
     const [timeRange, setTimeRange] = useState<TimeRange>(
@@ -690,8 +697,6 @@ const OverviewPage: React.FC = () => {
     // `null` is the loading sentinel — tiles defer their dispatch
     // until the catalogue resolves so we don't fire a ghost
     // compatibility request that gets superseded a moment later.
-    // The map includes `aliases` so older persisted overrides survive
-    // search_name cleanups without falling back to scheduled searches.
     // On fetch failure we set an empty Map so tiles fall back to the
     // configured dispatch path (still functional, just less
     // executive-friendly drilldowns).
@@ -706,9 +711,6 @@ const OverviewPage: React.FC = () => {
                 const map = new Map<string, SearchbaseRecord>();
                 for (const entry of list) {
                     if (entry.searchName) map.set(entry.searchName, entry);
-                    for (const alias of entry.aliases ?? []) {
-                        if (alias && !map.has(alias)) map.set(alias, entry);
-                    }
                 }
                 setSearchbaseByName(map);
             })
@@ -722,6 +724,14 @@ const OverviewPage: React.FC = () => {
 
     // ------------------------------ Regional view (map | table) ------------------------------
     const [regionalView, setRegionalView] = useState<RegionalView>('map');
+    const [topologySummaryById, setTopologySummaryById] =
+        useState<TopologySummaryMetricMap>({});
+    const handleTopologySummaryChange = useCallback(
+        (metrics: TopologySummaryMetricMap) => {
+            setTopologySummaryById(metrics);
+        },
+        []
+    );
 
     // ------------------------------ Layout split (tiles ↔ map) ------------------------------
     // Percentage of the dashboard width allocated to the left-hand
@@ -866,6 +876,60 @@ const OverviewPage: React.FC = () => {
         };
     }, [refreshToken]);
 
+    // ------------------------------ Splunk user fetch ------------------------------
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+        let cancelled = false;
+        const bootstrap = (window as unknown as {
+            $C?: {
+                USERNAME?: string;
+                username?: string;
+                USER?: { name?: string; username?: string };
+                user?: { name?: string; username?: string };
+            };
+        }).$C;
+        const bootstrapName =
+            bootstrap?.USERNAME ??
+            bootstrap?.username ??
+            bootstrap?.USER?.username ??
+            bootstrap?.USER?.name ??
+            bootstrap?.user?.username ??
+            bootstrap?.user?.name ??
+            '';
+
+        fetch(
+            `${splunkLocalePrefix()}/splunkd/__raw/services/authentication/current-context?output_mode=json`,
+            {
+                credentials: 'include',
+                headers: { Accept: 'application/json' },
+            }
+        )
+            .then((res) => {
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return res.json() as Promise<{
+                    entry?: Array<{ content?: Record<string, unknown> }>;
+                }>;
+            })
+            .then((json) => {
+                if (cancelled) return;
+                const content = json.entry?.[0]?.content ?? {};
+                const raw =
+                    content.username ??
+                    content.user ??
+                    content.name ??
+                    bootstrapName;
+                const username = typeof raw === 'string' ? raw.trim() : '';
+                setSplunkUsername(username);
+            })
+            .catch(() => {
+                if (!cancelled) setSplunkUsername(bootstrapName.trim());
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
     // ------------------------------ Metric / KPI overrides (picker) ------------------------------
     //
     // Each tile stores its (optional) override under its `id`. The
@@ -968,6 +1032,18 @@ const OverviewPage: React.FC = () => {
     }, [overrides]);
     const topIncident = useKpi(effectiveTopIncidentCfg, timeRange, refreshToken);
     const operationalLead = useKpi(effectiveOpLeadCfg, timeRange, refreshToken);
+    const topologyTopIncident = topologySummaryById.top_incident;
+    const topologyOperationalLead = topologySummaryById.operational_lead;
+    const topIncidentCard = {
+        label: topologyTopIncident?.label ?? effectiveTopIncidentCfg.label,
+        value: topologyTopIncident?.value ?? topIncident.value,
+        source: topologyTopIncident?.source ?? topIncident.source,
+    };
+    const operationalLeadCard = {
+        label: topologyOperationalLead?.label ?? effectiveOpLeadCfg.label,
+        value: topologyOperationalLead?.value ?? operationalLead.value,
+        source: topologyOperationalLead?.source ?? operationalLead.source,
+    };
 
     // ------------------------------ Keyboard shortcuts ------------------------------
     // Drilldowns open in a new tab so the executive can keep the
@@ -1206,26 +1282,27 @@ const OverviewPage: React.FC = () => {
                     >
                         <Keyboard className="w-4 h-4" />
                     </button>
-                    <button
-                        type="button"
-                        className="relative p-1.5 text-slate-400 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors"
-                    >
-                        <Bell className="w-4 h-4" />
-                        <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full border border-white dark:border-slate-900"></span>
-                    </button>
-                    <div className="flex items-center gap-2">
-                        <div className="text-right hidden xl:block">
-                            <p className="text-[11px] font-bold text-slate-700 dark:text-slate-200 leading-none">
-                                Executive Admin
-                            </p>
-                            <p className="text-[9px] text-slate-400 dark:text-slate-500 leading-tight">
-                                Security Operations
-                            </p>
+                    {splunkUsername && (
+                        <div className="flex items-center gap-2">
+                            <div className="text-right hidden xl:block">
+                                <p
+                                    className="text-[11px] font-bold text-slate-700 dark:text-slate-200 leading-none max-w-[140px] truncate"
+                                    title={splunkUsername}
+                                >
+                                    {splunkUsername}
+                                </p>
+                                <p className="text-[9px] text-slate-400 dark:text-slate-500 leading-tight">
+                                    Splunk session
+                                </p>
+                            </div>
+                            <div
+                                className="w-8 h-8 rounded-full bg-sky-100 dark:bg-sky-900/40 border border-sky-200 dark:border-sky-800 flex items-center justify-center text-sky-600 dark:text-sky-300"
+                                title={`Signed in as ${splunkUsername}`}
+                            >
+                                <User className="w-4 h-4" />
+                            </div>
                         </div>
-                        <div className="w-8 h-8 rounded-full bg-sky-100 dark:bg-sky-900/40 border border-sky-200 dark:border-sky-800 flex items-center justify-center text-sky-600 dark:text-sky-300">
-                            <User className="w-4 h-4" />
-                        </div>
-                    </div>
+                    )}
                 </div>
             </header>
 
@@ -1376,11 +1453,14 @@ const OverviewPage: React.FC = () => {
                             <div className="flex-1 min-h-0">
                                 {regionalView === 'map' ? (
                                     <CustomerTopologyMap
-                                        topology={FDEM_TOPOLOGY}
+                                        topology={CUSTOMER_TOPOLOGY}
                                         isDark={resolvedTheme === 'dark'}
                                         earliestTime={timeRange.earliest}
                                         latestTime={timeRange.latest}
                                         refreshToken={refreshToken}
+                                        onSummaryMetricsChange={
+                                            handleTopologySummaryChange
+                                        }
                                         onOpenInSearch={(spl) => {
                                             const url = splunkSearchAppUrl(spl, timeRange);
                                             if (typeof window !== 'undefined') {
@@ -1393,15 +1473,15 @@ const OverviewPage: React.FC = () => {
                                         }}
                                     />
                                 ) : (
-                                    <TopologySiteTable topology={FDEM_TOPOLOGY} />
+                                    <TopologySiteTable topology={CUSTOMER_TOPOLOGY} />
                                 )}
                             </div>
 
                             <div className="mt-3 grid grid-cols-2 gap-3 flex-shrink-0">
                                 <KpiCard
-                                    label={effectiveTopIncidentCfg.label}
-                                    value={topIncident.value}
-                                    source={topIncident.source}
+                                    label={topIncidentCard.label}
+                                    value={topIncidentCard.value}
+                                    source={topIncidentCard.source}
                                     accentClassName="bg-red-500"
                                     onConfigure={() =>
                                         openPicker(KPI_CONFIG[0].id, KPI_CONFIG[0].label, {
@@ -1412,9 +1492,9 @@ const OverviewPage: React.FC = () => {
                                     isCustomized={Boolean(overrides[KPI_CONFIG[0].id])}
                                 />
                                 <KpiCard
-                                    label={effectiveOpLeadCfg.label}
-                                    value={operationalLead.value}
-                                    source={operationalLead.source}
+                                    label={operationalLeadCard.label}
+                                    value={operationalLeadCard.value}
+                                    source={operationalLeadCard.source}
                                     accentClassName="bg-emerald-500"
                                     onConfigure={() =>
                                         openPicker(KPI_CONFIG[1].id, KPI_CONFIG[1].label, {

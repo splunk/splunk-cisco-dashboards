@@ -2,12 +2,12 @@
  * CustomerTopologyMap
  *
  * Generic site-connectivity map for the executive overview. The default
- * data below represents the current FDEM story, but the component is
+ * data below represents the current customer story, but the component is
  * intentionally customer-topology driven: sites, links, roles, map frame,
  * and telemetry bindings live in one config object.
  */
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Circle,
     MapContainer,
@@ -16,16 +16,26 @@ import {
     TileLayer,
     ZoomControl,
     useMap,
+    useMapEvents,
 } from 'react-leaflet';
 import L from 'leaflet';
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, motion, useDragControls } from 'motion/react';
 import {
     Activity,
     Code2,
+    Download,
     ExternalLink,
     Layers,
     Link2,
+    MapPin,
+    MousePointer2,
+    Pencil,
+    Plus,
+    RotateCcw,
+    Save,
     Terminal,
+    Trash2,
+    Upload,
     X,
 } from 'lucide-react';
 import { cn } from '@/common/lib/utils';
@@ -52,10 +62,11 @@ L.Icon.Default.mergeOptions({
         'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-export const FDEM_TOPOLOGY: CustomerTopology = {
-    id: 'fdem-site-connectivity',
-    name: 'FDEM Site Connectivity',
-    subtitle: 'Hub paths into the State EOC',
+export const CUSTOMER_TOPOLOGY: CustomerTopology = {
+    id: 'customer-site-connectivity',
+    name: 'Florida Site Connectivity',
+    subtitle: 'Editable customer site connectivity',
+    telemetrySearchName: 'Overview - Topology Overview',
     map: {
         center: [28.45, -82.85],
         zoom: 6.55,
@@ -74,14 +85,10 @@ export const FDEM_TOPOLOGY: CustomerTopology = {
             role: 'state_hq',
             lat: 30.4383,
             lng: -84.2807,
-            status: 'stable',
-            metrics: {
-                activeDevices: 824,
-                alerts: 0,
-                healthPct: 99,
-                latencyMs: 28,
-            },
-            searchName: 'Overview - site_tlh',
+            status: 'unknown',
+            metrics: {},
+            telemetrySource: 'Awaiting normalized site telemetry',
+            searchName: 'Overview - Site Tallahassee Health',
         },
         {
             id: 'mco',
@@ -90,14 +97,10 @@ export const FDEM_TOPOLOGY: CustomerTopology = {
             role: 'regional_hub',
             lat: 28.5383,
             lng: -81.3792,
-            status: 'warning',
-            metrics: {
-                activeDevices: 410,
-                alerts: 12,
-                healthPct: 91,
-                latencyMs: 145,
-            },
-            searchName: 'Overview - site_mco',
+            status: 'unknown',
+            metrics: {},
+            telemetrySource: 'Awaiting normalized site telemetry',
+            searchName: 'Overview - Site Orlando Health',
         },
         {
             id: 'aub',
@@ -106,14 +109,10 @@ export const FDEM_TOPOLOGY: CustomerTopology = {
             role: 'logistics',
             lat: 28.0653,
             lng: -81.7876,
-            status: 'critical',
-            metrics: {
-                activeDevices: 188,
-                alerts: 42,
-                healthPct: 64,
-                latencyMs: 310,
-            },
-            searchName: 'Overview - site_aub',
+            status: 'unknown',
+            metrics: {},
+            telemetrySource: 'Awaiting normalized site telemetry',
+            searchName: 'Overview - Site Auburndale Health',
         },
     ],
     links: [
@@ -123,9 +122,8 @@ export const FDEM_TOPOLOGY: CustomerTopology = {
             sourceSiteId: 'mco',
             targetSiteId: 'tlh',
             status: 'unknown',
-            capacityMbps: 10000,
             telemetrySource: 'Awaiting topology link telemetry',
-            searchName: 'Overview - link_mco_tlh',
+            searchName: 'Overview - Link Orlando to Tallahassee Health',
         },
         {
             id: 'aub-tlh',
@@ -133,9 +131,8 @@ export const FDEM_TOPOLOGY: CustomerTopology = {
             sourceSiteId: 'aub',
             targetSiteId: 'tlh',
             status: 'unknown',
-            capacityMbps: 10000,
             telemetrySource: 'Awaiting topology link telemetry',
-            searchName: 'Overview - link_aub_tlh',
+            searchName: 'Overview - Link Auburndale to Tallahassee Health',
         },
     ],
 };
@@ -177,6 +174,329 @@ const ROLE_DOT_CLASS: Record<TopologyRole, string> = {
     branch: 'bg-emerald-500',
     datacenter: 'bg-violet-500',
     internet_edge: 'bg-slate-500',
+};
+
+const TOPOLOGY_STORAGE_KEY = 'splunk-cisco-dashboards.customerTopology.v2';
+const TOPOLOGY_STORAGE_VERSION = 2;
+const TOPOLOGY_ROLES: TopologyRole[] = [
+    'state_hq',
+    'regional_hub',
+    'logistics',
+    'branch',
+    'datacenter',
+    'internet_edge',
+];
+const TOPOLOGY_STATUSES: TopologyStatus[] = [
+    'unknown',
+    'stable',
+    'warning',
+    'critical',
+];
+
+type PersistedTopologyPayload = {
+    version: number;
+    topology: CustomerTopology;
+};
+
+export interface TopologySummaryMetric {
+    id: string;
+    label?: string;
+    value: string;
+    source: 'live' | 'mock' | 'loading';
+}
+
+export type TopologySummaryMetricMap = Record<string, TopologySummaryMetric>;
+
+type EditableTopology = Partial<CustomerTopology> & {
+    map?: Partial<CustomerTopology['map']>;
+    sites?: Array<Partial<TopologySite>>;
+    links?: Array<Partial<TopologyLink>>;
+};
+
+const cloneTopology = (topology: CustomerTopology): CustomerTopology =>
+    JSON.parse(JSON.stringify(topology)) as CustomerTopology;
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    Boolean(value && typeof value === 'object' && !Array.isArray(value));
+
+const textValue = (value: unknown, fallback = ''): string => {
+    if (value === null || value === undefined) return fallback;
+    const text = String(value).trim();
+    return text.length > 0 ? text : fallback;
+};
+
+const numberValue = (
+    value: unknown,
+    fallback: number,
+    min?: number,
+    max?: number
+): number => {
+    const parsed = Number(value);
+    const finite = Number.isFinite(parsed) ? parsed : fallback;
+    return Math.min(max ?? finite, Math.max(min ?? finite, finite));
+};
+
+const normalizeId = (value: unknown, fallback: string): string => {
+    const source = textValue(value, fallback).toLowerCase();
+    const normalized = source.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    return normalized || fallback;
+};
+
+const uniqueId = (base: string, used: Set<string>): string => {
+    let candidate = base;
+    let idx = 2;
+    while (used.has(candidate)) {
+        candidate = `${base}-${idx}`;
+        idx += 1;
+    }
+    used.add(candidate);
+    return candidate;
+};
+
+const isTopologyRole = (value: unknown): value is TopologyRole =>
+    TOPOLOGY_ROLES.includes(value as TopologyRole);
+
+const isTopologyStatus = (value: unknown): value is TopologyStatus =>
+    TOPOLOGY_STATUSES.includes(value as TopologyStatus);
+
+const optionalText = (value: unknown): string | undefined => {
+    const text = textValue(value);
+    return text.length > 0 ? text : undefined;
+};
+
+const sanitizeTopology = (
+    candidate: unknown,
+    fallback: CustomerTopology
+): CustomerTopology => {
+    const source = isRecord(candidate) ? (candidate as EditableTopology) : fallback;
+    const fallbackMap = fallback.map;
+    const rawSites = Array.isArray(source.sites) && source.sites.length > 0
+        ? source.sites
+        : fallback.sites;
+    const usedSiteIds = new Set<string>();
+    const sites = rawSites.map((site, index) => {
+        const fallbackSite = fallback.sites[index] ?? fallback.sites[0];
+        const id = uniqueId(
+            normalizeId(site.id ?? site.shortName ?? site.name, `site-${index + 1}`),
+            usedSiteIds
+        );
+        const shortName = textValue(
+            site.shortName,
+            id.replace(/-/g, '').slice(0, 4).toUpperCase()
+        ).slice(0, 8);
+        return {
+            id,
+            name: textValue(site.name, fallbackSite?.name ?? shortName),
+            shortName: shortName.toUpperCase(),
+            role: isTopologyRole(site.role) ? site.role : fallbackSite?.role ?? 'branch',
+            lat: numberValue(site.lat, fallbackSite?.lat ?? 39.2, -85, 85),
+            lng: numberValue(site.lng, fallbackSite?.lng ?? -96.5, -180, 180),
+            status: isTopologyStatus(site.status)
+                ? site.status
+                : fallbackSite?.status ?? 'unknown',
+            metrics: {
+                activeDevices: finiteOptionalNumber(site.metrics?.activeDevices),
+                alerts: finiteOptionalNumber(site.metrics?.alerts),
+                healthPct: finiteOptionalNumber(site.metrics?.healthPct),
+                latencyMs: finiteOptionalNumber(site.metrics?.latencyMs),
+            },
+            lastUpdated: optionalText(site.lastUpdated),
+            dataState: site.searchName ? 'loading' : site.dataState ?? 'static',
+            dataError: optionalText(site.dataError),
+            telemetrySource:
+                optionalText(site.telemetrySource) ??
+                (site.searchName
+                    ? 'Awaiting normalized site telemetry'
+                    : 'Configured topology item'),
+            searchName: optionalText(site.searchName),
+        };
+    });
+
+    const validSiteIds = new Set(sites.map((site) => site.id));
+    const rawLinks = Array.isArray(source.links) ? source.links : fallback.links;
+    const usedLinkIds = new Set<string>();
+    const links = rawLinks
+        .map((link, index) => {
+            const fallbackLink = fallback.links[index] ?? fallback.links[0];
+            const sourceSiteId = textValue(
+                link.sourceSiteId,
+                fallbackLink?.sourceSiteId ?? ''
+            );
+            const targetSiteId = textValue(
+                link.targetSiteId,
+                fallbackLink?.targetSiteId ?? ''
+            );
+            if (!validSiteIds.has(sourceSiteId) || !validSiteIds.has(targetSiteId)) {
+                return null;
+            }
+            const id = uniqueId(
+                normalizeId(link.id, `${sourceSiteId}-${targetSiteId}`),
+                usedLinkIds
+            );
+            const normalized: TopologyLink = {
+                id,
+                name: textValue(link.name, `${sourceSiteId} to ${targetSiteId}`),
+                sourceSiteId,
+                targetSiteId,
+                status: isTopologyStatus(link.status)
+                    ? link.status
+                    : fallbackLink?.status ?? 'unknown',
+                dataState: link.searchName ? 'loading' : link.dataState ?? 'static',
+                telemetrySource:
+                    optionalText(link.telemetrySource) ??
+                    'Awaiting topology link telemetry',
+            };
+            const capacityMbps = finiteOptionalNumber(link.capacityMbps);
+            if (capacityMbps !== undefined) normalized.capacityMbps = capacityMbps;
+            const throughputMbps = finiteOptionalNumber(link.throughputMbps);
+            if (throughputMbps !== undefined) {
+                normalized.throughputMbps = throughputMbps;
+            }
+            const utilizationPct = finiteOptionalNumber(link.utilizationPct);
+            if (utilizationPct !== undefined) {
+                normalized.utilizationPct = utilizationPct;
+            }
+            const latencyMs = finiteOptionalNumber(link.latencyMs);
+            if (latencyMs !== undefined) normalized.latencyMs = latencyMs;
+            const lossPct = finiteOptionalNumber(link.lossPct);
+            if (lossPct !== undefined) normalized.lossPct = lossPct;
+            const endpointHealthPct = finiteOptionalNumber(link.endpointHealthPct);
+            if (endpointHealthPct !== undefined) {
+                normalized.endpointHealthPct = endpointHealthPct;
+            }
+            const endpointDevices = finiteOptionalNumber(link.endpointDevices);
+            if (endpointDevices !== undefined) {
+                normalized.endpointDevices = endpointDevices;
+            }
+            const lastUpdated = optionalText(link.lastUpdated);
+            if (lastUpdated) normalized.lastUpdated = lastUpdated;
+            const dataError = optionalText(link.dataError);
+            if (dataError) normalized.dataError = dataError;
+            const searchName = optionalText(link.searchName);
+            if (searchName) normalized.searchName = searchName;
+            return normalized;
+        })
+        .filter((link): link is TopologyLink => Boolean(link));
+
+    return {
+        id: normalizeId(source.id, fallback.id),
+        name: textValue(source.name, fallback.name),
+        subtitle: textValue(source.subtitle, fallback.subtitle),
+        telemetrySearchName: optionalText(source.telemetrySearchName),
+        map: {
+            center: [
+                numberValue(source.map?.center?.[0], fallbackMap.center[0], -85, 85),
+                numberValue(source.map?.center?.[1], fallbackMap.center[1], -180, 180),
+            ],
+            zoom: numberValue(source.map?.zoom, fallbackMap.zoom, 1, 16),
+            minZoom: numberValue(source.map?.minZoom, fallbackMap.minZoom, 1, 16),
+            maxZoom: numberValue(source.map?.maxZoom, fallbackMap.maxZoom, 1, 20),
+            bounds: [
+                [
+                    numberValue(
+                        source.map?.bounds?.[0]?.[0],
+                        fallbackMap.bounds[0][0],
+                        -85,
+                        85
+                    ),
+                    numberValue(
+                        source.map?.bounds?.[0]?.[1],
+                        fallbackMap.bounds[0][1],
+                        -180,
+                        180
+                    ),
+                ],
+                [
+                    numberValue(
+                        source.map?.bounds?.[1]?.[0],
+                        fallbackMap.bounds[1][0],
+                        -85,
+                        85
+                    ),
+                    numberValue(
+                        source.map?.bounds?.[1]?.[1],
+                        fallbackMap.bounds[1][1],
+                        -180,
+                        180
+                    ),
+                ],
+            ],
+        },
+        sites,
+        links,
+    };
+};
+
+const finiteOptionalNumber = (value: unknown): number | undefined => {
+    if (value === null || value === undefined || value === '') return undefined;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const readPersistedTopology = (fallback: CustomerTopology): CustomerTopology => {
+    if (typeof window === 'undefined') return cloneTopology(fallback);
+    try {
+        const raw = window.localStorage.getItem(TOPOLOGY_STORAGE_KEY);
+        if (!raw) return cloneTopology(fallback);
+        const parsed = JSON.parse(raw) as Partial<PersistedTopologyPayload>;
+        return sanitizeTopology(parsed.topology ?? parsed, fallback);
+    } catch {
+        return cloneTopology(fallback);
+    }
+};
+
+const writePersistedTopology = (topology: CustomerTopology): void => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(
+        TOPOLOGY_STORAGE_KEY,
+        JSON.stringify({
+            version: TOPOLOGY_STORAGE_VERSION,
+            topology,
+        })
+    );
+};
+
+const clearPersistedTopology = (): void => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.removeItem(TOPOLOGY_STORAGE_KEY);
+};
+
+const usePersistedTopology = (fallback: CustomerTopology) => {
+    const [topology, setTopology] = useState<CustomerTopology>(() =>
+        readPersistedTopology(fallback)
+    );
+
+    useEffect(() => {
+        setTopology(readPersistedTopology(fallback));
+    }, [fallback]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+        const onStorage = (event: StorageEvent) => {
+            if (event.key === TOPOLOGY_STORAGE_KEY) {
+                setTopology(readPersistedTopology(fallback));
+            }
+        };
+        window.addEventListener('storage', onStorage);
+        return () => window.removeEventListener('storage', onStorage);
+    }, [fallback]);
+
+    const saveTopology = useCallback(
+        (next: CustomerTopology) => {
+            const sanitized = sanitizeTopology(next, fallback);
+            setTopology(sanitized);
+            writePersistedTopology(sanitized);
+        },
+        [fallback]
+    );
+
+    const resetTopology = useCallback(() => {
+        const factory = cloneTopology(fallback);
+        clearPersistedTopology();
+        setTopology(factory);
+    }, [fallback]);
+
+    return { topology, saveTopology, resetTopology };
 };
 
 const topologyAnimationCss = `
@@ -424,6 +744,142 @@ const parseLinkRow = (
     };
 };
 
+const deriveSiteStatus = (
+    row: Record<string, unknown>,
+    fallback: TopologyStatus
+): TopologyStatus => {
+    const explicit = normalizeStatus(textFromRow(row, ['status', 'siteStatus']));
+    if (explicit) return explicit;
+
+    const healthPct = finiteNumberFromRow(row, [
+        'healthPct',
+        'health_pct',
+        'siteHealthPct',
+        'score',
+        'health',
+    ]);
+    const alerts = finiteNumberFromRow(row, [
+        'alerts',
+        'alertCount',
+        'alert_count',
+        'issueCount',
+        'issue_count',
+    ]);
+    const latencyMs = finiteNumberFromRow(row, ['latencyMs', 'latency_ms', 'rttMs']);
+
+    if (
+        (healthPct !== undefined && healthPct < 70) ||
+        (alerts !== undefined && alerts >= 25) ||
+        (latencyMs !== undefined && latencyMs >= 200)
+    ) {
+        return 'critical';
+    }
+    if (
+        (healthPct !== undefined && healthPct < 90) ||
+        (alerts !== undefined && alerts > 0) ||
+        (latencyMs !== undefined && latencyMs >= 100)
+    ) {
+        return 'warning';
+    }
+    if (healthPct !== undefined || alerts !== undefined || latencyMs !== undefined) {
+        return 'stable';
+    }
+    return fallback;
+};
+
+const parseSiteRow = (
+    base: TopologySite,
+    row: Record<string, unknown>
+): Partial<TopologySite> => ({
+    status: deriveSiteStatus(row, base.status),
+    metrics: {
+        ...base.metrics,
+        activeDevices:
+            finiteNumberFromRow(row, [
+                'activeDevices',
+                'active_devices',
+                'deviceCount',
+                'device_count',
+                'devices',
+                'totalDevices',
+            ]) ?? base.metrics.activeDevices,
+        alerts:
+            finiteNumberFromRow(row, [
+                'alerts',
+                'alertCount',
+                'alert_count',
+                'issueCount',
+                'issue_count',
+            ]) ?? base.metrics.alerts,
+        healthPct:
+            finiteNumberFromRow(row, [
+                'healthPct',
+                'health_pct',
+                'siteHealthPct',
+                'score',
+                'health',
+            ]) ?? base.metrics.healthPct,
+        latencyMs:
+            finiteNumberFromRow(row, ['latencyMs', 'latency_ms', 'rttMs']) ??
+            base.metrics.latencyMs,
+    },
+    lastUpdated:
+        textFromRow(row, ['lastUpdated', 'last_updated', '_time']) ?? base.lastUpdated,
+    telemetrySource:
+        textFromRow(row, ['telemetrySource', 'telemetry_source', 'source']) ??
+        base.telemetrySource,
+    dataState: 'live',
+    dataError: undefined,
+});
+
+const normalizeMetricId = (value: unknown): string =>
+    textValue(value)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_|_$/g, '');
+
+const normalizedLinkId = (sourceSiteId?: string, targetSiteId?: string): string =>
+    sourceSiteId && targetSiteId ? `${sourceSiteId}-${targetSiteId}` : '';
+
+const rowItemType = (row: Record<string, unknown>): string =>
+    normalizeMetricId(textFromRow(row, ['itemType', 'item_type', 'type', 'rowType']));
+
+const parseSummaryRow = (
+    row: Record<string, unknown>
+): TopologySummaryMetric | null => {
+    const id = normalizeMetricId(
+        textFromRow(row, [
+            'summaryId',
+            'summary_id',
+            'metricId',
+            'metric_id',
+            'kpiId',
+            'kpi_id',
+            'id',
+        ])
+    );
+    if (!id) return null;
+
+    const value =
+        textFromRow(row, [
+            'value',
+            'displayValue',
+            'display_value',
+            'metricValue',
+            'metric_value',
+            'site',
+            'Site',
+        ]) ?? '';
+    if (!value) return null;
+
+    return {
+        id,
+        label: textFromRow(row, ['label', 'name', 'title']),
+        value,
+        source: 'live',
+    };
+};
+
 const linkFlowClass = (link: TopologyLink): string => {
     const utilization = link.utilizationPct;
     if (utilization === undefined) {
@@ -470,7 +926,7 @@ const createSiteIcon = (
           }">
           <span class="font-black text-[10px] tracking-tight">${safeShortName}</span>
           ${
-              site.status !== 'stable'
+              site.status === 'critical' || site.status === 'warning'
                   ? `
             <span class="absolute -top-1 -right-1 flex h-3 w-3">
               <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
@@ -502,12 +958,14 @@ interface MapFrameProps {
 
 const MapFrame: React.FC<MapFrameProps> = ({ topology }) => {
     const map = useMap();
+    const [centerLat, centerLng] = topology.map.center;
+    const zoom = topology.map.zoom;
     useEffect(() => {
         let firstApply = true;
         const apply = () => {
             map.invalidateSize();
             if (firstApply) {
-                map.setView(topology.map.center, topology.map.zoom, {
+                map.setView([centerLat, centerLng], zoom, {
                     animate: false,
                 });
                 firstApply = false;
@@ -518,7 +976,22 @@ const MapFrame: React.FC<MapFrameProps> = ({ topology }) => {
         const observer = new ResizeObserver(() => apply());
         observer.observe(container);
         return () => observer.disconnect();
-    }, [map, topology]);
+    }, [centerLat, centerLng, map, zoom]);
+    return null;
+};
+
+interface MapClickCaptureProps {
+    enabled: boolean;
+    onPick: (lat: number, lng: number) => void;
+}
+
+const MapClickCapture: React.FC<MapClickCaptureProps> = ({ enabled, onPick }) => {
+    useMapEvents({
+        click: (event) => {
+            if (!enabled) return;
+            onPick(event.latlng.lat, event.latlng.lng);
+        },
+    });
     return null;
 };
 
@@ -535,10 +1008,11 @@ interface CustomerTopologyMapProps {
     spotlightIntervalMs?: number;
     spotlightPauseMs?: number;
     onOpenInSearch?: (spl: string) => void;
+    onSummaryMetricsChange?: (metrics: TopologySummaryMetricMap) => void;
 }
 
 export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
-    topology = FDEM_TOPOLOGY,
+    topology = CUSTOMER_TOPOLOGY,
     isDark = false,
     earliestTime = '-24h',
     latestTime = 'now',
@@ -546,10 +1020,18 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     spotlightIntervalMs = 11000,
     spotlightPauseMs = 25000,
     onOpenInSearch,
+    onSummaryMetricsChange,
 }) => {
     const [selected, setSelected] = useState<SelectedTarget | null>(null);
     const [spotlightSite, setSpotlightSite] = useState<TopologySite | null>(null);
     const [paused, setPaused] = useState(false);
+    const { topology: storedTopology, saveTopology, resetTopology } =
+        usePersistedTopology(topology);
+    const [isEditorOpen, setIsEditorOpen] = useState(false);
+    const [draftTopology, setDraftTopology] = useState<CustomerTopology>(() =>
+        cloneTopology(storedTopology)
+    );
+    const [pickSiteId, setPickSiteId] = useState<string | null>(null);
     const [tilePresetId, setTilePresetId] = useState<TileLayerPreset['id']>(
         TILE_LAYER_PRESETS[0].id
     );
@@ -561,7 +1043,26 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         string,
         Partial<TopologyLink>
     >>({});
+    const [liveSiteById, setLiveSiteById] = useState<Record<
+        string,
+        Partial<TopologySite>
+    >>({});
+    const [summaryMetricById, setSummaryMetricById] =
+        useState<TopologySummaryMetricMap>({});
     const pauseUntilRef = useRef<number>(0);
+
+    useEffect(() => {
+        if (!isEditorOpen) {
+            setDraftTopology(cloneTopology(storedTopology));
+        }
+    }, [isEditorOpen, storedTopology]);
+
+    const activeTopology = isEditorOpen ? draftTopology : storedTopology;
+    const telemetrySearchName = storedTopology.telemetrySearchName?.trim();
+
+    useEffect(() => {
+        onSummaryMetricsChange?.(summaryMetricById);
+    }, [onSummaryMetricsChange, summaryMetricById]);
 
     useEffect(() => {
         let cancelled = false;
@@ -585,8 +1086,287 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
 
     useEffect(() => {
         if (catalogueByName === null) return undefined;
+        if (!telemetrySearchName) return undefined;
+        const record = catalogueByName[telemetrySearchName];
+        if (!record?.search?.trim()) return undefined;
+
         let cancelled = false;
-        const searchableLinks = topology.links.filter((link) => {
+        setLiveSiteById((current) => {
+            const next = { ...current };
+            for (const site of storedTopology.sites) {
+                next[site.id] = {
+                    ...next[site.id],
+                    dataState: next[site.id]?.dataState === 'live' ? 'live' : 'loading',
+                };
+            }
+            return next;
+        });
+        setLiveLinkById((current) => {
+            const next = { ...current };
+            for (const link of storedTopology.links) {
+                next[link.id] = {
+                    ...next[link.id],
+                    dataState: next[link.id]?.dataState === 'live' ? 'live' : 'loading',
+                };
+            }
+            return next;
+        });
+        setSummaryMetricById((current) => {
+            const loading: TopologySummaryMetricMap = { ...current };
+            for (const id of ['top_incident', 'operational_lead']) {
+                loading[id] = {
+                    ...loading[id],
+                    id,
+                    value: loading[id]?.value ?? 'Awaiting data',
+                    source: loading[id]?.source === 'live' ? 'live' : 'loading',
+                };
+            }
+            return loading;
+        });
+
+        const siteByConfiguredId = new Map(
+            storedTopology.sites.map((site) => [site.id, site] as const)
+        );
+        const linkByConfiguredId = new Map(
+            storedTopology.links.map((link) => [link.id, link] as const)
+        );
+        const linkByEndpointKey = new Map(
+            storedTopology.links.map(
+                (link) =>
+                    [
+                        normalizedLinkId(link.sourceSiteId, link.targetSiteId),
+                        link,
+                    ] as const
+            )
+        );
+
+        runSearch({
+            spl: record.search,
+            earliestTime,
+            latestTime,
+            tag: 'topology_overview',
+        })
+            .then((res) => {
+                if (cancelled) return;
+                const rows = (res?.results ?? []) as Array<Record<string, unknown>>;
+                const siteUpdates: Record<string, Partial<TopologySite>> = {};
+                const linkUpdates: Record<string, Partial<TopologyLink>> = {};
+                const summaryUpdates: TopologySummaryMetricMap = {};
+
+                for (const row of rows) {
+                    const itemType = rowItemType(row);
+                    const siteId = normalizeId(
+                        textFromRow(row, ['siteId', 'site_id', 'site', 'id']),
+                        ''
+                    );
+                    const explicitLinkId = normalizeId(
+                        textFromRow(row, ['linkId', 'link_id', 'id']),
+                        ''
+                    );
+                    const sourceSiteId = normalizeId(
+                        textFromRow(row, ['sourceSiteId', 'source_site_id', 'source']),
+                        ''
+                    );
+                    const targetSiteId = normalizeId(
+                        textFromRow(row, ['targetSiteId', 'target_site_id', 'target']),
+                        ''
+                    );
+                    const endpointLinkId =
+                        normalizedLinkId(sourceSiteId, targetSiteId) || explicitLinkId;
+
+                    if (
+                        itemType === 'site' ||
+                        (siteId && siteByConfiguredId.has(siteId))
+                    ) {
+                        const site = siteByConfiguredId.get(siteId);
+                        if (site) siteUpdates[site.id] = parseSiteRow(site, row);
+                        continue;
+                    }
+
+                    if (
+                        itemType === 'link' ||
+                        (endpointLinkId &&
+                            (linkByConfiguredId.has(endpointLinkId) ||
+                                linkByEndpointKey.has(endpointLinkId)))
+                    ) {
+                        const link =
+                            linkByConfiguredId.get(endpointLinkId) ??
+                            linkByEndpointKey.get(endpointLinkId);
+                        if (link) linkUpdates[link.id] = parseLinkRow(link, row);
+                        continue;
+                    }
+
+                    if (
+                        itemType === 'summary' ||
+                        itemType === 'kpi' ||
+                        itemType === 'insight'
+                    ) {
+                        const metric = parseSummaryRow(row);
+                        if (metric) summaryUpdates[metric.id] = metric;
+                    }
+                }
+
+                setLiveSiteById((current) => {
+                    const next = { ...current };
+                    for (const site of storedTopology.sites) {
+                        next[site.id] =
+                            siteUpdates[site.id] ??
+                            ({
+                                status: 'unknown',
+                                metrics: {},
+                                dataState: 'error',
+                                dataError: 'Topology search returned no site row',
+                                telemetrySource:
+                                    site.telemetrySource ??
+                                    'Awaiting normalized site telemetry',
+                            } satisfies Partial<TopologySite>);
+                    }
+                    return next;
+                });
+                setLiveLinkById((current) => {
+                    const next = { ...current };
+                    for (const link of storedTopology.links) {
+                        next[link.id] =
+                            linkUpdates[link.id] ??
+                            ({
+                                dataState: 'error',
+                                dataError: 'Topology search returned no link row',
+                            } satisfies Partial<TopologyLink>);
+                    }
+                    return next;
+                });
+                setSummaryMetricById(summaryUpdates);
+            })
+            .catch((err) => {
+                if (cancelled) return;
+                const message = err instanceof Error ? err.message : String(err);
+                setLiveSiteById((current) => {
+                    const next = { ...current };
+                    for (const site of storedTopology.sites) {
+                        next[site.id] = {
+                            status: 'unknown',
+                            metrics: {},
+                            dataState: 'error',
+                            dataError: message,
+                            telemetrySource:
+                                site.telemetrySource ??
+                                'Awaiting normalized site telemetry',
+                        };
+                    }
+                    return next;
+                });
+                setLiveLinkById((current) => {
+                    const next = { ...current };
+                    for (const link of storedTopology.links) {
+                        next[link.id] = {
+                            dataState: 'error',
+                            dataError: message,
+                        };
+                    }
+                    return next;
+                });
+                setSummaryMetricById({});
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        catalogueByName,
+        earliestTime,
+        latestTime,
+        refreshToken,
+        storedTopology.links,
+        storedTopology.sites,
+        telemetrySearchName,
+    ]);
+
+    useEffect(() => {
+        if (catalogueByName === null) return undefined;
+        if (telemetrySearchName) return undefined;
+        let cancelled = false;
+        const searchableSites = storedTopology.sites.filter((site) => {
+            if (!site.searchName) return false;
+            const record = catalogueByName[site.searchName];
+            return Boolean(record?.search?.trim());
+        });
+        if (searchableSites.length === 0) return undefined;
+
+        setLiveSiteById((current) => {
+            const next = { ...current };
+            for (const site of searchableSites) {
+                next[site.id] = {
+                    ...next[site.id],
+                    dataState: next[site.id]?.dataState === 'live' ? 'live' : 'loading',
+                };
+            }
+            return next;
+        });
+
+        searchableSites.forEach((site) => {
+            const record = site.searchName ? catalogueByName[site.searchName] : null;
+            if (!record?.search) return;
+            runSearch({
+                spl: record.search,
+                earliestTime,
+                latestTime,
+                tag: `topology_site_${site.id}`,
+            })
+                .then((res) => {
+                    if (cancelled) return;
+                    const rows = (res?.results ?? []) as Array<Record<string, unknown>>;
+                    const row = [...rows].reverse().find((candidate) =>
+                        Object.keys(candidate).some((key) => !key.startsWith('_'))
+                    );
+                    setLiveSiteById((current) => ({
+                        ...current,
+                        [site.id]: row
+                            ? parseSiteRow(site, row)
+                            : {
+                                  status: 'unknown',
+                                  metrics: {},
+                                  dataState: 'error',
+                                  dataError: 'Search returned no site rows',
+                                  telemetrySource:
+                                      site.telemetrySource ??
+                                      'Awaiting normalized site telemetry',
+                              },
+                    }));
+                })
+                .catch((err) => {
+                    if (cancelled) return;
+                    setLiveSiteById((current) => ({
+                        ...current,
+                        [site.id]: {
+                            status: 'unknown',
+                            metrics: {},
+                            dataState: 'error',
+                            dataError: err instanceof Error ? err.message : String(err),
+                            telemetrySource:
+                                site.telemetrySource ??
+                                'Awaiting normalized site telemetry',
+                        },
+                    }));
+                });
+        });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        catalogueByName,
+        earliestTime,
+        latestTime,
+        refreshToken,
+        storedTopology.sites,
+        telemetrySearchName,
+    ]);
+
+    useEffect(() => {
+        if (catalogueByName === null) return undefined;
+        if (telemetrySearchName) return undefined;
+        let cancelled = false;
+        const searchableLinks = storedTopology.links.filter((link) => {
             if (!link.searchName) return false;
             const record = catalogueByName[link.searchName];
             return Boolean(record?.search?.trim());
@@ -644,18 +1424,37 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         return () => {
             cancelled = true;
         };
-    }, [catalogueByName, earliestTime, latestTime, refreshToken, topology.links]);
+    }, [
+        catalogueByName,
+        earliestTime,
+        latestTime,
+        refreshToken,
+        storedTopology.links,
+        telemetrySearchName,
+    ]);
 
     const resolvedTopology = useMemo<CustomerTopology>(
         () => ({
-            ...topology,
-            links: topology.links.map((link) => ({
+            ...activeTopology,
+            sites: activeTopology.sites.map((site) => {
+                const liveSite = liveSiteById[site.id];
+                return {
+                    ...site,
+                    dataState: site.searchName ? 'loading' : site.dataState ?? 'static',
+                    ...liveSite,
+                    metrics: {
+                        ...site.metrics,
+                        ...(liveSite?.metrics ?? {}),
+                    },
+                };
+            }),
+            links: activeTopology.links.map((link) => ({
                 ...link,
                 dataState: link.searchName ? 'loading' : link.dataState ?? 'static',
                 ...liveLinkById[link.id],
             })),
         }),
-        [liveLinkById, topology]
+        [activeTopology, liveLinkById, liveSiteById]
     );
 
     const siteById = useMemo(() => {
@@ -795,6 +1594,41 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         );
     };
 
+    const openEditor = () => {
+        pauseUntilRef.current = Date.now() + spotlightPauseMs;
+        setSelected(null);
+        setDraftTopology(cloneTopology(storedTopology));
+        setIsEditorOpen(true);
+    };
+
+    const saveEditor = () => {
+        saveTopology(draftTopology);
+        setPickSiteId(null);
+        setIsEditorOpen(false);
+    };
+
+    const resetEditor = () => {
+        resetTopology();
+        setPickSiteId(null);
+        setIsEditorOpen(false);
+    };
+
+    const applyMapPick = (lat: number, lng: number) => {
+        if (!pickSiteId) return;
+        setDraftTopology((current) => ({
+            ...current,
+            sites: current.sites.map((site) =>
+                site.id === pickSiteId
+                    ? {
+                          ...site,
+                          lat: Number(lat.toFixed(5)),
+                          lng: Number(lng.toFixed(5)),
+                      }
+                    : site
+            ),
+        }));
+    };
+
     return (
         <div
             className={cn(
@@ -847,6 +1681,10 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 className="z-10"
             >
                 <MapFrame topology={resolvedTopology} />
+                <MapClickCapture
+                    enabled={isEditorOpen && Boolean(pickSiteId)}
+                    onPick={applyMapPick}
+                />
                 <TileLayer key={tileUrl} attribution="" url={tileUrl} />
                 <ZoomControl position="bottomright" />
 
@@ -894,7 +1732,8 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 })}
 
                 {spotlightSite &&
-                    spotlightSite.status !== 'stable' &&
+                    (spotlightSite.status === 'critical' ||
+                        spotlightSite.status === 'warning') &&
                     !resolvedSelected && (
                         <Circle
                             key={`spotlight-${spotlightSite.id}`}
@@ -940,6 +1779,22 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 onOpenInSearch={onOpenInSearch ? openSelectedInSearch : undefined}
             />
 
+            <TopologyEditorPanel
+                open={isEditorOpen}
+                topology={draftTopology}
+                factoryTopology={topology}
+                isDark={isDark}
+                pickSiteId={pickSiteId}
+                onPickSite={setPickSiteId}
+                onTopologyChange={setDraftTopology}
+                onSave={saveEditor}
+                onResetFactory={resetEditor}
+                onClose={() => {
+                    setPickSiteId(null);
+                    setIsEditorOpen(false);
+                }}
+            />
+
             <div className="absolute bottom-6 left-4 z-[1000] space-y-3 pointer-events-auto">
                 <div
                     className={cn(
@@ -978,6 +1833,19 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                         {tilePreset.id.charAt(0)}
                     </span>
                 </button>
+
+                <button
+                    type="button"
+                    onClick={openEditor}
+                    title="Edit topology"
+                    aria-label="Edit topology"
+                    className={cn(
+                        'border p-2 rounded-lg shadow-md transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                        buttonChrome
+                    )}
+                >
+                    <Pencil className="w-4 h-4" />
+                </button>
             </div>
         </div>
     );
@@ -1004,6 +1872,7 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
     onClose,
     onOpenInSearch,
 }) => {
+    const dragControls = useDragControls();
     const connectedLinks = useMemo(() => {
         if (!selected || selected.kind !== 'site') return [];
         return topology.links.filter(
@@ -1041,9 +1910,18 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
                     initial={{ opacity: 0, x: 20, scale: 0.94 }}
                     animate={{ opacity: 1, x: 0, scale: 1 }}
                     exit={{ opacity: 0, x: 20, scale: 0.94 }}
-                    className="absolute top-3 right-3 z-[2000] w-80 bg-[#1a1c1e] text-slate-300 rounded-lg border border-slate-700 shadow-2xl overflow-hidden"
+                    drag
+                    dragControls={dragControls}
+                    dragListener={false}
+                    dragMomentum={false}
+                    dragElastic={0.04}
+                    className="absolute top-3 right-3 bottom-16 z-[2000] w-[min(22rem,calc(100%-1.5rem))] bg-[#1a1c1e] text-slate-300 rounded-lg border border-slate-700 shadow-2xl overflow-hidden flex flex-col"
                 >
-                    <div className="bg-slate-800/50 px-4 py-2 border-b border-slate-700 flex items-center justify-between">
+                    <div
+                        className="bg-slate-800/50 px-4 py-2 border-b border-slate-700 flex items-center justify-between cursor-move touch-none flex-shrink-0"
+                        onPointerDown={(event) => dragControls.start(event)}
+                        title="Drag topology details"
+                    >
                         <div className="flex items-center gap-2 min-w-0">
                             <Terminal className="w-3.5 h-3.5 text-sky-400 flex-shrink-0" />
                             <div className="min-w-0">
@@ -1065,13 +1943,14 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
                             type="button"
                             aria-label="Close topology details"
                             onClick={onClose}
+                            onPointerDown={(event) => event.stopPropagation()}
                             className="text-slate-500 hover:text-white transition-colors p-0.5 rounded hover:bg-white/5 focus:outline-none focus:ring-1 focus:ring-sky-500"
                         >
                             <X className="w-3.5 h-3.5" />
                         </button>
                     </div>
 
-                    <div className="p-3 space-y-3">
+                    <div className="p-3 space-y-3 overflow-y-auto overscroll-contain flex-1 min-h-0">
                         {selected.kind === 'site' ? (
                             <SiteDetails site={selected.site} links={connectedLinks} />
                         ) : (
@@ -1083,38 +1962,35 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
                                 <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
                                     Searchbase SPL
                                 </span>
-                                <Activity className="w-3 h-3 text-slate-600" />
-                            </div>
-                            <button
-                                type="button"
-                                onClick={onOpenInSearch}
-                                disabled={!onOpenInSearch || !selectedSpl}
-                                title={
-                                    selectedSpl
-                                        ? 'Open this query in Splunk Search'
-                                        : 'No runnable SPL loaded yet'
-                                }
-                                className={cn(
-                                    'w-full text-left rounded p-2 border font-mono transition-colors focus:outline-none focus:ring-1 focus:ring-sky-500',
-                                    selectedSpl && onOpenInSearch
-                                        ? 'bg-black/60 hover:bg-black/80 border-slate-800 hover:border-sky-700'
-                                        : 'bg-black/40 border-slate-800 cursor-not-allowed'
+                                {selectedSpl && onOpenInSearch ? (
+                                    <button
+                                        type="button"
+                                        aria-label="Open this query in Splunk Search"
+                                        onClick={onOpenInSearch}
+                                        title="Open this query in Splunk Search"
+                                        className="text-slate-600 hover:text-sky-400 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-500"
+                                    >
+                                        <Activity className="w-3 h-3" />
+                                    </button>
+                                ) : (
+                                    <Activity className="w-3 h-3 text-slate-600" />
                                 )}
-                            >
+                            </div>
+                            <div className="w-full rounded border border-slate-800 bg-black/55 p-2 font-mono">
                                 {!catalogueLoaded ? (
                                     <p className="text-[10px] text-slate-500 italic leading-relaxed">
                                         Loading searchbase SPL...
                                     </p>
                                 ) : selectedSpl ? (
-                                    <p className="text-[10px] text-sky-200 leading-relaxed whitespace-pre-wrap break-all">
+                                    <pre className="m-0 text-[10px] text-sky-200 leading-relaxed whitespace-pre-wrap break-words select-text">
                                         {selectedSpl}
-                                    </p>
+                                    </pre>
                                 ) : (
                                     <p className="text-[10px] text-slate-500 leading-relaxed">
                                         No searchbase binding for this topology item.
                                     </p>
                                 )}
-                            </button>
+                            </div>
                             {selectedSearchName && (
                                 <p
                                     className="text-[9px] font-mono text-slate-500 truncate"
@@ -1146,6 +2022,935 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
     );
 };
 
+interface TopologyEditorPanelProps {
+    open: boolean;
+    topology: CustomerTopology;
+    factoryTopology: CustomerTopology;
+    isDark: boolean;
+    pickSiteId: string | null;
+    onPickSite: (siteId: string | null) => void;
+    onTopologyChange: React.Dispatch<React.SetStateAction<CustomerTopology>>;
+    onSave: () => void;
+    onResetFactory: () => void;
+    onClose: () => void;
+}
+
+const editorInputClass = (isDark: boolean): string =>
+    cn(
+        'w-full rounded-md border px-2 py-1.5 text-[11px] font-semibold outline-none transition-colors focus:ring-1 focus:ring-sky-400',
+        isDark
+            ? 'bg-slate-950 border-slate-700 text-slate-100 placeholder:text-slate-600'
+            : 'bg-white border-slate-200 text-slate-800 placeholder:text-slate-400'
+    );
+
+const editorLabelClass = 'text-[8px] font-black uppercase tracking-widest';
+
+const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
+    open,
+    topology,
+    factoryTopology,
+    isDark,
+    pickSiteId,
+    onPickSite,
+    onTopologyChange,
+    onSave,
+    onResetFactory,
+    onClose,
+}) => {
+    const [jsonText, setJsonText] = useState('');
+    const [jsonError, setJsonError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!open) {
+            setJsonError(null);
+        }
+    }, [open]);
+
+    const updateSite = (siteId: string, patch: Partial<TopologySite>) => {
+        onTopologyChange((current) => ({
+            ...current,
+            sites: current.sites.map((site) =>
+                site.id === siteId
+                    ? {
+                          ...site,
+                          ...patch,
+                          metrics: patch.metrics
+                              ? { ...site.metrics, ...patch.metrics }
+                              : site.metrics,
+                      }
+                    : site
+            ),
+        }));
+    };
+
+    const addSite = () => {
+        onTopologyChange((current) => {
+            const used = new Set(current.sites.map((site) => site.id));
+            const id = uniqueId(`site-${current.sites.length + 1}`, used);
+            return {
+                ...current,
+                sites: [
+                    ...current.sites,
+                    {
+                        id,
+                        name: `Site ${current.sites.length + 1}`,
+                        shortName: id.replace(/-/g, '').slice(0, 4).toUpperCase(),
+                        role: 'branch',
+                        lat: Number(current.map.center[0].toFixed(5)),
+                        lng: Number(current.map.center[1].toFixed(5)),
+                        status: 'unknown',
+                        metrics: {},
+                        telemetrySource: 'Configured topology item',
+                    },
+                ],
+            };
+        });
+    };
+
+    const removeSite = (siteId: string) => {
+        onPickSite(pickSiteId === siteId ? null : pickSiteId);
+        onTopologyChange((current) => ({
+            ...current,
+            sites: current.sites.filter((site) => site.id !== siteId),
+            links: current.links.filter(
+                (link) =>
+                    link.sourceSiteId !== siteId && link.targetSiteId !== siteId
+            ),
+        }));
+    };
+
+    const updateLink = (linkId: string, patch: Partial<TopologyLink>) => {
+        onTopologyChange((current) => ({
+            ...current,
+            links: current.links.map((link) =>
+                link.id === linkId ? { ...link, ...patch } : link
+            ),
+        }));
+    };
+
+    const addLink = () => {
+        onTopologyChange((current) => {
+            if (current.sites.length < 2) return current;
+            const source = current.sites[0];
+            const target = current.sites[1];
+            const used = new Set(current.links.map((link) => link.id));
+            const id = uniqueId(`${source.id}-${target.id}`, used);
+            return {
+                ...current,
+                links: [
+                    ...current.links,
+                    {
+                        id,
+                        name: `${source.name} to ${target.name}`,
+                        sourceSiteId: source.id,
+                        targetSiteId: target.id,
+                        status: 'unknown',
+                        telemetrySource: 'Awaiting topology link telemetry',
+                    },
+                ],
+            };
+        });
+    };
+
+    const removeLink = (linkId: string) => {
+        onTopologyChange((current) => ({
+            ...current,
+            links: current.links.filter((link) => link.id !== linkId),
+        }));
+    };
+
+    const updateMap = (patch: Partial<CustomerTopology['map']>) => {
+        onTopologyChange((current) => ({
+            ...current,
+            map: {
+                ...current.map,
+                ...patch,
+            },
+        }));
+    };
+
+    const exportTopology = () => {
+        setJsonError(null);
+        setJsonText(
+            JSON.stringify(
+                {
+                    version: TOPOLOGY_STORAGE_VERSION,
+                    topology: sanitizeTopology(topology, factoryTopology),
+                },
+                null,
+                2
+            )
+        );
+    };
+
+    const importTopology = () => {
+        try {
+            let parsed: unknown = JSON.parse(jsonText);
+            if (typeof parsed === 'string') {
+                parsed = JSON.parse(parsed);
+            }
+            const imported =
+                isRecord(parsed) && 'topology' in parsed
+                    ? (parsed as Partial<PersistedTopologyPayload>).topology
+                    : parsed;
+            const sanitized = sanitizeTopology(imported, factoryTopology);
+            onTopologyChange(sanitized);
+            setJsonText(
+                JSON.stringify(
+                    {
+                        version: TOPOLOGY_STORAGE_VERSION,
+                        topology: sanitized,
+                    },
+                    null,
+                    2
+                )
+            );
+            setJsonError(null);
+        } catch (err) {
+            setJsonError(err instanceof Error ? err.message : String(err));
+        }
+    };
+
+    return (
+        <AnimatePresence>
+            {open && (
+                <motion.aside
+                    initial={{ opacity: 0, x: 28, scale: 0.98 }}
+                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                    exit={{ opacity: 0, x: 28, scale: 0.98 }}
+                    className={cn(
+                        'absolute top-3 right-3 bottom-3 z-[2200] w-[min(430px,calc(100%-1.5rem))] rounded-xl border shadow-2xl overflow-hidden flex flex-col',
+                        isDark
+                            ? 'bg-slate-950/96 border-slate-700 text-slate-100'
+                            : 'bg-white/98 border-slate-200 text-slate-800'
+                    )}
+                >
+                    <div
+                        className={cn(
+                            'px-4 py-3 border-b flex items-center justify-between gap-3',
+                            isDark ? 'border-slate-800' : 'border-slate-200'
+                        )}
+                    >
+                        <div className="min-w-0">
+                            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-sky-500">
+                                Topology Editor
+                            </p>
+                            <p
+                                className={cn(
+                                    'text-[10px] font-semibold truncate',
+                                    isDark ? 'text-slate-400' : 'text-slate-500'
+                                )}
+                            >
+                                {topology.name}
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            aria-label="Close topology editor"
+                            onClick={onClose}
+                            className={cn(
+                                'p-1.5 rounded-md transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                                isDark
+                                    ? 'hover:bg-slate-800 text-slate-400'
+                                    : 'hover:bg-slate-100 text-slate-500'
+                            )}
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+
+                    <div className="flex-1 overflow-auto p-4 space-y-4">
+                        <section className="space-y-2">
+                            <div className="grid grid-cols-2 gap-2">
+                                <label className="space-y-1">
+                                    <span
+                                        className={cn(
+                                            editorLabelClass,
+                                            isDark ? 'text-slate-500' : 'text-slate-400'
+                                        )}
+                                    >
+                                        Name
+                                    </span>
+                                    <input
+                                        className={editorInputClass(isDark)}
+                                        value={topology.name}
+                                        onChange={(event) =>
+                                            onTopologyChange((current) => ({
+                                                ...current,
+                                                name: event.target.value,
+                                            }))
+                                        }
+                                    />
+                                </label>
+                                <label className="space-y-1">
+                                    <span
+                                        className={cn(
+                                            editorLabelClass,
+                                            isDark ? 'text-slate-500' : 'text-slate-400'
+                                        )}
+                                    >
+                                        Subtitle
+                                    </span>
+                                    <input
+                                        className={editorInputClass(isDark)}
+                                        value={topology.subtitle}
+                                        onChange={(event) =>
+                                            onTopologyChange((current) => ({
+                                                ...current,
+                                                subtitle: event.target.value,
+                                            }))
+                                        }
+                                    />
+                                </label>
+                            </div>
+                            <label className="block space-y-1">
+                                <span
+                                    className={cn(
+                                        editorLabelClass,
+                                        isDark ? 'text-slate-500' : 'text-slate-400'
+                                    )}
+                                >
+                                    Topology telemetry search_name
+                                </span>
+                                <input
+                                    className={editorInputClass(isDark)}
+                                    value={topology.telemetrySearchName ?? ''}
+                                    placeholder="Overview - Topology Overview"
+                                    onChange={(event) =>
+                                        onTopologyChange((current) => ({
+                                            ...current,
+                                            telemetrySearchName: event.target.value,
+                                        }))
+                                    }
+                                />
+                            </label>
+                            <div className="grid grid-cols-3 gap-2">
+                                <label className="space-y-1">
+                                    <span
+                                        className={cn(
+                                            editorLabelClass,
+                                            isDark ? 'text-slate-500' : 'text-slate-400'
+                                        )}
+                                    >
+                                        Center Lat
+                                    </span>
+                                    <input
+                                        type="number"
+                                        step="0.0001"
+                                        className={editorInputClass(isDark)}
+                                        value={topology.map.center[0]}
+                                        onChange={(event) =>
+                                            updateMap({
+                                                center: [
+                                                    Number(event.target.value),
+                                                    topology.map.center[1],
+                                                ],
+                                            })
+                                        }
+                                    />
+                                </label>
+                                <label className="space-y-1">
+                                    <span
+                                        className={cn(
+                                            editorLabelClass,
+                                            isDark ? 'text-slate-500' : 'text-slate-400'
+                                        )}
+                                    >
+                                        Center Lng
+                                    </span>
+                                    <input
+                                        type="number"
+                                        step="0.0001"
+                                        className={editorInputClass(isDark)}
+                                        value={topology.map.center[1]}
+                                        onChange={(event) =>
+                                            updateMap({
+                                                center: [
+                                                    topology.map.center[0],
+                                                    Number(event.target.value),
+                                                ],
+                                            })
+                                        }
+                                    />
+                                </label>
+                                <label className="space-y-1">
+                                    <span
+                                        className={cn(
+                                            editorLabelClass,
+                                            isDark ? 'text-slate-500' : 'text-slate-400'
+                                        )}
+                                    >
+                                        Zoom
+                                    </span>
+                                    <input
+                                        type="number"
+                                        step="0.1"
+                                        className={editorInputClass(isDark)}
+                                        value={topology.map.zoom}
+                                        onChange={(event) =>
+                                            updateMap({ zoom: Number(event.target.value) })
+                                        }
+                                    />
+                                </label>
+                            </div>
+                        </section>
+
+                        <section className="space-y-2">
+                            <div className="flex items-center justify-between gap-2">
+                                <h4 className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+                                    Sites
+                                </h4>
+                                <button
+                                    type="button"
+                                    onClick={addSite}
+                                    title="Add site"
+                                    className="inline-flex items-center gap-1 rounded-md bg-sky-500 px-2 py-1 text-[10px] font-black text-white hover:bg-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-300"
+                                >
+                                    <Plus className="w-3.5 h-3.5" />
+                                    Add
+                                </button>
+                            </div>
+                            <div className="space-y-2">
+                                {topology.sites.map((site) => (
+                                    <div
+                                        key={site.id}
+                                        className={cn(
+                                            'rounded-lg border p-3 space-y-2',
+                                            isDark
+                                                ? 'border-slate-800 bg-slate-900/70'
+                                                : 'border-slate-200 bg-slate-50'
+                                        )}
+                                    >
+                                        <div className="flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <MapPin className="w-4 h-4 text-sky-500 flex-shrink-0" />
+                                                <span className="text-[10px] font-mono uppercase text-slate-400 truncate">
+                                                    {site.id}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        onPickSite(
+                                                            pickSiteId === site.id
+                                                                ? null
+                                                                : site.id
+                                                        )
+                                                    }
+                                                    title="Click the map to set this site's lat/lng"
+                                                    className={cn(
+                                                        'p-1.5 rounded-md transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                                                        pickSiteId === site.id
+                                                            ? 'bg-sky-500 text-white'
+                                                            : isDark
+                                                            ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                                                            : 'bg-white text-slate-500 hover:bg-slate-100'
+                                                    )}
+                                                >
+                                                    <MousePointer2 className="w-3.5 h-3.5" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeSite(site.id)}
+                                                    title="Remove site"
+                                                    className={cn(
+                                                        'p-1.5 rounded-md transition-colors focus:outline-none focus:ring-1 focus:ring-red-400',
+                                                        isDark
+                                                            ? 'bg-slate-800 text-red-300 hover:bg-red-950/70'
+                                                            : 'bg-white text-red-500 hover:bg-red-50'
+                                                    )}
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <label className="space-y-1">
+                                                <span
+                                                    className={cn(
+                                                        editorLabelClass,
+                                                        isDark
+                                                            ? 'text-slate-500'
+                                                            : 'text-slate-400'
+                                                    )}
+                                                >
+                                                    Name
+                                                </span>
+                                                <input
+                                                    className={editorInputClass(isDark)}
+                                                    value={site.name}
+                                                    onChange={(event) =>
+                                                        updateSite(site.id, {
+                                                            name: event.target.value,
+                                                        })
+                                                    }
+                                                />
+                                            </label>
+                                            <label className="space-y-1">
+                                                <span
+                                                    className={cn(
+                                                        editorLabelClass,
+                                                        isDark
+                                                            ? 'text-slate-500'
+                                                            : 'text-slate-400'
+                                                    )}
+                                                >
+                                                    Short
+                                                </span>
+                                                <input
+                                                    className={editorInputClass(isDark)}
+                                                    value={site.shortName}
+                                                    maxLength={8}
+                                                    onChange={(event) =>
+                                                        updateSite(site.id, {
+                                                            shortName:
+                                                                event.target.value.toUpperCase(),
+                                                        })
+                                                    }
+                                                />
+                                            </label>
+                                            <label className="space-y-1">
+                                                <span
+                                                    className={cn(
+                                                        editorLabelClass,
+                                                        isDark
+                                                            ? 'text-slate-500'
+                                                            : 'text-slate-400'
+                                                    )}
+                                                >
+                                                    Role
+                                                </span>
+                                                <select
+                                                    className={editorInputClass(isDark)}
+                                                    value={site.role}
+                                                    onChange={(event) =>
+                                                        updateSite(site.id, {
+                                                            role: event.target
+                                                                .value as TopologyRole,
+                                                        })
+                                                    }
+                                                >
+                                                    {TOPOLOGY_ROLES.map((role) => (
+                                                        <option key={role} value={role}>
+                                                            {ROLE_LABEL[role]}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </label>
+                                            <label className="space-y-1">
+                                                <span
+                                                    className={cn(
+                                                        editorLabelClass,
+                                                        isDark
+                                                            ? 'text-slate-500'
+                                                            : 'text-slate-400'
+                                                    )}
+                                                >
+                                                    Status
+                                                </span>
+                                                <select
+                                                    className={editorInputClass(isDark)}
+                                                    value={site.status}
+                                                    onChange={(event) =>
+                                                        updateSite(site.id, {
+                                                            status: event.target
+                                                                .value as TopologyStatus,
+                                                        })
+                                                    }
+                                                >
+                                                    {TOPOLOGY_STATUSES.map((status) => (
+                                                        <option
+                                                            key={status}
+                                                            value={status}
+                                                        >
+                                                            {status}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </label>
+                                            <label className="space-y-1">
+                                                <span
+                                                    className={cn(
+                                                        editorLabelClass,
+                                                        isDark
+                                                            ? 'text-slate-500'
+                                                            : 'text-slate-400'
+                                                    )}
+                                                >
+                                                    Lat
+                                                </span>
+                                                <input
+                                                    type="number"
+                                                    step="0.00001"
+                                                    className={editorInputClass(isDark)}
+                                                    value={site.lat}
+                                                    onChange={(event) =>
+                                                        updateSite(site.id, {
+                                                            lat: Number(
+                                                                event.target.value
+                                                            ),
+                                                        })
+                                                    }
+                                                />
+                                            </label>
+                                            <label className="space-y-1">
+                                                <span
+                                                    className={cn(
+                                                        editorLabelClass,
+                                                        isDark
+                                                            ? 'text-slate-500'
+                                                            : 'text-slate-400'
+                                                    )}
+                                                >
+                                                    Lng
+                                                </span>
+                                                <input
+                                                    type="number"
+                                                    step="0.00001"
+                                                    className={editorInputClass(isDark)}
+                                                    value={site.lng}
+                                                    onChange={(event) =>
+                                                        updateSite(site.id, {
+                                                            lng: Number(
+                                                                event.target.value
+                                                            ),
+                                                        })
+                                                    }
+                                                />
+                                            </label>
+                                        </div>
+                                        <label className="block space-y-1">
+                                            <span
+                                                className={cn(
+                                                    editorLabelClass,
+                                                    isDark
+                                                        ? 'text-slate-500'
+                                                        : 'text-slate-400'
+                                                )}
+                                            >
+                                                search_name
+                                            </span>
+                                            <input
+                                                className={editorInputClass(isDark)}
+                                                value={site.searchName ?? ''}
+                                                placeholder="Overview - Site Tallahassee Health"
+                                                onChange={(event) =>
+                                                    updateSite(site.id, {
+                                                        searchName: event.target.value,
+                                                    })
+                                                }
+                                            />
+                                        </label>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+
+                        <section className="space-y-2">
+                            <div className="flex items-center justify-between gap-2">
+                                <h4 className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+                                    Links
+                                </h4>
+                                <button
+                                    type="button"
+                                    onClick={addLink}
+                                    disabled={topology.sites.length < 2}
+                                    title="Add link"
+                                    className="inline-flex items-center gap-1 rounded-md bg-sky-500 px-2 py-1 text-[10px] font-black text-white hover:bg-sky-600 disabled:opacity-40 disabled:hover:bg-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-300"
+                                >
+                                    <Plus className="w-3.5 h-3.5" />
+                                    Add
+                                </button>
+                            </div>
+                            <div className="space-y-2">
+                                {topology.links.map((link) => (
+                                    <div
+                                        key={link.id}
+                                        className={cn(
+                                            'rounded-lg border p-3 space-y-2',
+                                            isDark
+                                                ? 'border-slate-800 bg-slate-900/70'
+                                                : 'border-slate-200 bg-slate-50'
+                                        )}
+                                    >
+                                        <div className="flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <Link2 className="w-4 h-4 text-sky-500 flex-shrink-0" />
+                                                <span className="text-[10px] font-mono uppercase text-slate-400 truncate">
+                                                    {link.id}
+                                                </span>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => removeLink(link.id)}
+                                                title="Remove link"
+                                                className={cn(
+                                                    'p-1.5 rounded-md transition-colors focus:outline-none focus:ring-1 focus:ring-red-400',
+                                                    isDark
+                                                        ? 'bg-slate-800 text-red-300 hover:bg-red-950/70'
+                                                        : 'bg-white text-red-500 hover:bg-red-50'
+                                                )}
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                        <label className="block space-y-1">
+                                            <span
+                                                className={cn(
+                                                    editorLabelClass,
+                                                    isDark
+                                                        ? 'text-slate-500'
+                                                        : 'text-slate-400'
+                                                )}
+                                            >
+                                                Name
+                                            </span>
+                                            <input
+                                                className={editorInputClass(isDark)}
+                                                value={link.name}
+                                                onChange={(event) =>
+                                                    updateLink(link.id, {
+                                                        name: event.target.value,
+                                                    })
+                                                }
+                                            />
+                                        </label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <label className="space-y-1">
+                                                <span
+                                                    className={cn(
+                                                        editorLabelClass,
+                                                        isDark
+                                                            ? 'text-slate-500'
+                                                            : 'text-slate-400'
+                                                    )}
+                                                >
+                                                    Source
+                                                </span>
+                                                <select
+                                                    className={editorInputClass(isDark)}
+                                                    value={link.sourceSiteId}
+                                                    onChange={(event) =>
+                                                        updateLink(link.id, {
+                                                            sourceSiteId:
+                                                                event.target.value,
+                                                        })
+                                                    }
+                                                >
+                                                    {topology.sites.map((site) => (
+                                                        <option
+                                                            key={site.id}
+                                                            value={site.id}
+                                                        >
+                                                            {site.shortName}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </label>
+                                            <label className="space-y-1">
+                                                <span
+                                                    className={cn(
+                                                        editorLabelClass,
+                                                        isDark
+                                                            ? 'text-slate-500'
+                                                            : 'text-slate-400'
+                                                    )}
+                                                >
+                                                    Target
+                                                </span>
+                                                <select
+                                                    className={editorInputClass(isDark)}
+                                                    value={link.targetSiteId}
+                                                    onChange={(event) =>
+                                                        updateLink(link.id, {
+                                                            targetSiteId:
+                                                                event.target.value,
+                                                        })
+                                                    }
+                                                >
+                                                    {topology.sites.map((site) => (
+                                                        <option
+                                                            key={site.id}
+                                                            value={site.id}
+                                                        >
+                                                            {site.shortName}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </label>
+                                            <label className="space-y-1">
+                                                <span
+                                                    className={cn(
+                                                        editorLabelClass,
+                                                        isDark
+                                                            ? 'text-slate-500'
+                                                            : 'text-slate-400'
+                                                    )}
+                                                >
+                                                    Status
+                                                </span>
+                                                <select
+                                                    className={editorInputClass(isDark)}
+                                                    value={link.status}
+                                                    onChange={(event) =>
+                                                        updateLink(link.id, {
+                                                            status: event.target
+                                                                .value as TopologyStatus,
+                                                        })
+                                                    }
+                                                >
+                                                    {TOPOLOGY_STATUSES.map((status) => (
+                                                        <option
+                                                            key={status}
+                                                            value={status}
+                                                        >
+                                                            {status}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </label>
+                                            <label className="space-y-1">
+                                                <span
+                                                    className={cn(
+                                                        editorLabelClass,
+                                                        isDark
+                                                            ? 'text-slate-500'
+                                                            : 'text-slate-400'
+                                                    )}
+                                                >
+                                                    Capacity Mbps
+                                                </span>
+                                                <input
+                                                    type="number"
+                                                    className={editorInputClass(isDark)}
+                                                    value={link.capacityMbps ?? ''}
+                                                    onChange={(event) =>
+                                                        updateLink(link.id, {
+                                                            capacityMbps:
+                                                                event.target.value === ''
+                                                                    ? undefined
+                                                                    : Number(
+                                                                          event.target
+                                                                              .value
+                                                                      ),
+                                                        })
+                                                    }
+                                                />
+                                            </label>
+                                        </div>
+                                        <label className="block space-y-1">
+                                            <span
+                                                className={cn(
+                                                    editorLabelClass,
+                                                    isDark
+                                                        ? 'text-slate-500'
+                                                        : 'text-slate-400'
+                                                )}
+                                            >
+                                                search_name
+                                            </span>
+                                            <input
+                                                className={editorInputClass(isDark)}
+                                                value={link.searchName ?? ''}
+                                                placeholder="Overview - Link Orlando to Tallahassee Health"
+                                                onChange={(event) =>
+                                                    updateLink(link.id, {
+                                                        searchName: event.target.value,
+                                                    })
+                                                }
+                                            />
+                                        </label>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+
+                        <section className="space-y-2">
+                            <div className="flex items-center justify-between gap-2">
+                                <h4 className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+                                    JSON
+                                </h4>
+                                <div className="flex items-center gap-1">
+                                    <button
+                                        type="button"
+                                        onClick={exportTopology}
+                                        title="Export topology JSON"
+                                        className={cn(
+                                            'p-1.5 rounded-md transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                                            isDark
+                                                ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                        )}
+                                    >
+                                        <Download className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={importTopology}
+                                        title="Import topology JSON"
+                                        className={cn(
+                                            'p-1.5 rounded-md transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                                            isDark
+                                                ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                        )}
+                                    >
+                                        <Upload className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            </div>
+                            <textarea
+                                className={cn(
+                                    editorInputClass(isDark),
+                                    'min-h-[96px] font-mono font-medium leading-relaxed resize-y'
+                                )}
+                                value={jsonText}
+                                onChange={(event) => setJsonText(event.target.value)}
+                                placeholder="Export or paste topology JSON"
+                            />
+                            {jsonError && (
+                                <p className="text-[10px] font-semibold text-red-500">
+                                    {jsonError}
+                                </p>
+                            )}
+                        </section>
+                    </div>
+
+                    <div
+                        className={cn(
+                            'border-t p-3 flex items-center justify-between gap-2',
+                            isDark ? 'border-slate-800' : 'border-slate-200'
+                        )}
+                    >
+                        <button
+                            type="button"
+                            onClick={onResetFactory}
+                            className={cn(
+                                'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[10px] font-black transition-colors focus:outline-none focus:ring-1 focus:ring-red-400',
+                                isDark
+                                    ? 'bg-slate-900 text-red-300 hover:bg-red-950/70'
+                                    : 'bg-red-50 text-red-600 hover:bg-red-100'
+                            )}
+                        >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            Factory
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onSave}
+                            className="inline-flex items-center gap-1.5 rounded-md bg-sky-500 px-3 py-1.5 text-[10px] font-black text-white hover:bg-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-300"
+                        >
+                            <Save className="w-3.5 h-3.5" />
+                            Save
+                        </button>
+                    </div>
+                </motion.aside>
+            )}
+        </AnimatePresence>
+    );
+};
+
 interface SiteDetailsProps {
     site: TopologySite;
     links: TopologyLink[];
@@ -1161,6 +2966,31 @@ const SiteDetails: React.FC<SiteDetailsProps> = ({ site, links }) => (
             />
             <MetricPill label="Alerts" value={formatNumber(site.metrics.alerts)} />
             <MetricPill label="Latency" value={formatLatency(site.metrics.latencyMs)} />
+        </div>
+        <div className="rounded bg-white/5 border border-white/5 p-2 space-y-1">
+            <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-slate-500">
+                <Code2 className="w-3 h-3" />
+                Telemetry Source
+            </div>
+            <p className="text-[10px] text-slate-300 leading-relaxed">
+                {site.telemetrySource ??
+                    (site.searchName
+                        ? 'Awaiting normalized site telemetry'
+                        : 'Configured topology item')}
+            </p>
+            <p className="text-[9px] text-slate-500 leading-relaxed">
+                {site.dataState === 'live'
+                    ? 'Live searchbase result'
+                    : site.dataState === 'loading'
+                    ? 'Loading searchbase result'
+                    : site.dataState === 'error'
+                    ? 'Searchbase result unavailable'
+                    : 'Configured value'}
+                {site.lastUpdated ? ` - Updated ${site.lastUpdated}` : ''}
+                {site.dataState === 'error' && site.dataError
+                    ? ` - ${site.dataError}`
+                    : ''}
+            </p>
         </div>
         {links.length > 0 && (
             <div className="space-y-1">
@@ -1282,17 +3112,18 @@ interface TopologySiteTableProps {
 }
 
 export const TopologySiteTable: React.FC<TopologySiteTableProps> = ({
-    topology = FDEM_TOPOLOGY,
+    topology = CUSTOMER_TOPOLOGY,
 }) => {
+    const { topology: persistedTopology } = usePersistedTopology(topology);
     const linksBySite = useMemo(() => {
         const map: Record<string, TopologyLink[]> = {};
-        for (const site of topology.sites) map[site.id] = [];
-        for (const link of topology.links) {
+        for (const site of persistedTopology.sites) map[site.id] = [];
+        for (const link of persistedTopology.links) {
             map[link.sourceSiteId]?.push(link);
             map[link.targetSiteId]?.push(link);
         }
         return map;
-    }, [topology]);
+    }, [persistedTopology]);
 
     return (
         <div className="h-full w-full overflow-auto rounded-xl border border-slate-200 dark:border-slate-800">
@@ -1309,7 +3140,7 @@ export const TopologySiteTable: React.FC<TopologySiteTableProps> = ({
                     </tr>
                 </thead>
                 <tbody>
-                    {topology.sites.map((site) => {
+                    {persistedTopology.sites.map((site) => {
                         const siteLinks = linksBySite[site.id] ?? [];
                         const worstLink = [...siteLinks].sort(
                             (a, b) =>

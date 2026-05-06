@@ -25,7 +25,7 @@
       <view name="workplace_spog_v2"/>
       
       <divider />
-      <a href="template">FDEM Template</a>
+      <a href="template">Customer Template</a>
       <divider />
       <!-- <a href="search">Search</a> -->
       <view name="reports" />
@@ -33,5 +33,5 @@
       <!-- <view name="analysis_workspace" /> -->
       <!-- <view name="data_models" /> -->
    </collection>
+   <a href="search" target="_blank" rel="noopener"></a>
 </nav>
-

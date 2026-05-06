@@ -1,5 +1,6 @@
 .DS_Store
 .vscode
+.cursor/
 
 ### Splunk local folders
 local/

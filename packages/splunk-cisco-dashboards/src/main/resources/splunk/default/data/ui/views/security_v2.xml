@@ -1090,7 +1090,7 @@
 		"ds_failed_detail_sources": {
 			"name": "Security Resilience - ds_failed_detail_sources",
 			"options": {
-				"query": "| tstats `summariesonly` count from datamodel=Authentication where Authentication.action=\"failure\" Authentication.src!=\"\" Authentication.src!=\"-\" Authentication.src!=\"::1\" Authentication.src!=\"127.0.0.1\" sourcetype=\"XmlWinEventLog\" BY Authentication.src\n| rename Authentication.src as \"Source IP\", count as Failures\n| sort -Failures\n| head 10",
+				"query": "| tstats `summariesonly` count from datamodel=Authentication where Authentication.action=\"failure\" Authentication.src!=\"\" Authentication.src!=\"-\" Authentication.src!=\"::1\" Authentication.src!=\"127.0.0.1\" sourcetype=\"*WinEventLog\" BY Authentication.src\n| rename Authentication.src as \"Source IP\", count as Failures\n| sort -Failures\n| head 10",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1101,7 +1101,7 @@
 		"ds_failed_detail_users": {
 			"name": "Security Resilience - ds_failed_detail_users",
 			"options": {
-				"query": "| tstats `summariesonly` count from datamodel=Authentication where Authentication.action=\"failure\" sourcetype=\"XmlWinEventLog\" BY Authentication.user\n| rename Authentication.user as User, count as Failures\n| where NOT match(User, \"\\$$\")\n| sort -Failures\n| head 10",
+				"query": "| tstats `summariesonly` count from datamodel=Authentication where Authentication.action=\"failure\" sourcetype=\"*WinEventLog\" BY Authentication.user\n| rename Authentication.user as User, count as Failures\n| where NOT match(User, \"\\$$\")\n| sort -Failures\n| head 10",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1205,7 +1205,7 @@
 		"ds_identity_detail_trend": {
 			"name": "Security Resilience - ds_identity_detail_trend",
 			"options": {
-				"query": "(`index_windows` sourcetype=\"XmlWinEventLog\" (EventCode=4624 OR EventCode=4625 OR EventCode=4740)) OR (`index_identity` sourcetype=\"cisco:ise:syslog\" (\"5200\" OR \"5400\"))\n| eval evt=case(EventCode==4624,\"AD_Success\", EventCode==4625,\"AD_Failed\", EventCode==4740,\"AD_Lockout\", match(_raw,\"5200\"),\"ISE_Success\", match(_raw,\"5400\"),\"ISE_Failed\", 1==1,\"Other\")\n| where evt!=\"Other\"\n| timechart count by evt",
+				"query": "(`index_windows` sourcetype=\"*WinEventLog\" (EventCode=4624 OR EventCode=4625 OR EventCode=4740)) OR (`index_identity` sourcetype=\"cisco:ise:syslog\" (\"5200\" OR \"5400\"))\n| eval evt=case(EventCode==4624,\"AD_Success\", EventCode==4625,\"AD_Failed\", EventCode==4740,\"AD_Lockout\", match(_raw,\"5200\"),\"ISE_Success\", match(_raw,\"5400\"),\"ISE_Failed\", 1==1,\"Other\")\n| where evt!=\"Other\"\n| timechart count by evt",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1411,7 +1411,7 @@
 		"ds_lockout_detail": {
 			"name": "Security Resilience - ds_lockout_detail",
 			"options": {
-				"query": "`index_windows` sourcetype=\"XmlWinEventLog\" EventCode=4740\n| stats count as Lockouts, latest(_time) as last_seen, values(TargetDomainName) as sources by TargetUserName\n| eval last_seen=strftime(last_seen, \"%Y-%m-%d %H:%M\"), sources=mvjoin(sources, \", \")\n| sort -Lockouts\n| head 10\n| rename TargetUserName as \"Locked User\", sources as \"Source Hosts\", last_seen as \"Last Lockout\"",
+				"query": "`index_windows` sourcetype=\"*WinEventLog\" EventCode=4740\n| stats count as Lockouts, latest(_time) as last_seen, values(TargetDomainName) as sources by TargetUserName\n| eval last_seen=strftime(last_seen, \"%Y-%m-%d %H:%M\"), sources=mvjoin(sources, \", \")\n| sort -Lockouts\n| head 10\n| rename TargetUserName as \"Locked User\", sources as \"Source Hosts\", last_seen as \"Last Lockout\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1444,7 +1444,7 @@
 		"ds_priv_detail": {
 			"name": "Security Resilience - ds_priv_detail",
 			"options": {
-				"query": "| tstats `summariesonly` count from datamodel=Authentication where Authentication.signature_id=4672 sourcetype=\"XmlWinEventLog\" BY Authentication.user\n| rename Authentication.user as User, count as \"Priv Logons\"\n| sort -\"Priv Logons\"",
+				"query": "| tstats `summariesonly` count from datamodel=Authentication where Authentication.signature_id=4672 sourcetype=\"*WinEventLog\" BY Authentication.user\n| rename Authentication.user as User, count as \"Priv Logons\"\n| sort -\"Priv Logons\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1455,7 +1455,7 @@
 		"ds_priv_trend": {
 			"name": "Privileged Logon Trend",
 			"options": {
-				"query": "`index_windows` sourcetype=\"XmlWinEventLog\" EventCode=4672\n| timechart fixedrange=false dc(user) as \"Privileged Users\", count as \"Logon Events\"",
+				"query": "`index_windows` sourcetype=\"*WinEventLog\" EventCode=4672\n| timechart fixedrange=false dc(user) as \"Privileged Users\", count as \"Logon Events\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1466,7 +1466,7 @@
 		"ds_privileged_logons": {
 			"name": "Security Resilience - ds_privileged_logons",
 			"options": {
-				"query": "| tstats `summariesonly` count from datamodel=Authentication where (Authentication.signature_id=4672 OR Authentication.signature_id=4673) sourcetype=\"XmlWinEventLog\"",
+				"query": "| tstats `summariesonly` count from datamodel=Authentication where (Authentication.signature_id=4672 OR Authentication.signature_id=4673) sourcetype=\"*WinEventLog\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1477,7 +1477,7 @@
 		"ds_privileged_trend": {
 			"name": "Privileged Logons Trend",
 			"options": {
-				"query": "| tstats `summariesonly` count from datamodel=Authentication where (Authentication.signature_id=4672 OR Authentication.signature_id=4673) sourcetype=\"XmlWinEventLog\" by _time | timechart fixedrange=false sum(count) as \"Privileged (AD)\"",
+				"query": "| tstats `summariesonly` count from datamodel=Authentication where (Authentication.signature_id=4672 OR Authentication.signature_id=4673) sourcetype=\"*WinEventLog\" by _time | timechart fixedrange=false sum(count) as \"Privileged (AD)\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
