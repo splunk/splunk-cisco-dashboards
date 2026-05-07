@@ -34,6 +34,11 @@ import {
 } from 'lucide-react';
 import { DashboardSection } from '@/common/components/florida/DashboardSection';
 import { MetricItem } from '@/common/components/florida/MetricItem';
+import { TableTile } from '@/common/components/florida/TableTile';
+import {
+    sparklineVizTypeFromSplunkViz,
+    normalizeDataValuesDisplay,
+} from '@/common/components/florida/Sparkline';
 import {
     CustomerTopologyMap,
     CUSTOMER_TOPOLOGY,
@@ -50,6 +55,8 @@ import {
 import {
     useMetric,
     useKpi,
+    useTableData,
+    isTableViz,
     type MetricConfig,
     type KpiConfig,
     type SectionId,
@@ -243,12 +250,12 @@ const METRIC_CONFIG: MetricConfig[] = [
             'Number of distinct external source IPs being denied by the firewall. ' +
             'Climbing values usually indicate distributed scanning or a low-and-slow ' +
             'campaign. Warning at 25 unique sources, critical at 100.',
-        // No off-the-shelf single-row stanza for this — wrap the
-        // existing fw_blocked tstats with dc(src) to get one number.
-        spl:
-            '| tstats `summariesonly` dc(All_Traffic.src) as count from ' +
-            'datamodel=Network_Traffic where All_Traffic.action="blocked" ' +
-            '| appendpipe [| where isnull(count) | eval count=0]',
+        // Promoted to a first-class searchbase stanza so the picker
+        // can offer it like the other 14 tiles and authors can tune
+        // viz_options + tags from the conf instead of editing this
+        // file. The underlying SPL still wraps the same Network_Traffic
+        // tstats, just resolved through searchbaseCatalogue.
+        savedSearch: 'Executive Dashboard - Threat Sources',
         valueField: 'count',
         color: '#ef4444',
         thresholds: { warning: 25, critical: 100, direction: 'lower_is_better' },
@@ -594,6 +601,129 @@ const MetricCard: React.FC<MetricCardProps> = ({
         return effective;
     }, [effective, searchbaseByName]);
 
+    // Resolve the conf record (if any) so we can pull viz hints from it.
+    // The picker preview, drilldown, and tile renderer must all agree
+    // on which entry is in play — we read the same `effective.savedSearch`
+    // → `searchbaseByName` lookup the dispatch logic above already does.
+    const sbRecord = useMemo(() => {
+        if (!effective.savedSearch || !searchbaseByName) return null;
+        return searchbaseByName.get(effective.savedSearch) ?? null;
+    }, [effective.savedSearch, searchbaseByName]);
+
+    // Branch on viz type: tables get a wholly different rendering path
+    // (TableTile + useTableData) so we never coerce categorical row
+    // distributions through the single-value/sparkline pipeline. The
+    // branch is component-level (rather than inside the body) so each
+    // leaf calls its own data hook unconditionally — Rules of Hooks
+    // forbid switching `useMetric` ↔ `useTableData` between renders.
+    const showTable = isTableViz(sbRecord?.defaultViz);
+
+    if (showTable) {
+        return (
+            <TableCardLeaf
+                effective={effective}
+                dispatchedConfig={dispatchedConfig}
+                range={range}
+                refreshToken={refreshToken}
+                onStatus={onStatus}
+                onConfigure={onConfigure}
+                infoAnchor={infoAnchor}
+                isCustomized={Boolean(override)}
+            />
+        );
+    }
+    return (
+        <MetricCardLeaf
+            effective={effective}
+            dispatchedConfig={dispatchedConfig}
+            sbRecord={sbRecord}
+            range={range}
+            refreshToken={refreshToken}
+            onStatus={onStatus}
+            onConfigure={onConfigure}
+            infoAnchor={infoAnchor}
+            isCustomized={Boolean(override)}
+        />
+    );
+};
+
+interface CommonLeafProps {
+    effective: MetricConfig;
+    dispatchedConfig: MetricConfig;
+    range: TimeRange;
+    refreshToken: number;
+    onStatus: (id: string, status: MetricStatus) => void;
+    onConfigure: () => void;
+    infoAnchor: 'auto' | 'left' | 'right';
+    isCustomized: boolean;
+}
+
+interface MetricCardLeafProps extends CommonLeafProps {
+    sbRecord: SearchbaseRecord | null;
+}
+
+/**
+ * Sparkline-tile leaf: single-value KPI rendered through MetricItem.
+ * Mirrors the original MetricCard body verbatim; extracted into a
+ * named component only so `MetricCard` can choose between this and
+ * `TableCardLeaf` without violating the Rules of Hooks.
+ */
+const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
+    effective,
+    dispatchedConfig,
+    sbRecord,
+    range,
+    refreshToken,
+    onStatus,
+    onConfigure,
+    infoAnchor,
+    isCustomized,
+}) => {
+    /**
+     * Tile viz variant. `searchbase.conf`'s `default_viz` is the source
+     * of truth when present; the static MetricConfig has no equivalent
+     * field today, so absence falls back to `area` (the prior default).
+     * User picker overrides intentionally inherit the new binding's
+     * viz hints — the override switches *which* search drives the tile,
+     * not how it's drawn, so the chart should track the new search.
+     */
+    const vizType = useMemo(
+        () => sparklineVizTypeFromSplunkViz(sbRecord?.defaultViz),
+        [sbRecord?.defaultViz]
+    );
+
+    /**
+     * `viz_options.seriesColors[0]` overrides the static config colour
+     * so the conf author can drive both viz type and palette in one
+     * place. We only use the first entry (sparklines are single-series
+     * today); multi-series support would honour the full array.
+     */
+    const tileColor = useMemo(() => {
+        const seriesColors = sbRecord?.vizOptions?.seriesColors;
+        if (Array.isArray(seriesColors)) {
+            const first = seriesColors[0];
+            if (typeof first === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(first.trim())) {
+                return first.trim();
+            }
+        }
+        return effective.color;
+    }, [effective.color, sbRecord?.vizOptions]);
+
+    /**
+     * `viz_options.dataValuesDisplay` controls how Sparkline labels
+     * the high/low points (Studio v2 analogue). Anything missing or
+     * malformed falls through to the Sparkline default of `'minmax'`,
+     * which is the project-wide policy now that the hardcoded peak
+     * marker has been retired.
+     */
+    const dataValuesDisplay = useMemo(
+        () =>
+            normalizeDataValuesDisplay(
+                sbRecord?.vizOptions?.dataValuesDisplay
+            ),
+        [sbRecord?.vizOptions]
+    );
+
     const result = useMetric(dispatchedConfig, range, refreshToken);
 
     useEffect(() => {
@@ -631,17 +761,72 @@ const MetricCard: React.FC<MetricCardProps> = ({
             previousData={result.previousSparkData}
             sparkTimestamps={result.sparkTimestamps}
             timeRange={range}
-            color={effective.color}
+            color={tileColor}
+            vizType={vizType}
+            dataValuesDisplay={dataValuesDisplay}
             status={result.status}
             source={result.source}
             onOpenInSearch={drilldownSpl ? handleClick : undefined}
             onConfigure={onConfigure}
-            isCustomized={Boolean(override)}
+            isCustomized={isCustomized}
             sparkTitle={
-                drilldownSpl
-                    ? 'Hover for date · click to open in Splunk Search'
-                    : undefined
+                // The chart itself is no longer a click target — the
+                // ExternalLink icon next to the tile label is the
+                // explicit drilldown affordance. We keep `sparkTitle`
+                // around as a hover hint so users still discover the
+                // per-bucket Recharts tooltip.
+                drilldownSpl ? 'Hover for date and value' : undefined
             }
+            noDataReason={result.noDataReason}
+            rangeLabel={result.rangeLabel}
+        />
+    );
+};
+
+/**
+ * Categorical-tile leaf: multi-row table rendered through TableTile.
+ * Activated when the bound searchbase stanza declares
+ * `default_viz = splunk.table`. Tables don't have a "status" in the
+ * threshold sense, so we always emit `unknown` to keep the aggregate
+ * health badge math identical to before this branch existed.
+ */
+const TableCardLeaf: React.FC<CommonLeafProps> = ({
+    effective,
+    dispatchedConfig,
+    range,
+    refreshToken,
+    onStatus,
+    onConfigure,
+    infoAnchor,
+    isCustomized,
+}) => {
+    const result = useTableData(dispatchedConfig, range, refreshToken);
+
+    useEffect(() => {
+        onStatus(effective.id, 'unknown');
+    }, [effective.id, onStatus]);
+
+    const drilldownSpl = result.spl;
+    const handleClick = useCallback(() => {
+        if (!drilldownSpl) return;
+        const url = splunkSearchAppUrl(drilldownSpl, range);
+        if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener,noreferrer');
+    }, [drilldownSpl, range]);
+
+    return (
+        <TableTile
+            label={effective.label}
+            subLabel={effective.subLabel}
+            description={effective.description}
+            descriptionFootnote={undefined}
+            infoAnchor={infoAnchor}
+            rows={result.rows}
+            columns={result.columns}
+            totalRowCount={result.totalRowCount}
+            source={result.source}
+            onOpenInSearch={drilldownSpl ? handleClick : undefined}
+            onConfigure={onConfigure}
+            isCustomized={isCustomized}
             noDataReason={result.noDataReason}
             rangeLabel={result.rangeLabel}
         />

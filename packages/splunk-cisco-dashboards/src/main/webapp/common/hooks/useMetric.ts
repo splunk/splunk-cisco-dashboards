@@ -840,3 +840,197 @@ export const useKpi = (
 
     return result;
 };
+
+// ---------------------------------------------------------------------------
+// useTableData — categorical / row-shaped tile (default_viz = splunk.table)
+// ---------------------------------------------------------------------------
+//
+// MetricItem expects a single number + a sparkline. A `stats count by name`
+// distribution doesn't fit that contract — the `count` column has N category
+// rows, not N time buckets, and useMetric's auto-detect ends up plotting
+// row-order as if it were a time axis (this is the "92 with min=70 / max=99
+// bubble pretending to be a sparkline" you see when a table-shaped search
+// is wired into a metric tile). useTableData skips all that: it dispatches
+// the same SPL useMetric would, then exposes the raw rows + a derived
+// column order so TableTile can render an honest categorical table.
+
+export interface TableDataConfig {
+    id: string;
+    savedSearch?: string;
+    spl?: string;
+    /**
+     * Maximum rows materialised into the tile. oneShot can return up
+     * to 1,000 rows; the executive table tile should cap well before
+     * that to keep DOM weight reasonable. Defaults to 50.
+     */
+    rowLimit?: number;
+    /**
+     * Mirrors {@link MetricConfig.suppressMockOnEmpty} so the same
+     * MetricConfig can be threaded through both hooks. Tables don't
+     * have a mock fallback, so this is currently informational only —
+     * a zero-row result always renders the no-data state.
+     */
+    suppressMockOnEmpty?: boolean;
+}
+
+export interface TableDataResult {
+    rows: Array<Record<string, unknown>>;
+    /** Visible (non-internal) field names in SPL emission order. */
+    columns: string[];
+    /**
+     * Row count BEFORE the {@link TableDataConfig.rowLimit} cap. Lets
+     * the tile show an honest "5 of 23 rows" caption — without this
+     * the cap collapses both numbers to the same value and the user
+     * can't tell whether the search returned more than the tile shows.
+     */
+    totalRowCount: number;
+    source: DataSource;
+    spl: string;
+    resolvedSavedSearch: string;
+    noDataReason?: NoDataReason;
+    rangeLabel?: string;
+}
+
+const DEFAULT_TABLE_ROW_LIMIT = 50;
+
+/**
+ * Predicate used by the Overview wrapper to decide whether to render
+ * a metric tile (sparkline) or a table tile. Centralised so both the
+ * sparkline mapper and this hook agree on what counts as "table".
+ */
+export const isTableViz = (splunkViz: string | undefined): boolean => {
+    if (typeof splunkViz !== 'string') return false;
+    return splunkViz.trim().toLowerCase() === 'splunk.table';
+};
+
+export const useTableData = (
+    cfg: TableDataConfig,
+    range: TimeRange,
+    refreshToken: number
+): TableDataResult => {
+    const spl = resolveMetricSpl(cfg);
+    const savedSearchName = cfg.savedSearch ?? '';
+    const rowLimit = Math.max(
+        1,
+        Math.min(cfg.rowLimit ?? DEFAULT_TABLE_ROW_LIMIT, 1000)
+    );
+
+    const [result, setResult] = useState<TableDataResult>(() => ({
+        rows: [],
+        columns: [],
+        totalRowCount: 0,
+        source: 'mock',
+        spl,
+        resolvedSavedSearch: savedSearchName,
+    }));
+
+    useEffect(() => {
+        const fresh: TableDataResult = {
+            rows: [],
+            columns: [],
+            totalRowCount: 0,
+            source: 'mock',
+            spl,
+            resolvedSavedSearch: savedSearchName,
+        };
+        if (!spl) {
+            setResult(fresh);
+            return undefined;
+        }
+        let cancelled = false;
+        setResult({ ...fresh, source: 'loading' });
+
+        const buildNoData = (reason: NoDataReason): TableDataResult => ({
+            rows: [],
+            columns: [],
+            totalRowCount: 0,
+            source: 'live',
+            spl,
+            resolvedSavedSearch: savedSearchName,
+            noDataReason: reason,
+            rangeLabel: range.label,
+        });
+
+        debugLog(cfg.id, 'table dispatching', {
+            spl,
+            earliest: range.earliest,
+            latest: range.latest,
+            label: range.label,
+            rowLimit,
+        });
+
+        runSearch({
+            spl,
+            earliestTime: range.earliest,
+            latestTime: range.latest,
+            tag: cfg.id,
+        })
+            .then((res) => {
+                if (cancelled) return;
+                const allRows = (res?.results ?? []) as Array<
+                    Record<string, unknown>
+                >;
+                if (allRows.length === 0) {
+                    debugLog(cfg.id, 'table no rows', { rangeLabel: range.label });
+                    setResult(buildNoData('empty_rows'));
+                    return;
+                }
+                // Walk every row's keys to build a stable, SPL-order
+                // column list. We can't trust `Object.keys(rows[0])`
+                // alone because `| timechart` (and other commands)
+                // omit a column from rows whose bucket had nothing —
+                // a sparse first row would silently drop columns the
+                // user actually cares about.
+                const seenKeys = new Set<string>();
+                const columns: string[] = [];
+                for (const row of allRows) {
+                    for (const key of Object.keys(row)) {
+                        // Splunk's leading-underscore fields (_time,
+                        // _span, _raw, _bkt, …) are noise in a
+                        // categorical tile — skip them by convention.
+                        if (key.startsWith('_')) continue;
+                        if (seenKeys.has(key)) continue;
+                        seenKeys.add(key);
+                        columns.push(key);
+                    }
+                }
+                if (columns.length === 0) {
+                    debugLog(cfg.id, 'table rows had only internal fields', {
+                        rowCount: allRows.length,
+                        firstRowKeys: Object.keys(allRows[0] ?? {}),
+                    });
+                    setResult(buildNoData('no_numeric_column'));
+                    return;
+                }
+                debugLog(cfg.id, 'table rendering', {
+                    rowCount: allRows.length,
+                    columnCount: columns.length,
+                    columns,
+                });
+                setResult({
+                    rows: allRows.slice(0, rowLimit),
+                    columns,
+                    totalRowCount: allRows.length,
+                    source: 'live',
+                    spl,
+                    resolvedSavedSearch: savedSearchName,
+                    rangeLabel: range.label,
+                });
+            })
+            .catch((err) => {
+                if (cancelled) return;
+                debugLog(cfg.id, 'table dispatch threw', {
+                    error: err instanceof Error ? err.message : String(err),
+                    spl,
+                });
+                setResult(buildNoData('error'));
+            });
+
+        return () => {
+            cancelled = true;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [cfg, range.earliest, range.latest, refreshToken]);
+
+    return result;
+};
