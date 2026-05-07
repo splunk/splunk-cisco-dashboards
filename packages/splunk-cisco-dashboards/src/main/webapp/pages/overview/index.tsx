@@ -70,6 +70,24 @@ import {
     usePersistedMetricOverrides,
     type MetricOverride,
 } from '@/common/hooks/usePersistedMetricOverrides';
+import { usePersistedSectionTileCounts } from '@/common/hooks/usePersistedSectionTileCounts';
+import { usePersistedSectionTileOrder } from '@/common/hooks/usePersistedSectionTileOrder';
+import { SortableMetricCard } from '@/common/components/florida/SortableMetricCard';
+import {
+    DndContext,
+    PointerSensor,
+    KeyboardSensor,
+    useSensor,
+    useSensors,
+    closestCenter,
+    type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+    SortableContext,
+    sortableKeyboardCoordinates,
+    arrayMove,
+    horizontalListSortingStrategy,
+} from '@dnd-kit/sortable';
 import { ThemeToggle } from '@/common/components/florida/ThemeToggle';
 import { runSearch } from '@/common/services/splunkSearchService';
 import {
@@ -860,12 +878,101 @@ const OverviewPage: React.FC = () => {
         setLastRefreshed(new Date());
     }, []);
 
+    // ------------------------------ Section tile-count preference ------------------------------
+    //
+    // Per-user, per-section "how many tiles do I want visible". The
+    // user dials it via the small `−  N  +` pill on each section
+    // header. Trailing tiles (from the bottom of METRIC_CONFIG for
+    // that section) are the ones that hide first when narrowing —
+    // picker overrides on hidden tiles are NOT cleared, so a user
+    // who customises tile #5, dials down to 3, then back up to 5,
+    // gets their customisation back unchanged.
+    //
+    // Bounds: 3..5 with a default of 5 (today's behaviour). Bumping
+    // the cap above 5 only requires changing `maxCount` here and
+    // adding more tiles to METRIC_CONFIG; the pill, the slicing,
+    // and the status-aggregation filter all key off this single
+    // source of truth.
+    //
+    // Declared up here (before the aggregate status block) because
+    // the HealthBadge filter below needs to know which tiles are
+    // currently visible.
+    const {
+        counts: sectionTileCounts,
+        bounds: sectionTileBounds,
+        setCount: setSectionTileCount,
+    } = usePersistedSectionTileCounts({ minCount: 3, maxCount: 5, defaultCount: 5 });
+
+    // ------------------------------ Section tile-order preference ------------------------------
+    //
+    // Companion to the count preference: the user can drag tiles
+    // within a section to put their favourites first. Combined with
+    // the count pill's trailing-hide rule, the user has full control
+    // over which tiles appear and in what order.
+    //
+    // `getOrder(section, canonicalIds)` reconciles the persisted
+    // order against METRIC_CONFIG on every read — renamed/removed
+    // tiles drop out, new tiles are appended at the end so they
+    // can't bump the user's chosen top tiles out of view when a
+    // release ships.
+    const { getOrder: getSectionTileOrder, setOrder: setSectionTileOrder } =
+        usePersistedSectionTileOrder();
+
+    // Drag sensors:
+    //   * PointerSensor with a small activationConstraint so a click
+    //     on the grip handle that doesn't move (e.g., a missed drag
+    //     attempt) doesn't accidentally trigger reordering.
+    //   * KeyboardSensor for users who navigate by keyboard — the
+    //     `sortableKeyboardCoordinates` helper translates arrow
+    //     keys into drag deltas that respect the sortable layout.
+    const dndSensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: { distance: 5 },
+        }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
+
     // ------------------------------ Aggregate status ------------------------------
     const [statuses, setStatuses] = useState<Record<string, MetricStatus>>({});
     const reportStatus = useCallback((id: string, s: MetricStatus) => {
         setStatuses((prev) => (prev[id] === s ? prev : { ...prev, [id]: s }));
     }, []);
-    const statusList = useMemo(() => Object.values(statuses), [statuses]);
+
+    // The HealthBadge should only reflect tiles the user is
+    // currently *seeing*. When a tile is hidden (because the user
+    // dialled the section count down), its last reported status
+    // would otherwise stick around in `statuses` and skew the
+    // aggregate. Recompute the visible-tile id set whenever the
+    // per-section count preference changes and use it as the gate
+    // both for the badge and (below) for the section render.
+    const visibleMetricIds = useMemo(() => {
+        const out = new Set<string>();
+        for (const section of ['it_health', 'security', 'building'] as const) {
+            // Same pipeline the render below uses: canonical ids ->
+            // apply user reorder -> slice to visible count. Keeping
+            // the badge filter and the render in lockstep means a
+            // tile dragged into the visible window also gets its
+            // status counted in the aggregate, and a tile dragged
+            // out is dropped immediately.
+            const canonicalIds = METRIC_CONFIG.filter((m) => m.section === section).map(
+                (m) => m.id
+            );
+            const orderedIds = getSectionTileOrder(section, canonicalIds);
+            const visible = orderedIds.slice(0, sectionTileCounts[section]);
+            for (const id of visible) out.add(id);
+        }
+        return out;
+    }, [sectionTileCounts, getSectionTileOrder]);
+
+    const statusList = useMemo(
+        () =>
+            Object.entries(statuses)
+                .filter(([id]) => visibleMetricIds.has(id))
+                .map(([, s]) => s),
+        [statuses, visibleMetricIds]
+    );
 
     // ------------------------------ Help overlay ------------------------------
     const [helpOpen, setHelpOpen] = useState(false);
@@ -1524,9 +1631,55 @@ const OverviewPage: React.FC = () => {
                     <div className="flex flex-col gap-2 min-h-0 min-w-0 w-full xl:w-[var(--scd-left-pct)] xl:flex-shrink-0">
                         {(['it_health', 'security', 'building'] as const).map((section) => {
                             const meta = SECTION_META[section];
-                            const sectionMetrics = METRIC_CONFIG.filter(
+                            const allSectionMetrics = METRIC_CONFIG.filter(
                                 (m) => m.section === section
                             );
+                            // The pill's max is whichever is smaller —
+                            // the global cap (sectionTileBounds.maxCount)
+                            // or what METRIC_CONFIG actually offers for
+                            // this section. Today both are 5 across the
+                            // board, but this keeps the UI honest if
+                            // someone trims a section to 4 tiles in
+                            // METRIC_CONFIG without touching this code.
+                            const sectionMaxAvailable = Math.min(
+                                sectionTileBounds.maxCount,
+                                allSectionMetrics.length
+                            );
+                            const visibleCount = Math.min(
+                                sectionTileCounts[section],
+                                sectionMaxAvailable
+                            );
+
+                            // Apply the user's drag-reorder
+                            // preference (if any) to the canonical
+                            // tile list, then slice to the visible
+                            // count. The id-keyed `byId` lookup lets
+                            // the render iterate ordered ids while
+                            // still resolving each id back to its
+                            // full MetricConfig — no per-iteration
+                            // .find() scan.
+                            const canonicalIds = allSectionMetrics.map((m) => m.id);
+                            const orderedIds = getSectionTileOrder(section, canonicalIds);
+                            const visibleIds = orderedIds.slice(0, visibleCount);
+                            const byId = new Map(allSectionMetrics.map((m) => [m.id, m]));
+
+                            // Drag handler scoped to this section: dnd-kit
+                            // emits the dragged id and the id it was
+                            // dropped over. We translate that into a
+                            // reordered array of *all* tile ids (visible
+                            // + hidden) so that ordering preferences
+                            // survive a count change. Dropping outside the
+                            // sortable context is a no-op (`over === null`).
+                            const handleDragEnd = (event: DragEndEvent) => {
+                                const { active, over } = event;
+                                if (!over || active.id === over.id) return;
+                                const fromIdx = orderedIds.indexOf(String(active.id));
+                                const toIdx = orderedIds.indexOf(String(over.id));
+                                if (fromIdx < 0 || toIdx < 0) return;
+                                const next = arrayMove(orderedIds, fromIdx, toIdx);
+                                setSectionTileOrder(section, next);
+                            };
+
                             return (
                                 <DashboardSection
                                     key={section}
@@ -1534,33 +1687,60 @@ const OverviewPage: React.FC = () => {
                                     linkText={meta.linkText}
                                     href={meta.href}
                                     className="flex-1 min-h-0"
+                                    tileCount={{
+                                        value: visibleCount,
+                                        min: sectionTileBounds.minCount,
+                                        max: sectionMaxAvailable,
+                                        onChange: (next) => setSectionTileCount(section, next),
+                                        label: `${meta.title} tiles`,
+                                    }}
                                 >
-                                    {sectionMetrics.map((cfg, idx) => (
-                                        <MetricCard
-                                            key={cfg.id}
-                                            cfg={cfg}
-                                            range={timeRange}
-                                            refreshToken={refreshToken}
-                                            onStatus={reportStatus}
-                                            // Anchor the tooltip to the right
-                                            // edge for the last metric so the
-                                            // popover stays inside the section
-                                            // card instead of overflowing.
-                                            infoAnchor={
-                                                idx === sectionMetrics.length - 1
-                                                    ? 'right'
-                                                    : 'auto'
-                                            }
-                                            override={overrides[cfg.id]}
-                                            searchbaseByName={searchbaseByName}
-                                            onConfigure={() =>
-                                                openPicker(cfg.id, cfg.label, {
-                                                    savedSearch: cfg.savedSearch,
-                                                    valueField: cfg.valueField,
-                                                })
-                                            }
-                                        />
-                                    ))}
+                                    <DndContext
+                                        sensors={dndSensors}
+                                        collisionDetection={closestCenter}
+                                        onDragEnd={handleDragEnd}
+                                    >
+                                        <SortableContext
+                                            items={visibleIds}
+                                            strategy={horizontalListSortingStrategy}
+                                        >
+                                            {visibleIds.map((id, idx) => {
+                                                const cfg = byId.get(id);
+                                                if (!cfg) return null;
+                                                return (
+                                                    <SortableMetricCard
+                                                        key={cfg.id}
+                                                        id={cfg.id}
+                                                        ariaLabel={cfg.label}
+                                                    >
+                                                        <MetricCard
+                                                            cfg={cfg}
+                                                            range={timeRange}
+                                                            refreshToken={refreshToken}
+                                                            onStatus={reportStatus}
+                                                            // Anchor the tooltip to the right
+                                                            // edge for the last metric so the
+                                                            // popover stays inside the section
+                                                            // card instead of overflowing.
+                                                            infoAnchor={
+                                                                idx === visibleIds.length - 1
+                                                                    ? 'right'
+                                                                    : 'auto'
+                                                            }
+                                                            override={overrides[cfg.id]}
+                                                            searchbaseByName={searchbaseByName}
+                                                            onConfigure={() =>
+                                                                openPicker(cfg.id, cfg.label, {
+                                                                    savedSearch: cfg.savedSearch,
+                                                                    valueField: cfg.valueField,
+                                                                })
+                                                            }
+                                                        />
+                                                    </SortableMetricCard>
+                                                );
+                                            })}
+                                        </SortableContext>
+                                    </DndContext>
                                 </DashboardSection>
                             );
                         })}

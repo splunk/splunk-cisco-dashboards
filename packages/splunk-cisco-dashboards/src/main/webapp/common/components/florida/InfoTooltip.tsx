@@ -71,14 +71,21 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
                     'group-hover/info:opacity-100 group-hover/info:visible group-hover/info:translate-y-0',
                     'group-focus-within/info:opacity-100 group-focus-within/info:visible group-focus-within/info:translate-y-0',
                     'transition-all duration-150',
-                    'w-[300px] max-w-[340px] p-3.5 rounded-lg',
+                    // Width and padding nudged up so the body breathes
+                    // without becoming a wall of text. ~3 lines now
+                    // instead of 5–6 for typical tile descriptions.
+                    'w-[360px] max-w-[420px] p-4 rounded-lg',
                     'bg-slate-900 text-slate-100 shadow-xl ring-1 ring-slate-700/60',
-                    'text-[13px] leading-relaxed normal-case tracking-normal text-left',
+                    // 13.5px sub-pixel-rounds noticeably crisper than 13
+                    // on retina displays; leading-[1.6] is a hair tighter
+                    // than `leading-relaxed` (1.625) but reads more
+                    // densely in the popover frame.
+                    'text-[13.5px] leading-[1.6] normal-case tracking-normal text-left',
                     POSITION_CLASSES[anchor]
                 )}
             >
                 {title && (
-                    <span className="block font-bold text-white text-[14px] mb-1.5 normal-case">
+                    <span className="block font-bold text-white text-[15px] mb-2 normal-case">
                         {title}
                     </span>
                 )}
@@ -86,7 +93,7 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
                     {description}
                 </span>
                 {footnote && (
-                    <span className="block mt-2 pt-2 border-t border-slate-700 text-slate-400 italic text-[11px] font-mono break-all">
+                    <span className="block mt-2.5 pt-2 border-t border-slate-700 text-slate-400 italic text-[11.5px] font-mono break-all leading-snug">
                         {footnote}
                     </span>
                 )}
