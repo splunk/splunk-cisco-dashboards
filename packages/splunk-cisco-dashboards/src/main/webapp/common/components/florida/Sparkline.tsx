@@ -4,6 +4,7 @@ import {
     AreaChart,
     ComposedChart,
     Line,
+    ReferenceDot,
     ResponsiveContainer,
     Tooltip,
     XAxis,
@@ -130,6 +131,93 @@ const formatTimestamp = (epoch: number, range?: TimeRange): string => {
 const defaultFormatValue = (value: number): string =>
     Number.isFinite(value) ? value.toLocaleString() : '—';
 
+interface PeakMarkerProps {
+    cx?: number;
+    cy?: number;
+    value: number;
+    color: string;
+    formatValue: (value: number) => string;
+    viewBox?: {
+        x?: number;
+        y?: number;
+        width?: number;
+        height?: number;
+    };
+}
+
+const PeakMarker: React.FC<PeakMarkerProps> = ({
+    cx,
+    cy,
+    value,
+    color,
+    formatValue,
+    viewBox,
+}) => {
+    if (
+        !Number.isFinite(cx ?? Number.NaN) ||
+        !Number.isFinite(cy ?? Number.NaN) ||
+        !Number.isFinite(value)
+    ) {
+        return null;
+    }
+    const label = formatValue(value);
+    const width = Math.max(28, label.length * 7 + 12);
+    const bubbleHeight = 20;
+    const chartX = viewBox?.x ?? 0;
+    const chartY = viewBox?.y ?? 0;
+    const chartWidth = viewBox?.width ?? 9999;
+    const chartHeight = viewBox?.height ?? 9999;
+    const clamp = (n: number, min: number, max: number) =>
+        Math.max(min, Math.min(max, n));
+    const bubbleX = clamp(
+        (cx as number) - width / 2,
+        chartX + 1,
+        chartX + chartWidth - width - 1
+    );
+    const desiredAboveY = (cy as number) - bubbleHeight - 10;
+    const bubbleY = clamp(
+        desiredAboveY,
+        chartY + 1,
+        chartY + chartHeight - bubbleHeight - 1
+    );
+    const bubbleCenterX = bubbleX + width / 2;
+    const lineY2 = bubbleY + bubbleHeight;
+    return (
+        <g>
+            <line
+                x1={cx}
+                y1={cy}
+                x2={bubbleCenterX}
+                y2={lineY2}
+                stroke={color}
+                strokeWidth={1.5}
+                strokeDasharray="3 2"
+            />
+            <circle cx={cx} cy={cy} r={3.5} fill={color} stroke="#ffffff" strokeWidth={1.5} />
+            <rect
+                x={bubbleX}
+                y={bubbleY}
+                rx={6}
+                ry={6}
+                width={width}
+                height={bubbleHeight}
+                fill="#0f172a"
+                opacity={0.92}
+            />
+            <text
+                x={bubbleCenterX}
+                y={bubbleY + 13}
+                textAnchor="middle"
+                fontSize="10"
+                fontWeight="700"
+                fill="#ffffff"
+            >
+                {label}
+            </text>
+        </g>
+    );
+};
+
 // ---------------------------------------------------------------------------
 // Tooltip
 // ---------------------------------------------------------------------------
@@ -224,6 +312,12 @@ export const Sparkline: React.FC<SparklineProps> = ({
         value: val,
         previous: previousAligned ? previousAligned[i] : null,
     }));
+    const peakPoint =
+        chartData.length > 0
+            ? chartData.reduce((best, point) =>
+                  point.value > best.value ? point : best
+              )
+            : null;
 
     const interactiveProps = onClick
         ? {
@@ -270,7 +364,10 @@ export const Sparkline: React.FC<SparklineProps> = ({
         <div {...interactiveProps}>
             <ResponsiveContainer width="100%" height="100%">
                 {hasPrevious ? (
-                    <ComposedChart data={chartData} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
+                    <ComposedChart
+                        data={chartData}
+                        margin={{ top: 38, right: 18, bottom: 0, left: 18 }}
+                    >
                         <defs>
                             <linearGradient
                                 id={`gradient-${color}`}
@@ -304,9 +401,27 @@ export const Sparkline: React.FC<SparklineProps> = ({
                             isAnimationActive={false}
                             activeDot={{ r: 3, stroke: color, strokeWidth: 1, fill: '#fff' }}
                         />
+                        {peakPoint && (
+                            <ReferenceDot
+                                x={peakPoint.index}
+                                y={peakPoint.value}
+                                isFront
+                                ifOverflow="extendDomain"
+                                shape={
+                                    <PeakMarker
+                                        value={peakPoint.value}
+                                        color={color}
+                                        formatValue={formatValue}
+                                    />
+                                }
+                            />
+                        )}
                     </ComposedChart>
                 ) : (
-                    <AreaChart data={chartData} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
+                    <AreaChart
+                        data={chartData}
+                        margin={{ top: 38, right: 18, bottom: 0, left: 18 }}
+                    >
                         <defs>
                             <linearGradient
                                 id={`gradient-${color}`}
@@ -331,6 +446,21 @@ export const Sparkline: React.FC<SparklineProps> = ({
                             isAnimationActive={false}
                             activeDot={{ r: 3, stroke: color, strokeWidth: 1, fill: '#fff' }}
                         />
+                        {peakPoint && (
+                            <ReferenceDot
+                                x={peakPoint.index}
+                                y={peakPoint.value}
+                                isFront
+                                ifOverflow="extendDomain"
+                                shape={
+                                    <PeakMarker
+                                        value={peakPoint.value}
+                                        color={color}
+                                        formatValue={formatValue}
+                                    />
+                                }
+                            />
+                        )}
                     </AreaChart>
                 )}
             </ResponsiveContainer>

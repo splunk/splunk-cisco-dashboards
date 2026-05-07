@@ -103,6 +103,20 @@ const splitTags = (raw: string | undefined): string[] => {
 const isTruthyConfValue = (raw: string | undefined): boolean =>
     typeof raw === 'string' && /^(1|true|yes)$/i.test(raw.trim());
 
+/**
+ * Splunk can hand back conf-searchbase `search` values with app macro
+ * expansions inlined as a macro plus explicit index disjunction.
+ * That makes the preview noisy and reintroduces hardcoded fallback
+ * indexes into "Open in Search". Collapse only the narrow macro+index
+ * expansion form back to the authored macro, leaving real boolean SPL
+ * untouched.
+ */
+const collapseExpandedIndexMacro = (spl: string): string =>
+    spl.replace(
+        /\(\s*(`index_[^`]+`)\s*(?:OR\s+index=[A-Za-z0-9_*:-]+(?:\s+OR\s+index=[A-Za-z0-9_*:-]+)*)\s*\)/g,
+        '$1'
+    );
+
 let CACHED_PROMISE: Promise<SearchbaseRecord[]> | null = null;
 
 const fetchSearchbase = async (): Promise<SearchbaseRecord[]> => {
@@ -138,7 +152,10 @@ const fetchSearchbase = async (): Promise<SearchbaseRecord[]> => {
             dispatchContext:
                 typeof content.dispatch_context === 'string' ? content.dispatch_context : appName,
             description: typeof content.description === 'string' ? content.description : '',
-            search: typeof content.search === 'string' ? content.search : '',
+            search:
+                typeof content.search === 'string'
+                    ? collapseExpandedIndexMacro(content.search)
+                    : '',
         });
     }
     return out;

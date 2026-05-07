@@ -67,7 +67,9 @@ export interface TopologyLink {
     status: TopologyStatus;
     capacityMbps?: number;
     throughputMbps?: number;
+    peakThroughputMbps?: number;
     utilizationPct?: number;
+    peakUtilizationPct?: number;
     latencyMs?: number;
     lossPct?: number;
     endpointHealthPct?: number;

@@ -64,6 +64,69 @@ const MAX_FIELD_LENGTH = 64;
 const FIELD_NAME_PATTERN = /^[A-Za-z_][\w.]{0,63}$/;
 const TAG_CHIP_LIMIT = 24;
 
+const SPL_COMMANDS = new Set([
+    'append',
+    'appendcols',
+    'bin',
+    'chart',
+    'dedup',
+    'eval',
+    'eventstats',
+    'fields',
+    'filldown',
+    'fillnull',
+    'head',
+    'inputlookup',
+    'join',
+    'lookup',
+    'makeresults',
+    'makemv',
+    'mvexpand',
+    'predict',
+    'rename',
+    'rex',
+    'search',
+    'sort',
+    'spath',
+    'stats',
+    'streamstats',
+    'table',
+    'tail',
+    'timechart',
+    'tstats',
+    'union',
+    'where',
+]);
+
+const SPL_KEYWORDS = new Set([
+    'and',
+    'as',
+    'by',
+    'case',
+    'coalesce',
+    'earliest',
+    'false',
+    'if',
+    'in',
+    'isnotnull',
+    'isnull',
+    'latest',
+    'like',
+    'lower',
+    'match',
+    'max',
+    'min',
+    'not',
+    'null',
+    'or',
+    'round',
+    'sum',
+    'tonumber',
+    'tostring',
+    'true',
+    'values',
+]);
+
 export interface KpiPickerContext {
     /** Stable tile id from the metric/KPI config. */
     tileId: string;
@@ -98,6 +161,103 @@ export interface KpiPickerPanelProps {
 }
 
 const escapeRegex = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const renderSplBlock = (spl: string): React.ReactNode => {
+    const lines = spl.split('\n');
+    return lines.map((line, lineIndex) => (
+        <React.Fragment key={`spl-line-${lineIndex}`}>
+            {renderSplLine(line, lineIndex)}
+            {lineIndex < lines.length - 1 ? '\n' : null}
+        </React.Fragment>
+    ));
+};
+
+const renderSplLine = (line: string, lineIndex: number): React.ReactNode[] => {
+    const pattern =
+        /(`[^`]*`|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\|\s*[A-Za-z_][A-Za-z0-9_]*|\b\d+(?:\.\d+)?\b|\b[A-Za-z_][A-Za-z0-9_.:{}-]*\b)/g;
+    const parts = line.split(pattern);
+
+    return parts.map((part, partIndex) => {
+        if (!part) return null;
+
+        const key = `spl-${lineIndex}-${partIndex}`;
+
+        if (part.startsWith('`') && part.endsWith('`')) {
+            return (
+                <span key={key} className="text-amber-700 dark:text-amber-300">
+                    {part}
+                </span>
+            );
+        }
+
+        if (
+            (part.startsWith('"') && part.endsWith('"')) ||
+            (part.startsWith("'") && part.endsWith("'"))
+        ) {
+            return (
+                <span key={key} className="text-emerald-700 dark:text-emerald-300">
+                    {part}
+                </span>
+            );
+        }
+
+        if (part.startsWith('|')) {
+            const command = part.slice(1).trim();
+            return (
+                <React.Fragment key={key}>
+                    <span className="text-sky-700 dark:text-sky-400">|</span>
+                    {command ? (
+                        <>
+                            {' '}
+                            <span className="text-violet-700 dark:text-violet-300">
+                                {command}
+                            </span>
+                        </>
+                    ) : null}
+                </React.Fragment>
+            );
+        }
+
+        if (/^\d+(?:\.\d+)?$/.test(part)) {
+            return (
+                <span key={key} className="text-orange-700 dark:text-orange-300">
+                    {part}
+                </span>
+            );
+        }
+
+        const normalized = part.toLowerCase();
+        if (SPL_COMMANDS.has(normalized)) {
+            return (
+                <span key={key} className="text-violet-700 dark:text-violet-300">
+                    {part}
+                </span>
+            );
+        }
+
+        if (SPL_KEYWORDS.has(normalized)) {
+            return (
+                <span key={key} className="text-sky-700 dark:text-sky-300">
+                    {part}
+                </span>
+            );
+        }
+
+        if (part.includes('=') || part.includes('.')) {
+            return (
+                <span key={key} className="text-slate-700 dark:text-slate-200">
+                    {part}
+                </span>
+            );
+        }
+
+        return (
+            <span key={key} className="text-slate-900 dark:text-slate-100">
+                {part}
+            </span>
+        );
+    });
+};
 
 /**
  * Extracts the column names a search will emit by walking the SPL and
@@ -1116,19 +1276,20 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 onTestInSearch(selectedEntry.search)
                                             }
                                             title="Click to run this SPL in Splunk Search & Reporting"
-                                            className="mt-1 block w-full text-left p-2 rounded bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 hover:border-sky-400 dark:hover:border-sky-500 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400"
+                                            className="mt-1 block w-full rounded-lg border border-slate-200 bg-slate-50 p-2 text-left transition-colors hover:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-sky-500"
                                         >
-                                            <pre className="text-[10px] font-mono text-slate-700 dark:text-slate-200 whitespace-pre-wrap break-all leading-snug">
-                                                {selectedEntry.search}
+                                            <pre className="m-0 max-h-[20rem] overflow-auto rounded-md border border-slate-200 bg-white px-3 py-3 text-[12px] leading-6 whitespace-pre-wrap break-words text-slate-900 ring-1 ring-black/5 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:ring-white/5">
+                                                {renderSplBlock(selectedEntry.search)}
                                             </pre>
                                         </button>
                                     ) : (
                                         <pre
                                             id="kpi-picker-spl-block"
-                                            className="mt-1 text-[10px] font-mono p-2 rounded bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 whitespace-pre-wrap break-all leading-snug border border-slate-200 dark:border-slate-700"
+                                            className="mt-1 max-h-[20rem] overflow-auto rounded-lg border border-slate-200 bg-white px-3 py-3 text-[12px] leading-6 whitespace-pre-wrap break-words text-slate-900 ring-1 ring-black/5 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:ring-white/5"
                                         >
-                                            {selectedEntry.search ||
-                                                '(searchbase.conf entry has no `search` value)'}
+                                            {selectedEntry.search
+                                                ? renderSplBlock(selectedEntry.search)
+                                                : '(searchbase.conf entry has no `search` value)'}
                                         </pre>
                                     ))}
                             </div>

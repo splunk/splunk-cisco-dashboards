@@ -74,6 +74,10 @@ interface MetricItemProps {
      */
     isCustomized?: boolean;
     sparkTitle?: string;
+    /** Studio-like compact formatting for the headline value. */
+    abbreviateMajorValue?: boolean;
+    /** Studio-like compact formatting for the delta/trend value. */
+    abbreviateTrendValue?: boolean;
     /**
      * Populated when {@link value} is `Number.NaN` to explain *why* the
      * tile is showing no data. The component uses this to render a
@@ -94,6 +98,35 @@ const STATUS_TEXT_COLOR: Record<MetricStatus, string> = {
     warning: 'text-amber-500 dark:text-amber-300',
     critical: 'text-red-600 dark:text-red-400',
     unknown: 'text-sky-600 dark:text-sky-300',
+};
+
+const COMPACT_SUFFIXES = [
+    { value: 1_000_000_000_000, suffix: 't' },
+    { value: 1_000_000_000, suffix: 'b' },
+    { value: 1_000_000, suffix: 'm' },
+    { value: 1_000, suffix: 'k' },
+];
+
+const toFiniteNumber = (value: string | number): number | null => {
+    if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+    if (typeof value !== 'string') return null;
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : null;
+};
+
+const formatCompactNumber = (value: number): string => {
+    const abs = Math.abs(value);
+    for (const entry of COMPACT_SUFFIXES) {
+        if (abs >= entry.value) {
+            const scaled = value / entry.value;
+            const decimals = Math.abs(scaled) >= 10 ? 0 : 1;
+            const rendered = scaled.toFixed(decimals).replace(/\.0$/, '');
+            return `${rendered}${entry.suffix}`;
+        }
+    }
+    return Number.isInteger(value) ? String(value) : value.toFixed(1).replace(/\.0$/, '');
 };
 
 const StatusIcon: React.FC<{ status: MetricStatus }> = ({ status }) => {
@@ -126,10 +159,28 @@ export const MetricItem: React.FC<MetricItemProps> = ({
     onConfigure,
     isCustomized = false,
     sparkTitle,
+    abbreviateMajorValue = true,
+    abbreviateTrendValue = true,
     noDataReason,
     rangeLabel,
     className,
 }) => {
+    const numericValue = toFiniteNumber(value);
+    const displayValue =
+        abbreviateMajorValue &&
+        numericValue !== null &&
+        unit !== '%' &&
+        unit !== 'ms' &&
+        unit !== 'Mbps'
+            ? formatCompactNumber(numericValue)
+            : value;
+    const displayChange =
+        typeof change === 'number' &&
+        Number.isFinite(change) &&
+        abbreviateTrendValue
+            ? formatCompactNumber(change)
+            : change;
+
     return (
         // flex-1 + basis-0 makes every tile grab an equal share of the
         // section's free width — without it the tiles sat at their
@@ -283,7 +334,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                                 STATUS_TEXT_COLOR[status]
                             )}
                         >
-                            {value}
+                            {displayValue}
                             {unit}
                         </span>
                         {showChange && (
@@ -302,8 +353,8 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                                 )}
                                 <span>
                                     {(change as number) > 0
-                                        ? `+${change}`
-                                        : change}
+                                        ? `+${displayChange}`
+                                        : displayChange}
                                     %
                                 </span>
                             </div>
@@ -312,7 +363,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                 );
             })()}
 
-            <div className="h-10 mt-auto opacity-80 hover:opacity-100 transition-opacity">
+            <div className="h-16 mt-6 pt-3 opacity-80 hover:opacity-100 transition-opacity flex-shrink-0">
                 <Sparkline
                     data={sparkData}
                     color={color}
@@ -324,6 +375,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                     title={sparkTitle}
                 />
             </div>
+            <div className="flex-1 min-h-0" aria-hidden="true" />
         </div>
     );
 };
