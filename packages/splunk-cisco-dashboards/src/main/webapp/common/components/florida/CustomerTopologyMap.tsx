@@ -124,7 +124,7 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
             targetSiteId: 'tlh',
             status: 'unknown',
             telemetrySource: 'Awaiting topology link telemetry',
-            searchName: 'Overview - Link Orlando to Tallahassee Preview',
+            searchName: 'Overview - Link Orlando to Tallahassee Health',
         },
         {
             id: 'aub-tlh',
@@ -133,7 +133,7 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
             targetSiteId: 'tlh',
             status: 'unknown',
             telemetrySource: 'Awaiting topology link telemetry',
-            searchName: 'Overview - Link Auburndale to Tallahassee Preview',
+            searchName: 'Overview - Link Auburndale to Tallahassee Health',
         },
     ],
 };
@@ -213,8 +213,8 @@ const ROLE_BEACON_CHROME: Record<
     },
 };
 
-const TOPOLOGY_STORAGE_KEY = 'splunk-cisco-dashboards.customerTopology.v2';
-const TOPOLOGY_STORAGE_VERSION = 2;
+const TOPOLOGY_STORAGE_KEY = 'splunk-cisco-dashboards.customerTopology.v3';
+const TOPOLOGY_STORAGE_VERSION = 3;
 const TOPOLOGY_ROLES: TopologyRole[] = [
     'state_hq',
     'regional_hub',
@@ -301,30 +301,6 @@ const optionalText = (value: unknown): string | undefined => {
     return text.length > 0 ? text : undefined;
 };
 
-const PREVIEW_LINK_SEARCH_BY_ID: Record<string, string> = {
-    'mco-tlh': 'Overview - Link Orlando to Tallahassee Preview',
-    'aub-tlh': 'Overview - Link Auburndale to Tallahassee Preview',
-};
-
-const LEGACY_LINK_SEARCH_NAMES = new Set([
-    'Overview - Link Orlando to Tallahassee Health',
-    'Overview - Link Auburndale to Tallahassee Health',
-]);
-
-const resolveLinkSearchName = (
-    linkId: string,
-    searchName: string | undefined,
-    fallbackSearchName: string | undefined
-): string | undefined => {
-    const previewSearch = PREVIEW_LINK_SEARCH_BY_ID[linkId];
-    const candidate = searchName ?? fallbackSearchName;
-    if (!previewSearch) return candidate;
-    if (!candidate || LEGACY_LINK_SEARCH_NAMES.has(candidate)) {
-        return previewSearch;
-    }
-    return candidate;
-};
-
 const sanitizeTopology = (
     candidate: unknown,
     fallback: CustomerTopology
@@ -345,6 +321,9 @@ const sanitizeTopology = (
             site.shortName,
             id.replace(/-/g, '').slice(0, 4).toUpperCase()
         ).slice(0, 8);
+        const resolvedSiteSearchName =
+            optionalText(site.searchName) ??
+            optionalText(fallbackSite?.searchName);
         return {
             id,
             name: textValue(site.name, fallbackSite?.name ?? shortName),
@@ -362,14 +341,14 @@ const sanitizeTopology = (
                 latencyMs: finiteOptionalNumber(site.metrics?.latencyMs),
             },
             lastUpdated: optionalText(site.lastUpdated),
-            dataState: site.searchName ? 'loading' : site.dataState ?? 'static',
+            dataState: resolvedSiteSearchName ? 'loading' : site.dataState ?? 'static',
             dataError: optionalText(site.dataError),
             telemetrySource:
                 optionalText(site.telemetrySource) ??
-                (site.searchName
+                (resolvedSiteSearchName
                     ? 'Awaiting normalized site telemetry'
                     : 'Configured topology item'),
-            searchName: optionalText(site.searchName),
+            searchName: resolvedSiteSearchName,
         };
     });
 
@@ -441,11 +420,9 @@ const sanitizeTopology = (
             if (lastUpdated) normalized.lastUpdated = lastUpdated;
             const dataError = optionalText(link.dataError);
             if (dataError) normalized.dataError = dataError;
-            const searchName = resolveLinkSearchName(
-                id,
-                optionalText(link.searchName),
-                optionalText(fallbackLink?.searchName)
-            );
+            const searchName =
+                optionalText(link.searchName) ??
+                optionalText(fallbackLink?.searchName);
             if (searchName) normalized.searchName = searchName;
             return normalized;
         })
@@ -455,7 +432,9 @@ const sanitizeTopology = (
         id: normalizeId(source.id, fallback.id),
         name: textValue(source.name, fallback.name),
         subtitle: textValue(source.subtitle, fallback.subtitle),
-        telemetrySearchName: optionalText(source.telemetrySearchName),
+        telemetrySearchName:
+            optionalText(source.telemetrySearchName) ??
+            optionalText(fallback.telemetrySearchName),
         map: {
             center: [
                 numberValue(source.map?.center?.[0], fallbackMap.center[0], -85, 85),
@@ -573,51 +552,14 @@ const usePersistedTopology = (fallback: CustomerTopology) => {
 };
 
 const topologyAnimationCss = `
-    @keyframes customer-topology-flow {
-        from { stroke-dashoffset: 0; }
-        to { stroke-dashoffset: -72; }
-    }
-    @keyframes customer-topology-flow-glow {
-        0%, 100% { stroke-opacity: 0.28; }
-        50% { stroke-opacity: 0.62; }
-    }
     @keyframes customer-topology-pulse {
         0%, 100% { stroke-opacity: 0.55; }
         50% { stroke-opacity: 0.9; }
     }
-    @keyframes customer-topology-site-breathe {
-        0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.18); }
-        50% { transform: scale(1.08); box-shadow: 0 0 0 8px rgba(14, 165, 233, 0.08); }
-    }
-    @keyframes customer-topology-site-breathe-alert {
-        0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.14); }
-        50% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(245, 158, 11, 0.08); }
-    }
-    .customer-topology-flow-line {
-        animation-name: customer-topology-flow;
-        animation-timing-function: linear;
-        animation-iteration-count: infinite;
-        stroke-linecap: round;
-        stroke-dashoffset: 0;
-    }
-    .customer-topology-flow-line-glow {
-        animation:
-            customer-topology-flow linear infinite,
-            customer-topology-flow-glow 2.2s ease-in-out infinite;
-        stroke-linecap: round;
-        stroke-dashoffset: 0;
-    }
-    .customer-topology-flow-fast {
-        animation-duration: 0.65s;
-    }
-    .customer-topology-flow-medium {
-        animation-duration: 1.1s;
-    }
-    .customer-topology-flow-slow {
-        animation-duration: 1.8s;
-    }
-    .customer-topology-flow-idle {
-        animation-duration: 2.4s;
+    @keyframes customer-topology-radiate {
+        0% { transform: scale(0.85); opacity: 0.55; }
+        70% { transform: scale(1.55); opacity: 0; }
+        100% { transform: scale(1.55); opacity: 0; }
     }
     .customer-topology-link-hitbox {
         cursor: pointer;
@@ -625,13 +567,24 @@ const topologyAnimationCss = `
     .customer-topology-alert-ring {
         animation: customer-topology-pulse 2.6s ease-in-out infinite;
     }
-    .customer-topology-site-breathe {
-        animation: customer-topology-site-breathe 2.8s ease-in-out infinite;
+    .customer-topology-radiate {
+        animation-name: customer-topology-radiate;
+        animation-timing-function: ease-out;
+        animation-iteration-count: infinite;
         transform-origin: center;
     }
-    .customer-topology-site-breathe-alert {
-        animation: customer-topology-site-breathe-alert 1.7s ease-in-out infinite;
-        transform-origin: center;
+    .customer-topology-radiate--stable {
+        animation-duration: 3.4s;
+    }
+    .customer-topology-radiate--unknown {
+        animation-duration: 4.6s;
+        opacity: 0.35;
+    }
+    .customer-topology-radiate--warning {
+        animation-duration: 1.7s;
+    }
+    .customer-topology-radiate--critical {
+        animation-duration: 0.95s;
     }
 `;
 
@@ -849,11 +802,6 @@ const renderSplLine = (line: string, lineIndex: number): React.ReactNode[] => {
             </span>
         );
     });
-};
-
-const linkWeight = (link: TopologyLink): number => {
-    if (link.utilizationPct === undefined) return 2.4;
-    return Math.max(2.4, Math.min(7, 2.4 + link.utilizationPct / 18));
 };
 
 const normalizeStatus = (raw: unknown): TopologyStatus | null => {
@@ -1113,6 +1061,117 @@ const normalizeMetricId = (value: unknown): string =>
 const normalizedLinkId = (sourceSiteId?: string, targetSiteId?: string): string =>
     sourceSiteId && targetSiteId ? `${sourceSiteId}-${targetSiteId}` : '';
 
+const inferRoleFromName = (name: string): TopologyRole => {
+    const n = name.toLowerCase();
+    if (/\bhq\b|headquart|state[-_ ]?eoc/.test(n)) return 'state_hq';
+    if (/\bhub\b|\breg(ion(al)?)?\d?\b/.test(n)) return 'regional_hub';
+    if (/\blog(istics)?\b|warehouse|distribution|depot/.test(n)) return 'logistics';
+    if (/\bdc\d?\b|datacenter|data[-_ ]center|colo/.test(n)) return 'datacenter';
+    if (/\bcgw\b|\baws\b|\bazure\b|\bgcp\b|\bcloud\b/.test(n)) return 'internet_edge';
+    return 'branch';
+};
+
+const isTopologyRoleValue = (value: unknown): value is TopologyRole =>
+    typeof value === 'string' && (TOPOLOGY_ROLES as readonly string[]).includes(value);
+
+const buildShortName = (name: string): string => {
+    const trimmed = name.trim();
+    if (!trimmed) return '?';
+    const parts = trimmed.split(/[^A-Za-z0-9]+/).filter(Boolean);
+    if (parts.length >= 2) {
+        return (parts[0]![0]! + parts[1]![0]!).toUpperCase();
+    }
+    return trimmed.slice(0, 3).toUpperCase();
+};
+
+/**
+ * Build a full TopologySite from a discovery search row when the siteId
+ * isn't already configured. Requires at least lat/lng + a siteId/name.
+ */
+const parseSiteRowAsDiscovered = (
+    row: Record<string, unknown>
+): TopologySite | null => {
+    const siteId = normalizeId(
+        textFromRow(row, ['siteId', 'site_id', 'site', 'id']),
+        ''
+    );
+    const lat = finiteNumberFromRow(row, ['lat', 'latitude']);
+    const lng = finiteNumberFromRow(row, ['lng', 'lon', 'long', 'longitude']);
+    if (!siteId || lat === undefined || lng === undefined) return null;
+    if (lat === 0 && lng === 0) return null;
+
+    const name =
+        textFromRow(row, ['siteName', 'site_name', 'name', 'displayName']) ?? siteId;
+    const rawRole = textFromRow(row, ['role', 'siteRole', 'site_role']);
+    const role: TopologyRole = isTopologyRoleValue(rawRole)
+        ? rawRole
+        : inferRoleFromName(name);
+    const shortName = (
+        textFromRow(row, ['shortName', 'short_name', 'siteCode', 'site_code']) ??
+        buildShortName(name)
+    )
+        .slice(0, 4)
+        .toUpperCase();
+
+    const placeholder: TopologySite = {
+        id: siteId,
+        name,
+        shortName,
+        role,
+        lat,
+        lng,
+        status: 'unknown',
+        metrics: {},
+        telemetrySource: 'Auto-discovered from topology search',
+        searchName: undefined,
+    };
+    const updates = parseSiteRow(placeholder, row);
+    return {
+        ...placeholder,
+        ...updates,
+        metrics: { ...placeholder.metrics, ...(updates.metrics ?? {}) },
+    };
+};
+
+/**
+ * Build a full TopologyLink from a discovery search row. Requires resolvable
+ * source/target site ids; the caller should ensure both endpoints exist (as
+ * either configured or discovered sites) before rendering it.
+ */
+const parseLinkRowAsDiscovered = (
+    row: Record<string, unknown>
+): TopologyLink | null => {
+    const sourceSiteId = normalizeId(
+        textFromRow(row, ['sourceSiteId', 'source_site_id', 'source']),
+        ''
+    );
+    const targetSiteId = normalizeId(
+        textFromRow(row, ['targetSiteId', 'target_site_id', 'target']),
+        ''
+    );
+    if (!sourceSiteId || !targetSiteId || sourceSiteId === targetSiteId) return null;
+
+    const explicitId = normalizeId(textFromRow(row, ['linkId', 'link_id', 'id']), '');
+    const id = explicitId || normalizedLinkId(sourceSiteId, targetSiteId);
+    if (!id) return null;
+
+    const name =
+        textFromRow(row, ['name', 'linkName', 'link_name']) ??
+        `${sourceSiteId} ↔ ${targetSiteId}`;
+
+    const placeholder: TopologyLink = {
+        id,
+        name,
+        sourceSiteId,
+        targetSiteId,
+        status: 'unknown',
+        telemetrySource: 'Auto-discovered from topology search',
+        searchName: undefined,
+    };
+    const updates = parseLinkRow(placeholder, row);
+    return { ...placeholder, ...updates };
+};
+
 const rowItemType = (row: Record<string, unknown>): string =>
     normalizeMetricId(textFromRow(row, ['itemType', 'item_type', 'type', 'rowType']));
 
@@ -1152,16 +1211,133 @@ const parseSummaryRow = (
     };
 };
 
-const linkFlowClass = (link: TopologyLink): string => {
-    const utilization = link.utilizationPct;
-    if (utilization === undefined) {
-        return link.dataState === 'live'
-            ? 'customer-topology-flow-medium'
-            : 'customer-topology-flow-idle';
+/**
+ * Compute a slight bezier-curved polyline between two geographic points.
+ * The curve sits perpendicular to the chord at its midpoint, giving lines
+ * a subtle "network arc" feel without becoming a route. Curvature is a
+ * fraction of chord length; 32 segments keeps the path smooth at any zoom
+ * level while staying inexpensive to render.
+ */
+const computeBezierLine = (
+    source: [number, number],
+    target: [number, number],
+    curvature = 0.12,
+    segments = 32
+): Array<[number, number]> => {
+    const [sLat, sLng] = source;
+    const [tLat, tLng] = target;
+    const dLat = tLat - sLat;
+    const dLng = tLng - sLng;
+    const length = Math.sqrt(dLat * dLat + dLng * dLng) || 1;
+    const offset = curvature * length;
+    // Perpendicular direction (rotate 90deg clockwise in lat/lng space).
+    const perpLat = -dLng / length;
+    const perpLng = dLat / length;
+    const ctrlLat = (sLat + tLat) / 2 + perpLat * offset;
+    const ctrlLng = (sLng + tLng) / 2 + perpLng * offset;
+    const points: Array<[number, number]> = [];
+    for (let i = 0; i <= segments; i += 1) {
+        const t = i / segments;
+        const oneMinusT = 1 - t;
+        const lat =
+            oneMinusT * oneMinusT * sLat +
+            2 * oneMinusT * t * ctrlLat +
+            t * t * tLat;
+        const lng =
+            oneMinusT * oneMinusT * sLng +
+            2 * oneMinusT * t * ctrlLng +
+            t * t * tLng;
+        points.push([lat, lng]);
     }
-    if (utilization >= 80) return 'customer-topology-flow-fast';
-    if (utilization >= 35) return 'customer-topology-flow-medium';
-    return 'customer-topology-flow-slow';
+    return points;
+};
+
+interface LinkFlowProfile {
+    /**
+     * stroke-dasharray applied to the polyline. `null` means a solid line
+     * (used for the calm "stable" state so healthy links don't appear to
+     * march).
+     */
+    dashArray: string | null;
+    /**
+     * Animation period in seconds for the marching dash. `null` disables
+     * the SVG <animate> element entirely. We keep stable links static so
+     * the eye reads them as quiet/healthy at a glance.
+     */
+    flowSeconds: number | null;
+    /**
+     * If true, also animate stroke-opacity for a "breathing" alert glow.
+     * Reserved for critical so it stands out without being distracting on
+     * warning/unknown.
+     */
+    breathe: boolean;
+    weight: number;
+    opacity: number;
+}
+
+const linkFlowProfile = (link: TopologyLink): LinkFlowProfile => {
+    switch (link.status) {
+        case 'critical':
+            return {
+                dashArray: '6 6',
+                flowSeconds: 0.7,
+                breathe: true,
+                weight: 3.6,
+                opacity: 0.95,
+            };
+        case 'warning':
+            return {
+                dashArray: '8 6',
+                flowSeconds: 1.6,
+                breathe: false,
+                weight: 3.0,
+                opacity: 0.9,
+            };
+        case 'stable':
+            return {
+                dashArray: null,
+                flowSeconds: null,
+                breathe: false,
+                weight: 2.4,
+                opacity: 0.7,
+            };
+        case 'unknown':
+        default:
+            return {
+                dashArray: '2 6',
+                flowSeconds: null,
+                breathe: false,
+                weight: 1.8,
+                opacity: 0.45,
+            };
+    }
+};
+
+/**
+ * Site marker design: status drives the visible chrome (border ring colour,
+ * radiating-halo cadence, optional corner alert dot); role drives the inner
+ * letter glyph and the label-border tint. This keeps "what's wrong" the
+ * dominant signal while still conveying "what role this site plays".
+ */
+const STATUS_RING_COLOR: Record<TopologyStatus, string> = {
+    critical: '#ef4444',
+    warning: '#f59e0b',
+    stable: '#10b981',
+    unknown: '#94a3b8',
+};
+
+const STATUS_HALO_RGBA: Record<TopologyStatus, string> = {
+    critical: 'rgba(239, 68, 68, 0.45)',
+    warning: 'rgba(245, 158, 11, 0.40)',
+    stable: 'rgba(16, 185, 129, 0.32)',
+    unknown: 'rgba(148, 163, 184, 0.28)',
+};
+
+const STATUS_RADIATE_CLASS: Record<TopologyStatus, string> = {
+    critical: 'customer-topology-radiate customer-topology-radiate--critical',
+    warning: 'customer-topology-radiate customer-topology-radiate--warning',
+    stable: 'customer-topology-radiate customer-topology-radiate--stable',
+    unknown: 'customer-topology-radiate customer-topology-radiate--unknown',
 };
 
 const createSiteIcon = (
@@ -1172,56 +1348,54 @@ const createSiteIcon = (
 ) => {
     const safeName = escapeHtml(site.name);
     const safeShortName = escapeHtml(site.shortName);
-    const beacon = ROLE_BEACON_CHROME[site.role];
-    const selectionRing = isSelected
-        ? 'ring-4 ring-sky-300/60 scale-110'
+    const roleChrome = ROLE_BEACON_CHROME[site.role];
+    const ringColor = STATUS_RING_COLOR[site.status];
+    const haloColor = STATUS_HALO_RGBA[site.status];
+    const radiateClass = STATUS_RADIATE_CLASS[site.status];
+    const ringWidth = site.status === 'critical' ? 2.5 : 2;
+    const selectionScale = isSelected
+        ? 'scale-110'
         : isSpotlight
-        ? 'ring-4 ring-sky-400/35 scale-105'
+        ? 'scale-105'
         : '';
-    const motionClass = isSelected
-        ? ''
-        : site.status === 'critical' || site.status === 'warning'
-        ? 'customer-topology-site-breathe-alert'
-        : site.dataState === 'live' || site.status === 'stable' || isSpotlight
-        ? 'customer-topology-site-breathe'
-        : '';
+    const selectionRing = isSelected
+        ? `box-shadow:0 0 0 4px rgba(14, 165, 233, 0.35), 0 8px 18px rgba(15,23,42,0.22);`
+        : isSpotlight
+        ? `box-shadow:0 0 0 4px rgba(14, 165, 233, 0.18), 0 6px 14px rgba(15,23,42,0.18);`
+        : `box-shadow:0 6px 14px rgba(15,23,42,0.18);`;
     const labelChrome = isDark
-        ? 'bg-slate-900/90 backdrop-blur-sm border-slate-700'
-        : 'bg-white/90 backdrop-blur-sm border-slate-200';
-    const statusStroke =
-        site.status === 'critical'
-            ? '#ef4444'
-            : site.status === 'warning'
-            ? '#f59e0b'
-            : site.status === 'unknown'
-            ? '#94a3b8'
-            : beacon.fill;
+        ? 'bg-slate-900/90 backdrop-blur-sm border-slate-700 text-slate-100'
+        : 'bg-white/90 backdrop-blur-sm border-slate-200 text-slate-800';
+    const pillBg = isDark ? '#0f172a' : '#ffffff';
+    const showAlertDot =
+        site.status === 'critical' || site.status === 'warning';
     return L.divIcon({
         className: 'custom-div-icon',
         html: `
       <div class="relative flex flex-col items-center group w-[200px]">
-        <div class="relative flex items-center justify-center w-14 h-14 ${selectionRing}">
+        <div class="relative flex items-center justify-center w-9 h-9 ${selectionScale} transition-transform duration-200">
           <span
-            class="absolute inset-0 rounded-full ${motionClass}"
-            style="background:${beacon.halo}; box-shadow:0 10px 24px ${beacon.halo};"
+            class="absolute inset-0 rounded-full ${radiateClass}"
+            style="background:${haloColor};"
+            aria-hidden="true"
           ></span>
           <span
-            class="absolute inset-[6px] rounded-full"
-            style="background:${isDark ? '#0f172a' : '#ffffff'}; border:3px solid ${statusStroke}; box-shadow:0 8px 18px rgba(15,23,42,0.18);"
+            class="absolute inset-0 rounded-full"
+            style="background:${pillBg}; border:${ringWidth}px solid ${ringColor}; ${selectionRing}"
+            aria-hidden="true"
           ></span>
           <span
-            class="absolute inset-[12px] rounded-full"
-            style="background:${beacon.fill};"
-          ></span>
-          <span class="relative z-10 font-black text-[15px] tracking-tight text-white drop-shadow-sm">${safeShortName}</span>
+            class="relative z-10 font-black text-[12px] tracking-tight"
+            style="color:${roleChrome.fill};"
+          >${safeShortName}</span>
           ${
-              site.status === 'critical' || site.status === 'warning'
+              showAlertDot
                   ? `
-            <span class="absolute top-[2px] right-[2px] z-20 flex h-4 w-4">
+            <span class="absolute -top-0.5 -right-0.5 z-20 flex h-3 w-3">
               <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
                   site.status === 'critical' ? 'bg-red-400' : 'bg-amber-400'
               }"></span>
-              <span class="relative inline-flex rounded-full h-4 w-4 border-2 border-white ${
+              <span class="relative inline-flex rounded-full h-3 w-3 border border-white ${
                   site.status === 'critical' ? 'bg-red-500' : 'bg-amber-500'
               }"></span>
             </span>
@@ -1229,35 +1403,154 @@ const createSiteIcon = (
                   : ''
           }
         </div>
-        <div class="mt-1 whitespace-nowrap font-black px-3 py-1 rounded-md shadow-sm border ${labelChrome} ${beacon.label} ${
-            isDark ? 'text-[12px] text-slate-100' : 'text-[12px] text-slate-800'
-        }">
+        <div class="mt-1 whitespace-nowrap font-semibold px-2.5 py-0.5 rounded-md shadow-sm border text-[11px] ${labelChrome} ${roleChrome.label}">
           ${safeName}
         </div>
       </div>
     `,
-        iconSize: [200, 86],
-        iconAnchor: [100, 28],
+        iconSize: [200, 70],
+        iconAnchor: [100, 18],
     });
+};
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+interface TopologyLinkPathProps {
+    link: TopologyLink;
+    source: TopologySite;
+    target: TopologySite;
+    isSelected: boolean;
+    onSelect: (link: TopologyLink) => void;
+}
+
+/**
+ * Renders a single bezier-curved link line between two sites with a separate
+ * invisible hitbox for clicks. The visible line uses native SVG <animate>
+ * elements injected into Leaflet's underlying <path> for the marching-dash
+ * "flow" effect. SMIL animation runs on the GPU and is anchored to the SVG
+ * element, so it does not stutter when Leaflet redraws the path on pan/zoom
+ * the way a CSS stroke-dashoffset animation would.
+ *
+ * Status drives motion:
+ *   - stable:   solid line, no animation (calm/healthy at a glance)
+ *   - warning:  amber dashes, medium-speed flow
+ *   - critical: red dashes, fast flow + stroke-opacity breathe
+ *   - unknown:  thin grey dashes, no animation
+ */
+const TopologyLinkPath: React.FC<TopologyLinkPathProps> = ({
+    link,
+    source,
+    target,
+    isSelected,
+    onSelect,
+}) => {
+    const positions = useMemo(
+        () =>
+            computeBezierLine(
+                [source.lat, source.lng],
+                [target.lat, target.lng]
+            ),
+        [source.lat, source.lng, target.lat, target.lng]
+    );
+    const profile = useMemo(() => linkFlowProfile(link), [link]);
+    const color = STATUS_STROKE[link.status];
+    const polylineRef = useRef<L.Polyline | null>(null);
+
+    useEffect(() => {
+        const polyline = polylineRef.current;
+        if (!polyline) return undefined;
+        const apply = () => {
+            const element = polyline.getElement() as SVGPathElement | null;
+            if (!element) return;
+            element
+                .querySelectorAll('animate[data-customer-topology-flow]')
+                .forEach((node) => node.remove());
+            if (profile.flowSeconds !== null) {
+                const flow = document.createElementNS(SVG_NS, 'animate');
+                flow.setAttribute('attributeName', 'stroke-dashoffset');
+                flow.setAttribute('from', '0');
+                flow.setAttribute('to', '-24');
+                flow.setAttribute('dur', `${profile.flowSeconds}s`);
+                flow.setAttribute('repeatCount', 'indefinite');
+                flow.setAttribute('data-customer-topology-flow', 'dash');
+                element.appendChild(flow);
+            }
+            if (profile.breathe) {
+                const breathe = document.createElementNS(SVG_NS, 'animate');
+                breathe.setAttribute('attributeName', 'stroke-opacity');
+                breathe.setAttribute(
+                    'values',
+                    `${profile.opacity};${Math.min(1, profile.opacity + 0.05)};${profile.opacity * 0.65};${profile.opacity}`
+                );
+                breathe.setAttribute('dur', '1.4s');
+                breathe.setAttribute('repeatCount', 'indefinite');
+                breathe.setAttribute('data-customer-topology-flow', 'breathe');
+                element.appendChild(breathe);
+            }
+        };
+        // Leaflet may not have inserted the <path> into the DOM yet on first
+        // mount, so re-apply once the element is available. `add` fires after
+        // the path is attached.
+        apply();
+        polyline.on('add', apply);
+        return () => {
+            polyline.off('add', apply);
+            const element = polyline.getElement() as SVGPathElement | null;
+            element
+                ?.querySelectorAll('animate[data-customer-topology-flow]')
+                .forEach((node) => node.remove());
+        };
+    }, [profile.flowSeconds, profile.breathe, profile.opacity]);
+
+    const handleClick = useCallback(() => onSelect(link), [link, onSelect]);
+
+    return (
+        <>
+            <Polyline
+                positions={positions}
+                pathOptions={{
+                    color: '#ffffff',
+                    weight: 16,
+                    opacity: 0.01,
+                    className: 'customer-topology-link-hitbox',
+                }}
+                eventHandlers={{ click: handleClick }}
+            />
+            <Polyline
+                ref={polylineRef}
+                positions={positions}
+                pathOptions={{
+                    color,
+                    weight: isSelected ? profile.weight + 1 : profile.weight,
+                    opacity: isSelected ? 1 : profile.opacity,
+                    dashArray: profile.dashArray ?? undefined,
+                    lineCap: 'round',
+                    lineJoin: 'round',
+                }}
+                eventHandlers={{ click: handleClick }}
+            />
+        </>
+    );
 };
 
 interface MapFrameProps {
     topology: CustomerTopology;
+    autoFitSites?: TopologySite[];
 }
 
-const MapFrame: React.FC<MapFrameProps> = ({ topology }) => {
+const MapFrame: React.FC<MapFrameProps> = ({ topology, autoFitSites }) => {
     const map = useMap();
     const [centerLat, centerLng] = topology.map.center;
     const zoom = topology.map.zoom;
+    const initialFrameAppliedRef = useRef(false);
+    const autoFitAppliedRef = useRef(false);
+
     useEffect(() => {
-        let firstApply = true;
         const apply = () => {
             map.invalidateSize();
-            if (firstApply) {
-                map.setView([centerLat, centerLng], zoom, {
-                    animate: false,
-                });
-                firstApply = false;
+            if (!initialFrameAppliedRef.current) {
+                map.setView([centerLat, centerLng], zoom, { animate: false });
+                initialFrameAppliedRef.current = true;
             }
         };
         apply();
@@ -1266,6 +1559,25 @@ const MapFrame: React.FC<MapFrameProps> = ({ topology }) => {
         observer.observe(container);
         return () => observer.disconnect();
     }, [centerLat, centerLng, map, zoom]);
+
+    useEffect(() => {
+        if (autoFitAppliedRef.current) return;
+        if (!autoFitSites || autoFitSites.length === 0) return;
+        const usable = autoFitSites.filter(
+            (site) =>
+                Number.isFinite(site.lat) &&
+                Number.isFinite(site.lng) &&
+                !(site.lat === 0 && site.lng === 0)
+        );
+        if (usable.length === 0) return;
+        const bounds = L.latLngBounds(
+            usable.map((site) => [site.lat, site.lng] as [number, number])
+        );
+        if (!bounds.isValid()) return;
+        map.fitBounds(bounds, { padding: [40, 40], animate: false, maxZoom: 9 });
+        autoFitAppliedRef.current = true;
+    }, [autoFitSites, map]);
+
     return null;
 };
 
@@ -1336,6 +1648,14 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         string,
         Partial<TopologySite>
     >>({});
+    const [discoveredSiteById, setDiscoveredSiteById] = useState<Record<
+        string,
+        TopologySite
+    >>({});
+    const [discoveredLinkById, setDiscoveredLinkById] = useState<Record<
+        string,
+        TopologyLink
+    >>({});
     const [summaryMetricById, setSummaryMetricById] =
         useState<TopologySummaryMetricMap>({});
     const pauseUntilRef = useRef<number>(0);
@@ -1375,9 +1695,17 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
 
     useEffect(() => {
         if (catalogueByName === null) return undefined;
-        if (!telemetrySearchName) return undefined;
+        if (!telemetrySearchName) {
+            setDiscoveredSiteById({});
+            setDiscoveredLinkById({});
+            return undefined;
+        }
         const record = catalogueByName[telemetrySearchName];
-        if (!record?.search?.trim()) return undefined;
+        if (!record?.search?.trim()) {
+            setDiscoveredSiteById({});
+            setDiscoveredLinkById({});
+            return undefined;
+        }
 
         let cancelled = false;
         setLiveSiteById((current) => {
@@ -1441,6 +1769,8 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 const siteUpdates: Record<string, Partial<TopologySite>> = {};
                 const linkUpdates: Record<string, Partial<TopologyLink>> = {};
                 const summaryUpdates: TopologySummaryMetricMap = {};
+                const discoveredSites: Record<string, TopologySite> = {};
+                const discoveredLinkRows: Array<Record<string, unknown>> = [];
 
                 for (const row of rows) {
                     const itemType = rowItemType(row);
@@ -1468,7 +1798,12 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                         (siteId && siteByConfiguredId.has(siteId))
                     ) {
                         const site = siteByConfiguredId.get(siteId);
-                        if (site) siteUpdates[site.id] = parseSiteRow(site, row);
+                        if (site) {
+                            siteUpdates[site.id] = parseSiteRow(site, row);
+                        } else if (itemType === 'site' && siteId) {
+                            const discovered = parseSiteRowAsDiscovered(row);
+                            if (discovered) discoveredSites[discovered.id] = discovered;
+                        }
                         continue;
                     }
 
@@ -1481,7 +1816,11 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                         const link =
                             linkByConfiguredId.get(endpointLinkId) ??
                             linkByEndpointKey.get(endpointLinkId);
-                        if (link) linkUpdates[link.id] = parseLinkRow(link, row);
+                        if (link) {
+                            linkUpdates[link.id] = parseLinkRow(link, row);
+                        } else if (itemType === 'link') {
+                            discoveredLinkRows.push(row);
+                        }
                         continue;
                     }
 
@@ -1492,6 +1831,25 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                     ) {
                         const metric = parseSummaryRow(row);
                         if (metric) summaryUpdates[metric.id] = metric;
+                    }
+                }
+
+                const discoveredLinks: Record<string, TopologyLink> = {};
+                if (discoveredLinkRows.length > 0) {
+                    const knownEndpointIds = new Set<string>([
+                        ...siteByConfiguredId.keys(),
+                        ...Object.keys(discoveredSites),
+                    ]);
+                    for (const row of discoveredLinkRows) {
+                        const link = parseLinkRowAsDiscovered(row);
+                        if (!link) continue;
+                        if (
+                            !knownEndpointIds.has(link.sourceSiteId) ||
+                            !knownEndpointIds.has(link.targetSiteId)
+                        ) {
+                            continue;
+                        }
+                        discoveredLinks[link.id] = link;
                     }
                 }
 
@@ -1542,6 +1900,8 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                     }
                     return next;
                 });
+                setDiscoveredSiteById(discoveredSites);
+                setDiscoveredLinkById(discoveredLinks);
                 setSummaryMetricById(summaryUpdates);
             })
             .catch((err) => {
@@ -1574,6 +1934,8 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                     }
                     return next;
                 });
+                setDiscoveredSiteById({});
+                setDiscoveredLinkById({});
                 setSummaryMetricById({});
             });
 
@@ -1738,29 +2100,40 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         storedTopology.links,
     ]);
 
-    const resolvedTopology = useMemo<CustomerTopology>(
-        () => ({
+    const resolvedTopology = useMemo<CustomerTopology>(() => {
+        const configuredSites = activeTopology.sites.map((site) => {
+            const liveSite = liveSiteById[site.id];
+            return {
+                ...site,
+                dataState: site.searchName ? 'loading' : site.dataState ?? 'static',
+                ...liveSite,
+                metrics: {
+                    ...site.metrics,
+                    ...(liveSite?.metrics ?? {}),
+                },
+            };
+        });
+        const configuredLinks = activeTopology.links.map((link) => ({
+            ...link,
+            dataState: link.searchName ? 'loading' : link.dataState ?? 'static',
+            ...liveLinkById[link.id],
+        }));
+        const configuredSiteIds = new Set(configuredSites.map((s) => s.id));
+        const configuredLinkIds = new Set(configuredLinks.map((l) => l.id));
+
+        const extraSites = Object.values(discoveredSiteById).filter(
+            (site) => !configuredSiteIds.has(site.id)
+        );
+        const extraLinks = Object.values(discoveredLinkById).filter(
+            (link) => !configuredLinkIds.has(link.id)
+        );
+
+        return {
             ...activeTopology,
-            sites: activeTopology.sites.map((site) => {
-                const liveSite = liveSiteById[site.id];
-                return {
-                    ...site,
-                    dataState: site.searchName ? 'loading' : site.dataState ?? 'static',
-                    ...liveSite,
-                    metrics: {
-                        ...site.metrics,
-                        ...(liveSite?.metrics ?? {}),
-                    },
-                };
-            }),
-            links: activeTopology.links.map((link) => ({
-                ...link,
-                dataState: link.searchName ? 'loading' : link.dataState ?? 'static',
-                ...liveLinkById[link.id],
-            })),
-        }),
-        [activeTopology, liveLinkById, liveSiteById]
-    );
+            sites: [...configuredSites, ...extraSites],
+            links: [...configuredLinks, ...extraLinks],
+        };
+    }, [activeTopology, liveLinkById, liveSiteById, discoveredSiteById, discoveredLinkById]);
 
     const siteById = useMemo(() => {
         const map: Record<string, TopologySite> = {};
@@ -1984,7 +2357,14 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 attributionControl={false}
                 className="z-10"
             >
-                <MapFrame topology={resolvedTopology} />
+                <MapFrame
+                    topology={resolvedTopology}
+                    autoFitSites={
+                        activeTopology.sites.length === 0
+                            ? resolvedTopology.sites
+                            : undefined
+                    }
+                />
                 <MapClickCapture
                     enabled={isEditorOpen && Boolean(pickSiteId)}
                     onPick={applyMapPick}
@@ -1992,65 +2372,19 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 <TileLayer key={tileUrl} attribution="" url={tileUrl} />
                 <ZoomControl position="bottomright" />
 
-                {linkSegments.map(({ link, source, target }) => {
-                    const positions: [[number, number], [number, number]] = [
-                        [source.lat, source.lng],
-                        [target.lat, target.lng],
-                    ];
-                    const isSelected =
-                        resolvedSelected?.kind === 'link' &&
-                        resolvedSelected.link.id === link.id;
-                    return (
-                        <React.Fragment key={link.id}>
-                            <Polyline
-                                positions={positions}
-                                pathOptions={{
-                                    color: '#ffffff',
-                                    weight: 16,
-                                    opacity: 0.01,
-                                    className: 'customer-topology-link-hitbox',
-                                }}
-                                eventHandlers={{
-                                    click: () => selectLink(link),
-                                }}
-                            />
-                            <Polyline
-                                positions={positions}
-                                pathOptions={{
-                                    color: STATUS_STROKE[link.status],
-                                    weight: Math.max(2.6, linkWeight(link) - 0.8),
-                                    dashArray:
-                                        link.status === 'stable' ? '6 10' : '4 8',
-                                    opacity: isSelected ? 0.68 : 0.42,
-                                    className: cn(
-                                        'customer-topology-flow-line-glow',
-                                        linkFlowClass(link)
-                                    ),
-                                }}
-                                eventHandlers={{
-                                    click: () => selectLink(link),
-                                }}
-                            />
-                            <Polyline
-                                positions={positions}
-                                pathOptions={{
-                                    color: STATUS_STROKE[link.status],
-                                    weight: linkWeight(link) + 1,
-                                    dashArray:
-                                        link.status === 'stable' ? '6 10' : '4 8',
-                                    opacity: isSelected ? 1 : 0.92,
-                                    className: cn(
-                                        'customer-topology-flow-line',
-                                        linkFlowClass(link)
-                                    ),
-                                }}
-                                eventHandlers={{
-                                    click: () => selectLink(link),
-                                }}
-                            />
-                        </React.Fragment>
-                    );
-                })}
+                {linkSegments.map(({ link, source, target }) => (
+                    <TopologyLinkPath
+                        key={link.id}
+                        link={link}
+                        source={source}
+                        target={target}
+                        isSelected={
+                            resolvedSelected?.kind === 'link' &&
+                            resolvedSelected.link.id === link.id
+                        }
+                        onSelect={selectLink}
+                    />
+                ))}
 
                 {spotlightSite &&
                     (spotlightSite.status === 'critical' ||

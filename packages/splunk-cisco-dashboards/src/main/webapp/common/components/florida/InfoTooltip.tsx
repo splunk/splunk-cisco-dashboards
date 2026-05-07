@@ -71,14 +71,14 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
                     'group-hover/info:opacity-100 group-hover/info:visible group-hover/info:translate-y-0',
                     'group-focus-within/info:opacity-100 group-focus-within/info:visible group-focus-within/info:translate-y-0',
                     'transition-all duration-150',
-                    'w-[220px] max-w-[240px] p-2.5 rounded-md',
-                    'bg-slate-900 text-slate-100 shadow-xl',
-                    'text-[10.5px] leading-snug normal-case tracking-normal text-left',
+                    'w-[300px] max-w-[340px] p-3.5 rounded-lg',
+                    'bg-slate-900 text-slate-100 shadow-xl ring-1 ring-slate-700/60',
+                    'text-[13px] leading-relaxed normal-case tracking-normal text-left',
                     POSITION_CLASSES[anchor]
                 )}
             >
                 {title && (
-                    <span className="block font-bold text-white mb-0.5 normal-case">
+                    <span className="block font-bold text-white text-[14px] mb-1.5 normal-case">
                         {title}
                     </span>
                 )}
@@ -86,7 +86,7 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
                     {description}
                 </span>
                 {footnote && (
-                    <span className="block mt-1.5 pt-1.5 border-t border-slate-700 text-slate-400 italic text-[9.5px] font-mono break-all">
+                    <span className="block mt-2 pt-2 border-t border-slate-700 text-slate-400 italic text-[11px] font-mono break-all">
                         {footnote}
                     </span>
                 )}

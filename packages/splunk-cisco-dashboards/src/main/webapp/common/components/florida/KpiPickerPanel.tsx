@@ -405,7 +405,15 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         getSearchbaseCatalogue()
             .then((list) => {
                 if (cancelled) return;
-                const sorted = [...list].sort((a, b) =>
+                // Cisco-only browsing gate: hide every entry that
+                // isn't tagged "Cisco" so the picker only surfaces
+                // searches vetted for this app. Categories, sub-
+                // categories, tag dropdown, and result list all
+                // derive from `catalogue`, so a single filter here
+                // scopes the entire browse experience. Drop the
+                // .filter() call to restore the full catalogue.
+                const ciscoOnly = list.filter((entry) => entry.tags.includes('Cisco'));
+                const sorted = [...ciscoOnly].sort((a, b) =>
                     a.searchName.localeCompare(b.searchName, undefined, {
                         sensitivity: 'base',
                     })

@@ -8,7 +8,11 @@ import {
     ExternalLink,
     Settings2,
 } from 'lucide-react';
-import { Sparkline } from './Sparkline';
+import {
+    Sparkline,
+    type SparklineVizType,
+    type DataValuesDisplay,
+} from './Sparkline';
 import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
 import { cn } from '@/common/lib/utils';
 import type {
@@ -90,6 +94,20 @@ interface MetricItemProps {
     noDataReason?: NoDataReason;
     /** Label of the dispatched time range — used in the no-data subtext. */
     rangeLabel?: string;
+    /**
+     * Sparkline visualization variant. Sourced from `searchbase.conf`'s
+     * `default_viz` field when present (e.g. `splunk.column` →
+     * `'column'`). Defaults to `'area'`, preserving prior behaviour
+     * for tiles whose stanza doesn't set the field.
+     */
+    vizType?: SparklineVizType;
+    /**
+     * Mirrors Splunk Studio v2's `dataValuesDisplay` option. Sourced
+     * from `searchbase.conf`'s `viz_options.dataValuesDisplay`.
+     * Defaults to `'minmax'` inside Sparkline so every tile labels
+     * both the period low and high without per-stanza configuration.
+     */
+    dataValuesDisplay?: DataValuesDisplay;
     className?: string;
 }
 
@@ -163,6 +181,8 @@ export const MetricItem: React.FC<MetricItemProps> = ({
     abbreviateTrendValue = true,
     noDataReason,
     rangeLabel,
+    vizType = 'area',
+    dataValuesDisplay,
     className,
 }) => {
     const numericValue = toFiniteNumber(value);
@@ -363,18 +383,38 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                 );
             })()}
 
-            <div className="h-16 mt-6 pt-3 opacity-80 hover:opacity-100 transition-opacity flex-shrink-0">
-                <Sparkline
-                    data={sparkData}
-                    color={color}
-                    previousData={previousData}
-                    timestamps={sparkTimestamps}
-                    timeRange={timeRange}
-                    formatValue={(n) => `${n.toLocaleString()}${unit}`}
-                    onClick={onOpenInSearch}
-                    title={sparkTitle}
-                />
-            </div>
+            {vizType !== 'singlevalue' && (
+                // Tile sparkline canvas. h-28 (112px) gives the Recharts
+                // SVG enough vertical room for both the peak-label bubble
+                // (which floats above the highest data point) and a
+                // visible trend line. Earlier h-16 + pt-3 + a 38-px chart
+                // top-margin left only ~26px of actual stroke-visible
+                // area, which read as a flat ribbon. mt-3/pt-2 keeps the
+                // headline-to-chart gap tight without wasting the new
+                // pixels.
+                <div className="h-28 mt-3 pt-2 opacity-80 hover:opacity-100 transition-opacity flex-shrink-0">
+                    {/* Sparkline is intentionally NOT wired to the
+                        drilldown click. The ExternalLink icon next to
+                        the tile label is the explicit "open in Splunk
+                        Search" affordance — duplicating that on the
+                        chart canvas was a stray click target that
+                        kept yanking users out of the dashboard when
+                        they were just trying to read the trend. The
+                        Recharts hover tooltip remains; only the
+                        clickable wrapper is gone. */}
+                    <Sparkline
+                        data={sparkData}
+                        color={color}
+                        vizType={vizType}
+                        dataValuesDisplay={dataValuesDisplay}
+                        previousData={previousData}
+                        timestamps={sparkTimestamps}
+                        timeRange={timeRange}
+                        formatValue={(n) => `${n.toLocaleString()}${unit}`}
+                        title={sparkTitle}
+                    />
+                </div>
+            )}
             <div className="flex-1 min-h-0" aria-hidden="true" />
         </div>
     );

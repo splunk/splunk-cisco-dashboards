@@ -2,8 +2,12 @@ import React from 'react';
 import {
     Area,
     AreaChart,
+    Bar,
+    BarChart,
+    Cell,
     ComposedChart,
     Line,
+    LineChart,
     ReferenceDot,
     ResponsiveContainer,
     Tooltip,
@@ -12,9 +16,89 @@ import {
 } from 'recharts';
 import type { TimeRange } from '@/common/hooks/useMetric';
 
+/**
+ * Sparkline visualization variants. The default (`area`) preserves
+ * existing tile rendering. `line` and `column` are activated when a
+ * `searchbase.conf` stanza sets `default_viz` to `splunk.line` or
+ * `splunk.column` respectively. `singlevalue` suppresses the spark
+ * entirely (the headline value is the whole story).
+ */
+export type SparklineVizType = 'area' | 'line' | 'column' | 'singlevalue';
+
+/**
+ * Mirrors Splunk Dashboard Studio v2's `dataValuesDisplay` option for
+ * line/area/column visualizations.
+ *
+ *   `'minmax'`   — label both the lowest and highest data points.
+ *                  When min and max land on the same point (flat
+ *                  series, single bucket) we collapse to a single
+ *                  bubble so the two don't overlap.
+ *   `'maxonly'`  — preserves the historical "peak only" behaviour
+ *                  some legacy stanzas may rely on.
+ *   `'off'`      — suppress the value bubble entirely (clean spark).
+ *   `'all'`      — Studio's `"all"` labels every point; sparklines
+ *                  are too narrow for that, so we treat it as
+ *                  `'minmax'`.
+ *
+ * Sourced from `searchbase.conf`'s `viz_options.dataValuesDisplay`
+ * via the searchbase catalogue. Default is `'minmax'` so the app no
+ * longer hard-codes a single peak marker on every tile.
+ */
+export type DataValuesDisplay = 'off' | 'minmax' | 'maxonly' | 'all';
+
+/**
+ * Map an arbitrary string (typically `viz_options.dataValuesDisplay`
+ * read from JSON) onto our supported set, falling back to `'minmax'`
+ * when the value is missing, malformed, or a Studio mode we can't
+ * meaningfully render in a 100x110 spark canvas.
+ */
+export const normalizeDataValuesDisplay = (
+    raw: unknown
+): DataValuesDisplay => {
+    if (typeof raw !== 'string') return 'minmax';
+    const v = raw.trim().toLowerCase();
+    if (v === 'off' || v === 'minmax' || v === 'maxonly') return v;
+    if (v === 'all') return 'minmax';
+    return 'minmax';
+};
+
+/**
+ * Map a Splunk visualization id (e.g. `splunk.column`) onto the
+ * sparkline variant the dashboard knows how to render. Unknown viz
+ * ids fall back to `area` so a typo or a viz the dashboard doesn't
+ * support yet still produces a usable tile.
+ */
+export const sparklineVizTypeFromSplunkViz = (
+    splunkViz: string | undefined
+): SparklineVizType => {
+    if (typeof splunkViz !== 'string') return 'area';
+    switch (splunkViz.trim().toLowerCase()) {
+        case 'splunk.column':
+        case 'splunk.bar':
+            return 'column';
+        case 'splunk.line':
+            return 'line';
+        case 'splunk.singlevalue':
+        case 'splunk.singlevalueradial':
+        case 'splunk.singlevalueicon':
+            return 'singlevalue';
+        case 'splunk.area':
+        default:
+            return 'area';
+    }
+};
+
 interface SparklineProps {
     data: number[];
     color: string;
+    /**
+     * Visualization variant. Defaults to `area` to preserve the
+     * pre-conf-driven behaviour. When the conf-stanza-derived value
+     * is `singlevalue`, the caller should skip mounting Sparkline
+     * entirely; the component still renders nothing for that case
+     * as a safety net.
+     */
+    vizType?: SparklineVizType;
     /**
      * Optional previous-period series; rendered as a dashed grey line
      * behind the area for "vs. previous period" comparison. Resampled
@@ -44,6 +128,13 @@ interface SparklineProps {
     /** Click handler. When set, the sparkline gets a hover affordance. */
     onClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
     title?: string;
+    /**
+     * Splunk Studio v2 `dataValuesDisplay` analogue. Defaults to
+     * `'minmax'` so every tile shows both the period low and high
+     * without per-stanza configuration. `searchbase.conf` stanzas
+     * may override via `viz_options.dataValuesDisplay`.
+     */
+    dataValuesDisplay?: DataValuesDisplay;
 }
 
 // ---------------------------------------------------------------------------
@@ -131,7 +222,7 @@ const formatTimestamp = (epoch: number, range?: TimeRange): string => {
 const defaultFormatValue = (value: number): string =>
     Number.isFinite(value) ? value.toLocaleString() : '—';
 
-interface PeakMarkerProps {
+interface ValueMarkerProps {
     cx?: number;
     cy?: number;
     value: number;
@@ -143,15 +234,22 @@ interface PeakMarkerProps {
         width?: number;
         height?: number;
     };
+    /**
+     * Where the bubble sits relative to the data point. Max markers
+     * float above (`'top'`); min markers float below (`'bottom'`).
+     * Both anchor with a dashed leader line back to the data dot.
+     */
+    position?: 'top' | 'bottom';
 }
 
-const PeakMarker: React.FC<PeakMarkerProps> = ({
+const ValueMarker: React.FC<ValueMarkerProps> = ({
     cx,
     cy,
     value,
     color,
     formatValue,
     viewBox,
+    position = 'top',
 }) => {
     if (
         !Number.isFinite(cx ?? Number.NaN) ||
@@ -174,14 +272,22 @@ const PeakMarker: React.FC<PeakMarkerProps> = ({
         chartX + 1,
         chartX + chartWidth - width - 1
     );
-    const desiredAboveY = (cy as number) - bubbleHeight - 10;
+    // Top: bubble sits above the data point with leader line going
+    // down. Bottom: bubble sits below with leader line going up. The
+    // 10-px gap matches the visual breathing room the previous
+    // peak-only marker used so the two-marker minmax pair feels
+    // visually balanced rather than crammed.
+    const desiredY =
+        position === 'top'
+            ? (cy as number) - bubbleHeight - 10
+            : (cy as number) + 10;
     const bubbleY = clamp(
-        desiredAboveY,
+        desiredY,
         chartY + 1,
         chartY + chartHeight - bubbleHeight - 1
     );
     const bubbleCenterX = bubbleX + width / 2;
-    const lineY2 = bubbleY + bubbleHeight;
+    const lineY2 = position === 'top' ? bubbleY + bubbleHeight : bubbleY;
     return (
         <g>
             <line
@@ -287,13 +393,16 @@ const SparklineTooltip: React.FC<SparklineTooltipProps> = ({
 export const Sparkline: React.FC<SparklineProps> = ({
     data,
     color,
+    vizType = 'area',
     previousData,
     timestamps,
     timeRange,
     formatValue = defaultFormatValue,
     onClick,
     title,
+    dataValuesDisplay = 'minmax',
 }) => {
+    if (vizType === 'singlevalue') return null;
     const hasPrevious = Array.isArray(previousData) && previousData.length > 0;
     const previousAligned = hasPrevious
         ? resampleSeries(previousData as number[], data.length)
@@ -312,12 +421,20 @@ export const Sparkline: React.FC<SparklineProps> = ({
         value: val,
         previous: previousAligned ? previousAligned[i] : null,
     }));
-    const peakPoint =
-        chartData.length > 0
-            ? chartData.reduce((best, point) =>
-                  point.value > best.value ? point : best
-              )
-            : null;
+    // Locate the period high (`peakPoint`) and low (`troughPoint`)
+    // in a single pass. We only consider finite values so a stray
+    // NaN/Infinity doesn't anchor a marker on a non-renderable point.
+    let peakPoint: (typeof chartData)[number] | null = null;
+    let troughPoint: (typeof chartData)[number] | null = null;
+    for (const point of chartData) {
+        if (!Number.isFinite(point.value)) continue;
+        if (peakPoint === null || point.value > peakPoint.value) {
+            peakPoint = point;
+        }
+        if (troughPoint === null || point.value < troughPoint.value) {
+            troughPoint = point;
+        }
+    }
 
     const interactiveProps = onClick
         ? {
@@ -360,110 +477,234 @@ export const Sparkline: React.FC<SparklineProps> = ({
         </>
     );
 
+    // Top + bottom reserved for the floating value-label bubbles
+    // (rect 20px tall + leader line + 4-px breathing room each).
+    // Bottom margin matches the top so the min bubble and max bubble
+    // both fit cleanly inside the chart area when minmax is active.
+    // Side margins keep the path from kissing the tile edges and
+    // clipping the active-dot ring.
+    const chartMargin = { top: 28, right: 12, bottom: 28, left: 12 };
+    // Decide which markers to render. `'off'` is empty, `'maxonly'`
+    // preserves the historical single-peak behaviour, and `'minmax'`
+    // (default) renders both endpoints — collapsing to the peak alone
+    // when min and max happen to land on the same data point (flat
+    // series, single bucket, NaN-only series). This is the cleanest
+    // analogue of Splunk Studio's `dataValuesDisplay:"minmax"` for a
+    // narrow sparkline canvas.
+    const valueMarkers: React.ReactElement[] = [];
+    if (dataValuesDisplay !== 'off' && peakPoint) {
+        valueMarkers.push(
+            <ReferenceDot
+                key="peak"
+                x={peakPoint.index}
+                y={peakPoint.value}
+                isFront
+                ifOverflow="extendDomain"
+                shape={
+                    <ValueMarker
+                        value={peakPoint.value}
+                        color={color}
+                        formatValue={formatValue}
+                        position="top"
+                    />
+                }
+            />
+        );
+        const wantsMin = dataValuesDisplay !== 'maxonly';
+        const distinctTrough =
+            troughPoint &&
+            (troughPoint.index !== peakPoint.index ||
+                troughPoint.value !== peakPoint.value);
+        if (wantsMin && distinctTrough) {
+            valueMarkers.push(
+                <ReferenceDot
+                    key="trough"
+                    x={(troughPoint as NonNullable<typeof troughPoint>).index}
+                    y={(troughPoint as NonNullable<typeof troughPoint>).value}
+                    isFront
+                    ifOverflow="extendDomain"
+                    shape={
+                        <ValueMarker
+                            value={
+                                (troughPoint as NonNullable<typeof troughPoint>)
+                                    .value
+                            }
+                            color={color}
+                            formatValue={formatValue}
+                            position="bottom"
+                        />
+                    }
+                />
+            );
+        }
+    }
+    const gradientDefs = (
+        <defs>
+            <linearGradient id={`gradient-${color}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={color} stopOpacity={0.3} />
+                <stop offset="95%" stopColor={color} stopOpacity={0} />
+            </linearGradient>
+        </defs>
+    );
+
+    let chartElement: React.ReactElement;
+    if (vizType === 'column') {
+        chartElement = (
+            <BarChart data={chartData} margin={chartMargin}>
+                {hiddenAxes}
+                {tooltipContent}
+                <Bar
+                    dataKey="value"
+                    fill={color}
+                    radius={[2, 2, 0, 0]}
+                    isAnimationActive={false}
+                >
+                    {peakPoint &&
+                        chartData.map((point) => (
+                            <Cell
+                                key={`cell-${point.index}`}
+                                fill={point.index === peakPoint.index ? color : color}
+                                fillOpacity={point.index === peakPoint.index ? 1 : 0.55}
+                            />
+                        ))}
+                </Bar>
+                {valueMarkers}
+            </BarChart>
+        );
+    } else if (vizType === 'line') {
+        chartElement = (
+            <LineChart data={chartData} margin={chartMargin}>
+                {hiddenAxes}
+                {tooltipContent}
+                {hasPrevious && (
+                    <Line
+                        type="monotone"
+                        dataKey="previous"
+                        stroke="#94a3b8"
+                        strokeWidth={1}
+                        strokeDasharray="4 3"
+                        dot={false}
+                        isAnimationActive={false}
+                    />
+                )}
+                <Line
+                    type="monotone"
+                    dataKey="value"
+                    stroke={color}
+                    strokeWidth={2}
+                    dot={false}
+                    isAnimationActive={false}
+                    activeDot={{ r: 3, stroke: color, strokeWidth: 1, fill: '#fff' }}
+                />
+                {valueMarkers}
+            </LineChart>
+        );
+    } else if (hasPrevious) {
+        chartElement = (
+            <ComposedChart data={chartData} margin={chartMargin}>
+                {gradientDefs}
+                {hiddenAxes}
+                {tooltipContent}
+                <Line
+                    type="monotone"
+                    dataKey="previous"
+                    stroke="#94a3b8"
+                    strokeWidth={1}
+                    strokeDasharray="4 3"
+                    dot={false}
+                    isAnimationActive={false}
+                />
+                <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke={color}
+                    strokeWidth={2}
+                    fillOpacity={1}
+                    fill={`url(#gradient-${color})`}
+                    isAnimationActive={false}
+                    activeDot={{ r: 3, stroke: color, strokeWidth: 1, fill: '#fff' }}
+                />
+                {valueMarkers}
+            </ComposedChart>
+        );
+    } else {
+        chartElement = (
+            <AreaChart data={chartData} margin={chartMargin}>
+                {gradientDefs}
+                {hiddenAxes}
+                {tooltipContent}
+                <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke={color}
+                    strokeWidth={2}
+                    fillOpacity={1}
+                    fill={`url(#gradient-${color})`}
+                    isAnimationActive={false}
+                    activeDot={{ r: 3, stroke: color, strokeWidth: 1, fill: '#fff' }}
+                />
+                {valueMarkers}
+            </AreaChart>
+        );
+    }
+
+    // Time-axis footer. Two anchor labels (period start / period end)
+    // sit beneath the spark — the standard sparkline convention used
+    // by Apple Stocks, Google Finance mini-charts, and Splunk's own
+    // single-value sparklines. Per-bucket times remain available via
+    // the hover tooltip; the footer just answers "where does this
+    // trend start and end?" at a glance.
+    //
+    // We deliberately don't use a Recharts `<XAxis>` here:
+    //   - mounting a second visible axis fights the existing
+    //     hidden index-axis the ReferenceDots depend on,
+    //   - tick-collision logic on a 100–250px-wide canvas is fiddly,
+    //   - the footer is decoupled from the chart so it never clashes
+    //     with the min/max value bubbles, which live inside the
+    //     plot area.
+    //
+    // Cost: ~11px stolen from the chart canvas (text-[9px] glyph
+    // height + 2px top padding). The trough bubble's clamp logic
+    // still keeps it inside the chart inner area, so labels never
+    // overlap a value bubble.
+    const firstTime = resolvedTimestamps[0];
+    const lastTime = resolvedTimestamps[resolvedTimestamps.length - 1];
+    const showFooter =
+        Number.isFinite(firstTime) && Number.isFinite(lastTime);
+    // Single-bucket searches (and 1-row tiles where we synthesise a
+    // single timestamp) collapse to one centered label so we don't
+    // print the same date twice.
+    const sameTime = firstTime === lastTime;
+    const footerJustify = sameTime ? 'justify-center' : 'justify-between';
+
     return (
         <div {...interactiveProps}>
-            <ResponsiveContainer width="100%" height="100%">
-                {hasPrevious ? (
-                    <ComposedChart
-                        data={chartData}
-                        margin={{ top: 38, right: 18, bottom: 0, left: 18 }}
+            <div className="flex flex-col h-full w-full">
+                <div className="flex-1 min-h-0">
+                    <ResponsiveContainer width="100%" height="100%">
+                        {chartElement}
+                    </ResponsiveContainer>
+                </div>
+                {showFooter && (
+                    <div
+                        className={`flex items-center pt-0.5 px-3 text-[9px] tabular-nums leading-none text-slate-400 dark:text-slate-500 font-medium select-none ${footerJustify}`}
+                        aria-hidden="true"
                     >
-                        <defs>
-                            <linearGradient
-                                id={`gradient-${color}`}
-                                x1="0"
-                                y1="0"
-                                x2="0"
-                                y2="1"
-                            >
-                                <stop offset="5%" stopColor={color} stopOpacity={0.3} />
-                                <stop offset="95%" stopColor={color} stopOpacity={0} />
-                            </linearGradient>
-                        </defs>
-                        {hiddenAxes}
-                        {tooltipContent}
-                        <Line
-                            type="monotone"
-                            dataKey="previous"
-                            stroke="#94a3b8"
-                            strokeWidth={1}
-                            strokeDasharray="4 3"
-                            dot={false}
-                            isAnimationActive={false}
-                        />
-                        <Area
-                            type="monotone"
-                            dataKey="value"
-                            stroke={color}
-                            strokeWidth={2}
-                            fillOpacity={1}
-                            fill={`url(#gradient-${color})`}
-                            isAnimationActive={false}
-                            activeDot={{ r: 3, stroke: color, strokeWidth: 1, fill: '#fff' }}
-                        />
-                        {peakPoint && (
-                            <ReferenceDot
-                                x={peakPoint.index}
-                                y={peakPoint.value}
-                                isFront
-                                ifOverflow="extendDomain"
-                                shape={
-                                    <PeakMarker
-                                        value={peakPoint.value}
-                                        color={color}
-                                        formatValue={formatValue}
-                                    />
-                                }
-                            />
+                        {sameTime ? (
+                            <span>{formatTimestamp(firstTime, timeRange)}</span>
+                        ) : (
+                            <>
+                                <span>
+                                    {formatTimestamp(firstTime, timeRange)}
+                                </span>
+                                <span>
+                                    {formatTimestamp(lastTime, timeRange)}
+                                </span>
+                            </>
                         )}
-                    </ComposedChart>
-                ) : (
-                    <AreaChart
-                        data={chartData}
-                        margin={{ top: 38, right: 18, bottom: 0, left: 18 }}
-                    >
-                        <defs>
-                            <linearGradient
-                                id={`gradient-${color}`}
-                                x1="0"
-                                y1="0"
-                                x2="0"
-                                y2="1"
-                            >
-                                <stop offset="5%" stopColor={color} stopOpacity={0.3} />
-                                <stop offset="95%" stopColor={color} stopOpacity={0} />
-                            </linearGradient>
-                        </defs>
-                        {hiddenAxes}
-                        {tooltipContent}
-                        <Area
-                            type="monotone"
-                            dataKey="value"
-                            stroke={color}
-                            strokeWidth={2}
-                            fillOpacity={1}
-                            fill={`url(#gradient-${color})`}
-                            isAnimationActive={false}
-                            activeDot={{ r: 3, stroke: color, strokeWidth: 1, fill: '#fff' }}
-                        />
-                        {peakPoint && (
-                            <ReferenceDot
-                                x={peakPoint.index}
-                                y={peakPoint.value}
-                                isFront
-                                ifOverflow="extendDomain"
-                                shape={
-                                    <PeakMarker
-                                        value={peakPoint.value}
-                                        color={color}
-                                        formatValue={formatValue}
-                                    />
-                                }
-                            />
-                        )}
-                    </AreaChart>
+                    </div>
                 )}
-            </ResponsiveContainer>
+            </div>
         </div>
     );
 };
