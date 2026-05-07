@@ -1461,7 +1461,7 @@ const OverviewPage: React.FC = () => {
                                         onSummaryMetricsChange={
                                             handleTopologySummaryChange
                                         }
-                                        onOpenInSearch={(spl: string) => {
+                                        onOpenInSearch={(spl) => {
                                             const url = splunkSearchAppUrl(spl, timeRange);
                                             if (typeof window !== 'undefined') {
                                                 window.open(
