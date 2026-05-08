@@ -7,6 +7,211 @@
 
 ---
 
+## 2026-05-08 (cont. 4) — Click-outside dismiss, design-of-record capacities, DNAC field-name audit
+
+### Goal of the addendum
+
+Four asks from the user, all landed in this session:
+
+1. **Diagnose the link popup screenshot.** The user observed the
+   Orlando&harr;Tallahassee link popup showing only `endpointHealthPct=100` with
+   every other metric (capacity, throughput, utilization, latency, loss) stuck on
+   "Awaiting" and asked whether that was expected given the new map popup
+   enrichment work that landed in cont. 3.
+2. **Audit every DNAC search for field-name correctness.** Sweep
+   `searchbase.conf` against the 9 documented `cisco:dnac:*` sourcetypes (plus
+   the 2 unboarded `cisco:catalyst:center:*` ones), then carry the audit into
+   the dashboard layer (XML/Studio JSON inline SPL).
+3. **Click outside the link/site popup to dismiss.** Today only the X button or
+   Esc closes it.
+4. **Hardcode design-of-record capacities** so link/site popups show meaningful
+   values today instead of "Awaiting" until SD-WAN linkhealth and per-site
+   Internet uplink telemetry land.
+
+### Diagnosis (item 1)
+
+Confirmed expected behavior: the cont. 3 enrichment work attached
+`site:topology` data (address, GPS, country, building label) to the **site**
+detail card, not the **link** detail card. The link rows still come from
+`[overview_link_*_health]`, which on FDEM falls through to the Catalyst Center
+device-health priority-2 path (no `cisco:sdwan:linkhealth` data exists). That
+priority-2 branch was explicitly setting `capacityMbps=null()`,
+`txMbps=null()`, `rxMbps=null()`, `utilizationPct=null()` &mdash; which is
+exactly what the screenshot shows.
+
+The user-confirmed design-of-record capacities (item 4 below) land directly in
+that branch, so the popup will now show concrete values for capacity even
+when SD-WAN telemetry stays absent.
+
+### What we built
+
+#### 1. Click-outside-to-dismiss (`CustomerTopologyMap.tsx`)
+
+The existing `MapClickCapture` component only fired when the editor was open in
+"pick a coordinate" mode; map background clicks otherwise did nothing. Added
+an optional `onBackgroundClick` callback that fires when the editor is **not**
+in pick mode and the click hit empty map (Leaflet doesn't propagate marker /
+link clicks to the map's `click` event, and the SelectionCard panel is a DOM
+sibling so clicks inside it never reach the map). Wired the callback to
+`setSelected(null)`.
+
+Net effect: clicking anywhere on the map background now dismisses the
+SelectionCard (matches the existing Esc-key behavior). The X button still
+works as before.
+
+#### 2. Design-of-record link capacities (3 link stanzas in `searchbase.conf`)
+
+Updated the priority-2 (DNAC fallback) branch of each link stanza to set
+`capacityMbps` to a hardcoded design-of-record value and renamed the
+`telemetrySourceLabel` so the popup makes the source obvious:
+
+| Stanza | Capacity | Telemetry Source label |
+|---|---|---|
+| `overview_link_orlando_tallahassee_health` | 1000 Mbps | "Catalyst Center device health (capacity: 1 Gbps design-of-record)" |
+| `overview_link_auburndale_tallahassee_health` | 1000 Mbps | "Catalyst Center device health (capacity: 1 Gbps design-of-record)" |
+| `overview_link_orlando_auburndale_health` | 100 Mbps | "Catalyst Center device health (capacity: 100 Mbps design-of-record)" |
+
+When SD-WAN linkhealth eventually arrives, the priority-1 branch wins (it was
+already correct) and the live capacity overrides the static value
+automatically &mdash; same waterfall as before.
+
+`txMbps` / `rxMbps` / `utilizationPct` stay null in the fallback path since
+those aren't design-of-record values, only live telemetry.
+
+#### 3. Per-site Internet edge bandwidth (`types.ts`, `CustomerTopologyMap.tsx`)
+
+Extended the `TopologySite` type with an optional `internetEdgeMbps` field and
+populated it on each site in `CUSTOMER_TOPOLOGY`:
+
+| Site | Internet edge |
+|---|---|
+| TLH (HQ) | 1000 Mbps |
+| MCO (Regional Hub) | 500 Mbps |
+| AUB (Logistics) | 500 Mbps |
+
+`SiteDetails` now renders a "Design of Record &mdash; Internet Edge Bandwidth"
+block (between Address &amp; Location and Telemetry Source) whenever the field
+is set. The block is explicit that it's a static configuration value and will
+be overridden when per-site Internet uplink telemetry is wired in.
+
+The normalizer (`normalizeTopology`) preserves the field across persistence
+roundtrips, so user-customized topologies inherit the new values from the
+factory fallback without needing a storage-version bump.
+
+#### 4. DNAC field-name audit (item 2)
+
+Inventory of `cisco:dnac:*` and `cisco:catalyst:center:*` usage in the source:
+- 209 sourcetype occurrences across 171 unique stanzas in `searchbase.conf`.
+- 16 active dashboards (excluding archive/) inspected for inline SPL.
+
+Methodology: scripted cross-reference of every field token in each stanza
+against the canonical field inventory in
+`.cursor/rules/splunk-cisco-dnac-fields.mdc`. Anti-patterns specifically scanned
+for: lowercase `site` aliases, `index=*` direct usage, `siteHierarchy` on
+sourcetypes that don't have it (devicehealth/issue/clienthealth/audit:logs),
+`SiteName` on networkhealth (which has no site dimension), `Reachability` on
+securityadvisory (where it's `DeviceReachability`), and the documented
+"never exists" fields (`InterfaceUtilizationPercent`, `WANUtilization`,
+`AvgTrafficNorth`, `AvgTrafficSouth`).
+
+**Real bugs found and fixed:**
+
+1. `[it_critical_systems_sitelevel_health]` (searchbase.conf): grouped by
+   `SiteName` on `cisco:dnac:networkhealth`. That sourcetype's only dimensions
+   are `category` (AP / Access / Distribution / Core / WLC / All). Result on
+   FDEM: empty table. **Fixed** by rebasing the stanza onto
+   `cisco:dnac:devicehealth` with `dnac_site_normalize(coalesce(Site, Location))`
+   and a 0&ndash;100 rescaled `OverallHealth` average per Site (with `-1`
+   sentinel pre-filtered). Output schema preserved (`Site, health, devices`).
+
+2. `[it_critical_systems_ds_site_health]` (searchbase.conf): same
+   networkhealth issue, with a misleading `rename category as Site` that made
+   "AP" / "WLC" / etc. masquerade as site labels. **Fixed** the same way as
+   #1, with band-count columns (`good`/`fair`/`bad`) computed directly from
+   `OverallHealth` thresholds (&ge;8 good, 4&ndash;7 fair, &lt;4 bad).
+
+3. `it_health_v2.xml` (`ds_site_health` inline SPL): same broken networkhealth
+   query was duplicated in the dashboard. **Fixed** to match the corrected
+   searchbase stanza.
+
+4. `spaces_intelligence_v2.xml`: 7 inline DNAC queries used `index=*` directly
+   (anti-pattern per cursor rule &mdash; should use the `index_catalyst`
+   macro). **Fixed all 7.** The first one (`ds_client_health_by_site`) also
+   had a lowercase `site` alias built from `mvindex(split(siteHierarchy, "/"), 3)`;
+   replaced with the canonical `dnac_site_normalize(siteHierarchy)` overwrite
+   pattern.
+
+5. `statewide_exercise_v2.xml` (`ds_exec_client_health_by_site`): used a
+   lowercase `site` alias the same way. Replaced with the
+   `dnac_site_normalize` overwrite pattern.
+
+**Confirmed false positives (no fix needed):**
+
+- Stanzas that synthesize fields like `siteId="tlh"`, `id="mco-tlh"`,
+  `type="branch"` via `eval` &mdash; the names happen to match canonical fields
+  on `cisco:dnac:client` but they're literal-value assignments, not field
+  reads.
+- Lookup-output fields (`audit_logs_by_site_lookup_join`,
+  `clienthealth_by_site_lookup_join`, etc.) that pull `Site` / `address` from
+  `site_topology_lookup`. The lookup is the source, not the original
+  sourcetype.
+- Internal renames like `rename SiteName as Site` and the synthetic
+  `description` / `severity` aliases on issue stanzas (those are aliases of
+  `IssueSpecificDescription` / `IssueSpecificSeverity` for nicer column
+  names, not reads from `cisco:dnac:audit:logs`).
+
+### Verification
+
+- `yarn run typecheck` &mdash; clean (no errors introduced by the
+  `internetEdgeMbps` field or `Globe` icon import).
+- `it_critical_systems_sitelevel_health` query on FDEM now returns
+  4 rows (Atlanta-GA, Boston-MA x2, Plano-TX) with proper per-site health
+  rollups; previously returned 0 rows.
+- Re-ran the audit script against the modified files: 0 occurrences of any
+  fixed anti-pattern remain.
+- All 3 link stanzas verified to have `capacityMbps=1000|1000|100` in their
+  fallback branches with the updated `telemetrySourceLabel`.
+- No regressions in the `[overview_link_*]` SPL syntax (the `cisco:sdwan:linkhealth`
+  CLI test failure was a pre-existing FDEM-empty-events artifact, not a
+  regression).
+
+### Files touched
+
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf`
+  (3 link stanzas + 2 site-health stanzas).
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/data/ui/views/it_health_v2.xml`
+  (inline `ds_site_health`).
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/data/ui/views/spaces_intelligence_v2.xml`
+  (7 `index=*` &rarr; `index_catalyst` + 1 lowercase site alias fix).
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/data/ui/views/statewide_exercise_v2.xml`
+  (1 lowercase site alias fix).
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/florida/CustomerTopologyMap.tsx`
+  (click-outside-to-dismiss + `internetEdgeMbps` factory + `SiteDetails`
+  Design-of-Record block + `Globe` icon import + normalize merge).
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/types.ts`
+  (`internetEdgeMbps?: number` on `TopologySite`).
+
+### What's next
+
+Open items still pending from cont. 3:
+- Phase 1.11 / Tier 2C composite-scoring stanzas in searchbase.conf.
+- Phase 2.1 search-name simplification + drift cleanup.
+- Phase 2.2 documentation drift in conf `<explanation>` HTML.
+- Studio v2 dashboards still pending: network, devices, security, overview.
+- Where do the 7 IT Health / Site Connectivity tiles live? Either expand
+  IT Health or create a new Site Connectivity section.
+
+New items added by this addendum:
+- Once SD-WAN linkhealth or per-site Internet uplink telemetry arrives, the
+  static design-of-record values become live-overridable automatically &mdash;
+  no code change needed beyond updating the source data feed.
+- Future field-list updates to the cursor rule should re-run the audit
+  script; the script is documented inline in this session's chat thread and
+  could be extracted into `scripts/dnac_field_audit.py` if we want it as a
+  pre-commit hook.
+
+---
+
 ## 2026-05-08 (cont. 3) — Map popup enrichment, two join stanzas, drift panel landed
 
 ### Goal of the addendum

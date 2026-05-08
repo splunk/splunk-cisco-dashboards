@@ -2102,7 +2102,7 @@
 		"ds_site_health": {
 			"name": "IT - Critical Systems - ds_site_health",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:networkhealth\" category!=\"All\"\n| stats latest(healthScore) as health, latest(goodCount) as good, latest(badCount) as bad, latest(fairCount) as fair, latest(totalCount) as total by category\n| eval health=round(health)\n| sort -health\n| rename category as Site",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" earliest=-15m\n| eval Site=`dnac_site_normalize(coalesce(Site, Location))`\n| where Site!=\"\"\n| stats avg(eval(if(OverallHealth>=0, OverallHealth, null))) as healthRaw, count(eval(OverallHealth>=8)) as good, count(eval(OverallHealth>=4 AND OverallHealth<8)) as fair, count(eval(OverallHealth<4 AND OverallHealth>=0)) as bad, dc(DeviceID) as total by Site\n| eval health=round(healthRaw*10)\n| fields Site health good bad fair total\n| sort -health",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"

@@ -1920,7 +1920,7 @@
 		"ds_exec_client_health_by_site": {
 			"name": "Executive Summary - ds_client_health_by_site",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" \n| eval site=mvindex(split(siteHierarchy,\"/\"),-1) \n| where isnotnull(site) AND site!=\"null\" AND site!=\"\" \n| stats avg(health.overallScore) as health by type, site \n| eval health=round(health*10, 2) \n| chart avg(health) by site, type \n| rename Wireless as wireless, Wired as wired \n| fields site wireless wired \n| rename site as Site",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| eval siteHierarchy=`dnac_site_normalize(siteHierarchy)`\n| where siteHierarchy!=\"\"\n| stats avg(health.overallScore) as health by type, siteHierarchy\n| eval health=round(health*10, 2)\n| chart avg(health) by siteHierarchy, type\n| rename Wireless as wireless, Wired as wired, siteHierarchy as Site\n| fields Site wireless wired",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"

@@ -57,6 +57,16 @@ export interface TopologySite {
      * searchbase.conf `search_name` used for the SPL preview and drilldown.
      */
     searchName?: string;
+    /**
+     * Static design-of-record Internet edge bandwidth for the site, in Mbps.
+     * Today this is a hardcoded configuration value (not telemetry) — there is
+     * no per-site Internet uplink telemetry source on FDEM. When that arrives
+     * (e.g. via ThousandEyes Internet Insights or a NetFlow uplink rollup),
+     * the live source should override this static value the same way live
+     * link telemetry overrides the design-of-record capacity in the link
+     * stanzas.
+     */
+    internetEdgeMbps?: number;
 }
 
 export interface TopologyLink {

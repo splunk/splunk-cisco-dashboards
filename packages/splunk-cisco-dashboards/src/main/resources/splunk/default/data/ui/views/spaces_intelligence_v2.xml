@@ -1284,7 +1284,7 @@
 		"ds_ap_health_dist": {
 			"name": "AP health distribution by tier",
 			"options": {
-				"query": "index=* sourcetype=\"cisco:dnac:devicehealth\" DeviceFamily=\"Unified AP\"\n| stats latest(OverallHealth) as health by DeviceName\n| eval tier=case(health>=9, \"Excellent (9-10)\",\n health>=7, \"Good (7-8)\",\n health>=5, \"Fair (5-6)\",\n health>=1, \"Poor (1-4)\",\n 1=1, \"No Data (0)\")\n| stats count by tier",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" DeviceFamily=\"Unified AP\"\n| stats latest(OverallHealth) as health by DeviceName\n| eval tier=case(health>=9, \"Excellent (9-10)\",\n health>=7, \"Good (7-8)\",\n health>=5, \"Fair (5-6)\",\n health>=1, \"Poor (1-4)\",\n 1=1, \"No Data (0)\")\n| stats count by tier",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1295,7 +1295,7 @@
 		"ds_ap_health_table": {
 			"name": "AP health detail table",
 			"options": {
-				"query": "index=* sourcetype=\"cisco:dnac:devicehealth\" DeviceFamily=\"Unified AP\"\n| stats latest(OverallHealth) as Health,\n latest(CPUUtilization) as \"CPU %\",\n latest(MemoryUtilization) as \"Mem %\",\n latest(IssueCount) as Issues,\n latest(ClientCountGhz24) as \"2.4 GHz Clients\",\n latest(ClientCountGhz50) as \"5 GHz Clients\",\n latest(AirQualityHealthGhz24) as \"Air Quality 2.4\",\n latest(AirQualityHealthGhz50) as \"Air Quality 5\",\n latest(InterferenceHealthGhz24) as \"Interference 2.4\",\n latest(InterferenceHealthGhz50) as \"Interference 5\",\n latest(Site) as Site by DeviceName\n| eval \"Total Clients\"='2.4 GHz Clients'+'5 GHz Clients',\n \"CPU %\"=round('CPU %', 2),\n \"Mem %\"=round('Mem %', 2)\n| sort - \"Total Clients\"\n| rename DeviceName as \"Access Point\"\n| table \"Access Point\", Site, Health, \"CPU %\", \"Mem %\", Issues, \"Total Clients\", \"2.4 GHz Clients\", \"5 GHz Clients\", \"Air Quality 2.4\", \"Air Quality 5\" ",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" DeviceFamily=\"Unified AP\"\n| stats latest(OverallHealth) as Health,\n latest(CPUUtilization) as \"CPU %\",\n latest(MemoryUtilization) as \"Mem %\",\n latest(IssueCount) as Issues,\n latest(ClientCountGhz24) as \"2.4 GHz Clients\",\n latest(ClientCountGhz50) as \"5 GHz Clients\",\n latest(AirQualityHealthGhz24) as \"Air Quality 2.4\",\n latest(AirQualityHealthGhz50) as \"Air Quality 5\",\n latest(InterferenceHealthGhz24) as \"Interference 2.4\",\n latest(InterferenceHealthGhz50) as \"Interference 5\",\n latest(Site) as Site by DeviceName\n| eval \"Total Clients\"='2.4 GHz Clients'+'5 GHz Clients',\n \"CPU %\"=round('CPU %', 2),\n \"Mem %\"=round('Mem %', 2)\n| sort - \"Total Clients\"\n| rename DeviceName as \"Access Point\"\n| table \"Access Point\", Site, Health, \"CPU %\", \"Mem %\", Issues, \"Total Clients\", \"2.4 GHz Clients\", \"5 GHz Clients\", \"Air Quality 2.4\", \"Air Quality 5\" ",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1306,7 +1306,7 @@
 		"ds_band_distribution": {
 			"name": "Client band distribution",
 			"options": {
-				"query": "index=* sourcetype=\"cisco:dnac:client\" connectionStatus=\"connected\"\n| eval band='connection.band'\n| where isnotnull(band)\n| stats count by band",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" connectionStatus=\"connected\"\n| eval band='connection.band'\n| where isnotnull(band)\n| stats count by band",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1357,7 +1357,7 @@
 		"ds_client_health_by_site": {
 			"name": "Client health score by site over time",
 			"options": {
-				"query": "index=* sourcetype=\"cisco:dnac:client\" connectionStatus=\"connected\"\n| eval site=mvindex(split(siteHierarchy, \"/\"), 3),\n floor=mvindex(split(siteHierarchy, \"/\"), 4),\n health='health.overallScore'\n| where isnotnull(health) AND health>0\n| bin _time \n| stats avg(health) as health by _time, site\n| timechart useother=t avg(eval(round(health, 2))) as \"Client Health\" by site where max in top10",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" connectionStatus=\"connected\"\n| eval siteHierarchy=`dnac_site_normalize(siteHierarchy)`,\n health='health.overallScore'\n| where siteHierarchy!=\"\" AND isnotnull(health) AND health>0\n| bin _time\n| stats avg(health) as health by _time, siteHierarchy\n| timechart useother=t avg(eval(round(health, 2))) as \"Client Health\" by siteHierarchy where max in top10",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1557,7 +1557,7 @@
 		"ds_net_kpi_client_health": {
 			"name": "KPI Client health score",
 			"options": {
-				"query": "index=* sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\"\n| bin _time \n| stats latest(scoreValue) as \"Client Health\" by _time\n| eval \"Client Health\"=round('Client Health', 2)",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\"\n| bin _time \n| stats latest(scoreValue) as \"Client Health\" by _time\n| eval \"Client Health\"=round('Client Health', 2)",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1568,7 +1568,7 @@
 		"ds_net_kpi_compliance": {
 			"name": "KPI Compliance rate",
 			"options": {
-				"query": "index=* sourcetype=\"cisco:dnac:compliance\"\n| stats latest(ComplianceStatus) as status by DeviceID\n| stats count(eval(status=\"COMPLIANT\")) as compliant, count as total\n| eval \"Compliance Rate\"=if(total>0, round(compliant/total*100, 2), 0)\n| fields \"Compliance Rate\" ",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:compliance\"\n| stats latest(ComplianceStatus) as status by DeviceID\n| stats count(eval(status=\"COMPLIANT\")) as compliant, count as total\n| eval \"Compliance Rate\"=if(total>0, round(compliant/total*100, 2), 0)\n| fields \"Compliance Rate\" ",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1579,7 +1579,7 @@
 		"ds_net_kpi_health": {
 			"name": "KPI Network health score",
 			"options": {
-				"query": "index=* sourcetype=\"cisco:dnac:networkhealth\" category=\"All\"\n| bin _time \n| stats latest(healthScore) as \"Network Health\" by _time\n| eval \"Network Health\"=round('Network Health', 2)",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:networkhealth\" category=\"All\"\n| bin _time \n| stats latest(healthScore) as \"Network Health\" by _time\n| eval \"Network Health\"=round('Network Health', 2)",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1746,7 +1746,7 @@
 		"ds_wifi_quality": {
 			"name": "WiFi RSSI by SSID over time",
 			"options": {
-				"query": "index=* sourcetype=\"cisco:dnac:client\" connectionStatus=\"connected\"\n| eval rssi='connection.rssi',\n ssid='connection.ssid',\n band='connection.band',\n snr='connection.snr'\n| where isnotnull(rssi) AND rssi<0\n| bin _time \n| stats avg(rssi) as avg_rssi, avg(snr) as avg_snr by _time, ssid\n| timechart useother=t avg(eval(round(avg_rssi, 2))) as \"Avg RSSI (dBm)\" by ssid where max in top10",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" connectionStatus=\"connected\"\n| eval rssi='connection.rssi',\n ssid='connection.ssid',\n band='connection.band',\n snr='connection.snr'\n| where isnotnull(rssi) AND rssi<0\n| bin _time \n| stats avg(rssi) as avg_rssi, avg(snr) as avg_snr by _time, ssid\n| timechart useother=t avg(eval(round(avg_rssi, 2))) as \"Avg RSSI (dBm)\" by ssid where max in top10",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"

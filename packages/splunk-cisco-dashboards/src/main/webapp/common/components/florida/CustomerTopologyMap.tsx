@@ -26,6 +26,7 @@ import {
     Code2,
     Download,
     ExternalLink,
+    Globe,
     Layers,
     Link2,
     MapPin,
@@ -90,6 +91,7 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
             metrics: {},
             telemetrySource: 'Awaiting normalized site telemetry',
             searchName: 'Overview - Site Tallahassee Health',
+            internetEdgeMbps: 1000,
         },
         {
             id: 'mco',
@@ -102,6 +104,7 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
             metrics: {},
             telemetrySource: 'Awaiting normalized site telemetry',
             searchName: 'Overview - Site Orlando Health',
+            internetEdgeMbps: 500,
         },
         {
             id: 'aub',
@@ -114,6 +117,7 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
             metrics: {},
             telemetrySource: 'Awaiting normalized site telemetry',
             searchName: 'Overview - Site Auburndale Health',
+            internetEdgeMbps: 500,
         },
     ],
     links: [
@@ -376,6 +380,9 @@ const sanitizeTopology = (
                     ? 'Awaiting normalized site telemetry'
                     : 'Configured topology item'),
             searchName: resolvedSiteSearchName,
+            internetEdgeMbps:
+                finiteOptionalNumber(site.internetEdgeMbps) ??
+                fallbackSite?.internetEdgeMbps,
         };
     });
 
@@ -1626,13 +1633,27 @@ const MapFrame: React.FC<MapFrameProps> = ({ topology, autoFitSites }) => {
 interface MapClickCaptureProps {
     enabled: boolean;
     onPick: (lat: number, lng: number) => void;
+    onBackgroundClick?: () => void;
 }
 
-const MapClickCapture: React.FC<MapClickCaptureProps> = ({ enabled, onPick }) => {
+const MapClickCapture: React.FC<MapClickCaptureProps> = ({
+    enabled,
+    onPick,
+    onBackgroundClick,
+}) => {
     useMapEvents({
         click: (event) => {
-            if (!enabled) return;
-            onPick(event.latlng.lat, event.latlng.lng);
+            if (enabled) {
+                onPick(event.latlng.lat, event.latlng.lng);
+                return;
+            }
+            // Map background click (not a marker / not a link path / not the
+            // editor pick mode) — used as a "click outside to dismiss"
+            // affordance for the SelectionCard. Marker and link clicks
+            // don't bubble up to the map's click event, and the
+            // SelectionCard sits as a sibling DOM element so clicks
+            // inside the panel never reach the map.
+            onBackgroundClick?.();
         },
     });
     return null;
@@ -2485,6 +2506,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 <MapClickCapture
                     enabled={isEditorOpen && Boolean(pickSiteId)}
                     onPick={applyMapPick}
+                    onBackgroundClick={() => setSelected(null)}
                 />
                 <TileLayer key={tileUrl} attribution="" url={tileUrl} />
                 <ZoomControl position="bottomright" />
@@ -3944,6 +3966,42 @@ const SiteDetails: React.FC<SiteDetailsProps> = ({
                         {enrichment?.lastUpdated
                             ? ` - Updated ${enrichment.lastUpdated}`
                             : ''}
+                    </p>
+                </div>
+            )}
+            {site.internetEdgeMbps !== undefined && (
+                <div
+                    className={cn(
+                        'rounded border p-2 space-y-1',
+                        isDark
+                            ? 'bg-white/5 border-white/5'
+                            : 'bg-slate-50 border-slate-200'
+                    )}
+                >
+                    <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-slate-500">
+                        <Globe className="w-3 h-3" />
+                        Design of Record
+                    </div>
+                    <div className="flex items-center justify-between gap-2 text-[10px] leading-relaxed">
+                        <span
+                            className={cn(
+                                isDark ? 'text-slate-300' : 'text-slate-700'
+                            )}
+                        >
+                            Internet Edge Bandwidth
+                        </span>
+                        <span
+                            className={cn(
+                                'font-mono font-bold',
+                                isDark ? 'text-slate-100' : 'text-slate-900'
+                            )}
+                        >
+                            {formatMbps(site.internetEdgeMbps)}
+                        </span>
+                    </div>
+                    <p className="text-[9px] text-slate-500 leading-relaxed">
+                        Static configuration value &mdash; will be overridden
+                        when per-site Internet uplink telemetry is wired in.
                     </p>
                 </div>
             )}
