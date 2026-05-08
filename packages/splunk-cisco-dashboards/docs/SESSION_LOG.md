@@ -7,6 +7,144 @@
 
 ---
 
+## 2026-05-08 (cont. 3) — Map popup enrichment, two join stanzas, drift panel landed
+
+### Goal of the addendum
+
+Land the three follow-ups committed to at the end of cont. 2:
+1. Wire `site_topology_marker_enrichment` into the map popup so address /
+   country / coordinates appear when a site is selected.
+2. Replicate the join demo for `clienthealth` and `audit:logs`.
+3. Ship the drift panel into a system-status / data-quality dashboard.
+
+All three landed today.
+
+### What we built
+
+#### 1. Map popup enrichment (`CustomerTopologyMap.tsx`)
+
+- Defined a public `SiteEnrichment` type alongside the existing topology
+  types, keyed on a building's `name` (e.g. "TLH", "AUB", "MCO") so it
+  matches the map's `shortName` field directly.
+- Added a `siteEnrichmentByShortName` state hook and a dedicated
+  `useEffect` that fires `[site_topology_marker_enrichment]` once when
+  the searchbase catalogue resolves. The fetch is independent of the
+  per-site / per-link search effects so it doesn't compete for slots.
+- Threaded the enrichment through `SelectionCard` → `SiteDetails` as a
+  new optional `enrichment?: SiteEnrichment` prop. `SiteDetails` now
+  renders an "Address & Location" block between the metric pills and the
+  telemetry-source block, **only when enrichment is present**, so sites
+  that DNAC isn't currently managing (today: Orlando) silently skip the
+  block instead of rendering "-" placeholders.
+- The block surfaces street address, country, GPS coordinates, the
+  human-readable `Site` label, the source sourcetype, and the lookup's
+  `lastUpdated` timestamp.
+
+Verified end-to-end:
+- TLH and AUB sites render the Address block with full street addresses
+  (Shumard Oak Boulevard for TLH, Fred Jones Boulevard for AUB).
+- MCO renders cleanly **without** an Address block — exactly the
+  graceful-degradation behavior we wanted.
+- `tsc --noEmit` clean. Lint clean.
+
+#### 2. `clienthealth_by_site_lookup_join` searchbase stanza
+
+Built per the documented two-stage stats pattern (snapshot data: stats
+by `siteId` first, then lookup, then re-stats by `Site`). Filters out
+the `siteId="global"` literal early — see "FDEM caveat" below.
+
+#### 3. `audit_logs_by_site_lookup_join` searchbase stanza
+
+Originally drafted as a pure UUID-lookup join, but **local data
+inspection forced a pivot to a hybrid pattern**:
+
+- FDEM-style schema would emit UUID-form `network.siteId` matching
+  topology lookups directly.
+- Demo data (and apparently some FDEM events) emit `network.siteId`
+  in **path form** — `Global/Florida/Tallahassee` — or short label form
+  — `Tallahassee` — neither of which matches a UUID.
+- The literal-string `"null"` value also appears for ~94% of demo
+  events; those are dnac-instance-scoped (logins, system config) with
+  no site context.
+
+The hybrid stanza tries the UUID lookup first and falls back to
+`dnac_site_normalize` for path/label inputs, then `coalesce()`-merges
+into a single `Site` column. Empty / `"null"` / unmatched inputs are
+filtered out at the top so they don't pollute the rollup. Verified
+against ~1.3M demo audit events: 93 events resolve to "Tallahassee:
+TLH" via the macro path (no UUIDs in demo data, so the lookup arm is
+dormant for now but ready when FDEM emits real UUIDs).
+
+Both stanzas tagged `Cisco,Catalyst_Center,Network,Topology,Lookup_Join`
+so they appear in the KPI picker's Cisco-only filter.
+
+#### 4. Drift panel placement
+
+Picked `admin_guide_v21.xml`'s **Troubleshooting** layout as the home —
+already a system-status / data-quality surface (slow searches, schedule
+conflicts, cache hit rates, dashboard usage). Drift fits the same
+audience: "is the data we depend on actually here".
+
+Added:
+- `viz_ts_box_drift` — rounded-rectangle background to match the other
+  troubleshoot sections.
+- `viz_ts_drift_table` — `splunk.table` viz with row coloring on the
+  `driftStatus` column: green-tinted for "Managed by DNAC", red-tinted
+  for "Missing from DNAC".
+- `ds_site_drift` — inline SPL data source (mirrors the searchbase
+  stanza's logic but inlined per the dashboard's existing convention of
+  in-XML SPL).
+- Bumped `layout_troubleshoot.options.height` from 3310 → 3600 to fit
+  the new section below the Dashboard-Usage table.
+
+Verified the live SPL output:
+
+```
+Site             driftStatus       buildings ...
+Orlando: MCO     Missing from DNAC -         (red)
+Auburndale: AUB  Managed by DNAC   AUB       (green)
+Tallahassee: TLH Managed by DNAC   TLH       (green)
+```
+
+Exactly the diff we wanted: every site the React `CUSTOMER_TOPOLOGY`
+factory expects is checked against `site_topology_lookup`, and Orlando
+is correctly flagged because FDEM's DNAC isn't managing it today.
+
+### FDEM caveat captured in cursor rule
+
+Local data verification surfaced two FDEM-specific facts that need to
+travel forward:
+
+1. `cisco:dnac:clienthealth.siteId` is **always literally `"global"`**
+   on FDEM (and on demo data). 31,577 events, one distinct value. So
+   the per-site clienthealth join returns zero rows on FDEM until DNAC
+   is configured to emit per-site rollups. The `siteId="global"` filter
+   in the stanza prevents a useless single-row "global" entry from
+   polluting the table.
+2. `cisco:dnac:client.siteId` and the leaf of `siteHierarchyId` can
+   **differ by a few events** because DNAC sometimes places the same
+   client at building precision via `siteId` and sometimes at floor
+   precision via `siteHierarchyId`. Either field joins correctly to
+   `site_topology_lookup`; just don't expect the leaf-extraction
+   counts to match `siteId` counts exactly.
+
+Both facts are now documented in
+`.cursor/rules/splunk-cisco-dnac-fields.mdc` so future sessions don't
+relearn them.
+
+### What's next
+
+- User to deploy and visually verify the drift panel + map popup
+  enrichment + new KPI-picker entries on FDEM.
+- Pending Tier 2C (composite scoring) review.
+- Studio v2 dashboards for `network`, `devices`, `security`, `overview`
+  still pending.
+- Decide where the seven new IT critical-systems sparkline stanzas
+  (Site Connectivity & Link Health) live in the dashboards — they're
+  searchable but not yet bound to a tile slot.
+
+---
+
 ## 2026-05-08 (cont. 2) — Site topology lookup + UUID-chain join discovery
 
 ### Goal of the addendum

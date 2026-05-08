@@ -590,6 +590,42 @@
 					"headerColor": "#2B2B2B"
 				}
 			}
+		},
+		"viz_ts_box_drift": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "rgba(255,255,255,0.78)",
+				"strokeColor": "rgba(0,0,0,0.08)",
+				"rx": 10
+			}
+		},
+		"viz_ts_drift_table": {
+			"type": "splunk.table",
+			"dataSources": {
+				"primary": "ds_site_drift"
+			},
+			"options": {
+				"count": 10,
+				"fontSize": "small",
+				"columnFormat": {
+					"driftStatus": {
+						"rowColors": "> table | seriesByName(\"driftStatus\") | matchValue(driftStatus_RowColorsEditorConfig)",
+						"rowBackgroundColors": "> table | seriesByName(\"driftStatus\") | matchValue(driftStatus_RowBgColorsEditorConfig)"
+					}
+				}
+			},
+			"context": {
+				"driftStatus_RowColorsEditorConfig": [
+					{ "match": "Missing from DNAC", "value": "#FFFFFF" },
+					{ "match": "Managed by DNAC", "value": "#1B5E20" }
+				],
+				"driftStatus_RowBgColorsEditorConfig": [
+					{ "match": "Missing from DNAC", "value": "#B33A3A" },
+					{ "match": "Managed by DNAC", "value": "#E6F4EA" }
+				]
+			},
+			"title": "Site Topology Drift (Expected vs DNAC-Managed)",
+			"description": "Rows flagged 'Missing from DNAC' indicate sites the dashboard expects but DNAC isn't managing — site-keyed metrics for those sites will be empty. Backed by site_topology_lookup (refreshed hourly)."
 		}
 	},
 	"dataSources": {
@@ -758,6 +794,13 @@
 				}
 			},
 			"name": "Dashboard usage"
+		},
+		"ds_site_drift": {
+			"type": "ds.search",
+			"options": {
+				"query": "| makeresults count=3 | streamstats count as n | eval Site=case(n=1,\"Tallahassee: TLH\", n=2,\"Orlando: MCO\", n=3,\"Auburndale: AUB\") | fields Site | join type=left Site [| inputlookup site_topology_lookup | where type=\"building\" | stats values(name) as buildings, values(address) as addresses, first(lat) as lat, first(lon) as lon, first(country) as country, first(updated) as updated by Site] | eval driftStatus=if(isnotnull(buildings),\"Managed by DNAC\",\"Missing from DNAC\"), buildings=if(isnotnull(buildings),buildings,\"-\"), addresses=if(isnotnull(addresses),addresses,\"-\"), lat=if(isnotnull(lat),lat,\"-\"), lon=if(isnotnull(lon),lon,\"-\"), country=if(isnotnull(country),country,\"-\"), lastUpdated=if(isnotnull(updated),updated,\"never\") | table Site driftStatus buildings addresses country lat lon lastUpdated | sort -driftStatus Site"
+			},
+			"name": "Site Topology Drift"
 		}
 	},
 	"defaults": {
@@ -951,7 +994,7 @@
 				"type": "absolute",
 				"options": {
 					"width": 1440,
-					"height": 3310,
+					"height": 3600,
 					"backgroundColor": "transparent",
 					"display": "auto-scale"
 				},
@@ -1283,6 +1326,26 @@
 							"y": 2820,
 							"w": 1400,
 							"h": 430
+						}
+					},
+					{
+						"item": "viz_ts_box_drift",
+						"type": "block",
+						"position": {
+							"x": 20,
+							"y": 3290,
+							"w": 1400,
+							"h": 280
+						}
+					},
+					{
+						"item": "viz_ts_drift_table",
+						"type": "block",
+						"position": {
+							"x": 30,
+							"y": 3315,
+							"w": 1380,
+							"h": 245
 						}
 					}
 				]

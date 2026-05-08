@@ -253,6 +253,24 @@ export interface TopologySummaryMetric {
 
 export type TopologySummaryMetricMap = Record<string, TopologySummaryMetric>;
 
+/**
+ * Site-level metadata sourced from `cisco:dnac:site:topology` via the
+ * `Site Topology - Map Marker Enrichment (Buildings with GPS)` searchbase
+ * stanza. Keyed by the building's short name (e.g. "TLH", "AUB", "MCO")
+ * which matches the `shortName` of `TopologySite` entries in
+ * `CUSTOMER_TOPOLOGY`. Sites that DNAC isn't currently managing simply
+ * have no entry; consumers MUST treat the lookup as optional.
+ */
+export interface SiteEnrichment {
+    address?: string;
+    country?: string;
+    lat?: number;
+    lon?: number;
+    nameHierarchy?: string;
+    siteLabel?: string;
+    lastUpdated?: string;
+}
+
 type EditableTopology = Partial<CustomerTopology> & {
     map?: Partial<CustomerTopology['map']>;
     sites?: Array<Partial<TopologySite>>;
@@ -1682,6 +1700,9 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     >>({});
     const [summaryMetricById, setSummaryMetricById] =
         useState<TopologySummaryMetricMap>({});
+    const [siteEnrichmentByShortName, setSiteEnrichmentByShortName] = useState<
+        Record<string, SiteEnrichment>
+    >({});
     const pauseUntilRef = useRef<number>(0);
 
     useEffect(() => {
@@ -2054,6 +2075,78 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         refreshToken,
         storedTopology.sites,
     ]);
+
+    useEffect(() => {
+        if (catalogueByName === null) return undefined;
+        const enrichmentSearchName =
+            'Site Topology - Map Marker Enrichment (Buildings with GPS)';
+        const record = catalogueByName[enrichmentSearchName];
+        if (!record?.search?.trim()) {
+            // Stanza isn't installed (e.g. dashboard deployed before the
+            // 2026-05-08 site:topology integration). Quietly no-op so older
+            // deployments keep working.
+            return undefined;
+        }
+        let cancelled = false;
+        runSearch({
+            spl: record.search,
+            earliestTime,
+            latestTime,
+            tag: 'topology_marker_enrichment',
+        })
+            .then((res) => {
+                if (cancelled) return;
+                const rows = (res?.results ?? []) as Array<
+                    Record<string, unknown>
+                >;
+                const next: Record<string, SiteEnrichment> = {};
+                for (const row of rows) {
+                    const nameRaw = row['name'];
+                    if (typeof nameRaw !== 'string' || nameRaw.length === 0) {
+                        continue;
+                    }
+                    const shortName = nameRaw.trim();
+                    if (shortName.length === 0) continue;
+                    const latNum = Number(row['lat']);
+                    const lonNum = Number(row['lon']);
+                    next[shortName] = {
+                        address:
+                            typeof row['address'] === 'string'
+                                ? (row['address'] as string)
+                                : undefined,
+                        country:
+                            typeof row['country'] === 'string'
+                                ? (row['country'] as string)
+                                : undefined,
+                        lat: Number.isFinite(latNum) ? latNum : undefined,
+                        lon: Number.isFinite(lonNum) ? lonNum : undefined,
+                        nameHierarchy:
+                            typeof row['nameHierarchy'] === 'string'
+                                ? (row['nameHierarchy'] as string)
+                                : undefined,
+                        siteLabel:
+                            typeof row['Site'] === 'string'
+                                ? (row['Site'] as string)
+                                : undefined,
+                        lastUpdated:
+                            typeof row['lastUpdated'] === 'string'
+                                ? (row['lastUpdated'] as string)
+                                : undefined,
+                    };
+                }
+                setSiteEnrichmentByShortName(next);
+            })
+            .catch(() => {
+                // Lookup may be empty on first deploy (the populator search
+                // hasn't run yet). Don't surface an error to the user — the
+                // map degrades gracefully without enrichment.
+                if (cancelled) return;
+                setSiteEnrichmentByShortName({});
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [catalogueByName, earliestTime, latestTime, refreshToken]);
 
     useEffect(() => {
         if (catalogueByName === null) return undefined;
@@ -2455,6 +2548,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 catalogueLoaded={catalogueByName !== null}
                 selectedSearchName={selectedSearchName}
                 selectedSpl={selectedSpl}
+                siteEnrichmentByShortName={siteEnrichmentByShortName}
                 onClose={() => setSelected(null)}
                 onOpenInSearch={onOpenInSearch ? openSelectedInSearch : undefined}
             />
@@ -2539,6 +2633,7 @@ interface SelectionCardProps {
     catalogueLoaded: boolean;
     selectedSearchName?: string;
     selectedSpl: string;
+    siteEnrichmentByShortName?: Record<string, SiteEnrichment>;
     onClose: () => void;
     onOpenInSearch?: () => void;
 }
@@ -2551,6 +2646,7 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
     catalogueLoaded,
     selectedSearchName,
     selectedSpl,
+    siteEnrichmentByShortName,
     onClose,
     onOpenInSearch,
 }) => {
@@ -2668,6 +2764,11 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
                                 site={selected.site}
                                 links={connectedLinks}
                                 isDark={isDark}
+                                enrichment={
+                                    siteEnrichmentByShortName?.[
+                                        selected.site.shortName
+                                    ]
+                                }
                             />
                         ) : (
                             <LinkDetails
@@ -3756,122 +3857,193 @@ interface SiteDetailsProps {
     site: TopologySite;
     links: TopologyLink[];
     isDark: boolean;
+    enrichment?: SiteEnrichment;
 }
 
-const SiteDetails: React.FC<SiteDetailsProps> = ({ site, links, isDark }) => (
-    <>
-        <div className="grid grid-cols-2 gap-2">
-            <MetricPill
-                label="Health"
-                value={formatPercent(site.metrics.healthPct)}
-                isDark={isDark}
-            />
-            <MetricPill
-                label="Devices"
-                value={formatNumber(site.metrics.activeDevices)}
-                isDark={isDark}
-            />
-            <MetricPill
-                label="Alerts"
-                value={formatNumber(site.metrics.alerts)}
-                isDark={isDark}
-            />
-            <MetricPill
-                label="Latency"
-                value={formatLatency(site.metrics.latencyMs)}
-                isDark={isDark}
-            />
-        </div>
-        <div
-            className={cn(
-                'rounded border p-2 space-y-1',
-                isDark ? 'bg-white/5 border-white/5' : 'bg-slate-50 border-slate-200'
-            )}
-        >
-            <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-slate-500">
-                <Code2 className="w-3 h-3" />
-                Telemetry Source
+const SiteDetails: React.FC<SiteDetailsProps> = ({
+    site,
+    links,
+    isDark,
+    enrichment,
+}) => {
+    const hasEnrichment = Boolean(
+        enrichment &&
+            (enrichment.address ||
+                enrichment.lat !== undefined ||
+                enrichment.lon !== undefined)
+    );
+    const coordinatesLabel =
+        enrichment?.lat !== undefined && enrichment?.lon !== undefined
+            ? `${enrichment.lat.toFixed(5)}, ${enrichment.lon.toFixed(5)}`
+            : null;
+
+    return (
+        <>
+            <div className="grid grid-cols-2 gap-2">
+                <MetricPill
+                    label="Health"
+                    value={formatPercent(site.metrics.healthPct)}
+                    isDark={isDark}
+                />
+                <MetricPill
+                    label="Devices"
+                    value={formatNumber(site.metrics.activeDevices)}
+                    isDark={isDark}
+                />
+                <MetricPill
+                    label="Alerts"
+                    value={formatNumber(site.metrics.alerts)}
+                    isDark={isDark}
+                />
+                <MetricPill
+                    label="Latency"
+                    value={formatLatency(site.metrics.latencyMs)}
+                    isDark={isDark}
+                />
             </div>
-            <p
+            {hasEnrichment && (
+                <div
+                    className={cn(
+                        'rounded border p-2 space-y-1',
+                        isDark
+                            ? 'bg-white/5 border-white/5'
+                            : 'bg-slate-50 border-slate-200'
+                    )}
+                >
+                    <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-slate-500">
+                        <MapPin className="w-3 h-3" />
+                        Address & Location
+                    </div>
+                    {enrichment?.address && (
+                        <p
+                            className={cn(
+                                'text-[10px] leading-relaxed',
+                                isDark ? 'text-slate-300' : 'text-slate-700'
+                            )}
+                        >
+                            {enrichment.address}
+                        </p>
+                    )}
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[9px] text-slate-500 leading-relaxed">
+                        {enrichment?.country && (
+                            <span>{enrichment.country}</span>
+                        )}
+                        {coordinatesLabel && (
+                            <span className="font-mono">
+                                {coordinatesLabel}
+                            </span>
+                        )}
+                        {enrichment?.siteLabel && (
+                            <span className="font-mono">
+                                {enrichment.siteLabel}
+                            </span>
+                        )}
+                    </div>
+                    <p className="text-[9px] text-slate-500 leading-relaxed">
+                        Source: cisco:dnac:site:topology
+                        {enrichment?.lastUpdated
+                            ? ` - Updated ${enrichment.lastUpdated}`
+                            : ''}
+                    </p>
+                </div>
+            )}
+            <div
                 className={cn(
-                    'text-[10px] leading-relaxed',
-                    isDark ? 'text-slate-300' : 'text-slate-700'
+                    'rounded border p-2 space-y-1',
+                    isDark
+                        ? 'bg-white/5 border-white/5'
+                        : 'bg-slate-50 border-slate-200'
                 )}
             >
-                {site.telemetrySource ??
-                    (site.searchName
-                        ? 'Awaiting normalized site telemetry'
-                        : 'Configured topology item')}
-            </p>
-            <p className="text-[9px] text-slate-500 leading-relaxed">
-                {site.dataState === 'live'
-                    ? 'Live searchbase result'
-                    : site.dataState === 'loading'
-                    ? 'Loading searchbase result'
-                    : site.dataState === 'error'
-                    ? 'Searchbase result unavailable'
-                        : 'Configured value'}
-                {site.lastUpdated ? ` - Updated ${site.lastUpdated}` : ''}
-                {site.dataState === 'error' && site.dataError
-                    ? ` - ${site.dataError}`
-                    : ''}
-            </p>
-        </div>
-        {links.length > 0 && (
-            <div className="space-y-1">
                 <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-slate-500">
-                    <Link2 className="w-3 h-3" />
-                    Connected Paths
+                    <Code2 className="w-3 h-3" />
+                    Telemetry Source
                 </div>
-                <div className="space-y-1">
-                    {links.map((link) => (
-                        <div
-                            key={link.id}
-                            className={cn(
-                                'flex items-center justify-between gap-2 rounded border px-2 py-1',
-                                isDark
-                                    ? 'bg-white/5 border-white/5'
-                                    : 'bg-white border-slate-200'
-                            )}
-                            title={`${link.name}: ${formatMbps(
-                                link.throughputMbps
-                            )}, ${formatPercent(link.utilizationPct)} utilized`}
-                        >
-                            <div className="min-w-0">
-                                <span
-                                    className={cn(
-                                        'block text-[10px] font-bold truncate',
-                                        isDark ? 'text-slate-300' : 'text-slate-700'
-                                    )}
-                                >
-                                    {link.name}
-                                </span>
-                                <span className="block text-[8.5px] font-mono text-slate-500 truncate">
-                                    {formatMbps(link.throughputMbps)} ·{' '}
-                                    {formatPercent(link.utilizationPct)}
-                                </span>
-                            </div>
-                            <div className="flex flex-shrink-0 items-center gap-1.5">
-                                {link.capacityMbps !== undefined && (
-                                    <span className="font-mono text-[8.5px] text-slate-500">
-                                        {formatMbps(link.capacityMbps)}
-                                    </span>
-                                )}
-                                <span
-                                    className={cn(
-                                        'w-2 h-2 rounded-full',
-                                        STATUS_DOT_CLASS[link.status]
-                                    )}
-                                    title={link.status}
-                                />
-                            </div>
-                        </div>
-                    ))}
-                </div>
+                <p
+                    className={cn(
+                        'text-[10px] leading-relaxed',
+                        isDark ? 'text-slate-300' : 'text-slate-700'
+                    )}
+                >
+                    {site.telemetrySource ??
+                        (site.searchName
+                            ? 'Awaiting normalized site telemetry'
+                            : 'Configured topology item')}
+                </p>
+                <p className="text-[9px] text-slate-500 leading-relaxed">
+                    {site.dataState === 'live'
+                        ? 'Live searchbase result'
+                        : site.dataState === 'loading'
+                        ? 'Loading searchbase result'
+                        : site.dataState === 'error'
+                        ? 'Searchbase result unavailable'
+                        : 'Configured value'}
+                    {site.lastUpdated ? ` - Updated ${site.lastUpdated}` : ''}
+                    {site.dataState === 'error' && site.dataError
+                        ? ` - ${site.dataError}`
+                        : ''}
+                </p>
             </div>
-        )}
-    </>
-);
+            {links.length > 0 && (
+                <div className="space-y-1">
+                    <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-slate-500">
+                        <Link2 className="w-3 h-3" />
+                        Connected Paths
+                    </div>
+                    <div className="space-y-1">
+                        {links.map((link) => (
+                            <div
+                                key={link.id}
+                                className={cn(
+                                    'flex items-center justify-between gap-2 rounded border px-2 py-1',
+                                    isDark
+                                        ? 'bg-white/5 border-white/5'
+                                        : 'bg-white border-slate-200'
+                                )}
+                                title={`${link.name}: ${formatMbps(
+                                    link.throughputMbps
+                                )}, ${formatPercent(
+                                    link.utilizationPct
+                                )} utilized`}
+                            >
+                                <div className="min-w-0">
+                                    <span
+                                        className={cn(
+                                            'block text-[10px] font-bold truncate',
+                                            isDark
+                                                ? 'text-slate-300'
+                                                : 'text-slate-700'
+                                        )}
+                                    >
+                                        {link.name}
+                                    </span>
+                                    <span className="block text-[8.5px] font-mono text-slate-500 truncate">
+                                        {formatMbps(link.throughputMbps)} ·{' '}
+                                        {formatPercent(link.utilizationPct)}
+                                    </span>
+                                </div>
+                                <div className="flex flex-shrink-0 items-center gap-1.5">
+                                    {link.capacityMbps !== undefined && (
+                                        <span className="font-mono text-[8.5px] text-slate-500">
+                                            {formatMbps(link.capacityMbps)}
+                                        </span>
+                                    )}
+                                    <span
+                                        className={cn(
+                                            'w-2 h-2 rounded-full',
+                                            STATUS_DOT_CLASS[link.status]
+                                        )}
+                                        title={link.status}
+                                    />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </>
+    );
+};
 
 interface LinkDetailsProps {
     link: TopologyLink;
