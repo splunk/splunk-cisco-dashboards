@@ -1435,30 +1435,28 @@
 			"title": "Site-level Health",
 			"type": "splunk.table"
 		},
-		"viz_site_map": {
+		"viz_site_health_distribution": {
 			"dataSources": {
-				"primary": "ds_site_map"
+				"primary": "ds_site_health_distribution"
 			},
+			"description": "Devices per site, broken down by Catalyst Center health tier",
 			"options": {
-				"baseLayerTileServer": "https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
-				"baseLayerTileServerType": "raster",
-				"layers": [
-					{
-						"type": "marker",
-						"latitude": "> primary | seriesByName('lat')",
-						"longitude": "> primary | seriesByName('lon')",
-						"markerColor": "#049FD9",
-						"additionalTooltipFields": [
-							"city",
-							"devices"
-						]
-					}
+				"backgroundColor": "transparent",
+				"stackMode": "stacked",
+				"seriesColors": [
+					"#6EBE4A",
+					"#E5A823",
+					"#D64550",
+					"#9CA3AF"
 				],
-				"showScale": false,
-				"showZoomControls": false,
-				"backgroundColor": "#F0F0F0"
+				"legendDisplay": "right",
+				"legendTruncation": "ellipsisEnd",
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"dataValuesDisplay": "all"
 			},
-			"type": "splunk.map"
+			"title": "Device Health by Site",
+			"type": "splunk.bar"
 		},
 		"viz_switch_loc_bar": {
 			"dataSources": {
@@ -2112,11 +2110,11 @@
 			},
 			"type": "ds.search"
 		},
-		"ds_site_map": {
-			"name": "Site Locations",
+		"ds_site_health_distribution": {
+			"name": "Site Health Distribution",
 			"options": {
-				"extend": "ds_base_topology_site_role",
-				"query": "| stats sum(count) as device_count by Site | eval lat=case(match(Site,\"(?i)auburndale|AUB\"),28.0639, match(Site,\"(?i)tallahassee|TLH|SEOC\"),30.4418, match(Site,\"(?i)orlando|SLRC\"),28.5383, 1==1,29.5), lon=case(match(Site,\"(?i)auburndale|AUB\"),81.7887, match(Site,\"(?i)tallahassee|TLH|SEOC\"),84.2809, match(Site,\"(?i)orlando|SLRC\"),81.3792, 1==1,82.5) | eval lon=-lon | table lat, lon, Site, device_count | rename Site as name, device_count as devices"
+				"extend": "ds_base_devicehealth_ref",
+				"query": "| eval site_short=mvindex(split(Site,\"/\"),-1) | where isnotnull(site_short) AND site_short!=\"\" | eval health_status=case(isnull(OverallHealth) OR OverallHealth==0,\"Unknown\", OverallHealth>=8,\"Healthy\", OverallHealth>=4,\"Warning\", 1==1,\"Critical\") | chart dc(DeviceID) over site_short by health_status | fillnull value=0 | eval _Healthy=coalesce(Healthy,0), _Warning=coalesce(Warning,0), _Critical=coalesce(Critical,0), _Unknown=coalesce(Unknown,0), _Total=_Healthy+_Warning+_Critical+_Unknown | where _Total>0 | sort 12 -_Total | rename site_short as Site | table Site _Healthy _Warning _Critical _Unknown | rename _Healthy as Healthy, _Warning as Warning, _Critical as Critical, _Unknown as Unknown"
 			},
 			"type": "ds.chain"
 		},
@@ -3004,7 +3002,7 @@
 						"type": "block"
 					},
 					{
-						"item": "viz_site_map",
+						"item": "viz_site_health_distribution",
 						"position": {
 							"h": 340,
 							"w": 520,

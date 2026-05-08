@@ -654,6 +654,11 @@ export interface KpiConfig {
     /** Mock fallback when no search wired. */
     mockValue: string;
     /**
+     * Body text for the info tooltip ("?" icon) on the KPI card. Kept
+     * optional so tiles without a description simply omit the icon.
+     */
+    description?: string;
+    /**
      * Same semantics as {@link MetricConfig.suppressMockOnEmpty}: when
      * true, an empty/erroring search renders "—" instead of the
      * configured mock — used by override-bound KPI tiles so a swap

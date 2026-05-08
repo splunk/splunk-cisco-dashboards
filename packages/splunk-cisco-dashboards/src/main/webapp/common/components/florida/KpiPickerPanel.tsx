@@ -54,6 +54,7 @@ import {
     type SearchbaseRecord,
 } from '@/common/services/searchbaseCatalogue';
 import type { MetricOverride } from '@/common/hooks/usePersistedMetricOverrides';
+import { VizIcon, resolveVizMapping } from './vizIcons';
 
 // "All" sentinel for the facet dropdowns — using a sentinel rather
 // than '' keeps the <select> element rendering predictable.
@@ -158,6 +159,20 @@ export interface KpiPickerPanelProps {
      * dispatched saved-search separately if they want to.
      */
     onTestInSearch?: (spl: string) => void;
+    /**
+     * Optional "factory reset" handler. When provided, a small
+     * destructive-styled link is rendered alongside the "Reset tile"
+     * affordance so the user can wipe **every** customisation
+     * (picker overrides, section tile counts, section tile orders,
+     * map topology, splitter position) in one click. Theme is left
+     * alone — that's a UI preference, not a layout customisation.
+     *
+     * The picker shows a `window.confirm()` prompt before invoking
+     * the handler so a misclick doesn't blow away the user's whole
+     * setup. The handler is responsible for performing the actual
+     * reset and (typically) closing the picker after.
+     */
+    onResetAllCustomizations?: () => void;
 }
 
 const escapeRegex = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -369,6 +384,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     onApply,
     onClearOverride,
     onTestInSearch,
+    onResetAllCustomizations,
 }) => {
     const [catalogue, setCatalogue] = useState<SearchbaseRecord[]>([]);
     const [loadState, setLoadState] = useState<'idle' | 'loading' | 'error'>('idle');
@@ -774,6 +790,29 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         onClearOverride(context.tileId);
     };
 
+    const handleResetAllCustomizations = () => {
+        if (!onResetAllCustomizations) return;
+        // Native confirm() is intentional: it's universally
+        // supported, blocks until the user answers, and visually
+        // detaches from the panel chrome — the user can't conflate
+        // it with the per-tile "Reset tile" button. The message
+        // enumerates exactly what gets wiped so the user knows what
+        // they're agreeing to before they click OK.
+        const ok = window.confirm(
+            'Reset all dashboard customisations?\n\n' +
+                'This will undo every change you have made to:\n' +
+                "  • Each tile's bound search, value field, label, and description\n" +
+                '  • The visible tile count in each section\n' +
+                '  • The order of tiles within each section\n' +
+                '  • The map topology (sites, links, names, positions)\n' +
+                '  • The map ↔ tiles splitter position\n\n' +
+                'Your light/dark theme preference will be kept.\n\n' +
+                'This action cannot be undone.'
+        );
+        if (!ok) return;
+        onResetAllCustomizations();
+    };
+
     const handleClearFacets = () => {
         setSelectedCategory(ALL_CATEGORIES);
         setSelectedSubCategory(ALL_SUB_CATEGORIES);
@@ -1131,6 +1170,26 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                       : 'bg-slate-300 dark:bg-slate-600'
                                             )}
                                         />
+                                        {/* Viz hint: small Splunk-Studio glyph showing
+                                            what kind of chart/table this search will
+                                            render. Helps the user filter by viz type
+                                            at a glance ("oh that's a pie chart, not
+                                            a sparkline") without having to apply
+                                            and find out. The icon resolves to the
+                                            generic `ChartBasic` glyph when an entry
+                                            has no `default_viz` set. */}
+                                        <VizIcon
+                                            splunkViz={entry.defaultViz}
+                                            size={13}
+                                            className={cn(
+                                                'mt-0.5',
+                                                isSelected
+                                                    ? 'text-sky-600 dark:text-sky-400'
+                                                    : isCurrent
+                                                      ? 'text-emerald-600 dark:text-emerald-400'
+                                                      : 'text-slate-400 dark:text-slate-500'
+                                            )}
+                                        />
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-baseline gap-2 flex-wrap">
                                                 <span className="text-[11px] font-bold text-slate-800 dark:text-slate-100 break-all select-text cursor-text">
@@ -1192,9 +1251,25 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                     {selectedEntry ? (
                         <>
                             <div>
-                                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
-                                    Search name
-                                </p>
+                                <div className="flex items-center justify-between gap-2 mb-1">
+                                    <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                                        Search name
+                                    </p>
+                                    {/* Right-aligned viz hint + label.
+                                        Same icon vocabulary the row list uses, but
+                                        with a written label here so the user gets
+                                        an unambiguous "yes, this is what you'll
+                                        see when you Apply" confirmation. */}
+                                    <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                                        <VizIcon
+                                            splunkViz={selectedEntry.defaultViz}
+                                            size={12}
+                                            showTooltip={false}
+                                            className="text-sky-600 dark:text-sky-400"
+                                        />
+                                        {resolveVizMapping(selectedEntry.defaultViz).label}
+                                    </span>
+                                </div>
                                 <p
                                     className="select-text cursor-text text-[12px] font-bold text-slate-800 dark:text-slate-100 break-words leading-snug"
                                     title="Drag to select part of the search name for copying."
@@ -1412,15 +1487,43 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
 
                 {/* Footer: actions */}
                 <div className="border-t border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 py-2.5 flex-shrink-0">
-                    <button
-                        type="button"
-                        onClick={handleResetThisTile}
-                        title="Restore this tile to its default saved search"
-                        className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100"
-                    >
-                        <RotateCcw className="w-3 h-3" />
-                        Reset tile
-                    </button>
+                    <div className="flex items-center gap-3 min-w-0">
+                        <button
+                            type="button"
+                            onClick={handleResetThisTile}
+                            title="Restore this tile to its default saved search"
+                            className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 flex-shrink-0"
+                        >
+                            <RotateCcw className="w-3 h-3" />
+                            Reset tile
+                        </button>
+                        {onResetAllCustomizations && (
+                            <>
+                                {/* Visual divider between the two
+                                    "Reset" actions so the
+                                    destructive one stands apart. */}
+                                <span
+                                    aria-hidden="true"
+                                    className="w-px h-3 bg-slate-200 dark:bg-slate-700 flex-shrink-0"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={handleResetAllCustomizations}
+                                    // Red text + the literal phrase
+                                    // "factory default" to telegraph
+                                    // "this is bigger than 'Reset
+                                    // tile'". A confirm() prompt
+                                    // catches misclicks before
+                                    // anything is wiped.
+                                    title="Wipe every dashboard customisation and start fresh"
+                                    className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 flex-shrink-0"
+                                >
+                                    <RotateCcw className="w-3 h-3" />
+                                    Factory reset
+                                </button>
+                            </>
+                        )}
+                    </div>
                     <div className="flex items-center gap-2">
                         <button
                             type="button"

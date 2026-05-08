@@ -31,6 +31,7 @@ import {
     Keyboard,
     RotateCcw,
     Settings2,
+    ExternalLink,
 } from 'lucide-react';
 import { DashboardSection } from '@/common/components/florida/DashboardSection';
 import { MetricItem } from '@/common/components/florida/MetricItem';
@@ -42,12 +43,14 @@ import {
 import {
     CustomerTopologyMap,
     CUSTOMER_TOPOLOGY,
+    clearCustomerTopologyStorage,
     type TopologySummaryMetricMap,
     TopologySiteTable,
 } from '@/common/components/florida/CustomerTopologyMap';
 import { HealthBadge } from '@/common/components/florida/HealthBadge';
 import { IncidentTicker } from '@/common/components/florida/IncidentTicker';
 import { HelpOverlay } from '@/common/components/florida/HelpOverlay';
+import { InfoTooltip } from '@/common/components/florida/InfoTooltip';
 import {
     KpiPickerPanel,
     type KpiPickerContext,
@@ -419,11 +422,23 @@ const METRIC_CONFIG: MetricConfig[] = [
 //
 // Both fall back to mock if the data sources are empty (the dispatch
 // returns 0 rows and `useKpi` shows the mockValue).
+//
+// Shape contract — IMPORTANT for the picker:
+// These cards display a single STRING (typically a site name), not a
+// numeric metric or sparkline. When swapping searches via the gear
+// icon, pick one whose final pipeline emits a single row with a
+// readable string column (set Value field to that column name). A
+// numeric `timechart` will not produce a usable site label and will
+// surface the empty-row "—" placeholder.
 
 const KPI_CONFIG: KpiConfig[] = [
     {
         id: 'top_incident',
         label: 'Top incident volume',
+        description:
+            'Site name producing the most distinct XDR/SecureX incident IDs in ' +
+            'the selected window. Helps the operator answer "which site is ' +
+            'noisiest right now?". Outputs a single string (the site label).',
         spl:
             '`index_security` (sourcetype="cisco:xdr:incidents" OR ' +
             'sourcetype="cisco:xdr:incidents-summary") ' +
@@ -437,6 +452,10 @@ const KPI_CONFIG: KpiConfig[] = [
     {
         id: 'operational_lead',
         label: 'Operational lead',
+        description:
+            'Site name with the strongest IT health, derived from Catalyst ' +
+            'Center device health rolled up by Site (Reachable+Managed=100, ' +
+            'Reachable=50, else=0). Outputs a single string (the site label).',
         spl:
             '`index_catalyst` sourcetype="cisco:dnac:devicehealth" ' +
             '| stats latest(Reachability) as Reachability, latest(Manageability) as ' +
@@ -901,6 +920,7 @@ const OverviewPage: React.FC = () => {
         counts: sectionTileCounts,
         bounds: sectionTileBounds,
         setCount: setSectionTileCount,
+        resetAll: resetAllSectionTileCounts,
     } = usePersistedSectionTileCounts({ minCount: 3, maxCount: 5, defaultCount: 5 });
 
     // ------------------------------ Section tile-order preference ------------------------------
@@ -915,8 +935,11 @@ const OverviewPage: React.FC = () => {
     // tiles drop out, new tiles are appended at the end so they
     // can't bump the user's chosen top tiles out of view when a
     // release ships.
-    const { getOrder: getSectionTileOrder, setOrder: setSectionTileOrder } =
-        usePersistedSectionTileOrder();
+    const {
+        getOrder: getSectionTileOrder,
+        setOrder: setSectionTileOrder,
+        resetAll: resetAllSectionTileOrder,
+    } = usePersistedSectionTileOrder();
 
     // Drag sensors:
     //   * PointerSensor with a small activationConstraint so a click
@@ -1238,6 +1261,14 @@ const OverviewPage: React.FC = () => {
     } = usePersistedMetricOverrides();
     const [pickerContext, setPickerContext] = useState<KpiPickerContext | null>(null);
 
+    // Bump this counter to force a fresh mount of <CustomerTopologyMap>.
+    // localStorage `storage` events only fire across tabs, so wiping
+    // the persisted topology in this tab won't reseed the map's
+    // internal state on its own — a remount via `key={topologyResetKey}`
+    // gets the hook to re-read storage (now empty) and fall back to
+    // the canonical CUSTOMER_TOPOLOGY factory.
+    const [topologyResetKey, setTopologyResetKey] = useState(0);
+
     // Saved-search names already bound across the dashboard, so the
     // picker can flag duplicates with an "in use" badge.
     const usedSavedSearches = useMemo(() => {
@@ -1291,6 +1322,51 @@ const OverviewPage: React.FC = () => {
         [setOverride]
     );
 
+    // "Factory reset" — wipes every persisted dashboard customisation
+    // in one shot. The picker shows a `window.confirm()` prompt before
+    // calling this, so misclicks are caught at the UI layer; we only
+    // get here if the user has explicitly agreed.
+    //
+    // What gets reset (and the localStorage key cleared):
+    //   • metricOverrides.v1            — per-tile picker bindings
+    //   • sectionTileCounts.v1          — visible tile count per section
+    //   • sectionTileOrder.v1           — drag-to-reorder preference
+    //   • customerTopology.v3           — Florida map customisations
+    //   • scd_overview_split_pct        — tiles ↔ map splitter position
+    //
+    // What is intentionally NOT reset:
+    //   • theme (light / dark) — UI preference, not layout
+    //   • Splunk-side preferences (saved searches, scheduled jobs) —
+    //     those don't live in this dashboard's localStorage
+    //
+    // After reset, we close the picker and bump `topologyResetKey` so
+    // the map re-mounts with its now-empty persisted state and falls
+    // through to the canonical CUSTOMER_TOPOLOGY factory.
+    const handleResetAllCustomizations = useCallback(() => {
+        resetAllOverrides();
+        resetAllSectionTileCounts();
+        resetAllSectionTileOrder();
+        clearCustomerTopologyStorage();
+        setTopologyResetKey((n) => n + 1);
+        setLeftPct(SPLIT_DEFAULT);
+        if (typeof window !== 'undefined' && window.localStorage) {
+            try {
+                window.localStorage.removeItem(SPLIT_KEY);
+            } catch {
+                // Storage unavailable; the setLeftPct above is the
+                // authoritative reset for this session anyway.
+            }
+        }
+        setPickerContext(null);
+    }, [
+        resetAllOverrides,
+        resetAllSectionTileCounts,
+        resetAllSectionTileOrder,
+        SPLIT_KEY,
+        SPLIT_DEFAULT,
+        setLeftPct,
+    ]);
+
     // ------------------------------ KPI cards ------------------------------
     // Same `valueField: ov.valueField` (no fallback) and
     // `suppressMockOnEmpty: true` rules as `applyOverride` for the
@@ -1298,44 +1374,147 @@ const OverviewPage: React.FC = () => {
     // original tile's `valueField` was the same root cause: useKpi
     // would read a column the new SPL doesn't emit, get undefined,
     // and quietly fall back to the original tile's mock string.
-    const effectiveTopIncidentCfg = useMemo<KpiConfig>(() => {
-        const ov = overrides[KPI_CONFIG[0].id];
-        if (!ov) return KPI_CONFIG[0];
+    //
+    // Searchbase resolution mirrors `dispatchedConfig` for the metric
+    // grid: when the picker writes `savedSearch: <searchbase entry name>`,
+    // we look that name up in `searchbaseByName` and replace the binding
+    // with the literal `search` field — same SPL the picker preview shows
+    // and the "Open in Search" drilldown opens. This is the critical step
+    // that was missing: most catalogue searches (e.g.
+    // "Building Resilience - Power Trend") live ONLY in searchbase.conf,
+    // not in savedsearches.conf, so a raw `| savedsearch "X"` dispatch
+    // was failing silently → tile showed "Awaiting data" / "—" → looked
+    // like the picker did nothing.
+    //
+    // While `searchbaseByName === null` (still loading) we strip both
+    // `spl` and `savedSearch` so useKpi short-circuits to mock and waits
+    // — same defer pattern as `dispatchedConfig` to avoid a doomed first
+    // dispatch that gets superseded once the catalogue lands.
+    const buildEffectiveKpiCfg = (
+        base: KpiConfig,
+        ov: MetricOverride | undefined
+    ): KpiConfig => {
+        if (!ov) return base;
+        // Catalogue still loading — defer dispatch.
+        if (searchbaseByName === null) {
+            return {
+                ...base,
+                spl: undefined,
+                savedSearch: undefined,
+                valueField: ov.valueField,
+                label: ov.label ?? base.label,
+                suppressMockOnEmpty: true,
+            };
+        }
+        const sb = ov.savedSearch
+            ? searchbaseByName.get(ov.savedSearch)
+            : undefined;
+        if (sb && sb.search) {
+            return {
+                ...base,
+                spl: sb.search,
+                savedSearch: undefined,
+                valueField: ov.valueField,
+                label: ov.label ?? base.label,
+                suppressMockOnEmpty: true,
+            };
+        }
+        // No matching searchbase entry — fall through to the configured
+        // savedsearch name (will resolve only if a real savedsearches.conf
+        // stanza of that name exists).
         return {
-            ...KPI_CONFIG[0],
+            ...base,
             savedSearch: ov.savedSearch,
             spl: undefined,
             valueField: ov.valueField,
-            label: ov.label ?? KPI_CONFIG[0].label,
+            label: ov.label ?? base.label,
             suppressMockOnEmpty: true,
         };
-    }, [overrides]);
-    const effectiveOpLeadCfg = useMemo<KpiConfig>(() => {
-        const ov = overrides[KPI_CONFIG[1].id];
-        if (!ov) return KPI_CONFIG[1];
-        return {
-            ...KPI_CONFIG[1],
-            savedSearch: ov.savedSearch,
-            spl: undefined,
-            valueField: ov.valueField,
-            label: ov.label ?? KPI_CONFIG[1].label,
-            suppressMockOnEmpty: true,
-        };
-    }, [overrides]);
+    };
+    const effectiveTopIncidentCfg = useMemo<KpiConfig>(
+        () => buildEffectiveKpiCfg(KPI_CONFIG[0], overrides[KPI_CONFIG[0].id]),
+        [overrides, searchbaseByName]
+    );
+    const effectiveOpLeadCfg = useMemo<KpiConfig>(
+        () => buildEffectiveKpiCfg(KPI_CONFIG[1], overrides[KPI_CONFIG[1].id]),
+        [overrides, searchbaseByName]
+    );
     const topIncident = useKpi(effectiveTopIncidentCfg, timeRange, refreshToken);
     const operationalLead = useKpi(effectiveOpLeadCfg, timeRange, refreshToken);
     const topologyTopIncident = topologySummaryById.top_incident;
     const topologyOperationalLead = topologySummaryById.operational_lead;
-    const topIncidentCard = {
-        label: topologyTopIncident?.label ?? effectiveTopIncidentCfg.label,
-        value: topologyTopIncident?.value ?? topIncident.value,
-        source: topologyTopIncident?.source ?? topIncident.source,
-    };
-    const operationalLeadCard = {
-        label: topologyOperationalLead?.label ?? effectiveOpLeadCfg.label,
-        value: topologyOperationalLead?.value ?? operationalLead.value,
-        source: topologyOperationalLead?.source ?? operationalLead.source,
-    };
+    // Picker-override precedence: when the operator has explicitly bound
+    // a different search via the gear icon (overrides[id] present), the
+    // user's `useKpi` result wins. Otherwise we fall through to the
+    // topology overview SPL summary row (cheap, already-running, kept in
+    // lockstep with the map). Without this branch, the topology summary
+    // silently shadowed the override and the picker appeared broken.
+    const topIncidentOverride = overrides[KPI_CONFIG[0].id];
+    const operationalLeadOverride = overrides[KPI_CONFIG[1].id];
+    const topIncidentCard = topIncidentOverride
+        ? {
+              label: effectiveTopIncidentCfg.label,
+              value: topIncident.value,
+              source: topIncident.source,
+          }
+        : {
+              label: topologyTopIncident?.label ?? effectiveTopIncidentCfg.label,
+              value: topologyTopIncident?.value ?? topIncident.value,
+              source: topologyTopIncident?.source ?? topIncident.source,
+          };
+    const operationalLeadCard = operationalLeadOverride
+        ? {
+              label: effectiveOpLeadCfg.label,
+              value: operationalLead.value,
+              source: operationalLead.source,
+          }
+        : {
+              label: topologyOperationalLead?.label ?? effectiveOpLeadCfg.label,
+              value: topologyOperationalLead?.value ?? operationalLead.value,
+              source: topologyOperationalLead?.source ?? operationalLead.source,
+          };
+    // Footnote shown at the bottom of the info tooltip — surfaces the
+    // current data source so the operator can trace lineage. When an
+    // override is bound, we point at the user's saved search; otherwise
+    // we name the topology overview stanza that's actually emitting the
+    // value (or "(inline SPL)" if both are absent).
+    // Drilldown SPL: always the literal SPL useKpi just dispatched
+    // (`topIncident.spl` / `operationalLead.spl`). When no override is
+    // bound, that's the inline KPI_CONFIG SPL — a clean, single-purpose
+    // query — which is a far better drilldown target than the giant
+    // `overview_topology_overview` pipeline. When an override is bound,
+    // it's the resolved searchbase SPL → exactly what the picker preview
+    // showed. Either way: see-and-click parity with what's running.
+    const topIncidentDrilldownSpl = topIncident.spl;
+    const operationalLeadDrilldownSpl = operationalLead.spl;
+    const handleTopIncidentOpenInSearch = useCallback(() => {
+        if (!topIncidentDrilldownSpl) return;
+        const url = splunkSearchAppUrl(topIncidentDrilldownSpl, timeRange);
+        if (typeof window !== 'undefined') {
+            window.open(url, '_blank', 'noopener,noreferrer');
+        }
+    }, [topIncidentDrilldownSpl, timeRange]);
+    const handleOperationalLeadOpenInSearch = useCallback(() => {
+        if (!operationalLeadDrilldownSpl) return;
+        const url = splunkSearchAppUrl(operationalLeadDrilldownSpl, timeRange);
+        if (typeof window !== 'undefined') {
+            window.open(url, '_blank', 'noopener,noreferrer');
+        }
+    }, [operationalLeadDrilldownSpl, timeRange]);
+    const topIncidentBindingFootnote = topIncidentOverride
+        ? topIncidentOverride.savedSearch
+            ? `Saved search: ${topIncidentOverride.savedSearch}`
+            : '(inline SPL)'
+        : topologyTopIncident
+        ? 'Saved search: Overview - Topology Overview'
+        : '(inline SPL)';
+    const operationalLeadBindingFootnote = operationalLeadOverride
+        ? operationalLeadOverride.savedSearch
+            ? `Saved search: ${operationalLeadOverride.savedSearch}`
+            : '(inline SPL)'
+        : topologyOperationalLead
+        ? 'Saved search: Overview - Topology Overview'
+        : '(inline SPL)';
 
     // ------------------------------ Keyboard shortcuts ------------------------------
     // Drilldowns open in a new tab so the executive can keep the
@@ -1818,6 +1997,12 @@ const OverviewPage: React.FC = () => {
                             <div className="flex-1 min-h-0">
                                 {regionalView === 'map' ? (
                                     <CustomerTopologyMap
+                                        // Bumping `topologyResetKey` forces a
+                                        // remount of the map after a "Factory
+                                        // reset", so its internal hook re-reads
+                                        // (now-empty) storage and falls back
+                                        // to the canonical CUSTOMER_TOPOLOGY.
+                                        key={topologyResetKey}
                                         topology={CUSTOMER_TOPOLOGY}
                                         isDark={resolvedTheme === 'dark'}
                                         earliestTime={timeRange.earliest}
@@ -1848,6 +2033,13 @@ const OverviewPage: React.FC = () => {
                                     value={topIncidentCard.value}
                                     source={topIncidentCard.source}
                                     accentClassName="bg-red-500"
+                                    description={KPI_CONFIG[0].description}
+                                    bindingFootnote={topIncidentBindingFootnote}
+                                    onOpenInSearch={
+                                        topIncidentDrilldownSpl
+                                            ? handleTopIncidentOpenInSearch
+                                            : undefined
+                                    }
                                     onConfigure={() =>
                                         openPicker(KPI_CONFIG[0].id, KPI_CONFIG[0].label, {
                                             savedSearch: KPI_CONFIG[0].savedSearch,
@@ -1861,6 +2053,13 @@ const OverviewPage: React.FC = () => {
                                     value={operationalLeadCard.value}
                                     source={operationalLeadCard.source}
                                     accentClassName="bg-emerald-500"
+                                    description={KPI_CONFIG[1].description}
+                                    bindingFootnote={operationalLeadBindingFootnote}
+                                    onOpenInSearch={
+                                        operationalLeadDrilldownSpl
+                                            ? handleOperationalLeadOpenInSearch
+                                            : undefined
+                                    }
                                     onConfigure={() =>
                                         openPicker(KPI_CONFIG[1].id, KPI_CONFIG[1].label, {
                                             savedSearch: KPI_CONFIG[1].savedSearch,
@@ -1912,6 +2111,7 @@ const OverviewPage: React.FC = () => {
                         window.open(url, '_blank', 'noopener,noreferrer');
                     }
                 }}
+                onResetAllCustomizations={handleResetAllCustomizations}
             />
         </div>
     );
@@ -1930,6 +2130,20 @@ interface KpiCardProps {
     onConfigure?: () => void;
     /** Marks the gear with a small dot when the tile is overridden. */
     isCustomized?: boolean;
+    /** Body text for the (?) info tooltip. Hides the icon when omitted. */
+    description?: string;
+    /**
+     * Italic footnote shown at the bottom of the tooltip — typically the
+     * search binding (saved-search stanza or "(inline SPL)") so the
+     * operator can trace the data lineage at a glance.
+     */
+    bindingFootnote?: string;
+    /**
+     * Click handler for the ExternalLink icon — opens the literal SPL
+     * the tile dispatched in the standard Splunk Search & Reporting UI.
+     * Hidden when omitted, matching `MetricItem`'s behavior.
+     */
+    onOpenInSearch?: () => void;
 }
 
 // =============================================================================
@@ -1985,6 +2199,9 @@ const KpiCard: React.FC<KpiCardProps> = ({
     accentClassName,
     onConfigure,
     isCustomized = false,
+    description,
+    bindingFootnote,
+    onOpenInSearch,
 }) => (
     <div className="p-2 border border-slate-100 dark:border-slate-800 rounded-lg bg-slate-50/50 dark:bg-slate-800/40 relative">
         <span
@@ -2009,6 +2226,27 @@ const KpiCard: React.FC<KpiCardProps> = ({
             <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider truncate flex-1">
                 {label}
             </span>
+            {description && (
+                <InfoTooltip
+                    title={label}
+                    description={description}
+                    footnote={bindingFootnote}
+                    anchor="right"
+                    iconAriaLabel={`What is ${label}?`}
+                    className="flex-shrink-0"
+                />
+            )}
+            {onOpenInSearch && (
+                <button
+                    type="button"
+                    onClick={onOpenInSearch}
+                    title="Open in Splunk Search"
+                    aria-label={`Open ${label} in Splunk Search`}
+                    className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400 flex-shrink-0"
+                >
+                    <ExternalLink className="w-3 h-3 stroke-[2.5px]" />
+                </button>
+            )}
             {onConfigure && (
                 <button
                     type="button"

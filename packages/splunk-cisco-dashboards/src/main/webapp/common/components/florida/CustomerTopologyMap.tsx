@@ -135,6 +135,15 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
             telemetrySource: 'Awaiting topology link telemetry',
             searchName: 'Overview - Link Auburndale to Tallahassee Health',
         },
+        {
+            id: 'mco-aub',
+            name: 'Orlando to Auburndale',
+            sourceSiteId: 'mco',
+            targetSiteId: 'aub',
+            status: 'unknown',
+            telemetrySource: 'Awaiting topology link telemetry',
+            searchName: 'Overview - Link Orlando to Auburndale Health',
+        },
     ],
 };
 
@@ -213,8 +222,8 @@ const ROLE_BEACON_CHROME: Record<
     },
 };
 
-const TOPOLOGY_STORAGE_KEY = 'splunk-cisco-dashboards.customerTopology.v3';
-const TOPOLOGY_STORAGE_VERSION = 3;
+const TOPOLOGY_STORAGE_KEY = 'splunk-cisco-dashboards.customerTopology.v4';
+const TOPOLOGY_STORAGE_VERSION = 4;
 const TOPOLOGY_ROLES: TopologyRole[] = [
     'state_hq',
     'regional_hub',
@@ -511,6 +520,21 @@ const writePersistedTopology = (topology: CustomerTopology): void => {
 const clearPersistedTopology = (): void => {
     if (typeof window === 'undefined') return;
     window.localStorage.removeItem(TOPOLOGY_STORAGE_KEY);
+};
+
+/**
+ * Public-facing helper for the "Reset all customisations" flow on
+ * the Overview page. Wipes the persisted topology so the next mount
+ * of `<CustomerTopologyMap />` reads `null` from localStorage and
+ * falls through to the default `CUSTOMER_TOPOLOGY` factory.
+ *
+ * NOTE: in-tab callers must also force a remount of the map (e.g.
+ * by bumping its `key` prop) — `localStorage` `storage` events only
+ * fire across tabs, not in the originating tab, so the existing
+ * mounted map won't reseed itself just because storage was cleared.
+ */
+export const clearCustomerTopologyStorage = (): void => {
+    clearPersistedTopology();
 };
 
 const usePersistedTopology = (fallback: CustomerTopology) => {
