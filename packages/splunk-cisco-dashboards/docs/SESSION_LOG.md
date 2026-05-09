@@ -7,6 +7,208 @@
 
 ---
 
+## 2026-05-08 (cont. 7) — Map "wow factor" animations (Tier 1 + Tier 2)
+
+### Goal of the addendum
+
+Make the executive overview map's connectivity story visibly *alive* —
+not as eye-candy, but as a glanceable status signal. User feedback after
+seeing the static-with-marching-dashes baseline:
+
+> "are you sure this the best option? I want this dashboard to wow everyone!"
+
+So the bar moved from "tasteful" to "wow without sacrificing readability."
+
+### Discovery & decisions
+
+- **The codebase already had more animation than I initially noticed.**
+  `CustomerTopologyMap.tsx` was injecting SMIL `<animate>` elements into
+  Leaflet's polyline `<path>` SVGs to drive marching dashes (warning,
+  critical) and breathing stroke-opacity (critical only). The popup was
+  already wrapped in `<AnimatePresence>` with a slide+fade. The site
+  markers had pulsing radiate halos via CSS keyframes. The codebase
+  comment at the SMIL injection site explicitly explained why SMIL beats
+  CSS for Leaflet polylines: Leaflet rewrites the path's `d` attribute
+  on every pan/zoom, which restarts CSS `stroke-dashoffset` animations
+  but leaves SMIL animations running smoothly.
+
+  → Decision: **build on top of the existing SMIL approach**, do not
+  rip it out for `leaflet-ant-path` or anything else. SMIL is the right
+  primitive for animations anchored to a path that Leaflet redraws.
+
+- **What was missing for "wow":**
+  1. Packets visibly traveling along the links (the showstopper).
+  2. Marker entrance choreography (just a static drop-in today).
+  3. Hover micro-interaction on the lines (click-only today).
+  4. A user-facing animation level toggle so an operator can dial it
+     down for a presentation, or a CISO can disable it completely. And
+     `prefers-reduced-motion` honored as a hard override.
+
+- **Why packets via `<animateMotion>` + `<mpath>` (SMIL) and not Motion's
+  `motion.circle` with a JS frame loop:** SMIL animations run in the
+  browser's compositor without involving the JS frame loop, so even
+  with a dozen packets in flight they don't compete with a busy CPU
+  during a live demo. Same reasoning the existing marching-dash code
+  uses. Motion remains the right tool for React-state-driven UI
+  transitions (popup, KPI panel) where SMIL can't reach.
+
+### What we built
+
+Animation level system (`useTopologyAnimationLevel`):
+
+- Three-level enum: `'on' | 'subtle' | 'off'`.
+- Persisted in `localStorage` under `florida-topology-animation-level`.
+- Subscribed via `useSyncExternalStore` so multiple instances stay in
+  sync, including a manual `dispatchEvent('storage')` after writes
+  because the native `storage` event does not fire in the same tab.
+- `prefers-reduced-motion: reduce` is read via `matchMedia` and forces
+  the *effective* level to `'off'` regardless of stored preference,
+  while preserving the stored value for when the OS preference flips
+  back. This is the correct pattern: respect the system signal, but
+  don't lose the user's explicit choice.
+- Toggle button added to the bottom-left control stack on the map
+  (Sparkles icon + tier badge: On / Sub / Off). Click cycles. Tooltip
+  explains when reduced-motion is overriding.
+
+Marker entrance (Tier 1):
+
+- New `customer-topology-marker-enter` keyframe (cubic-bezier overshoot
+  ease, scale + translateY pop with opacity ramp).
+- `createSiteIcon` accepts an `animateEntrance` flag and a delay in
+  milliseconds; renders the entrance class only on the first mount of
+  each site. A per-component `Set<siteId>` ref tracks which markers
+  have already animated, so toggling the level later does not re-fire
+  drop-in for existing markers (which would be jarring).
+- Stagger: `index * 90ms`, so the five Florida sites cascade in
+  sequence over ~360ms. Easy to read which marker is which on first
+  load.
+
+Link hover bump (Tier 1):
+
+- New `customer-topology-link-shell` className applied to the visible
+  Polyline.
+- CSS `:hover` selector bumps `stroke-width` by 1.6px and pumps
+  `stroke-opacity` to 1.0, with a 180ms ease-out transition. Pure
+  CSS, costs nothing, and works because Leaflet's polyline `<path>`
+  is a regular SVG element that responds to `:hover`.
+
+SMIL flow scaling (Tier 1):
+
+- `TopologyLinkPath` now accepts the effective animation level. At
+  `'off'` it skips SMIL injection entirely (line is fully static). At
+  `'subtle'` it slows the marching dashes to ~70% of full speed and
+  breathing to 2.4s instead of 1.4s, so the line still reads as alive
+  but doesn't compete for attention.
+
+Packet stream layer (Tier 2 — the centerpiece):
+
+- New `<LinkPacketLayer>` component, mounted inside `<MapContainer>`
+  immediately after the existing `<TopologyLinkPath>` instances.
+- Lives in a custom `<Pane name="customer-topology-packets" zIndex=410>`,
+  which Leaflet positions between its default `overlayPane` (zIndex
+  400, where the polyline shells live) and `markerPane` (zIndex 600,
+  where site icons live). Result: packets float above the lines but
+  below the markers and popups, exactly where the eye expects.
+- Geometry pipeline:
+  1. For each link segment, compute the same bezier polyline used by
+     `TopologyLinkPath` (`computeBezierLine`) so packets travel the
+     identical curve.
+  2. Convert each bezier point through `map.latLngToLayerPoint(...)`
+     to get pane-relative pixel coordinates.
+  3. Stitch points into an SVG `<path d="...">` and stash it inside a
+     `<defs>` block.
+  4. Render N `<circle>` packets per link, each with an
+     `<animateMotion><mpath href="#..."></mpath></animateMotion>` child
+     pointing at the link's path.
+  5. Stagger packet starts via `begin="-Xs"` so they spread evenly
+     along the path rather than clumping at the source.
+- Re-render trigger: a `useReducer` tick fired from `zoomend` and
+  `viewreset` listeners. Pan does NOT trigger recompute because
+  Leaflet's pane translate handles pan for free; subscribing to `move`
+  would force a useless rebuild every drag tick.
+- Per-status profile (count × duration × radius × color × opacity)
+  is dialed twice — once for `'on'`, once for `'subtle'` — so each
+  level has its own coherent visual cadence:
+  - **Stable:** soft sky-blue dots, 4 packets at 6s on / 2 at 8.5s
+    subtle. Reads as a calm trickle.
+  - **Warning:** amber dots, 3 at 3.6s on / 2 at 5.2s subtle.
+  - **Critical:** red dots with glow, 2 at 1.8s on / 1 at 2.6s subtle.
+    Tight, urgent cadence.
+  - **Unknown:** intentionally no packets at any level. Unknown stays
+    quiet because we have nothing to say about it.
+- Glow filter (`drop-shadow` on `currentColor`) animated via CSS
+  keyframe at 1.6s (on) / 2.6s (subtle). Color tied to the
+  `customer-topology-packet--{status}` class and the `currentColor`
+  pattern, so changing status auto-changes glow color.
+
+Reduced-motion + level CSS overrides:
+
+- Wrapper div carries a `customer-topology-anim--{on|subtle|off}` class
+  driven by the effective level. `--off` halts every CSS keyframe via
+  `animation: none !important` for radiate, alert ring, marker
+  entrance, and packet glow. SMIL animations are stopped at the
+  injection layer (TopologyLinkPath skips injection at `'off'`).
+- A `@media (prefers-reduced-motion: reduce)` block applies the same
+  CSS halts independently of the wrapper class, as belt-and-braces in
+  case the wrapper class fails to apply for some reason.
+
+### Verification
+
+- `yarn run typecheck` — clean.
+- `yarn run build` — clean (only pre-existing asset-size warnings).
+- ESLint can't run on this repo without the `eslint-config-airbnb`
+  package which the workspace doesn't have installed. Confirmed by
+  invoking the linter directly. Pre-existing infra issue, not
+  something this work introduced.
+- `react-leaflet@4.2.1` confirmed to export `<Pane>` (verified via the
+  package's `Pane.d.ts`).
+
+Manual visual verification is the user's job since the animation has to
+actually look right. The dev stack is browser-only and the rendering is
+SMIL-based; the only signal a CI build can give us is "compiles."
+
+### Files changed
+
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/florida/CustomerTopologyMap.tsx`
+  - Imports: `useReducer`, `useSyncExternalStore` (React); `Pane`
+    (react-leaflet); `Sparkles` (lucide-react).
+  - Added `TopologyAnimationLevel` type, `useTopologyAnimationLevel`
+    hook, `TOPOLOGY_ANIMATION_LEVEL_LABELS`, related storage helpers.
+  - Extended `topologyAnimationCss` with marker entrance, packet glow,
+    hover bump, level overrides, and `prefers-reduced-motion` block.
+  - `createSiteIcon`: now accepts `animateEntrance` and
+    `entranceDelayMs`; emits the entrance class + CSS variable on the
+    outer div.
+  - `TopologyLinkPath`: accepts `animationLevel`; skips SMIL at
+    `'off'`, slows it at `'subtle'`. Polyline gains
+    `customer-topology-link-shell` className.
+  - New components: `packetProfile`, `<LinkPacketLayer>`.
+  - `CustomerTopologyMap` host: calls
+    `useTopologyAnimationLevel`, tracks marker entrance via a ref,
+    threads `animationLevel` into `<TopologyLinkPath>`, renders
+    `<LinkPacketLayer>` inside `MapContainer`, attaches
+    `customer-topology-anim--{level}` class to the wrapper, adds the
+    Sparkles cycle button to the bottom-left control stack.
+
+### Tag
+
+Pre-snapshot saved at `codex-pre-map-animation-20260508-222336` so this
+work is one revert away from the "User Experience folded in" baseline
+if anything visual goes sideways.
+
+### What's next
+
+- Visual verification on the deployed app — start at level=`'on'` and
+  cycle through `'subtle'` and `'off'` to confirm the level knob
+  behaves the way the comments promise.
+- If 60fps is an issue with all 4 links populated (especially on a
+  modest laptop driving an external display), the count for stable
+  links can drop from 4→3 cheaply. Watch for jank during a fast pan.
+- Future polish: sparkline draw-in via Motion (Tier 3 from the original
+  proposal), and Motion-driven hover lift on the KPI cards.
+
+---
+
 ## 2026-05-08 (cont. 6) — User Experience folded into IT Health (Option A)
 
 ### Goal of the addendum

@@ -7,11 +7,20 @@
  * and telemetry bindings live in one config object.
  */
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+    useCallback,
+    useEffect,
+    useMemo,
+    useReducer,
+    useRef,
+    useState,
+    useSyncExternalStore,
+} from 'react';
 import {
     Circle,
     MapContainer,
     Marker,
+    Pane,
     Polyline,
     TileLayer,
     ZoomControl,
@@ -35,6 +44,7 @@ import {
     Plus,
     RotateCcw,
     Save,
+    Sparkles,
     Terminal,
     Trash2,
     Upload,
@@ -600,6 +610,129 @@ const usePersistedTopology = (fallback: CustomerTopology) => {
     return { topology, saveTopology, resetTopology };
 };
 
+/**
+ * Topology animation level: governs the intensity of map animations
+ * (marker entrance, link hover bumps, packet streams). Persisted in
+ * localStorage so each operator's preference survives reloads.
+ *
+ *  - 'on'     : full effects (entrance bounce, marching dashes, packet streams)
+ *  - 'subtle' : reduced effects (no entrance, slower packets, no bounce)
+ *  - 'off'    : every keyframe halted; equivalent to honoring
+ *               `prefers-reduced-motion` system-wide
+ *
+ * `prefers-reduced-motion: reduce` forces the effective level to 'off'
+ * regardless of the stored preference. Stored preference is preserved so
+ * the user gets their previous setting back if the OS preference flips.
+ */
+type TopologyAnimationLevel = 'on' | 'subtle' | 'off';
+
+const TOPOLOGY_ANIMATION_LEVEL_KEY = 'florida-topology-animation-level';
+const TOPOLOGY_ANIMATION_LEVELS: TopologyAnimationLevel[] = [
+    'on',
+    'subtle',
+    'off',
+];
+
+const readStoredAnimationLevel = (): TopologyAnimationLevel => {
+    if (typeof window === 'undefined') return 'subtle';
+    try {
+        const stored = window.localStorage.getItem(
+            TOPOLOGY_ANIMATION_LEVEL_KEY
+        );
+        if (
+            stored === 'on' ||
+            stored === 'subtle' ||
+            stored === 'off'
+        ) {
+            return stored;
+        }
+    } catch {
+        /* localStorage may be unavailable (private mode etc.) */
+    }
+    return 'subtle';
+};
+
+const subscribeStoredAnimationLevel = (
+    onChange: () => void
+): (() => void) => {
+    if (typeof window === 'undefined') return () => undefined;
+    const handler = (event: StorageEvent) => {
+        if (event.key === TOPOLOGY_ANIMATION_LEVEL_KEY) onChange();
+    };
+    window.addEventListener('storage', handler);
+    return () => window.removeEventListener('storage', handler);
+};
+
+const subscribeReducedMotion = (onChange: () => void): (() => void) => {
+    if (typeof window === 'undefined' || !window.matchMedia) {
+        return () => undefined;
+    }
+    const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (typeof mql.addEventListener === 'function') {
+        mql.addEventListener('change', onChange);
+        return () => mql.removeEventListener('change', onChange);
+    }
+    // Safari < 14 fallback
+    mql.addListener(onChange);
+    return () => mql.removeListener(onChange);
+};
+
+const useTopologyAnimationLevel = (): {
+    level: TopologyAnimationLevel; // effective level (after reduced-motion override)
+    storedLevel: TopologyAnimationLevel; // raw stored preference
+    setLevel: (next: TopologyAnimationLevel) => void;
+    reducedMotion: boolean;
+} => {
+    const storedLevel = useSyncExternalStore<TopologyAnimationLevel>(
+        subscribeStoredAnimationLevel,
+        readStoredAnimationLevel,
+        () => 'subtle'
+    );
+    const reducedMotion = useSyncExternalStore(
+        subscribeReducedMotion,
+        () => {
+            if (typeof window === 'undefined' || !window.matchMedia) return false;
+            return window.matchMedia(
+                '(prefers-reduced-motion: reduce)'
+            ).matches;
+        },
+        () => false
+    );
+    const setLevel = useCallback((next: TopologyAnimationLevel) => {
+        if (typeof window === 'undefined') return;
+        try {
+            window.localStorage.setItem(
+                TOPOLOGY_ANIMATION_LEVEL_KEY,
+                next
+            );
+            // `storage` events do not fire in the same tab, so dispatch
+            // manually to nudge other useSyncExternalStore subscribers
+            // mounted in the same window.
+            window.dispatchEvent(
+                new StorageEvent('storage', {
+                    key: TOPOLOGY_ANIMATION_LEVEL_KEY,
+                    newValue: next,
+                })
+            );
+        } catch {
+            /* swallow */
+        }
+    }, []);
+    return {
+        level: reducedMotion ? 'off' : storedLevel,
+        storedLevel,
+        setLevel,
+        reducedMotion,
+    };
+};
+
+const TOPOLOGY_ANIMATION_LEVEL_LABELS: Record<TopologyAnimationLevel, string> =
+    {
+        on: 'Animations: On',
+        subtle: 'Animations: Subtle',
+        off: 'Animations: Off',
+    };
+
 const topologyAnimationCss = `
     @keyframes customer-topology-pulse {
         0%, 100% { stroke-opacity: 0.55; }
@@ -609,6 +742,15 @@ const topologyAnimationCss = `
         0% { transform: scale(0.85); opacity: 0.55; }
         70% { transform: scale(1.55); opacity: 0; }
         100% { transform: scale(1.55); opacity: 0; }
+    }
+    @keyframes customer-topology-marker-enter {
+        0%   { transform: scale(0) translateY(-12px); opacity: 0; }
+        70%  { transform: scale(1.18) translateY(0); opacity: 1; }
+        100% { transform: scale(1) translateY(0); opacity: 1; }
+    }
+    @keyframes customer-topology-packet-glow {
+        0%, 100% { filter: drop-shadow(0 0 1.5px currentColor); }
+        50%      { filter: drop-shadow(0 0 4px currentColor); }
     }
     .customer-topology-link-hitbox {
         cursor: pointer;
@@ -634,6 +776,50 @@ const topologyAnimationCss = `
     }
     .customer-topology-radiate--critical {
         animation-duration: 0.95s;
+    }
+    /* Marker entrance — staggered via inline --customer-topology-marker-delay */
+    .customer-topology-marker-enter {
+        animation-name: customer-topology-marker-enter;
+        animation-duration: 720ms;
+        animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+        animation-fill-mode: both;
+        animation-delay: var(--customer-topology-marker-delay, 0ms);
+        transform-origin: center bottom;
+    }
+    /* Hover bump for connectivity lines */
+    .customer-topology-link-shell {
+        transition: stroke-width 180ms ease-out, stroke-opacity 180ms ease-out;
+    }
+    .customer-topology-link-shell:hover {
+        stroke-opacity: 1 !important;
+        stroke-width: calc(var(--customer-topology-link-weight, 2.4) + 1.6px) !important;
+    }
+    /* Packet stream visuals */
+    .customer-topology-packet {
+        animation: customer-topology-packet-glow 1.6s ease-in-out infinite;
+    }
+    .customer-topology-packet--critical { color: #ef4444; }
+    .customer-topology-packet--warning  { color: #f59e0b; }
+    .customer-topology-packet--stable   { color: #38bdf8; }
+    /* Subtle level: slow the packet glow but keep packets visible */
+    .customer-topology-anim--subtle .customer-topology-packet {
+        animation-duration: 2.6s;
+        opacity: 0.75;
+    }
+    /* Off level + prefers-reduced-motion: halt everything */
+    .customer-topology-anim--off .customer-topology-radiate,
+    .customer-topology-anim--off .customer-topology-alert-ring,
+    .customer-topology-anim--off .customer-topology-marker-enter,
+    .customer-topology-anim--off .customer-topology-packet {
+        animation: none !important;
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .customer-topology-radiate,
+        .customer-topology-alert-ring,
+        .customer-topology-marker-enter,
+        .customer-topology-packet {
+            animation: none !important;
+        }
     }
 `;
 
@@ -1393,7 +1579,9 @@ const createSiteIcon = (
     site: TopologySite,
     isSelected: boolean,
     isSpotlight: boolean,
-    isDark: boolean
+    isDark: boolean,
+    animateEntrance: boolean,
+    entranceDelayMs: number
 ) => {
     const safeName = escapeHtml(site.name);
     const safeShortName = escapeHtml(site.shortName);
@@ -1418,10 +1606,16 @@ const createSiteIcon = (
     const pillBg = isDark ? '#0f172a' : '#ffffff';
     const showAlertDot =
         site.status === 'critical' || site.status === 'warning';
+    const entranceClass = animateEntrance
+        ? 'customer-topology-marker-enter'
+        : '';
+    const entranceStyle = animateEntrance
+        ? `--customer-topology-marker-delay:${entranceDelayMs}ms;`
+        : '';
     return L.divIcon({
         className: 'custom-div-icon',
         html: `
-      <div class="relative flex flex-col items-center group w-[200px]">
+      <div class="relative flex flex-col items-center group w-[200px] ${entranceClass}" style="${entranceStyle}">
         <div class="relative flex items-center justify-center w-9 h-9 ${selectionScale} transition-transform duration-200">
           <span
             class="absolute inset-0 rounded-full ${radiateClass}"
@@ -1470,6 +1664,11 @@ interface TopologyLinkPathProps {
     target: TopologySite;
     isSelected: boolean;
     onSelect: (link: TopologyLink) => void;
+    /**
+     * Effective animation level. 'off' suppresses SMIL marching/breathing
+     * entirely; 'subtle' slows it; 'on' uses the original cadence.
+     */
+    animationLevel: TopologyAnimationLevel;
 }
 
 /**
@@ -1492,6 +1691,7 @@ const TopologyLinkPath: React.FC<TopologyLinkPathProps> = ({
     target,
     isSelected,
     onSelect,
+    animationLevel,
 }) => {
     const positions = useMemo(
         () =>
@@ -1505,6 +1705,17 @@ const TopologyLinkPath: React.FC<TopologyLinkPathProps> = ({
     const color = STATUS_STROKE[link.status];
     const polylineRef = useRef<L.Polyline | null>(null);
 
+    // Subtle level: slow the marching dashes and breathing roughly 70% to keep
+    // the line readable as "alive" without the eye-grabbing cadence of full.
+    // Off level: skip SMIL injection entirely so the path is fully static.
+    const flowSeconds =
+        animationLevel === 'off'
+            ? null
+            : animationLevel === 'subtle' && profile.flowSeconds !== null
+            ? profile.flowSeconds * 1.7
+            : profile.flowSeconds;
+    const enableBreathe = animationLevel !== 'off' && profile.breathe;
+
     useEffect(() => {
         const polyline = polylineRef.current;
         if (!polyline) return undefined;
@@ -1514,24 +1725,27 @@ const TopologyLinkPath: React.FC<TopologyLinkPathProps> = ({
             element
                 .querySelectorAll('animate[data-customer-topology-flow]')
                 .forEach((node) => node.remove());
-            if (profile.flowSeconds !== null) {
+            if (flowSeconds !== null) {
                 const flow = document.createElementNS(SVG_NS, 'animate');
                 flow.setAttribute('attributeName', 'stroke-dashoffset');
                 flow.setAttribute('from', '0');
                 flow.setAttribute('to', '-24');
-                flow.setAttribute('dur', `${profile.flowSeconds}s`);
+                flow.setAttribute('dur', `${flowSeconds}s`);
                 flow.setAttribute('repeatCount', 'indefinite');
                 flow.setAttribute('data-customer-topology-flow', 'dash');
                 element.appendChild(flow);
             }
-            if (profile.breathe) {
+            if (enableBreathe) {
                 const breathe = document.createElementNS(SVG_NS, 'animate');
                 breathe.setAttribute('attributeName', 'stroke-opacity');
                 breathe.setAttribute(
                     'values',
                     `${profile.opacity};${Math.min(1, profile.opacity + 0.05)};${profile.opacity * 0.65};${profile.opacity}`
                 );
-                breathe.setAttribute('dur', '1.4s');
+                breathe.setAttribute(
+                    'dur',
+                    animationLevel === 'subtle' ? '2.4s' : '1.4s'
+                );
                 breathe.setAttribute('repeatCount', 'indefinite');
                 breathe.setAttribute('data-customer-topology-flow', 'breathe');
                 element.appendChild(breathe);
@@ -1549,7 +1763,7 @@ const TopologyLinkPath: React.FC<TopologyLinkPathProps> = ({
                 ?.querySelectorAll('animate[data-customer-topology-flow]')
                 .forEach((node) => node.remove());
         };
-    }, [profile.flowSeconds, profile.breathe, profile.opacity]);
+    }, [flowSeconds, enableBreathe, profile.opacity, animationLevel]);
 
     const handleClick = useCallback(
         (event: L.LeafletMouseEvent) => {
@@ -1587,10 +1801,223 @@ const TopologyLinkPath: React.FC<TopologyLinkPathProps> = ({
                     dashArray: profile.dashArray ?? undefined,
                     lineCap: 'round',
                     lineJoin: 'round',
+                    className: 'customer-topology-link-shell',
                 }}
                 eventHandlers={{ click: handleClick }}
             />
         </>
+    );
+};
+
+/**
+ * Per-link packet stream profile. Counts/durations are deliberately tuned so
+ * that even at level='on' the stable links carry a calm, slow trickle while
+ * critical links pop with a tight, urgent cadence. The eye reads density and
+ * speed *together* as a health signal.
+ */
+interface PacketProfile {
+    count: number;
+    durationSeconds: number;
+    radius: number;
+    fill: string;
+    statusClass: string;
+    opacity: number;
+}
+
+const packetProfile = (
+    status: TopologyStatus,
+    level: TopologyAnimationLevel
+): PacketProfile | null => {
+    if (level === 'off') return null;
+    if (status === 'unknown') return null; // unknown stays quiet
+    const subtle = level === 'subtle';
+    switch (status) {
+        case 'critical':
+            return {
+                count: subtle ? 1 : 2,
+                durationSeconds: subtle ? 2.6 : 1.8,
+                radius: 3.4,
+                fill: '#ef4444',
+                statusClass: 'customer-topology-packet--critical',
+                opacity: 0.95,
+            };
+        case 'warning':
+            return {
+                count: subtle ? 2 : 3,
+                durationSeconds: subtle ? 5.2 : 3.6,
+                radius: 2.8,
+                fill: '#f59e0b',
+                statusClass: 'customer-topology-packet--warning',
+                opacity: 0.9,
+            };
+        case 'stable':
+        default:
+            return {
+                count: subtle ? 2 : 4,
+                durationSeconds: subtle ? 8.5 : 6,
+                radius: 2.5,
+                fill: '#38bdf8',
+                statusClass: 'customer-topology-packet--stable',
+                opacity: subtle ? 0.65 : 0.85,
+            };
+    }
+};
+
+interface LinkPacketLayerProps {
+    linkSegments: Array<{
+        link: TopologyLink;
+        source: TopologySite;
+        target: TopologySite;
+    }>;
+    animationLevel: TopologyAnimationLevel;
+}
+
+/**
+ * Renders bright "packets" (small SVG circles) traveling end-to-end along
+ * each link's bezier curve, color-coded by health status and density-tuned
+ * by the active animation level.
+ *
+ * The implementation lives inside a custom Leaflet pane (zIndex 410, between
+ * Leaflet's default overlayPane=400 and markerPane=600) so packets appear
+ * above the polyline shells but below the site markers and popups. Custom
+ * panes are translated by Leaflet automatically on pan, so we only need to
+ * recompute path geometry on `zoomend` and `viewreset` — pan is free.
+ *
+ * Animation itself uses SVG <animateMotion> + <mpath> for two reasons:
+ *   1. Consistency with the existing SMIL approach used by TopologyLinkPath
+ *      (the codebase already depends on SMIL working in the target
+ *      browsers).
+ *   2. SMIL animations run inside the browser's compositor without
+ *      involving the JS frame loop, so we keep 60fps even with a dozen
+ *      packets in flight on a busy CPU.
+ */
+const LinkPacketLayer: React.FC<LinkPacketLayerProps> = ({
+    linkSegments,
+    animationLevel,
+}) => {
+    const map = useMap();
+    const [tick, forceRedraw] = useReducer((n: number) => n + 1, 0);
+
+    useEffect(() => {
+        // Recompute screen-space paths whenever the world↔pixel mapping
+        // changes. Pan does NOT change that mapping when packets live inside
+        // a Leaflet pane (Leaflet translates the pane wholesale), so we
+        // deliberately do not subscribe to `move`/`moveend` to avoid a
+        // useless re-render on every drag tick.
+        const handler = () => forceRedraw();
+        map.on('zoomend', handler);
+        map.on('viewreset', handler);
+        return () => {
+            map.off('zoomend', handler);
+            map.off('viewreset', handler);
+        };
+    }, [map]);
+
+    const segmentsWithGeometry = useMemo(() => {
+        // `tick` is intentionally read so this memo invalidates whenever
+        // forceRedraw fires (zoomend / viewreset). Without it the cached
+        // result would hold stale latLngToLayerPoint coordinates after a
+        // zoom change.
+        void tick;
+        return linkSegments
+            .map(({ link, source, target }) => {
+                const profile = packetProfile(link.status, animationLevel);
+                if (!profile) return null;
+                const points = computeBezierLine(
+                    [source.lat, source.lng],
+                    [target.lat, target.lng]
+                );
+                if (points.length < 2) return null;
+                const layerPoints = points.map(([lat, lng]) =>
+                    map.latLngToLayerPoint([lat, lng])
+                );
+                const head = layerPoints[0];
+                const tail = layerPoints
+                    .slice(1)
+                    .map((p) => `L${p.x},${p.y}`)
+                    .join(' ');
+                const d = `M${head.x},${head.y} ${tail}`;
+                return {
+                    id: link.id,
+                    d,
+                    profile,
+                };
+            })
+            .filter(
+                (
+                    seg
+                ): seg is {
+                    id: string;
+                    d: string;
+                    profile: PacketProfile;
+                } => Boolean(seg)
+            );
+    }, [linkSegments, animationLevel, map, tick]);
+
+    if (animationLevel === 'off') return null;
+    if (segmentsWithGeometry.length === 0) return null;
+
+    return (
+        <Pane
+            name="customer-topology-packets"
+            style={{ zIndex: 410, pointerEvents: 'none' }}
+        >
+            <svg
+                width="0"
+                height="0"
+                style={{
+                    overflow: 'visible',
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                }}
+            >
+                <defs>
+                    {segmentsWithGeometry.map((seg) => (
+                        <path
+                            key={`def-${seg.id}`}
+                            id={`customer-topology-packet-path-${seg.id}`}
+                            d={seg.d}
+                            fill="none"
+                        />
+                    ))}
+                </defs>
+                {segmentsWithGeometry.map((seg) =>
+                    Array.from({ length: seg.profile.count }).map((_, i) => {
+                        // Stagger packet starts so they appear evenly spaced
+                        // along the path rather than clumping at the source.
+                        const beginOffset =
+                            (i / seg.profile.count) *
+                            seg.profile.durationSeconds;
+                        return (
+                            <circle
+                                key={`pkt-${seg.id}-${i}`}
+                                r={seg.profile.radius}
+                                cx={0}
+                                cy={0}
+                                fill={seg.profile.fill}
+                                opacity={seg.profile.opacity}
+                                className={cn(
+                                    'customer-topology-packet',
+                                    seg.profile.statusClass
+                                )}
+                            >
+                                <animateMotion
+                                    dur={`${seg.profile.durationSeconds}s`}
+                                    repeatCount="indefinite"
+                                    rotate="auto"
+                                    begin={`-${beginOffset}s`}
+                                >
+                                    <mpath
+                                        href={`#customer-topology-packet-path-${seg.id}`}
+                                    />
+                                </animateMotion>
+                            </circle>
+                        );
+                    })
+                )}
+            </svg>
+        </Pane>
     );
 };
 
@@ -1737,6 +2164,27 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         Record<string, SiteEnrichment>
     >({});
     const pauseUntilRef = useRef<number>(0);
+
+    // Animation level (controls marker entrance, link hover, packet streams).
+    const {
+        level: animationLevel,
+        storedLevel: storedAnimationLevel,
+        setLevel: setAnimationLevel,
+        reducedMotion,
+    } = useTopologyAnimationLevel();
+
+    // Track which sites we've already shown the entrance animation for so a
+    // later toggle of animation level doesn't restart drop-in for everyone.
+    const animatedSitesRef = useRef<Set<string>>(new Set());
+    const shouldAnimateMarkerEntrance = useCallback(
+        (siteId: string, level: TopologyAnimationLevel) => {
+            if (level !== 'on') return false;
+            if (animatedSitesRef.current.has(siteId)) return false;
+            animatedSitesRef.current.add(siteId);
+            return true;
+        },
+        []
+    );
 
     useEffect(() => {
         if (!isEditorOpen) {
@@ -2462,6 +2910,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         <div
             className={cn(
                 'relative w-full h-full min-h-[320px] overflow-hidden border rounded-xl shadow-inner group',
+                `customer-topology-anim--${animationLevel}`,
                 isDark
                     ? 'bg-slate-900 border-slate-800'
                     : 'bg-slate-100 border-slate-200'
@@ -2534,8 +2983,15 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                             resolvedSelected.link.id === link.id
                         }
                         onSelect={selectLink}
+                        animationLevel={animationLevel}
                     />
                 ))}
+
+                <LinkPacketLayer
+                    linkSegments={linkSegments}
+                    animationLevel={animationLevel}
+                />
+
 
                 {spotlightSite &&
                     (spotlightSite.status === 'critical' ||
@@ -2556,7 +3012,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                         />
                     )}
 
-                {resolvedTopology.sites.map((site) => (
+                {resolvedTopology.sites.map((site, index) => (
                     <Marker
                         key={site.id}
                         position={[site.lat, site.lng]}
@@ -2565,7 +3021,13 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                             resolvedSelected?.kind === 'site' &&
                                 resolvedSelected.site.id === site.id,
                             spotlightSite?.id === site.id && !resolvedSelected,
-                            isDark
+                            isDark,
+                            // Entrance animation runs only on the first mount of
+                            // each site marker. We tie it to a stable per-site
+                            // ref so toggling animation level later does not
+                            // re-trigger a now-distracting drop-in.
+                            shouldAnimateMarkerEntrance(site.id, animationLevel),
+                            index * 90
                         )}
                         eventHandlers={{
                             click: () => selectSite(site),
@@ -2653,6 +3115,56 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                     )}
                 >
                     <Pencil className="w-4 h-4" />
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() => {
+                        const idx = TOPOLOGY_ANIMATION_LEVELS.indexOf(
+                            storedAnimationLevel
+                        );
+                        const nextIdx =
+                            (idx + 1) % TOPOLOGY_ANIMATION_LEVELS.length;
+                        setAnimationLevel(
+                            TOPOLOGY_ANIMATION_LEVELS[nextIdx]
+                        );
+                    }}
+                    title={
+                        reducedMotion
+                            ? 'Animations forced off by your OS reduce-motion setting. Click to cycle preference (will apply when reduce-motion is disabled).'
+                            : `${TOPOLOGY_ANIMATION_LEVEL_LABELS[storedAnimationLevel]}. Click to cycle.`
+                    }
+                    aria-label={
+                        TOPOLOGY_ANIMATION_LEVEL_LABELS[animationLevel]
+                    }
+                    className={cn(
+                        'border p-2 rounded-lg shadow-md transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400 relative',
+                        buttonChrome,
+                        animationLevel === 'off' && 'opacity-60'
+                    )}
+                >
+                    <Sparkles
+                        className={cn(
+                            'w-4 h-4',
+                            animationLevel === 'on' && 'text-sky-500',
+                            animationLevel === 'subtle' && 'text-slate-400',
+                            animationLevel === 'off' && 'text-slate-500'
+                        )}
+                    />
+                    <span
+                        className={cn(
+                            'absolute -bottom-1 -right-1 px-1 py-0.5 rounded text-[7px] font-bold uppercase tracking-widest text-white shadow-sm',
+                            animationLevel === 'on' && 'bg-sky-500',
+                            animationLevel === 'subtle' && 'bg-slate-500',
+                            animationLevel === 'off' && 'bg-slate-700'
+                        )}
+                    >
+                        {animationLevel === 'on'
+                            ? 'On'
+                            : animationLevel === 'subtle'
+                            ? 'Sub'
+                            : 'Off'}
+                    </span>
                 </button>
             </div>
         </div>
