@@ -1697,6 +1697,166 @@
 				"fontSize": "small",
 				"markdown": "**Identity-attested device logins** &mdash; Cross-source view of who authenticated to network devices via TACACS+/ISE &mdash; including auth success/failure and per-command authorization decisions (allowed / denied) &mdash; and the last device they touched. Pair this with the Catalyst Center audit table above to confirm config changes were performed by an authorized human and not via an out-of-band channel. Source: `cisco:ise:syslog`."
 			}
+		},
+		"viz_uxh_section": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.45)",
+				"fillOpacity": 1,
+				"rx": 12,
+				"strokeColor": "rgba(0,0,0,0.06)",
+				"strokeOpacity": 0.3,
+				"strokeWidth": 1
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_uxh_box_gauges": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.78)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.08)"
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_uxh_box_trend": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.78)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.08)"
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_uxh_box_breakdown": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.78)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.08)"
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_uxh_narrative": {
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#6E6E6E",
+				"fontSize": "small",
+				"markdown": "End-user **client experience** seen from Catalyst Center &mdash; wireless and wired health scores, distribution over time, and what kinds of devices are on the network. Use this tab to confirm clients are healthy and to spot which device categories or operating systems trend with degraded experience. Internet-path metrics (ThousandEyes) appear here once the `Cisco_ThousandEyes.Test_Metrics` data model is installed and accelerated."
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_uxh_wireless_gauge": {
+			"context": {
+				"majorColorEditorConfig": [
+					{ "to": 70, "value": "#D64550" },
+					{ "from": 70, "to": 85, "value": "#E5A823" },
+					{ "from": 85, "value": "#6EBE4A" }
+				]
+			},
+			"dataSources": {
+				"primary": "ds_uxh_wireless_health"
+			},
+			"description": "Current wireless client health score from Catalyst Center",
+			"options": {
+				"backgroundColor": "transparent",
+				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
+				"majorFontSize": 48,
+				"showTrendIndicator": false,
+				"sparklineDisplay": "off",
+				"unit": "%",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
+			},
+			"title": "Wireless Health",
+			"type": "splunk.singlevalue"
+		},
+		"viz_uxh_wired_gauge": {
+			"context": {
+				"majorColorEditorConfig": [
+					{ "to": 70, "value": "#D64550" },
+					{ "from": 70, "to": 85, "value": "#E5A823" },
+					{ "from": 85, "value": "#6EBE4A" }
+				]
+			},
+			"dataSources": {
+				"primary": "ds_uxh_wired_health"
+			},
+			"description": "Current wired client health score from Catalyst Center",
+			"options": {
+				"backgroundColor": "transparent",
+				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
+				"majorFontSize": 48,
+				"showTrendIndicator": false,
+				"sparklineDisplay": "off",
+				"unit": "%",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true
+			},
+			"title": "Wired Health",
+			"type": "splunk.singlevalue"
+		},
+		"viz_uxh_client_trend": {
+			"dataSources": {
+				"primary": "ds_uxh_client_trend"
+			},
+			"description": "Client health distribution over time, stacked Good / Fair / Poor",
+			"options": {
+				"backgroundColor": "transparent",
+				"legendDisplay": "right",
+				"seriesColors": [
+					"#6EBE4A",
+					"#E5A823",
+					"#D64550"
+				],
+				"stackMode": "stacked100",
+				"xAxisTitleVisibility": "hide"
+			},
+			"title": "Client Health Trend",
+			"type": "splunk.area"
+		},
+		"viz_uxh_dev_types_bar": {
+			"dataSources": {
+				"primary": "ds_uxh_top_device_types"
+			},
+			"description": "Top device categories by unique MAC count",
+			"options": {
+				"backgroundColor": "transparent",
+				"dataValuesDisplay": "all",
+				"legendDisplay": "off",
+				"seriesColors": [
+					"#049FD9"
+				],
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide"
+			},
+			"title": "Top 5 Device Types",
+			"type": "splunk.bar"
+		},
+		"viz_uxh_client_os_pie": {
+			"dataSources": {
+				"primary": "ds_uxh_top_client_os"
+			},
+			"description": "Top operating systems by unique MAC count",
+			"options": {
+				"backgroundColor": "transparent",
+				"labelDisplay": "valuesAndPercentage",
+				"seriesColors": [
+					"#6EBE4A",
+					"#049FD9",
+					"#E5A823",
+					"#D64550",
+					"#6E6E6E"
+				],
+				"showDonutHole": true
+			},
+			"title": "Client OS Distribution",
+			"type": "splunk.pie"
+		},
+		"viz_uxh_te_note": {
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#2B2B2B",
+				"fontSize": "small",
+				"markdown": "### Internet path metrics (ThousandEyes)\n\nThousandEyes per-test latency, loss, jitter, and HTTP availability panels are **temporarily parked** because the `Cisco_ThousandEyes.Test_Metrics` data model is not installed on this stack. Once the *Cisco ThousandEyes App for Splunk* is installed and the data model is accelerated, these panels will return:\n\n- Internet path composite score (gauge)\n- Per-agent latency / loss / jitter table\n- Per-test result table with status\n- Test-health distribution (donut)\n\nReinstating them requires no SPL changes &mdash; the underlying searches already live in `searchbase.conf` and are filterable in the KPI Picker via the `Requires_Cisco_ThousandEyes_DM` tag."
+			},
+			"type": "splunk.markdown"
 		}
 	},
 	"dataSources": {
@@ -2396,6 +2556,66 @@
 				}
 			},
 			"type": "ds.search"
+		},
+		"ds_uxh_wireless_health": {
+			"name": "IT Health - User Experience - ds_uxh_wireless_health",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" scoreType=\"ALL\"\n| stats latest(scoreValue) as sv\n| eval score=if(sv>=0, sv, 0)\n| fields score",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_uxh_wired_health": {
+			"name": "IT Health - User Experience - ds_uxh_wired_health",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" scoreType=\"ALL\"\n| stats latest(scoreValue) as sv\n| eval score=if(sv>=0, sv, 0)\n| fields score",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_uxh_client_trend": {
+			"name": "IT Health - User Experience - ds_uxh_client_trend",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRED\" OR clientType=\"WIRELESS\") (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\")\n| bin _time\n| stats latest(clientCount) as cc by _time, clientType, scoreType\n| stats sum(cc) as cc by _time, scoreType\n| eval Good=if(scoreType==\"GOOD\",cc,null()), Fair=if(scoreType==\"FAIR\",cc,null()), Poor=if(scoreType==\"POOR\",cc,null())\n| stats sum(Good) as Good, sum(Fair) as Fair, sum(Poor) as Poor by _time",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_uxh_base_client_ref": {
+			"name": "IT Health - User Experience - ds_uxh_base_client_ref",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| fields macAddress, osType, deviceType",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_uxh_top_client_os": {
+			"name": "IT Health - User Experience - ds_uxh_top_client_os",
+			"options": {
+				"extend": "ds_uxh_base_client_ref",
+				"query": "| where isnotnull(osType) AND osType!=\"null\" AND osType!=\"\" AND osType!=\"Unknown\" AND osType!=\"unknown\" | stats dc(macAddress) as count by osType | sort -count | head 5 | rename osType as os"
+			},
+			"type": "ds.chain"
+		},
+		"ds_uxh_top_device_types": {
+			"name": "IT Health - User Experience - ds_uxh_top_device_types",
+			"options": {
+				"extend": "ds_uxh_base_client_ref",
+				"query": "| where isnotnull(deviceType) AND deviceType!=\"null\" AND deviceType!=\"\" AND deviceType!=\"Un-Classified Device\" | stats dc(macAddress) as Clients by deviceType | sort -Clients | head 5 | rename deviceType as \"Device Type\""
+			},
+			"type": "ds.chain"
 		}
 	},
 	"layout": {
@@ -3444,6 +3664,87 @@
 					}
 				],
 				"type": "absolute"
+			},
+			"layout_user_experience": {
+				"options": {
+					"backgroundColor": "#f5f6f8",
+					"display": "auto-scale",
+					"height": 950,
+					"width": 1440
+				},
+				"structure": [
+					{
+						"item": "viz_p_hdr_bg",
+						"position": { "h": 60, "w": 1400, "x": 20, "y": 10 },
+						"type": "block"
+					},
+					{
+						"item": "viz_p_hdr_title",
+						"position": { "h": 30, "w": 440, "x": 500, "y": 20 },
+						"type": "block"
+					},
+					{
+						"item": "viz_uxh_narrative",
+						"position": { "h": 50, "w": 1350, "x": 30, "y": 75 },
+						"type": "block"
+					},
+					{
+						"item": "viz_uxh_section",
+						"position": { "h": 815, "w": 1420, "x": 10, "y": 130 },
+						"type": "block"
+					},
+					{
+						"item": "viz_uxh_box_gauges",
+						"position": { "h": 230, "w": 1400, "x": 20, "y": 145 },
+						"type": "block"
+					},
+					{
+						"item": "viz_uxh_wireless_gauge",
+						"position": { "h": 200, "w": 400, "x": 35, "y": 160 },
+						"type": "block"
+					},
+					{
+						"item": "viz_uxh_wired_gauge",
+						"position": { "h": 200, "w": 400, "x": 450, "y": 160 },
+						"type": "block"
+					},
+					{
+						"item": "viz_uxh_dev_types_bar",
+						"position": { "h": 200, "w": 555, "x": 865, "y": 160 },
+						"type": "block"
+					},
+					{
+						"item": "viz_uxh_box_trend",
+						"position": { "h": 290, "w": 1400, "x": 20, "y": 390 },
+						"type": "block"
+					},
+					{
+						"item": "viz_uxh_client_trend",
+						"position": { "h": 260, "w": 1370, "x": 35, "y": 405 },
+						"type": "block"
+					},
+					{
+						"item": "viz_uxh_box_breakdown",
+						"position": { "h": 250, "w": 1400, "x": 20, "y": 695 },
+						"type": "block"
+					},
+					{
+						"item": "viz_uxh_client_os_pie",
+						"position": { "h": 220, "w": 560, "x": 35, "y": 710 },
+						"type": "block"
+					},
+					{
+						"item": "viz_uxh_te_note",
+						"position": { "h": 220, "w": 820, "x": 600, "y": 710 },
+						"type": "block"
+					},
+					{
+						"item": "input_global_trp",
+						"position": { "h": 70, "w": 198, "x": 30, "y": -8 },
+						"type": "input"
+					}
+				],
+				"type": "absolute"
 			}
 		},
 		"options": {
@@ -3454,6 +3755,10 @@
 				{
 					"label": "Overview",
 					"layoutId": "layout_overview"
+				},
+				{
+					"label": "User Experience",
+					"layoutId": "layout_user_experience"
 				},
 				{
 					"label": "Details & KPI Reference",

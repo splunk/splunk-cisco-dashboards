@@ -7,6 +7,128 @@
 
 ---
 
+## 2026-05-08 (cont. 6) — User Experience folded into IT Health (Option A)
+
+### Goal of the addendum
+
+Decide what to do with `user_experience_v1.xml` now that:
+- Half of its content (5 ThousandEyes panels) is dead on this stack — the
+  `Cisco_ThousandEyes.Test_Metrics` data model is not installed, so the
+  panels render "no results" and erode executive trust in the rest of the
+  app.
+- The remaining client-side content (wired/wireless health, OS mix, device
+  types, client-health trend) belongs next to device health from a NOC
+  triage perspective, not on a separate top-level page.
+
+Three options were laid out:
+- **A**: Fold UX into IT Health as a tab, delete the standalone dashboard.
+- **B**: Keep UX as a top-level tab (status quo) — rejected because
+  advertising a half-broken capability is worse than removing the tab.
+- **C**: Demote UX into a collection — rejected because it preserves a
+  broken dashboard at a discoverability cost.
+
+User approved **Option A**.
+
+### Decisions
+
+1. **New tab inside IT Health** rather than a section appended to the
+   Overview tab. Less risk of layout collision with IT Health's already
+   busy Overview, and it preserves the "User Experience" muscle memory
+   for users who knew where to look.
+2. **5 panels imported, 4 dropped.** Specifically:
+   - **Imported** — Wireless Health gauge, Wired Health gauge, Client
+     Health Trend (stacked Good/Fair/Poor), Top 5 Device Types bar,
+     Client OS Distribution pie.
+   - **Dropped** — Active Clients donut (census, not health), Total
+     Clients single-value (census), Client Health by Type trend
+     (overlaps the stacked trend), and the misleading "Client Health"
+     gauge that was actually wired to `cisco:dnac:devicehealth`
+     reachability/manageability and would duplicate IT Health's
+     existing device gauge.
+3. **All 4 ThousandEyes-dependent stanzas tagged
+   `Requires_Cisco_ThousandEyes_DM`** rather than rewritten or deleted.
+   When the data model is installed and accelerated, the panels can be
+   re-wired with no SPL changes — the stanzas already have the correct
+   `tstats` queries.
+4. **5 in-stanza `<a href="/app/splunk-cisco-dashboards/user_experience">`
+   links rewritten** to point at `it_health_v1`, with anchor text
+   updated to "IT Health dashboard (User Experience tab)".
+
+### What we built
+
+**`it_health_v1.xml` — new tab `layout_user_experience`** (between
+Overview and Details & KPI Reference):
+
+| viz id | type | data source | what it shows |
+|---|---|---|---|
+| `viz_uxh_wireless_gauge` | singlevalue | `ds_uxh_wireless_health` | Latest wireless score (`scoreType="ALL"`, `clientType="WIRELESS"`) |
+| `viz_uxh_wired_gauge` | singlevalue | `ds_uxh_wired_health` | Latest wired score |
+| `viz_uxh_dev_types_bar` | bar | `ds_uxh_top_device_types` (chain on `ds_uxh_base_client_ref`) | Top 5 device categories by unique MAC |
+| `viz_uxh_client_trend` | area, stacked100 | `ds_uxh_client_trend` | Good/Fair/Poor distribution over time |
+| `viz_uxh_client_os_pie` | pie | `ds_uxh_top_client_os` (chain) | Top 5 operating systems by unique MAC |
+| `viz_uxh_te_note` | markdown | — | Explains where the ThousandEyes panels went and how to bring them back |
+
+All 6 datasource ids carry the `_uxh_` prefix to mark provenance.
+Background frames (`viz_uxh_box_*`) follow the same `rgba(255,255,255,0.78)`
++ `rx:10` styling as the rest of the dashboard.
+
+**Tab order in IT Health (5 tabs total):**
+Overview → User Experience (new) → Details & KPI Reference → Catalyst
+Center Intelligence → About.
+
+### Verification
+
+- **JSON well-formedness**: parsed `it_health_v1.xml` CDATA payload and
+  confirmed all 5 new viz items resolve to existing visualizations,
+  all primary datasource references resolve, and the new layout's input
+  reference (`input_global_trp`) resolves.
+- **XML well-formedness**: parsed `it_health_v1.xml`, `admin_guide_v1.xml`,
+  and `nav/default.xml` — all OK.
+- **Live SPL validation** (against local Splunk on `https://localhost:8089`,
+  app `splunk-cisco-dashboards`, `-24h..now`):
+
+  | datasource | rows | sample keys |
+  |---|---|---|
+  | `ds_uxh_wireless_health` | 1 | `score` |
+  | `ds_uxh_wired_health` | 1 | `score` |
+  | `ds_uxh_client_trend` | non-empty | `_time`, `Good`, `Fair`, `Poor` |
+  | `ds_uxh_top_client_os` | up to 5 | `os`, `count` |
+  | `ds_uxh_top_device_types` | up to 5 | `Device Type`, `Clients` |
+
+  All 5 returned without error and produced data.
+
+### Files changed
+
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/data/ui/views/it_health_v1.xml`
+  — added 8 vizes, 6 datasources, 1 layout, 1 tab.
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/data/ui/views/user_experience_v1.xml`
+  — **deleted**.
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/data/ui/views/admin_guide_v1.xml`
+  — Dashboard Overview markdown rewritten to remove the standalone UX
+  card and call out the new tab inside IT Health. Stale Security/Devices/
+  Network entries cleaned up while we were there.
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/data/ui/nav/default.xml`
+  — `<a href="user_experience_v1">User Experience</a>` removed; primary
+  group is now Overview / IT Health / Security.
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf`
+  — 4 stanzas tagged `Requires_Cisco_ThousandEyes_DM`; 5 anchor links
+  rewired from `/app/splunk-cisco-dashboards/user_experience` to
+  `/app/splunk-cisco-dashboards/it_health_v1` with anchor text updated.
+
+### What's next
+
+- The 7 DNAC empty stanzas from cont. 5 are still on the books (real
+  SPL bugs identified by the live audit, separate work).
+- The 8 datamodel-dependent stanzas (`Cisco_ThousandEyes`, `Cisco_Security`,
+  `ITSI_KPI_Summary`) — same decision still required: install data
+  models or rewrite to raw events.
+- KPI picker UI: extend the picker's tag filter to honor
+  `Requires_*_DM` tokens by default (hide them unless the user opts in
+  via a "show advanced" toggle). Today the tag is set; the UI plumbing
+  to react to it is not yet wired.
+
+---
+
 ## 2026-05-08 (cont. 5) — Duplicate-stanza consolidation + 408-stanza live audit
 
 ### Goal of the addendum

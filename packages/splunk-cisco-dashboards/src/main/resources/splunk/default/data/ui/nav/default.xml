@@ -5,7 +5,6 @@
     <view name="overview" default="true" label="Overview"/>
     <a href="it_health_v1">IT Health</a>
     <a href="security_v1">Security</a>
-    <a href="user_experience_v1">User Experience</a>
 
     <!-- ================================================================= -->
     <!-- Workplace: Cisco Spaces and physical-building dashboards           -->

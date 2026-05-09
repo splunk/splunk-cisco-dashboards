@@ -23,7 +23,7 @@
 		"viz_overview": {
 			"type": "splunk.markdown",
 			"options": {
-				"markdown": "### Dashboard Overview\n\nThis app provides five executive dashboards for the **Florida Division of Emergency Management** statewide drill.\n\n---\n\n**Executive Dashboard** — `home_launchpad`\n> Top-level launchpad with domain scores — click any card to drill down\n\n**IT Health** — `it_health`\n> Network health, device health, compliance, open issues, syslog, config changes\n\n**Security** — `security`\n> Firewall, IDS/IPS, ISE, AD logons, VPN, DNS, email, web, XDR, PSIRT\n\n**User Experience** — `user_experience`\n> Client health, active clients, ThousandEyes, WAN latency\n\n**Building Resilience** — `building`\n> Occupancy, environmental sensors, power, cooling, compliance\n\n**Admin Guide** — `admin_guide`\n> This page"
+				"markdown": "### Dashboard Overview\n\nThis app provides several executive dashboards for the **Florida Division of Emergency Management** statewide drill.\n\n---\n\n**Executive Overview** — `overview`\n> Top-level overview with KPI tiles, customer topology map, and drill-down cards\n\n**IT Health** — `it_health_v1`\n> Network and device health, open issues, compliance, syslog, config changes, and the **User Experience tab** (client health, OS mix, device types). ThousandEyes panels return when the `Cisco_ThousandEyes.Test_Metrics` data model is installed.\n\n**Security Resilience** — `security_v1`\n> Firewall, IDS/IPS, ISE, AD logons, VPN, DNS, email, web, XDR, PSIRT\n\n**Building Resilience** — `building_v1`\n> Occupancy, environmental sensors, power, cooling, compliance\n\n**Admin Guide** — `admin_guide_v1`\n> This page"
 			}
 		},
 		"viz_macros": {
