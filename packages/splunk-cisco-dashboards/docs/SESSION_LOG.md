@@ -7,6 +7,148 @@
 
 ---
 
+## 2026-05-09 — `cisco:dnac:site:topology` re-import + dual-schema discovery
+
+### Goal of the addendum
+
+User pulled a fresh export of `cisco:dnac:site:topology` from FDEM (130
+events, up from the 13 we had on 2026-05-08) and asked us to re-import,
+diff against the prior state, and adjust any consumer searches if the new
+data exposed something the smaller sample missed.
+
+> "weird that catalyst center took this much time to dump more data"
+
+### Findings — what the new data actually contains
+
+**TL;DR: the data is materially identical to the 13-event sample. There
+are no new entities, no new fields, no new field values, and no
+hierarchy nodes that we hadn't already accounted for. What changed is
+that we now have multiple polling cycles instead of one snapshot, which
+let us validate the polling behavior end-to-end.**
+
+| Dimension | 13-event sample (2026-05-08) | 117-event sample (2026-05-09) | Delta |
+|---|---|---|---|
+| Distinct entity IDs | 13 | 13 | 0 (identical UUIDs) |
+| Distinct hierarchies | 13 | 13 | 0 (identical paths) |
+| Distinct field names | 16 | 16 | 0 (`signature_id`/`vendor_product` are TA-added post-index) |
+| Field-value drift across polls | n/a | **0 of 13 ids drifted on any of 11 fields checked** | Stable |
+| Catalyst Center hosts | 1 (`demcatalyst01.fleoc.org`) | 1 (same) | 0 |
+| Polling cycles represented | 1 | **9 (each cycle re-emits the full tree)** | +8 |
+
+**The 117 events = 9 polling cycles × 13 unique entities, each cycle
+identical to the others.** Catalyst Center dumps the whole tree on every
+poll; the existing lookup generator's `dedup id sortby -_time` correctly
+collapses this. We took the opportunity to verify that field values
+don't drift between polls, which they don't — strong evidence that the
+TA input is stable and that the lookup CSV is durable across refreshes.
+
+### Discovery — the sourcetype carries TWO different schemas
+
+Prior to this re-import we believed `cisco:dnac:site:topology` was a
+single hierarchy-snapshot schema. The before-snapshot revealed **641
+extra events in the same sourcetype** carrying a completely different
+shape — Cisco's stock TA demo feed (`device_removed_from_site`,
+`topology_link_added` events for fictional sites like `London-UK` and
+`New-York-NY`, with `type="NETWORK"`, `eventId`, `severity` 1/2/3). This
+demo input lives on every Splunk stack that has the Catalyst Center TA
+loaded with default samples enabled.
+
+**Two coexisting schemas under one sourcetype:**
+
+| Schema | Distinguishing fields | Example `name` values | Source |
+|---|---|---|---|
+| **Hierarchy snapshot** (FDEM real data) | `type IN ("global","area","building","floor")`, `id` UUID, `nameHierarchy`, `latitude`/`longitude` | `TLH`, `First Floor`, `Florida` | Customer Catalyst Center poll |
+| **Event-style change feed** (demo only on this stack) | `type="NETWORK"`, `eventId="NETWORK-DEVICE-1-301"`, `details.siteName`, `severity` | `device_removed_from_site`, `topology_link_added` | Cisco TA demo input |
+
+**The bug the re-import surfaced:** three of our existing stanzas
+(`it_critical_systems_site_topology_recent_changes`,
+`_event_type_distribution`, `_site_type_distribution`) were authored
+against the event-style schema. On a stack that ingests both schemas,
+they were silently displaying hierarchy-snapshot rows as if they were
+"recent changes" — `recent_changes` was returning 771 rows where 765
+were FDEM hierarchy entries (`name="First Floor"` listed alongside
+`name="device_removed_from_site"`, both with the same severity label,
+indistinguishable to a viewer).
+
+### Fixes applied
+
+1. **Lookup generator** (`savedsearches.conf`,
+   `[Executive Dashboard - Site Topology Lookup Generator]`):
+   added `type IN ("global","area","building","floor")` filter to the
+   primary search. Defense-in-depth — the prior `dedup id` was already
+   stripping demo events because they carry no top-level `id` field, but
+   the explicit filter makes intent unambiguous and immunizes the
+   lookup against any future TA change that might add an `id` to demo
+   payloads.
+
+2. **Three event-style stanzas** (`searchbase.conf`):
+   added `| where isnotnull(eventId)` immediately after the base search
+   for `it_critical_systems_site_topology_recent_changes`,
+   `_event_type_distribution`, and `_site_type_distribution`. Updated
+   each stanza's `description` / `explanation` / `solution` /
+   `related_info` to call out the dual-schema design and point at
+   `[site_topology_marker_enrichment]` as the snapshot-side
+   counterpart. Tagged all three with `Requires_DNAC_Topology_Events`
+   (parallel to the existing `Requires_Cisco_ThousandEyes_DM` pattern)
+   so the KPI picker can hide them by default on stacks that only ingest
+   hierarchy snapshots.
+
+3. **Cursor rule** (`.cursor/rules/splunk-cisco-dnac-fields.mdc`):
+   inserted a "Dual-schema warning (CRITICAL)" section under the
+   `cisco:dnac:site:topology` heading. Documents the two schemas, the
+   filtering recipes for each intent, and the empirical finding that
+   field values don't drift across polls.
+
+### Verification (before / after)
+
+Re-imported the 117 events into local Splunk under `host=fdem-import-2026-05-09`
+(distinguishing it from the prior `host=fdem-import-2026-05-08` for clean
+provenance). Ran the hardened lookup generator manually via the Splunk
+REST API.
+
+| Check | Before fix | After fix |
+|---|---|---|
+| `site_topology_lookup` row count | 13 (3 area + 4 building + 5 floor + 1 global) | 13 (identical — the dedup was already correct) |
+| `site_topology_marker_enrichment` rows | 4 buildings | 4 buildings (TLH, SEOC, AUB, Warehouse — all with full GPS + addresses) |
+| `site_topology_drift_panel` rows | 3 (MCO=Missing, TLH/AUB=Managed) | 3 (same — drift status correct) |
+| `clients_by_building_lookup_join_demo` rows | 4 (TLH 324 / AUB 27 / Warehouse 5 / SEOC 4 unique clients) | 4 (identical) |
+| `audit_logs_by_site_lookup_join` rows | 4 (path-fallback resolved demo data correctly) | 4 (identical) |
+| `clienthealth_by_site_lookup_join` rows | 0 (FDEM siteId="global" caveat documented) | 0 (expected) |
+| `it_critical_systems_site_topology_recent_changes` rows | **771 (765 polluted)** | **642 (all clean event-style)** |
+| `it_critical_systems_site_topology_event_type_distribution` rows | 22 (16 polluted with hierarchy values) | 11 (only event names) |
+| `it_critical_systems_site_topology_site_type_distribution` rows | 6 (incidentally clean — was filtering by `details.siteType`) | 6 (still clean, now with explicit filter) |
+
+The 771→642 row delta on `recent_changes` exactly matches the 130
+imported hierarchy events being filtered out, validating that the
+dual-schema fix correctly partitions the two payload types.
+
+### Files changed
+
+| File | Net effect |
+|---|---|
+| `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/savedsearches.conf` | +1 filter clause + dual-schema note in `[Executive Dashboard - Site Topology Lookup Generator]` description |
+| `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf` | 3 event-style stanzas: +`where isnotnull(eventId)` filter, expanded prose, +`Requires_DNAC_Topology_Events` tag |
+| `.cursor/rules/splunk-cisco-dnac-fields.mdc` | New "Dual-schema warning (CRITICAL)" subsection under `cisco:dnac:site:topology` + polling-cadence amendment |
+| `packages/splunk-cisco-dashboards/docs/SESSION_LOG.md` | This addendum |
+
+### What's next (decision points for the user)
+
+1. **Optional**: extend the KPI picker to honor the new
+   `Requires_DNAC_Topology_Events` token the same way it (eventually) will
+   for `Requires_Cisco_ThousandEyes_DM` — hide tagged stanzas by default,
+   show them via an "advanced" toggle, badge them as "data-source dependent".
+2. **Optional**: add a small data-quality tile to a system-status
+   dashboard showing "site:topology dual-schema split — N event-style
+   rows in last 24h, M hierarchy rows in last 24h" so the customer can
+   tell at a glance whether they're getting both feeds or just one.
+3. **No code action needed**: the demo `type="NETWORK"` events are inert
+   noise — they don't pollute any lookup-driven panel anymore, and the 3
+   event-style stanzas correctly target them. The customer can leave the
+   demo input enabled or disable it; the dashboards behave correctly
+   either way.
+
+---
+
 ## 2026-05-08 (cont. 7) — Map "wow factor" animations (Tier 1 + Tier 2)
 
 ### Goal of the addendum
