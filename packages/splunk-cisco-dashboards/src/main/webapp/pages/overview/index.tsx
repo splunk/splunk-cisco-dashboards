@@ -176,7 +176,7 @@ const METRIC_CONFIG: MetricConfig[] = [
             'category. Combines link state, throughput and protocol metrics into a ' +
             "0-100 grade. Healthy >= 95; Critical < 80.",
         // Single row: { score: 0..100 }
-        savedSearch: 'IT - Critical Systems - Network Health Score',
+        savedSearch: 'IT - Critical Systems - Network Health Score (Current)',
         valueField: 'score',
         unit: '%',
         thresholds: { warning: 95, critical: 80, direction: 'higher_is_better' },

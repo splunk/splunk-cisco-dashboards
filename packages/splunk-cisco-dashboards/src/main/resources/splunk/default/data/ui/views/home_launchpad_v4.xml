@@ -801,7 +801,7 @@
 		"ds_dev_health_trend_exec": {
 			"name": "Shared - ds_dev_health_trend",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" | eval h=case(Reachability==\"Reachable\" AND match(Manageability,\"^Managed\"),100, Reachability==\"Reachable\",50, 1==1,0) | timechart fixedrange=false avg(h) as score",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" | where OverallHealth>=0 | eval health=OverallHealth*10 | timechart fixedrange=false avg(health) as score",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"

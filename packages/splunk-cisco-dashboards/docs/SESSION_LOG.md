@@ -7,6 +7,174 @@
 
 ---
 
+## 2026-05-08 (cont. 5) — Duplicate-stanza consolidation + 408-stanza live audit
+
+### Goal of the addendum
+
+Two related asks from the user, completed in one pass:
+
+1. **Land the consolidation/rename pass** for the 16 stanzas flagged in the
+   side-by-side analysis (cont. 4 closing). Update every dashboard that
+   referenced the renamed names.
+2. **Sweep `searchbase.conf` for searches not returning results.** With ~400
+   stanzas, the user asked for the right testing approach.
+
+### Phase 1 — Consolidations and renames (3 fixes + 6 renames + 1 dashboard reference update)
+
+**Real bugs (consolidations)** — same stanza ID kept, SPL rebased onto the
+canonical pipeline so executive and IT views can never disagree again:
+
+| stanza | old SPL | new SPL |
+|---|---|---|
+| `shared_ds_dev_health_trend` | `case(Reachability AND Manageability,100, Reachability,50, _,0) \| timechart avg(h) as score` | `where OverallHealth>=0 \| eval health=OverallHealth*10 \| timechart avg(health) as score` |
+| `executive_summary_network_health_trend` | `cisco:dnac:devicehealth \| spath \| eval healthy=... \| bin _time \| stats avg(healthy) as pct \| eval pct=round(pct*100)` | `cisco:dnac:networkhealth category="All" \| timechart latest(healthScore) as pct` |
+| `network_activation_wired_client_trend_24h` | `timechart sum(eval(if(scoreType=="GOOD",clientCount,0))) as Healthy, ...` | `timechart latest(eval(if(scoreType=="GOOD",clientCount,null()))) as Healthy, ...` |
+
+The wired-client fix matters: `cisco:dnac:clienthealth` emits cumulative
+snapshots per `(siteId, scoreType, clientType)`. `sum()` across the bucket
+multiplies counts by the number of polls; `latest()` matches the snapshot
+semantics already used by `statewide_ds_wired_client_trend_24h`.
+
+Inline copies in `it_health_v2.xml` (`ds_dev_health_trend`) and
+`home_launchpad_v4.xml` (`ds_dev_health_trend_exec`) were rebased to the same
+canonical pipeline and re-staged into `stage/default/`.
+
+**Renames** — `search_name` only; stanza IDs left stable so existing
+references-by-ID continue to resolve. Six labels became unambiguous:
+
+| stanza | old `search_name` | new `search_name` |
+|---|---|---|
+| `user_experience_client_health_trend` | "User Experience - Client Health Trend" | "User Experience - Client Health Distribution Trend" |
+| `executive_dashboard_ise_authentication_rate` | "Executive Dashboard - ISE Authentication Rate" | "Executive Dashboard - Identity Authentication Score (ISE + Windows AD)" |
+| `executive_summary_issue_trend` | "Executive Summary - Issue Trend" | "Executive Summary - Issue Trend by Priority" |
+| `it_critical_systems_issue_trend` | "IT - Critical Systems - Issue Trend" | "IT - Critical Systems - Issue Trend by Category" |
+| `executive_dashboard_network_health_score` | "Executive Dashboard - Network Health Score" | "Executive Dashboard - Network Health Score Trend" |
+| `it_critical_systems_network_health_score` | "IT - Critical Systems - Network Health Score" | "IT - Critical Systems - Network Health Score (Current)" |
+
+Cross-repo audit confirmed only one external code reference to any of these
+names: `overview/index.tsx` line 179, which was updated to the new "Current"
+suffix. Every other reference is internal to `searchbase.conf` and resolved
+via the picker catalog (which auto-updates).
+
+### Phase 2 — Live validation of all 408 stanzas
+
+**Tooling.** Built `scripts/validate_searchbase_parallel.py` (8-worker thread
+pool wrapping the existing `validate_searchbase_live.py` oneshot dispatcher)
+plus `scripts/triage_validation.py` to bucket findings by sourcetype.
+
+**Run parameters.** Local Splunk 10.2.2, `codex/changeme`, `-24h@now`, 20s
+search timeout, 8 parallel oneshots. Full sweep completed in **~4 minutes**
+(vs ~21+ minutes for the sequential validator), so this is a viable
+"every-PR" check going forward.
+
+**Headline numbers.**
+
+| outcome | count | meaning |
+|---|---|---|
+| pass with rows | 298 | search returned data — healthy |
+| pass with 0 rows | **99** | search ran cleanly but no rows came back |
+| fail | **8** | SPL/HTTP error |
+| skip | 3 | side-effecting (`outputlookup`/`collect`/etc.) — intentional |
+
+**The 8 failures are all `Error in 'DataModelEvaluator'`** — searches that
+target accelerated data models that don't exist on this stack:
+
+* `Cisco_ThousandEyes` — `executive_dashboard_thousandeyes_health_score`,
+  `user_experience_thousandeyes_agents`,
+  `user_experience_thousandeyes_latency_trend`,
+  `user_experience_thousandeyes_test_results`
+* `Cisco_Security` — `security_resilience_idsips_alert_count`,
+  `security_resilience_idsips_alert_trend`,
+  `security_resilience_ds_ids_classification`
+* `ITSI_KPI_Summary` — `teuc_5_9_50_itsi_service_health`
+
+These are "needs upstream tile" rather than bugs: the SPL is correct, the
+data model just isn't installed/accelerated on the dev stack.
+
+**The 99 empty passes split cleanly into two groups:**
+
+A) **~85 stanzas — systematic data gap (no fix needed in SPL).** Every
+stanza in these sourcetype groups was empty:
+
+| sourcetype / macro | empty count | notes |
+|---|---|---|
+| `\`stream_index\`` (ThousandEyes telemetry) | 38 | TEUC-* searches — no TE on stack |
+| `cisco:asa` / `cisco:ftd` / `cisco:sfw:estreamer` | 15 | partial firewall data |
+| `meraki:devicesuplinkslossandlatency` | 6 | no Meraki uplink data |
+| `\`event_index\`` (TE alerts) | 5 | no TE data |
+| `cisco:ios` | 7 | partial IOS syslog data |
+| `thousandeyes:alerts` | 4 | no TE data |
+| `\`path_viz_index\`` | 3 | no TE data |
+| `meraki:sensorreadingshistory` | 3 | partial Meraki sensors |
+| `ms:defender:endpoint:alerts` | 2 | no Defender data |
+| `cisco:cloud_security:dns` | 2 | partial Umbrella data |
+| `oncall:incidents`, `thousandeyes:traces`, `\`activity_index\`` | 3 | no data |
+
+B) **~14 stanzas — likely real bugs in the SPL.** These hit sourcetypes
+that DO have data on the stack but still returned 0 rows:
+
+* **DNAC empties (7):**
+  - `it_critical_systems_weekoverweek_health` — `xyseries _time week score`
+    after `stats avg(...) by week` has no `_time` axis; SPL pattern broken
+  - `it_critical_systems_ap_disconnect_issues` — filter
+    `IssueName="AP*disconnect*"` may not exist in demo data; over-restrictive
+  - `user_experience_guest_client_surge` — `latest(*) by macAddress` then
+    `bucket _time` produces 1 row per MAC, breaks 48-bucket trend logic
+  - `user_experience_client_onboarding_failures` — quoted nested-JSON path
+    `'onboarding.latestFailureReason'` likely not extracting on FDEM
+  - `user_experience_client_roaming_analysis` — same nested-path issue
+  - `clients_by_building_lookup_join_demo` — already known: depends on
+    `site_topology_lookup` being non-empty (regenerate the lookup)
+  - `clienthealth_by_site_lookup_join` — known FDEM caveat documented in
+    cursor rule: FDEM `clienthealth.siteId="global"` always; the
+    `siteId!="global"` filter empties the result. Defensive by design.
+* **Firewall/IOS overlap with healthy data (~7):** per-stanza fix-or-defer.
+
+**Sourcetype health matrix** (top of healthy + concerning):
+
+| empty % | total | sourcetype |
+|---|---|---|
+| 0% | 47 | `cisco:dnac:devicehealth` ✅ |
+| 0% | 21 | `cisco:spaces:firehose` ✅ |
+| 0% | 21 | `*WinEventLog` ✅ |
+| 0% | 18 | `cisco:ise:syslog` ✅ |
+| 0% | 7 | `DhcpSrvLog` ✅ |
+| 4% | 24 | `cisco:dnac:clienthealth` ✅ |
+| 5% | 21 | `cisco:dnac:issue` ✅ |
+| 11% | 35 | `cisco:dnac:client` 🟡 |
+| 21% | 34 | `cisco:ios` 🟡 |
+| 56% | 27 | `cisco:asa` 🔴 |
+| 100% | 6 | `meraki:devicesuplinkslossandlatency` 🔴 |
+| 100% | 4 | `thousandeyes:alerts` 🔴 |
+
+### What's next
+
+A small set of clear follow-ups, in priority order:
+
+1. **Fix the 7 DNAC empty stanzas (real bugs).** Especially:
+   - `it_critical_systems_weekoverweek_health` (broken `xyseries`)
+   - `user_experience_guest_client_surge` (broken `latest(*)` + bucket logic)
+   - `user_experience_client_onboarding_failures` and
+     `user_experience_client_roaming_analysis` (verify nested-JSON
+     extraction; switch to `spath` or use `.` notation without quotes)
+2. **Tag data-gap stanzas** with `tags = ...,Requires_Data_Source` so the
+   KPI picker can render a "no data on this stack" badge instead of an
+   empty trend.
+3. **Decide on the 8 datamodel-dependent stanzas:** either build the data
+   models (`Cisco_ThousandEyes`, `Cisco_Security`, `ITSI_KPI_Summary`) or
+   rewrite to use raw events.
+4. **Wire `validate_searchbase_parallel.py` into CI** so a green build
+   guarantees no SPL/HTTP errors. Empty-but-clean searches stay in the
+   "data gap" bucket and don't block.
+5. **Outstanding from prior sessions** (carried forward from cont. 4):
+   - Phase 1.11 / Tier 2C — composite scoring pipelines
+   - Studio v2 dashboards still pending (network, devices, security,
+     overview)
+   - Place the 7 new dashboard tiles into IT Health vs new "Site
+     Connectivity" section
+
+---
+
 ## 2026-05-08 (cont. 4) — Click-outside dismiss, design-of-record capacities, DNAC field-name audit
 
 ### Goal of the addendum

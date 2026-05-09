@@ -1551,7 +1551,19 @@ const TopologyLinkPath: React.FC<TopologyLinkPathProps> = ({
         };
     }, [profile.flowSeconds, profile.breathe, profile.opacity]);
 
-    const handleClick = useCallback(() => onSelect(link), [link, onSelect]);
+    const handleClick = useCallback(
+        (event: L.LeafletMouseEvent) => {
+            // Leaflet polylines (unlike Markers) bubble click events up to the
+            // map's click handler by default. Without this stop, clicking a
+            // link triggers our background "click outside to dismiss"
+            // handler on the MapContainer right after selectLink runs,
+            // which immediately clears the selection. Stop the propagation
+            // here so the link click is the only event the map sees.
+            L.DomEvent.stopPropagation(event);
+            onSelect(link);
+        },
+        [link, onSelect]
+    );
 
     return (
         <>
