@@ -479,12 +479,12 @@ const SECTION_META: Record<
     SectionId,
     { title: string; linkText: string; href: string }
 > = {
-    it_health: { title: 'IT Health', linkText: 'Open IT health', href: 'it_health_v2' },
-    security: { title: 'Security', linkText: 'Open security', href: 'security_v2' },
+    it_health: { title: 'IT Health', linkText: 'Open IT health', href: 'it_health_v1' },
+    security: { title: 'Security', linkText: 'Open security', href: 'security_v1' },
     building: {
         title: 'Building Intelligence',
         linkText: 'Open building intelligence',
-        href: 'building_v2',
+        href: 'building_v1',
     },
 };
 

@@ -21,8 +21,8 @@ interface DashboardSectionProps {
     linkText: string;
     /**
      * Splunk view name (without app prefix). Resolved relative to the
-     * current app, so {href: 'it_health_v2'} navigates to
-     * `/<locale>/app/splunk-cisco-dashboards/it_health_v2`. If omitted
+     * current app, so {href: 'it_health_v1'} navigates to
+     * `/<locale>/app/splunk-cisco-dashboards/it_health_v1`. If omitted
      * the link is non-interactive.
      */
     href?: string;

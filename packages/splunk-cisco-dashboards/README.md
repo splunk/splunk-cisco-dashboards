@@ -19,7 +19,7 @@ React-based Splunk app that ships four dashboards for Cisco data:
 
 ## Branding (customer name + logo)
 
-The home dashboard (`home_launchpad_v3`) and the React Overview both pull
+The home dashboard (`home_launchpad_v1`) and the React Overview both pull
 the customer name from a single Splunk macro called `customer_name`,
 defined in `default/macros.conf`:
 
@@ -43,12 +43,14 @@ containing `<div id="scan-root">`. A small RequireJS bootstrap (in
 `appserver/static/<view>_bootstrap.js`) loads the matching React bundle
 from `appserver/static/pages/<view>.js`, which mounts into `#scan-root`.
 
-Two mount helpers exist:
+One mount helper is in active use:
 
-* `common/render.jsx` (`mountPage`) — wraps the page in
-  `SplunkThemeProvider` (Prisma family). Used by Devices/Network/Security.
 * `common/render-raw.tsx` (`mountPageRaw`) — bare mount, no theme
   provider. Used by Overview so Tailwind owns 100% of the styling.
+
+A `common/render.jsx` (`mountPage`) variant that wraps the page in
+`SplunkThemeProvider` (Prisma family) is retained for any future React
+view that wants Splunk's default theming.
 
 Tailwind is scoped to `#scan-root` (via `important: '#scan-root'` and
 disabled Preflight) so the utilities and resets never bleed into the

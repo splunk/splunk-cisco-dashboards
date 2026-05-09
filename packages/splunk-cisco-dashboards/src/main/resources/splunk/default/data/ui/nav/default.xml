@@ -1,34 +1,40 @@
 <nav color="#049fd9">
+    <!-- ================================================================= -->
+    <!-- Primary dashboards: daily-use executive + operations landing pages -->
+    <!-- ================================================================= -->
     <view name="overview" default="true" label="Overview"/>
-    <a href="it_health_v2">IT Health</a>
-  <a href="security_v2">Security</a>
-  <a href="user_experience_v2">User Experience</a>
-  <a href="building_v2">Cisco Spaces - Building Intelligence</a>
-  <!-- <a href="spaces_intelligence_v2">New</a> -->
-  <a href="statewide_exercise_v2">Network Activation Report</a>
-  <a href="asset_inventory_v2">Inventory</a>
+    <a href="it_health_v1">IT Health</a>
+    <a href="security_v1">Security</a>
+    <a href="user_experience_v1">User Experience</a>
 
-    <!-- <view name="executive_overview" label="Executive Overview (Studio)"/> -->
-     <collection label="Tools">
-     <!-- <view name="home_launchpad_v3"/> -->
-     <view name="home_launchpad_v4"/>
-     <!-- <a href="home_launchpad_v4"></a> -->
-    <!-- <view name="executive_overview"/> -->
-      <a href="admin_guide_v21">Admin Guide</a>
-      <divider />
-      
-       <view name="netops_readiness_v2"/>
-      <view name="spaces_intelligence_v2"/>
-      <view name="workplace_spog_v2"/>
-      
-      <divider />
-      <a href="template">Customer Template</a>
-      <divider />
-      <!-- <a href="search">Search</a> -->
-      <view name="reports" />
-      <view name="dashboards" />
-      <!-- <view name="analysis_workspace" /> -->
-      <!-- <view name="data_models" /> -->
-   </collection>
-   <a href="search" target="_blank" rel="noopener"></a>
+    <!-- ================================================================= -->
+    <!-- Workplace: Cisco Spaces and physical-building dashboards           -->
+    <!-- ================================================================= -->
+    <collection label="Workplace">
+        <a href="building_v1">Building Intelligence</a>
+        <view name="spaces_intelligence_v1"/>
+        <view name="workplace_spog_v1"/>
+    </collection>
+
+    <!-- ================================================================= -->
+    <!-- Reports: periodic, event-driven, and inventory views               -->
+    <!-- ================================================================= -->
+    <collection label="Reports">
+        <a href="statewide_exercise_v1">Network Activation Report</a>
+        <a href="asset_inventory_v1">Asset Inventory</a>
+    </collection>
+
+    <!-- ================================================================= -->
+    <!-- Tools: operator launchpads, docs, scaffolding, built-in Splunk     -->
+    <!-- ================================================================= -->
+    <collection label="Tools">
+        <a href="home_launchpad_v1">Executive Launchpad</a>
+        <a href="netops_readiness_v1">NetOps Readiness</a>
+        <a href="admin_guide_v1">Admin Guide</a>
+        <a href="template">Customer Template</a>
+        <divider/>
+        <view name="reports"/>
+        <view name="dashboards"/>
+        <a href="search" target="_blank" rel="noopener">Search</a>
+    </collection>
 </nav>

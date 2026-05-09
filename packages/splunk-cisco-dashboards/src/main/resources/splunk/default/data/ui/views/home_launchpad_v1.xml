@@ -237,7 +237,7 @@
 				{
 					"options": {
 						"newTab": true,
-						"url": "/app/splunk-cisco-dashboards/building_v2"
+						"url": "/app/splunk-cisco-dashboards/building_v1"
 					},
 					"type": "drilldown.customUrl"
 				}
@@ -254,7 +254,7 @@
 				{
 					"options": {
 						"newTab": true,
-						"url": "/app/splunk-cisco-dashboards/building_v2"
+						"url": "/app/splunk-cisco-dashboards/building_v1"
 					},
 					"type": "drilldown.customUrl"
 				}
@@ -383,7 +383,7 @@
 				{
 					"options": {
 						"newTab": true,
-						"url": "/app/splunk-cisco-dashboards/it_health_v2"
+						"url": "/app/splunk-cisco-dashboards/it_health_v1"
 					},
 					"type": "drilldown.customUrl"
 				}
@@ -400,7 +400,7 @@
 				{
 					"options": {
 						"newTab": true,
-						"url": "/app/splunk-cisco-dashboards/it_health_v2"
+						"url": "/app/splunk-cisco-dashboards/it_health_v1"
 					},
 					"type": "drilldown.customUrl"
 				}
@@ -530,7 +530,7 @@
 				{
 					"options": {
 						"newTab": true,
-						"url": "/app/splunk-cisco-dashboards/security_v2"
+						"url": "/app/splunk-cisco-dashboards/security_v1"
 					},
 					"type": "drilldown.customUrl"
 				}
@@ -547,7 +547,7 @@
 				{
 					"options": {
 						"newTab": true,
-						"url": "/app/splunk-cisco-dashboards/security_v2"
+						"url": "/app/splunk-cisco-dashboards/security_v1"
 					},
 					"type": "drilldown.customUrl"
 				}
