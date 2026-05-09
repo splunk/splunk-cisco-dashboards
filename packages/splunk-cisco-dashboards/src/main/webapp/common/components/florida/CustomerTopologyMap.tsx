@@ -572,7 +572,7 @@ export const clearCustomerTopologyStorage = (): void => {
     clearPersistedTopology();
 };
 
-const usePersistedTopology = (fallback: CustomerTopology) => {
+export const usePersistedTopology = (fallback: CustomerTopology) => {
     const [topology, setTopology] = useState<CustomerTopology>(() =>
         readPersistedTopology(fallback)
     );
@@ -634,7 +634,7 @@ const TOPOLOGY_ANIMATION_LEVELS: TopologyAnimationLevel[] = [
 ];
 
 const readStoredAnimationLevel = (): TopologyAnimationLevel => {
-    if (typeof window === 'undefined') return 'subtle';
+    if (typeof window === 'undefined') return 'on';
     try {
         const stored = window.localStorage.getItem(
             TOPOLOGY_ANIMATION_LEVEL_KEY
@@ -649,7 +649,7 @@ const readStoredAnimationLevel = (): TopologyAnimationLevel => {
     } catch {
         /* localStorage may be unavailable (private mode etc.) */
     }
-    return 'subtle';
+    return 'on';
 };
 
 const subscribeStoredAnimationLevel = (
@@ -686,7 +686,7 @@ const useTopologyAnimationLevel = (): {
     const storedLevel = useSyncExternalStore<TopologyAnimationLevel>(
         subscribeStoredAnimationLevel,
         readStoredAnimationLevel,
-        () => 'subtle'
+        () => 'on'
     );
     const reducedMotion = useSyncExternalStore(
         subscribeReducedMotion,
@@ -1712,7 +1712,7 @@ const TopologyLinkPath: React.FC<TopologyLinkPathProps> = ({
         animationLevel === 'off'
             ? null
             : animationLevel === 'subtle' && profile.flowSeconds !== null
-            ? profile.flowSeconds * 1.7
+            ? profile.flowSeconds * 1.4
             : profile.flowSeconds;
     const enableBreathe = animationLevel !== 'off' && profile.breathe;
 
@@ -1834,31 +1834,34 @@ const packetProfile = (
     switch (status) {
         case 'critical':
             return {
-                count: subtle ? 1 : 2,
-                durationSeconds: subtle ? 2.6 : 1.8,
-                radius: 3.4,
+                count: subtle ? 2 : 3,
+                durationSeconds: subtle ? 2.4 : 1.6,
+                radius: subtle ? 3.2 : 3.6,
                 fill: '#ef4444',
                 statusClass: 'customer-topology-packet--critical',
                 opacity: 0.95,
             };
         case 'warning':
             return {
-                count: subtle ? 2 : 3,
-                durationSeconds: subtle ? 5.2 : 3.6,
-                radius: 2.8,
+                count: subtle ? 2 : 4,
+                durationSeconds: subtle ? 4.4 : 3.2,
+                radius: subtle ? 2.8 : 3.0,
                 fill: '#f59e0b',
                 statusClass: 'customer-topology-packet--warning',
-                opacity: 0.9,
+                opacity: 0.92,
             };
         case 'stable':
         default:
             return {
-                count: subtle ? 2 : 4,
-                durationSeconds: subtle ? 8.5 : 6,
-                radius: 2.5,
+                // Subtle is now "alive but unhurried" instead of "barely
+                // there" — eye still catches motion within a glance, but
+                // it doesn't pull focus from real data.
+                count: subtle ? 3 : 5,
+                durationSeconds: subtle ? 5.5 : 4.5,
+                radius: subtle ? 2.8 : 3.2,
                 fill: '#38bdf8',
                 statusClass: 'customer-topology-packet--stable',
-                opacity: subtle ? 0.65 : 0.85,
+                opacity: subtle ? 0.85 : 0.95,
             };
     }
 };
@@ -1891,134 +1894,177 @@ interface LinkPacketLayerProps {
  *      involving the JS frame loop, so we keep 60fps even with a dozen
  *      packets in flight on a busy CPU.
  */
+/**
+ * Bulletproof packet-flow layer.
+ *
+ * Earlier attempts wrapped the packets in a custom react-leaflet `<Pane>`
+ * with our own `<svg>`. Both attempts had subtle SVG-sizing / viewport
+ * bugs that meant the marching-dash animation worked (because it lives
+ * inside Leaflet's *own* properly-sized overlay SVG) but the packet
+ * circles never painted on the live map even though the same SMIL
+ * pattern rendered fine in a standalone HTML test.
+ *
+ * The fix: stop running our own SVG. Find Leaflet's existing overlay
+ * `<svg>` element — the one Leaflet creates lazily when the first
+ * vector layer is added, and which it sizes / positions correctly on
+ * every zoom + pan — and append a `<g>` group directly into it. All
+ * `<defs><path>` + `<circle>` + `<animateMotion>` elements live inside
+ * that group, so they share Leaflet's already-correct viewBox and
+ * inherit its zoom-driven transforms automatically.
+ *
+ * This mirrors exactly how `TopologyLinkPath` injects its `<animate>`
+ * elements onto the polyline path object — same imperative DOM pattern,
+ * proven to work in this codebase.
+ */
 const LinkPacketLayer: React.FC<LinkPacketLayerProps> = ({
     linkSegments,
     animationLevel,
 }) => {
     const map = useMap();
-    const [tick, forceRedraw] = useReducer((n: number) => n + 1, 0);
+    const groupRef = useRef<SVGGElement | null>(null);
+    // version is bumped any time we want the imperative re-render effect
+    // below to run again — i.e. on the very first attach AND on every
+    // map zoomend / viewreset / moveend / resize event.
+    const [version, bumpVersion] = useReducer((n: number) => n + 1, 0);
 
+    // Step 1: find Leaflet's existing overlay <svg> and append our <g>.
+    // Leaflet only creates that <svg> when the first vector renderer is
+    // initialised. By the time this effect runs the `<TopologyLinkPath>`
+    // siblings have already been mounted, but Leaflet sometimes defers
+    // SVG creation by an animation frame — so we retry on rAF until the
+    // element appears.
     useEffect(() => {
-        // Recompute screen-space paths whenever the world↔pixel mapping
-        // changes. Pan does NOT change that mapping when packets live inside
-        // a Leaflet pane (Leaflet translates the pane wholesale), so we
-        // deliberately do not subscribe to `move`/`moveend` to avoid a
-        // useless re-render on every drag tick.
-        const handler = () => forceRedraw();
-        map.on('zoomend', handler);
-        map.on('viewreset', handler);
+        const SVG_NS = 'http://www.w3.org/2000/svg';
+        let cancelled = false;
+        let group: SVGGElement | null = null;
+        let rafId: number | null = null;
+
+        const attach = () => {
+            if (cancelled) return;
+            const overlayPane = map.getPanes().overlayPane;
+            const svg = overlayPane?.querySelector('svg');
+            if (!svg) {
+                rafId = requestAnimationFrame(attach);
+                return;
+            }
+            group = document.createElementNS(SVG_NS, 'g');
+            group.setAttribute('class', 'customer-topology-packets-group');
+            group.setAttribute('pointer-events', 'none');
+            svg.appendChild(group);
+            groupRef.current = group;
+            bumpVersion();
+        };
+        attach();
+
         return () => {
-            map.off('zoomend', handler);
-            map.off('viewreset', handler);
+            cancelled = true;
+            if (rafId !== null) cancelAnimationFrame(rafId);
+            if (group && group.parentNode) {
+                group.parentNode.removeChild(group);
+            }
+            groupRef.current = null;
         };
     }, [map]);
 
-    const segmentsWithGeometry = useMemo(() => {
-        // `tick` is intentionally read so this memo invalidates whenever
-        // forceRedraw fires (zoomend / viewreset). Without it the cached
-        // result would hold stale latLngToLayerPoint coordinates after a
-        // zoom change.
-        void tick;
-        return linkSegments
-            .map(({ link, source, target }) => {
-                const profile = packetProfile(link.status, animationLevel);
-                if (!profile) return null;
-                const points = computeBezierLine(
-                    [source.lat, source.lng],
-                    [target.lat, target.lng]
-                );
-                if (points.length < 2) return null;
-                const layerPoints = points.map(([lat, lng]) =>
-                    map.latLngToLayerPoint([lat, lng])
-                );
-                const head = layerPoints[0];
-                const tail = layerPoints
-                    .slice(1)
-                    .map((p) => `L${p.x},${p.y}`)
-                    .join(' ');
-                const d = `M${head.x},${head.y} ${tail}`;
-                return {
-                    id: link.id,
-                    d,
-                    profile,
-                };
-            })
-            .filter(
-                (
-                    seg
-                ): seg is {
-                    id: string;
-                    d: string;
-                    profile: PacketProfile;
-                } => Boolean(seg)
+    // Step 2: re-render packets whenever the map's world↔pixel mapping
+    // could have changed. Pan moves the overlay SVG via a CSS transform
+    // (no re-render needed for that), but `viewreset` fires when Leaflet
+    // re-anchors the SVG and `zoomend` fires after each zoom completes —
+    // both times we need to recompute layer-point coords.
+    useEffect(() => {
+        const handler = () => bumpVersion();
+        map.on('zoomend', handler);
+        map.on('viewreset', handler);
+        map.on('moveend', handler);
+        map.on('resize', handler);
+        return () => {
+            map.off('zoomend', handler);
+            map.off('viewreset', handler);
+            map.off('moveend', handler);
+            map.off('resize', handler);
+        };
+    }, [map]);
+
+    // Step 3: imperatively rebuild the packet DOM whenever inputs change.
+    // We blow away the previous children and rebuild — `<animateMotion>`
+    // elements are cheap and there's no benefit to diff-style updates.
+    useEffect(() => {
+        const group = groupRef.current;
+        if (!group) return;
+        const SVG_NS = 'http://www.w3.org/2000/svg';
+        const XLINK_NS = 'http://www.w3.org/1999/xlink';
+
+        // Clear previous render
+        while (group.firstChild) {
+            group.removeChild(group.firstChild);
+        }
+        if (animationLevel === 'off') return;
+
+        const defs = document.createElementNS(SVG_NS, 'defs');
+        group.appendChild(defs);
+
+        for (const { link, source, target } of linkSegments) {
+            const profile = packetProfile(link.status, animationLevel);
+            if (!profile) continue;
+            const points = computeBezierLine(
+                [source.lat, source.lng],
+                [target.lat, target.lng]
             );
-    }, [linkSegments, animationLevel, map, tick]);
+            if (points.length < 2) continue;
+            const layerPoints = points.map(([lat, lng]) =>
+                map.latLngToLayerPoint([lat, lng])
+            );
+            const head = layerPoints[0];
+            const tail = layerPoints
+                .slice(1)
+                .map((p) => `L${p.x},${p.y}`)
+                .join(' ');
+            const d = `M${head.x},${head.y} ${tail}`;
 
-    if (animationLevel === 'off') return null;
-    if (segmentsWithGeometry.length === 0) return null;
+            const pathId = `customer-topology-packet-path-${link.id}`;
+            const path = document.createElementNS(SVG_NS, 'path');
+            path.setAttribute('id', pathId);
+            path.setAttribute('d', d);
+            path.setAttribute('fill', 'none');
+            defs.appendChild(path);
 
-    return (
-        <Pane
-            name="customer-topology-packets"
-            style={{ zIndex: 410, pointerEvents: 'none' }}
-        >
-            <svg
-                width="0"
-                height="0"
-                style={{
-                    overflow: 'visible',
-                    position: 'absolute',
-                    left: 0,
-                    top: 0,
-                }}
-            >
-                <defs>
-                    {segmentsWithGeometry.map((seg) => (
-                        <path
-                            key={`def-${seg.id}`}
-                            id={`customer-topology-packet-path-${seg.id}`}
-                            d={seg.d}
-                            fill="none"
-                        />
-                    ))}
-                </defs>
-                {segmentsWithGeometry.map((seg) =>
-                    Array.from({ length: seg.profile.count }).map((_, i) => {
-                        // Stagger packet starts so they appear evenly spaced
-                        // along the path rather than clumping at the source.
-                        const beginOffset =
-                            (i / seg.profile.count) *
-                            seg.profile.durationSeconds;
-                        return (
-                            <circle
-                                key={`pkt-${seg.id}-${i}`}
-                                r={seg.profile.radius}
-                                cx={0}
-                                cy={0}
-                                fill={seg.profile.fill}
-                                opacity={seg.profile.opacity}
-                                className={cn(
-                                    'customer-topology-packet',
-                                    seg.profile.statusClass
-                                )}
-                            >
-                                <animateMotion
-                                    dur={`${seg.profile.durationSeconds}s`}
-                                    repeatCount="indefinite"
-                                    rotate="auto"
-                                    begin={`-${beginOffset}s`}
-                                >
-                                    <mpath
-                                        href={`#customer-topology-packet-path-${seg.id}`}
-                                    />
-                                </animateMotion>
-                            </circle>
-                        );
-                    })
-                )}
-            </svg>
-        </Pane>
-    );
+            for (let i = 0; i < profile.count; i++) {
+                // Stagger packet starts so they appear evenly distributed
+                // along the path rather than clumping at the origin.
+                const beginOffset =
+                    (i / profile.count) * profile.durationSeconds;
+                const circle = document.createElementNS(SVG_NS, 'circle');
+                circle.setAttribute('r', String(profile.radius));
+                circle.setAttribute('cx', '0');
+                circle.setAttribute('cy', '0');
+                circle.setAttribute('fill', profile.fill);
+                circle.setAttribute('opacity', String(profile.opacity));
+                circle.setAttribute(
+                    'class',
+                    `customer-topology-packet ${profile.statusClass}`
+                );
+
+                const motion = document.createElementNS(SVG_NS, 'animateMotion');
+                motion.setAttribute('dur', `${profile.durationSeconds}s`);
+                motion.setAttribute('repeatCount', 'indefinite');
+                motion.setAttribute('rotate', 'auto');
+                motion.setAttribute('begin', `-${beginOffset}s`);
+
+                const mpath = document.createElementNS(SVG_NS, 'mpath');
+                // Belt + braces — set both modern and legacy refs since
+                // some Chromium and Safari variants resolve only one
+                // form depending on the host page's SVG mode.
+                mpath.setAttributeNS(XLINK_NS, 'xlink:href', `#${pathId}`);
+                mpath.setAttribute('href', `#${pathId}`);
+
+                motion.appendChild(mpath);
+                circle.appendChild(motion);
+                group.appendChild(circle);
+            }
+        }
+    }, [linkSegments, animationLevel, map, version]);
+
+    return null;
 };
 
 interface MapFrameProps {
@@ -2030,15 +2076,42 @@ const MapFrame: React.FC<MapFrameProps> = ({ topology, autoFitSites }) => {
     const map = useMap();
     const [centerLat, centerLng] = topology.map.center;
     const zoom = topology.map.zoom;
-    const initialFrameAppliedRef = useRef(false);
     const autoFitAppliedRef = useRef(false);
+
+    // Track the last view we *programmatically* set so subsequent renders
+    // that re-derive the same center/zoom don't fight the user's manual
+    // pan/zoom. We only call `setView` when the editor (or persisted
+    // topology) actually changes the requested center / zoom — not on
+    // every render, and not when the user has been panning.
+    //
+    // Why the imperative dance instead of just passing `center`/`zoom` to
+    // <MapContainer>? Because react-leaflet's MapContainer ignores
+    // center/zoom prop changes after the initial mount — that's a
+    // documented quirk of the library. Without `setView` here, edits to
+    // Center Lat / Center Lng / Zoom in the topology editor would write
+    // to localStorage but the visible map would never move.
+    const lastAppliedViewRef = useRef<{
+        lat: number;
+        lng: number;
+        zoom: number;
+    } | null>(null);
 
     useEffect(() => {
         const apply = () => {
             map.invalidateSize();
-            if (!initialFrameAppliedRef.current) {
+            const last = lastAppliedViewRef.current;
+            if (
+                !last ||
+                last.lat !== centerLat ||
+                last.lng !== centerLng ||
+                last.zoom !== zoom
+            ) {
                 map.setView([centerLat, centerLng], zoom, { animate: false });
-                initialFrameAppliedRef.current = true;
+                lastAppliedViewRef.current = {
+                    lat: centerLat,
+                    lng: centerLng,
+                    zoom,
+                };
             }
         };
         apply();
@@ -3063,6 +3136,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                     setPickSiteId(null);
                     setIsEditorOpen(false);
                 }}
+                catalogueByName={catalogueByName}
             />
 
             <div className="absolute bottom-6 left-4 z-[1000] space-y-3 pointer-events-auto">
@@ -3481,6 +3555,13 @@ interface TopologyEditorPanelProps {
     onSave: () => void;
     onResetFactory: () => void;
     onClose: () => void;
+    /**
+     * Searchbase catalogue keyed by `searchName`. Used to populate the
+     * per-site and per-link "Pick search…" dropdowns so demo / fake
+     * stanzas can be swapped in without typing the stanza name.
+     * `null` while the catalogue is still loading.
+     */
+    catalogueByName: Record<string, SearchbaseRecord> | null;
 }
 
 const editorInputClass = (isDark: boolean): string =>
@@ -3504,9 +3585,36 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
     onSave,
     onResetFactory,
     onClose,
+    catalogueByName,
 }) => {
     const [jsonText, setJsonText] = useState('');
     const [jsonError, setJsonError] = useState<string | null>(null);
+
+    // Two filtered slices of the searchbase catalogue, keyed by tag, so
+    // each per-site / per-link search picker only shows entries that are
+    // actually shaped for that map element. The Demo stanzas live behind
+    // these tags too, so the user can swap a marker / line onto a fully
+    // populated synthetic feed for screenshots and walk-throughs.
+    const siteSearchOptions = useMemo(() => {
+        if (!catalogueByName) return [] as SearchbaseRecord[];
+        return Object.values(catalogueByName)
+            .filter((record) => record.tags.includes('Topology_Site'))
+            .sort((a, b) =>
+                a.searchName.localeCompare(b.searchName, undefined, {
+                    sensitivity: 'base',
+                })
+            );
+    }, [catalogueByName]);
+    const linkSearchOptions = useMemo(() => {
+        if (!catalogueByName) return [] as SearchbaseRecord[];
+        return Object.values(catalogueByName)
+            .filter((record) => record.tags.includes('Topology_Link'))
+            .sort((a, b) =>
+                a.searchName.localeCompare(b.searchName, undefined, {
+                    sensitivity: 'base',
+                })
+            );
+    }, [catalogueByName]);
 
     useEffect(() => {
         if (!open) {
@@ -4089,6 +4197,44 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                     })
                                                 }
                                             />
+                                            {siteSearchOptions.length > 0 ? (
+                                                <select
+                                                    className={cn(
+                                                        editorInputClass(isDark),
+                                                        'mt-1 cursor-pointer'
+                                                    )}
+                                                    value={
+                                                        siteSearchOptions.some(
+                                                            (record) =>
+                                                                record.searchName ===
+                                                                site.searchName
+                                                        )
+                                                            ? site.searchName ?? ''
+                                                            : ''
+                                                    }
+                                                    onChange={(event) => {
+                                                        const next =
+                                                            event.target.value;
+                                                        if (!next) return;
+                                                        updateSite(site.id, {
+                                                            searchName: next,
+                                                        });
+                                                    }}
+                                                    title="Pick a search from the catalogue (filtered to Topology_Site stanzas, including Demo feeds)"
+                                                >
+                                                    <option value="">
+                                                        Pick search…
+                                                    </option>
+                                                    {siteSearchOptions.map((record) => (
+                                                        <option
+                                                            key={record.id}
+                                                            value={record.searchName}
+                                                        >
+                                                            {record.searchName}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            ) : null}
                                         </label>
                                     </div>
                                 ))}
@@ -4308,6 +4454,44 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                     })
                                                 }
                                             />
+                                            {linkSearchOptions.length > 0 ? (
+                                                <select
+                                                    className={cn(
+                                                        editorInputClass(isDark),
+                                                        'mt-1 cursor-pointer'
+                                                    )}
+                                                    value={
+                                                        linkSearchOptions.some(
+                                                            (record) =>
+                                                                record.searchName ===
+                                                                link.searchName
+                                                        )
+                                                            ? link.searchName ?? ''
+                                                            : ''
+                                                    }
+                                                    onChange={(event) => {
+                                                        const next =
+                                                            event.target.value;
+                                                        if (!next) return;
+                                                        updateLink(link.id, {
+                                                            searchName: next,
+                                                        });
+                                                    }}
+                                                    title="Pick a search from the catalogue (filtered to Topology_Link stanzas, including Demo feeds)"
+                                                >
+                                                    <option value="">
+                                                        Pick search…
+                                                    </option>
+                                                    {linkSearchOptions.map((record) => (
+                                                        <option
+                                                            key={record.id}
+                                                            value={record.searchName}
+                                                        >
+                                                            {record.searchName}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            ) : null}
                                         </label>
                                     </div>
                                 ))}

@@ -7,6 +7,1034 @@
 
 ---
 
+## 2026-05-09 — Searchbase metadata audit & Cisco-tag gate cleanup
+
+### Goal of the session
+
+Make every stanza in `searchbase.conf` discoverable through both the
+overview picker (which gates on the literal `Cisco` tag —
+`KpiPickerPanel.tsx:431`) and the Splunk Searchbase admin UI (which
+indexes `description` / `explanation` / `solution` / `related_info`
+/ `category` / `sub_category` / `tags`). User ask:
+
+> "I need you to make sure all of these fields are accurate for each
+> stanza, update as necessary and make sure we are categorizing and
+> sub-categorizing and tagging in the best manner possible so admins
+> can quickly find these searches."
+
+### What we built
+
+1. **`scripts/audit_searchbase_metadata.py`** — one-shot inventory of
+   every stanza for missing prose / classification fields, plus tag
+   and category vocabulary normalisation candidates. Output:
+   `scripts/searchbase_metadata_audit.md`.
+2. **`scripts/fix_searchbase_metadata.py`** — applied conservative,
+   automated fixes:
+   - Added the picker-gate `Cisco` tag to the 6 `cisco:dnac:issue`
+     stanzas rewritten in this session's earlier Group B work that
+     were inadvertently left without it (the 7th sibling already had
+     it). Picker-visible count: 106 → 112.
+   - Normalised redundant tag spellings (consolidated to a single
+     canonical form): `ActiveDirectory` → `Active_Directory`,
+     `Executive Summary` → `Executive_Summary`, `Network Activation`
+     → `Network_Activation`, `Cisco Cloud Security` →
+     `Cisco_Cloud_Security`, `Secure Access` → `Secure_Access`,
+     `Cloud Firewall` → `Cloud_Firewall`, `SDWAN` → `SD-WAN`.
+   - Normalised one sub-category casing variant: `IDS/IPS` →
+     `IDS / IPS`.
+   - Touched 27 stanzas; bumped `version`, `date_updated`, and
+     `updated_author` on each.
+3. **`scripts/fix_searchbase_prose_gaps.py`** — filled the 16 stanzas
+   the audit flagged as missing `related_info` (overview map
+   per-site / per-link health, demo variants, the topology umbrella,
+   and shared-helper datasources). Three of those stanzas
+   (`shared_ds_dev_health_trend`, `building_resilience_ds_room_detail`,
+   `shared_ds_annotations`) were also missing `explanation` and
+   `solution` and got those filled too.
+
+### Cisco-gate policy (after this pass)
+
+| Bucket | Count |
+|---|---:|
+| Stanzas with `Cisco` tag (visible in overview picker) | 112 |
+| Stanzas without `Cisco` tag (hidden from picker, still discoverable in Searchbase UI) | 302 |
+
+Policy: the `Cisco` tag is the validated-for-picker allow-list. New
+stanzas only earn it after they've been audited against live data.
+Today's Group A and Group B stanzas — both now validated against the
+live `index=dnac` shape — all carry it.
+
+### Carryover bug fix found while auditing
+
+`it_health_v1.xml` &rarr; `ds_base_issues_ref` data source was using
+the same broken assumption as the deleted Group B stanzas: it
+projected `SiteName` / `SiteNameHierarchy` / `SiteType` from
+`cisco:dnac:issue` events that don't carry those fields. Every
+downstream panel that extends this base (8 of them — interface
+utilization, issues by site x2, etc.) was either showing a single
+`Unknown` site row (where `fillnull` was applied) or collapsing all
+issues into one null row.
+
+Fix: rewrote the base query with the same
+`cisco:dnac:devicehealth`-join-on-`DeviceID` pattern used in the
+Group B `searchbase.conf` rewrites:
+
+```
+| join type=left DeviceID [ search `index_catalyst` sourcetype="cisco:dnac:devicehealth"
+   | stats latest(Site) as SiteName, latest(Location) as SiteNameHierarchy by DeviceID ]
+| eval SiteName=coalesce(SiteName, "Site enrichment unavailable"),
+       SiteNameHierarchy=coalesce(SiteNameHierarchy, SiteName),
+       SiteType=null()
+```
+
+Validated by parsing the dashboard JSON definition end-to-end — no
+syntax breakage. Every panel that extends `ds_base_issues_ref`
+inherits the enriched site context.
+
+### Verification
+
+- Re-ran `scripts/audit_searchbase_metadata.py`: 0 missing
+  `description` / `explanation` / `solution` / `related_info` /
+  `category` / `sub_category` / `tags` across all 414 stanzas. Zero
+  tag or category casing-variant warnings.
+- Re-ran `scripts/audit_sourcetype_fields.py --audit-only
+  --output-suffix=merged_live_dnac_v2`: 0 high-confidence findings,
+  same 1 partial-confidence finding for `[asset_inventory_build_lookup]`
+  (F5/Meraki sourcetypes without inventory data on the current stack
+  — needs an F5 stack to clear).
+
+### What's next
+
+- Run the field audit on a stack that has F5 data to clear the
+  remaining partial-confidence finding.
+- Wire `audit_sourcetype_fields.py --audit-only` and
+  `audit_searchbase_metadata.py` into pre-commit / CI.
+- XDR `props.conf` `site` alias check (carryover from earlier
+  pass).
+
+---
+
+## 2026-05-09 — Live-DNAC schema reconciliation (Groups A/B/C/D)
+
+### Goal of the session
+
+Close out the audit findings surfaced when the user pointed `index=dnac`
+at a real Catalyst Center TA (replacing the oneshot-derived inventory
+that previous sessions used as ground truth). The merged-live-DNAC-v2
+audit had landed **10 high-confidence findings + 1 partial-confidence**
+across 17 stanzas, all bucketed into four product-decision groups.
+
+User direction: *"can you just please do what you think is best? what
+do you recomend we do?"* — i.e. stop deliberating and execute.
+
+### Pre-flight: how badly did this matter?
+
+A quick consumer scan answered the most important question: **all 17
+affected stanzas are orphans.** Zero `views/*.xml`, zero React/TSX,
+zero other config files reference any of them. They show up in the
+gear-icon picker UI for dashboard authors, but no panel is bound to
+them. So the work is about correctness for *future* binding, not
+fixing broken panels — which means we can be aggressive about
+deleting stanzas that target data shapes that don't exist anywhere.
+
+```
+Stanza                                                       Consumers
+----------------------------------------------------------------------
+it_critical_systems_inventory_reachability_summary           (NONE - orphan)
+it_critical_systems_inventory_unreachable_detail             (NONE - orphan)
+... (all 17 reported NONE) ...
+```
+
+Snapshot before touching anything: `git tag snapshot/pre-live-dnac-rewrites`.
+
+### Group A — Catalyst Center reports rewritten (6 stanzas, kept)
+
+**The bug:** the previous revisions used speculative camelCase
+(`complianceStatus`, `deviceName`, `deviceFamily`, etc.) and
+speculative split-status fields (`Reachability Status` +
+`Manageability Status`). Live data uses Title-Case-with-spaces and a
+single `Status` column.
+
+**The fix:** rewrite the SPL of each stanza against the actual schema
+the live `cisco:catalyst:center:inventory:report` and
+`cisco:catalyst:center:compliance:report` events emit. Bumped each to
+`version = 1.0.1`, `updated_author = codex`, with a
+`Schema-correction history` bullet in `related_info` documenting
+exactly which fields moved.
+
+| Stanza | What changed |
+|---|---|
+| `inventory_reachability_summary` | `"Reachability Status"` + `"Manageability Status"` &rarr; `Status` (single column). The synthetic `Reachable + Managed` bucket is retired because the data doesn't support it. |
+| `inventory_unreachable_detail` | `"Site Hierarchy"` &rarr; `Location`. `"Device Series"` &rarr; `"Device Type"`. Added `"Up Time"` and `"Time Since Code Upgrade via Cisco DNA Center SWIM"`. |
+| `inventory_device_family_distribution` | `"Device Series"` &rarr; `"Device Type"`. |
+| `compliance_report_rate` | `complianceStatus` &rarr; `"Compliance Status"`, `deviceName` &rarr; `"Device Name"`. |
+| `compliance_report_status_distribution` | Same camelCase &rarr; Title-Case rename. |
+| `compliance_report_noncompliant_detail` | **Major rebuild.** `complianceMessage`, `totalChecks`, `passCount`, `failCount`, `siteHierarchy`, `role`, `deviceFamily`, `deviceSeries` *all* don't exist in the live data. Replaced with the per-feature columns the report actually emits: `"Software Image"`, `EoX`, `"Network Profile"`, `"Network Settings"`, `"Startup Vs Running Configuration"`, `"Critical Security Advisories"`, `"Application Visibility"`, `"Customization Profile"`, `Fabric`. |
+
+### Group B — `cisco:dnac:issue` site enrichment (7 stanzas, kept)
+
+**The bug:** `cisco:dnac:issue` events on the live TA carry
+`Issue*` and `Device*` context but **no site / location field at all**.
+Every stanza grouped by `SiteName` or counted `dc(SiteName)`, which
+returned zero on every customer.
+
+**The fix:** add a `join type=left DeviceID` against
+`cisco:dnac:devicehealth`, which *does* ship `Site` (e.g.
+`"Global/Cali/San Jose/SJC23/Floor 2"`) keyed on the same
+`DeviceID` UUID. After the join, every issue event has a Site path.
+
+```spl
+`index_catalyst` sourcetype="cisco:dnac:issue" ...
+| join type=left DeviceID
+   [ search `index_catalyst` sourcetype="cisco:dnac:devicehealth"
+     | stats latest(Site) as Site by DeviceID ]
+| eval Site=coalesce(Site, "Site enrichment unavailable")  # only on stanzas grouping BY Site
+| stats ... by Site, ...
+```
+
+For stanzas that group BY Site (`issues_by_site`,
+`issue_summary_kpis`'s `affected_sites` count) the `coalesce()` keeps
+issues whose device wasn't in the recent `devicehealth` snapshot
+visible (bucketed under `"Site enrichment unavailable"`) rather than
+silently dropped. For stanzas that just *display* Site as one column
+of many (the per-domain triage tables), the missing-site rows still
+appear, just with an empty Site cell — the user can still drill in by
+device.
+
+Stanzas updated:
+
+- `executive_dashboard_issue_summary_kpis` (1.1.0 &rarr; 1.2.0)
+- `executive_summary_issue_details` (1.0.0 &rarr; 1.0.1)
+- `it_critical_systems_aaa_server_issues` (1.0.0 &rarr; 1.0.1)
+- `it_critical_systems_ap_disconnect_issues` (1.0.0 &rarr; 1.0.1, also
+  collapsed `SiteName` + `SiteNameHierarchy` into the single
+  hierarchical `Site` path which already encodes building/floor)
+- `it_critical_systems_bgp_neighbor_issues` (1.0.0 &rarr; 1.0.1)
+- `it_critical_systems_interface_utilization_issues` (1.0.0 &rarr; 1.0.1)
+- `it_critical_systems_issues_by_site` (1.0.0 &rarr; 1.0.1)
+
+Performance note: the join subsearch is bounded to
+`stats latest(Site) as Site by DeviceID` against `cisco:dnac:devicehealth`,
+which is naturally small (one-row-per-device snapshot per cycle). Even
+on a large customer this returns hundreds-to-low-thousands of rows,
+well under Splunk's default subsearch caps. If a customer ever blows
+past that, the right next step is a generated lookup CSV refreshed by a
+scheduled search; the join pattern is documented in `related_info` so
+the rewrite path is obvious.
+
+### Group C — `[audit_logs_by_site_lookup_join]` deleted
+
+`network.deviceId` and `network.siteId` are null in **100% of live
+`cisco:dnac:audit:logs` events** (verified: 26/26 events on the live
+Catalyst Center TA had `network: null`). The stanza was dead code on
+every standard-TA customer. Replaced the stanza body with a comment
+block explaining why and pointing at the snapshot tag for restoration.
+
+### Group D — Three `cisco:dnac:site:topology` alert-event stanzas deleted
+
+All three (`site_topology_recent_changes`,
+`site_topology_event_type_distribution`,
+`site_topology_site_type_distribution`) filtered
+`WHERE isnotnull(eventId)` to target the alert-event variant of
+`cisco:dnac:site:topology`. The live TA only emits the **hierarchy
+snapshot** variant (one event per global/area/building/floor node, no
+`eventId`, no `details.*`, no `severity`). All three would silently
+return zero rows on every standard-TA customer.
+
+Topology *change* events on the live TA flow through
+`cisco:dnac:audit:logs` (with `category` / `eventHierarchy` carrying
+the change context), and the existing hierarchy-snapshot stanzas
+elsewhere in the file already handle the snapshot variant correctly.
+Replaced the three deleted stanzas with a comment block explaining the
+schema mismatch and pointing at the snapshot tag.
+
+### Verification: audit re-run
+
+```
+$ python3 scripts/audit_sourcetype_fields.py --audit-only \
+    --output-suffix=merged_live_dnac_v2
+
+Audit complete:
+  inspected                         280
+  skipped_no_sourcetype             102
+  skipped_makeresults                 9
+  skipped_no_inventory_data          23
+  flagged                             1
+```
+
+**Before:** 10 high-confidence + 1 partial-confidence = 11 findings.
+**After:** 0 high-confidence + 1 partial-confidence = 1 finding.
+
+The single remaining finding is `[asset_inventory_build_lookup]`
+flagging fields (`hostname`, `managementIp`, `marketingName`,
+`platform`, `version`) that are likely supplied by the F5 / Meraki /
+DNS sourcetypes that have no inventory data on this stack. It's
+correctly de-escalated to partial-confidence — pending a stack with
+F5 data to settle.
+
+### Files touched
+
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf` —
+  6 Catalyst Center report stanzas rewritten (Group A); 7 issue
+  stanzas re-shaped with devicehealth site join (Group B); 1 audit
+  log stanza deleted (Group C); 3 topology alert stanzas deleted
+  (Group D). Net `+ 13 rewrites, − 4 stanzas` plus comment blocks
+  documenting deletions.
+- `scripts/sourcetype_audit_findings_merged_live_dnac_v2.md` —
+  regenerated; now 0 high-confidence findings.
+- `packages/splunk-cisco-dashboards/docs/SESSION_LOG.md` — this entry.
+
+Snapshot tag: `snapshot/pre-live-dnac-rewrites` (rollback path).
+
+### What's next
+
+1. **Run the audit on a stack that has F5 data** to clear (or
+   confirm) the single remaining partial-confidence finding on
+   `[asset_inventory_build_lookup]`. (Carryover from previous
+   session — still open.)
+2. **Wire `audit_sourcetype_fields.py --audit-only` into
+   pre-commit / CI** so future stanza edits get the same field
+   check automatically. (Carryover.)
+3. **Sweep XDR `props.conf` for a `site` field alias** — if the
+   customer's TA exposes `site` via alias and the audit script
+   isn't reading aliases yet, the coalesce sentinel will hide
+   real values. Confirm before treating the data dependency as
+   permanent. (Carryover.)
+4. **Pick up the next user-facing dashboard work**. With 17 orphan
+   stanzas now correct against live data, dashboard authors can
+   drop them into Studio panels via the picker UI without surprises.
+   The most natural next move is to wire the Catalyst Center report
+   stanzas (Group A) into a new "Inventory & Compliance" panel in
+   the IT Health dashboard, since the data feed is now live.
+
+---
+
+## 2026-05-09 — KPI tile cleanup + sourcetype field audit infrastructure
+
+### Goal of the session
+
+Two asks, related by the same root cause:
+
+1. **Wire the two right-column KPI tiles** ("Top Incident Volume" and
+   "Operational Lead") through `searchbase.conf` so the gear icon's
+   "Currently bound" banner + "Jump To" button work the way they do
+   for every other tile. Today the picker shows neither, because the
+   tiles are defined with hardcoded inline SPL and `savedSearch`
+   undefined — the picker's `currentBoundEntry` lookup falls through.
+2. **Stand up an MCP-style field audit** so we can stop guessing what
+   fields each Cisco sourcetype actually exposes. The user noticed
+   stanzas referencing fields that may not exist on the data — the
+   audit is the way to find those at scale.
+
+### Part 1 — KPI tile cleanup
+
+#### What the tiles actually are
+
+Single-row, single-string KPI cards. They emit one `value` column
+that's a *site name*, not a number. No trend line, no major/minor
+numerics, no thresholds. They answer "who's at the top of the
+leaderboard?" rather than "how big is the number?". Distinct
+counter-pattern from the regular metric tiles.
+
+| Tile | Question answered | Source |
+|---|---|---|
+| Top Incident Volume | "Which site is loudest in XDR right now?" | `cisco:xdr:incidents` / `cisco:xdr:incidents-summary` |
+| Operational Lead | "Which site is healthiest right now?" | `cisco:dnac:devicehealth` |
+
+#### Why "Jump To" was broken
+
+`KpiPickerPanel.currentBoundEntry` is computed from
+`context.currentSavedSearch`. For the regular metric tiles, the
+static config has `savedSearch: '<searchbase entry name>'`, so the
+picker resolves it cleanly. The two KPI tiles instead had:
+
+```ts
+{ id: 'top_incident', spl: '...inline SPL...', valueField: 'value' }
+```
+
+`savedSearch` was undefined → `currentSavedSearch` was undefined →
+`currentBoundEntry` was null → no banner, no "Jump To" button, no
+auto-scroll. The inline SPL was also a duplicate of the
+`append [search ...]` blocks already inside
+`overview_topology_overview` (which the topology React component
+reads as a summary feed).
+
+#### The fix
+
+Three coordinated changes:
+
+1. **Two new stanzas in `searchbase.conf`** (between
+   `overview_topology_overview` and the per-site health entries),
+   modeled on the existing `default_viz = splunk.singlevalue`
+   convention and tagged with `Cisco` so the picker (which gates on
+   that tag) surfaces them:
+   - `[overview_top_incident_volume]` — `Overview - Top Incident Volume`
+   - `[overview_operational_lead]` — `Overview - Operational Lead`
+
+   Each carries the full description / explanation / solution / related-info
+   block matching the rest of the catalogue, plus the SPL extracted
+   verbatim from the topology overview's `append` blocks.
+
+2. **`KPI_CONFIG` in `pages/overview/index.tsx`** drops the inline
+   `spl` field and uses `savedSearch` pointing at the new stanzas:
+
+   ```ts
+   { id: 'top_incident', savedSearch: 'Overview - Top Incident Volume', ... }
+   { id: 'operational_lead', savedSearch: 'Overview - Operational Lead', ... }
+   ```
+
+3. **`buildEffectiveKpiCfg` extended** so the no-override branch now
+   resolves `savedSearch` through `searchbaseByName` to literal SPL,
+   exactly the way the override branch already did. Prior behaviour
+   would have dispatched `| savedsearch "..."`, which silently fails
+   for searchbase-only stanzas. The override-branch logic stays
+   untouched. `useKpi`'s `resolveMetricSpl` still picks `spl` over
+   `savedSearch`, so the dispatch runs the literal SPL while the UI
+   keeps the saved-search name for picker / footnote display.
+
+4. **Binding-footnote precedence updated** to credit the new
+   searchbase entries when no override is bound and the topology
+   summary feed isn't the source — was previously falling through to
+   "(inline SPL)".
+
+#### Verification
+
+- TypeScript `tsc --noEmit` passes.
+- ESLint clean.
+- Picker-context call sites unchanged: `openPicker(KPI_CONFIG[i].id,
+  cfg.label, { savedSearch: KPI_CONFIG[i].savedSearch, ... })` —
+  `savedSearch` is now populated, so `currentSavedSearch` is set,
+  so `currentBoundEntry` resolves, so the green banner + Jump To
+  button render and the auto-scroll-on-open fires.
+
+#### Files touched (Part 1)
+
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf`
+  — Added `[overview_top_incident_volume]` and
+  `[overview_operational_lead]` between the topology overview and the
+  per-site health stanzas, with full descriptions and `Cisco`+
+  `Overview`+`KPI`+`Site_Leaderboard` tags so the picker surfaces them.
+- `packages/splunk-cisco-dashboards/src/main/webapp/pages/overview/index.tsx`
+  — `KPI_CONFIG` now uses `savedSearch` (was inline `spl`); extended
+  `buildEffectiveKpiCfg` no-override branch to resolve through
+  `searchbaseByName`; tightened binding-footnote precedence.
+
+### Part 2 — Sourcetype field audit infrastructure
+
+#### Why we built it
+
+The user has had a hunch for a while that several `searchbase.conf`
+stanzas reference fields that don't actually exist in the data. With
+~10K lines of SPL across 416 stanzas and 44 unique concrete
+sourcetypes, eyeballing isn't viable. Originally pitched as an MCP
+flow — but no MCP Splunk server is configured for this workspace
+(`~/.cursor/mcp.json` doesn't exist). So we used the existing
+curl + REST pattern the rest of the `validate_searchbase_*` scripts
+already use.
+
+#### What `scripts/audit_sourcetype_fields.py` does
+
+For every concrete sourcetype referenced by any stanza in
+`searchbase.conf`:
+
+1. Dispatches `search index=* sourcetype="<st>" | head <N> |
+   `field_list`` against Splunk via the same `post_oneshot` helper
+   the validation scripts use.
+2. The `field_list` macro (already defined in `macros.conf`) returns
+   one row with a comma-separated `Fields_List` column — sorted,
+   deduplicated, with built-in fields (`host`, `index`, `_time`,
+   etc.) stripped.
+3. Parses, sorts, deduplicates further, writes a per-sourcetype JSON
+   blob to `scripts/sourcetype_field_inventory.json` (machine-
+   readable ground truth, intended to be tracked in git) and a
+   human-readable markdown report to
+   `scripts/sourcetype_field_inventory.md`.
+
+Workers are parallel (default 6), each oneshot dispatch is bounded
+by a configurable `--timeout`, and the script skips wildcard
+sourcetypes (`cisco:*`) since `oneshot` can't expand them.
+
+Configuration mirrors the existing scripts: `SPLUNK_BASE_URL`,
+`SPLUNK_USERNAME`, `SPLUNK_PASSWORD`, `SPLUNK_OWNER`, `SPLUNK_APP`,
+`SPLUNK_VERIFY_SSL`. Defaults work against local Splunk
+(`https://localhost:8089`, `splunk-cisco-dashboards` app namespace).
+
+#### First-run results
+
+- **44 concrete sourcetypes** referenced across 416 stanzas.
+- **33 returned fields** (`pass`).
+- **11 returned no events** (`empty`) — e.g. `cisco:firepower:syslog`,
+  `cisco:ftd`, `meraki:devicesuplinkslossandlatency`,
+  `cisco:cloud_security:dns`, `thousandeyes:alerts`, etc. These
+  match known data gaps on the local stack.
+- **0 errored.** Run took 21.5s with 8 workers.
+
+#### Findings the audit immediately surfaced
+
+The biggest finding came from the very stanza I just added:
+
+##### `cisco:xdr:incidents` has no `site` field
+
+Discovered field set for both `cisco:xdr:incidents` and
+`cisco:xdr:incidents-summary`:
+
+```
+assignees{}, categories{}, client_id, confidence, created,
+description, detection_sources{}, discovery_method, enrichment_status,
+external_ids{}, external_references{}.*, groups{}, id, incident_source,
+incident_time.{closed,contained,discovered,opened,reported}, meta.ai_description,
+modified, owner, owner_id, promotion_method, schema_version,
+scores.{asset,global,ml_score,ttp}, severity, short_description,
+signature_id, source_uri, status, tactics{}, techniques{}, timestamp,
+title, tlp, type
+```
+
+**There is no `site` field.** The `top_incident` SPL groups by `site`
+which doesn't exist. The tile would silently produce a single
+`site=null` row and surface nothing meaningful — exactly the
+"Awaiting data" state the user has been seeing.
+
+This is a real data-shape gap, not a code bug. Three options:
+
+| Option | What it costs | What it gets you |
+|---|---|---|
+| A. Drop `site` dimension; group by `incident_source` or `signature_id` | One stanza rewrite | Tile actually emits a value, but answers a different question |
+| B. Add `iplocation`/CMDB lookup to map `client_id` or asset → site | Lookup file + maintenance | Tile answers the original "which site" question, but only if the lookup is populated |
+| C. Leave SPL as-is, document the data dependency in the stanza | Zero | Honest "needs site enrichment" surface — picker description already explains the contract |
+
+**No change made yet.** Surfaced for direction.
+
+##### Three other XDR stanzas use a non-existent `incident_id` field
+
+- `[executive_dashboard_xdr_incident_count]` (line 1089)
+- `[security_resilience_xdr_by_severity]` (line 2349)
+- `[security_resilience_xdr_incident_detail]` (line 2368)
+
+All three reference `incident_id` in `dc(incident_id)` /
+`stats ... by incident_id` / `latest(...) by incident_id`. The actual
+field is `id`. No field alias in `props.conf` rescues them. These
+will silently fall through to a single null bucket on real data.
+Confirmed via the audit finding + manual `props.conf` check.
+
+**Definite bugs.** Three-line fix per stanza (`incident_id` → `id`).
+Not changed yet — held for user direction.
+
+##### 69 total stanzas with potentially-missing field references
+
+A second-pass heuristic script (inline, didn't add it as a
+permanent file) scanned every stanza's `stats by`, `eval`,
+`rename`, `where`, and `table/fields` clauses and diff'd against
+the discovered field set. 69 hits.
+
+Caveats — these are heuristic, expect noise:
+
+- **Splunk built-ins (`host`, `_time`, `_raw`, `index`)** are stripped
+  by the `field_list` macro by design, so any stanza that references
+  them comes back as a "missing" hit. ~15 of the 69 are this case.
+- **CIM-mapped aliases (`src`, `dest`, `dest_ip`, `dest_port`,
+  `Country`)** are produced by search-time field aliases / lookups in
+  the TA, not in raw events, so `field_list` won't surface them.
+  ~20 of the 69 are this case.
+- **Genuine bugs** — the `incident_id` cases above plus a handful of
+  others (`utd_action` on `cisco:sdwan:utd:logs`, `period` on
+  `devicehealth`, `vlan_id` extracted from syslog text) — need
+  individual review.
+
+Next step: refine the heuristic to suppress known-safe categories
+(Splunk built-ins, CIM aliases, common eval/rename targets) so the
+report is a tight list of actionable findings, not a 69-item wall.
+That's a follow-up; not done in this session.
+
+#### Files touched (Part 2)
+
+- `scripts/audit_sourcetype_fields.py` — new audit script.
+- `scripts/sourcetype_field_inventory.json` — machine-readable
+  inventory; safe to regenerate; intended to be tracked in git so
+  field-set changes show up in PR diffs.
+- `scripts/sourcetype_field_inventory.md` — human-readable report
+  (also tracked).
+
+### Part 3 — Fixing what the audit found ("go after all and fix them")
+
+User instruction was unambiguous: take all three "What's next"
+threads and close them in one pass.
+
+#### Fix 1 — `incident_id` → `id` in the three XDR stanzas
+
+`cisco:xdr:incidents` and `cisco:xdr:incidents-summary` expose the
+canonical incident identifier as `id` at the top level of the JSON
+payload. There is no `incident_id` field — confirmed against the
+discovered field inventory and a `props.conf` field-alias check.
+The previous SPL silently fell through to a single null bucket on
+real data.
+
+| Stanza (line) | Change |
+|---|---|
+| `[executive_dashboard_xdr_incident_count]` (1089) | `dc(incident_id) → dc(id)` |
+| `[security_resilience_xdr_by_severity]` (2349) | `dc(incident_id) by severity → dc(id) by severity` |
+| `[security_resilience_xdr_incident_detail]` (2368) | `... by incident_id → ... by id` |
+
+All three stanzas were also bumped to `version = 1.0.1`,
+`updated_author = codex`, `date_updated = 2026-05-09`, and the
+`explanation` / `related_info` fields now call out the field-name
+correction so future readers see *why* the stanza was touched, not
+just the diff.
+
+#### Fix 2 — `site` enrichment gap on `top_incident` (option C, with a demo escape hatch)
+
+Picked **option C** from the original options table: leave the SPL
+mechanically intact (still groups by `site`), but make the data
+dependency *explicit* with a coalesce sentinel:
+
+```spl
+| eval site=coalesce(site, "Site enrichment unavailable")
+| stats dc(id) as incidents by site
+| eventstats max(incidents) as max_incidents
+| where incidents=max_incidents
+| stats first(site) as value
+| fields value
+```
+
+Now the tile renders one of two unambiguous states:
+
+- A real site name → XDR is enriched, this is the noisy site.
+- The literal string `"Site enrichment unavailable"` → XDR isn't
+  enriched, the dashboard is honest about it instead of showing an
+  empty card.
+
+Applied to **both** the canonical `[overview_top_incident_volume]`
+stanza *and* the embedded duplicate inside the `append` block of
+`[overview_topology_overview]` (line 9552). Both bumped to
+`version = 1.0.1` and the docs explain the data dependency + how
+to fix it (TA-side asset lookup keyed on `client_id`).
+
+To keep the tile demo-able on stacks where `site` enrichment
+isn't wired *and* avoid pinning the canonical stanza to a fake
+value, added two synthetic companions that mirror the existing
+site/link demo pattern:
+
+- `[overview_top_incident_volume_demo]` → `value="Orlando (Regional Hub)"`
+- `[overview_operational_lead_demo]` → `value="Tallahassee (State EOC)"`
+
+Pure `makeresults` + `eval`, no sourcetype dependency, tagged
+`Cisco,Demo,KPI,Site_Leaderboard,Leaderboard` so the picker
+surfaces them next to the real stanzas under the same sub-category
+filter. The `Demo` tag makes them easy to find/exclude.
+
+#### Fix 3 — `deviceLocationUpdate.deviceMacAddress` typo (bonus find from refining the audit)
+
+The refined audit (Fix 4 below) caught a second real bug that the
+first-pass heuristic had missed in the noise: two stanzas were
+referencing `deviceLocationUpdate.deviceMacAddress`, but the
+actual field on `cisco:spaces:firehose` is
+`deviceLocationUpdate.device.macAddress` (one extra dot — `device`
+is a nested object). Fixed both:
+
+- `[building_resilience_spaces_location_breakdown]` (497)
+- `[building_resilience_ds_spaces_kpi_devices]` (6887)
+
+Both bumped to `version = 1.0.1`, `updated_author = codex`,
+`date_updated = 2026-05-09`.
+
+#### Fix 4 — Refine `audit_sourcetype_fields.py` so the report is actionable
+
+The first-pass heuristic produced 69 findings, mostly noise. The
+refined version drops that to **0 high-confidence findings + 1
+partial-confidence finding** that's gated on missing F5 inventory
+data we don't have on this stack. Refinements, in the order they
+moved the needle:
+
+1. **Proper `eval` clause walker.** Replaced the regex-based
+   "split by `|`" with a character-by-character walker
+   (`_iter_eval_clauses` + `_eval_clause_lhs`) that tracks paren
+   depth and string-literal state. Catches every LHS in chained
+   `eval a=X, b=Y, c=Z` statements *and* doesn't mis-split on
+   literal `|` characters inside `match(field, "a|b|c")`. **69 → 14.**
+2. **`rename` parser handles quoted dotted fields and chains.**
+   Added `RE_RENAME_CLAUSE` / `RE_RENAME_PAIR` so
+   `rename "network.siteId" as siteId, "device.serial" as serial`
+   parses correctly and both LHS fields are recognized as
+   referenced. **14 → 11.**
+3. **`lookup ... OUTPUT` and `rex (?<name>...)` synthesized fields.**
+   Added `RE_LOOKUP_OUTPUT` and `RE_REX_NAMED` so fields produced
+   by lookups and named regex captures are subtracted from the
+   "referenced" set before flagging. Caught the known-good fields
+   from the asset inventory lookup pipeline. **11 → 4.**
+4. **CIM data-model + alias suppression.** Introduced two
+   allow-lists: `CIM_DATA_MODELS` (e.g. `Network_Traffic`,
+   `Authentication`) and `CIM_ALIASES` (e.g. `dest_port`, `Country`,
+   `src_ip`). Any reference matching `<DataModel>.<field>` or any
+   bare CIM alias is dropped before flagging. The markdown report
+   documents the rule so reviewers know it's deliberate suppression,
+   not a hidden bug. **4 → 1.**
+5. **High-confidence vs partial-confidence split.** Added
+   `confidence` and `missing_inventory` fields to `AuditFinding`.
+   A finding is `partial` if any of the stanza's sourcetypes had
+   `status = empty` or `fail` in the inventory — meaning the
+   comparison set is incomplete and the flagged field might
+   legitimately come from one of the missing sourcetypes. The
+   markdown report groups findings by confidence and only
+   high-confidence ones gate the script's exit code (so CI doesn't
+   fail on "we don't have F5 data on this stack"). The single
+   remaining flag is `[asset_inventory_build_lookup]` against the
+   F5 sourcetype `f5:bigip:management:device:icontrol`, which
+   isn't ingested locally — re-run on a stack with F5 to clear it
+   or confirm the bug.
+6. **First-class CLI surface.** Added `--audit` (discover then
+   audit) and `--audit-only` (audit using the existing inventory
+   JSON). `--audit-only` is fast (~150ms, no Splunk hits) and is
+   what we'll wire into pre-commit / CI.
+
+Final audit run:
+
+```
+inspected                         284
+skipped_no_sourcetype             102
+skipped_makeresults                 9
+skipped_no_inventory_data          23
+flagged                             1
+Exit code: 0
+```
+
+#### Files touched (Part 3)
+
+- `packages/.../searchbase.conf` — three XDR stanzas (`incident_id`
+  → `id`), two Spaces stanzas (`deviceLocationUpdate.device.macAddress`),
+  `[overview_top_incident_volume]` + embedded duplicate in
+  `[overview_topology_overview]` (coalesce sentinel), two new
+  demo companion stanzas.
+- `scripts/audit_sourcetype_fields.py` — eval/rename/lookup/rex
+  parser refinements, CIM suppression, confidence split, `--audit`
+  / `--audit-only` flags, exit-code logic gated on high-confidence
+  findings only.
+- `scripts/sourcetype_audit_findings.md` — regenerated; now shows
+  the confidence split + the single F5-gated finding.
+- `scripts/sourcetype_field_inventory.json` / `.md` — regenerated
+  to reflect the fixed `id` and `device.macAddress` fields.
+
+### What's next
+
+The Part 3 cleanup closes the three threads from the original
+"What's next". Open follow-ups for the next session:
+
+1. **Run the audit on a stack that has F5 data** to clear (or
+   confirm) the single remaining partial-confidence finding on
+   `[asset_inventory_build_lookup]`.
+2. **Wire `audit_sourcetype_fields.py --audit-only` into
+   pre-commit / CI** so future stanza edits get the same field
+   check the user just got from the manual run.
+3. **Sweep XDR `props.conf` for a `site` field alias** — if the
+   customer's TA exposes `site` via alias and the audit script
+   isn't reading aliases yet, the coalesce sentinel will hide
+   real values. Confirm before treating the data dependency as
+   permanent.
+
+---
+
+## 2026-05-09 — Map animation Fix C + topology-element search picker + demo stanzas
+
+### Goal of the session
+
+Two follow-ups from last session:
+
+1. The animation work was deployed but the user couldn't see it on the
+   default settings (subtle level + stable links). Diagnosed last
+   session that the defaults rendered "2 tiny blue dots @ 0.65 opacity
+   over 8.5s" — technically correct but visually imperceptible. User
+   chose **Fix C**: bump the default level to `'on'` and tighten the
+   `'subtle'` profile so it reads as "alive but unhurried" rather than
+   "barely there".
+2. Make site icons and connectivity links **swappable** the way KPI
+   tiles already are — the user wants to pick a search from a dropdown
+   so they can demo the map with realistic-looking data even when real
+   telemetry isn't there yet, without typing `search_name` strings into
+   the editor by hand.
+
+> "let,s go with fix C" … "let us allow the site icons and site
+> connectivity line searches to be changed like the tiles, and so I
+> can pick a fake search to showcase how it will work in real-life…
+> if we don't have the fake searches… create them so all fields are
+> populating and working when clicking on the lines or when clicking
+> on the icons."
+
+### What got built
+
+#### 1. Fix C — animation level rebalance
+
+- `readStoredAnimationLevel()` and the `useSyncExternalStore` server
+  snapshot in `useTopologyAnimationLevel` both now default to `'on'`
+  (was `'subtle'`). New users land on the eye-catching cadence.
+- `packetProfile()` rebalanced so the three levels are clearly
+  distinct rather than collapsing toward "off":
+  - **stable / subtle**: `count=3 (was 2)`, `duration=5.5s (was 8.5s)`,
+    `radius=2.8 (was 2.5)`, `opacity=0.85 (was 0.65)`.
+  - **stable / on**: `count=5 (was 4)`, `duration=4.5s (was 6s)`,
+    `radius=3.2 (was 2.5)`, `opacity=0.95 (was 0.85)`.
+  - Warning + critical also tightened a notch (more packets, slightly
+    larger radius) so transitions between status colors register.
+- `flowSeconds` multiplier for `'subtle'` marching dashes dropped
+  from 1.7 → 1.4 so the line-itself motion stays in step with the new
+  packet cadence.
+
+Net effect: a healthy stable link in the default `'on'` mode now shows
+5 cyan packets crossing every 4.5 s — readable as motion within a
+glance from across a room. `'subtle'` is genuinely calm but still
+legible. `'off'` remains fully static.
+
+#### 2. Topology element search picker (per-site + per-link dropdowns)
+
+Discovery work mapped two surprises:
+
+- The KPI picker is hard-gated to the `Cisco` tag (`KpiPickerPanel.tsx`).
+- The map already supports per-site/per-link `searchName` overrides
+  via the topology editor — but only as a free-text input. No discovery
+  surface for what's available, no demo escape hatch.
+
+Wired a lightweight catalogue-backed `<select>` next to each existing
+text input in `TopologyEditorPanel`:
+
+- New prop `catalogueByName: Record<string, SearchbaseRecord> | null`
+  passed down from `CustomerTopologyMap` (catalogue is already loaded
+  for telemetry resolution; we just thread it through).
+- Two derived option lists with `useMemo`:
+  - `siteSearchOptions` — entries tagged `Topology_Site`.
+  - `linkSearchOptions` — entries tagged `Topology_Link`.
+- Each `<select>` renders a "Pick search…" placeholder + sorted
+  options. Selecting an option writes back through the existing
+  `updateSite` / `updateLink` reducer, so persistence reuses the
+  same `customerTopology.v4` localStorage path that already
+  serializes `searchName`.
+- The plain `<input>` stays alongside for power users who need to
+  paste / type a stanza name that isn't tagged for the picker.
+
+Only files touched: `CustomerTopologyMap.tsx`. No new persistence
+layer, no new context, no new component file.
+
+#### 3. Six demo / synthetic stanzas in `searchbase.conf`
+
+Built fully synthetic stanzas so the picker has something to swap to
+even when real telemetry is absent. Every stanza emits the **exact**
+canonical field names that `parseSiteRow` / `parseLinkRow` consume,
+verified against the parser code (lines 1131-1199 and 1245-1288 of
+`CustomerTopologyMap.tsx`).
+
+Sites (each emits `status`, `healthPct`, `activeDevices`, `alerts`,
+`latencyMs`, `telemetrySource`, `lastUpdated`):
+
+- `overview_site_demo_healthy` — `healthPct=96`, `alerts=0`, `latencyMs=4`.
+- `overview_site_demo_warning` — `healthPct=78`, `alerts=4`, `latencyMs=24`.
+- `overview_site_demo_critical` — `healthPct=42`, `alerts=14`, `latencyMs=87`.
+
+Links (each emits `status`, `capacityMbps`, `throughputMbps`,
+`peakThroughputMbps`, `utilizationPct`, `peakUtilizationPct`,
+`latencyMs`, `lossPct`, `endpointHealthPct`, `txMbps`, `rxMbps`,
+`endpointDevices`, `telemetrySource`, `lastUpdated`):
+
+- `overview_link_demo_healthy` — 1000 Mbps capacity, 32 % util, 0.05 % loss.
+- `overview_link_demo_warning` — 500 Mbps capacity, 84 % util, 1.2 % loss.
+- `overview_link_demo_critical` — 200 Mbps capacity, 97 % util, 4.8 % loss.
+
+All built with `| makeresults | eval … | fields …` — no sourcetype
+queries, so they always return one row regardless of indexed data,
+time range, or feed availability. Tagged
+`Cisco,Demo,Topology_{Site|Link},…` so they appear in the new
+dropdown alongside the real `overview_site_*_health` / `overview_link_*_health`
+stanzas. The three real `overview_site_*_health` stanzas and the three
+real `overview_link_*_health` stanzas got their tags amended with
+`Topology_Site` / `Topology_Link` so they show up in the picker too —
+otherwise the dropdown would only show demo entries and the real
+stanzas would be unreachable from the picker UX.
+
+### Verification
+
+- React build clean (`yarn run build` exit 0, 1 entrypoint warning
+  unrelated to this work).
+- No new lints in `CustomerTopologyMap.tsx`.
+- Splunk app reloaded via REST (`POST .../apps/local/.../_reload` and
+  `POST .../configs/conf-searchbase/_reload`).
+- `GET configs/conf-searchbase?search=Topology_Link` confirms 6 entries
+  carrying `Topology_Link` (3 real + 3 demo) — exactly what the picker
+  should expose.
+- One-shot test of `overview_link_demo_critical`'s SPL returned 1 row
+  with all 14 popup fields populated and parseable as numbers /
+  strings of the expected types.
+- One-shot test of `overview_site_demo_warning`'s SPL returned 1 row
+  with all 7 popup fields.
+
+### Files touched
+
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/florida/CustomerTopologyMap.tsx`
+  - Default animation level → `'on'` in two places (`readStoredAnimationLevel`,
+    `useSyncExternalStore` server snapshot).
+  - `packetProfile()` rebalanced for all three statuses + both levels.
+  - `flowSeconds` `'subtle'` multiplier 1.7 → 1.4.
+  - `TopologyEditorPanelProps` extended with `catalogueByName`.
+  - Editor wires two `<select>` dropdowns (site + link) filtered by
+    `Topology_Site` / `Topology_Link` tags.
+  - Catalogue threaded from parent → editor.
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf`
+  - Six new demo stanzas (3 site + 3 link), each with full
+    description / explanation / solution.
+  - Six existing real overview stanzas re-tagged with
+    `Topology_Site` / `Topology_Link`.
+
+### What's next
+
+- Optional polish: surface a small "Demo" badge in the editor next to
+  any `searchName` whose catalogue entry carries the `Demo` tag, so
+  users can see at a glance whether the map is on real or synthetic
+  data without opening the popup.
+- The picker dropdown is order-by-name. If we add many more topology
+  stanzas, consider grouping by sub-category (`Topology Site` /
+  `Topology Link` / `Demo`) inside the `<select>`.
+- Still pending from earlier sessions: tag the data-gap stanzas with
+  `Requires_Data_Source` and teach the KPI picker to badge / hide
+  them; decide on the 8 datamodel-dependent stanzas; wire the live
+  validator into CI.
+
+---
+
+## 2026-05-09 — Three real bugs discovered while demoing the new picker
+
+### Goal of the addendum
+
+While walking through the topology picker we'd just shipped, the user
+hit three things that were silently broken. Two were "I picked a demo
+search, it kind of works but…" and one was a flat "this animation you
+keep talking about isn't there at all". All three turned out to be
+real bugs that had been hiding behind defaults, browser quirks, and
+react-leaflet's lifecycle.
+
+### Bug 1 — Packet circles never painted on the map
+
+**Symptom.** Marching dashes on each link animated correctly, but the
+small filled circles ("packets") that are supposed to slide along each
+link's bezier curve were invisible. A standalone HTML test
+(`docs/packet-animation-demo.html`) using the exact same SMIL pattern
+rendered the circles fine in the same browser, so we knew the rendering
+primitive itself worked.
+
+**Root cause.** `LinkPacketLayer` was rendering its own `<svg
+width="0" height="0" style="overflow: visible">` inside a custom
+react-leaflet `<Pane>`. Even though `overflow: visible` *should* let
+SVG children paint outside a degenerate viewport, that behaviour is
+unreliable across renderers when the parent pane also has no explicit
+size. The marching dashes worked because they live inside Leaflet's
+*own* properly-sized overlay SVG (managed by `L.SVG.prototype._update`),
+not ours.
+
+Two intermediate fixes both failed:
+
+1. Mimic Leaflet's own renderer pattern — set `width` / `height` /
+   `viewBox` / `transform` on our SVG every `zoomend` / `viewreset` /
+   `moveend` / `resize`. Looked correct on paper, still no dots.
+2. Add `xlinkHref` alongside `href` on `<mpath>` for cross-browser
+   `<mpath>` resolution. No improvement on its own.
+
+**Fix that landed.** Stop running our own SVG. Find Leaflet's existing
+overlay `<svg>` element via `map.getPanes().overlayPane.querySelector('svg')`
+and append a `<g>` group **directly** into it, the same imperative-DOM
+pattern `TopologyLinkPath` already uses to attach `<animate>` elements
+to polyline paths.
+
+The new `LinkPacketLayer`:
+
+- Returns `null` from JSX — pure side-effects component.
+- Mount effect uses `requestAnimationFrame` to retry until Leaflet's
+  overlay SVG exists (it's lazy-created when the first vector renderer
+  is added, which can be a frame later than our component's mount).
+- Builds `<defs><path>` + `<circle>` + `<animateMotion><mpath>`
+  imperatively via `document.createElementNS`. Uses `setAttributeNS`
+  with the XLink namespace for `xlink:href` AND `setAttribute` for the
+  modern `href` form.
+- Wires re-renders on `zoomend` / `viewreset` / `moveend` / `resize`
+  via a `useReducer`-driven `version` counter.
+
+User reported "amazing!!!! you nailed it now!! I love you!" the moment
+the bundle reached the browser. Worth recording.
+
+**File touched:** `CustomerTopologyMap.tsx`, around line 1900.
+
+### Bug 2a — Center Lat / Center Lng / Zoom in the editor were no-ops
+
+**Symptom.** User changes Center Lat / Lng / Zoom in the topology
+editor → values are correctly stored in `customerTopology.v4` →
+visible map view never moves.
+
+**Root cause.** `MapContainer` from react-leaflet only honors the
+`center` and `zoom` props on the **initial mount**. Subsequent prop
+changes are silently ignored. The `MapFrame` component already had a
+`useEffect` that *would* call `map.setView(...)` when those values
+changed, but it was hard-gated by `initialFrameAppliedRef.current` —
+ran exactly once and never again, so editor edits had no effect.
+
+**Fix.** Replaced the one-shot gate with a `lastAppliedViewRef` that
+tracks the most recently applied (lat, lng, zoom). The effect now
+calls `setView` whenever the requested view differs from the last
+one we applied. Manual user pans don't trigger React state changes,
+so they don't fight the editor's edits — only explicit topology
+changes move the map.
+
+### Bug 2b — Editor's Name and Subtitle fields were no-ops
+
+**Symptom.** User edits Name to "Florida Production Sites", saves,
+dashboard header still says "Network Topology".
+
+**Root cause.** "Network Topology" and "Site connectivity and path
+health" were hardcoded as JSX literals in
+`pages/overview/index.tsx`. The editor's Name / Subtitle inputs were
+correctly writing to the topology's `.name` / `.subtitle`, but
+nothing outside the editor read those fields.
+
+**Fix.** Exported `usePersistedTopology` from `CustomerTopologyMap.tsx`,
+called it in `overview/index.tsx`, and replaced the hardcoded literals
+with `{topologyHeaderName}` / `{topologyHeaderSubtitle}`. Falls back to
+the original strings if the user clears them. Same hook the map uses,
+same localStorage key, no manual sync needed.
+
+### Diagnostic that unblocked the packet bug
+
+I created `docs/packet-animation-demo.html` — a standalone file with
+three SVGs (stable / warning / critical) that use the exact same SMIL
+pattern as the production code. Opening it in the user's browser
+confirmed:
+
+- ✅ Browser supports `<animateMotion>` + `<mpath>`.
+- ✅ Both `href` and `xlink:href` resolve.
+- ✅ `prefers-reduced-motion` not blocking SMIL.
+
+That narrowed the production bug from "browser problem" to
+"integration problem", which made the imperative-append-to-Leaflet's-SVG
+fix obviously the right move.
+
+### Files touched
+
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/florida/CustomerTopologyMap.tsx`
+  - Rewrote `LinkPacketLayer` to imperatively append `<g>` into
+    Leaflet's existing overlay SVG.
+  - Replaced one-shot `initialFrameAppliedRef` gate with a
+    `lastAppliedViewRef`-driven `setView` so editor center/zoom edits
+    actually move the map.
+  - Exported `usePersistedTopology`.
+- `packages/splunk-cisco-dashboards/src/main/webapp/pages/overview/index.tsx`
+  - Replaced hardcoded "Network Topology" / "Site connectivity and
+    path health" with values read from the persisted topology.
+- `packages/splunk-cisco-dashboards/docs/packet-animation-demo.html`
+  - New standalone SMIL test page. Useful again any time we touch the
+    map's animation rendering.
+
+### What's next
+
+- The diagnostic HTML file at `docs/packet-animation-demo.html` should
+  probably be moved into a `docs/diagnostics/` subfolder if we end up
+  building more of these. For now it lives next to `SESSION_LOG.md`.
+- Watch for similar "react-leaflet ignores prop changes" gotchas on
+  other map-config props (maxBounds, minZoom, maxZoom, tileUrl). The
+  topology editor exposes some of those and they may have the same
+  bug. Fixing each requires the same imperative-update pattern.
+
+---
+
 ## 2026-05-09 — `cisco:dnac:site:topology` re-import + dual-schema discovery
 
 ### Goal of the addendum

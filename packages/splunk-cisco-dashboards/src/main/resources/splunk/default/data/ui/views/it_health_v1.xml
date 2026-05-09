@@ -1893,7 +1893,7 @@
 		"ds_base_issues_ref": {
 			"name": "IT - Critical Systems - ds_base_issues",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\"\n| eval DeviceImgVersion=DeviceImageVersion\n| fields IssueID, IssueName, IssueCategory, IssueSpecificPriority, IssueStatus, IssueSpecificSeverity, IssueSpecificDescription, IssueSpecificSummary, IssueSpecificEntity, IssueSpecificEntityValue, IssueSpecificCategory, IssueSpecificName, IssueSpecificSource, IssueCount, IssueDeviceRole, DeviceName, DeviceFamily, DevicePlatform, DeviceRole, DeviceSerialNumber, DeviceSeries, DeviceIpAddress, DeviceImgVersion, DeviceMACAddress, SiteName, SiteNameHierarchy, SiteType, IssueClientMac, _time",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\"\n| eval DeviceImgVersion=DeviceImageVersion\n| join type=left DeviceID [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" | stats latest(Site) as SiteName, latest(Location) as SiteNameHierarchy by DeviceID ]\n| eval SiteName=coalesce(SiteName, \"Site enrichment unavailable\"), SiteNameHierarchy=coalesce(SiteNameHierarchy, SiteName), SiteType=null()\n| fields IssueID, IssueName, IssueCategory, IssueSpecificPriority, IssueStatus, IssueSpecificSeverity, IssueSpecificDescription, IssueSpecificSummary, IssueSpecificEntity, IssueSpecificEntityValue, IssueSpecificCategory, IssueSpecificName, IssueSpecificSource, IssueCount, IssueDeviceRole, DeviceName, DeviceFamily, DevicePlatform, DeviceRole, DeviceSerialNumber, DeviceSeries, DeviceIpAddress, DeviceImgVersion, DeviceMACAddress, SiteName, SiteNameHierarchy, SiteType, IssueClientMac, _time",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"

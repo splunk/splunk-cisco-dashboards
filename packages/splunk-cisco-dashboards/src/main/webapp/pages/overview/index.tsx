@@ -3,7 +3,7 @@
  *
  * Executive landing page adapted for Splunk and pumped full of
  * dashboards-tooling niceties:
- *   * Time-range picker (default Last 7 days)
+ *   * Time-range picker (default Last 24 hours)
  *   * Auto-refresh interval picker + manual refresh button
  *   * Per-metric searchbase wiring, with saved-search dispatch used only
  *     for searches that are intentionally scheduled
@@ -46,6 +46,7 @@ import {
     clearCustomerTopologyStorage,
     type TopologySummaryMetricMap,
     TopologySiteTable,
+    usePersistedTopology,
 } from '@/common/components/florida/CustomerTopologyMap';
 import { HealthBadge } from '@/common/components/florida/HealthBadge';
 import { IncidentTicker } from '@/common/components/florida/IncidentTicker';
@@ -130,12 +131,13 @@ const splunkLocalePrefix = (): string => {
 // =============================================================================
 
 const TIME_RANGE_OPTIONS: TimeRange[] = [
+    { earliest: '-4h@h', latest: 'now', label: 'Last 4 hours', spanSeconds: 4 * 3600 },
     { earliest: '-24h@h', latest: 'now', label: 'Last 24 hours', spanSeconds: 24 * 3600 },
     { earliest: '-7d@d', latest: 'now', label: 'Last 7 days', spanSeconds: 7 * 86400 },
     { earliest: '-30d@d', latest: 'now', label: 'Last 30 days', spanSeconds: 30 * 86400 },
     { earliest: '-90d@d', latest: 'now', label: 'Last 90 days', spanSeconds: 90 * 86400 },
 ];
-const DEFAULT_TIME_RANGE_LABEL = 'Last 7 days';
+const DEFAULT_TIME_RANGE_LABEL = 'Last 24 hours';
 
 // =============================================================================
 // Auto-refresh
@@ -431,6 +433,20 @@ const METRIC_CONFIG: MetricConfig[] = [
 // numeric `timechart` will not produce a usable site label and will
 // surface the empty-row "—" placeholder.
 
+// Each tile binds to a `search_name` in `searchbase.conf` so:
+//   1. the KPI picker's "currently bound" banner + Jump To button can
+//      locate the entry (both gate on a non-null `currentSavedSearch`),
+//   2. the runtime dispatch is the literal `search` field from the
+//      catalogue entry — keeping picker preview, runtime, and the
+//      Open-in-Search drilldown in lockstep,
+//   3. the SPL itself stays out of this file so any rewrite happens in
+//      one place (`searchbase.conf`) without rebuilding the React app.
+//
+// The same SPL is also embedded as `append [search ...]` blocks inside
+// `overview_topology_overview` — that's intentional, the topology
+// React component reads it as a single summary feed and shadows the
+// useKpi value when no override is bound. Both paths now reference
+// the canonical SPL string; neither is duplicated in TypeScript.
 const KPI_CONFIG: KpiConfig[] = [
     {
         id: 'top_incident',
@@ -439,13 +455,7 @@ const KPI_CONFIG: KpiConfig[] = [
             'Site name producing the most distinct XDR/SecureX incident IDs in ' +
             'the selected window. Helps the operator answer "which site is ' +
             'noisiest right now?". Outputs a single string (the site label).',
-        spl:
-            '`index_security` (sourcetype="cisco:xdr:incidents" OR ' +
-            'sourcetype="cisco:xdr:incidents-summary") ' +
-            '| stats dc(id) as incidents by site ' +
-            '| eventstats max(incidents) as max_incidents ' +
-            '| where incidents=max_incidents ' +
-            '| stats first(site) as value | fields value',
+        savedSearch: 'Overview - Top Incident Volume',
         valueField: 'value',
         mockValue: 'Awaiting data',
     },
@@ -456,16 +466,7 @@ const KPI_CONFIG: KpiConfig[] = [
             'Site name with the strongest IT health, derived from Catalyst ' +
             'Center device health rolled up by Site (Reachable+Managed=100, ' +
             'Reachable=50, else=0). Outputs a single string (the site label).',
-        spl:
-            '`index_catalyst` sourcetype="cisco:dnac:devicehealth" ' +
-            '| stats latest(Reachability) as Reachability, latest(Manageability) as ' +
-            'Manageability by DeviceID, Site ' +
-            '| where Site!="" ' +
-            '| eval h=case(Reachability=="Reachable" AND match(Manageability,"^Managed"),100, ' +
-            'Reachability=="Reachable",50, 1==1,0) ' +
-            '| stats avg(h) as score by Site ' +
-            '| eventstats max(score) as max_score | where score=max_score ' +
-            '| stats first(Site) as value | fields value',
+        savedSearch: 'Overview - Operational Lead',
         valueField: 'value',
         mockValue: 'Awaiting data',
     },
@@ -1269,6 +1270,20 @@ const OverviewPage: React.FC = () => {
     // the canonical CUSTOMER_TOPOLOGY factory.
     const [topologyResetKey, setTopologyResetKey] = useState(0);
 
+    // Read the persisted topology so the dashboard header can show the
+    // user's edited name / subtitle from the topology editor (instead of
+    // hardcoded "Network Topology" / "Site connectivity and path
+    // health"). The same hook the map uses; same localStorage key, so
+    // edits land here without any manual sync.
+    const { topology: persistedTopology } = usePersistedTopology(
+        CUSTOMER_TOPOLOGY
+    );
+    const topologyHeaderName =
+        persistedTopology.name?.trim() || 'Network Topology';
+    const topologyHeaderSubtitle =
+        persistedTopology.subtitle?.trim() ||
+        'Site connectivity and path health';
+
     // Saved-search names already bound across the dashboard, so the
     // picker can flag duplicates with an "in use" badge.
     const usedSavedSearches = useMemo(() => {
@@ -1394,17 +1409,51 @@ const OverviewPage: React.FC = () => {
         base: KpiConfig,
         ov: MetricOverride | undefined
     ): KpiConfig => {
-        if (!ov) return base;
-        // Catalogue still loading — defer dispatch.
+        // Defer until the catalogue is ready — same defer pattern as
+        // `dispatchedConfig` for the metric grid. Without this, the first
+        // dispatch fires against the static binding before searchbase
+        // resolves and gets immediately superseded; useKpi's mock briefly
+        // flashes through to the user.
         if (searchbaseByName === null) {
             return {
                 ...base,
                 spl: undefined,
                 savedSearch: undefined,
-                valueField: ov.valueField,
-                label: ov.label ?? base.label,
-                suppressMockOnEmpty: true,
+                ...(ov
+                    ? {
+                          valueField: ov.valueField,
+                          label: ov.label ?? base.label,
+                          suppressMockOnEmpty: true,
+                      }
+                    : {}),
             };
+        }
+        // No override — use the static binding from KPI_CONFIG. Resolve
+        // `savedSearch` through the searchbase catalogue to literal SPL
+        // exactly like the override branch does, so:
+        //   1. The KPI picker's "currently bound" banner / Jump To
+        //      button can match this saved search to a catalogue entry
+        //      (both gate on `cfg.savedSearch` being set at picker-open
+        //      time, which we preserve via `currentSavedSearch`).
+        //   2. The runtime dispatch is the catalogue's literal `search`
+        //      field — same SPL the picker preview shows and the Open
+        //      in Search drilldown opens, no `| savedsearch "..."`
+        //      indirection that would fail for searchbase-only entries.
+        if (!ov) {
+            const sbBase = base.savedSearch
+                ? searchbaseByName.get(base.savedSearch)
+                : undefined;
+            if (sbBase && sbBase.search) {
+                return {
+                    ...base,
+                    // Keep `savedSearch` set so the picker can locate
+                    // the currently-bound entry, but inject the literal
+                    // SPL so useKpi dispatches that directly instead
+                    // of a doomed `| savedsearch` indirection.
+                    spl: sbBase.search,
+                };
+            }
+            return base;
         }
         const sb = ov.savedSearch
             ? searchbaseByName.get(ov.savedSearch)
@@ -1501,12 +1550,23 @@ const OverviewPage: React.FC = () => {
             window.open(url, '_blank', 'noopener,noreferrer');
         }
     }, [operationalLeadDrilldownSpl, timeRange]);
+    // Footnote precedence:
+    //   1. Override bound  → user's saved search (or "(inline SPL)" if
+    //      they wired a free-form SPL via the picker).
+    //   2. Topology summary feed  → that's the actual source of the
+    //      displayed value; surface the topology overview stanza.
+    //   3. useKpi default path  → the static binding from KPI_CONFIG,
+    //      which is a real searchbase entry now (`Overview - Top Incident
+    //      Volume` / `Overview - Operational Lead`). Surface that name
+    //      so the footnote credits the actual SPL that ran.
     const topIncidentBindingFootnote = topIncidentOverride
         ? topIncidentOverride.savedSearch
             ? `Saved search: ${topIncidentOverride.savedSearch}`
             : '(inline SPL)'
         : topologyTopIncident
         ? 'Saved search: Overview - Topology Overview'
+        : KPI_CONFIG[0].savedSearch
+        ? `Saved search: ${KPI_CONFIG[0].savedSearch}`
         : '(inline SPL)';
     const operationalLeadBindingFootnote = operationalLeadOverride
         ? operationalLeadOverride.savedSearch
@@ -1514,6 +1574,8 @@ const OverviewPage: React.FC = () => {
             : '(inline SPL)'
         : topologyOperationalLead
         ? 'Saved search: Overview - Topology Overview'
+        : KPI_CONFIG[1].savedSearch
+        ? `Saved search: ${KPI_CONFIG[1].savedSearch}`
         : '(inline SPL)';
 
     // ------------------------------ Keyboard shortcuts ------------------------------
@@ -1982,10 +2044,10 @@ const OverviewPage: React.FC = () => {
                             <div className="flex items-center justify-between mb-2 flex-shrink-0">
                                 <div>
                                     <h3 className="text-base font-bold text-sky-900 dark:text-sky-200 uppercase tracking-wide leading-none">
-                                        Network Topology
+                                        {topologyHeaderName}
                                     </h3>
                                     <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium mt-0.5">
-                                        Site connectivity and path health
+                                        {topologyHeaderSubtitle}
                                     </p>
                                 </div>
                                 <RegionalViewToggle
