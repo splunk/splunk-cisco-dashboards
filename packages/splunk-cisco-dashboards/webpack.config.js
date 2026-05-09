@@ -27,9 +27,6 @@ const stageRoot = path.join(__dirname, 'stage');
 const commonConfig = webpackMerge(baseConfig, {
     entry: {
         overview: path.join(webappRoot, 'pages/overview/render.tsx'),
-        devices: path.join(webappRoot, 'pages/devices/render.jsx'),
-        network: path.join(webappRoot, 'pages/network/render.jsx'),
-        security: path.join(webappRoot, 'pages/security/render.jsx'),
     },
     output: {
         path: path.join(stageRoot, 'appserver', 'static', 'pages'),

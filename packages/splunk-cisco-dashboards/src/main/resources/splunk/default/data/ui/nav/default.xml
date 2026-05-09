@@ -1,8 +1,5 @@
 <nav color="#049fd9">
     <view name="overview" default="true" label="Overview"/>
-    <!-- <view name="devices" label="Devices"/> -->
-    <!-- <view name="it_health_v2" label="Network"/> -->
-    <!-- <view name="security_v2" label="Security"/> -->
     <a href="it_health_v2">IT Health</a>
   <a href="security_v2">Security</a>
   <a href="user_experience_v2">User Experience</a>
