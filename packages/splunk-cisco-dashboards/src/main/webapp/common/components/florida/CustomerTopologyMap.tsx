@@ -4198,6 +4198,51 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                         : 'text-slate-400'
                                                 )}
                                             >
+                                                Internet edge Mbps
+                                            </span>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                step="1"
+                                                className={editorInputClass(isDark)}
+                                                value={site.internetEdgeMbps ?? ''}
+                                                placeholder="e.g. 1000"
+                                                onChange={(event) =>
+                                                    updateSite(site.id, {
+                                                        internetEdgeMbps:
+                                                            event.target.value === ''
+                                                                ? undefined
+                                                                : Number(
+                                                                      event.target
+                                                                          .value
+                                                                  ),
+                                                    })
+                                                }
+                                            />
+                                            <span
+                                                className={cn(
+                                                    'block text-[9px] tracking-wide',
+                                                    isDark
+                                                        ? 'text-slate-500'
+                                                        : 'text-slate-400'
+                                                )}
+                                            >
+                                                Optional. Populates the
+                                                "Design of Record" line on this
+                                                site&rsquo;s popup. Leave blank
+                                                if the circuit speed is not
+                                                confirmed yet.
+                                            </span>
+                                        </label>
+                                        <label className="block space-y-1">
+                                            <span
+                                                className={cn(
+                                                    editorLabelClass,
+                                                    isDark
+                                                        ? 'text-slate-500'
+                                                        : 'text-slate-400'
+                                                )}
+                                            >
                                                 search_name
                                             </span>
                                             <input

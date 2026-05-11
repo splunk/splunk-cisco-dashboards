@@ -58,13 +58,16 @@ export interface TopologySite {
      */
     searchName?: string;
     /**
-     * Static design-of-record Internet edge bandwidth for the site, in Mbps.
-     * Today this is a hardcoded configuration value (not telemetry) — there is
-     * no per-site Internet uplink telemetry source on FDEM. When that arrives
-     * (e.g. via ThousandEyes Internet Insights or a NetFlow uplink rollup),
-     * the live source should override this static value the same way live
-     * link telemetry overrides the design-of-record capacity in the link
-     * stanzas.
+     * Customer-entered design-of-record Internet edge bandwidth for the site,
+     * in Mbps. Set through the topology editor (pencil-tool → site → "Internet
+     * edge Mbps") and persisted in the customer-topology localStorage payload.
+     * Defaults to undefined; the popup hides the "Design of Record" line until
+     * a value is entered, and SPL stanzas should treat undefined as "awaiting
+     * circuit info" rather than fabricating a denominator. When per-site
+     * Internet uplink telemetry becomes available (e.g. ThousandEyes Internet
+     * Insights or a NetFlow uplink rollup) the live source should override
+     * this customer-entered value, mirroring how live link telemetry overrides
+     * the design-of-record capacity in the link stanzas.
      */
     internetEdgeMbps?: number;
 }
