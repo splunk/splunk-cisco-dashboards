@@ -491,9 +491,32 @@ export const Sparkline: React.FC<SparklineProps> = ({
 
     // We mount XAxis/YAxis with `hide` so Recharts sets up scales for
     // the cursor + tooltip but we don't render axis chrome.
+    //
+    // Two X-axis variants:
+    //   - `hiddenAxes` (numeric, default for line/area): bars/dots are
+    //     placed at their literal `index` x-coordinate, which gives
+    //     the line and area charts a continuous domain that matches
+    //     the timestamp footer cleanly.
+    //   - `hiddenAxesCategorical`: bars are slotted into evenly-spaced
+    //     category cells. Used by the column branch only. Without this,
+    //     `<Bar>` inside a `<ComposedChart type="number">` x-axis renders
+    //     each bar centered on its x value, so the first bar overflows
+    //     half-width past the LEFT edge of the chart canvas and the
+    //     last overflows past the RIGHT edge — exactly the side-overflow
+    //     Alan flagged after the 2026-05-11 line→column switch. A
+    //     categorical x-axis auto-sizes bars to fit their slot and keeps
+    //     them inside the canvas; the dashed baseline `<Line>` continues
+    //     to draw correctly because Recharts treats categorical x-values
+    //     as evenly-spaced for line series too.
     const hiddenAxes = (
         <>
             <XAxis dataKey="index" type="number" hide domain={['dataMin', 'dataMax']} />
+            <YAxis hide type="number" domain={['auto', 'auto']} />
+        </>
+    );
+    const hiddenAxesCategorical = (
+        <>
+            <XAxis dataKey="index" type="category" hide />
             <YAxis hide type="number" domain={['auto', 'auto']} />
         </>
     );
@@ -582,7 +605,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
         // hard to read as line-on-line, can we use bars + overlay?").
         chartElement = (
             <ComposedChart data={chartData} margin={chartMargin}>
-                {hiddenAxes}
+                {hiddenAxesCategorical}
                 {tooltipContent}
                 <Bar
                     dataKey="value"
@@ -603,9 +626,10 @@ export const Sparkline: React.FC<SparklineProps> = ({
                     <Line
                         type="monotone"
                         dataKey="previous"
-                        stroke="#94a3b8"
-                        strokeWidth={1}
-                        strokeDasharray="4 3"
+                        stroke="#1f2937"
+                        strokeWidth={1.75}
+                        strokeDasharray="6 3"
+                        strokeOpacity={0.9}
                         dot={false}
                         isAnimationActive={false}
                     />
@@ -622,9 +646,10 @@ export const Sparkline: React.FC<SparklineProps> = ({
                     <Line
                         type="monotone"
                         dataKey="previous"
-                        stroke="#94a3b8"
-                        strokeWidth={1}
-                        strokeDasharray="4 3"
+                        stroke="#1f2937"
+                        strokeWidth={1.75}
+                        strokeDasharray="6 3"
+                        strokeOpacity={0.9}
                         dot={false}
                         isAnimationActive={false}
                     />
@@ -650,9 +675,10 @@ export const Sparkline: React.FC<SparklineProps> = ({
                 <Line
                     type="monotone"
                     dataKey="previous"
-                    stroke="#94a3b8"
-                    strokeWidth={1}
-                    strokeDasharray="4 3"
+                    stroke="#1f2937"
+                    strokeWidth={1.75}
+                    strokeDasharray="6 3"
+                    strokeOpacity={0.9}
                     dot={false}
                     isAnimationActive={false}
                 />

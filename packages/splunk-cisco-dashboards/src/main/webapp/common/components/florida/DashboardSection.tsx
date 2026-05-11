@@ -131,7 +131,23 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
                 {tileCount && <TileCountPill {...tileCount} />}
             </div>
 
-            <div className="flex flex-wrap md:flex-nowrap gap-0 divide-x divide-slate-100 dark:divide-slate-800 flex-1 min-h-0">
+            {/*
+              * `overflow-hidden` here is the safety net that prevents
+              * a too-tall tile (chart + headline + sublabel) from bleeding
+              * down into the section's "Open IT Health" footer link when
+              * the browser is shrunk vertically. The section card itself
+              * is also `overflow-hidden`, but that only clips at the very
+              * bottom of the card — overflow above the footer is still
+              * rendered ON TOP of the footer text. Clipping at the tile
+              * row instead means any spillage stops at the divider line
+              * above the footer, so the drill-down link stays readable
+              * regardless of viewport height. The companion change in
+              * MetricItem (chart container `flex-1 min-h-[72px] max-h-28`
+              * instead of fixed `h-28 flex-shrink-0`) means this clip
+              * almost never fires in practice — charts compress
+              * gracefully down to 72px before the clip kicks in.
+              */}
+            <div className="flex flex-wrap md:flex-nowrap gap-0 divide-x divide-slate-100 dark:divide-slate-800 flex-1 min-h-0 overflow-hidden">
                 {children}
             </div>
 

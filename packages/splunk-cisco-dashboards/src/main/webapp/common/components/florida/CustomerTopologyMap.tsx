@@ -89,6 +89,22 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
             [32.5, -77.0],
         ],
     },
+    // `internetEdgeMbps` is intentionally left undefined here. The
+    // earlier 1000 / 500 / 500 placeholders were initial estimates from
+    // the design-of-record conversation and were never confirmed against
+    // real circuit records. Shipping them on a customer-facing exec
+    // dashboard meant the popup was claiming a number we did not
+    // actually know. The site-level "Design of Record" block in the
+    // popup is conditional on the value being defined, so leaving it
+    // unset hides the block cleanly and matches the rest of the
+    // popup's "Awaiting"-pattern for empty fields. Customers who want
+    // to surface a real number can enter it through the existing
+    // topology editor pencil-tool, which writes to the persisted
+    // localStorage payload (`splunk-cisco-dashboards.customerTopology.v4`)
+    // and immediately repopulates the popup. If FDEM's network team
+    // ever confirms actual circuit bandwidths, the values can be
+    // restored here as a packaged default and the editor entry will
+    // override them per-user as before.
     sites: [
         {
             id: 'tlh',
@@ -101,7 +117,6 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
             metrics: {},
             telemetrySource: 'Awaiting normalized site telemetry',
             searchName: 'Overview - Site Tallahassee Health',
-            internetEdgeMbps: 1000,
         },
         {
             id: 'mco',
@@ -114,7 +129,6 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
             metrics: {},
             telemetrySource: 'Awaiting normalized site telemetry',
             searchName: 'Overview - Site Orlando Health',
-            internetEdgeMbps: 500,
         },
         {
             id: 'aub',
@@ -127,7 +141,6 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
             metrics: {},
             telemetrySource: 'Awaiting normalized site telemetry',
             searchName: 'Overview - Site Auburndale Health',
-            internetEdgeMbps: 500,
         },
     ],
     links: [

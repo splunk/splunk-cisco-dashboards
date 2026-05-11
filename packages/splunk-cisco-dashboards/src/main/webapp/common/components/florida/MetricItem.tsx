@@ -432,16 +432,24 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                 );
             })()}
 
-            {vizType !== 'singlevalue' && (
-                // Tile sparkline canvas. h-28 (112px) gives the Recharts
-                // SVG enough vertical room for both the peak-label bubble
-                // (which floats above the highest data point) and a
-                // visible trend line. Earlier h-16 + pt-3 + a 38-px chart
-                // top-margin left only ~26px of actual stroke-visible
-                // area, which read as a flat ribbon. mt-3/pt-2 keeps the
-                // headline-to-chart gap tight without wasting the new
-                // pixels.
-                <div className="h-28 mt-3 pt-2 opacity-80 hover:opacity-100 transition-opacity flex-shrink-0">
+            {vizType !== 'singlevalue' ? (
+                // Tile sparkline canvas. We let the chart container *fill
+                // remaining vertical space* (`flex-1`) up to a `max-h-28`
+                // (112px, the design-target where the peak-label bubble
+                // and trend line both read cleanly) and down to a
+                // `min-h-[72px]` floor that still keeps the bubble label
+                // and the bar/line legible. The earlier fixed
+                // `h-28 flex-shrink-0` could not compress when the
+                // browser was shrunk vertically, so the chart's static
+                // 112px would push down past the tile's slot in the
+                // section's flex-column and bleed onto the "Open IT
+                // Health" footer link. With this wrapper change plus the
+                // `overflow-hidden` on the tile row in DashboardSection,
+                // the chart compresses smoothly with the section first,
+                // and only the extreme-short-viewport edge case actually
+                // hits the row clip. mt-3/pt-2 keeps the headline-to-
+                // chart gap tight without wasting pixels at full size.
+                <div className="flex-1 min-h-[72px] max-h-28 mt-3 pt-2 opacity-80 hover:opacity-100 transition-opacity">
                     {/* Sparkline is intentionally NOT wired to the
                         drilldown click. The ExternalLink icon next to
                         the tile label is the explicit "open in Splunk
@@ -464,8 +472,14 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                         title={sparkTitle}
                     />
                 </div>
+            ) : (
+                // Single-value tiles need a flex spacer so they share
+                // their row's height with chart-bearing siblings; without
+                // this, a singlevalue tile would collapse to its headline
+                // height and the divider rules between tiles would not
+                // line up across the row.
+                <div className="flex-1 min-h-0" aria-hidden="true" />
             )}
-            <div className="flex-1 min-h-0" aria-hidden="true" />
         </div>
     );
 };
