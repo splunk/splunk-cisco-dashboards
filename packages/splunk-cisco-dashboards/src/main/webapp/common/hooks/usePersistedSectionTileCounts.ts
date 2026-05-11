@@ -44,8 +44,20 @@ export interface SectionTileCountBounds {
     minCount: number;
     /** Highest count the user is allowed to dial up to. */
     maxCount: number;
-    /** Initial value when nothing is in localStorage yet. */
-    defaultCount: number;
+    /**
+     * Initial visible tile count when nothing is in localStorage yet.
+     * Either a single number (every section starts at the same value)
+     * or a partial per-section map (sections not listed fall back to
+     * `fallbackDefault`). Used so the IT Health section can default to
+     * 3 visible tiles per Alan's 2026-05-11 review while Security and
+     * Building stay at 5.
+     */
+    defaultCount: number | Partial<Record<SectionId, number>>;
+    /**
+     * Backstop default when `defaultCount` is a partial map. Defaults
+     * to 5 to preserve the historical "all sections start at 5" UX.
+     */
+    fallbackDefault?: number;
 }
 
 export type SectionTileCountMap = Record<SectionId, number>;
@@ -58,14 +70,29 @@ interface PersistedShape {
 const clamp = (n: number, lo: number, hi: number): number =>
     Math.min(Math.max(Math.round(n), lo), hi);
 
-const buildDefaults = (count: number): SectionTileCountMap => ({
-    it_health: count,
-    security: count,
-    building: count,
+const resolveSectionDefault = (
+    section: SectionId,
+    bounds: SectionTileCountBounds
+): number => {
+    const fallback = bounds.fallbackDefault ?? 5;
+    if (typeof bounds.defaultCount === 'number') {
+        return clamp(bounds.defaultCount, bounds.minCount, bounds.maxCount);
+    }
+    const explicit = bounds.defaultCount[section];
+    const raw = typeof explicit === 'number' && Number.isFinite(explicit)
+        ? explicit
+        : fallback;
+    return clamp(raw, bounds.minCount, bounds.maxCount);
+};
+
+const buildDefaults = (bounds: SectionTileCountBounds): SectionTileCountMap => ({
+    it_health: resolveSectionDefault('it_health', bounds),
+    security: resolveSectionDefault('security', bounds),
+    building: resolveSectionDefault('building', bounds),
 });
 
 const readFromStorage = (bounds: SectionTileCountBounds): SectionTileCountMap => {
-    const fallback = buildDefaults(bounds.defaultCount);
+    const fallback = buildDefaults(bounds);
     if (typeof window === 'undefined' || !window.localStorage) return fallback;
     try {
         const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -143,10 +170,10 @@ export const usePersistedSectionTileCounts = (
     );
 
     const resetAll = useCallback(() => {
-        const fresh = buildDefaults(bounds.defaultCount);
+        const fresh = buildDefaults(bounds);
         writeToStorage(fresh);
         setCounts(fresh);
-    }, [bounds.defaultCount]);
+    }, [bounds]);
 
     return { counts, bounds, setCount, resetAll };
 };

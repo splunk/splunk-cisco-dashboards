@@ -44,6 +44,13 @@ interface MetricItemProps {
     sparkData: number[];
     previousData?: number[];
     /**
+     * Tooltip label for the dashed comparison overlay on the sparkline.
+     * Defaults to `'Prev'` (previous-period overlay). Baseline-overlay
+     * tiles set this to `'Avg'` so the hover popover reads "Avg: 96"
+     * rather than the misleading "Prev: 96".
+     */
+    previousLabel?: string;
+    /**
      * Optional explicit timestamps (Unix-epoch ms) for `sparkData`.
      * Required for the hover tooltip to show real bucket times on
      * time-series searches; mock series fall back to synthesised
@@ -118,6 +125,36 @@ const STATUS_TEXT_COLOR: Record<MetricStatus, string> = {
     unknown: 'text-sky-600 dark:text-sky-300',
 };
 
+// Change-arrow + delta-percent pill color. Historically this was a
+// direction-only signal (up=green, down=red), which produced a
+// confusing mismatch on "lower is better" metrics: a critical-red
+// headline (e.g. "Failed Auth: 142, threshold 100") could ship with
+// a cheerful green up-arrow because the value had risen. Alan flagged
+// this on 2026-05-11. The fix is to inherit the headline's
+// status-aware color so the headline number, the trend arrow, and
+// the trend-percent pill all read the same story at a glance.
+const STATUS_TREND_COLOR: Record<MetricStatus, string> = {
+    healthy: 'text-sky-600 dark:text-sky-300',
+    warning: 'text-amber-500 dark:text-amber-300',
+    critical: 'text-red-600 dark:text-red-400',
+    unknown: 'text-slate-400 dark:text-slate-500',
+};
+
+// Sparkline stroke/fill palette for `warning` and `critical`. Healthy
+// and unknown intentionally fall through to the tile's brand `color`
+// prop so the resting-state visual identity per metric (Security Score
+// green, Network Health sky, etc.) is preserved when the tile is fine.
+// When the tile degrades, the sparkline turns amber/red along with the
+// headline and trend arrow so all three signals tell the same story
+// at a glance — Alan flagged the inverse case on 2026-05-11
+// (red "58%" headline, green sparkline). Hex values mirror the
+// Tailwind tokens used by the headline/text classes so the three
+// elements visibly match without a separate palette to govern.
+const STATUS_VIZ_COLOR: Partial<Record<MetricStatus, string>> = {
+    warning: '#f59e0b',
+    critical: '#dc2626',
+};
+
 const COMPACT_SUFFIXES = [
     { value: 1_000_000_000_000, suffix: 't' },
     { value: 1_000_000_000, suffix: 'b' },
@@ -168,6 +205,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
     change,
     sparkData,
     previousData,
+    previousLabel,
     sparkTimestamps,
     timeRange,
     color = '#0ea5e9',
@@ -346,11 +384,24 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                 }
                 const showChange =
                     change !== undefined && Number.isFinite(change);
+                // Auto-shrink the headline font when the search emits a
+                // long string headline (e.g. "17 of 18 available") so
+                // it fits inside the tile at typical section widths
+                // without clipping. Numeric headlines and short strings
+                // keep the traditional text-4xl punch. Threshold of 7
+                // characters covers single units like "100%", "1.2k",
+                // "142", and shrinks for "17 of 18", "17/18 sites", etc.
+                const renderedText = `${displayValue}${unit}`;
+                const headlineSizeClass =
+                    typeof value === 'string' && renderedText.length > 7
+                        ? 'text-2xl'
+                        : 'text-4xl';
                 return (
                     <div className="flex items-baseline gap-2 mb-1">
                         <span
                             className={cn(
-                                'text-4xl font-black tracking-tighter leading-none transition-colors',
+                                'font-black tracking-tighter leading-none transition-colors',
+                                headlineSizeClass,
                                 STATUS_TEXT_COLOR[status]
                             )}
                         >
@@ -361,9 +412,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                             <div
                                 className={cn(
                                     'flex items-center text-[10px] font-black',
-                                    (change as number) >= 0
-                                        ? 'text-green-500'
-                                        : 'text-red-500'
+                                    STATUS_TREND_COLOR[status]
                                 )}
                             >
                                 {(change as number) >= 0 ? (
@@ -404,10 +453,11 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                         clickable wrapper is gone. */}
                     <Sparkline
                         data={sparkData}
-                        color={color}
+                        color={STATUS_VIZ_COLOR[status] ?? color}
                         vizType={vizType}
                         dataValuesDisplay={dataValuesDisplay}
                         previousData={previousData}
+                        previousLabel={previousLabel}
                         timestamps={sparkTimestamps}
                         timeRange={timeRange}
                         formatValue={(n) => `${n.toLocaleString()}${unit}`}

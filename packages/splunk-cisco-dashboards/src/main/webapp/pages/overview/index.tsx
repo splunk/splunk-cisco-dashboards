@@ -168,6 +168,49 @@ const AUTO_REFRESH_OPTIONS: { label: string; seconds: number }[] = [
 
 const METRIC_CONFIG: MetricConfig[] = [
     // ----- IT Health -----
+    //
+    // Per the FDEM Overview review with Alan on 2026-05-11, the IT
+    // Health row is intentionally pared down at the top: the new
+    // `critical_website_availability` tile sits at position 1, then
+    // Network health, then Device health (the three Alan defaulted
+    // onto). The two legacy composite-score tiles (UX Score, Compliance)
+    // were replaced in the same review with named, countable signals:
+    // Active TE alerts (Critical+High) and Sites < 90%. The composite
+    // searchbase entries themselves stay in the catalogue so anyone
+    // who wants them back can re-bind via the KPI picker. The
+    // section's *default* visible tile count is dropped to 3 in
+    // `usePersistedSectionTileCounts` so a fresh user lands on the
+    // three Alan asked for; the increase/decrease tile-count control
+    // stays in place. Drag-to-reorder also stays in place.
+    {
+        id: 'critical_website_availability',
+        section: 'it_health',
+        label: 'Critical sites available',
+        subLabel: 'ThousandEyes HTTP availability',
+        description:
+            "Count of business-critical websites whose ThousandEyes HTTP Server " +
+            'Availability AVG is at least 99.5% over the dispatched window, vs. the ' +
+            'total monitored. Headline reads "X of Y available". Sparkline shows the ' +
+            'live availability percentage; dashed line is the rolling-average baseline ' +
+            'so anomalies stand out without remembering "what is normal".',
+        // Timechart row: { _time, current_pct, baseline_pct, sites_up,
+        // sites_total, display, headline_pct }. `display` and
+        // `headline_pct` are broadcast onto every row via eventstats
+        // latest, so reading the latest row gives a stable string +
+        // numeric pair.
+        savedSearch: 'Executive Dashboard - Critical Website Availability',
+        valueField: 'headline_pct',
+        displayField: 'display',
+        sparkDataField: 'current_pct',
+        baselineField: 'baseline_pct',
+        overlayLabel: 'Avg',
+        unit: '%',
+        color: '#16A34A',
+        thresholds: { warning: 99.5, critical: 90, direction: 'higher_is_better' },
+        // Mock falls back to a "16 of 18" feel so the tile is
+        // recognisable even before the search resolves.
+        mock: { seed: 10, sparkMin: 88, sparkMax: 100, value: 89, change: -1 },
+    },
     {
         id: 'network_health',
         section: 'it_health',
@@ -215,37 +258,56 @@ const METRIC_CONFIG: MetricConfig[] = [
         thresholds: { warning: 500, critical: 1000, direction: 'lower_is_better' },
         mock: { seed: 13, sparkMin: 100, sparkMax: 800, value: 650, change: -50 },
     },
+    // Composite-metric replacements per Alan's 2026-05-11 review:
+    // "UX score" (Catalyst client + device blend) and "Compliance"
+    // (% of compliance checks passing) were both 0-100 composites that
+    // executives could not act on directly ("80% means what?"). They
+    // are replaced here with two named, countable signals. The original
+    // stanzas (`Executive Dashboard - User Experience Score`,
+    // `IT - Critical Systems - Compliance Rate`) stay in the catalogue
+    // so anyone who wants the composite back can dial it up via the
+    // KPI picker; we just stop defaulting them onto the executive view.
     {
-        id: 'ux_score',
+        id: 'active_te_alerts',
         section: 'it_health',
-        label: 'UX score',
-        subLabel: 'Catalyst client + device blend',
+        label: 'Active TE alerts',
+        subLabel: 'Critical + High severity (with baseline)',
         description:
-            'Composite user-experience score derived from Catalyst Center client ' +
-            'health (scoreType=ALL, clientType=ALL) blended with the device ' +
-            'reachability/manageability score. 0-100. Healthy >= 95; Critical < 75.',
-        // Single row: { score: 0..100 }
-        savedSearch: 'Executive Dashboard - User Experience Score',
-        valueField: 'score',
-        unit: '%',
-        thresholds: { warning: 95, critical: 75, direction: 'higher_is_better' },
-        mock: { seed: 14, sparkMin: 80, sparkMax: 100, value: 96, change: 1 },
+            'Count of distinct ThousandEyes alerts currently at critical or high ' +
+            'severity. Sparkline shows per-hour active count; dashed line is the ' +
+            'rolling-average baseline so a burst above normal stands out. ' +
+            'Replaces the legacy UX Score composite tile - "12 active alerts" is ' +
+            'directly actionable; an 80% blended score is not.',
+        // Hour-bucket timechart: { _time, active, baseline, total_count }.
+        savedSearch: 'IT Health - Active TE Alerts (High + Critical)',
+        valueField: 'total_count',
+        sparkDataField: 'active',
+        baselineField: 'baseline',
+        overlayLabel: 'Avg',
+        // Resting/healthy color stays neutral sky; MetricItem flips the
+        // sparkline to amber/red on warning/critical via STATUS_VIZ_COLOR.
+        color: '#0ea5e9',
+        thresholds: { warning: 5, critical: 20, direction: 'lower_is_better' },
+        mock: { seed: 14, sparkMin: 0, sparkMax: 8, value: 3, change: 0 },
     },
     {
-        id: 'compliance',
+        id: 'sites_below_threshold',
         section: 'it_health',
-        label: 'Compliance',
-        subLabel: 'Catalyst compliance pass rate',
+        label: 'Sites < 90%',
+        subLabel: 'Sites below health threshold',
         description:
-            'Percentage of Catalyst Center compliance checks that pass ' +
-            '(COMPLIANT or COMPLIANT_WARNING). NOT_APPLICABLE checks are ' +
-            'excluded. Healthy >= 95; Critical < 80.',
-        // Single row: { pct: 0..100 }
-        savedSearch: 'IT - Critical Systems - Compliance Rate',
-        valueField: 'pct',
-        unit: '%',
-        thresholds: { warning: 95, critical: 80, direction: 'higher_is_better' },
-        mock: { seed: 15, sparkMin: 70, sparkMax: 100, value: 92, change: -1 },
+            'How many of the three FDEM sites (Tallahassee, Orlando, Auburndale) ' +
+            'have a current device-health rollup below 90%. Discrete count, not ' +
+            'a composite - 0 = all sites healthy, 1+ = open the Overview map to ' +
+            'identify which site is degraded. Uses the same HA-pair-aware filter ' +
+            'as the Overview site markers so a standby device reporting 0 does ' +
+            'not unfairly flag its site.',
+        // Single row: { sites_below, sites_total }
+        savedSearch: 'IT Health - Sites Below Health Threshold',
+        valueField: 'sites_below',
+        color: '#0ea5e9',
+        thresholds: { warning: 1, critical: 2, direction: 'lower_is_better' },
+        mock: { seed: 15, sparkMin: 0, sparkMax: 1, value: 0, change: 0 },
     },
     // ----- Security -----
     {
@@ -255,11 +317,20 @@ const METRIC_CONFIG: MetricConfig[] = [
         subLabel: 'Unique blocked connections',
         description:
             'Distinct (source, destination, dest-port) tuples blocked by the ' +
-            'firewall, accelerated via the Network_Traffic data model. A spike ' +
-            'usually signals a scan or active exploit attempt.',
-        // Single row: { blocked }
-        savedSearch: 'Executive Dashboard - Firewall Blocked Connections',
-        valueField: 'blocked',
+            'firewall over the dispatched window. The headline is the window-total ' +
+            "count - same meaning as the original 'Firewall Blocked Count' tile. " +
+            'The sparkline shows per-hour distinct blocks; the dashed line is the ' +
+            "rolling-average baseline so an anomalous spike stands out at a glance.",
+        // Hour-bucket timechart: { _time, blocked, baseline, total_blocked }.
+        // total_blocked is broadcast (window-total, headline value);
+        // blocked is per-hour (sparkline); baseline is window-avg
+        // (dashed overlay).
+        savedSearch:
+            'Executive Dashboard - Firewall Blocked Connections (with Baseline)',
+        valueField: 'total_blocked',
+        sparkDataField: 'blocked',
+        baselineField: 'baseline',
+        overlayLabel: 'Avg',
         color: '#f59e0b',
         thresholds: { warning: 5000, critical: 25000, direction: 'lower_is_better' },
         mock: { seed: 21, sparkMin: 10, sparkMax: 50, value: 142, change: 12 },
@@ -280,7 +351,12 @@ const METRIC_CONFIG: MetricConfig[] = [
         // tstats, just resolved through searchbaseCatalogue.
         savedSearch: 'Executive Dashboard - Threat Sources',
         valueField: 'count',
-        color: '#ef4444',
+        // Resting/healthy color is neutral sky so the line doesn't pre-
+        // tint as "alarming" when the count is fine. The status palette
+        // in MetricItem flips the sparkline to amber/red when the tile
+        // crosses warning/critical thresholds, so red is reserved for
+        // "actually bad" state across every tile in the dashboard.
+        color: '#0ea5e9',
         thresholds: { warning: 25, critical: 100, direction: 'lower_is_better' },
         mock: { seed: 22, sparkMin: 5, sparkMax: 20, value: 18, change: -5 },
     },
@@ -288,14 +364,20 @@ const METRIC_CONFIG: MetricConfig[] = [
         id: 'failed_auth',
         section: 'security',
         label: 'Failed auth',
-        subLabel: 'Distinct users with auth failures',
+        subLabel: 'ISE + AD failures (with baseline)',
         description:
-            'Distinct user accounts that have had at least one failed authentication ' +
-            'in the window, as reported by the Authentication data model (ISE + AD). ' +
-            'Sustained values may indicate credential-stuffing.',
-        // Single row: { count }
-        savedSearch: 'Executive Dashboard - Failed Logons',
-        valueField: 'count',
+            "Total failed authentication events from ISE syslog (5400) and Windows " +
+            "Security log (EventCode=4625) over the dispatched window. Sparkline " +
+            "shows per-hour failures; dashed line is the rolling-average baseline. " +
+            'Sustained elevation above the baseline often indicates credential-' +
+            'stuffing or a lockout storm.',
+        // Hour-bucket timechart: { _time, failures, baseline, total_count }.
+        savedSearch:
+            'Executive Dashboard - Failed Logon Count (with Baseline)',
+        valueField: 'total_count',
+        sparkDataField: 'failures',
+        baselineField: 'baseline',
+        overlayLabel: 'Avg',
         color: '#0ea5e9',
         thresholds: { warning: 25, critical: 100, direction: 'lower_is_better' },
         mock: { seed: 23, sparkMin: 0, sparkMax: 5, value: 1, change: 0 },
@@ -312,7 +394,10 @@ const METRIC_CONFIG: MetricConfig[] = [
         // Single row: { total }
         savedSearch: 'Executive Dashboard - XDR Incidents',
         valueField: 'total',
-        color: '#ef4444',
+        // Same rationale as Threat Sources: resting state stays neutral
+        // sky; MetricItem's status palette turns the sparkline amber/
+        // red when the count crosses warning/critical thresholds.
+        color: '#0ea5e9',
         thresholds: { warning: 5, critical: 20, direction: 'lower_is_better' },
         mock: { seed: 24, sparkMin: 0, sparkMax: 4, value: 2, change: 0 },
     },
@@ -792,11 +877,25 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
             // dump it into a hover popover too.
             descriptionFootnote={undefined}
             infoAnchor={infoAnchor}
-            value={result.value}
-            unit={effective.unit}
+            // `displayValue` (string broadcast from the search) wins
+            // over the numeric `value` when present. Status, threshold,
+            // and change still derive from the numeric `value` so the
+            // headline color remains accurate even for tiles that
+            // render a non-numeric headline (e.g. "12 of 18 available").
+            value={
+                typeof result.displayValue === 'string'
+                    ? result.displayValue
+                    : result.value
+            }
+            unit={
+                typeof result.displayValue === 'string'
+                    ? ''
+                    : effective.unit
+            }
             change={result.change}
             sparkData={result.sparkData}
             previousData={result.previousSparkData}
+            previousLabel={effective.overlayLabel}
             sparkTimestamps={result.sparkTimestamps}
             timeRange={range}
             color={tileColor}
@@ -908,11 +1007,20 @@ const OverviewPage: React.FC = () => {
     // who customises tile #5, dials down to 3, then back up to 5,
     // gets their customisation back unchanged.
     //
-    // Bounds: 3..5 with a default of 5 (today's behaviour). Bumping
-    // the cap above 5 only requires changing `maxCount` here and
-    // adding more tiles to METRIC_CONFIG; the pill, the slicing,
-    // and the status-aggregation filter all key off this single
-    // source of truth.
+    // Bounds: 3..6 with per-section defaults. The cap was bumped from
+    // 5 to 6 when the new `critical_website_availability` tile landed
+    // in the IT Health section so users can still dial up to "show
+    // everything"; Security and Building keep 5 tiles each. The
+    // *default* tile count for IT Health is 3 per Alan's review
+    // (2026-05-11) — the row at first load shows Critical sites,
+    // Network health, and Device health (the top three of the
+    // section) so the executive view stays focused on what matters.
+    // Returning users keep whatever count they had configured because
+    // the per-section preference is keyed off localStorage.
+    //
+    // The increase / decrease tile-count pill and drag-to-reorder
+    // both stay - this only changes the *default* count for new
+    // sessions in IT Health.
     //
     // Declared up here (before the aggregate status block) because
     // the HealthBadge filter below needs to know which tiles are
@@ -922,7 +1030,12 @@ const OverviewPage: React.FC = () => {
         bounds: sectionTileBounds,
         setCount: setSectionTileCount,
         resetAll: resetAllSectionTileCounts,
-    } = usePersistedSectionTileCounts({ minCount: 3, maxCount: 5, defaultCount: 5 });
+    } = usePersistedSectionTileCounts({
+        minCount: 3,
+        maxCount: 6,
+        defaultCount: { it_health: 3 },
+        fallbackDefault: 5,
+    });
 
     // ------------------------------ Section tile-order preference ------------------------------
     //

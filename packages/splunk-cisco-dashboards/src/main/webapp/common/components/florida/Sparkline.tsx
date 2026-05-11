@@ -100,11 +100,23 @@ interface SparklineProps {
      */
     vizType?: SparklineVizType;
     /**
-     * Optional previous-period series; rendered as a dashed grey line
-     * behind the area for "vs. previous period" comparison. Resampled
-     * to {data.length} so both series align horizontally.
+     * Optional comparison series; rendered as a dashed grey line behind
+     * the primary series. Originally introduced as a "vs. previous
+     * period" overlay - same SPL shifted back by `range.spanSeconds` -
+     * but now also drives the "vs. baseline (rolling average)" overlay
+     * when the underlying searchbase stanza emits a baseline column on
+     * the same rows as the primary series. Resampled to {data.length}
+     * so both series align horizontally regardless of their original
+     * row counts.
      */
     previousData?: number[];
+    /**
+     * Tooltip label for the comparison series. Defaults to `'Prev'` for
+     * backwards-compat with the previous-period overlay. Tiles using
+     * the rolling-average baseline overlay should pass `'Avg'` (or
+     * any short label) so the hover popover reads naturally.
+     */
+    previousLabel?: string;
     /**
      * Optional explicit Unix-epoch (ms) timestamps for each `data`
      * point. Live time-series searches should pass real timestamps so
@@ -340,6 +352,12 @@ interface SparklineTooltipProps {
     formatValue: (n: number) => string;
     range?: TimeRange;
     color: string;
+    /**
+     * Label for the dashed comparison line in the tooltip. Defaults
+     * to "Prev" for the historical previous-period overlay; baseline
+     * tiles override to "Avg" via {@link SparklineProps.previousLabel}.
+     */
+    previousLabel: string;
 }
 
 const SparklineTooltip: React.FC<SparklineTooltipProps> = ({
@@ -348,6 +366,7 @@ const SparklineTooltip: React.FC<SparklineTooltipProps> = ({
     formatValue,
     range,
     color,
+    previousLabel,
 }) => {
     if (!active || !payload || payload.length === 0) return null;
     const point = payload[0]?.payload;
@@ -378,7 +397,7 @@ const SparklineTooltip: React.FC<SparklineTooltipProps> = ({
                         aria-hidden="true"
                     />
                     <span className="text-slate-500 dark:text-slate-400 tabular-nums">
-                        Prev: {formatValue(point.previous as number)}
+                        {previousLabel}: {formatValue(point.previous as number)}
                     </span>
                 </div>
             )}
@@ -395,6 +414,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
     color,
     vizType = 'area',
     previousData,
+    previousLabel = 'Prev',
     timestamps,
     timeRange,
     formatValue = defaultFormatValue,
@@ -462,6 +482,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
                     formatValue={formatValue}
                     range={timeRange}
                     color={color}
+                    previousLabel={previousLabel}
                 />
             }
             wrapperStyle={{ zIndex: 50, outline: 'none' }}
@@ -549,8 +570,18 @@ export const Sparkline: React.FC<SparklineProps> = ({
 
     let chartElement: React.ReactElement;
     if (vizType === 'column') {
+        // ComposedChart so the column branch can render a dashed
+        // baseline overlay line on top of the bars when the underlying
+        // searchbase stanza emits a baseline column. Falls back to a
+        // plain BarChart visually when `previousData` is absent because
+        // ComposedChart with a single <Bar> child renders identically
+        // to BarChart at this canvas size; the only cost is one extra
+        // recharts wrapper which is negligible. Without this the
+        // baseline line was silently dropped on column-viz tiles
+        // (Alan flagged on 2026-05-11: "Failed Auth + FW Blocked are
+        // hard to read as line-on-line, can we use bars + overlay?").
         chartElement = (
-            <BarChart data={chartData} margin={chartMargin}>
+            <ComposedChart data={chartData} margin={chartMargin}>
                 {hiddenAxes}
                 {tooltipContent}
                 <Bar
@@ -568,8 +599,19 @@ export const Sparkline: React.FC<SparklineProps> = ({
                             />
                         ))}
                 </Bar>
+                {hasPrevious && (
+                    <Line
+                        type="monotone"
+                        dataKey="previous"
+                        stroke="#94a3b8"
+                        strokeWidth={1}
+                        strokeDasharray="4 3"
+                        dot={false}
+                        isAnimationActive={false}
+                    />
+                )}
                 {valueMarkers}
-            </BarChart>
+            </ComposedChart>
         );
     } else if (vizType === 'line') {
         chartElement = (

@@ -49,6 +49,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/common/lib/utils';
 import {
+    clearSearchbaseCache,
     getSearchbaseCatalogue,
     plainTextFromHtml,
     type SearchbaseRecord,
@@ -413,42 +414,82 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
 
     // Lazy-load searchbase.conf when the panel first opens. Cached at
     // the service layer; subsequent opens reuse the in-memory list.
+    //
+    // Self-healing refetch: if the tile reports a `currentSavedSearch`
+    // that the cached catalogue doesn't recognise, transparently bust
+    // the cache and refetch once. This recovers from the common case
+    // where the user opens the picker shortly after a `searchbase.conf`
+    // edit / Splunk reload — without it, the previously-cached list
+    // hides the new entry, the "Currently bound" banner can't render,
+    // and the Jump-To button vanishes. Alan flagged this on
+    // 2026-05-11 ("you took out the jump-to feature again"). The retry
+    // is bounded to one extra fetch per panel-open so a genuinely
+    // missing entry doesn't cause an infinite refresh loop.
     useEffect(() => {
         if (!open) return undefined;
         let cancelled = false;
         setLoadState('loading');
         setErrorMsg('');
+
+        const sortAndApplyCiscoFilter = (list: SearchbaseRecord[]) => {
+            // Cisco-only browsing gate: hide every entry that
+            // isn't tagged "Cisco" so the picker only surfaces
+            // searches vetted for this app. Categories, sub-
+            // categories, tag dropdown, and result list all
+            // derive from `catalogue`, so a single filter here
+            // scopes the entire browse experience. Drop the
+            // .filter() call to restore the full catalogue.
+            const ciscoOnly = list.filter((entry) => entry.tags.includes('Cisco'));
+            return [...ciscoOnly].sort((a, b) =>
+                a.searchName.localeCompare(b.searchName, undefined, {
+                    sensitivity: 'base',
+                })
+            );
+        };
+
+        const applyList = (list: SearchbaseRecord[]) => {
+            if (cancelled) return;
+            setCatalogue(sortAndApplyCiscoFilter(list));
+            setLoadState('idle');
+        };
+
+        const handleError = (err: unknown) => {
+            if (cancelled) return;
+            setCatalogue([]);
+            setLoadState('error');
+            setErrorMsg(
+                err instanceof Error ? err.message : 'Failed to load searchbase.conf.'
+            );
+        };
+
+        const expectedKey = context?.currentSavedSearch?.trim();
         getSearchbaseCatalogue()
             .then((list) => {
                 if (cancelled) return;
-                // Cisco-only browsing gate: hide every entry that
-                // isn't tagged "Cisco" so the picker only surfaces
-                // searches vetted for this app. Categories, sub-
-                // categories, tag dropdown, and result list all
-                // derive from `catalogue`, so a single filter here
-                // scopes the entire browse experience. Drop the
-                // .filter() call to restore the full catalogue.
-                const ciscoOnly = list.filter((entry) => entry.tags.includes('Cisco'));
-                const sorted = [...ciscoOnly].sort((a, b) =>
-                    a.searchName.localeCompare(b.searchName, undefined, {
-                        sensitivity: 'base',
-                    })
-                );
-                setCatalogue(sorted);
-                setLoadState('idle');
+                const filtered = sortAndApplyCiscoFilter(list);
+                const cacheRecognisesBinding =
+                    !expectedKey ||
+                    filtered.some((entry) => entryMatchesKey(entry, expectedKey));
+                if (cacheRecognisesBinding) {
+                    setCatalogue(filtered);
+                    setLoadState('idle');
+                    return;
+                }
+                // Cache is stale relative to the bound search; force one
+                // refetch so a freshly-deployed stanza shows up without
+                // the user having to reload the whole page.
+                clearSearchbaseCache();
+                getSearchbaseCatalogue().then(applyList).catch(handleError);
             })
-            .catch((err: unknown) => {
-                if (cancelled) return;
-                setCatalogue([]);
-                setLoadState('error');
-                setErrorMsg(
-                    err instanceof Error ? err.message : 'Failed to load searchbase.conf.'
-                );
-            });
+            .catch(handleError);
+
         return () => {
             cancelled = true;
         };
-    }, [open]);
+        // `context?.currentSavedSearch` participates so re-opening the
+        // picker for a different tile re-evaluates whether its bound
+        // search is in the cache.
+    }, [open, context?.currentSavedSearch]);
 
     // Reset transient form state when the panel opens for a new tile.
     // Sub-category and tag selections start cleared every time so the

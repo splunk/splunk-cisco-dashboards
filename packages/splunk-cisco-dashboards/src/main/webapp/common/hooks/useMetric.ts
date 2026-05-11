@@ -67,10 +67,41 @@ export interface MetricConfig {
     /** Optional explicit signed % change field; if missing, auto-computed. */
     changeField?: string;
     /**
+     * When set, the headline string is pulled from this column instead
+     * of the numeric `valueField`. Status / threshold / change still
+     * use `valueField`. Lets a single search drive a "12 of 18 available"
+     * style headline (string broadcast via `eventstats latest` onto every
+     * row of a timechart) while keeping numeric thresholding intact.
+     */
+    displayField?: string;
+    /**
+     * When set, the sparkline series is pulled from this column instead
+     * of `valueField`. Used by tiles whose `valueField` is a broadcast
+     * window-total (so reading it per row would produce a flat line) —
+     * the per-bucket trend lives in a separate column.
+     */
+    sparkDataField?: string;
+    /**
+     * When set, the dashed comparison overlay reads this column from
+     * the same rows as the primary series. Use this for a baseline
+     * (rolling-average) overlay computed inline via `eventstats avg`
+     * — no second dispatch needed, no shifted-time-range guesswork.
+     * Mutually exclusive with `comparePeriod`: if both are set, this
+     * field wins and the previous-period dispatch is skipped.
+     */
+    baselineField?: string;
+    /**
+     * Tooltip label for the dashed comparison overlay. Defaults to
+     * `'Prev'` for {@link comparePeriod}; baseline tiles should set
+     * this to `'Avg'` so the hover popover reads naturally.
+     */
+    overlayLabel?: string;
+    /**
      * When true the hook also dispatches a second search shifted back
      * by `range.spanSeconds` to populate the dashed previous-period
      * line on the sparkline. Only meaningful for time-series searches
-     * (multiple rows). Defaults to false.
+     * (multiple rows). Defaults to false. Ignored when
+     * {@link baselineField} is set.
      */
     comparePeriod?: boolean;
     unit?: string;
@@ -137,6 +168,14 @@ export type NoDataReason =
 
 export interface MetricResult {
     value: number;
+    /**
+     * Optional string override for the headline. Populated when the
+     * source search emits a `displayField` column (e.g. "12 of 18
+     * available" broadcast onto every row). When undefined, callers
+     * fall back to formatting `value` themselves. Status / threshold
+     * still derive from the numeric `value`.
+     */
+    displayValue?: string;
     change: number;
     sparkData: number[];
     /**
@@ -410,14 +449,21 @@ export const useMetric = (
         });
 
         const previousRange = computePreviousRange(range);
-        const previousPromise = cfg.comparePeriod
-            ? runSearch({
-                  spl,
-                  earliestTime: previousRange.earliest,
-                  latestTime: previousRange.latest,
-                  tag: `${cfg.id}__prev`,
-              }).catch(() => ({ results: [] as Array<Record<string, unknown>> }))
-            : Promise.resolve({ results: [] as Array<Record<string, unknown>> });
+        // `baselineField` reads the overlay from the live-search rows
+        // (a column emitted by `eventstats avg` in the searchbase SPL),
+        // so we never need a second time-shifted dispatch when it's
+        // set. This is the cheaper + more correct path for tiles that
+        // want a "vs. rolling average" overlay rather than a strict
+        // "vs. previous period" overlay.
+        const previousPromise =
+            !cfg.baselineField && cfg.comparePeriod
+                ? runSearch({
+                      spl,
+                      earliestTime: previousRange.earliest,
+                      latestTime: previousRange.latest,
+                      tag: `${cfg.id}__prev`,
+                  }).catch(() => ({ results: [] as Array<Record<string, unknown>> }))
+                : Promise.resolve({ results: [] as Array<Record<string, unknown>> });
 
         const buildNoData = (reason: NoDataReason): MetricResult => ({
             value: Number.NaN,
@@ -584,7 +630,15 @@ export const useMetric = (
                 // data so the trendline still has visual interest.
                 const isSingleRow = liveSeries.length < 2;
                 const value = rowToNumber(latestValueRow[valueField]);
-                const sparkData = isSingleRow ? buildMockSparkline(cfg) : liveSeries;
+                // `sparkDataField` lets a tile keep `valueField` pointed
+                // at a broadcast window-total (so the headline number is
+                // stable) while sourcing the per-bucket sparkline from a
+                // separate column - typical pattern for "current value
+                // big number + per-hour trend" tiles. Falls back to
+                // `valueField` for the existing tile contract.
+                const sparkField = cfg.sparkDataField ?? valueField;
+                const sparkSeries = rows.map((r) => rowToNumber(r[sparkField]));
+                const sparkData = isSingleRow ? buildMockSparkline(cfg) : sparkSeries;
                 const sparkTimestamps = isSingleRow
                     ? []
                     : rows
@@ -600,13 +654,39 @@ export const useMetric = (
                     ? Math.round(((value - baseline) / baseline) * 100)
                     : 0;
 
+                // Comparison overlay. Two mutually-exclusive sources:
+                //   1. `baselineField` - read from the live-search rows
+                //      (e.g. `baseline_pct` broadcast via `eventstats avg`).
+                //   2. `comparePeriod` - read from the previous-period
+                //      dispatch result, indexed by the same `valueField`.
+                // The Sparkline component already resamples to data.length
+                // so a flat broadcast baseline renders as a clean dashed
+                // line through the avg.
                 const prevRows = (prevRes?.results ?? []) as Array<Record<string, unknown>>;
-                const previousSparkData = isSingleRow
+                const previousSparkData = cfg.baselineField
+                    ? rows.map((r) => rowToNumber(r[cfg.baselineField as string]))
+                    : isSingleRow
                     ? []
                     : prevRows.map((r) => rowToNumber(r[valueField]));
 
+                // Optional string headline override. Read from the
+                // latest row only - a `displayField` is always
+                // broadcast-constant (via `eventstats latest`) so any
+                // row would do, but the latest row matches the
+                // `value` source.
+                let displayValue: string | undefined;
+                if (cfg.displayField) {
+                    const raw = latestValueRow[cfg.displayField];
+                    if (typeof raw === 'string' && raw.trim().length > 0) {
+                        displayValue = raw.trim();
+                    } else if (raw !== null && raw !== undefined) {
+                        displayValue = String(raw);
+                    }
+                }
+
                 setResult({
                     value,
+                    displayValue,
                     change,
                     sparkData,
                     sparkTimestamps:
