@@ -1179,6 +1179,8 @@ const parseLinkRow = (
         lossPct:
             finiteNumberFromRow(row, ['lossPct', 'loss_pct', 'packetLossPct']) ??
             base.lossPct,
+        jitterMs:
+            finiteNumberFromRow(row, ['jitterMs', 'jitter_ms']) ?? base.jitterMs,
         endpointHealthPct:
             finiteNumberFromRow(row, [
                 'endpointHealthPct',
@@ -1187,6 +1189,19 @@ const parseLinkRow = (
         endpointDevices:
             finiteNumberFromRow(row, ['endpointDevices', 'endpoint_devices']) ??
             base.endpointDevices,
+        sourceAgents:
+            textFromRow(row, ['sourceAgents', 'source_agents', 'sourceAgent']) ??
+            base.sourceAgents,
+        targetAgents:
+            textFromRow(row, ['targetAgents', 'target_agents', 'targetAgent']) ??
+            base.targetAgents,
+        teLink:
+            textFromRow(row, [
+                'teLink',
+                'te_link',
+                'thousandeyesPermalink',
+                'thousandeyes.permalink',
+            ]) ?? base.teLink,
         lastUpdated:
             textFromRow(row, ['lastUpdated', 'last_updated', '_time']) ??
             base.lastUpdated,
@@ -4861,67 +4876,122 @@ interface LinkDetailsProps {
     isDark: boolean;
 }
 
-const LinkDetails: React.FC<LinkDetailsProps> = ({ link, siteById, isDark }) => (
-    <>
-        <div className="grid grid-cols-2 gap-2">
-            <MetricPill label="Capacity" value={formatMbps(link.capacityMbps)} isDark={isDark} />
-            <MetricPill
-                label="Throughput"
-                value={formatMbps(link.throughputMbps)}
-                isDark={isDark}
-            />
-            <MetricPill
-                label="Peak Throughput"
-                value={formatMbps(link.peakThroughputMbps)}
-                isDark={isDark}
-            />
-            <MetricPill
-                label="Utilization"
-                value={formatPercent(link.utilizationPct)}
-                isDark={isDark}
-            />
-            <MetricPill
-                label="Peak Utilization"
-                value={formatPercent(link.peakUtilizationPct)}
-                isDark={isDark}
-            />
-            <MetricPill label="Latency" value={formatLatency(link.latencyMs)} isDark={isDark} />
-            <MetricPill label="Loss" value={formatPercent(link.lossPct)} isDark={isDark} />
-            <MetricPill
-                label="Endpoint Health"
-                value={formatPercent(link.endpointHealthPct)}
-                isDark={isDark}
-            />
-        </div>
-        <div
-            className={cn(
-                'rounded border p-2 space-y-1',
-                isDark ? 'bg-white/5 border-white/5' : 'bg-slate-50 border-slate-200'
-            )}
-        >
-            <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-slate-500">
-                <Code2 className="w-3 h-3" />
-                Telemetry Source
+const LinkDetails: React.FC<LinkDetailsProps> = ({ link, siteById, isDark }) => {
+    // Render the agent pair only when both sides are present. We learned on
+    // 2026-05-12 that TE test names can be misleading (the "TLH - AUB
+    // Connection" test was actually targeting an Orlando agent under the
+    // hood), so when the underlying data carries explicit source/target
+    // agent names, we display them prominently in the popup as ground truth
+    // — that way the operator sees which agents are *actually* being probed,
+    // not just the test's marketing name.
+    const showAgentPair = Boolean(link.sourceAgents && link.targetAgents);
+    return (
+        <>
+            <div className="grid grid-cols-2 gap-2">
+                <MetricPill
+                    label="Capacity"
+                    value={formatMbps(link.capacityMbps)}
+                    isDark={isDark}
+                />
+                <MetricPill
+                    label="Throughput"
+                    value={formatMbps(link.throughputMbps)}
+                    isDark={isDark}
+                />
+                <MetricPill
+                    label="Peak Throughput"
+                    value={formatMbps(link.peakThroughputMbps)}
+                    isDark={isDark}
+                />
+                <MetricPill
+                    label="Utilization"
+                    value={formatPercent(link.utilizationPct)}
+                    isDark={isDark}
+                />
+                <MetricPill
+                    label="Peak Utilization"
+                    value={formatPercent(link.peakUtilizationPct)}
+                    isDark={isDark}
+                />
+                <MetricPill
+                    label="Latency"
+                    value={formatLatency(link.latencyMs)}
+                    isDark={isDark}
+                />
+                <MetricPill
+                    label="Loss"
+                    value={formatPercent(link.lossPct)}
+                    isDark={isDark}
+                />
+                <MetricPill
+                    label="Jitter"
+                    value={formatLatency(link.jitterMs)}
+                    isDark={isDark}
+                />
+                <MetricPill
+                    label="Endpoint Health"
+                    value={formatPercent(link.endpointHealthPct)}
+                    isDark={isDark}
+                />
             </div>
-            <p
+            <div
                 className={cn(
-                    'text-[10px] leading-relaxed',
-                    isDark ? 'text-slate-300' : 'text-slate-700'
+                    'rounded border p-2 space-y-1',
+                    isDark ? 'bg-white/5 border-white/5' : 'bg-slate-50 border-slate-200'
                 )}
             >
-                {link.telemetrySource}
-            </p>
-            <p className="text-[9px] text-slate-500 leading-relaxed">
-                {siteById[link.sourceSiteId]?.name ?? link.sourceSiteId} to{' '}
-                {siteById[link.targetSiteId]?.name ?? link.targetSiteId}
-                {link.lastUpdated ? ` - Updated ${link.lastUpdated}` : ''}
-                {link.dataState === 'error' && link.dataError
-                    ? ` - ${link.dataError}`
-                    : ''}
-            </p>
-        </div>
-    </>
-);
+                <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-slate-500">
+                    <Code2 className="w-3 h-3" />
+                    Telemetry Source
+                </div>
+                <p
+                    className={cn(
+                        'text-[10px] leading-relaxed',
+                        isDark ? 'text-slate-300' : 'text-slate-700'
+                    )}
+                >
+                    {link.telemetrySource}
+                </p>
+                {showAgentPair && (
+                    <p
+                        className={cn(
+                            'text-[10px] leading-relaxed font-mono',
+                            isDark ? 'text-slate-400' : 'text-slate-600'
+                        )}
+                    >
+                        Measured by {link.sourceAgents}
+                        {' \u2194 '}
+                        {link.targetAgents}
+                    </p>
+                )}
+                <p className="text-[9px] text-slate-500 leading-relaxed">
+                    {siteById[link.sourceSiteId]?.name ?? link.sourceSiteId} to{' '}
+                    {siteById[link.targetSiteId]?.name ?? link.targetSiteId}
+                    {link.lastUpdated ? ` - Updated ${link.lastUpdated}` : ''}
+                    {link.dataState === 'error' && link.dataError
+                        ? ` - ${link.dataError}`
+                        : ''}
+                </p>
+                {link.teLink && (
+                    <a
+                        href={link.teLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={cn(
+                            'mt-1 inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold transition-colors',
+                            isDark
+                                ? 'bg-sky-500/10 text-sky-300 hover:bg-sky-500/20'
+                                : 'bg-sky-50 text-sky-700 hover:bg-sky-100'
+                        )}
+                    >
+                        <ExternalLink className="w-3 h-3" />
+                        View in ThousandEyes
+                    </a>
+                )}
+            </div>
+        </>
+    );
+};
 
 interface MetricPillProps {
     label: string;

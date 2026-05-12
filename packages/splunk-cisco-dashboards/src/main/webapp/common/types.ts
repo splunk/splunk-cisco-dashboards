@@ -85,8 +85,34 @@ export interface TopologyLink {
     peakUtilizationPct?: number;
     latencyMs?: number;
     lossPct?: number;
+    /**
+     * Path jitter in milliseconds (variation in inter-packet arrival time).
+     * Populated when the link's telemetry source is ThousandEyes
+     * agent-to-agent — SD-WAN linkhealth and Catalyst Center fallback do
+     * not measure jitter. See `[overview_link_*]` searchbase stanzas.
+     */
+    jitterMs?: number;
     endpointHealthPct?: number;
     endpointDevices?: number;
+    /**
+     * ThousandEyes-side agent identity for path measurements. When the link
+     * is sourced from a TE agent-to-agent test, these surface the actual
+     * agents being probed (vs the test name, which can be misleading — see
+     * SESSION_LOG 2026-05-12 misnamed-test lesson). Multi-valued from
+     * Splunk; a string here is whatever Splunk delivers (usually one name,
+     * occasionally newline-joined for multi-pair tests).
+     */
+    sourceAgents?: string;
+    targetAgents?: string;
+    /**
+     * Optional deep link into the ThousandEyes console for the underlying
+     * test (`https://app.thousandeyes.com/network-app-synthetics/views?
+     * __a=<account>&testId=<test>`). Populated by the TE branch of the
+     * link searchbase stanza using `teAccountId` and `teTestId` captured
+     * from the data model. Map popup renders this as a "View in
+     * ThousandEyes" affordance when present.
+     */
+    teLink?: string;
     lastUpdated?: string;
     dataState?: 'static' | 'loading' | 'live' | 'error';
     dataError?: string;
