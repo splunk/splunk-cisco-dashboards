@@ -7,6 +7,426 @@
 
 ---
 
+## 2026-05-11 — FDEM Overview review with Alan, Cloud Vetting, layout & tooltip hardening
+
+### Context
+
+Two threads interleaved through the day:
+
+1. **Splunk Cloud Vetting** flagged the package on lookup-file naming
+   conflicts and a missing custom-conf reload trigger. Blocking issue
+   for the customer's deployment.
+2. **FDEM Overview review with Alan** — narrowed the top of the
+   Overview to 3-4 high-signal tiles (Network Health, new Critical
+   Website Availability, WAN/site map), added rolling-average baseline
+   overlays so anomalies are visible at a glance, and cleaned up
+   composite metrics that Alan didn't trust (UX Score, Compliance) in
+   favor of more actionable replacements (Active TE alerts, Sites
+   below threshold). HA-pair logic for site composites and a string
+   of layout / popover bugs surfaced as users worked the live build
+   on `/opt/10`.
+
+Five commits landed:
+
+| Commit | Subject |
+|---|---|
+| `515e999` | minor updates — Cloud Vetting fixes |
+| `bd2ba4e` | FDEM Overview review: critical-site availability, baselines, HA-pair, composite swap |
+| `e9ecdba` | FDEM Overview review: SPL math fix, layout overflow, capacity honesty |
+| `521f3c3` | Topology editor: add per-site "Internet edge Mbps" input |
+| `f2256a2` | InfoTooltip: portal popover so it can't be clipped by ancestors |
+
+### What we built
+
+#### Cloud Vetting (`515e999`)
+
+- **Lookup file naming conflict**: removed
+  `lookups/asset_inventory.csv.default`,
+  `lookups/data_status.csv.default`,
+  `lookups/exec_scores.csv.default`. Splunk Cloud's installer renames
+  every lookup at install time to `<name>.csv.default`, which
+  collided with the literal `.csv.default` files we shipped as seed
+  rows. Keeping only the `.csv` files means the installer's rename
+  step succeeds, and the seed rows themselves are still preserved
+  inside the regular `.csv` files.
+- **`app.conf` `[triggers]` stanza**: added `reload.searchbase = simple`
+  so changes to `searchbase.conf` no longer require a full Splunk
+  restart. Vetting requires every custom config to declare a reload
+  policy; without it the installer warns about a forced restart on
+  any future config change.
+
+#### Critical Website Availability tile (`bd2ba4e`, math fix in `e9ecdba`)
+
+A new top-level tile on the IT Health section, replacing one of the
+older composite metrics. Reads the ThousandEyes
+`Test_Metrics.metric_name:http.server.request.availability` data model
+across an FDEM-curated list of 18 business-critical sites
+(`server.address` allow-list pulled from Alan's throughput-by-site
+table — ranges from `www.floridadisaster.org` and the Salesforce login
+endpoints through to `outlook.office.com` and `demftp.floridadisaster.org`).
+
+- Headline: `"X of Y available"` where Y is the count of distinct
+  monitored sites in the bucket and X is the count of sites whose
+  AVG availability is at or above the 99.5% threshold.
+- Sparkline: hour-bucketed availability percentage (current series)
+  with a rolling-average baseline overlaid as a dashed line — same
+  pattern we use for FW Blocked and Failed Auth so anomalies stand
+  out visually rather than relying on the user to remember last
+  week's numbers.
+- Drilldown: per-site availability table, sorted ascending so the
+  worst-performing sites surface first.
+
+`searchbase.conf` stanzas added:
+
+- `[executive_dashboard_critical_website_availability]` — headline
+  + sparkline + status fields. `display` field uses
+  `tostring(latest_up) . " of " . tostring(latest_total) . " available"`
+  so the headline is robust against numeric-coercion surprises.
+- `[executive_dashboard_critical_website_availability_drilldown]` —
+  per-site table for the drill-down.
+
+**Math fix in `e9ecdba`**: the original SPL computed `sites_total`
+from the row count after the `BY _time, site` group-by, which counts
+*every* (sub-time, site) measurement row — about 14 measurements per
+site per hour times 18 sites = ~248 rows in the latest hour, so the
+headline displayed "3870 of 4471 available" instead of "17 of 18
+available". The fix is two changes:
+
+1. `BY _time span=1h, ...` on the tstats up front so each (hour,
+   site) is exactly one row.
+2. `timechart span=1h sum(available) AS sites_up, dc(site) AS
+   sites_total` so the denominator is now distinct sites in the
+   bucket.
+
+Headline percentage was already correct (3870/4471 = 86.6% matched
+the 17/18-ish reality for the most recent hour); only the labels
+were misleading.
+
+#### Baseline overlays (`bd2ba4e`)
+
+Two security tiles Alan specifically called out — "Unique IPs Blocked
+by Firewall" and "Failed Authentications" — needed to read as
+"current vs rolling average" so the user can spot anomalies
+immediately rather than having to remember last week's baseline.
+
+- New `_with_baseline` searchbase variants
+  (`executive_dashboard_firewall_blocked_with_baseline`,
+  `executive_dashboard_failed_logon_with_baseline`) emit per-hour
+  bars plus an `eventstats avg`-derived rolling-average baseline
+  series.
+- `Sparkline.tsx` now renders a `ComposedChart` (Recharts) for the
+  `column` viz path: bars for current values, dashed line for the
+  baseline overlay. The baseline line was readability-tuned in
+  `e9ecdba` (gray-800 / 1.75px / `6 3` dash at 90% opacity) after
+  Alan said the original slate-400 / 1px stroke was too faint
+  against the column bars on the live FDEM stack.
+- `useMetric` extended with `baselineField` so the baseline series
+  is read from the main search result instead of dispatching a
+  second job — keeps tile load behavior identical to the single-
+  series tiles.
+- Same baseline pattern wired into the Critical Sites tile so all
+  three "anomaly visibility" tiles share the same rolling-average
+  vocabulary.
+
+#### Sparkline color sync (`bd2ba4e`)
+
+Alan caught a bug where a tile's headline number could be red
+("critical" status) but its sparkline was still green (because the
+sparkline color came from a brand-color prop that was never threaded
+through to the trend-line). The fix:
+
+- Introduced `STATUS_VIZ_COLOR` mirroring `STATUS_TREND_COLOR`,
+  applied uniformly to the sparkline / change-arrow / change-pct.
+- Brand colors for `threat_sources` and `xdr_incidents` changed
+  from red to neutral sky blue (`#0ea5e9`) so red is reserved for
+  critical-status anomalies — earlier they were red even when
+  healthy, which made anomaly red unreadable.
+
+#### Headline auto-shrink (`bd2ba4e`)
+
+The new "X of Y available" string overflows the default `text-4xl`
+on narrower tiles. Added a string-length check in `MetricItem`:
+when `value` is a string and the rendered headline (`displayValue +
+unit`) is longer than 7 characters, fall back to `text-2xl`.
+Numeric headlines and short strings keep the traditional punch.
+
+#### HA-pair-aware site composite (`bd2ba4e`)
+
+FDEM's site composites (Tallahassee, Orlando, Auburndale) were
+double-counting standby HA peers as "down": Catalyst Center reports
+the standby device with a 0 health score, which silently dragged
+the site composite down to 50% even when both physical devices were
+fully healthy.
+
+Updated SPL in `[overview_site_tallahassee_health]`,
+`[overview_site_orlando_health]`, `[overview_site_auburndale_health]`
+to filter out zero-scoring devices *only when an active peer is
+also reporting in the same window*. If everything reports zero, the
+site rolls up zero (real outage). If exactly one device reports
+zero, the standby/zero peer is dropped from the rollup — site
+score reflects the active devices only.
+
+#### Composite metric replacement (`bd2ba4e`)
+
+Alan said the UX Score and Compliance composite tiles felt
+arbitrary — they were aggregations of aggregations and he couldn't
+trace what made the number move. Replaced both with single-source
+tiles whose semantics he can explain to FDEM directly:
+
+- `[it_health_active_te_alerts_high_critical]` — counts per-hour
+  distinct critical+high ThousandEyes alerts with a rolling-average
+  baseline.
+- `[it_health_sites_below_threshold]` — counts FDEM sites whose
+  device-health rollup is below the configurable warn threshold
+  (default 90%).
+
+Both stanzas tagged `Cisco` so they show up in the picker.
+
+#### IT Health TE detail-page stanzas (`bd2ba4e`)
+
+Seven new searchbase stanzas seeded for the IT Health detail page
+(panels not yet wired — that's the carryover):
+
+- `it_health_thousandeyes_network_latency`
+- `it_health_thousandeyes_network_loss`
+- `it_health_thousandeyes_network_jitter`
+- `it_health_thousandeyes_alerts_summary`
+- `it_health_thousandeyes_alerts_timeline`
+- `it_health_thousandeyes_alerts_table`
+- `it_health_thousandeyes_endpoint_traces`
+
+#### KPI picker self-healing refresh (`bd2ba4e`)
+
+Alan reported that the picker's "Currently bound" / "Jump to" banner
+wasn't appearing for newly added stanzas. Two root causes:
+
+1. New stanzas hadn't been tagged `Cisco` (the picker's allow-list
+   filter). Fixed: every stanza added today carries the tag.
+2. Stale in-memory catalogue. Picker was reading a cached
+   `searchbase.conf` parse from before the new stanzas existed.
+
+Fix: `KpiPickerPanel` now does a one-shot self-healing refetch — if
+the currently-bound `saved_search` isn't in the loaded catalogue,
+clear the cache and refetch once. Avoids permanently broken pickers
+when the catalogue changes underneath the open browser tab.
+`searchbaseCatalogue` exports `clearSearchbaseCache` for explicit
+invalidation.
+
+#### Per-section default tile counts (`bd2ba4e`)
+
+Alan wanted IT Health to default to 3 visible tiles (the high-signal
+ones) while keeping other sections at their existing 5-tile default.
+Refactored `usePersistedSectionTileCounts` so `defaultCount` accepts
+either a single number or a per-section map; Overview now passes
+`{ it_health: 3 }` with a `fallbackDefault: 5`. The +/- pill and
+drag-to-reorder are intentionally preserved — Alan can dial it back
+up to 6 when he wants the full picture.
+
+#### Capacity honesty (`e9ecdba`)
+
+Three link-health stanzas (`overview_link_orlando_tallahassee_health`,
+`overview_link_auburndale_tallahassee_health`,
+`overview_link_orlando_auburndale_health`) had hardcoded
+`capacityMbps=1000 / 100` rows in their appendpipe defaults. Those
+were initial estimates from an early design-of-record conversation
+that were never confirmed against real circuit records — shipping
+them on a customer-facing exec dashboard meant the popup was
+claiming a number we did not actually know.
+
+- Set `capacityMbps=null()` in the default rows.
+- Updated `telemetrySourceLabel` from "design-of-record" to
+  "(capacity awaiting circuit info)".
+- React popup already gates the capacity pill on
+  `link.capacityMbps !== undefined`, so the pill cleanly disappears
+  when the value is null.
+- Same cleanup applied to per-site `internetEdgeMbps` defaults in
+  `CustomerTopologyMap.tsx`'s `CUSTOMER_TOPOLOGY` (TLH=1000, MCO=500,
+  AUB=500 placeholders dropped).
+
+#### Customer-editable capacities (`521f3c3`)
+
+The cleanup above raised a follow-up: with the placeholders gone,
+where does the customer enter their real circuit speeds?
+
+- **Link capacity**: editor input *already existed*. Pencil icon
+  on the topology map → expand a Link → fill in `Capacity Mbps`
+  → Save. Persists in localStorage payload
+  (`splunk-cisco-dashboards.customerTopology.v4`); link popup pill
+  appears the moment a value is saved.
+- **Per-site Internet edge bandwidth**: editor input *did not
+  exist*. The data type and popup conditionally rendered the value,
+  but there was no UI path to populate it after we removed the
+  defaults. Added `Internet edge Mbps` input under the Lat/Lng
+  grid in the per-site editor (`CustomerTopologyMap.tsx`),
+  mirroring the link-capacity pattern: empty clears to undefined,
+  number-coerces non-empty input, persisted in the same
+  localStorage payload. Inline helper text reminds the user that
+  blank is acceptable ("Awaiting" stays on the popup) and that the
+  field maps to the popup's "Design of Record" line.
+- Updated `TopologySite.internetEdgeMbps` doc comment in
+  `types.ts` — it claimed the field was a "hardcoded configuration
+  value," which was true for an hour earlier in the day but is no
+  longer.
+
+**Customer-facing answer (recorded here so this doesn't get asked
+again):** both manual-entry paths exist. If a popup currently shows
+"Awaiting" for capacity, that's because (a) we removed the
+hardcoded placeholders that morning, and (b) no value has been
+typed through the editor yet. Pencil icon → Sites or Links → fill
+in capacity field → Save.
+
+#### Layout-overflow fixes (`e9ecdba` → revisited in `f2256a2`)
+
+Two visual bugs surfaced when the browser window was shrunk:
+
+1. **Bars overflowing tile edges horizontally**: `Sparkline`'s
+   `column` viz path was using a `type="number"` X-axis (inherited
+   from the area-viz config), which centers each bar on its
+   x-coordinate — so the first/last bar protruded half-width past
+   the tile edges. Fix: separate `hiddenAxesCategorical`
+   (`type="category"` X-axis) routed to the column branch, so bars
+   slot into evenly-spaced cells with auto-sized widths and stay
+   inside the chart.
+2. **Charts bleeding vertically into the section's footer
+   drill-down link**: chart container had a fixed
+   `h-28 flex-shrink-0` (rigid 112px) that couldn't compress when
+   the browser was vertically shrunk. The first attempt
+   (`e9ecdba`) added `overflow-hidden` to the section's tile-row
+   container as a safety net; that *did* clip the chart but also
+   clipped sibling popovers — see the InfoTooltip regression below.
+
+Final approach (`f2256a2`):
+
+- Chart container in `MetricItem` is now
+  `flex-1 min-h-[72px] max-h-28 overflow-hidden` — chart can
+  compress gracefully down to a 72px floor while still reading as
+  a chart, and any spill is clipped at the chart's *own* boundary
+  rather than at the row.
+- Tile-row `overflow-hidden` removed from `DashboardSection`.
+- Single-value tiles get a `flex-1 min-h-0` spacer so they share
+  row height with chart-bearing siblings (otherwise the divider
+  rules between tiles wouldn't line up).
+
+#### InfoTooltip popover portal (`f2256a2`)
+
+Alan flagged "i think the info modal is getting truncated" on the
+new Critical Sites tile — the description body cut off mid-sentence
+("...dashed line is the rolling-average baseline so") with the rest
+behind the section card boundary.
+
+Root cause: `e9ecdba`'s `overflow-hidden` on the tile row also
+clipped every absolute-positioned descendant, including the
+InfoTooltip popover. Once an ancestor has `overflow:hidden`,
+`z-index:50` doesn't save you — z-index can't escape an overflow
+clip path. The same trap applies to the section card's own
+`overflow-hidden` (used for rounded-corner shape).
+
+Fix: `InfoTooltip` rewritten to portal the popover to
+`document.body` via `createPortal`, with `position: fixed` and
+coords computed from the trigger's `getBoundingClientRect()` in a
+`useLayoutEffect`. The popover's only ancestor is now `<body>`, so
+no layout container in the dashboard tree (today's tile row,
+tomorrow's `transform`/`filter`/`contain` ancestor, anything) can
+clip it.
+
+Bonus features now possible because the popover is portaled:
+
+- **Viewport edge clamping**: left/right anchors are clamped to
+  within 8px of the viewport edges so the shadow never crops at
+  narrow widths.
+- **Bottom-flip**: if the popover would push past the viewport
+  bottom (tile near the bottom of a short window), it flips above
+  the trigger.
+- **Reposition on scroll/resize**: while open, listens on `window`
+  for both events so the popover follows its trigger.
+
+Trade-off: visibility is now state-driven (`isOpen` boolean) instead
+of CSS-only `:hover`/`:focus-within`. Adds one tiny render per
+hover; closed tiles add zero overhead. Hover/focus accessibility
+behavior is unchanged.
+
+### What we decided NOT to do (and why)
+
+- **Wire the seven new IT Health TE stanzas into `it_health_v1.xml`
+  this session.** Deferred to a follow-up PR. The stanzas exist
+  and are picker-discoverable; wiring them is XML panel-layout
+  work that's better isolated from today's tile / SPL / layout
+  work.
+- **KV Store-backed capacity persistence.** Customer-entered
+  link/site capacities are persisted only in the user's browser
+  (localStorage payload, key
+  `splunk-cisco-dashboards.customerTopology.v4`). An edit on
+  Alan's machine is invisible to Manny's. Backing this with a
+  Splunk KV Store collection would (a) make edits team-shared and
+  (b) let the SPL itself read the customer-entered value (so
+  utilization-% computes server-side instead of just rendering
+  in the React popup). Out of scope today: needs a new REST
+  endpoint, a permissions story (who can edit?), and an
+  `app.conf` permissions stanza — none of which the customer has
+  asked for yet.
+- **Wave 1 site-map** (real WAN visibility from agent-to-server
+  rollups grouped by source-site). Blocked on either an
+  agent-to-site mapping from the customer or the agent-to-agent
+  test rollout we asked David to consider. Discussed with Alan;
+  message to David is on Akhamis to send.
+- **Drill-down regression on `/opt/10`**. User reported all
+  drill-down affordances (↗ icon, footer link, KPI picker "Jump
+  to") were broken on a specific test instance. Probable cause:
+  the searchbase catalogue fetch was returning 503s on that stack,
+  leaving `result.spl` undefined. Self-healing refetch landed in
+  this session as defensive armor; full root-cause needs the
+  console output from the affected stack, which the user said
+  they'd capture next session.
+
+### Verification
+
+- `yarn workspace @splunk/splunk-cisco-dashboards run build`
+  green at every commit boundary; only the pre-existing
+  asset-size warnings (overview.js, searchbase.conf, background
+  PNGs).
+- Lint clean on every edited TSX/TS file across all five commits.
+- Manually traced every flow that changed:
+  - Critical Sites SPL on FDEM stack: headline reads
+    `17 of 18 available` (was `3870 of 4471 available` pre-fix),
+    drill-down table sorted ascending with worst sites first.
+  - Baseline overlay readable on FW Blocked / Failed Auth /
+    Critical Sites against the full status-color palette.
+  - HA-pair filter: TLH/MCO/AUB site rollups no longer drop to
+    50% when one HA peer is standby.
+  - InfoTooltip on Critical Sites: full body visible, no
+    truncation; clamps at viewport edges; flips above trigger
+    near viewport bottom.
+  - Per-site editor: typing 1000 in `Internet edge Mbps`,
+    saving, re-opening the popup → "Design of Record: 1000 Mbps"
+    line appears.
+  - Per-link editor: typing 100 in `Capacity Mbps`, saving,
+    re-opening the popup → "Capacity: 100 Mbps" pill appears.
+
+### What's next
+
+- **Wire the seven new IT Health TE stanzas into `it_health_v1.xml`**
+  as panels. Follow-up PR.
+- **Send the message to David** about ThousandEyes A2A test
+  feasibility — needed for Wave 1 site-map work. (User to send;
+  agent to draft if asked again.)
+- **Capture console output from `/opt/10`** to root-cause the
+  drill-down regression. The self-healing refetch in
+  `KpiPickerPanel` is defensive armor; the underlying 503 / fetch
+  failure pattern still needs a definitive read.
+- **KV Store-backed capacity persistence** when the customer asks
+  for team-shared edits or SPL-readable circuit speeds. Spec
+  needs: new REST endpoint, permissions stanza in `app.conf`, and
+  a migration path from existing localStorage payloads.
+- **Process change agreed this session**: maintain this
+  `SESSION_LOG.md` as the running record of asks / decisions /
+  deferrals so the customer and the agent stay synced. Each
+  session must update it before closing out.
+- Two files modified locally but not committed: `app.conf` (build
+  bump beyond what `e9ecdba` set) and `macros.conf`. Likely the
+  user's packaging cycle; left alone pending direction.
+
+---
+
 ## 2026-05-09 — Searchbase metadata audit & Cisco-tag gate cleanup
 
 ### Goal of the session
