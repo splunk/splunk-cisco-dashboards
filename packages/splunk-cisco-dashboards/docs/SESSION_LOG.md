@@ -7,6 +7,220 @@
 
 ---
 
+## 2026-05-12 — David call: FDEM is TLH + AUB only; MCO removed from the topology
+
+### Context
+
+Quick post-meeting cleanup based on a customer call with David
+(FDEM). Three substantive truths surfaced that we hadn't been
+designing against:
+
+1. **FDEM's actual site footprint is two locations**: Tallahassee
+   (TLH, State EOC) and Auburndale (AUB, Logistics). Everything else
+   is being decommissioned, including BLA. **MCO/Orlando was never
+   an FDEM site** — it had been carried in our topology config and
+   demo narrative as a placeholder third-site, but it has no
+   real-world counterpart at the customer.
+2. **The TLH↔AUB ThousandEyes agent-to-agent test is broken**: the
+   Tallahassee enterprise agent (`demt-te01-va`) is unresponsive to
+   probes. TE currently shows 100% network loss on the link, which
+   is an artifact of the broken probe-response, not real packet
+   loss. Recovering the agent is on FDEM/Cisco; once it's back,
+   anything we wire to the A2A test will start populating
+   automatically.
+3. **TE configuration ownership**: David confirmed Cisco did all the
+   original TE setup; FDEM has minimal in-house TE knowledge beyond
+   a login. Future TE changes (test reconfigs, agent rebuild) will
+   need Cisco-side support. **TE data trust is low** until the agent
+   is fixed and we can validate against ground truth.
+4. **David likes the dashboard direction** (Critical Sites Available
+   tile, baselines, simplified Overview, IT Health detail page).
+   No course-correction needed on architecture.
+
+The actionable engineering work was to delete every MCO/Orlando
+reference from the live config paths so the map and SPL match
+reality, while leaving breadcrumb comments for the next maintainer
+who'll wonder why the demo narrative used to talk about three sites.
+
+### What we built
+
+#### Map topology — TLH + AUB only (`CustomerTopologyMap.tsx`)
+
+`CUSTOMER_TOPOLOGY` shrinks from 3 sites + 3 links down to 2 sites
++ 1 link.
+
+- **Removed**: the `mco` site entry, the `mco-tlh` link, and the
+  `mco-aub` link.
+- **Re-centered**: map default center moved from `[28.45, -82.85]`
+  (the geometric center of the old three-site triangle) to
+  `[29.25, -83.0]` (the midpoint between TLH at 30.4383,-84.2807
+  and AUB at 28.0653,-81.7876). Default zoom of 6.55 keeps both
+  markers visible without forcing a pan; bounds are intentionally
+  left permissive so users can still scroll to neighboring states
+  for context.
+- **Updated comment** on `internetEdgeMbps`: now reflects that the
+  customer-entered value (via the topology editor's "Internet edge
+  Mbps" field, persisted to `splunk-cisco-dashboards.customerTopology.v4`
+  in localStorage) is the only source of bandwidth on the popup.
+  No more 1000/500 placeholders to mislead anyone.
+- **Editor placeholder**: changed `"Overview - Link Orlando to
+  Tallahassee Health"` placeholder text on the link search-name
+  input to `"Overview - Link Auburndale to Tallahassee Health"`
+  so the only example shown matches a real stanza.
+- **Stale doc reference**: the JSDoc on the `SiteEnrichment` type
+  used `(e.g. "TLH", "AUB", "MCO")` as an example list of building
+  short names — dropped MCO from the example.
+
+#### `searchbase.conf` cleanup
+
+Removed three full stanzas and rewired everything that referenced
+them:
+
+- **Deleted**:
+  - `[overview_site_orlando_health]` — the per-site Orlando rollup.
+  - `[overview_link_orlando_tallahassee_health]` — the MCO↔TLH link
+    health stanza.
+  - `[overview_link_orlando_auburndale_health]` — the MCO↔AUB link
+    health stanza.
+- **Kept** as the only inter-site link stanza:
+  - `[overview_link_auburndale_tallahassee_health]` — its SPL
+    `case(...)` mappings are simplified to drop the `(?i)Orlando`
+    branch (no MCO data ever existed to match it). Version bumped
+    to `1.2.0`. Description rewritten to flag that the TLH↔AUB
+    A2A test exists but is currently unhealthy because of the
+    downed Tallahassee agent — if/when the agent recovers, this
+    stanza is the right place to extend to consume
+    `Cisco_ThousandEyes.Test_Metrics` for latency/loss/jitter on
+    the pair.
+- **Updated** the umbrella stanza `[overview_topology_overview]`:
+  - Search filter narrowed from
+    `(Site=*Tallahassee* OR Site=*TLH* OR Site=*Orlando* OR Site=*ORL* OR Site=*MCO* OR Site=*Auburndale* OR Site=*AUB* OR host=TLH-* OR host=ORL-* OR host=MCO-* OR host=AUB-*)`
+    to just `(Site=*Tallahassee* OR Site=*TLH* OR Site=*Auburndale* OR Site=*AUB* OR host=TLH-* OR host=AUB-*)`.
+  - All three `case(...)` branches that mapped Orlando/MCO patterns
+    to a `siteId=mco` row were removed.
+  - The link-expansion logic that emitted both `mco-tlh` and
+    `aub-tlh` from each Tallahassee endpoint now emits a single
+    `aub-tlh` row.
+  - Version bumped to `1.1.0`; `related_info` updated to point at
+    the only surviving per-site/per-link sibling stanzas.
+- **Updated** the surviving site stanzas
+  (`[overview_site_tallahassee_health]`,
+  `[overview_site_auburndale_health]`): `related_info` no longer
+  points at `[overview_site_orlando_health]` (it doesn't exist
+  anymore), and each carries a one-line breadcrumb explaining that
+  the Orlando stanza was removed on 2026-05-12 and why.
+- **Updated** the IT Health composite-replacement
+  `[it_health_sites_below_threshold]`: site count goes from
+  `0..3 (TLH, MCO, AUB)` to `0..2 (TLH, AUB)`; SPL `case(...)`
+  drops the Orlando branch; "Suggested Actions" rewritten so the
+  "tile reads N" guidance matches the new total (2, not 3).
+- **Updated** the demo stanzas: `[overview_top_incident_volume_demo]`
+  now returns `"Auburndale (Logistics)"` instead of
+  `"Orlando (Regional Hub)"` (the picker preview showed Orlando as
+  the busiest synthetic site, which would have been confusing
+  with no Orlando on the map). `[overview_site_demo_healthy]`
+  related_info updated to say the production analogue stanzas
+  are TLH and AUB only.
+- **Updated** the drift-detection stanza
+  `[admin_dashboard_drift_panel]` (Site Topology - Drift Panel):
+  `makeresults count=3` → `count=2`, the inline expected-set
+  hardcoded list drops `Orlando: MCO`, and the description /
+  explanation prose drops the FDEM-specific Orlando paragraph.
+
+#### Dashboard view JSON
+
+- **`home_launchpad_v1.xml`**: removed the `viz_florida_dot_orl`
+  ellipse from the Florida-map panel layout, the
+  `viz_florida_dot_orl` viz definition itself, the
+  `ds_florida_site_health_orl` data source, and the orphaned
+  `viz_C0hqav52` line connector that used to go from TLH to MCO
+  (the TLH↔AUB connector `viz_SQjolf8o` was kept). Validated the
+  resulting JSON parses cleanly.
+- **`admin_guide_v1.xml`**: the inline drift-detection query in
+  `ds_site_drift` was updated identically to the searchbase
+  stanza — count=2, drop the Orlando case branch.
+
+#### What we left intact (and why)
+
+- **`dnac_site_normalize` macro** (`macros.conf`): still maps
+  `MCO` / `Orlando` paths to a normalized `Orlando: MCO` label.
+  This is a defensive no-op — even with no FDEM Orlando site, if
+  any stray Orlando data ever shows up in the indexes the macro
+  classifies it correctly instead of leaking through. Cheap to
+  keep, costly to re-derive if a future customer needs it.
+- **Archive views** (`detail_dashboard.xml`,
+  `spaces_intelligence_v2.xml`, `it_health_v2.xml` under
+  `data/ui/views/archive/`): these aren't wired into the live
+  navigation; they exist as historical reference for the design
+  evolution. Skipped to keep the diff focused.
+- **`overview_site_demo_critical/warning/healthy` stanzas**: still
+  three demo variants. They aren't tied to physical sites — they
+  represent three discrete render states for the topology editor's
+  preview. No reason to drop one.
+
+### Decisions worth remembering
+
+- **No MCO tombstone stanza**. Briefly tried leaving an
+  `[overview_link_orlando_auburndale_health_REMOVED_2026_05_12]`
+  marker stanza so external saved-search subscribers would fail
+  loudly. Backed out: searchbase is parsed key-by-key; a missing
+  stanza already produces a clean "stanza not found" error if
+  anyone references the old name. The breadcrumb comments above
+  the surviving stanzas are enough.
+- **Did NOT wire A2A `Test_Metrics` into the AUB↔TLH link yet.**
+  The test exists in TE, but the TLH agent is down so the data
+  is currently 100% loss / null latency. Wiring it would just
+  make the popup look broken. Once FDEM/Cisco recover the agent,
+  the right move is to extend
+  `[overview_link_auburndale_tallahassee_health]` with a Priority-0
+  `tstats` against `Cisco_ThousandEyes.Test_Metrics` (latency,
+  loss, jitter on the TLH↔AUB pair) ahead of the existing
+  SD-WAN / DNAC-fallback chain. Description on that stanza
+  already documents the plan.
+- **Did NOT change the role/label tables** (`ROLE_LABEL`,
+  `ROLE_DOT_CLASS`, `ROLE_BEACON_CHROME`, `TOPOLOGY_ROLES` in
+  `CustomerTopologyMap.tsx`). They still expose `regional_hub` /
+  `branch` / `datacenter` / `internet_edge` even though no
+  current site uses any of those. Leaving them in lets a
+  customer add a third site through the editor pencil-tool and
+  pick the right role without a code change.
+
+### Verification
+
+- `yarn typecheck` (in `packages/splunk-cisco-dashboards`) → clean,
+  zero TypeScript errors.
+- `yarn build` → webpack production build succeeds; only
+  pre-existing asset-size warnings (unchanged).
+- `yarn lint` → still blocked by pre-existing
+  `eslint-config-airbnb` resolution failure, unrelated to this
+  diff. Tracked separately; this change does not introduce new
+  lint surface.
+- Both rewritten dashboard JSON definitions parse cleanly when
+  extracted from their `<![CDATA[ ]]>` wrappers.
+- Manual grep for `mco|orlando|MCO|Orlando` in the live config
+  paths returns only the intentional historical-breadcrumb
+  comments and the defensive `dnac_site_normalize` macro entries.
+
+### What's next
+
+1. **Send the David-call summary to Alan** (drafted in chat).
+2. **Wait on FDEM/Cisco to recover the TLH enterprise agent
+   (`demt-te01-va`)**. When it's back:
+   - Verify TE shows healthy A2A samples between TLH and AUB.
+   - Extend `[overview_link_auburndale_tallahassee_health]` to
+     consume `Cisco_ThousandEyes.Test_Metrics` (latency, loss,
+     jitter) as Priority-0, ahead of the SD-WAN and DNAC
+     fallbacks.
+3. **Carryovers from 2026-05-11 still pending**:
+   - Wire IT Health ThousandEyes stanzas
+     (`it_health_thousandeyes_*`) into `it_health_v1.xml`.
+   - KV-Store backed link/site capacity input (currently
+     `localStorage`-only).
+   - Drill-down regression on `/opt/10` — still need browser
+     console output to root-cause.
+
+---
+
 ## 2026-05-11 — FDEM Overview review with Alan, Cloud Vetting, layout & tooltip hardening
 
 ### Context

@@ -47,12 +47,6 @@
 			},
 			"type": "splunk.image"
 		},
-		"viz_C0hqav52": {
-			"options": {
-				"strokeColor": "#53a051"
-			},
-			"type": "abslayout.line"
-		},
 		"viz_SQjolf8o": {
 			"options": {
 				"strokeColor": "#53a051"
@@ -123,45 +117,6 @@
 			},
 			"dataSources": {
 				"primary": "ds_florida_site_health_aub"
-			},
-			"options": {
-				"fillColor": "> fillDataValue | rangeValue(fillColorEditorConfig)",
-				"strokeColor": "#ffffff",
-				"strokeWidth": 3
-			},
-			"type": "splunk.ellipse"
-		},
-		"viz_florida_dot_orl": {
-			"context": {
-				"fillColorEditorConfig": [
-					{
-						"to": 50,
-						"value": "#d9534f"
-					},
-					{
-						"from": 50,
-						"to": 70,
-						"value": "#f0ad4e"
-					},
-					{
-						"from": 70,
-						"to": 85,
-						"value": "#FFD442"
-					},
-					{
-						"from": 85,
-						"to": 95,
-						"value": "#5cb85c"
-					},
-					{
-						"from": 95,
-						"value": "#088f44"
-					}
-				],
-				"fillDataValue": "> primary | seriesByType(\"number\") | lastPoint()"
-			},
-			"dataSources": {
-				"primary": "ds_florida_site_health_orl"
 			},
 			"options": {
 				"fillColor": "> fillDataValue | rangeValue(fillColorEditorConfig)",
@@ -855,14 +810,6 @@
 			},
 			"type": "ds.search"
 		},
-		"ds_florida_site_health_orl": {
-			"name": "Orlando site health",
-			"options": {
-				"extend": "ds_florida_site_health_base",
-				"query": "| where like(Site, \"%ORL%\") OR like(Site, \"%Orlando%\") | stats avg(health) as health | eval health=if(isnull(health),0,round(health))"
-			},
-			"type": "ds.chain"
-		},
 		"ds_florida_site_health_tlh": {
 			"name": "Tallahassee site health",
 			"options": {
@@ -1299,16 +1246,6 @@
 						"type": "block"
 					},
 					{
-						"item": "viz_florida_dot_orl",
-						"position": {
-							"h": 25,
-							"w": 25,
-							"x": 1170,
-							"y": 390
-						},
-						"type": "block"
-					},
-					{
 						"item": "viz_florida_dot_aub",
 						"position": {
 							"h": 25,
@@ -1328,20 +1265,6 @@
 							"to": {
 								"item": "viz_florida_dot_aub",
 								"port": "w"
-							}
-						},
-						"type": "line"
-					},
-					{
-						"item": "viz_C0hqav52",
-						"position": {
-							"from": {
-								"item": "viz_florida_dot_tlh",
-								"port": "e"
-							},
-							"to": {
-								"item": "viz_florida_dot_orl",
-								"port": "n"
 							}
 						},
 						"type": "line"

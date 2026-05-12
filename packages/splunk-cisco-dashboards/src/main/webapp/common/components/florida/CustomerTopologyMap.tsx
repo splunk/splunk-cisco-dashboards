@@ -80,7 +80,14 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
     subtitle: 'Editable customer site connectivity',
     telemetrySearchName: 'Overview - Topology Overview',
     map: {
-        center: [28.45, -82.85],
+        // Center re-derived for the TLH+AUB-only topology (David call,
+        // 2026-05-12): MCO/Orlando was never an FDEM site and has been
+        // removed. The midpoint between TLH (30.4383, -84.2807) and
+        // AUB (28.0653, -81.7876) sits at ~(29.25, -83.03), which
+        // keeps both markers visible at the default zoom without
+        // needing to pan. Bounds are kept permissive so the user can
+        // still pan to neighbouring states for context.
+        center: [29.25, -83.0],
         zoom: 6.55,
         minZoom: 5,
         maxZoom: 11,
@@ -89,22 +96,23 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
             [32.5, -77.0],
         ],
     },
-    // `internetEdgeMbps` is intentionally left undefined here. The
-    // earlier 1000 / 500 / 500 placeholders were initial estimates from
-    // the design-of-record conversation and were never confirmed against
-    // real circuit records. Shipping them on a customer-facing exec
-    // dashboard meant the popup was claiming a number we did not
+    // `internetEdgeMbps` is intentionally left undefined on every site.
+    // The earlier 1000 / 500 / 500 placeholders were initial estimates
+    // from a design-of-record conversation that was never confirmed
+    // against real circuit records. Shipping them on a customer-facing
+    // exec dashboard meant the popup was claiming a number we did not
     // actually know. The site-level "Design of Record" block in the
     // popup is conditional on the value being defined, so leaving it
     // unset hides the block cleanly and matches the rest of the
     // popup's "Awaiting"-pattern for empty fields. Customers who want
     // to surface a real number can enter it through the existing
-    // topology editor pencil-tool, which writes to the persisted
-    // localStorage payload (`splunk-cisco-dashboards.customerTopology.v4`)
-    // and immediately repopulates the popup. If FDEM's network team
-    // ever confirms actual circuit bandwidths, the values can be
-    // restored here as a packaged default and the editor entry will
-    // override them per-user as before.
+    // topology editor pencil-tool ("Internet edge Mbps" field), which
+    // writes to the persisted localStorage payload
+    // (`splunk-cisco-dashboards.customerTopology.v4`) and immediately
+    // repopulates the popup. If FDEM's network team ever confirms
+    // actual circuit bandwidths, the values can be restored here as a
+    // packaged default and the editor entry will override them
+    // per-user as before.
     sites: [
         {
             id: 'tlh',
@@ -117,18 +125,6 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
             metrics: {},
             telemetrySource: 'Awaiting normalized site telemetry',
             searchName: 'Overview - Site Tallahassee Health',
-        },
-        {
-            id: 'mco',
-            name: 'Orlando (Regional Hub)',
-            shortName: 'MCO',
-            role: 'regional_hub',
-            lat: 28.5383,
-            lng: -81.3792,
-            status: 'unknown',
-            metrics: {},
-            telemetrySource: 'Awaiting normalized site telemetry',
-            searchName: 'Overview - Site Orlando Health',
         },
         {
             id: 'aub',
@@ -144,15 +140,14 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
         },
     ],
     links: [
-        {
-            id: 'mco-tlh',
-            name: 'Orlando to Tallahassee',
-            sourceSiteId: 'mco',
-            targetSiteId: 'tlh',
-            status: 'unknown',
-            telemetrySource: 'Awaiting topology link telemetry',
-            searchName: 'Overview - Link Orlando to Tallahassee Health',
-        },
+        // Single TLH<->AUB inter-site link. The TLH<->MCO and
+        // MCO<->AUB legs were removed alongside the MCO site (David
+        // call, 2026-05-12). A ThousandEyes agent-to-agent test does
+        // exist for this pair, but as of the call the Tallahassee
+        // enterprise agent (`demt-te01-va`) is unresponsive to probes,
+        // so the link popup will read "Awaiting" until either the
+        // agent recovers or the SPL stanza is rewired to consume the
+        // A2A `Test_Metrics` data once it's trustworthy.
         {
             id: 'aub-tlh',
             name: 'Auburndale to Tallahassee',
@@ -161,15 +156,6 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
             status: 'unknown',
             telemetrySource: 'Awaiting topology link telemetry',
             searchName: 'Overview - Link Auburndale to Tallahassee Health',
-        },
-        {
-            id: 'mco-aub',
-            name: 'Orlando to Auburndale',
-            sourceSiteId: 'mco',
-            targetSiteId: 'aub',
-            status: 'unknown',
-            telemetrySource: 'Awaiting topology link telemetry',
-            searchName: 'Overview - Link Orlando to Auburndale Health',
         },
     ],
 };
@@ -283,7 +269,7 @@ export type TopologySummaryMetricMap = Record<string, TopologySummaryMetric>;
 /**
  * Site-level metadata sourced from `cisco:dnac:site:topology` via the
  * `Site Topology - Map Marker Enrichment (Buildings with GPS)` searchbase
- * stanza. Keyed by the building's short name (e.g. "TLH", "AUB", "MCO")
+ * stanza. Keyed by the building's short name (e.g. "TLH", "AUB")
  * which matches the `shortName` of `TopologySite` entries in
  * `CUSTOMER_TOPOLOGY`. Sites that DNAC isn't currently managing simply
  * have no entry; consumers MUST treat the lookup as optional.
@@ -4505,7 +4491,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                             <input
                                                 className={editorInputClass(isDark)}
                                                 value={link.searchName ?? ''}
-                                                placeholder="Overview - Link Orlando to Tallahassee Health"
+                                                placeholder="Overview - Link Auburndale to Tallahassee Health"
                                                 onChange={(event) =>
                                                     updateLink(link.id, {
                                                         searchName: event.target.value,
