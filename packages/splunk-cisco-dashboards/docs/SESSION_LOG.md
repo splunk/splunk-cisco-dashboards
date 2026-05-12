@@ -23,7 +23,7 @@ commits the same evening:
    constantly fighting for horizontal width — region labels on the
    map kept truncating and the tile headlines kept ellipsis-ing.
    Stacking vertically gives each region the full window width.
-2. **Commit `<TBD>`** (this entry) extended the splitter to work in
+2. **Commit `589654b`** (this entry) extended the splitter to work in
    the two new vertical modes, so the user can rebalance heights
    the same way they rebalance widths in `right` mode. Alan tried
    the new layout immediately after `1e87fed` landed and noticed
