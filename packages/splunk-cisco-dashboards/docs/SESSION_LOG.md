@@ -201,6 +201,12 @@ them:
   paths returns only the intentional historical-breadcrumb
   comments and the defensive `dnac_site_normalize` macro entries.
 
+### Commit
+
+Landed as `27a207b` — "Topology: drop MCO/Orlando; FDEM is
+TLH+AUB only". Five files changed, 295 insertions / 295
+deletions.
+
 ### What's next
 
 1. **Send the David-call summary to Alan** (drafted in chat).
