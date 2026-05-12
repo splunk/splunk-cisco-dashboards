@@ -32,6 +32,9 @@ import {
     RotateCcw,
     Settings2,
     ExternalLink,
+    PanelRight,
+    PanelBottom,
+    PanelTop,
 } from 'lucide-react';
 import { DashboardSection } from '@/common/components/florida/DashboardSection';
 import { MetricItem } from '@/common/components/florida/MetricItem';
@@ -1265,6 +1268,46 @@ const OverviewPage: React.FC = () => {
     );
     const resetSplit = useCallback(() => setLeftPct(SPLIT_DEFAULT), []);
 
+    // ------------------------------ Map position (right / below / above) ------------------------------
+    // Where the topology map sits relative to the metric tiles. Default
+    // is `below` (tiles on top, map below) because the original
+    // right-side-only layout meant the map and the three tile sections
+    // always fought for horizontal width on standard 1280-1440px
+    // displays. Stacking vertically lets each region use the full
+    // width, which is friendlier for both the map (region labels stay
+    // legible) and the tile rails (no truncated headlines).
+    //
+    // `right` preserves the original split-pane behaviour with the
+    // draggable splitter; `above` swaps the order (map on top, tiles
+    // below) for operators who treat the map as the primary view.
+    //
+    // Persisted in localStorage so the operator's preference survives
+    // reloads, cleared by the factory reset alongside the splitter
+    // position.
+    const MAP_POS_KEY = 'scd_overview_map_pos';
+    const MAP_POS_DEFAULT: MapPosition = 'below';
+    const [mapPosition, setMapPosition] = useState<MapPosition>(() => {
+        if (typeof window === 'undefined') return MAP_POS_DEFAULT;
+        try {
+            const saved = window.localStorage.getItem(MAP_POS_KEY);
+            return saved === 'right' || saved === 'below' || saved === 'above'
+                ? saved
+                : MAP_POS_DEFAULT;
+        } catch {
+            return MAP_POS_DEFAULT;
+        }
+    });
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        try {
+            window.localStorage.setItem(MAP_POS_KEY, mapPosition);
+        } catch {
+            // localStorage may be disabled (private mode / quota);
+            // the choice still works for the session, we just can't
+            // persist it. Mirrors the split-percentage handling.
+        }
+    }, [mapPosition]);
+
     // ------------------------------ Export ------------------------------
     const exportRef = useRef<HTMLDivElement>(null);
     const { exporting, exportAs } = useExportPage({
@@ -1461,6 +1504,7 @@ const OverviewPage: React.FC = () => {
     //   • sectionTileOrder.v1           — drag-to-reorder preference
     //   • customerTopology.v3           — Florida map customisations
     //   • scd_overview_split_pct        — tiles ↔ map splitter position
+    //   • scd_overview_map_pos          — map position (right / below / above)
     //
     // What is intentionally NOT reset:
     //   • theme (light / dark) — UI preference, not layout
@@ -1477,12 +1521,15 @@ const OverviewPage: React.FC = () => {
         clearCustomerTopologyStorage();
         setTopologyResetKey((n) => n + 1);
         setLeftPct(SPLIT_DEFAULT);
+        setMapPosition(MAP_POS_DEFAULT);
         if (typeof window !== 'undefined' && window.localStorage) {
             try {
                 window.localStorage.removeItem(SPLIT_KEY);
+                window.localStorage.removeItem(MAP_POS_KEY);
             } catch {
-                // Storage unavailable; the setLeftPct above is the
-                // authoritative reset for this session anyway.
+                // Storage unavailable; the setLeftPct / setMapPosition
+                // calls above are the authoritative reset for this
+                // session anyway.
             }
         }
         setPickerContext(null);
@@ -1493,6 +1540,9 @@ const OverviewPage: React.FC = () => {
         SPLIT_KEY,
         SPLIT_DEFAULT,
         setLeftPct,
+        MAP_POS_KEY,
+        MAP_POS_DEFAULT,
+        setMapPosition,
     ]);
 
     // ------------------------------ KPI cards ------------------------------
@@ -1970,7 +2020,30 @@ const OverviewPage: React.FC = () => {
             <main className="flex-1 min-h-0 px-1.5 py-2 w-full overflow-hidden">
                 <div
                     ref={splitContainerRef}
-                    className="flex flex-col xl:flex-row gap-2 h-full min-h-0 relative"
+                    className={cn(
+                        // Map placement is now operator-configurable. Three
+                        // modes are wired to the segmented control in the
+                        // map card header (default `below`):
+                        //   • right  — original split-pane behaviour, side-
+                        //              by-side at xl+, stacked below on
+                        //              smaller widths. Drag splitter to
+                        //              rebalance.
+                        //   • below  — tiles on top, map below. No
+                        //              breakpoint switch — same layout at
+                        //              every width.
+                        //   • above  — same as below but with the column
+                        //              order reversed so the map sits on
+                        //              top. Uses `flex-col-reverse` rather
+                        //              than rearranging the JSX so the
+                        //              splitter logic stays attached to
+                        //              its sibling.
+                        'flex gap-2 h-full min-h-0 relative',
+                        mapPosition === 'right'
+                            ? 'flex-col xl:flex-row'
+                            : mapPosition === 'above'
+                            ? 'flex-col-reverse'
+                            : 'flex-col'
+                    )}
                     style={
                         {
                             '--scd-left-pct': `${leftPct}%`,
@@ -1978,11 +2051,19 @@ const OverviewPage: React.FC = () => {
                     }
                 >
                     {/* Left column — three sections.
-                        On xl+ widths the column basis is driven by the
-                        --scd-left-pct CSS variable, which the splitter
-                        updates on drag. Below xl we ignore it and let
-                        flex-col stack at full width. */}
-                    <div className="flex flex-col gap-2 min-h-0 min-w-0 w-full xl:w-[var(--scd-left-pct)] xl:flex-shrink-0">
+                        In right mode at xl+ widths the column basis is
+                        driven by the --scd-left-pct CSS variable, which
+                        the splitter updates on drag. In below/above modes
+                        the column is full-width and shares vertical space
+                        50/50 with the map via flex-1. */}
+                    <div
+                        className={cn(
+                            'flex flex-col gap-2 min-h-0 min-w-0 w-full',
+                            mapPosition === 'right'
+                                ? 'xl:w-[var(--scd-left-pct)] xl:flex-shrink-0'
+                                : 'flex-1'
+                        )}
+                    >
                         {(['it_health', 'security', 'building'] as const).map((section) => {
                             const meta = SECTION_META[section];
                             const allSectionMetrics = METRIC_CONFIG.filter(
@@ -2100,58 +2181,69 @@ const OverviewPage: React.FC = () => {
                         })}
                     </div>
 
-                    {/* Splitter handle — only renders at xl+ where the
-                        side-by-side layout is active. 4px hit-area
-                        (visually 2px) widens to 6px on hover/drag so
-                        it's easy to grab. Drag horizontally to
-                        rebalance tiles ↔ map; arrow keys nudge ±1%
-                        (Shift = ±5%); Home/End jump to the limits;
-                        double-click restores the default split.
-                        Persisted across reloads in localStorage. */}
-                    <button
-                        type="button"
-                        role="separator"
-                        aria-orientation="vertical"
-                        aria-label="Resize tiles vs map"
-                        aria-valuenow={Math.round(leftPct)}
-                        aria-valuemin={SPLIT_MIN}
-                        aria-valuemax={SPLIT_MAX}
-                        title="Drag to resize · arrows ±1% · double-click to reset"
-                        onMouseDown={beginDrag}
-                        onKeyDown={onSplitterKeyDown}
-                        onDoubleClick={resetSplit}
-                        className={cn(
-                            'hidden xl:flex flex-shrink-0 items-center justify-center group relative',
-                            'w-1.5 mx-0.5 rounded-full transition-colors cursor-col-resize',
-                            'focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
-                            dragging
-                                ? 'bg-sky-500'
-                                : 'bg-slate-200 dark:bg-slate-700 hover:bg-sky-400 dark:hover:bg-sky-500'
-                        )}
-                    >
-                        {/* Visible grip dots — three subtle dashes,
-                            centred vertically. Helps signal the handle
-                            is interactive at a glance. */}
-                        <span
-                            aria-hidden="true"
+                    {/* Splitter handle — only renders in right-mode at
+                        xl+ widths where the side-by-side layout is
+                        active. In below/above modes the layout is a
+                        fixed 50/50 vertical split with no resizer
+                        (drag-to-resize support for the vertical mode
+                        is a follow-up). 4px hit-area (visually 2px)
+                        widens to 6px on hover/drag so it's easy to
+                        grab. Drag horizontally to rebalance tiles ↔
+                        map; arrow keys nudge ±1% (Shift = ±5%);
+                        Home/End jump to the limits; double-click
+                        restores the default split. Persisted across
+                        reloads in localStorage. */}
+                    {mapPosition === 'right' && (
+                        <button
+                            type="button"
+                            role="separator"
+                            aria-orientation="vertical"
+                            aria-label="Resize tiles vs map"
+                            aria-valuenow={Math.round(leftPct)}
+                            aria-valuemin={SPLIT_MIN}
+                            aria-valuemax={SPLIT_MAX}
+                            title="Drag to resize · arrows ±1% · double-click to reset"
+                            onMouseDown={beginDrag}
+                            onKeyDown={onSplitterKeyDown}
+                            onDoubleClick={resetSplit}
                             className={cn(
-                                'flex flex-col gap-0.5 opacity-50 transition-opacity',
-                                dragging ? 'opacity-100' : 'group-hover:opacity-90'
+                                'hidden xl:flex flex-shrink-0 items-center justify-center group relative',
+                                'w-1.5 mx-0.5 rounded-full transition-colors cursor-col-resize',
+                                'focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
+                                dragging
+                                    ? 'bg-sky-500'
+                                    : 'bg-slate-200 dark:bg-slate-700 hover:bg-sky-400 dark:hover:bg-sky-500'
                             )}
                         >
-                            <span className="block w-0.5 h-1 rounded-full bg-white" />
-                            <span className="block w-0.5 h-1 rounded-full bg-white" />
-                            <span className="block w-0.5 h-1 rounded-full bg-white" />
-                        </span>
-                    </button>
+                            {/* Visible grip dots — three subtle dashes,
+                                centred vertically. Helps signal the
+                                handle is interactive at a glance. */}
+                            <span
+                                aria-hidden="true"
+                                className={cn(
+                                    'flex flex-col gap-0.5 opacity-50 transition-opacity',
+                                    dragging ? 'opacity-100' : 'group-hover:opacity-90'
+                                )}
+                            >
+                                <span className="block w-0.5 h-1 rounded-full bg-white" />
+                                <span className="block w-0.5 h-1 rounded-full bg-white" />
+                                <span className="block w-0.5 h-1 rounded-full bg-white" />
+                            </span>
+                        </button>
+                    )}
 
-                    {/* Right column — map.
-                        Width is the complement of leftPct on xl+; full
-                        width below xl. Both columns set min-w-0 so a
+                    {/* Map column.
+                        right mode: width is the complement of leftPct
+                        on xl+, full width below xl. below/above modes:
+                        full width, flex-1 to share vertical space with
+                        the tiles column. Both columns set min-w-0 so a
                         long word in a metric label or a wide map tile
                         can't blow the column wider than its share. */}
                     <div
-                        className="flex flex-col min-h-0 min-w-0 w-full xl:flex-1"
+                        className={cn(
+                            'flex flex-col min-h-0 min-w-0 w-full',
+                            mapPosition === 'right' ? 'xl:flex-1' : 'flex-1'
+                        )}
                     >
                         <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-3 shadow-sm flex flex-col">
                             <div className="flex items-center justify-between mb-2 flex-shrink-0">
@@ -2163,10 +2255,16 @@ const OverviewPage: React.FC = () => {
                                         {topologyHeaderSubtitle}
                                     </p>
                                 </div>
-                                <RegionalViewToggle
-                                    value={regionalView}
-                                    onChange={setRegionalView}
-                                />
+                                <div className="flex items-center gap-2">
+                                    <MapPositionToggle
+                                        value={mapPosition}
+                                        onChange={setMapPosition}
+                                    />
+                                    <RegionalViewToggle
+                                        value={regionalView}
+                                        onChange={setRegionalView}
+                                    />
+                                </div>
                             </div>
 
                             <div className="flex-1 min-h-0">
@@ -2363,6 +2461,66 @@ const RegionalViewToggle: React.FC<RegionalViewToggleProps> = ({ value, onChange
             >
                 TABLE
             </button>
+        </div>
+    );
+};
+
+// Map position relative to the metric tile column. Persisted to
+// `scd_overview_map_pos` in localStorage; cleared by the factory reset.
+// See the splitter / map-position useState block in the Overview page
+// for the wiring and the rationale on defaulting to `below`.
+type MapPosition = 'right' | 'below' | 'above';
+
+interface MapPositionToggleProps {
+    value: MapPosition;
+    onChange: (next: MapPosition) => void;
+}
+
+// Three-segment selector for the topology map's placement, rendered
+// in the map card header next to the MAP/TABLE toggle. Each segment
+// is an icon-only button (PanelBottom / PanelRight / PanelTop) with a
+// title tooltip so the meaning stays clear at icon-only widths. The
+// styling mirrors `RegionalViewToggle` for visual parity in the
+// header.
+const MapPositionToggle: React.FC<MapPositionToggleProps> = ({ value, onChange }) => {
+    const baseClass =
+        'p-1 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400';
+    const activeClass =
+        'bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 text-sky-600 dark:text-sky-300';
+    const inactiveClass =
+        'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300';
+    const options: Array<{
+        id: MapPosition;
+        icon: React.ReactNode;
+        label: string;
+    }> = [
+        { id: 'below', icon: <PanelBottom className="w-3.5 h-3.5" />, label: 'Map below tiles' },
+        { id: 'right', icon: <PanelRight className="w-3.5 h-3.5" />, label: 'Map on the right' },
+        { id: 'above', icon: <PanelTop className="w-3.5 h-3.5" />, label: 'Map above tiles' },
+    ];
+    return (
+        <div
+            role="tablist"
+            aria-label="Map position"
+            className="flex bg-slate-100 dark:bg-slate-800/60 p-1 rounded-md"
+        >
+            {options.map((opt) => (
+                <button
+                    key={opt.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={value === opt.id}
+                    aria-label={opt.label}
+                    title={opt.label}
+                    onClick={() => onChange(opt.id)}
+                    className={cn(
+                        baseClass,
+                        value === opt.id ? activeClass : inactiveClass
+                    )}
+                >
+                    {opt.icon}
+                </button>
+            ))}
         </div>
     );
 };
