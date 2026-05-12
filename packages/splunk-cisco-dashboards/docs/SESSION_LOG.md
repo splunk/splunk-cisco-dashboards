@@ -7,6 +7,135 @@
 
 ---
 
+## 2026-05-12 (evening) — TE deep link upgraded to Path Visualization format
+
+### Context
+
+Right after the late-afternoon work that introduced the deep link as
+a bare `?__a=&testId=` URL, the TE AI Assistant volunteered the
+**official URL format** for `/network-app-synthetics/views/` deep
+links, including the parameters needed to land directly on the Path
+Visualization view with metrics pre-selected and a time window
+already framed. That's a much better operator experience than what
+we had — the previous URL would land on the default Overview tab,
+forcing two more clicks to get to "show me where on the path it's
+broken". Upgraded the URL constructor accordingly.
+
+### Commit C — `[overview_link_auburndale_tallahassee_health]` v1.4.0 → v1.5.0
+
+**URL format change.** Previously:
+
+```
+https://app.thousandeyes.com/network-app-synthetics/views?__a=<acct>&testId=<test>
+```
+
+Now:
+
+```
+https://app.thousandeyes.com/network-app-synthetics/views/
+  ?testId=<test>
+  &__a=<account>
+  &detailId=pathvis
+  &metrics=netLatency,netLoss,netJitter
+  &direction=BIDIRECTIONAL
+  &startTime=<lastSeen-epoch>
+  &timelineWindow=<lastSeen-86400>,<lastSeen>
+```
+
+**Parameter rationale:**
+
+- `detailId=pathvis` — opens the network path graph. Best default
+  for the click-through use case ("we see degraded latency on this
+  link; show me where on the path it's breaking"). The other valid
+  values per the TE AI doc are `table` (tabular metrics view) and
+  `map` (geographic overview). Easy to change in one place if Alan
+  or the customer ever wants a different default.
+- `metrics=netLatency,netLoss,netJitter` — mirrors the three pills
+  we surface in the map popup. The TE Path Visualization view
+  defaults to a single metric if not specified; pre-selecting all
+  three keeps the operator's mental model consistent across the
+  pivot.
+- `direction=BIDIRECTIONAL` — required for A2A tests per the TE AI
+  doc. We know this branch is filtered to
+  `Test_Metrics.thousandeyes.test.type="agent-to-agent"`, so always
+  emitting `BIDIRECTIONAL` is safe.
+- `__a=<accountId>` — kept defensively. Multi-account TE users
+  could otherwise land on the wrong account's view. The TE AI's
+  example omitted it (probably because they only have one account
+  in their demo org), but it's strictly additive for single-account
+  setups so no harm done.
+- `startTime=<lastSeen>` + `timelineWindow=<lastSeen-86400>,<lastSeen>` —
+  anchors the deep link's time window to the latest sample our SPL
+  saw, expanded backward by 24h. Reasoning: the operator clicked
+  because *something* showed up on the map; landing on a 24h window
+  centered on the most recent data gives enough context to see
+  whether the issue is brand new or persistent without forcing them
+  to fiddle with TE's own time picker on arrival. We use
+  `strftime(lastSeen, "%s")` to convert the epoch float to a clean
+  integer string for URL safety.
+
+**SPL structure change.** Moved the `teLink` construction from the
+per-row position inside the TE branch (before `stats`) to after the
+final `stats by linkId`. Three reasons:
+
+1. **Correctness:** `lastSeen` is now `max(lastSeen)` after the
+   stats, so the URL's time anchor is the freshest sample across
+   all agent pairs for the link, not whichever per-pair row
+   happened to win the `first(teLink)` lottery.
+2. **Schema cleanliness:** the SD-WAN and Catalyst Center branches
+   no longer need `teLink=null()` in their initial evals (they
+   keep `teAccountId=null()` and `teTestId=null()` so the
+   single-eval URL constructor returns null cleanly via the
+   `isnotnull(...) AND isnotnull(...) AND isnotnull(...)` guard).
+3. **Single point of truth:** anyone who wants to change the URL
+   format — different view, different metrics, different time
+   window — now edits exactly one `eval` instead of trying to keep
+   per-row, mid-pipeline, and post-stats fields all in sync.
+
+**Stats aggregation slimmed by one field.** Removed
+`first(teLink) as teLink` from the stats since `teLink` no longer
+exists at that point in the pipeline; the new constructor runs on
+the aggregated `teAccountId` / `teTestId` / `lastSeen` directly.
+
+**Bumped app build 61 → 62.**
+
+### Bonus: connectivity-testing question
+
+User asked the TE AI Assistant "what is the best way to test
+connectivity between TLH and AUB?" The TE AI confirmed:
+
+1. **Agent-to-Agent (A2A) test is the right architecture** —
+   provides bidirectional latency / loss / jitter / bandwidth,
+   path visualization, continuous monitoring, and historical
+   trending.
+2. **No TLH or AUB-named agents are currently visible in their
+   search** — which independently confirms the morning's diagnosis
+   that `demb-te01-va` is offline (so it doesn't show up as an
+   "active" agent in TE's catalogue), and that the existing test
+   `7148943` ("TLH - AUB Connection") is misconfigured to target
+   an Orlando agent.
+
+No code change required from this; it's reaffirmation of the
+architecture we already have wired up. Documented here for the
+trail of "we asked, TE confirmed, the gap is operational not
+architectural." Once Cisco TE support restores `demb-te01-va`
+(and ideally repoints test `7148943` to actually target it), the
+existing searchbase stanza picks up the real data automatically —
+the placeholder filter swap is one line.
+
+### What's next
+
+- Same carryover as before: visual QA on a real Splunk environment,
+  drill-down regression on `/opt/10`, demo-data-gen fix, KV-Store
+  capacity inputs.
+- One additional cleanup item: when the demo data generator lands
+  emitting numeric metrics, the test name filter swap is now a
+  **two-character change** (`BLA` → `AUB` in
+  `Test_Metrics.thousandeyes.test.name="TLH - BLA Connection"`).
+  Logged so it doesn't get lost.
+
+---
+
 ## 2026-05-12 (late afternoon) — TE deep link in map popup, IT Health ThousandEyes tab wired
 
 ### Context
