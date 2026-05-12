@@ -307,7 +307,7 @@ Final approach (`f2256a2`):
   row height with chart-bearing siblings (otherwise the divider
   rules between tiles wouldn't line up).
 
-#### InfoTooltip popover portal (`f2256a2` + same-session fix-forward `<next-commit>`)
+#### InfoTooltip popover portal (`f2256a2` + same-session fix-forward `494f4b3`)
 
 Alan flagged "i think the info modal is getting truncated" on the
 new Critical Sites tile — the description body cut off mid-sentence
