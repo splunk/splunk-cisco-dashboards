@@ -132,22 +132,22 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
             </div>
 
             {/*
-              * `overflow-hidden` here is the safety net that prevents
-              * a too-tall tile (chart + headline + sublabel) from bleeding
-              * down into the section's "Open IT Health" footer link when
-              * the browser is shrunk vertically. The section card itself
-              * is also `overflow-hidden`, but that only clips at the very
-              * bottom of the card — overflow above the footer is still
-              * rendered ON TOP of the footer text. Clipping at the tile
-              * row instead means any spillage stops at the divider line
-              * above the footer, so the drill-down link stays readable
-              * regardless of viewport height. The companion change in
-              * MetricItem (chart container `flex-1 min-h-[72px] max-h-28`
-              * instead of fixed `h-28 flex-shrink-0`) means this clip
-              * almost never fires in practice — charts compress
-              * gracefully down to 72px before the clip kicks in.
+              * Tile row is intentionally NOT `overflow-hidden`. An
+              * earlier fix added that clip here as a chart-bleed
+              * safety net, but it was a sledgehammer: it also clipped
+              * floating UI rendered into descendant tiles - notably
+              * the InfoTooltip popover, whose body would get truncated
+              * mid-sentence when it tried to extend below the row. The
+              * chart-bleed risk is now contained at the source by an
+              * `overflow-hidden` on the chart container inside
+              * MetricItem (the only descendant that ever produces
+              * unbounded vertical content), so the row can stay open
+              * and lets popovers/tooltips/menus extend out of the row
+              * naturally. The InfoTooltip is also portaled to
+              * `document.body`, which is a separate belt-and-braces
+              * defense against any future ancestor clipping pattern.
               */}
-            <div className="flex flex-wrap md:flex-nowrap gap-0 divide-x divide-slate-100 dark:divide-slate-800 flex-1 min-h-0 overflow-hidden">
+            <div className="flex flex-wrap md:flex-nowrap gap-0 divide-x divide-slate-100 dark:divide-slate-800 flex-1 min-h-0">
                 {children}
             </div>
 

@@ -443,13 +443,22 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                 // browser was shrunk vertically, so the chart's static
                 // 112px would push down past the tile's slot in the
                 // section's flex-column and bleed onto the "Open IT
-                // Health" footer link. With this wrapper change plus the
-                // `overflow-hidden` on the tile row in DashboardSection,
-                // the chart compresses smoothly with the section first,
-                // and only the extreme-short-viewport edge case actually
-                // hits the row clip. mt-3/pt-2 keeps the headline-to-
-                // chart gap tight without wasting pixels at full size.
-                <div className="flex-1 min-h-[72px] max-h-28 mt-3 pt-2 opacity-80 hover:opacity-100 transition-opacity">
+                // Health" footer link.
+                //
+                // `overflow-hidden` on the chart container is the
+                // local containment for that bleed: any chart content
+                // that overflows the chart's allocated slot is clipped
+                // at chart bounds, not at the section row level. The
+                // earlier safety-net clip on the tile row in
+                // DashboardSection was the right intent in the wrong
+                // place - it also clipped sibling popovers (notably
+                // the InfoTooltip body) and floating menus. Clipping
+                // here keeps the chart visually contained without
+                // collateral damage to any other tile UI.
+                //
+                // mt-3/pt-2 keeps the headline-to-chart gap tight
+                // without wasting pixels at full size.
+                <div className="flex-1 min-h-[72px] max-h-28 mt-3 pt-2 opacity-80 hover:opacity-100 transition-opacity overflow-hidden">
                     {/* Sparkline is intentionally NOT wired to the
                         drilldown click. The ExternalLink icon next to
                         the tile label is the explicit "open in Splunk
