@@ -7,6 +7,304 @@
 
 ---
 
+## 2026-05-12 (afternoon) — `demb-te01-va` agent diagnosis; handed to TE support; resume dashboard work
+
+### Context
+
+Spent the afternoon trying to figure out which FDEM site the offline
+ThousandEyes Enterprise Agent physically lives in, and what
+restart procedure applies. The thread surfaced two
+data-quality problems on the customer side that we should
+remember (they affect what we trust in our dashboard):
+
+1. **The "TLH ↔ AUB Connection" A2A test (id `7148943`) is
+   misnamed.** Its source is `demt-te01-va` (TLH, online) but
+   its target is `dema-te01-va` — and `dema-te01-va` is in
+   **Orlando**, not Auburndale. So the test that was
+   supposedly proving "Tallahassee can reach Auburndale" has
+   been measuring TLH → Orlando the whole time. Whatever
+   number it returned for "loss between TLH and AUB" was
+   never about the AUB pair. The morning's decision to remove
+   MCO/Orlando from our topology means we now have *no real
+   A2A monitoring* for the only inter-site link FDEM cares
+   about — at least until Cisco repoints the test to a true
+   AUB-side agent.
+2. **The actually-offline agent is `demb-te01-va` (id
+   `1474613`)**, not `demt-te01-va` as initially suggested
+   by the in-product TE AI. It's a **Virtual Appliance**,
+   not a Linux/Docker installation, which means the SSH/
+   `systemctl restart te-agent` recovery instructions
+   originally sent to David don't apply — those are for
+   Linux-package installs. VA recovery is hypervisor-side
+   (vSphere/Hyper-V console, restart the VM, check the VA's
+   own web UI for connectivity to TE).
+   - It went offline **2026-05-06** at 19:15 UTC.
+   - Private IP **172.18.81.51**, public egress IP
+     **164.51.150.116**.
+   - Public IP geolocation is a dead end: the /16 is owned
+     by **Florida Department of Management Services - Division
+     of Telecommunications** (AS8103, MyFloridaNet), the
+     state's shared WAN. Every FDEM site egresses through
+     this AS, so the public IP cannot disambiguate between
+     TLH/AUB/anywhere-else. The private IP would, but only
+     if FDEM publishes their internal subnet plan — which
+     they don't expose to us.
+   - David told us verbally the VA is in **Auburndale** but
+     we have no independent confirmation. Treat as
+     "probably AUB, pending Cisco support verification."
+
+### Decision: hand the broken agent to TE support; resume app work
+
+The agent recovery is not in our scope and the diagnostic
+loop was burning time without closing. **David has the
+correct VA-vs-Linux instruction set and the contact info
+for `davijime@cisco.com`** (David A. Jimenez Martinez, Cisco
+TE specialist who did FDEM's original setup). When/if the
+agent comes back online and the test is repointed to a real
+AUB-side agent, the data will flow into our existing
+`[overview_link_auburndale_tallahassee_health]` stanza
+without code changes — that's exactly what we wanted out of
+the searchbase indirection.
+
+For dev/test of the dashboard we'll use **whatever data the
+currently-working test (`7148943`) produces**, even though
+that data is technically TLH→Orlando. The SPL panel will
+render real numbers, the visualization can be validated, and
+the misnamed test means the labels on the panel will say
+"TLH↔AUB" — which is wrong-but-stable until Cisco fixes the
+agent. We accept that wrongness for dev only; we don't
+push that to a customer dashboard until the test is
+repointed.
+
+### What we did NOT change
+
+- **No code changes today** in the afternoon thread. Every
+  edit in this session log entry is documentation.
+- We did **not** wire the broken/misnamed A2A test into
+  `[overview_link_auburndale_tallahassee_health]` yet. The
+  morning's stanza version (`1.2.0`) still uses Catalyst
+  Center device-health rollups as the link signal, with
+  `capacityMbps=null()` and a `telemetrySourceLabel` of
+  `"Catalyst Center device health (capacity awaiting circuit info)"`.
+  We'll revisit this when one of two things happens:
+  - Cisco support repoints test 7148943 to a true AUB-side
+    agent (cleanest path), OR
+  - We decide we want a "preview-only / dev-only" panel that
+    consumes test 7148943 as-is for layout validation, with
+    a clear visual badge indicating the data is provisional.
+- We did **not** delete or archive `dema-te01-va` or any
+  Orlando references in TE itself. That's customer data; we
+  only changed our app's representation.
+
+### Lesson recorded
+
+**TE test names are not reliable indicators of the test's
+actual source/target agents.** The "TLH - AUB Connection"
+test demonstrates this perfectly. Going forward, when we
+write SPL that filters on `Test_Metrics.thousandeyes.test.name`
+we should also pin
+`Test_Metrics.thousandeyes.target.agent.name` (or `id`) to
+prove we're consuming the right pair. A dashboard panel
+that quietly displays the wrong link's data is worse than
+one that shows "Awaiting data."
+
+### What's next
+
+User chooses one of these for the next active thread:
+
+1. **Wire `it_health_v1.xml` panels** to consume the seven
+   IT-Health ThousandEyes stanzas we added on 2026-05-11
+   (`it_health_thousandeyes_network_latency`, `_loss`,
+   `_jitter`, `_alerts_summary`, `_alerts_timeline`,
+   `_alerts_table`, `_endpoint_traces`) plus
+   `[it_health_active_te_alerts_high_critical]` and
+   `[it_health_sites_below_threshold]`. The stanzas
+   exist; the view doesn't render them yet.
+2. **Drill-down regression on `/opt/10`**: ↗ icon, footer
+   link, and KPI picker "Jump to" all stopped working on
+   the customer test stack. `KpiPickerPanel.tsx` got
+   self-healing refetch armor on 2026-05-11; if the
+   regression persists, we need browser console output
+   from `/opt/10` to root-cause whether it's a 503 cascade
+   or a different fault.
+3. **KV Store-backed link/site capacity input**: today
+   capacities live in browser `localStorage` only. For
+   team-shared edits and SPL-readable values, we'd need a
+   KV Store collection plus a small admin UI. Larger lift.
+4. **Provisional A2A wiring to test 7148943** for dev/test
+   only, gated behind a "preview" badge — only worth doing
+   if option (1) is going to take long enough that we want
+   visible link-health data on the map in the meantime.
+5. **Local untracked changes still uncommitted**:
+   - `app.conf` build-number bump (`50` → `60`)
+   - `macros.conf` edit to `[summariesonly]`
+     (`allow_old_summaries=false fillnull_value=null`)
+   - `props.conf` (currently focused; appears to have an
+     untracked diff header on line 1 that we noted but
+     haven't fixed). Worth cleaning up before the next
+     packaging cycle either way.
+
+---
+
+## 2026-05-12 (afternoon, follow-up) — Site-to-site link search now sources from ThousandEyes A2A
+
+### Context
+
+Picked up the dashboard work after handing the `demb-te01-va`
+recovery to TE support. The morning cleanup left the
+`[overview_link_auburndale_tallahassee_health]` stanza
+falling back to Catalyst Center device-health rollups for
+the link signal — useful as a fallback, but not what the
+business question on the map asks ("how is the WAN
+performing between TLH and AUB?"). User asked to wire
+this to the ThousandEyes Test_Metrics data model.
+
+User confirmed the sourcetype/data shape via a real event
+from `cisco:thousandeyes:metric` (latency/loss/jitter all
+present per metric_name field), and supplied a working
+example tstats query. They explicitly chose
+**`"TLH - BLA Connection"`** as the test-name filter for
+this round — it's a *different* A2A test in the same TE
+org but it's actually returning data, which is what we
+need to validate the SPL end-to-end. Once Cisco TE support
+fixes `demb-te01-va` and repoints the real TLH↔AUB test,
+we just swap the test-name string and the rest works
+unchanged.
+
+### What we built
+
+#### `[overview_link_auburndale_tallahassee_health]` v1.3.0
+
+Three-tier priority chain replaces the previous two-tier:
+
+1. **Priority 1 — Cisco SD-WAN linkhealth** (unchanged).
+   Capacity / throughput / utilization from
+   `cisco:sdwan:linkhealth`. Won't fire at FDEM (no
+   SD-WAN deployed) but kept for portability.
+2. **Priority 2 — ThousandEyes A2A** (NEW). `tstats`
+   against `Cisco_ThousandEyes.Test_Metrics` filtered to
+   `test.type="agent-to-agent"` and a single test name.
+   Returns one row per `(sourceAgent, targetAgent)` pair
+   with `latencyMs`, `lossPct`, `jitterMs`. Source and
+   target agent names propagate up to the output as
+   `sourceAgents` / `targetAgents` multivalues so the map
+   popup can display *which agents are actually being
+   measured* — directly responding to the 2026-05-12
+   misnamed-test lesson.
+3. **Priority 3 — Catalyst Center device health**
+   (was Priority 2). Demoted because it's a reachability
+   rollup, not a path measurement; falls back when the
+   first two branches are empty.
+
+#### Status logic now layered
+
+When the TE branch wins, status is computed from
+`lossPct` / `latencyMs` / `jitterMs` thresholds tuned for a
+~250-mile in-state WAN (anything over 30 ms latency or
+0.5% loss is suspect; over 100 ms or 2% is critical). When
+SD-WAN wins, status follows utilization%. When DNAC fallback
+wins, status follows `endpointHealthPct`. Priority filter
+guarantees only one branch's signals drive status per row.
+
+#### Unit handling
+
+The TE data model exposes `network.latency` in **seconds**
+(per the customer's own SPL examples and the existing
+`overview_overview_user_experience_quality` style stanzas).
+We multiply by 1000 to land on `latencyMs`. `network.jitter`
+is already in milliseconds and `network.loss` is already a
+percentage — no conversion needed for those.
+
+#### Output schema additions
+
+New fields on the output row, in addition to the existing
+schema:
+
+- `jitterMs` — third path metric, displayed in the popup
+  alongside latency/loss when available.
+- `sourceAgents` — multivalue of `Test_Metrics.thousandeyes.source.agent.name`
+  values that contributed to the measurement.
+- `targetAgents` — same for the target side.
+
+The map consumer (`CustomerTopologyMap.tsx`) doesn't read
+these yet; that's a follow-up. The fields are present in
+the search output now so the consumer can be updated
+without re-touching SPL.
+
+#### Tags
+
+Added `ThousandEyes` and `Requires_Cisco_ThousandEyes_DM`
+to the `tags` line so the KPI catalogue picker filters
+this stanza into the right TE-related slice.
+
+### How to validate the TE branch standalone
+
+Before trusting the full stanza, drop this into the search
+bar on the customer stack to verify the TE Priority 2
+branch returns rows and the units look right:
+
+```
+| tstats `summariesonly`
+    avg(Test_Metrics.metric_name:network.latency) as _latencyS,
+    avg(Test_Metrics.metric_name:network.loss) as lossPct,
+    avg(Test_Metrics.metric_name:network.jitter) as jitterMs,
+    latest(_time) as lastSeen
+  FROM datamodel="Cisco_ThousandEyes.Test_Metrics"
+  WHERE Test_Metrics.thousandeyes.test.type="agent-to-agent"
+        Test_Metrics.thousandeyes.test.name="TLH - BLA Connection"
+  BY Test_Metrics.thousandeyes.source.agent.name,
+     Test_Metrics.thousandeyes.target.agent.name
+| rename Test_Metrics.thousandeyes.source.agent.name as sourceAgent,
+         Test_Metrics.thousandeyes.target.agent.name as targetAgent
+| where isnotnull(sourceAgent) AND isnotnull(targetAgent)
+| eval latencyMs=round(_latencyS*1000,1),
+       lossPct=round(lossPct,2),
+       jitterMs=round(jitterMs,1)
+| table sourceAgent targetAgent latencyMs lossPct jitterMs lastSeen
+```
+
+Expected: one row per real source/target agent pair on the
+TLH-BLA test, with single-digit-to-low-double-digit
+`latencyMs`, near-zero `lossPct`, low `jitterMs`. If the
+table is empty, the data model isn't populating those
+metrics for that test (or `summariesonly` macro setup
+needs revisiting). If `latencyMs` is in the thousands, the
+unit assumption was wrong and we should drop the `*1000`.
+
+### What we did NOT change
+
+- **`CustomerTopologyMap.tsx` consumer is unchanged.** The
+  new `jitterMs`, `sourceAgents`, `targetAgents` fields
+  are exposed in the SPL output but not yet rendered in
+  the map popup. That's a deliberate small-step decision
+  — let the SPL settle first, then update the consumer
+  in a follow-up so we don't conflate two layers of
+  changes.
+- **No version-bump on `CustomerTopologyMap.tsx`** for the
+  same reason.
+
+### What's next
+
+1. **Validate on the customer stack**: run the standalone
+   TE query above against `TLH - BLA Connection`, confirm
+   row count and units. Then load the Overview page and
+   confirm the AUB↔TLH link picks up TE data instead of
+   DNAC fallback.
+2. **Update map popup** (`CustomerTopologyMap.tsx`) to
+   render `jitterMs` and the source/target agent names
+   when present. Small, focused PR.
+3. **Once Cisco fixes `demb-te01-va`** and the real
+   TLH↔AUB A2A test starts producing data, swap the
+   test-name string in this stanza from
+   `"TLH - BLA Connection"` to whatever the actual
+   TLH↔AUB test is named. No other changes required.
+4. **Carryover from morning**: `it_health_v1.xml` panel
+   wiring; `/opt/10` drill-down regression diagnosis;
+   `app.conf` / `macros.conf` / `props.conf` cleanup
+   before next packaging.
+
+---
+
 ## 2026-05-12 — David call: FDEM is TLH + AUB only; MCO removed from the topology
 
 ### Context
