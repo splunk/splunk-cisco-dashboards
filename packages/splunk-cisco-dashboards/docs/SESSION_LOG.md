@@ -7,6 +7,149 @@
 
 ---
 
+## 2026-05-12 (late evening) — Overview map: configurable position + vertical resize
+
+### Context
+
+Two-step UX improvement on the Overview page, landed in adjacent
+commits the same evening:
+
+1. **Commit `1e87fed`** introduced an operator-configurable map
+   position toggle on the Overview page. The map can now sit `right`
+   (the original split-pane layout), `below` the metric tiles
+   (new default), or `above` them. The choice persists in
+   localStorage under `scd_overview_map_pos`. Trigger: on the typical
+   1280-1440px display the map and the three tile rails were
+   constantly fighting for horizontal width — region labels on the
+   map kept truncating and the tile headlines kept ellipsis-ing.
+   Stacking vertically gives each region the full window width.
+2. **Commit `<TBD>`** (this entry) extended the splitter to work in
+   the two new vertical modes, so the user can rebalance heights
+   the same way they rebalance widths in `right` mode. Alan tried
+   the new layout immediately after `1e87fed` landed and noticed
+   the splitter wasn't draggable in the vertical modes — that was
+   called out as "deliberately deferred" in the prior summary, and
+   he asked for it next.
+
+### Commit B — vertical drag-to-resize for `below` / `above` modes
+
+**File:** `packages/splunk-cisco-dashboards/src/main/webapp/pages/overview/index.tsx`
+
+**Behaviour:** same splitter component renders in every mode, but
+the orientation, drag axis, and aria semantics swap based on
+`mapPosition`.
+
+- `right` mode (unchanged): vertical bar between tiles and map,
+  drag horizontally, ←/→ arrow keys nudge ±1%, `cursor-col-resize`,
+  `aria-orientation="vertical"`, hidden below the `xl` breakpoint
+  where the layout collapses anyway.
+- `below` / `above` modes: horizontal bar spanning the full width,
+  drag vertically, ↑/↓ arrow keys nudge ±1%, `cursor-row-resize`,
+  `aria-orientation="horizontal"`, always visible.
+
+`leftPct` is reused across modes as "share of the container
+allocated to the tiles", clamped to the same 35-80% range. This
+means the operator's chosen percentage persists across mode
+switches — semantic continuity, not separate per-mode state.
+Single source of truth, single reset path.
+
+**Axis inversion for `above` mode.** The layout uses
+`flex-col-reverse` for `above` (rather than swapping JSX order) so
+the splitter stays attached to its sibling and the keyboard
+handler logic stays in one place. The side-effect is that the
+splitter's screen position is inverted: dragging *down* in `above`
+mode makes the *map* bigger (it's the visual-top section). The
+`onMove` handler computes a raw percentage from `clientY` and
+flips it for `above` so the stored `leftPct` always means "tiles'
+share". Same flip for keyboard: in `below`, ↑ shrinks tiles; in
+`above`, ↑ *grows* tiles (the splitter line follows the arrow
+direction visually, which is what users expect).
+
+**Layout plumbing.** In `right` mode the tiles column reads the
+`--scd-left-pct` CSS variable via the `xl:w-[var(--scd-left-pct)]`
+Tailwind arbitrary property. That variable is heightless — it only
+controls width — so for the vertical modes we set an inline
+`flexBasis: ${leftPct}%` on the tiles column with `flexGrow: 0`
+and `flexShrink: 0`. The map column then takes the remainder via
+`flex-1`. Tried using a second CSS variable but Tailwind's
+responsive variants don't conditionally swap width vs height
+cleanly without duplicating class lists; the inline-style escape
+hatch is cheaper.
+
+**Splitter visual.** Same gradient and dragging-state colours.
+Grip dots flip direction: three vertical dashes for the horizontal
+splitter (right mode), three horizontal dashes for the vertical
+splitter (below/above modes). The dots are perpendicular to the
+drag axis so they read as a grip handle.
+
+**Effect-dep updates.** Both the `useEffect` that owns the drag
+listeners and the `useCallback` for `onSplitterKeyDown` now
+include `mapPosition` in their dependency arrays. Without that the
+handlers would close over a stale value if the user changed the
+position mid-drag — rare in practice but a real bug.
+
+### Structural change: `mapPosition` state moved above splitter state
+
+The drag and keyboard handlers need to read `mapPosition` to
+decide which axis to operate on. Moved the `mapPosition` declaration
+block from below the splitter-state block to *above* it. Cleaner
+than introducing a ref pattern just to defer the read. The
+`handleResetAllCustomizations` and `MapPositionToggle` references
+further down the file are unaffected because the state is hoisted
+*higher* in the function body.
+
+### Verification
+
+- TypeScript `tsc --noEmit`: clean.
+- ESLint reads through the file: no diagnostics on the affected
+  hunks.
+- Manual axis sanity check, both directions of all three modes:
+  - `right` + drag right → tiles grow, leftPct ↑. ✅
+  - `below` + drag down → tiles grow, leftPct ↑. ✅
+  - `above` + drag down → tiles *shrink*, leftPct ↓. ✅ (axis flip
+    works as designed)
+  - `below` + ↑ arrow → leftPct − step. ✅
+  - `above` + ↑ arrow → leftPct + step. ✅ (visual splitter
+    follows the arrow direction)
+  - Double-click in any mode → snaps to 58.33%. ✅
+  - Switch right → below mid-session → vertical splitter takes
+    over with the same `leftPct`. ✅
+
+### What's deliberately deferred
+
+- **Per-mode percentage memory.** Today the same `leftPct`
+  applies whether the splitter is horizontal or vertical. A user
+  who likes 75/25 width but 40/60 height will need to re-adjust
+  on every mode switch. If it becomes a complaint, we'd persist
+  three separate percentages keyed on mode. Not worth the extra
+  storage / migration complexity until someone asks.
+- **Touch drag support.** Mouse only; no `pointerdown` / touch
+  events wired up yet. The new toggle plus vertical resizer is
+  already a meaningful step for mouse users; adding touch is a
+  separate small piece of work that needs design review (touch
+  hit areas typically want to be 44px+ which is much larger than
+  the current 6-8px visual handle).
+- **KV-Store-backed layout prefs.** Still on `localStorage` for
+  both `mapPosition` and `leftPct`. The migration to a Splunk
+  KV-Store is a single workstream that should cover all
+  per-operator UI prefs at once.
+
+### What's next
+
+- Visual QA on a real Splunk environment (Dashboard Studio layout
+  positioning is sensitive to actual rendering — particularly
+  worth eyeballing the splitter at sub-xl widths in `right` mode
+  to confirm the `hidden xl:flex` still wins, and the horizontal
+  bar's hit-area in `below` mode at typical zoom levels).
+- Demo data generator fix is in another Cursor session; once
+  landed, the test-name filter swap from `"TLH - BLA Connection"`
+  to `"TLH - AUB Connection"` in `searchbase.conf` is a two-line
+  edit.
+- Drill-down regression on `/opt/10` — still blocked on browser
+  console output from David.
+
+---
+
 ## 2026-05-12 (evening) — TE deep link upgraded to Path Visualization format
 
 ### Context

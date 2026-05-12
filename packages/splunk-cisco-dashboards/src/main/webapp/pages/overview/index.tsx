@@ -1165,19 +1165,74 @@ const OverviewPage: React.FC = () => {
         []
     );
 
+    // ------------------------------ Map position (right / below / above) ------------------------------
+    // Where the topology map sits relative to the metric tiles. Default
+    // is `below` (tiles on top, map below) because the original
+    // right-side-only layout meant the map and the three tile sections
+    // always fought for horizontal width on standard 1280-1440px
+    // displays. Stacking vertically lets each region use the full
+    // width, which is friendlier for both the map (region labels stay
+    // legible) and the tile rails (no truncated headlines).
+    //
+    // `right` preserves the original split-pane behaviour with the
+    // draggable horizontal splitter; `above` swaps the order (map on
+    // top, tiles below) for operators who treat the map as the primary
+    // view; `below` puts tiles on top.
+    //
+    // Declared *above* the layout-split block because the drag and
+    // keyboard handlers below need to read this value to decide which
+    // axis to operate on.
+    //
+    // Persisted in localStorage so the operator's preference survives
+    // reloads, cleared by the factory reset alongside the splitter
+    // position.
+    const MAP_POS_KEY = 'scd_overview_map_pos';
+    const MAP_POS_DEFAULT: MapPosition = 'below';
+    const [mapPosition, setMapPosition] = useState<MapPosition>(() => {
+        if (typeof window === 'undefined') return MAP_POS_DEFAULT;
+        try {
+            const saved = window.localStorage.getItem(MAP_POS_KEY);
+            return saved === 'right' || saved === 'below' || saved === 'above'
+                ? saved
+                : MAP_POS_DEFAULT;
+        } catch {
+            return MAP_POS_DEFAULT;
+        }
+    });
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        try {
+            window.localStorage.setItem(MAP_POS_KEY, mapPosition);
+        } catch {
+            // localStorage may be disabled (private mode / quota);
+            // the choice still works for the session, we just can't
+            // persist it. Mirrors the split-percentage handling.
+        }
+    }, [mapPosition]);
+    // Convenience flag for the drag / keyboard handlers and the
+    // splitter styling: `right` mode drags on the X axis, `below` /
+    // `above` modes drag on the Y axis.
+    const isVerticalSplit = mapPosition !== 'right';
+
     // ------------------------------ Layout split (tiles ↔ map) ------------------------------
-    // Percentage of the dashboard width allocated to the left-hand
-    // metric tile column. The remainder goes to the map column. The
-    // splitter is the thin vertical handle between the two — drag it
-    // left to widen the map, right to widen the tiles. Default 58.33%
-    // matches the previous fixed 7-of-12 grid so the page boots
-    // identically until the user reaches for the handle. Persisted to
-    // localStorage so the operator's preference survives reloads.
+    // Percentage of the container allocated to the tile column,
+    // regardless of layout mode. In `right` mode the splitter is the
+    // thin vertical handle between the two side-by-side columns — drag
+    // it left to widen the map, right to widen the tiles. In `below` /
+    // `above` modes the same percentage controls vertical share: drag
+    // the horizontal handle up/down to rebalance heights. (In `above`
+    // mode the axis is inverted because tiles sit at the visual bottom
+    // — see `onMove` below.) Default 58.33% matches the previous fixed
+    // 7-of-12 grid so the page boots identically until the user
+    // reaches for the handle. Persisted to localStorage so the
+    // operator's preference survives reloads.
     //
     // Clamped 35–80% to keep both columns usable: below 35% and the
     // tiles can't even fit one row of headlines without truncating;
     // above 80% and the map collapses to a slim band that's hard to
-    // read region labels on.
+    // read region labels on. The same range applies vertically — at
+    // 35% map (= 65% tiles) the map height drops to ~280px on a
+    // standard 1080p display, which is the bottom of "still useful".
     const SPLIT_KEY = 'scd_overview_split_pct';
     const SPLIT_DEFAULT = 58.33;
     const SPLIT_MIN = 35;
@@ -1221,19 +1276,34 @@ const OverviewPage: React.FC = () => {
             const el = splitContainerRef.current;
             if (!el) return;
             const rect = el.getBoundingClientRect();
-            if (rect.width <= 0) return;
-            const pct = ((ev.clientX - rect.left) / rect.width) * 100;
+            let pct: number;
+            if (mapPosition === 'right') {
+                if (rect.width <= 0) return;
+                pct = ((ev.clientX - rect.left) / rect.width) * 100;
+            } else {
+                if (rect.height <= 0) return;
+                // Raw pct is the splitter's vertical position as a
+                // fraction of container height (0 = top edge, 100 =
+                // bottom edge). In `below` mode the tiles occupy the
+                // top portion, so that *is* the tiles' share. In
+                // `above` mode the layout is flex-col-reverse — tiles
+                // sit at the visual bottom — so the share is inverted.
+                const rawPct = ((ev.clientY - rect.top) / rect.height) * 100;
+                pct = mapPosition === 'above' ? 100 - rawPct : rawPct;
+            }
             const clamped = Math.max(SPLIT_MIN, Math.min(SPLIT_MAX, pct));
             setLeftPct(clamped);
         };
         const onUp = () => setDragging(false);
         // Lock the cursor and suppress text-selection while dragging.
-        // Without this the cursor flickers between col-resize and the
+        // Without this the cursor flickers between resize and the
         // default arrow as the pointer crosses tile boundaries, and
-        // sustained drags accidentally select metric labels.
+        // sustained drags accidentally select metric labels. The axis
+        // matches the splitter orientation so the locked cursor lines
+        // up with what the user is actually doing.
         const prevCursor = document.body.style.cursor;
         const prevUserSelect = document.body.style.userSelect;
-        document.body.style.cursor = 'col-resize';
+        document.body.style.cursor = isVerticalSplit ? 'row-resize' : 'col-resize';
         document.body.style.userSelect = 'none';
         window.addEventListener('mousemove', onMove);
         window.addEventListener('mouseup', onUp);
@@ -1243,20 +1313,45 @@ const OverviewPage: React.FC = () => {
             document.body.style.cursor = prevCursor;
             document.body.style.userSelect = prevUserSelect;
         };
-    }, [dragging]);
+    }, [dragging, mapPosition, isVerticalSplit]);
     // Keyboard nudge: arrow keys ±1, Shift+arrow ±5. Double-click
     // restores the default split. Both make the handle keyboard- and
     // touch-friendly without hijacking page-level shortcuts.
+    //
+    // The arrow key axis follows the splitter orientation so the
+    // visual mental model holds: pressing the arrow in a direction
+    // always moves the splitter line in that direction.
+    //   - `right` mode: ←/→ adjust tiles' width share directly.
+    //   - `below` mode: ↑ shrinks tiles (top section), ↓ grows them.
+    //   - `above` mode: tiles sit at the bottom, so ↑ *grows* them
+    //     (the splitter rises into map territory) and ↓ shrinks them.
+    // Home / End always snap to the min / max share for the tiles
+    // regardless of orientation — they're "first / last" semantics,
+    // not directional.
     const onSplitterKeyDown = useCallback(
         (e: React.KeyboardEvent) => {
             const step = e.shiftKey ? 5 : 1;
-            if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                setLeftPct((p) => Math.max(SPLIT_MIN, p - step));
-            } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                setLeftPct((p) => Math.min(SPLIT_MAX, p + step));
-            } else if (e.key === 'Home') {
+            const clamp = (p: number) => Math.max(SPLIT_MIN, Math.min(SPLIT_MAX, p));
+            if (mapPosition === 'right') {
+                if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    setLeftPct((p) => clamp(p - step));
+                } else if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    setLeftPct((p) => clamp(p + step));
+                }
+            } else {
+                // `above` inverts the axis (see onMove comment).
+                const sign = mapPosition === 'above' ? -1 : 1;
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    setLeftPct((p) => clamp(p - sign * step));
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    setLeftPct((p) => clamp(p + sign * step));
+                }
+            }
+            if (e.key === 'Home') {
                 e.preventDefault();
                 setLeftPct(SPLIT_MIN);
             } else if (e.key === 'End') {
@@ -1264,49 +1359,9 @@ const OverviewPage: React.FC = () => {
                 setLeftPct(SPLIT_MAX);
             }
         },
-        [SPLIT_MIN, SPLIT_MAX]
+        [SPLIT_MIN, SPLIT_MAX, mapPosition]
     );
     const resetSplit = useCallback(() => setLeftPct(SPLIT_DEFAULT), []);
-
-    // ------------------------------ Map position (right / below / above) ------------------------------
-    // Where the topology map sits relative to the metric tiles. Default
-    // is `below` (tiles on top, map below) because the original
-    // right-side-only layout meant the map and the three tile sections
-    // always fought for horizontal width on standard 1280-1440px
-    // displays. Stacking vertically lets each region use the full
-    // width, which is friendlier for both the map (region labels stay
-    // legible) and the tile rails (no truncated headlines).
-    //
-    // `right` preserves the original split-pane behaviour with the
-    // draggable splitter; `above` swaps the order (map on top, tiles
-    // below) for operators who treat the map as the primary view.
-    //
-    // Persisted in localStorage so the operator's preference survives
-    // reloads, cleared by the factory reset alongside the splitter
-    // position.
-    const MAP_POS_KEY = 'scd_overview_map_pos';
-    const MAP_POS_DEFAULT: MapPosition = 'below';
-    const [mapPosition, setMapPosition] = useState<MapPosition>(() => {
-        if (typeof window === 'undefined') return MAP_POS_DEFAULT;
-        try {
-            const saved = window.localStorage.getItem(MAP_POS_KEY);
-            return saved === 'right' || saved === 'below' || saved === 'above'
-                ? saved
-                : MAP_POS_DEFAULT;
-        } catch {
-            return MAP_POS_DEFAULT;
-        }
-    });
-    useEffect(() => {
-        if (typeof window === 'undefined') return;
-        try {
-            window.localStorage.setItem(MAP_POS_KEY, mapPosition);
-        } catch {
-            // localStorage may be disabled (private mode / quota);
-            // the choice still works for the session, we just can't
-            // persist it. Mirrors the split-percentage handling.
-        }
-    }, [mapPosition]);
 
     // ------------------------------ Export ------------------------------
     const exportRef = useRef<HTMLDivElement>(null);
@@ -2051,18 +2106,34 @@ const OverviewPage: React.FC = () => {
                     }
                 >
                     {/* Left column — three sections.
-                        In right mode at xl+ widths the column basis is
+                        In right mode at xl+ widths the column width is
                         driven by the --scd-left-pct CSS variable, which
                         the splitter updates on drag. In below/above modes
-                        the column is full-width and shares vertical space
-                        50/50 with the map via flex-1. */}
+                        the column is full-width and its *height* is
+                        driven by `leftPct` via an inline flex-basis (we
+                        can't reuse the CSS var because Tailwind's
+                        responsive variants don't conditionally swap
+                        width vs height cleanly). The map column then
+                        takes the remainder via `flex-1`, which gives
+                        the same drag-to-resize feel vertically as the
+                        existing right-mode splitter delivers
+                        horizontally. */}
                     <div
                         className={cn(
                             'flex flex-col gap-2 min-h-0 min-w-0 w-full',
                             mapPosition === 'right'
                                 ? 'xl:w-[var(--scd-left-pct)] xl:flex-shrink-0'
-                                : 'flex-1'
+                                : ''
                         )}
+                        style={
+                            isVerticalSplit
+                                ? {
+                                      flexBasis: `${leftPct}%`,
+                                      flexGrow: 0,
+                                      flexShrink: 0,
+                                  }
+                                : undefined
+                        }
                     >
                         {(['it_health', 'security', 'building'] as const).map((section) => {
                             const meta = SECTION_META[section];
@@ -2181,64 +2252,93 @@ const OverviewPage: React.FC = () => {
                         })}
                     </div>
 
-                    {/* Splitter handle — only renders in right-mode at
-                        xl+ widths where the side-by-side layout is
-                        active. In below/above modes the layout is a
-                        fixed 50/50 vertical split with no resizer
-                        (drag-to-resize support for the vertical mode
-                        is a follow-up). 4px hit-area (visually 2px)
-                        widens to 6px on hover/drag so it's easy to
-                        grab. Drag horizontally to rebalance tiles ↔
-                        map; arrow keys nudge ±1% (Shift = ±5%);
-                        Home/End jump to the limits; double-click
-                        restores the default split. Persisted across
-                        reloads in localStorage. */}
-                    {mapPosition === 'right' && (
-                        <button
-                            type="button"
-                            role="separator"
-                            aria-orientation="vertical"
-                            aria-label="Resize tiles vs map"
-                            aria-valuenow={Math.round(leftPct)}
-                            aria-valuemin={SPLIT_MIN}
-                            aria-valuemax={SPLIT_MAX}
-                            title="Drag to resize · arrows ±1% · double-click to reset"
-                            onMouseDown={beginDrag}
-                            onKeyDown={onSplitterKeyDown}
-                            onDoubleClick={resetSplit}
+                    {/* Splitter handle — renders in every layout mode.
+                        Right mode: thin vertical bar visible at xl+,
+                        hidden on smaller widths where the layout
+                        collapses to a single stacked column anyway.
+                        Below/above modes: thin horizontal bar always
+                        visible, spanning the full width. 6-8px hit-
+                        area so it's easy to grab without being
+                        visually heavy. Drag along the splitter's
+                        short axis to rebalance tiles ↔ map; arrow
+                        keys nudge ±1% (Shift = ±5%); Home/End jump to
+                        the limits; double-click restores the default
+                        split. Same `leftPct` persists across modes so
+                        switching back to a previous orientation
+                        preserves the user's intent. */}
+                    <button
+                        type="button"
+                        role="separator"
+                        aria-orientation={isVerticalSplit ? 'horizontal' : 'vertical'}
+                        aria-label="Resize tiles vs map"
+                        aria-valuenow={Math.round(leftPct)}
+                        aria-valuemin={SPLIT_MIN}
+                        aria-valuemax={SPLIT_MAX}
+                        title="Drag to resize · arrows ±1% · double-click to reset"
+                        onMouseDown={beginDrag}
+                        onKeyDown={onSplitterKeyDown}
+                        onDoubleClick={resetSplit}
+                        className={cn(
+                            'flex flex-shrink-0 items-center justify-center group relative',
+                            'rounded-full transition-colors',
+                            'focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
+                            // Right mode hides the splitter on sub-xl
+                            // widths because the layout collapses to a
+                            // single column there. Vertical modes
+                            // never collapse, so the splitter is
+                            // always visible in those.
+                            mapPosition === 'right' && 'hidden xl:flex',
+                            isVerticalSplit
+                                ? 'h-1.5 my-0.5 w-full cursor-row-resize'
+                                : 'w-1.5 mx-0.5 cursor-col-resize',
+                            dragging
+                                ? 'bg-sky-500'
+                                : 'bg-slate-200 dark:bg-slate-700 hover:bg-sky-400 dark:hover:bg-sky-500'
+                        )}
+                    >
+                        {/* Visible grip dots — three subtle dashes,
+                            oriented perpendicular to the drag axis so
+                            they read as a grip handle. Helps signal
+                            the handle is interactive at a glance. */}
+                        <span
+                            aria-hidden="true"
                             className={cn(
-                                'hidden xl:flex flex-shrink-0 items-center justify-center group relative',
-                                'w-1.5 mx-0.5 rounded-full transition-colors cursor-col-resize',
-                                'focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
-                                dragging
-                                    ? 'bg-sky-500'
-                                    : 'bg-slate-200 dark:bg-slate-700 hover:bg-sky-400 dark:hover:bg-sky-500'
+                                'flex gap-0.5 opacity-50 transition-opacity',
+                                isVerticalSplit ? 'flex-row' : 'flex-col',
+                                dragging ? 'opacity-100' : 'group-hover:opacity-90'
                             )}
                         >
-                            {/* Visible grip dots — three subtle dashes,
-                                centred vertically. Helps signal the
-                                handle is interactive at a glance. */}
                             <span
-                                aria-hidden="true"
                                 className={cn(
-                                    'flex flex-col gap-0.5 opacity-50 transition-opacity',
-                                    dragging ? 'opacity-100' : 'group-hover:opacity-90'
+                                    'block rounded-full bg-white',
+                                    isVerticalSplit ? 'h-0.5 w-1' : 'w-0.5 h-1'
                                 )}
-                            >
-                                <span className="block w-0.5 h-1 rounded-full bg-white" />
-                                <span className="block w-0.5 h-1 rounded-full bg-white" />
-                                <span className="block w-0.5 h-1 rounded-full bg-white" />
-                            </span>
-                        </button>
-                    )}
+                            />
+                            <span
+                                className={cn(
+                                    'block rounded-full bg-white',
+                                    isVerticalSplit ? 'h-0.5 w-1' : 'w-0.5 h-1'
+                                )}
+                            />
+                            <span
+                                className={cn(
+                                    'block rounded-full bg-white',
+                                    isVerticalSplit ? 'h-0.5 w-1' : 'w-0.5 h-1'
+                                )}
+                            />
+                        </span>
+                    </button>
 
                     {/* Map column.
                         right mode: width is the complement of leftPct
                         on xl+, full width below xl. below/above modes:
-                        full width, flex-1 to share vertical space with
-                        the tiles column. Both columns set min-w-0 so a
-                        long word in a metric label or a wide map tile
-                        can't blow the column wider than its share. */}
+                        full width, height is the complement of leftPct
+                        because the tiles column carries an explicit
+                        flex-basis of leftPct% and the map fills the
+                        remainder via flex-1. Both columns set min-w-0
+                        so a long word in a metric label or a wide map
+                        tile can't blow the column wider than its
+                        share. */}
                     <div
                         className={cn(
                             'flex flex-col min-h-0 min-w-0 w-full',
