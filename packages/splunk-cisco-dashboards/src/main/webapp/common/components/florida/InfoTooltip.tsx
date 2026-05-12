@@ -4,21 +4,30 @@
  * Renders an `Info` icon that, on hover or keyboard focus, exposes a
  * popover with the supplied description.
  *
- * Why this is portaled to `document.body`:
+ * Why this is portaled to `#scan-root` (NOT `document.body`):
  *
  * The popover is positioned `fixed` and rendered via `createPortal`
- * straight into `document.body` instead of being a child of the icon
- * span. This is intentional armor against the (in practice frequent)
- * pattern where a section card / tile row / scroll container in the
- * dashboard layout has `overflow-hidden` for legitimate reasons (chart
- * bleed containment, rounded-corner shape, scroll regions). When the
- * popover lived inside the icon span, any such ancestor `overflow-
- * hidden` would visually clip the bottom of the popover regardless of
- * `z-index`, because z-index can't escape an overflow clip path - this
- * is exactly the truncation bug the FDEM 2026-05-11 review surfaced
- * on the IT Health "Critical sites available" tile. Portaling means
- * the popover's only ancestor is `<body>`, so no layout container in
- * the dashboard tree can clip it now or in the future.
+ * out of the icon span and into the React app's mount node
+ * (`#scan-root`). The first revision of this rewrite portaled into
+ * `document.body` directly, which was technically the cleanest answer
+ * for ancestor-clipping but completely broke the popover's styling on
+ * the production stack: the project's `tailwind.config.js` scopes
+ * every utility class under `#scan-root` (`important: '#scan-root'`)
+ * to keep Tailwind's reset / utilities from leaking into Splunk Web's
+ * own chrome around the panel. So on `<body>` directly, none of
+ * `bg-slate-900`, `p-4`, `rounded-lg`, `shadow-xl`, etc. were applied
+ * - the popover rendered as raw unstyled text floating over the tile
+ * content (caught immediately by Alan in the FDEM 2026-05-11 review).
+ *
+ * `#scan-root` is the right portal target because:
+ *  - It's INSIDE the Tailwind scope, so utility classes apply
+ *    normally (no need to switch to inline styles).
+ *  - It's OUTSIDE every dashboard-layout container that has
+ *    `overflow-hidden` (section cards, tile rows, scroll regions),
+ *    so the popover is not clipped by any of them.
+ *  - It's the same root we already mount React into
+ *    (`render.jsx` -> `getElementById('scan-root')`), so we know
+ *    the element always exists when our component renders.
  *
  * Positioning is computed in `useLayoutEffect` from the trigger's
  * `getBoundingClientRect()` and clamped to the viewport so the popover
@@ -150,8 +159,21 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
         };
     }, [isOpen, anchor]);
 
+    // Portal target: `#scan-root` (the React mount node) rather than
+    // `document.body`. Tailwind utilities are scoped under #scan-root
+    // via `important: '#scan-root'` in tailwind.config.js, so anything
+    // rendered outside that scope gets no styling at all - which
+    // shipped briefly in the previous revision and made the popover
+    // render as raw text. SSR-safe fallback to `body` in the
+    // theoretical case the element is missing; in practice render.jsx
+    // ensures it exists before mounting React.
+    const portalTarget =
+        typeof document === 'undefined'
+            ? null
+            : document.getElementById('scan-root') ?? document.body;
+
     const popover =
-        isOpen && typeof document !== 'undefined'
+        isOpen && portalTarget
             ? createPortal(
                   <span
                       ref={popoverRef}
@@ -196,7 +218,7 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
                           </span>
                       )}
                   </span>,
-                  document.body
+                  portalTarget
               )
             : null;
 

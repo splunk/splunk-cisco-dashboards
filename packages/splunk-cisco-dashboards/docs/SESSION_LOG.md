@@ -307,7 +307,7 @@ Final approach (`f2256a2`):
   row height with chart-bearing siblings (otherwise the divider
   rules between tiles wouldn't line up).
 
-#### InfoTooltip popover portal (`f2256a2`)
+#### InfoTooltip popover portal (`f2256a2` + same-session fix-forward `<next-commit>`)
 
 Alan flagged "i think the info modal is getting truncated" on the
 new Critical Sites tile — the description body cut off mid-sentence
@@ -321,13 +321,48 @@ InfoTooltip popover. Once an ancestor has `overflow:hidden`,
 clip path. The same trap applies to the section card's own
 `overflow-hidden` (used for rounded-corner shape).
 
-Fix: `InfoTooltip` rewritten to portal the popover to
-`document.body` via `createPortal`, with `position: fixed` and
+**First attempt (`f2256a2`) — partially regressed and had to be
+fixed forward in the same session:** `InfoTooltip` was rewritten to
+portal the popover via `createPortal` with `position: fixed` and
 coords computed from the trigger's `getBoundingClientRect()` in a
-`useLayoutEffect`. The popover's only ancestor is now `<body>`, so
-no layout container in the dashboard tree (today's tile row,
-tomorrow's `transform`/`filter`/`contain` ancestor, anything) can
-clip it.
+`useLayoutEffect`. The portal target was `document.body`, on the
+theory that "the popover's only ancestor is `<body>`, so no layout
+container in the dashboard tree can clip it now or in the future."
+
+That fixed the truncation but immediately broke the styling: the
+popover rendered as raw unstyled text floating over the tile
+content (Alan: "you made the info modal worse!!!"). Root cause was
+a project-specific gotcha I missed:
+`packages/splunk-cisco-dashboards/tailwind.config.js` declares
+`important: '#scan-root'`, which scopes EVERY generated utility
+class under `#scan-root .<class>` so Tailwind utilities don't bleed
+into Splunk Web's own chrome around the dashboard panel. By
+portaling to `document.body`, the popover was rendered OUTSIDE
+`#scan-root`, so none of the `bg-slate-900 / p-4 / rounded-lg /
+shadow-xl / ring-1` classes were applied. The popover was working
+structurally; it just had zero styling because Tailwind's scoped
+classes didn't reach it.
+
+**Fix-forward (same-session follow-up commit):** changed the
+portal target from `document.body` to
+`document.getElementById('scan-root') ?? document.body`. Trade-off
+analysis:
+
+| Target | Tailwind classes apply? | Escapes tile-row clip? | Escapes section-card clip? |
+|---|---|---|---|
+| `document.body` (broken first revision) | NO | yes | yes |
+| `#scan-root` (current) | yes | yes | yes |
+| In-tree `position: fixed` (no portal) | yes | yes | yes today, fragile against any future ancestor with `transform`/`filter`/`contain` |
+
+`#scan-root` is the right answer because (a) it IS the React
+mount node, so we know it exists when the component renders
+(`render.jsx` already retries on it), (b) it's INSIDE the Tailwind
+scope, so utility classes apply normally, (c) it's OUTSIDE every
+dashboard-layout container with `overflow-hidden` (section cards,
+tile rows, future scroll regions), so the popover is not clipped
+by any of them. The fallback to `document.body` is theoretical
+defense for SSR-style environments and shouldn't trigger in
+practice on Splunk Web.
 
 Bonus features now possible because the popover is portaled:
 
@@ -344,6 +379,16 @@ Trade-off: visibility is now state-driven (`isOpen` boolean) instead
 of CSS-only `:hover`/`:focus-within`. Adds one tiny render per
 hover; closed tiles add zero overhead. Hover/focus accessibility
 behavior is unchanged.
+
+**Lesson recorded for future sessions:** any code path that renders
+out of the React tree (portals, manual `appendChild`, anything
+moving DOM nodes via `document.body`) must remember
+`important: '#scan-root'` from `tailwind.config.js` and either (a)
+portal into `#scan-root` to keep utility classes working, or (b)
+switch to inline styles (`style={...}`) for the externalized
+element. Default reflex of "portal into body" — which is correct
+for most React projects — is wrong for this one until either the
+Tailwind scope or the portal pattern changes.
 
 ### What we decided NOT to do (and why)
 
