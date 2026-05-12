@@ -1857,6 +1857,195 @@
 				"markdown": "### Internet path metrics (ThousandEyes)\n\nThousandEyes per-test latency, loss, jitter, and HTTP availability panels are **temporarily parked** because the `Cisco_ThousandEyes.Test_Metrics` data model is not installed on this stack. Once the *Cisco ThousandEyes App for Splunk* is installed and the data model is accelerated, these panels will return:\n\n- Internet path composite score (gauge)\n- Per-agent latency / loss / jitter table\n- Per-test result table with status\n- Test-health distribution (donut)\n\nReinstating them requires no SPL changes &mdash; the underlying searches already live in `searchbase.conf` and are filterable in the KPI Picker via the `Requires_Cisco_ThousandEyes_DM` tag."
 			},
 			"type": "splunk.markdown"
+		},
+		"viz_te_section": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.45)",
+				"fillOpacity": 1,
+				"rx": 12,
+				"strokeColor": "rgba(0,0,0,0.06)",
+				"strokeOpacity": 0.3,
+				"strokeWidth": 1
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_te_narrative": {
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#6E6E6E",
+				"fontSize": "small",
+				"markdown": "**ThousandEyes** &mdash; Internet path quality (latency / loss / jitter), active alerts by severity, and per-trace endpoint health for HTTP-server tests. Use this tab when the Overview map shows a degraded inter-site link or when an external SaaS dependency may be impacting users. Requires the *Cisco ThousandEyes App for Splunk* with both `Cisco_ThousandEyes.Test_Metrics` and `Cisco_ThousandEyes.Alerts` data models accelerated."
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_te_box_path": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.78)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.06)"
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_te_box_alerts": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.78)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.06)"
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_te_box_traces": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.78)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.06)"
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_te_path_title": {
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#005073",
+				"fontSize": "default",
+				"markdown": "### Path Quality\n\nPer-destination latency / loss / jitter from agent-to-server and agent-to-agent tests &mdash; sorted worst-first."
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_te_alerts_title": {
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#005073",
+				"fontSize": "default",
+				"markdown": "### Alerts\n\nActive ThousandEyes alerts by severity, hourly trend, and the most-recent 20 with permalinks back to the TE console."
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_te_traces_title": {
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#005073",
+				"fontSize": "default",
+				"markdown": "### Endpoint Traces\n\nPer-trace span counts, HTTP error counts, and durations from `cisco:thousandeyes:trace` events. Sort by error count to surface root-cause traces."
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_te_latency_chart": {
+			"dataSources": {
+				"primary": "ds_te_network_latency"
+			},
+			"description": "Per-destination network latency (ms) from agent-to-server and agent-to-agent tests",
+			"options": {
+				"backgroundColor": "transparent",
+				"legendDisplay": "bottom",
+				"lineWidth": 2,
+				"nullValueDisplay": "gaps",
+				"yAxisTitleText": "Latency (ms)"
+			},
+			"title": "Network Latency Trend",
+			"type": "splunk.line"
+		},
+		"viz_te_loss_chart": {
+			"dataSources": {
+				"primary": "ds_te_network_loss"
+			},
+			"description": "Per-destination packet loss (%) from agent-to-server and agent-to-agent tests",
+			"options": {
+				"backgroundColor": "transparent",
+				"legendDisplay": "bottom",
+				"lineWidth": 2,
+				"nullValueDisplay": "gaps",
+				"yAxisTitleText": "Loss (%)"
+			},
+			"title": "Network Loss Trend",
+			"type": "splunk.line"
+		},
+		"viz_te_jitter_chart": {
+			"dataSources": {
+				"primary": "ds_te_network_jitter"
+			},
+			"description": "Per-destination jitter (ms) from agent-to-server and agent-to-agent tests",
+			"options": {
+				"backgroundColor": "transparent",
+				"legendDisplay": "bottom",
+				"lineWidth": 2,
+				"nullValueDisplay": "gaps",
+				"yAxisTitleText": "Jitter (ms)"
+			},
+			"title": "Network Jitter Trend",
+			"type": "splunk.line"
+		},
+		"viz_te_alerts_summary": {
+			"dataSources": {
+				"primary": "ds_te_alerts_summary"
+			},
+			"description": "Active alert count grouped by severity",
+			"options": {
+				"backgroundColor": "transparent",
+				"legendDisplay": "off",
+				"seriesColors": [
+					"#D43F3F",
+					"#EDA800",
+					"#0EA5E9"
+				],
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide"
+			},
+			"title": "Alerts by Severity",
+			"type": "splunk.column"
+		},
+		"viz_te_alerts_timeline": {
+			"dataSources": {
+				"primary": "ds_te_alerts_timeline"
+			},
+			"description": "Hourly stacked alert volume by severity",
+			"options": {
+				"backgroundColor": "transparent",
+				"legendDisplay": "bottom",
+				"seriesColors": [
+					"#D43F3F",
+					"#EDA800",
+					"#0EA5E9"
+				],
+				"stackMode": "stacked",
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide"
+			},
+			"title": "Alert Timeline (hourly, stacked by severity)",
+			"type": "splunk.column"
+		},
+		"viz_te_alerts_table": {
+			"dataSources": {
+				"primary": "ds_te_alerts_table"
+			},
+			"description": "Most recent 20 ThousandEyes alerts with deep-link permalinks",
+			"options": {
+				"backgroundColor": "transparent",
+				"count": 20,
+				"fontSize": "small",
+				"headerVisibility": "fixed",
+				"tableFormat": {
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+				}
+			},
+			"title": "Recent Alerts",
+			"type": "splunk.table"
+		},
+		"viz_te_endpoint_traces": {
+			"dataSources": {
+				"primary": "ds_te_endpoint_traces"
+			},
+			"description": "Per-trace span counts, HTTP error counts, and duration from cisco:thousandeyes:trace events",
+			"options": {
+				"backgroundColor": "transparent",
+				"count": 25,
+				"fontSize": "small",
+				"headerVisibility": "fixed",
+				"tableFormat": {
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+				}
+			},
+			"title": "Endpoint Traces",
+			"type": "splunk.table"
 		}
 	},
 	"dataSources": {
@@ -2616,6 +2805,83 @@
 				"query": "| where isnotnull(deviceType) AND deviceType!=\"null\" AND deviceType!=\"\" AND deviceType!=\"Un-Classified Device\" | stats dc(macAddress) as Clients by deviceType | sort -Clients | head 5 | rename deviceType as \"Device Type\""
 			},
 			"type": "ds.chain"
+		},
+		"ds_te_network_latency": {
+			"name": "IT Health - ThousandEyes Network Latency",
+			"options": {
+				"query": "| tstats `summariesonly` avg(Test_Metrics.metric_name:network.latency) as avg_latency\nFROM datamodel=\"Cisco_ThousandEyes.Test_Metrics\"\nWHERE Test_Metrics.metric_name:network.latency=\"*\"\nTest_Metrics.thousandeyes.test.type IN (\"agent-to-server\",\"agent-to-agent\")\nBY _time, Test_Metrics.server.address\n| timechart eval(round(avg(avg_latency), 2)) as avg_latency BY Test_Metrics.server.address\n| sort 0 - avg_latency",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_te_network_loss": {
+			"name": "IT Health - ThousandEyes Network Loss",
+			"options": {
+				"query": "| tstats `summariesonly` avg(Test_Metrics.metric_name:network.loss) as avg_loss\nFROM datamodel=\"Cisco_ThousandEyes.Test_Metrics\"\nWHERE Test_Metrics.metric_name:network.loss=\"*\"\nTest_Metrics.thousandeyes.test.type IN (\"agent-to-server\",\"agent-to-agent\")\nBY _time, Test_Metrics.server.address\n| timechart eval(round(avg(avg_loss), 2)) as avg_loss BY Test_Metrics.server.address\n| sort 0 - avg_loss",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_te_network_jitter": {
+			"name": "IT Health - ThousandEyes Network Jitter",
+			"options": {
+				"query": "| tstats `summariesonly` avg(Test_Metrics.metric_name:network.jitter) as avg_jitter\nFROM datamodel=\"Cisco_ThousandEyes.Test_Metrics\"\nWHERE Test_Metrics.metric_name:network.jitter=\"*\"\nTest_Metrics.thousandeyes.test.type IN (\"agent-to-server\",\"agent-to-agent\")\nBY _time, Test_Metrics.server.address\n| timechart eval(round(avg(avg_jitter), 2)) as avg_jitter BY Test_Metrics.server.address\n| sort 0 - avg_jitter",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_te_alerts_summary": {
+			"name": "IT Health - ThousandEyes Alerts Summary by Severity",
+			"options": {
+				"query": "| tstats `summariesonly` count\nFROM datamodel=\"Cisco_ThousandEyes.Alerts\"\nBY Alerts.severity\n| rename Alerts.severity AS Severity\n| sort - count",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_te_alerts_timeline": {
+			"name": "IT Health - ThousandEyes Alerts Timeline",
+			"options": {
+				"query": "| tstats `summariesonly` count\nFROM datamodel=\"Cisco_ThousandEyes.Alerts\"\nBY Alerts.severity, _time span=1h\n| rename Alerts.severity AS Severity\n| timechart span=1h sum(count) AS count BY Severity",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_te_alerts_table": {
+			"name": "IT Health - ThousandEyes Active Alerts (Recent 20)",
+			"options": {
+				"query": "| tstats `summariesonly` count, values(Alerts.triggerTime) as triggerTime, values(Alerts.accountId) as accountId, values(Alerts.organizationId) as organizationId, values(Alerts.testId) as testId, values(Alerts.testName) as testName, values(Alerts.testType) as testType, values(Alerts.permalink) as permalink, values(Alerts.expression) as expression, values(Alerts.severity) as severity\nFROM datamodel=\"Cisco_ThousandEyes.Alerts\"\nBY _time, Alerts.alertId\n| eval \"Trigger Time\"=coalesce(strftime(triggerTime, \"%Y-%m-%d %H:%M:%S\"), strftime(_time, \"%Y-%m-%d %H:%M:%S\"))\n| rename accountId AS \"Account ID\", organizationId AS \"Org ID\", testId AS \"Test ID\", testName AS \"Test Name\", testType AS \"Test Type\", permalink AS \"Permalink\", expression AS \"Expression\", severity AS \"Severity\", Alerts.alertId AS \"Alert ID\"\n| sort 0 - \"Trigger Time\"\n| fields - _time, triggerTime, count\n| head 20\n| table \"Trigger Time\", \"Account ID\", \"Org ID\", \"Test ID\", \"Test Name\", \"Test Type\", \"Permalink\", \"Expression\", \"Severity\", \"Alert ID\"",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_te_endpoint_traces": {
+			"name": "IT Health - ThousandEyes Endpoint Trace Health",
+			"options": {
+				"query": "index=* sourcetype=\"cisco:thousandeyes:trace\"\n| eval is_parent=if(parent_span_id==\"\", 1, 0)\n| eval parent_key=if(is_parent==1, span_id, parent_span_id)\n| eval http_code_num = if(is_parent==1, 0, attributes.http.response.code)\n| eval agent_name = 'thousandeyes.source.agent.name'\n| eval permalink = 'thousandeyes.permalink'\n| eventstats count as spans_count count(eval('attributes.http.response.code'>399)) as error_count count(eval('attributes.http.response.code'>=500 AND 'attributes.http.response.code'<600)) as error_5xx_count min(start_time) as min_start_time max(end_time) as max_end_time by trace_id, parent_key\n| where is_parent==1\n| eval duration=round((max_end_time - min_start_time)/1000000) . \" ms\"\n| eval started_at_epoch = round(min_start_time / 1000000000)\n| eval timestamp = strftime(started_at_epoch, \"%a, %b %d %Y %I:%M:%S %p %Z\")\n| eval spans_count=spans_count-1\n| where (max_end_time - min_start_time)/1000000 >= 0\n| rename name as endpoint\n| rename thousandeyes.account.id as account_id\n| rename thousandeyes.test.name as test_name\n| dedup trace_id\n| table trace_id endpoint timestamp error_count spans_count duration agent_name account_id test_name permalink _raw",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
 		}
 	},
 	"layout": {
@@ -3745,6 +4011,107 @@
 					}
 				],
 				"type": "absolute"
+			},
+			"layout_thousandeyes": {
+				"options": {
+					"backgroundColor": "#f5f6f8",
+					"display": "auto-scale",
+					"height": 1900,
+					"width": 1440
+				},
+				"structure": [
+					{
+						"item": "viz_p_hdr_bg",
+						"position": { "h": 60, "w": 1400, "x": 20, "y": 10 },
+						"type": "block"
+					},
+					{
+						"item": "viz_p_hdr_title",
+						"position": { "h": 30, "w": 440, "x": 500, "y": 20 },
+						"type": "block"
+					},
+					{
+						"item": "viz_te_narrative",
+						"position": { "h": 50, "w": 1350, "x": 30, "y": 75 },
+						"type": "block"
+					},
+					{
+						"item": "viz_te_section",
+						"position": { "h": 1740, "w": 1420, "x": 10, "y": 130 },
+						"type": "block"
+					},
+					{
+						"item": "viz_te_box_path",
+						"position": { "h": 420, "w": 1400, "x": 20, "y": 145 },
+						"type": "block"
+					},
+					{
+						"item": "viz_te_path_title",
+						"position": { "h": 50, "w": 1370, "x": 35, "y": 155 },
+						"type": "block"
+					},
+					{
+						"item": "viz_te_latency_chart",
+						"position": { "h": 340, "w": 450, "x": 35, "y": 215 },
+						"type": "block"
+					},
+					{
+						"item": "viz_te_loss_chart",
+						"position": { "h": 340, "w": 450, "x": 495, "y": 215 },
+						"type": "block"
+					},
+					{
+						"item": "viz_te_jitter_chart",
+						"position": { "h": 340, "w": 455, "x": 955, "y": 215 },
+						"type": "block"
+					},
+					{
+						"item": "viz_te_box_alerts",
+						"position": { "h": 700, "w": 1400, "x": 20, "y": 580 },
+						"type": "block"
+					},
+					{
+						"item": "viz_te_alerts_title",
+						"position": { "h": 50, "w": 1370, "x": 35, "y": 590 },
+						"type": "block"
+					},
+					{
+						"item": "viz_te_alerts_summary",
+						"position": { "h": 280, "w": 450, "x": 35, "y": 650 },
+						"type": "block"
+					},
+					{
+						"item": "viz_te_alerts_timeline",
+						"position": { "h": 280, "w": 925, "x": 495, "y": 650 },
+						"type": "block"
+					},
+					{
+						"item": "viz_te_alerts_table",
+						"position": { "h": 320, "w": 1370, "x": 35, "y": 945 },
+						"type": "block"
+					},
+					{
+						"item": "viz_te_box_traces",
+						"position": { "h": 530, "w": 1400, "x": 20, "y": 1300 },
+						"type": "block"
+					},
+					{
+						"item": "viz_te_traces_title",
+						"position": { "h": 60, "w": 1370, "x": 35, "y": 1310 },
+						"type": "block"
+					},
+					{
+						"item": "viz_te_endpoint_traces",
+						"position": { "h": 450, "w": 1370, "x": 35, "y": 1375 },
+						"type": "block"
+					},
+					{
+						"item": "input_global_trp",
+						"position": { "h": 70, "w": 198, "x": 30, "y": -8 },
+						"type": "input"
+					}
+				],
+				"type": "absolute"
 			}
 		},
 		"options": {
@@ -3759,6 +4126,10 @@
 				{
 					"label": "User Experience",
 					"layoutId": "layout_user_experience"
+				},
+				{
+					"label": "ThousandEyes",
+					"layoutId": "layout_thousandeyes"
 				},
 				{
 					"label": "Details & KPI Reference",

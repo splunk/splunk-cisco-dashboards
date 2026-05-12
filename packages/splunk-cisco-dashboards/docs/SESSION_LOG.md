@@ -7,6 +7,192 @@
 
 ---
 
+## 2026-05-12 (late afternoon) — TE deep link in map popup, IT Health ThousandEyes tab wired
+
+### Context
+
+Two work items off the carry-over list from the morning, both in service
+of "make the operator's pivot from a degraded link to the underlying
+ThousandEyes evidence one click long":
+
+1. **Surface the new TE-derived fields in the map popup.** The
+   `[overview_link_auburndale_tallahassee_health]` stanza had been
+   rewritten that morning to add `jitterMs`, `sourceAgents`, and
+   `targetAgents`, but the topology map's `LinkDetails` popup wasn't
+   reading them yet. Customers would see the right line color, but
+   couldn't see the actual jitter number or which agents were being
+   probed.
+2. **Wire the seven ThousandEyes IT-Health stanzas into a real
+   dashboard tab.** They've been sitting in `searchbase.conf`
+   (`[it_health_thousandeyes_*]`) since 2026-05-11 with no consumer.
+
+### Commit A — Map popup: jitter + agent pair + TE deep link
+
+**Commit:** `682202c` — "Map link popup: surface jitter, agent pair, and
+ThousandEyes deep link"
+
+**Files:**
+- `searchbase.conf` (link stanza v1.3.0 → v1.4.0)
+- `CustomerTopologyMap.tsx` (`parseLinkRow` + `LinkDetails` component)
+- `types.ts` (`TopologyLink` interface)
+
+**Searchbase change.** The TE branch's `BY` clause grew two more fields:
+`Test_Metrics.thousandeyes.account.id` and `Test_Metrics.thousandeyes.test.id`.
+Renamed to `teAccountId` / `teTestId`, then composed into a `teLink`
+field via:
+
+```spl
+| eval teLink=if(isnotnull(teAccountId) AND isnotnull(teTestId),
+    "https://app.thousandeyes.com/network-app-synthetics/views?__a=" .
+    teAccountId . "&testId=" . teTestId, null())
+```
+
+The URL deliberately omits `agentId` and `direction` so the user lands
+on the **generic test view** in the TE console and can pivot to
+whichever agent perspective is most useful from there. (If a per-event
+pinned URL is ever wanted instead, the searchbase docstring documents
+the swap to `latest(Test_Metrics.thousandeyes.permalink)` as a one-liner.)
+
+The SD-WAN and Catalyst Center fallback branches null out
+`teAccountId` / `teTestId` / `teLink` for output-schema consistency, so
+the consumer always sees the same column set regardless of which
+priority branch wins.
+
+**Map popup change.** `TopologyLink` gained four new optional fields
+(`jitterMs`, `sourceAgents`, `targetAgents`, `teLink`). `parseLinkRow`
+reads them with the existing helpers — `textFromRow` for the agent
+fields handles Splunk's multi-value newline-joining transparently, and
+also accepts `thousandeyes.permalink` as a fallback source for `teLink`
+in case anyone wants to swap the URL strategy.
+
+`LinkDetails` got three additions:
+
+- A **Jitter pill** in the metric grid, sitting between Loss and
+  Endpoint Health (so the path-quality metrics latency / loss / jitter
+  cluster together visually).
+- A **"Measured by `<source>` ↔ `<target>`" line** in the bottom info
+  panel, but *only* when both agent fields are populated. This addresses
+  the 2026-05-12 misnamed-test lesson: a TE test name like "TLH - AUB
+  Connection" can lie about the actual pair under the hood, so we
+  display the agents as ground truth and let the operator audit the
+  test's intent against its actual configuration.
+- A **"View in ThousandEyes" link button** (`ExternalLink` icon, sky
+  theme matching the other CTA buttons in the editor), only rendered
+  when `teLink` is present. Opens in a new tab with `rel="noopener
+  noreferrer"`.
+
+**What we did NOT change.** The `deriveStatus` fallback in
+`CustomerTopologyMap.tsx` still uses its old thresholds (latency ≥ 200,
+loss ≥ 5, util ≥ 95 for critical). It only fires when the SPL didn't
+emit a status, which doesn't happen for the link stanza — so the
+defensive numbers don't actually trip. Updating them to match the
+in-state WAN thresholds would be a parallel change with no behavioral
+impact today; leaving the diff focused.
+
+### Commit B — IT Health: ThousandEyes tab with 7 panels
+
+**Commit:** `<pending>` — see git log after this section's verification
+section is filled in.
+
+**Files:**
+- `data/ui/views/it_health_v1.xml` (added 7 dataSources, 15 visualizations,
+  1 layout, 1 tab)
+- `app.conf` (build 60 → 61)
+
+**Where the tab lives.** Between **User Experience** and **Details &
+KPI Reference** — same horizontal level as the other ops-themed tabs,
+not buried at the end. Final tab order:
+
+```
+Overview | User Experience | ThousandEyes | Details & KPI Reference | Catalyst Center Intelligence | About
+```
+
+**Layout structure.** Three sub-sections inside the tab, each its own
+rounded card with a markdown sub-header:
+
+1. **Path Quality** (top, 1400×420) — three line charts side-by-side:
+   Network Latency, Network Loss, Network Jitter. Each is a multi-series
+   timechart by `Test_Metrics.server.address`, sorted worst-first.
+   Powered by `ds_te_network_latency` / `_loss` / `_jitter`.
+2. **Alerts** (middle, 1400×700) — three panels:
+   - **Alerts by Severity** column chart (`splunk.column`, 450×280).
+   - **Alert Timeline** stacked column chart by hour (`splunk.column`
+     stacked, 925×280).
+   - **Recent Alerts** table with permalinks back to the TE console
+     (`splunk.table`, 1370×320). Inherits the existing
+     `rowBackgroundColorsByIndex` row-stripe styling for parity with
+     other tables in the dashboard.
+3. **Endpoint Traces** (bottom, 1400×530) — single wide table powered
+   by the `cisco:thousandeyes:trace` sourcetype: per-trace span counts,
+   HTTP error counts, duration, and originating agent / test /
+   permalink.
+
+**DataSource pattern.** Each panel is an inline `ds.search` (raw `query`
+string), not a searchbase reference. That's the same pattern every
+other panel in this dashboard uses — Splunk Dashboard Studio doesn't
+have native searchbase resolution at view-render time, so the SPL is
+duplicated by hand. The duplication is one-way: searchbase remains the
+canonical source of truth (versioned, documented, KPI-picker-discoverable),
+and the dashboard view is a manual mirror. If the searchbase SPL ever
+changes, this view needs the same edit. Documented in the searchbase
+stanza's `related_info`.
+
+**JSON safety.** Every change was hand-validated by parsing the CDATA
+contents with `json.loads` after each edit. The validator script also
+cross-checked that every layout `viz_*` reference resolves to a real
+visualization, every viz `dataSources.primary` resolves to a real
+dataSource, and every layout's `input_*` reference resolves to a real
+input. Final state:
+
+```
+Tabs:    Overview, User Experience, ThousandEyes, Details & KPI Reference,
+         Catalyst Center Intelligence, About
+Layouts: layout_about, layout_cc_intel, layout_details, layout_overview,
+         layout_user_experience, layout_thousandeyes
+New TE viz count: 15 (3 sub-section bg rectangles + 3 sub-section
+                     markdown titles + 1 narrative + 1 section bg + 7 chart/table)
+New TE ds count:  7
+Missing layout refs: none
+Missing ds refs:    none
+```
+
+### What we did NOT change
+
+- The `props.conf` first-line corruption is still in place. User
+  confirmed earlier today the fix lands in the TA, not here. The file
+  remains untracked.
+- The `[overview_link_auburndale_tallahassee_health]` stanza still
+  filters to `"TLH - BLA Connection"` (placeholder for a working A2A
+  test in the same TE org, since the real `7148943` test is still
+  hosed pending Cisco repointing it). Flip the test-name filter back
+  to the real one in a one-line commit when the agent is recovered.
+- The two **composite-replacement** stanzas
+  (`[it_health_active_te_alerts_high_critical]` and
+  `[it_health_sites_below_threshold]`) are not in this view. They live
+  on the **Overview page** as the replacement headlines for the
+  retired UX Score and Compliance tiles, not on the IT Health detail
+  page. They're already wired from the earlier 2026-05-11 work.
+
+### What's next
+
+- **Visual QA on a real Splunk environment.** All edits are
+  type-clean and JSON-clean, but Dashboard Studio rendering can be
+  layout-position-sensitive. Open the dashboard on a stack with the
+  TE data model installed and verify each sub-section reads cleanly
+  at the default 1440 width (and the auto-scale fallback at narrower
+  widths).
+- **Drill-down regression on `/opt/10`** (carry-over). Still blocked
+  on browser console output from the user.
+- **Demo data generator fix** (carry-over). Sitting in another
+  Cursor session per the prompt produced earlier today. Once that
+  lands, switch the link stanza filter from `"TLH - BLA Connection"`
+  back to `"TLH - AUB Connection"`.
+- **KV-Store-backed link/site capacity input** (carry-over). Still
+  using browser `localStorage`; KV Store is a larger lift not yet
+  scoped.
+
+---
+
 ## 2026-05-12 (afternoon) — `demb-te01-va` agent diagnosis; handed to TE support; resume dashboard work
 
 ### Context
