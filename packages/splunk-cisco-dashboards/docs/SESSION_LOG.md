@@ -85,7 +85,7 @@ preview pane à la KpiPickerPanel) — but not a redesign.
 
 ### Commit
 
-`5ec8be9` — TopologySearchBrowser: full catalogue browse-and-pick UI
+`31f6f28` — TopologySearchBrowser: full catalogue browse-and-pick UI
 
 ---
 
