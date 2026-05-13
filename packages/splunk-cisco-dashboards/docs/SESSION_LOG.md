@@ -7,6 +7,138 @@
 
 ---
 
+## 2026-05-13 (Build 92) — Promote dispatch_context to a real picker facet
+
+### Context
+
+Build 91 swapped the picker's hardcoded Cisco-tag gate for a
+hardcoded `dispatch_context === 'splunk-cisco-dashboards'` check.
+Functionally that fixed the "No searches match" bug, but Alan's
+follow-up landed within the hour: "where is the dispatch_context
+filter?" The screenshot showed the picker UI with Category /
+Sub-cat / Tag dropdowns and no dispatch facet anywhere.
+
+Re-reading the original direction ("a dispatch_context filter
+that default to dispatch_context = splunk-cisco-dashboards"),
+"default" implies a changeable user-facing facet, not a constant.
+Build 92 promotes the constant to a real dropdown alongside
+Category / Sub-cat.
+
+### What changed
+
+#### 1. Constants and state
+
+`KpiPickerPanel.tsx`:
+
+- Renamed the file-top constant `DISPATCH_CONTEXT_SCOPE` to
+  `DEFAULT_DISPATCH_CONTEXT` so the name reflects "starting value"
+  rather than "permanent gate". Added an `ALL_DISPATCH_CONTEXTS`
+  sentinel matching the existing `ALL_CATEGORIES` /
+  `ALL_SUB_CATEGORIES` pattern.
+- New state hook: `selectedDispatchContext`, initial value
+  `DEFAULT_DISPATCH_CONTEXT`. Mirrors `selectedCategory` shape
+  exactly so the rest of the picker treats it as a peer facet.
+
+#### 2. Filtering moved from load-time to render-time
+
+The previous helper `sortAndApplyDispatchFilter` removed entries
+at REST-fetch time, so the catalogue state held only one app's
+slice. That made the dropdown impossible to widen at runtime
+without re-fetching. Replaced with `sortAlphabetical`: the full
+catalogue lands in state, and dispatch filtering happens inside
+the `filtered` and `tagFacetEntries` useMemos alongside the
+existing category/tag/text filters.
+
+The cache-staleness check that re-fetches when a binding isn't
+recognised now operates on the full sorted list, not a
+dispatch-filtered slice — that way bindings pointed at another
+app's stanza still resolve and the "Currently bound" banner
+renders once the user widens the Dispatch facet.
+
+#### 3. Cascading resets
+
+Same pattern as the existing category → sub-category cascade:
+when the dispatch context changes, the picker resets category,
+sub-category, and active tags. Different apps ship different
+category / tag vocabularies, so carrying old selections forward
+would silently zero out the result list. Cleared facets give the
+user a fresh slice to browse.
+
+#### 4. UI dropdown
+
+Added above the Category dropdown (top of the facet stack so the
+"what scope am I in?" question reads first). Always renders, even
+when only one dispatch context is present in the catalogue, so
+operators can see which scope they're browsing. Three option
+shapes:
+
+- `All dispatch contexts (N)` — the union sentinel.
+- One option per distinct `dispatch_context` value found in the
+  catalogue, sorted alphabetically.
+- A safety option for `splunk-cisco-dashboards` that renders only
+  when it isn't already in the derived list (e.g. during initial
+  paint or REST error states), so the dropdown never collapses
+  to "All" with the default value silently lost.
+
+The label `DISPATCH` lives in the same column as `CATEGORY` /
+`SUB-CAT`, with a tooltip that explains it's the Splunk app
+namespace the search registered against.
+
+#### 5. Categories / sub-categories scoped to the dispatch slice
+
+The `categories` and `subCategories` useMemos now skip entries
+whose dispatch context doesn't match the active selection (when
+not `ALL_DISPATCH_CONTEXTS`). Picking `splunk-cisco-dashboards`
+shows only this app's category vocabulary; switching to "All"
+unions every namespace's categories.
+
+#### 6. `facetsActive` and Clear-filters
+
+The "any non-default facet is set?" check now treats a non-default
+dispatch context as a facet. Clear-filters resets the dispatch
+context back to `DEFAULT_DISPATCH_CONTEXT` along with everything
+else.
+
+### Verification
+
+- React lints — none.
+- `yarn build` — clean (`webpack compiled with 2 warnings`,
+  same asset-size warnings as Build 91, no errors).
+- All 530 stanzas in `default/searchbase.conf` carry
+  `dispatch_context = splunk-cisco-dashboards`, so opening the
+  picker with the default selection still passes the full
+  catalogue (matches Build 91 behaviour for the common case).
+- New behaviour: switching to "All dispatch contexts" surfaces
+  any stanzas pulled from other apps' `searchbase.conf` files in
+  the same Splunk install. Selecting a specific other app
+  narrows to just that app's stanzas.
+
+### Files touched
+
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf`
+  — `build = 91` → `build = 92`.
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/florida/KpiPickerPanel.tsx`
+  — sentinel + default constants, `selectedDispatchContext`
+  state, runtime filter, dispatch-aware category / sub-category
+  derivation, cascade reset effect, dispatch dropdown UI,
+  facetsActive + clear-filters wiring.
+- `packages/splunk-cisco-dashboards/docs/SESSION_LOG.md` — this
+  entry.
+
+### What's next
+
+- Alan to refresh the picker, confirm the new Dispatch dropdown
+  shows up at the top of the facet stack with
+  `splunk-cisco-dashboards` selected and ~530 entries listed,
+  then exercise "All dispatch contexts" / a specific other app
+  to confirm the slice changes.
+- Carry-forward TODO list from Build 91: trace field-list dump,
+  DM-eligible TE alert/trace rewrites, `latencyMs` cleanup,
+  expected-critical-sites lookup, hand-audit of TA Stock stanza
+  descriptions, singleton-tag sweep.
+
+---
+
 ## 2026-05-13 (Build 91) — Picker browse fix + FDEM scrub
 
 ### Context

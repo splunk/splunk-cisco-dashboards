@@ -61,16 +61,29 @@ import { VizIcon, resolveVizMapping } from './vizIcons';
 // than '' keeps the <select> element rendering predictable.
 const ALL_CATEGORIES = '__all__';
 const ALL_SUB_CATEGORIES = '__all_sub__';
+const ALL_DISPATCH_CONTEXTS = '__all_dispatch__';
 
-// Dispatch-context scope for the picker. Only searchbase entries whose
-// `dispatch_context` matches this value show up in the browser. Every
-// stanza shipped in this app's `default/searchbase.conf` carries
+// Default dispatch-context for the picker. The catalogue REST endpoint
+// pulls from any app namespace (`/servicesNS/-/<app>/configs/conf-searchbase`),
+// so on a Splunk stack with multiple apps that ship their own
+// `searchbase.conf` the catalogue can grow beyond what this app vetted.
+// To keep the picker scoped to dashboard-pack searches by default, the
+// Dispatch facet starts at this value and only shows entries whose
+// `dispatch_context` matches it. Users can switch to "All dispatch
+// contexts" or pick a specific other app from the same dropdown to
+// browse wider — same UX as the Category facet.
+//
+// Every stanza shipped in this app's `default/searchbase.conf` carries
 // `dispatch_context = splunk-cisco-dashboards` (with
-// `dispatch_context_force = 1`), so this filter passes the full app
-// catalogue while excluding entries pulled from other apps' searchbase
-// files via the `/servicesNS/-/<app>/configs/conf-searchbase` REST
-// fetch. Change this constant to broaden or retarget the picker.
-const DISPATCH_CONTEXT_SCOPE = 'splunk-cisco-dashboards';
+// `dispatch_context_force = 1`), so this default passes the full
+// 530-entry catalogue.
+//
+// Replaces the previous hardcoded Cisco-tag gate (Build 87 dropped the
+// `Cisco` noise tag from every stanza, which silently collapsed the
+// picker to zero results until Build 91 swapped to a dispatch-context
+// constant; Build 92 promoted the constant to a real user-facing facet
+// because operators couldn't see why the catalogue was scoped).
+const DEFAULT_DISPATCH_CONTEXT = 'splunk-cisco-dashboards';
 
 const MAX_FIELD_LENGTH = 64;
 const FIELD_NAME_PATTERN = /^[A-Za-z_][\w.]{0,63}$/;
@@ -403,6 +416,13 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     const [query, setQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<string>(ALL_CATEGORIES);
     const [selectedSubCategory, setSelectedSubCategory] = useState<string>(ALL_SUB_CATEGORIES);
+    // Dispatch-context facet — defaults to this app's namespace so the
+    // picker stays scoped to dashboard-pack searches at first open.
+    // Switch to ALL_DISPATCH_CONTEXTS or another app's namespace via
+    // the dropdown to browse wider.
+    const [selectedDispatchContext, setSelectedDispatchContext] = useState<string>(
+        DEFAULT_DISPATCH_CONTEXT
+    );
     const [activeTags, setActiveTags] = useState<Set<string>>(() => new Set());
     // Free-text input that powers the tag multi-select dropdown. As
     // the user types, the dropdown narrows to substring matches and
@@ -441,35 +461,21 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         setLoadState('loading');
         setErrorMsg('');
 
-        const sortAndApplyDispatchFilter = (list: SearchbaseRecord[]) => {
-            // Dispatch-context gate: hide every entry whose
-            // `dispatch_context` does not match this app, so the
-            // picker only surfaces searches vetted for this
-            // dashboard pack. Categories, sub-categories, tag
-            // dropdown, and result list all derive from
-            // `catalogue`, so a single filter here scopes the
-            // entire browse experience.
-            //
-            // Replaces the previous Cisco-tag gate (Build 87
-            // dropped the noise tag `Cisco` from every stanza,
-            // which collapsed the picker to zero results — see
-            // Build 91 SESSION_LOG entry). To broaden the picker
-            // (e.g., to expose searches from other apps' own
-            // searchbase.conf files), bump
-            // `DISPATCH_CONTEXT_SCOPE` or relax this filter.
-            const inScope = list.filter(
-                (entry) => entry.dispatchContext === DISPATCH_CONTEXT_SCOPE
-            );
-            return [...inScope].sort((a, b) =>
+        // The whole catalogue lives in `catalogue` state — facet
+        // filtering (including dispatch-context) happens at render time
+        // in the `filtered` useMemo so the user can switch facets
+        // without re-fetching. Sort once at load so the result list is
+        // stable.
+        const sortAlphabetical = (list: SearchbaseRecord[]) =>
+            [...list].sort((a, b) =>
                 a.searchName.localeCompare(b.searchName, undefined, {
                     sensitivity: 'base',
                 })
             );
-        };
 
         const applyList = (list: SearchbaseRecord[]) => {
             if (cancelled) return;
-            setCatalogue(sortAndApplyDispatchFilter(list));
+            setCatalogue(sortAlphabetical(list));
             setLoadState('idle');
         };
 
@@ -486,12 +492,17 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         getSearchbaseCatalogue()
             .then((list) => {
                 if (cancelled) return;
-                const filtered = sortAndApplyDispatchFilter(list);
+                const sorted = sortAlphabetical(list);
+                // Cache-staleness check operates on the full catalogue,
+                // not a dispatch-filtered slice — that way a binding
+                // pointed at another app's stanza still resolves and
+                // the "Currently bound" banner can render once the
+                // user widens the Dispatch facet.
                 const cacheRecognisesBinding =
                     !expectedKey ||
-                    filtered.some((entry) => entryMatchesKey(entry, expectedKey));
+                    sorted.some((entry) => entryMatchesKey(entry, expectedKey));
                 if (cacheRecognisesBinding) {
-                    setCatalogue(filtered);
+                    setCatalogue(sorted);
                     setLoadState('idle');
                     return;
                 }
@@ -513,12 +524,15 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
 
     // Reset transient form state when the panel opens for a new tile.
     // Sub-category and tag selections start cleared every time so the
-    // user always sees the full slice of the chosen category.
+    // user always sees the full slice of the chosen category. Dispatch
+    // context resets to the dashboard-pack default so each new picker
+    // open is scoped to vetted searches by default.
     useEffect(() => {
         if (!open || !context) return;
         setQuery('');
         setSelectedCategory(ALL_CATEGORIES);
         setSelectedSubCategory(ALL_SUB_CATEGORIES);
+        setSelectedDispatchContext(DEFAULT_DISPATCH_CONTEXT);
         setActiveTags(new Set());
         setTagFilter('');
         setTagDropdownOpen(false);
@@ -551,6 +565,17 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         setSelectedSubCategory(ALL_SUB_CATEGORIES);
         setActiveTags(new Set());
     }, [selectedCategory]);
+
+    // When the dispatch context changes, reset the downstream facets.
+    // Picking a different app namespace surfaces a different category
+    // / sub-category / tag vocabulary, so carrying old selections over
+    // would silently filter the new slice down to nothing. Same idea
+    // as the cascade above for category → sub-category.
+    useEffect(() => {
+        setSelectedCategory(ALL_CATEGORIES);
+        setSelectedSubCategory(ALL_SUB_CATEGORIES);
+        setActiveTags(new Set());
+    }, [selectedDispatchContext]);
 
     // Different selection -> collapse SPL. The user explicitly opens
     // it for the entry they care about; carrying the open state across
@@ -599,36 +624,70 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     }, [open, tagDropdownOpen]);
 
     // Distinct, sorted category list — drives the Category dropdown.
+    // Scoped to the active dispatch context so picking a single app
+    // narrows the Category dropdown to that app's category vocabulary.
     const categories = useMemo(() => {
         const set = new Set<string>();
         for (const e of catalogue) {
+            if (
+                selectedDispatchContext !== ALL_DISPATCH_CONTEXTS &&
+                e.dispatchContext !== selectedDispatchContext
+            ) {
+                continue;
+            }
             if (e.category) set.add(e.category);
         }
         return Array.from(set).sort((a, b) =>
             a.localeCompare(b, undefined, { sensitivity: 'base' })
         );
-    }, [catalogue]);
+    }, [catalogue, selectedDispatchContext]);
 
-    // Sub-categories scoped to the current category. Empty array when
-    // no category is picked — that hides the dropdown.
+    // Sub-categories scoped to the current category and dispatch
+    // context. Empty array when no category is picked — that hides
+    // the dropdown.
     const subCategories = useMemo(() => {
         if (selectedCategory === ALL_CATEGORIES) return [];
         const set = new Set<string>();
         for (const e of catalogue) {
+            if (
+                selectedDispatchContext !== ALL_DISPATCH_CONTEXTS &&
+                e.dispatchContext !== selectedDispatchContext
+            ) {
+                continue;
+            }
             if (e.category !== selectedCategory) continue;
             if (e.subCategory) set.add(e.subCategory);
         }
         return Array.from(set).sort((a, b) =>
             a.localeCompare(b, undefined, { sensitivity: 'base' })
         );
-    }, [catalogue, selectedCategory]);
+    }, [catalogue, selectedDispatchContext, selectedCategory]);
+
+    // Distinct dispatch_context values present in the catalogue. Used
+    // to populate the Dispatch facet dropdown. Sorted alphabetically
+    // so the order is stable across loads.
+    const dispatchContexts = useMemo(() => {
+        const set = new Set<string>();
+        for (const e of catalogue) {
+            if (e.dispatchContext) set.add(e.dispatchContext);
+        }
+        return Array.from(set).sort((a, b) =>
+            a.localeCompare(b, undefined, { sensitivity: 'base' })
+        );
+    }, [catalogue]);
 
     // Tag counts are scoped to the current result slice, including
     // already-selected tags. This makes the tag picker progressive:
-    // after choosing "Cisco", the dropdown shows only tags that still
+    // after choosing one tag, the dropdown shows only tags that still
     // co-occur in the narrowed results rather than the full catalogue.
     const tagFacetEntries = useMemo(() => {
         return catalogue.filter((entry) => {
+            if (
+                selectedDispatchContext !== ALL_DISPATCH_CONTEXTS &&
+                entry.dispatchContext !== selectedDispatchContext
+            ) {
+                return false;
+            }
             if (selectedCategory !== ALL_CATEGORIES && entry.category !== selectedCategory) {
                 return false;
             }
@@ -645,7 +704,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
             }
             return matchesQuery(entry, query);
         });
-    }, [catalogue, query, selectedCategory, selectedSubCategory, activeTags]);
+    }, [catalogue, query, selectedDispatchContext, selectedCategory, selectedSubCategory, activeTags]);
 
     // Full tag counts for the narrowed slice. Sorted by frequency
     // desc, then alpha. Not capped — that happens in
@@ -685,6 +744,12 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
 
     const filtered = useMemo(() => {
         return catalogue.filter((entry) => {
+            if (
+                selectedDispatchContext !== ALL_DISPATCH_CONTEXTS &&
+                entry.dispatchContext !== selectedDispatchContext
+            ) {
+                return false;
+            }
             if (selectedCategory !== ALL_CATEGORIES && entry.category !== selectedCategory) {
                 return false;
             }
@@ -703,7 +768,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
             }
             return matchesQuery(entry, query);
         });
-    }, [catalogue, query, selectedCategory, selectedSubCategory, activeTags]);
+    }, [catalogue, query, selectedDispatchContext, selectedCategory, selectedSubCategory, activeTags]);
 
     const selectedEntry = useMemo(
         () =>
@@ -828,6 +893,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     const canApply = Boolean(selectedEntry && fieldNameValid && labelValid);
 
     const facetsActive =
+        selectedDispatchContext !== DEFAULT_DISPATCH_CONTEXT ||
         selectedCategory !== ALL_CATEGORIES ||
         selectedSubCategory !== ALL_SUB_CATEGORIES ||
         activeTags.size > 0 ||
@@ -875,6 +941,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     };
 
     const handleClearFacets = () => {
+        setSelectedDispatchContext(DEFAULT_DISPATCH_CONTEXT);
         setSelectedCategory(ALL_CATEGORIES);
         setSelectedSubCategory(ALL_SUB_CATEGORIES);
         setActiveTags(new Set());
@@ -935,6 +1002,46 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             className="w-full pl-8 pr-2.5 py-1.5 text-[12px] rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
                         />
                     </label>
+
+                    {/* Dispatch-context facet — defaults to this app's
+                        namespace so the picker stays scoped to the
+                        dashboard pack. Switch to "All dispatch
+                        contexts" or another app's namespace to widen.
+                        Always renders so operators can see which scope
+                        they're browsing — even when only one context
+                        is present in the catalogue. */}
+                    <div className="flex items-center gap-2">
+                        <span
+                            className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex-shrink-0 w-16"
+                            title="Dispatch context (Splunk app namespace) the search is registered against"
+                        >
+                            Dispatch
+                        </span>
+                        <select
+                            value={selectedDispatchContext}
+                            onChange={(e) => setSelectedDispatchContext(e.target.value)}
+                            className="flex-1 px-2 py-1 text-[11px] rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                        >
+                            <option value={ALL_DISPATCH_CONTEXTS}>
+                                All dispatch contexts ({dispatchContexts.length})
+                            </option>
+                            {dispatchContexts.map((dc) => (
+                                <option key={dc} value={dc}>
+                                    {dc}
+                                </option>
+                            ))}
+                            {/* Keep the default visible even when the
+                                catalogue hasn't loaded yet (initial
+                                paint, error states) so the dropdown
+                                never collapses to "All" with the
+                                default value silently lost. */}
+                            {!dispatchContexts.includes(DEFAULT_DISPATCH_CONTEXT) && (
+                                <option value={DEFAULT_DISPATCH_CONTEXT}>
+                                    {DEFAULT_DISPATCH_CONTEXT}
+                                </option>
+                            )}
+                        </select>
+                    </div>
 
                     {categories.length > 1 && (
                         <div className="flex items-center gap-2">
