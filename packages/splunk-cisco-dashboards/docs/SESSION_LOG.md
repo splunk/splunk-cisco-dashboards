@@ -7,6 +7,91 @@
 
 ---
 
+## 2026-05-13 (Build 80) — Correct ThousandEyes sourcetype names everywhere
+
+### Context
+
+Alan reviewed Build 79 and flagged that several stanzas (and the
+new `splunk-cisco-thousandeyes-fields.mdc` rule) still referenced
+the wrong sourcetype names for the `ta_cisco_thousandeyes` add-on
+on FDEM. The authoritative list per his stack's
+`/opt/splunk/etc/apps/ta_cisco_thousandeyes/default/props.conf`:
+
+- `cisco:thousandeyes:metric` (singular, NOT `metrics`)
+- `cisco:thousandeyes:trace`
+- `cisco:thousandeyes:path-vis` (hyphen, NOT `pathviz`)
+- `cisco:thousandeyes:activity` (NOT `:audit`)
+- `cisco:thousandeyes:alerts` (plural, NOT `alert`)
+- `cisco:thousandeyes:test` (singular, NOT `tests`)
+- `cisco:thousandeyes:account-group`
+
+He noted there may be more on his stack — operator props.conf
+inspection needed before authoring SPL on uncovered sourcetypes.
+
+### What changed (Build 80)
+
+#### 1. `.cursor/rules/splunk-cisco-thousandeyes-fields.mdc` v1.2.0
+
+- Replaced the speculative sourcetype-list paragraph with an
+  authoritative table tying each verified sourcetype to its DM
+  dataset, with explicit rationale for why each is correct.
+- Added a "common mistakes I keep making" section calling out
+  the wrong spellings I've used (`pathviz`, `alert`, `metrics`,
+  `tests`, `audit`) so future agent runs don't repeat them.
+- Demoted my prior assumption that
+  `Cisco_ThousandEyes.Events` is backed by
+  `cisco:thousandeyes:event` to "operator-confirm pending" —
+  that string is NOT in Alan's verified list. SPL filtering by
+  sourcetype for the Events dataset must wait until he pastes
+  the relevant `props.conf` block.
+
+#### 2. `searchbase.conf`
+
+- Two `[teuc_5_9_5_path_hop_count_analysis]` and
+  `[teuc_5_9_6_network_path_change_detection]` description
+  references to `cisco:thousandeyes:pathviz` corrected to
+  `cisco:thousandeyes:path-vis` (the actual TA spelling).
+
+#### 3. Archive `data/ui/views/archive/detail_dashboard.xml`
+
+- Two queries in this archived dashboard referenced
+  `cisco:thousandeyes:tests` (plural) and OR'd it with
+  `thousandeyes:tests` and `cisco:thousandeyes:*`. Replaced with
+  the correct `cisco:thousandeyes:test` and tightened the second
+  query to read from the `:metric` sourcetype with the proper
+  `metric_name:network.latency` aggregation. The file is no
+  longer wired into navigation but kept correct as a reference.
+
+#### 4. `scripts/audit_searchbase.py`
+
+- `OTHER_AVAILABLE_SOURCETYPES` had the wrong TE strings
+  (`cisco:thousandeyes:metrics` plural). Replaced with the
+  full correct list from Alan's authoritative paste.
+
+#### 5. `app.conf`
+
+`build = 79` → `80`.
+
+### Verification
+
+- `yarn build` (Build 80) — green, identical pre-existing webpack
+  asset-size warnings, no regressions.
+- Workspace-wide grep for `cisco:thousandeyes:[a-zA-Z_-]+`
+  returns only the seven correct strings (plus the rule's
+  "common mistakes" section which intentionally lists the wrong
+  spellings as DON'T-USE examples).
+- Live `search = …` lines in `searchbase.conf` only reference
+  `:metric` and `:trace`, both correct per the new rule.
+
+### What's next
+
+- Operator confirmation of the Events / `Cisco_ThousandEyes.Events`
+  dataset's actual sourcetype name from the FDEM TA `props.conf`.
+- Audit Catalyst Center / DNAC sourcetypes the same way (Alan
+  may have similar drift there) once TE is fully clean.
+
+---
+
 ## 2026-05-13 (Build 79) — ThousandEyes SPL reconciliation: `metric_name:` prefix sweep, DM/raw split, dead-stanza disable
 
 ### Context

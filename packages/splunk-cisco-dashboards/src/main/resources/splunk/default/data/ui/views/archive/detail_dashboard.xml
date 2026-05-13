@@ -1499,7 +1499,7 @@
 			"name": "ThousandEyes Tests",
 			"type": "ds.search",
 			"options": {
-				"query": "index=* (sourcetype=\"cisco:thousandeyes:tests\" OR sourcetype=\"thousandeyes:tests\" OR sourcetype=\"cisco:thousandeyes:*\") | stats latest(latency) as avg_latency, latest(loss) as loss, latest(status) as status by testName, target | rename testName as test | appendpipe [| stats count as xrc | where xrc==0 | append [| makeresults count=5 | streamstats count as xi | eval test=case(xi==1,\"UCM Cluster\",xi==2,\"Dimi Ticketing\",xi==3,\"GIS Portal\",xi==4,\"Betty Easley WAN\",xi==5,\"Orlando SLRC WAN\"), target=case(xi==1,\"ucm.fl.gov\",xi==2,\"dimi.fl.gov\",xi==3,\"gis.fl.gov\",xi==4,\"10.20.1.1\",xi==5,\"10.30.1.1\"), avg_latency=case(xi==1,round(random()%8+5),xi==2,round(random()%10+8),xi==3,round(random()%12+10),xi==4,round(random()%5+3),xi==5,round(random()%15+12)), loss=case(xi<=3,\"0.0\",xi==4,\"0.1\",xi==5,\"0.0\"), status=\"Active\" | fields test target avg_latency loss status] | where isnull(xrc)] | fields - xrc",
+				"query": "index=* sourcetype=\"cisco:thousandeyes:test\" | stats latest(latency) as avg_latency, latest(loss) as loss, latest(status) as status by testName, target | rename testName as test | appendpipe [| stats count as xrc | where xrc==0 | append [| makeresults count=5 | streamstats count as xi | eval test=case(xi==1,\"UCM Cluster\",xi==2,\"Dimi Ticketing\",xi==3,\"GIS Portal\",xi==4,\"Betty Easley WAN\",xi==5,\"Orlando SLRC WAN\"), target=case(xi==1,\"ucm.fl.gov\",xi==2,\"dimi.fl.gov\",xi==3,\"gis.fl.gov\",xi==4,\"10.20.1.1\",xi==5,\"10.30.1.1\"), avg_latency=case(xi==1,round(random()%8+5),xi==2,round(random()%10+8),xi==3,round(random()%12+10),xi==4,round(random()%5+3),xi==5,round(random()%15+12)), loss=case(xi<=3,\"0.0\",xi==4,\"0.1\",xi==5,\"0.0\"), status=\"Active\" | fields test target avg_latency loss status] | where isnull(xrc)] | fields - xrc",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1510,7 +1510,7 @@
 			"name": "ThousandEyes Latency Trend",
 			"type": "ds.search",
 			"options": {
-				"query": "index=* (sourcetype=\"cisco:thousandeyes:tests\" OR sourcetype=\"thousandeyes:tests\" OR sourcetype=\"cisco:thousandeyes:*\") | timechart span=1h avg(latency) as latency | appendpipe [| stats count as xrc | where xrc==0 | append [| makeresults count=24 | streamstats count as xi | eval _time=relative_time(now(), \"-\".xi.\"h\"), latency=round(random()%15+12) | table _time latency] | where isnull(xrc)] | fields - xrc",
+				"query": "`index_thousandeyes` sourcetype=\"cisco:thousandeyes:metric\" | timechart span=1h avg(metric_name:network.latency) as latency | appendpipe [| stats count as xrc | where xrc==0 | append [| makeresults count=24 | streamstats count as xi | eval _time=relative_time(now(), \"-\".xi.\"h\"), latency=round(random()%15+12) | table _time latency] | where isnull(xrc)] | fields - xrc",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"

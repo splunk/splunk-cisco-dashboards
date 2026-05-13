@@ -1,7 +1,7 @@
 ---
 description: Cisco ThousandEyes field reference and SPL conventions for the Cisco Exec Dashboards app. Authoritative source for DM dataset/field names and the metric_name: prefix convention.
 globs: **/searchbase.conf,**/savedsearches.conf,**/data/ui/views/*.xml,**/webapp/**/*.tsx,**/webapp/**/*.ts
-version: 1.1.0
+version: 1.2.0
 alwaysApply: false
 ---
 
@@ -92,19 +92,37 @@ with no `index=` prefix:
 `index_thousandeyes` sourcetype="cisco:thousandeyes:metric" "thousandeyes.test.type"="agent-to-agent"
 ```
 
-Sourcetype names commonly observed in this codebase:
+### Sourcetypes shipped by `ta_cisco_thousandeyes`
 
-- `cisco:thousandeyes:metric` — backs `Test_Metrics`
-- `cisco:thousandeyes:trace`  — backs `Test_Traces`
-- `cisco:thousandeyes:pathviz` — backs `Path_Viz` (operator to confirm)
-- `cisco:thousandeyes:activity` / `:audit` — backs `Activities`
-- `cisco:thousandeyes:event`  — backs `Events`
-- `cisco:thousandeyes:alert`  — backs `Alerts`
+The following list is **authoritative** per the operator on
+2026-05-13 (confirmed against
+`/opt/splunk/etc/apps/ta_cisco_thousandeyes/default/props.conf` on
+their FDEM stack). Use these strings verbatim — any other spelling
+returns no events:
 
-If you need to author SPL that filters by sourcetype, ask the user
-to confirm the exact sourcetype string for the target dataset on
-their stack — Splunk Add-ons occasionally rename these between
-versions.
+| Sourcetype | Purpose / backing |
+|---|---|
+| `cisco:thousandeyes:metric` | OTel Tests Stream — Metrics. Backs `Cisco_ThousandEyes.Test_Metrics`. |
+| `cisco:thousandeyes:trace` | OTel Tests Stream — Traces (page-load / web-transaction span data). Backs `Cisco_ThousandEyes.Test_Traces`. |
+| `cisco:thousandeyes:path-vis` | Path Visualization data via API (note the **hyphen**, not `pathviz`). Backs `Cisco_ThousandEyes.Path_Viz`. |
+| `cisco:thousandeyes:activity` | Activity Logs Stream (TE platform audit log). Backs `Cisco_ThousandEyes.Activities`. |
+| `cisco:thousandeyes:alerts` | Alerts Stream — webhook-delivered alert notifications (note the **plural** `alerts`, not `alert`). Backs `Cisco_ThousandEyes.Alerts`. |
+| `cisco:thousandeyes:test` | Test definition / metadata stream (NOT the test metrics — those go to `:metric`). HEC docs use this as the default `sourceType` parameter. |
+| `cisco:thousandeyes:account-group` | TE account-group / organization inventory. |
+
+**Common mistakes I keep making and must not repeat:**
+
+- ❌ `cisco:thousandeyes:pathviz`     ✅ `cisco:thousandeyes:path-vis` (hyphen)
+- ❌ `cisco:thousandeyes:alert`       ✅ `cisco:thousandeyes:alerts`   (plural)
+- ❌ `cisco:thousandeyes:metrics`     ✅ `cisco:thousandeyes:metric`   (singular)
+- ❌ `cisco:thousandeyes:tests`       ✅ `cisco:thousandeyes:test`     (singular)
+- ❌ `cisco:thousandeyes:audit`       ✅ `cisco:thousandeyes:activity` (Activities is the dataset; activity is the sourcetype)
+- ❌ `cisco:thousandeyes:event`       ✅ Sourcetype for the `Cisco_ThousandEyes.Events` (Internet Insights) dataset is **not yet confirmed** on this tenant. The TA's "Event" input may land on `:test` or a separate sourcetype the operator's `props.conf` will reveal. **Ask the operator** before authoring SPL that filters by sourcetype for the Events dataset; in the meantime use the DM (`| from datamodel:Cisco_ThousandEyes.Events`) which routes to whichever sourcetype the TA configured.
+
+If a stanza needs a sourcetype not on the table above, ask the
+operator to paste their TA `props.conf` (or run
+`| metadata type=sourcetypes index=<te_index> | search sourcetype=cisco:thousandeyes:*`)
+before you write the search.
 
 ## Per-dataset field inventory (DM-confirmed 2026-05-13)
 
