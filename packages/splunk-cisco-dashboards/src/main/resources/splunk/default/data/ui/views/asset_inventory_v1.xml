@@ -1455,7 +1455,7 @@
 		"eval": {}
 	},
 	"applicationProperties": {
-		"hideEdit": false,
+		"hideEdit": true,
 		"collapseNavigation": false
 	}
 }

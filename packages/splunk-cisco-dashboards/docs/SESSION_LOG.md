@@ -7,6 +7,166 @@
 
 ---
 
+## 2026-05-13 (post-Build-74 polish) — collapsible editor cards, inspect-only popup, raw-event TE A2A, unknown-status probe animation
+
+### Context
+
+Build 74 wired the dedicated `[overview_link_te_a2a_health]` stanza
+into the AUB↔TLH link and gave the editor a full catalogue browser
+per site/link. Alan deployed it to FDEM and got back to me with
+three follow-ups:
+
+1. **Editor UX**: the per-site / per-link cards in the topology
+   editor were always-expanded — with the catalogue browser, the
+   forms, the geo inputs, etc. Made the panel a wall of inputs.
+   He asked: "can the sites and links default to collapsable here?
+   and can I have an option to test the search, maybe after
+   selecting like our other modal for tiles we have an option to
+   open in search will be great."
+2. **Read-only popup UX**: clicking a marker / link on the map
+   *also* opened the catalogue browser inline. Alan wanted that
+   popup to be inspect-only — "when we actually click on the link
+   itself, there is no need to have at that point any option to
+   select any search really, just show what is attached is fine
+   and an ability to run it."
+3. **FDEM data gaps**: the new TE A2A stanza populated some
+   fields but left empty fields where the data model didn't
+   expose the geo / loss / jitter paths. Screenshot showed
+   `latencyMs=180.00` ✅ but `lossPct`, `jitterMs`,
+   `sourceLocation`, `targetLocation`, all four `*Country` /
+   `*Region` fields blank.
+4. **Animation regression on dev**: Alan reported "site
+   animation broke again on my dev instance under /opt/splunk".
+   Root cause: on dev the bound link search returns no rows →
+   appendpipe injects `status=unknown` → `packetProfile()` was
+   returning null for unknown → packets stopped rendering.
+
+### Changes (Build 75)
+
+#### 1. Read-only popup (`SelectionCard`) — picker removed
+- Stripped `searchOptions` and `onChangeSearchName` props from
+  `SelectionCardProps`. The popup no longer renders
+  `TopologySearchBrowser`.
+- Kept the existing "Show SPL" toggle, the SPL preview, and the
+  "Open in Splunk Search" button. Operators still get the
+  inspect + run UX, just without the surprise rebind affordance.
+- Cleaned up the parent: removed `popupSearchOptions` (the
+  Cisco-tagged catalogue slice) and `updateSelectedSearchName`
+  (the bypass-the-editor-draft mutator) since both were only
+  consumed by the popup.
+
+#### 2. Editor cards — collapsible by default
+- Added `expandedCardKeys: Set<string>` state to
+  `TopologyEditorPanel`, plus `toggleCardExpanded(key)` callback
+  and a `useEffect` that resets the set on `open=false` so a
+  re-open of the editor always starts collapsed.
+- Each site card and link card is now structured as:
+  - **Header** (always visible): `ChevronRight` (rotates to
+    `↓` when expanded) + role icon + `<id>` + bound search
+    summary (or "No search bound") + the per-card actions
+    (Open-in-Search button, Pick-from-map for sites only,
+    Remove).
+  - **Body** (only when expanded): the `TopologySearchBrowser`
+    plus the existing fields (Name / Short / Role / Status /
+    Lat / Lng / Internet edge Mbps for sites; Name / Source /
+    Target / Status / Capacity for links).
+- The header is itself a button that toggles expansion, so a
+  click anywhere on the row chrome opens / closes the card.
+  Per-card action buttons are siblings to that header button
+  (NOT nested) to keep the HTML valid.
+
+#### 3. Editor cards — Open in Search button
+- Added `onOpenInSearch?: (spl) => void` to
+  `TopologyEditorPanelProps` and wired it from the parent map
+  (which already had its own `onOpenInSearch` for the popup).
+- Added `handleOpenInSearch(searchName)` helper inside the
+  editor that looks up `catalogueByName[searchName].search` and
+  dispatches it through the parent's callback.
+- Each card's header gets an `<ExternalLink>` icon-button next
+  to its action buttons. Disabled when no search is bound;
+  enabled and styled sky-tinted when a search is bound. Hover
+  title is "Open this search in Splunk Search to test it".
+
+#### 4. Unknown-status probe animation
+- `packetProfile()` previously returned `null` for `unknown`
+  status. Replaced with a slow / faint "probe" profile (subtle
+  level: 1 packet, 8s cycle, 35% opacity; on level: 2 packets,
+  6.5s cycle, 45% opacity, slate-400 fill). Marketing-grade
+  motion that doesn't overstate health: it's a "the link is
+  alive even before data lands" signal, not a measurement.
+- Once the bound search returns rows, the status promotes to
+  stable / warning / critical and the packets re-tune to those
+  cadences automatically.
+
+#### 5. `[overview_link_te_a2a_health]` v1.0.0 → v1.1.0 (raw events)
+- Switched the SPL from `tstats` against
+  `Cisco_ThousandEyes.Test_Metrics` to a raw-event search
+  against `cisco:thousandeyes:metric` (gated by
+  `` `index_thousandeyes` `` macro and the
+  `thousandeyes.test.type="agent-to-agent"` filter).
+- Why: on FDEM, the metric-store wrapper exposed only
+  `network.latency` from the data model — `network.loss`,
+  `network.jitter`, and every `thousandeyes.source.agent.geo.*`
+  path returned null. Raw events have all the fields verbatim,
+  so we read them directly and lose nothing.
+- All field references switched to single-quoted dotted-path
+  form (`'thousandeyes.source.agent.location'` etc.) so Splunk
+  treats them as literal field names.
+- Added a "Diagnostic SPL" entry under `related_info` that
+  documents *exactly* how to verify field availability in any
+  customer's stack — both raw events and the data model — so
+  the next person hitting "empty fields" can self-diagnose
+  without reading our git history.
+- Tag set updated: removed `Requires_Cisco_ThousandEyes_DM`,
+  added `Raw_Events`.
+
+### Files touched
+
+- `src/main/webapp/common/components/florida/CustomerTopologyMap.tsx`
+  - `SelectionCard` props + body simplified.
+  - `TopologyEditorPanel` props extended with
+    `onOpenInSearch`; per-card collapsible state +
+    Open-in-Search wiring; both site and link cards
+    refactored to header + body shape.
+  - `packetProfile()` returns a probe profile for unknown.
+- `src/main/resources/splunk/default/searchbase.conf`
+  - `[overview_link_te_a2a_health]` v1.0.0 → v1.1.0 raw-event
+    rewrite, with diagnostic SPL embedded in the docstring.
+- `src/main/resources/splunk/default/app.conf`
+  - Build 74 → 75.
+
+### Verification
+
+- `yarn tsc --noEmit -p tsconfig.json` → clean (1.78s).
+- `yarn build` → succeeds; only the pre-existing asset-size
+  warnings (overview.js bundle, searchbase.conf, background
+  PNGs) — no code-quality warnings introduced.
+
+### Notes for the FDEM follow-up
+
+When Alan deploys Build 75 to FDEM, the link's bound search is
+unchanged (`Overview - Link ThousandEyes A2A Health`), but the
+SPL behind it is now raw-event-driven. The empty fields he saw
+in the Build 74 screenshot should populate. If any field stays
+empty, the `related_info` for the stanza now includes the exact
+diagnostic SPL to introspect raw events and the data model
+side-by-side. The animation regression on dev is fixed at the
+renderer level — no SPL change needed there.
+
+### What's next
+
+- Sanity-check the raw-event stanza on FDEM. If field names
+  don't match the customer's actual events (e.g. some TA
+  versions use underscored field names like
+  `thousandeyes_source_agent_location`), update the SPL to
+  alternative paths.
+- After Alan confirms the link popup is clean, consider a
+  similar collapsible treatment for the JSON import/export
+  section in the editor — that one is also always-expanded
+  and rarely used.
+
+---
+
 ## 2026-05-12 (very, very late, dedicated TE A2A stanza) — `[overview_link_te_a2a_health]`
 
 ### Context

@@ -1893,8 +1893,27 @@ const packetProfile = (
     level: TopologyAnimationLevel
 ): PacketProfile | null => {
     if (level === 'off') return null;
-    if (status === 'unknown') return null; // unknown stays quiet
     const subtle = level === 'subtle';
+    if (status === 'unknown') {
+        // 2026-05-13: previously returned null so unknown links
+        // sat completely still. That made the map look broken on
+        // dev stacks where the bound search hadn't started
+        // returning rows yet (e.g. the new TE A2A stanza on a
+        // customer who hasn't had any A2A samples in 24h). The
+        // fix: render a slow, faint "probe" packet stream so the
+        // link is visibly alive even before data lands. This is a
+        // marketing animation, not a status signal — once data
+        // returns, the status promotes to stable/warning/critical
+        // and the packets re-tune accordingly.
+        return {
+            count: subtle ? 1 : 2,
+            durationSeconds: subtle ? 8.0 : 6.5,
+            radius: subtle ? 2.2 : 2.4,
+            fill: '#94a3b8',
+            statusClass: 'customer-topology-packet--stable',
+            opacity: subtle ? 0.35 : 0.45,
+        };
+    }
     switch (status) {
         case 'critical':
             return {
@@ -2929,66 +2948,16 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
             ? selectedRecord.search.trim()
             : '';
 
-    // Filtered slices of the searchbase catalogue surfaced INTO the
-    // read-only popup so the operator can swap a marker / line onto a
-    // different feed without having to discover the editor pencil
-    // first. Same filter that the editor's per-card picker uses (tag
-    // membership), so the two surfaces stay in lockstep — anything
-    // selectable here is also selectable in the editor.
-    // The popup picker browses the FULL Cisco-tagged catalogue, not
-    // just topology-pre-tagged stanzas. We widen here (matching the
-    // KpiPickerPanel's `tags.includes('Cisco')` gate) so an operator
-    // can swap a marker / line onto any vetted search in the app —
-    // ThousandEyes A2A, Catalyst Center health, SD-WAN bandwidth,
-    // ISE auth failures, etc. Tag-narrowing happens INSIDE the
-    // browser via chips, not at this level. The single Cisco tag is
-    // still required because untagged stanzas aren't surfaced
-    // anywhere in the UI on principle (Cloud Vetting / hygiene).
-    const popupSearchOptions = useMemo(() => {
-        if (!catalogueByName) return [] as SearchbaseRecord[];
-        return Object.values(catalogueByName)
-            .filter((record) => record.tags.includes('Cisco'))
-            .sort((a, b) =>
-                a.searchName.localeCompare(b.searchName, undefined, {
-                    sensitivity: 'base',
-                })
-            );
-    }, [catalogueByName]);
-
-    // Mutating-from-the-popup callback. Bypasses the editor's draft
-    // layer and writes straight to the persisted topology — appropriate
-    // here because picking a different searchbase entry is a
-    // one-line, instantly-revertable change (just pick the previous
-    // entry again). The editor's atomic save/discard semantics are
-    // still useful for multi-field edits like coordinates and
-    // capacity, where you want to bail without saving.
-    const updateSelectedSearchName = useCallback(
-        (kind: 'site' | 'link', id: string, nextSearchName: string) => {
-            const nextTopology: CustomerTopology =
-                kind === 'site'
-                    ? {
-                          ...storedTopology,
-                          sites: storedTopology.sites.map((site) =>
-                              site.id === id
-                                  ? { ...site, searchName: nextSearchName }
-                                  : site
-                          ),
-                      }
-                    : {
-                          ...storedTopology,
-                          links: storedTopology.links.map((link) =>
-                              link.id === id
-                                  ? { ...link, searchName: nextSearchName }
-                                  : link
-                          ),
-                      };
-            saveTopology(nextTopology);
-            // Also update the live draft so a re-open of the editor
-            // doesn't blow away the popup-driven edit.
-            setDraftTopology(nextTopology);
-        },
-        [storedTopology, saveTopology]
-    );
+    // NOTE: the popup-side search picker was removed on 2026-05-13
+    // per Alan's request — the read-only popup is now inspect+run
+    // only ("when we actually click on the link itself, there is no
+    // need to have at that point any option to select any search
+    // really, just show what is attached is fine and an ability to
+    // run it"). All search-rebinding now lives in the topology
+    // editor's per-card pickers (pencil button), where it has
+    // proper save/discard semantics. The previous helper functions
+    // (popupSearchOptions, updateSelectedSearchName) lived here
+    // until that change and were removed alongside the picker.
 
     const spotlightOrder = useMemo(
         () =>
@@ -3242,8 +3211,6 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 selectedSearchName={selectedSearchName}
                 selectedSpl={selectedSpl}
                 siteEnrichmentByShortName={siteEnrichmentByShortName}
-                searchOptions={popupSearchOptions}
-                onChangeSearchName={updateSelectedSearchName}
                 onClose={() => setSelected(null)}
                 onOpenInSearch={onOpenInSearch ? openSelectedInSearch : undefined}
             />
@@ -3263,6 +3230,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                     setIsEditorOpen(false);
                 }}
                 catalogueByName={catalogueByName}
+                onOpenInSearch={onOpenInSearch}
             />
 
             <div className="absolute bottom-6 left-4 z-[1000] space-y-3 pointer-events-auto">
@@ -3852,24 +3820,22 @@ interface SelectionCardProps {
     selectedSearchName?: string;
     selectedSpl: string;
     siteEnrichmentByShortName?: Record<string, SiteEnrichment>;
-    /**
-     * Full Cisco-tagged catalogue. Powers the in-popup
-     * `TopologySearchBrowser` so the operator can browse and pick
-     * any vetted search — not just topology-pre-tagged ones. The
-     * browser surfaces topology-tagged entries to the top via its
-     * `preferredTags` prop, but every Cisco entry is reachable.
-     */
-    searchOptions: SearchbaseRecord[];
-    /** Persists a search-name swap directly into the stored topology, bypassing the editor's atomic draft layer. */
-    onChangeSearchName: (
-        kind: 'site' | 'link',
-        id: string,
-        searchName: string
-    ) => void;
     onClose: () => void;
     onOpenInSearch?: () => void;
 }
 
+/**
+ * Read-only popup that opens when the operator clicks a marker or
+ * a link on the map. Per Alan's 2026-05-13 feedback, this surface
+ * is intentionally inspect-only: it shows the bound `searchName`,
+ * the live SPL, and an "Open in Splunk Search" button so the
+ * operator can verify and run the underlying query, but it does
+ * NOT offer a search-picker on this surface. Search swaps belong
+ * in the topology editor (pencil button), where they are an
+ * editorial action with proper save/discard semantics. Mixing
+ * "view a marker" and "rebind a marker" on the same popup made
+ * the edit feel surprising and the inspect feel cluttered.
+ */
 const SelectionCard: React.FC<SelectionCardProps> = ({
     selected,
     topology,
@@ -3879,8 +3845,6 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
     selectedSearchName,
     selectedSpl,
     siteEnrichmentByShortName,
-    searchOptions,
-    onChangeSearchName,
     onClose,
     onOpenInSearch,
 }) => {
@@ -4070,57 +4034,12 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
                         )}
 
                         {/*
-                            Catalogue browser surfaced inside the popup.
-                            Mirrors the KpiPickerPanel pattern (free-text
-                            search + tag chips + scrollable list) but
-                            scoped to the single field that matters here:
-                            `searchName`. The previous incarnation showed
-                            a 5-item dropdown filtered to a tag — Alan
-                            (rightly) demanded full catalogue browsing
-                            on 2026-05-12 ("it does not allow browsing
-                            any search"), so this widget walks the entire
-                            Cisco-tagged set and pre-sorts the topology-
-                            shaped entries to the top via `preferredTags`.
+                            Inspect-only data-source line. Click is
+                            "view what this marker / link is wired to"
+                            — picking a different search lives in the
+                            editor (pencil button), so this surface
+                            stays focused on inspect + run.
                         */}
-                        {catalogueLoaded ? (
-                            <TopologySearchBrowser
-                                catalogue={searchOptions}
-                                currentSearchName={
-                                    selected.kind === 'site'
-                                        ? selected.site.searchName ?? ''
-                                        : selected.link.searchName ?? ''
-                                }
-                                preferredTags={
-                                    selected.kind === 'site'
-                                        ? ['Topology_Site']
-                                        : ['Topology_Link']
-                                }
-                                label={selected.kind}
-                                onPick={(searchName) => {
-                                    if (!searchName) return;
-                                    onChangeSearchName(
-                                        selected.kind,
-                                        selected.kind === 'site'
-                                            ? selected.site.id
-                                            : selected.link.id,
-                                        searchName
-                                    );
-                                }}
-                                isDark={isDark}
-                            />
-                        ) : (
-                            <div
-                                className={cn(
-                                    'rounded-md border-2 px-2.5 py-2.5 text-[11px] italic',
-                                    isDark
-                                        ? 'border-sky-500/40 bg-sky-500/5 text-sky-200/70'
-                                        : 'border-sky-400/60 bg-sky-50 text-sky-700/70'
-                                )}
-                            >
-                                Loading searchbase catalogue…
-                            </div>
-                        )}
-
                         <div className="space-y-1">
                             <div className="flex items-center justify-between gap-2">
                                 <button
@@ -4285,6 +4204,15 @@ interface TopologyEditorPanelProps {
      * `null` while the catalogue is still loading.
      */
     catalogueByName: Record<string, SearchbaseRecord> | null;
+    /**
+     * Optional dispatch for the per-card "Open in Splunk Search"
+     * affordance. When wired by the parent map, each editor card
+     * gets a button that pushes the bound stanza's SPL into a new
+     * Splunk Search tab — same UX as the "Open in Search" buttons
+     * on tile pickers, so operators can sanity-check a search
+     * before saving the topology.
+     */
+    onOpenInSearch?: (spl: string) => void;
 }
 
 const editorInputClass = (isDark: boolean): string =>
@@ -4309,6 +4237,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
     onResetFactory,
     onClose,
     catalogueByName,
+    onOpenInSearch,
 }) => {
     const [jsonText, setJsonText] = useState('');
     const [jsonError, setJsonError] = useState<string | null>(null);
@@ -4330,6 +4259,48 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                 })
             );
     }, [catalogueByName]);
+
+    // Collapsed-by-default site / link cards. Storing the
+    // *expanded* set (rather than the collapsed set) means a fresh
+    // editor open shows everything compact, matching Alan's 2026-
+    // 05-13 ask: "can the sites and links default to collapsable
+    // here?". Keys are site / link IDs, namespaced with `site:` /
+    // `link:` so a future shared ID space wouldn't collide.
+    const [expandedCardKeys, setExpandedCardKeys] = useState<Set<string>>(
+        () => new Set()
+    );
+    const toggleCardExpanded = useCallback((key: string) => {
+        setExpandedCardKeys((prev) => {
+            const next = new Set(prev);
+            if (next.has(key)) {
+                next.delete(key);
+            } else {
+                next.add(key);
+            }
+            return next;
+        });
+    }, []);
+    // Reset card-collapse state every time the editor closes so a
+    // re-open starts from the canonical "everything collapsed"
+    // baseline. Without this, a long editing session can leave a
+    // dozen cards expanded across multiple sessions.
+    useEffect(() => {
+        if (!open) setExpandedCardKeys(new Set());
+    }, [open]);
+
+    // SPL lookup helper for the per-card "Open in Search" button.
+    // Reads the searchbase catalogue and dispatches the bound
+    // stanza's literal SPL through the parent's `onOpenInSearch`
+    // handler — same plumbing as the read-only popup's button, so
+    // both surfaces behave identically.
+    const handleOpenInSearch = useCallback(
+        (searchName: string | undefined) => {
+            if (!searchName || !onOpenInSearch || !catalogueByName) return;
+            const spl = catalogueByName[searchName]?.search?.trim();
+            if (spl) onOpenInSearch(spl);
+        },
+        [onOpenInSearch, catalogueByName]
+    );
 
     useEffect(() => {
         if (!open) {
@@ -4696,24 +4667,112 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                 </button>
                             </div>
                             <div className="space-y-2">
-                                {topology.sites.map((site) => (
+                                {topology.sites.map((site) => {
+                                    const cardKey = `site:${site.id}`;
+                                    const isExpanded =
+                                        expandedCardKeys.has(cardKey);
+                                    const boundSearch =
+                                        site.searchName?.trim() || '';
+                                    return (
                                     <div
                                         key={site.id}
                                         className={cn(
-                                            'rounded-lg border p-3 space-y-2',
+                                            'rounded-lg border overflow-hidden',
                                             isDark
                                                 ? 'border-slate-800 bg-slate-900/70'
                                                 : 'border-slate-200 bg-slate-50'
                                         )}
                                     >
-                                        <div className="flex items-center justify-between gap-2">
-                                            <div className="flex items-center gap-2 min-w-0">
+                                        {/*
+                                            Collapsible header. Click the
+                                            chevron + ID block to toggle the
+                                            full-detail body. Defaulting to
+                                            collapsed (per Alan's 2026-05-13
+                                            ask) keeps the editor panel
+                                            short on customers with lots of
+                                            sites — operators expand only
+                                            the card they're touching.
+                                        */}
+                                        <div className="flex items-center justify-between gap-2 p-3">
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    toggleCardExpanded(cardKey)
+                                                }
+                                                aria-expanded={isExpanded}
+                                                title={
+                                                    isExpanded
+                                                        ? 'Collapse site details'
+                                                        : 'Expand site details'
+                                                }
+                                                className={cn(
+                                                    'flex items-center gap-2 min-w-0 flex-1 text-left rounded transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400'
+                                                )}
+                                            >
+                                                <ChevronRight
+                                                    className={cn(
+                                                        'w-3.5 h-3.5 flex-shrink-0 transition-transform',
+                                                        isDark
+                                                            ? 'text-slate-400'
+                                                            : 'text-slate-500',
+                                                        isExpanded && 'rotate-90'
+                                                    )}
+                                                />
                                                 <MapPin className="w-4 h-4 text-sky-500 flex-shrink-0" />
-                                                <span className="text-[10px] font-mono uppercase text-slate-400 truncate">
-                                                    {site.id}
-                                                </span>
-                                            </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="text-[10px] font-mono uppercase text-slate-400 truncate">
+                                                        {site.id}
+                                                    </div>
+                                                    <div
+                                                        className={cn(
+                                                            'text-[10px] truncate',
+                                                            boundSearch
+                                                                ? isDark
+                                                                    ? 'text-slate-200'
+                                                                    : 'text-slate-700'
+                                                                : isDark
+                                                                ? 'text-slate-500 italic'
+                                                                : 'text-slate-400 italic'
+                                                        )}
+                                                        title={
+                                                            boundSearch ||
+                                                            'No search bound — expand to pick one.'
+                                                        }
+                                                    >
+                                                        {boundSearch ||
+                                                            'No search bound'}
+                                                    </div>
+                                                </div>
+                                            </button>
                                             <div className="flex items-center gap-1">
+                                                {onOpenInSearch && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            handleOpenInSearch(
+                                                                boundSearch
+                                                            )
+                                                        }
+                                                        disabled={!boundSearch}
+                                                        title={
+                                                            boundSearch
+                                                                ? `Open this search in Splunk Search to test it`
+                                                                : 'Pick a search first to enable testing'
+                                                        }
+                                                        className={cn(
+                                                            'p-1.5 rounded-md transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                                                            !boundSearch
+                                                                ? isDark
+                                                                    ? 'bg-slate-800/50 text-slate-600 cursor-not-allowed'
+                                                                    : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                                                : isDark
+                                                                ? 'bg-slate-800 text-sky-300 hover:bg-sky-950/70'
+                                                                : 'bg-white text-sky-700 hover:bg-sky-50'
+                                                        )}
+                                                    >
+                                                        <ExternalLink className="w-3.5 h-3.5" />
+                                                    </button>
+                                                )}
                                                 <button
                                                     type="button"
                                                     onClick={() =>
@@ -4750,50 +4809,45 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                 </button>
                                             </div>
                                         </div>
+                                        {isExpanded && (
+                                        <div
+                                            className={cn(
+                                                'px-3 pb-3 space-y-2 border-t',
+                                                isDark
+                                                    ? 'border-slate-800'
+                                                    : 'border-slate-200'
+                                            )}
+                                        >
                                         {/*
                                             Data-source picker. Lives at the
-                                            top of the card (immediately under
-                                            the ID/actions row) because
+                                            top of the expanded body because
                                             "which search powers this
                                             marker?" is the most-asked
                                             question once the site exists in
-                                            the topology — operators want to
-                                            know whether the marker is wired
-                                            to live telemetry or sitting on a
-                                            static placeholder. Earlier
-                                            revisions buried the picker at
-                                            the bottom of the card under a
-                                            `search_name` label, where it
-                                            was treated as opaque jargon and
-                                            rarely touched.
+                                            the topology. The header above
+                                            already shows the bound search
+                                            name + an "Open in Search"
+                                            button so an operator can
+                                            sanity-check before expanding
+                                            the picker.
                                         */}
-                                        {/*
-                                            Editor variant of the catalogue
-                                            browser. Same component as the
-                                            in-popup picker — operators see
-                                            an identical "Change search
-                                            (site)" panel in both surfaces,
-                                            so muscle memory transfers.
-                                            Adds the free-form text input
-                                            so a power-user can bind to a
-                                            stanza name not yet in the
-                                            catalogue (typo-tolerant).
-                                        */}
-                                        <TopologySearchBrowser
-                                            catalogue={editorSearchOptions}
-                                            currentSearchName={
-                                                site.searchName ?? ''
-                                            }
-                                            preferredTags={['Topology_Site']}
-                                            label="site"
-                                            onPick={(searchName) =>
-                                                updateSite(site.id, {
-                                                    searchName,
-                                                })
-                                            }
-                                            isDark={isDark}
-                                            showFreeFormInput
-                                        />
+                                        <div className="pt-2">
+                                            <TopologySearchBrowser
+                                                catalogue={editorSearchOptions}
+                                                currentSearchName={
+                                                    site.searchName ?? ''
+                                                }
+                                                preferredTags={['Topology_Site']}
+                                                label="site"
+                                                onPick={(searchName) =>
+                                                    updateSite(site.id, {
+                                                        searchName,
+                                                    })
+                                                }
+                                                isDark={isDark}
+                                                showFreeFormInput
+                                            />
+                                        </div>
                                         <div className="grid grid-cols-2 gap-2">
                                             <label className="space-y-1">
                                                 <span
@@ -4994,8 +5048,11 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                 confirmed yet.
                                             </span>
                                         </label>
+                                        </div>
+                                        )}
                                     </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </section>
 
@@ -5016,53 +5073,124 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                 </button>
                             </div>
                             <div className="space-y-2">
-                                {topology.links.map((link) => (
+                                {topology.links.map((link) => {
+                                    const cardKey = `link:${link.id}`;
+                                    const isExpanded =
+                                        expandedCardKeys.has(cardKey);
+                                    const boundSearch =
+                                        link.searchName?.trim() || '';
+                                    return (
                                     <div
                                         key={link.id}
                                         className={cn(
-                                            'rounded-lg border p-3 space-y-2',
+                                            'rounded-lg border overflow-hidden',
                                             isDark
                                                 ? 'border-slate-800 bg-slate-900/70'
                                                 : 'border-slate-200 bg-slate-50'
                                         )}
                                     >
-                                        <div className="flex items-center justify-between gap-2">
-                                            <div className="flex items-center gap-2 min-w-0">
-                                                <Link2 className="w-4 h-4 text-sky-500 flex-shrink-0" />
-                                                <span className="text-[10px] font-mono uppercase text-slate-400 truncate">
-                                                    {link.id}
-                                                </span>
-                                            </div>
+                                        <div className="flex items-center justify-between gap-2 p-3">
                                             <button
                                                 type="button"
-                                                onClick={() => removeLink(link.id)}
-                                                title="Remove link"
-                                                className={cn(
-                                                    'p-1.5 rounded-md transition-colors focus:outline-none focus:ring-1 focus:ring-red-400',
-                                                    isDark
-                                                        ? 'bg-slate-800 text-red-300 hover:bg-red-950/70'
-                                                        : 'bg-white text-red-500 hover:bg-red-50'
-                                                )}
+                                                onClick={() =>
+                                                    toggleCardExpanded(cardKey)
+                                                }
+                                                aria-expanded={isExpanded}
+                                                title={
+                                                    isExpanded
+                                                        ? 'Collapse link details'
+                                                        : 'Expand link details'
+                                                }
+                                                className="flex items-center gap-2 min-w-0 flex-1 text-left rounded transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400"
                                             >
-                                                <Trash2 className="w-3.5 h-3.5" />
+                                                <ChevronRight
+                                                    className={cn(
+                                                        'w-3.5 h-3.5 flex-shrink-0 transition-transform',
+                                                        isDark
+                                                            ? 'text-slate-400'
+                                                            : 'text-slate-500',
+                                                        isExpanded && 'rotate-90'
+                                                    )}
+                                                />
+                                                <Link2 className="w-4 h-4 text-sky-500 flex-shrink-0" />
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="text-[10px] font-mono uppercase text-slate-400 truncate">
+                                                        {link.id}
+                                                    </div>
+                                                    <div
+                                                        className={cn(
+                                                            'text-[10px] truncate',
+                                                            boundSearch
+                                                                ? isDark
+                                                                    ? 'text-slate-200'
+                                                                    : 'text-slate-700'
+                                                                : isDark
+                                                                ? 'text-slate-500 italic'
+                                                                : 'text-slate-400 italic'
+                                                        )}
+                                                        title={
+                                                            boundSearch ||
+                                                            'No search bound — expand to pick one.'
+                                                        }
+                                                    >
+                                                        {boundSearch ||
+                                                            'No search bound'}
+                                                    </div>
+                                                </div>
                                             </button>
+                                            <div className="flex items-center gap-1">
+                                                {onOpenInSearch && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            handleOpenInSearch(
+                                                                boundSearch
+                                                            )
+                                                        }
+                                                        disabled={!boundSearch}
+                                                        title={
+                                                            boundSearch
+                                                                ? 'Open this search in Splunk Search to test it'
+                                                                : 'Pick a search first to enable testing'
+                                                        }
+                                                        className={cn(
+                                                            'p-1.5 rounded-md transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                                                            !boundSearch
+                                                                ? isDark
+                                                                    ? 'bg-slate-800/50 text-slate-600 cursor-not-allowed'
+                                                                    : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                                                : isDark
+                                                                ? 'bg-slate-800 text-sky-300 hover:bg-sky-950/70'
+                                                                : 'bg-white text-sky-700 hover:bg-sky-50'
+                                                        )}
+                                                    >
+                                                        <ExternalLink className="w-3.5 h-3.5" />
+                                                    </button>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeLink(link.id)}
+                                                    title="Remove link"
+                                                    className={cn(
+                                                        'p-1.5 rounded-md transition-colors focus:outline-none focus:ring-1 focus:ring-red-400',
+                                                        isDark
+                                                            ? 'bg-slate-800 text-red-300 hover:bg-red-950/70'
+                                                            : 'bg-white text-red-500 hover:bg-red-50'
+                                                    )}
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
                                         </div>
-                                        {/*
-                                            Data-source picker, mirrored from
-                                            the per-site card. Pulled to the
-                                            top of the link card for the same
-                                            reason: "which search measures
-                                            this connection?" is the most
-                                            useful question once the link
-                                            exists, so it deserves the most
-                                            visible slot. The dropdown is
-                                            scoped via `linkSearchOptions`
-                                            (Topology_Link tag), the input
-                                            below it stays for power users
-                                            who want to bind to a custom
-                                            searchbase entry name not yet
-                                            tagged.
-                                        */}
+                                        {isExpanded && (
+                                        <div
+                                            className={cn(
+                                                'px-3 pb-3 space-y-2 border-t',
+                                                isDark
+                                                    ? 'border-slate-800'
+                                                    : 'border-slate-200'
+                                            )}
+                                        >
                                         {/*
                                             Editor variant of the link
                                             catalogue browser. Same
@@ -5070,23 +5198,29 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                             scoped to `Topology_Link`-tagged
                                             stanzas as the preferred sort
                                             but with full Cisco-tagged
-                                            catalogue browsable.
+                                            catalogue browsable. The
+                                            header above already shows the
+                                            bound search name + an "Open
+                                            in Search" button for quick
+                                            sanity-checks.
                                         */}
-                                        <TopologySearchBrowser
-                                            catalogue={editorSearchOptions}
-                                            currentSearchName={
-                                                link.searchName ?? ''
-                                            }
-                                            preferredTags={['Topology_Link']}
-                                            label="link"
-                                            onPick={(searchName) =>
-                                                updateLink(link.id, {
-                                                    searchName,
-                                                })
-                                            }
-                                            isDark={isDark}
-                                            showFreeFormInput
-                                        />
+                                        <div className="pt-2">
+                                            <TopologySearchBrowser
+                                                catalogue={editorSearchOptions}
+                                                currentSearchName={
+                                                    link.searchName ?? ''
+                                                }
+                                                preferredTags={['Topology_Link']}
+                                                label="link"
+                                                onPick={(searchName) =>
+                                                    updateLink(link.id, {
+                                                        searchName,
+                                                    })
+                                                }
+                                                isDark={isDark}
+                                                showFreeFormInput
+                                            />
+                                        </div>
                                         <label className="block space-y-1">
                                             <span
                                                 className={cn(
@@ -5231,8 +5365,11 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                 />
                                             </label>
                                         </div>
+                                        </div>
+                                        )}
                                     </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </section>
 

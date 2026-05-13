@@ -1370,7 +1370,7 @@
 	"description": "Admin guide for the Cisco Executive Dashboards",
 	"title": "Admin Guide",
 	"applicationProperties": {
-		"hideEdit": false,
+		"hideEdit": true,
 		"collapseNavigation": false
 	}
 }

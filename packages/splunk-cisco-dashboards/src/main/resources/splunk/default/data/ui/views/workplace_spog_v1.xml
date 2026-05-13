@@ -1,9 +1,43 @@
 
 <dashboard version="2" theme="light">
- <label>Workplace — Single Pane of Glass</label>
- <description></description>
- <definition><![CDATA[
+    <label>Workplace — Single Pane of Glass</label>
+    <description></description>
+    <definition><![CDATA[
 {
+	"title": "Workplace — Single Pane of Glass",
+	"inputs": {
+		"input_global_trp": {
+			"options": {
+				"defaultValue": "-30d@d,now",
+				"token": "global_time"
+			},
+			"title": "Time range",
+			"type": "input.timerange"
+		}
+	},
+	"defaults": {
+		"dataSources": {
+			"ds.search": {
+				"options": {
+					"queryParameters": {
+						"earliest": "$global_time.earliest$",
+						"latest": "$global_time.latest$"
+					}
+				}
+			},
+			"ds.spl2": {
+				"options": {
+					"queryParameters": {
+						"earliest": "$global_time.earliest$",
+						"latest": "$global_time.latest$"
+					}
+				}
+			}
+		},
+		"tokens": {
+			"default": {}
+		}
+	},
 	"visualizations": {
 		"viz_about_box": {
 			"options": {
@@ -22,6 +56,15 @@
 				"markdown": "# Workplace — Single Pane of Glass\n\n**Audience:** Executive Sponsors, NetOps Leadership, Workplace Services, Cisco Account Team\n\nThis is the executive view aligned to the **Cisco Future-Proof Workplace** strategy paper . It rolls Catalyst Center + Cisco Spaces (Wi-Fi-based, not camera-based) into five Health Tiles. Two tiles are fully wired today; one is a Phase-3 placeholder pending data ingestion. Use this dashboard for monthly business reviews and incident-window readouts. Drill into `NetOps Readiness — Op Florida Ready` for operational detail."
 			},
 			"type": "splunk.markdown"
+		},
+		"viz_bmxsRvR0": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.85)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.08)",
+				"strokeWidth": 1
+			},
+			"type": "splunk.rectangle"
 		},
 		"viz_corr": {
 			"dataSources": {
@@ -47,11 +90,11 @@
 				],
 				"showLegend": true,
 				"showOverlayY2Axis": true,
+				"xAxisTitleVisibility": "hide",
 				"y2AxisAbbreviation": "auto",
 				"y2AxisTitleText": "AP Health / Spaces / Auth failures",
 				"yAxisAbbreviation": "auto",
-				"yAxisTitleText": "Wired / Wireless clients",
-				"xAxisTitleVisibility": "hide"
+				"yAxisTitleText": "Wired / Wireless clients"
 			},
 			"title": "Cross-source correlation",
 			"type": "splunk.line"
@@ -92,21 +135,6 @@
 			"type": "splunk.markdown"
 		},
 		"viz_issues": {
-			"dataSources": {
-				"primary": "ds_issues"
-			},
-			"options": {
-				"backgroundColor": "transparent",
-				"count": 12,
-				"headerVisibility": "fixed",
-				"columnFormat": {
-					"Priority": {
-						"rowBackgroundColors": "> table | seriesByName(\"Priority\") | matchValue(viz_issues_Priority_colors)"
-					}
-				}
-			},
-			"title": "Top active issues",
-			"type": "splunk.table",
 			"context": {
 				"viz_issues_Priority_colors": [
 					{
@@ -126,7 +154,22 @@
 						"value": "rgba(110,190,74,0.15)"
 					}
 				]
-			}
+			},
+			"dataSources": {
+				"primary": "ds_issues"
+			},
+			"options": {
+				"backgroundColor": "transparent",
+				"columnFormat": {
+					"Priority": {
+						"rowBackgroundColors": "> table | seriesByName(\"Priority\") | matchValue(viz_issues_Priority_colors)"
+					}
+				},
+				"count": 12,
+				"headerVisibility": "fixed"
+			},
+			"title": "Top active issues",
+			"type": "splunk.table"
 		},
 		"viz_issues_box": {
 			"options": {
@@ -168,11 +211,11 @@
 				],
 				"showLegend": true,
 				"showOverlayY2Axis": true,
+				"xAxisTitleVisibility": "hide",
 				"y2AxisAbbreviation": "auto",
 				"y2AxisTitleText": "AP Health (0-100) / Active Issues",
 				"yAxisAbbreviation": "auto",
-				"yAxisTitleText": "Wired / Wireless clients",
-				"xAxisTitleVisibility": "hide"
+				"yAxisTitleText": "Wired / Wireless clients"
 			},
 			"title": "Wireless occupancy & quality over time",
 			"type": "splunk.line"
@@ -195,21 +238,6 @@
 			"type": "splunk.markdown"
 		},
 		"viz_persite": {
-			"dataSources": {
-				"primary": "ds_persite"
-			},
-			"options": {
-				"backgroundColor": "transparent",
-				"count": 12,
-				"headerVisibility": "fixed",
-				"columnFormat": {
-					"Status": {
-						"rowBackgroundColors": "> table | seriesByName(\"Status\") | matchValue(viz_persite_Status_colors)"
-					}
-				}
-			},
-			"title": "Site quality leaderboard",
-			"type": "splunk.table",
 			"context": {
 				"viz_persite_Status_colors": [
 					{
@@ -225,7 +253,22 @@
 						"value": "rgba(110,190,74,0.15)"
 					}
 				]
-			}
+			},
+			"dataSources": {
+				"primary": "ds_persite"
+			},
+			"options": {
+				"backgroundColor": "transparent",
+				"columnFormat": {
+					"Status": {
+						"rowBackgroundColors": "> table | seriesByName(\"Status\") | matchValue(viz_persite_Status_colors)"
+					}
+				},
+				"count": 12,
+				"headerVisibility": "fixed"
+			},
+			"title": "Site quality leaderboard",
+			"type": "splunk.table"
 		},
 		"viz_persite_box": {
 			"options": {
@@ -268,11 +311,11 @@
 			"options": {
 				"majorColor": "#049FD9",
 				"majorFontSize": 56,
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
 				"shouldUseThousandSeparators": true,
 				"sparklineDisplay": "below",
-				"sparklineStrokeColor": "#0B5394",
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"sparklineStrokeColor": "#0B5394"
 			},
 			"title": "Total concurrent endpoints (wired + wireless)",
 			"type": "splunk.singlevalue"
@@ -319,12 +362,12 @@
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
 				"majorFontSize": 60,
 				"majorValue": "> primary | seriesByName('NQI') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#2E9E4A",
 				"unit": "%",
-				"unitPosition": "after",
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"unitPosition": "after"
 			},
 			"title": "Network Quality Index",
 			"type": "splunk.singlevalue"
@@ -397,11 +440,11 @@
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
 				"majorFontSize": 60,
 				"majorValue": "> primary | seriesByName('Active Risks') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
 				"shouldUseThousandSeparators": true,
 				"sparklineDisplay": "below",
-				"sparklineStrokeColor": "#D64550",
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"sparklineStrokeColor": "#D64550"
 			},
 			"title": "Active Risks",
 			"type": "splunk.singlevalue"
@@ -448,65 +491,22 @@
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
 				"majorFontSize": 60,
 				"majorValue": "> primary | seriesByName('NRS') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#0B5394",
 				"unit": "%",
-				"unitPosition": "after",
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"unitPosition": "after"
 			},
 			"title": "Network Readiness Score",
 			"type": "splunk.singlevalue"
-		},
-		"viz_bmxsRvR0": {
-			"options": {
-				"fillColor": "rgba(255,255,255,0.85)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
-			},
-			"type": "splunk.rectangle"
-		}
-	},
-	"title": "Workplace — Single Pane of Glass",
-	"inputs": {
-		"input_global_trp": {
-			"options": {
-				"defaultValue": "-30d@d,now",
-				"token": "global_time"
-			},
-			"title": "Time range",
-			"type": "input.timerange"
-		}
-	},
-	"defaults": {
-		"dataSources": {
-			"ds.search": {
-				"options": {
-					"queryParameters": {
-						"earliest": "$global_time.earliest$",
-						"latest": "$global_time.latest$"
-					}
-				}
-			},
-			"ds.spl2": {
-				"options": {
-					"queryParameters": {
-						"earliest": "$global_time.earliest$",
-						"latest": "$global_time.latest$"
-					}
-				}
-			}
-		},
-		"tokens": {
-			"default": {}
 		}
 	},
 	"dataSources": {
-		"ds_correlation": {
-			"name": "Cross-source correlation - clienthealth wired+wireless + AP health + Spaces + auth failures (union pattern)",
+		"ds_annotations": {
+			"name": "Shared - ds_annotations",
 			"options": {
-				"query": "| union\n [ search `index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" scoreType=\"ALL\" clientType=\"WIRED\"\n | timechart fixedrange=false latest(clientCount) as \"Wired Clients\" ]\n [ search `index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" scoreType=\"ALL\" clientType=\"WIRELESS\"\n | timechart fixedrange=false latest(clientCount) as \"Wireless Clients\" ]\n [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" OverallHealth=*\n | search DeviceFamily=\"Unified AP\" OR DeviceFamily=\"Wireless Controller\"\n | where OverallHealth >= 0\n | timechart avg(OverallHealth) as ap_h_raw\n | eval \"AP Health (0-100)\" = round(ap_h_raw*10, 1)\n | fields - ap_h_raw ]\n [ search `index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_PRESENCE\"\n | eval mac=coalesce('devicePresence.device.macAddress','devicePresence.macAddress')\n | where isnotnull(mac) AND mac!=\"\"\n | timechart dc(mac) as \"Spaces Concurrent Users\" ]\n [ search `index_windows` sourcetype=\"WinEventLog:Security\" (EventCode=4625 OR EventCode=4771)\n | timechart count as \"Auth Failures\" ]\n| stats values(*) as * by _time\n| sort _time\n| table _time, \"Wired Clients\", \"Wireless Clients\", \"AP Health (0-100)\", \"Spaces Concurrent Users\", \"Auth Failures\"",
+				"query": "| noop",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -514,10 +514,10 @@
 			},
 			"type": "ds.search"
 		},
-		"ds_annotations": {
-			"name": "Shared - ds_annotations",
+		"ds_correlation": {
+			"name": "Cross-source correlation - clienthealth wired+wireless + AP health + Spaces + auth failures (union pattern)",
 			"options": {
-				"query": "| noop",
+				"query": "| union\n [ search `index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" scoreType=\"ALL\" clientType=\"WIRED\"\n | timechart fixedrange=false latest(clientCount) as \"Wired Clients\" ]\n [ search `index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" scoreType=\"ALL\" clientType=\"WIRELESS\"\n | timechart fixedrange=false latest(clientCount) as \"Wireless Clients\" ]\n [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" OverallHealth=*\n | search DeviceFamily=\"Unified AP\" OR DeviceFamily=\"Wireless Controller\"\n | where OverallHealth >= 0\n | timechart avg(OverallHealth) as ap_h_raw\n | eval \"AP Health (0-100)\" = round(ap_h_raw*10, 1)\n | fields - ap_h_raw ]\n [ search `index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_PRESENCE\"\n | eval mac=coalesce('devicePresence.device.macAddress','devicePresence.macAddress')\n | where isnotnull(mac) AND mac!=\"\"\n | timechart dc(mac) as \"Spaces Concurrent Users\" ]\n [ search `index_windows` sourcetype=\"WinEventLog:Security\" (EventCode=4625 OR EventCode=4771)\n | timechart count as \"Auth Failures\" ]\n| stats values(*) as * by _time\n| sort _time\n| table _time, \"Wired Clients\", \"Wireless Clients\", \"AP Health (0-100)\", \"Spaces Concurrent Users\", \"Auth Failures\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -604,9 +604,7 @@
 		}
 	},
 	"layout": {
-		"globalInputs": [
-			"input_global_trp"
-		],
+		"globalInputs": [],
 		"layoutDefinitions": {
 			"layout_1": {
 				"options": {
@@ -619,10 +617,10 @@
 					{
 						"item": "viz_bmxsRvR0",
 						"position": {
-							"x": 670,
-							"y": 170,
+							"h": 290,
 							"w": 312,
-							"h": 290
+							"x": 670,
+							"y": 170
 						},
 						"type": "block"
 					},
@@ -640,8 +638,8 @@
 						"item": "viz_about_md",
 						"position": {
 							"h": 110,
-							"w": 1560,
-							"x": 40,
+							"w": 1320,
+							"x": 280,
 							"y": 30
 						},
 						"type": "block"
@@ -935,6 +933,16 @@
 							"y": 1580
 						},
 						"type": "block"
+					},
+					{
+						"item": "input_global_trp",
+						"type": "input",
+						"position": {
+							"x": 40,
+							"y": 40,
+							"w": 198,
+							"h": 82
+						}
 					}
 				],
 				"type": "absolute"
@@ -947,8 +955,14 @@
 					"layoutId": "layout_1"
 				}
 			]
+		},
+		"options": {
+			"showTitleAndDescription": false
 		}
+	},
+	"applicationProperties": {
+		"hideEdit": true
 	}
 }
-]]></definition>
+    ]]></definition>
 </dashboard>

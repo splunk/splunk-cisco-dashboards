@@ -1345,7 +1345,7 @@
 	},
 	"applicationProperties": {
 		"collapseNavigation": false,
-		"hideEdit": false,
+		"hideEdit": true,
 		"hideOpenInSearch": false
 	}
 }

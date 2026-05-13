@@ -2867,7 +2867,7 @@
 		}
 	},
 	"applicationProperties": {
-		"hideEdit": false,
+		"hideEdit": true,
 		"hideExport": false,
 		"hideOpenInSearch": false
 	}

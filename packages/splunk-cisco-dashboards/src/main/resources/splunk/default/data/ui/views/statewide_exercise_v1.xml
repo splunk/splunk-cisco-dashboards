@@ -3567,7 +3567,7 @@
 	},
 	"applicationProperties": {
 		"collapseNavigation": false,
-		"hideEdit": false
+		"hideEdit": true
 	}
 }
 ]]></definition>
