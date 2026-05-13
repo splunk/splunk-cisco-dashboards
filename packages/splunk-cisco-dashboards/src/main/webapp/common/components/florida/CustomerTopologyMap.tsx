@@ -5484,7 +5484,7 @@ const SiteDetails: React.FC<SiteDetailsProps> = ({
 
     return (
         <>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
                 <MetricPill
                     label="Health"
                     value={formatPercent(site.metrics.healthPct)}
@@ -5498,11 +5498,6 @@ const SiteDetails: React.FC<SiteDetailsProps> = ({
                 <MetricPill
                     label="Alerts"
                     value={formatNumber(site.metrics.alerts)}
-                    isDark={isDark}
-                />
-                <MetricPill
-                    label="Latency"
-                    value={formatLatency(site.metrics.latencyMs)}
                     isDark={isDark}
                 />
             </div>

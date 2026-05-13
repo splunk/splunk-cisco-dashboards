@@ -7,6 +7,192 @@
 
 ---
 
+## 2026-05-13 (Build 82) — Wire real Alerts data into the site map popup, drop the placeholder Latency tile
+
+### Context
+
+Alan opened the Tallahassee site marker on the Overview map and
+the popup showed `ALERTS: Awaiting` and `LATENCY: Awaiting`. Looked
+at the live stanza `[overview_site_tallahassee_health]` and found
+line 9797:
+
+```
+| eval healthPct=round(healthPct,1), alerts=null(), latencyMs=null() \
+```
+
+Both columns were faithful nulls — placeholders left over from
+when the stanza was first authored. The React layer (`MetricPill`
++ `formatLatency` / `formatNumber`) renders null as "Awaiting", so
+nothing was broken; we just never plumbed real data through.
+
+Alan's call:
+- **Drop Latency from the site popup.** Per-site latency has no
+  clean rollup from any single DNAC sourcetype. `cisco:dnac:client`
+  is the only DNAC source with latency data and it's per-client
+  RUM, not a site-level metric.
+- **Populate Alerts.** Picked Option A from three I proposed:
+  active DNAC P1/P2 issues for site devices, joined via the
+  established `cisco:dnac:devicehealth` site-enrichment pattern
+  used by 15+ existing issue stanzas in `searchbase.conf`.
+
+### What changed (Build 82)
+
+#### 1. `[overview_site_tallahassee_health]` v1.1.1 → v1.2.0
+
+- Removed `latencyMs=null()` from the eval line.
+- Removed `latencyMs` from the `fields` projection.
+- Added `appendcols` subsearch that counts distinct active P1/P2
+  Catalyst Center issues attributed to Tallahassee devices:
+  ```
+  | appendcols [
+      search `index_catalyst` sourcetype="cisco:dnac:issue"
+          IssueStatus="active"
+          (IssueSpecificPriority="P1" OR IssueSpecificPriority="P2")
+      | join type=left DeviceID [
+          search `index_catalyst` sourcetype="cisco:dnac:devicehealth"
+          | eval Site=`dnac_site_normalize(coalesce(Site, Location))`
+          | stats latest(Site) as Site by DeviceID
+      ]
+      | where match(Site, "(?i)Tallahassee")
+      | stats dc(IssueID) as alerts
+  ]
+  | fillnull value=0 alerts
+  ```
+- `fillnull value=0 alerts` guarantees the column is always
+  populated — empty popup tile would be the failure mode.
+- `telemetrySource` updated to:
+  `Catalyst Center device health + active issues
+   (cisco:dnac:devicehealth, cisco:dnac:issue)`
+- Description / explanation / related_info HTML updated to match.
+- Drill-down hint added: link to `[it_health_active_dnac_issues_table]`
+  filtered to Tallahassee.
+
+#### 2. `[overview_site_auburndale_health]` v1.1.1 → v1.2.0
+
+- Mirror image of TLH: same `appendcols` shape, `match(Site, "(?i)Auburndale")`,
+  `latencyMs` dropped, doc copy refreshed.
+
+#### 3. `[overview_topology_overview]` v1.3.0 → v1.3.1
+
+The umbrella stanza is described as a "summary banner / fallback
+when individual site stanzas haven't loaded." It also emitted a
+`latencyMs=null()` placeholder in the site row.
+
+- Dropped `latencyMs=null()` from the umbrella site row eval and
+  from the umbrella's `fields` projection.
+- Kept `alerts=null()` as conservative fallback semantics — when
+  the per-site stanza fails to load, the fallback should report
+  "we don't know" (which the React layer renders as "Awaiting"),
+  not a stale `0` that looks like real data.
+- Updated the `solution` doc to drop the per-site `latencyMs`
+  expectation.
+
+#### 4. `CustomerTopologyMap.tsx` — site popup layout
+
+- Dropped the `<MetricPill label="Latency">` block (lines 5503-5507
+  in the pre-build-82 snapshot).
+- Switched the popup grid from `grid-cols-2` (2x2) to `grid-cols-3`
+  (single row of three) so Health / Devices / Alerts sit cleanly
+  on one row.
+- The **link** popup keeps its Latency tile — that's real data
+  from `[overview_link_auburndale_tallahassee_health]` (TE A2A
+  network.latency in ms). Only the **site** popup loses Latency.
+- Site-level `latencyMs` plumbing in the normalization layer
+  (`finiteOptionalNumber`, threshold case() branches) was left
+  intact — those paths now just never see a value for sites and
+  short-circuit harmlessly. Cleaning up the dead code is a future
+  refactor, not in scope here.
+
+#### 5. `splunk-cisco-thousandeyes-fields.mdc` v1.2.0 → v1.3.0
+
+Operator dumped the raw `cisco:thousandeyes:alerts` field list:
+
+```
+accountGroupName, accountId, alert.details{}.metricsAtStart,
+alert.details{}.source.id, alert.details{}.source.name, alert.id,
+alert.rule.expression, alert.rule.id, alert.rule.name, alert.rule.notes,
+alert.severity, alert.targets{}, alert.test.name, alert.triggered,
+alert.type, alertId, alertState, alertType, alert_cleared,
+alert_rule_expression, alert_rule_id, alert_rule_name, alert_rule_notes,
+alert_targets, alert_test_name, alert_triggered, alert_type, app,
+endDate, eventId, eventType, expression, id, itsiDrilldownURI,
+itsi_drilldown_uri, orgId, organizationId, permalink, ruleId, ruleName,
+severity, severity_id, signature, src, startDate, testId, testName,
+testType, test_description, test_type, thousandeyes_test_id,
+triggerTime, trigger_time_formatted, type, vendor_severity
+```
+
+Added as a new "Raw `cisco:thousandeyes:alerts` field inventory"
+section alongside the existing `:metric` raw inventory, with notes
+on:
+
+- The dual `alert.*` (dotted) and `alert_*` (flat) naming the TA
+  emits — pick one per stanza, prefer dotted to round-trip with
+  the DM.
+- `alertState="active"` vs `alert_cleared` filtering for
+  open-alert counts.
+- `severity` (string) vs `severity_id` (numeric) vs
+  `vendor_severity` (upstream TE pre-mapping).
+- `alert.targets{}` multivalue handling.
+- `permalink` and `itsi_drilldown_uri` for deep-link hooks.
+- Test-to-site attribution via `testName` token matching (FDEM
+  convention: city name embedded in test title).
+
+Also placeholder added for the raw `cisco:thousandeyes:trace`
+field inventory (operator dump pending).
+
+Fixed a small bug in the rule's "Alert table" SPL example that
+still used the wrong `cisco:thousandeyes:alert` (singular)
+sourcetype — corrected to `cisco:thousandeyes:alerts` (plural)
+matching the authoritative table.
+
+### Why Option A and not Option B (TE alerts) or C (both)
+
+- Option A reuses an already-trusted pattern in this codebase
+  (`cisco:dnac:issue` joined to `cisco:dnac:devicehealth` for
+  site enrichment — line 545, 3452, 3475, 3498, 3521, 3566, 4308,
+  4407, etc.). Zero new sourcetype risk, zero new field guesses.
+- Option B (TE alerts via `testName` site-token match) is real,
+  but couples the popup to TE test naming discipline. Useful as
+  a future drill-down, not as the headline number.
+- Option C (DNAC + TE unioned) would mix two different fault
+  domains under one label, which is misleading on an exec popup.
+
+If we want richer signals later, the answer is more drill-down
+content (existing alert/issue dashboards filtered by site) — not
+more popup tiles.
+
+### Verification
+
+- `yarn build` clean, no new warnings.
+- `ReadLints` on `CustomerTopologyMap.tsx`: clean.
+- All site-row `latencyMs=null()` placeholders gone (remaining
+  hits are legitimate link-row placeholders that downstream
+  stages populate from real data).
+
+### Field-list cross-check on Build 81 alert stanzas
+
+Cross-checked the four TE alert stanzas I touched in Build 81
+against the new raw alerts field list: every field they reference
+(`alert.rule.name`, `alert.test.name`, `alert.type`, `severity`)
+**is** in the list — Build 81's worry that they were field-broken
+was wrong. Good.
+
+### What's next
+
+- Operator dump for `cisco:thousandeyes:trace` raw field list so
+  we can do the same audit for the trace stanza
+  (`teuc_5_9_52_trace_span_analysis`).
+- Once the trace field list is in the rule, sweep the four TE
+  alert stanzas + one TE trace stanza for any DM-eligible rewrites
+  (`Cisco_ThousandEyes.Alerts` dataset uses `testName` /
+  `testType` / `signature` shape, not the raw `alert.*` shape, so
+  there's potential consolidation).
+- Probably revisit dead `latencyMs` plumbing in `CustomerTopologyMap.tsx`
+  during the next layout refactor.
+
+---
+
 ## 2026-05-13 (Build 81) — Finish the sourcetype sweep (catch the bare `thousandeyes:*` variants Build 80 missed)
 
 ### Context

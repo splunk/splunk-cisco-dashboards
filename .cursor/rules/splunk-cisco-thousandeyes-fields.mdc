@@ -1,7 +1,7 @@
 ---
 description: Cisco ThousandEyes field reference and SPL conventions for the Cisco Exec Dashboards app. Authoritative source for DM dataset/field names and the metric_name: prefix convention.
 globs: **/searchbase.conf,**/savedsearches.conf,**/data/ui/views/*.xml,**/webapp/**/*.tsx,**/webapp/**/*.ts
-version: 1.2.0
+version: 1.3.0
 alwaysApply: false
 ---
 
@@ -329,6 +329,121 @@ These are not part of the schema; do not use them as
 generic field names. They appear because of how the user's
 saved searches tag results.
 
+### Raw `cisco:thousandeyes:alerts` field inventory (FDEM-confirmed 2026-05-13)
+
+This is the field list returned by
+`` `index_thousandeyes` sourcetype="cisco:thousandeyes:alerts" | `field_list` ``
+on the operator's stack. Compare carefully against the
+`Cisco_ThousandEyes.Alerts` DM list above — the raw events expose
+several extras (the dotted `alert.*` namespace, additional state
+fields, multivalue targets) that the DM intentionally flattens or
+omits. **Use this list for raw-event SPL; use the DM list above
+for `tstats` against `Cisco_ThousandEyes.Alerts`.**
+
+```
+accountGroupName
+accountId
+alert.details{}.metricsAtStart
+alert.details{}.source.id
+alert.details{}.source.name
+alert.id
+alert.rule.expression
+alert.rule.id
+alert.rule.name
+alert.rule.notes
+alert.severity
+alert.targets{}
+alert.test.name
+alert.triggered
+alert.type
+alertId
+alertState
+alertType
+alert_cleared
+alert_rule_expression
+alert_rule_id
+alert_rule_name
+alert_rule_notes
+alert_targets
+alert_test_name
+alert_triggered
+alert_type
+app
+endDate
+eventId
+eventType
+expression
+id
+itsiDrilldownURI
+itsi_drilldown_uri
+orgId
+organizationId
+permalink
+ruleId
+ruleName
+severity
+severity_id
+signature
+src
+startDate
+testId
+testName
+testType
+test_description
+test_type
+thousandeyes_test_id
+triggerTime
+trigger_time_formatted
+type
+vendor_severity
+```
+
+Notes on alert event shape:
+
+- The TA emits **two parallel naming conventions** for the same
+  underlying value: a dotted `alert.*` form (e.g. `alert.test.name`,
+  `alert.rule.name`, `alert.severity`, `alert.type`) and an
+  underscore-flat form (e.g. `alert_test_name`, `alert_rule_name`,
+  `alert_type`). Both are populated. Pick one and stay consistent
+  inside a single stanza so readers can grep either way; prefer
+  the dotted form because it round-trips with the DM dataset
+  field names where they overlap.
+- `alertState` (string: `"active"` / `"cleared"`) is the live
+  status. `alert_cleared` is a boolean flag carrying the same
+  signal in flat form. Filter with `alertState="active"` for
+  open-alert tiles.
+- `severity` is the human label (`"info"`, `"minor"`, `"major"`,
+  `"critical"` per the TA). `severity_id` is the numeric form.
+  `vendor_severity` is the upstream TE severity string before any
+  TA mapping.
+- `alert.targets{}` is a multivalue carrying the alert's affected
+  targets (test endpoints, server addresses, etc.). Use
+  `mvexpand alert.targets{}` if you need per-target fan-out, or
+  `dc(alert.targets{})` for target-count aggregation.
+- `permalink` is the deep-link URL into the TE web UI for the
+  alert; `itsi_drilldown_uri` (and the camelCase
+  `itsiDrilldownURI`) are deep links into ITSI for operators who
+  use Splunk's correlation engine.
+- `triggerTime` is the alert fire time as recorded by TE
+  (separate from Splunk's `_time`); `trigger_time_formatted` is
+  the human-readable rendering that the TA pre-computes.
+- `eventType` distinguishes the alert family (`"ALERT"`,
+  `"ALERT_CLEARED"`, etc.). When grouping per alert, prefer
+  `dc(alertId)` over `count` so a fire+clear pair counts as one
+  alert, not two events.
+- `testId` / `testName` / `testType` (and the dotted
+  `alert.test.name`) tie the alert back to a specific synthetic
+  test. To attribute alerts to a customer site without a join,
+  use a token match on `testName` (the FDEM convention is to
+  embed the city name in the test title, e.g. `"Auburndale to
+  Tallahassee"`).
+
+### Raw `cisco:thousandeyes:trace` field inventory (PENDING)
+
+Operator field-list dump pending. When available, append it here
+in the same format as the metric and alerts inventories above so
+trace stanzas can be audited the same way.
+
 ### Raw vs DM — fields the DM has but raw events do NOT
 
 These exist only via the DM (calculated fields the TA materializes
@@ -568,14 +683,14 @@ expressions per `splunk-spl-field-syntax.mdc`.
 ### Alert table
 
 ```spl
-`index_thousandeyes` sourcetype="cisco:thousandeyes:alert"
+`index_thousandeyes` sourcetype="cisco:thousandeyes:alerts" alertState="active"
 | stats
-    count
+    dc(alertId) as alert_count
     latest(severity) as severity
     latest(testName) as testName
     latest(permalink) as permalink
   by alertId
-| sort -count
+| sort -alert_count
 ```
 
 ## Common pitfalls
