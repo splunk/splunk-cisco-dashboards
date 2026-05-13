@@ -7,6 +7,215 @@
 
 ---
 
+## 2026-05-13 (Build 87) — Searchbase taxonomy refactor (530 stanzas)
+
+### Context
+
+Alan exported the catalogue&#39;s tag distribution and flagged three
+problems:
+
+1. The 100 freshly-harvested TA stock stanzas (carried in from
+   the previous Cursor agent session that scraped
+   `/opt/splunk/etc/apps/ta_cisco_thousandeyes/default/data/ui/views/`)
+   all had identical metadata: <code>search_name = TA Stock —
+   &lt;view&gt; — &lt;blob&gt;</code>, <code>sub_category =
+   ThousandEyes</code>, and <code>tags =
+   TA_Stock_Dashboard,ThousandEyes,Accelerated,Requires_Cisco_ThousandEyes_DM,Cisco_TA</code>.
+   Filtering on any of those tags returned the same 100 results,
+   so the tags carried zero information. Names were also
+   verbose, em-dash heavy, and broke the established
+   <code>&lt;Domain&gt; - &lt;Area&gt; - &lt;Description&gt;</code>
+   convention.
+2. Across the full 530 stanzas, three tags were near-universal
+   noise: <code>Cisco</code> (128), <code>Accelerated</code>
+   (117), and <code>Cisco_TA</code> (100, redundant with
+   <code>TA_Stock_Dashboard</code>).
+3. Singletons / typos in <code>category</code> and
+   <code>sub_category</code> ("Building Resilience", underscored
+   sub-categories) were skewing taxonomy histograms.
+
+### What changed (Build 87)
+
+#### Metadata-only refactor across the entire `searchbase.conf`
+
+**Verified safe**: zero SPL bytes changed (every <code>search =
+...</code> line is byte-identical pre/post). Stanza count and
+total line count unchanged (530 stanzas, 12872 lines). Only
+<code>search_name</code>, <code>category</code>,
+<code>sub_category</code>, <code>tags</code>, and (where
+applicable) <code>related_info</code> were modified.
+
+**Scope of changes** &mdash; 445 lines updated:
+
+* **Tags dropped app-wide**: <code>Cisco</code>,
+  <code>Accelerated</code>, <code>Cisco_TA</code>. Rationale:
+  noise tags that match almost everything in the catalogue
+  provide zero filtering value. <code>Accelerated</code> is
+  replaced by the more-specific
+  <code>Requires_Cisco_ThousandEyes_DM</code> (and siblings) for
+  panels that genuinely need a DM acceleration capability flag.
+
+* **Categories normalized**: <code>Building Resilience</code>
+  (singleton typo) &rarr; <code>Building</code>.
+
+* **Sub-categories normalized**: underscore &rarr; space for
+  <code>Internet_Insights</code>, <code>Path_Visualization</code>,
+  <code>Page_Load</code> so they read like the rest of the
+  catalogue.
+
+* **TA Stock 100 stanzas (`ta_te_stock_*`) fully reworked**:
+  * <code>search_name</code> rebuilt from each stanza&#39;s SPL
+    signature using a structured naming pipeline. Pattern:
+    <code>ThousandEyes - &lt;Area&gt; -
+    &lt;TestType&gt;? &lt;Metric&gt; &lt;Shape&gt;</code>. All 100
+    names are now unique &mdash; zero <code>(Variant N)</code>
+    suffixes &mdash; and tell you exactly what the panel does.
+  * Examples:
+    * <code>TA Stock — voice — FTP targets by server (3)</code>
+      &rarr; <code>ThousandEyes - Voice - FTP Server Throughput
+      Drilldown Permalinks</code>
+    * <code>TA Stock — network — Network latency by target
+      trend</code> &rarr; <code>ThousandEyes - Network - Latency
+      Trend by Server Address</code>
+    * <code>TA Stock — alerts — Alert volume by test type
+      (2)</code> &rarr; <code>ThousandEyes - Alerts - Alert
+      Counts by Severity (Filterable)</code>
+    * <code>TA Stock — application — ThousandEyes accelerated DM
+      panel</code> &rarr; <code>ThousandEyes - Application - HTTP
+      Server Availability Trend</code>
+  * <code>sub_category</code>: was uniformly
+    <code>ThousandEyes</code>, now per-area: <code>TE Activity
+    Logs</code>, <code>TE Alerts</code>, <code>TE
+    Application</code>, <code>TE Configuration</code>, <code>TE
+    Internet Insights</code>, <code>TE Network</code>, <code>TE
+    Voice</code>. So a catalog filter on
+    <code>sub_category=TE Voice</code> now returns just the 22
+    voice panels, not all 100 harvested TE searches.
+  * <code>tags</code>: removed the universal
+    <code>TA_Stock_Dashboard,ThousandEyes,Accelerated,Requires_Cisco_ThousandEyes_DM,Cisco_TA</code>
+    block; replaced with per-stanza inferred tags derived from
+    SPL signature + view. New tag set per stanza is now a
+    sensible mix of subject (<code>BGP</code>, <code>DNS</code>,
+    <code>HTTP</code>, <code>RTP</code>, <code>SIP</code>,
+    <code>FTP</code>, <code>Latency</code>, <code>Loss</code>,
+    <code>Jitter</code>, ...), intent (<code>Trend</code>,
+    <code>Detail</code>, <code>Drilldown</code>,
+    <code>Distribution</code>, <code>Geo_Map</code>), area
+    (<code>Application</code>, <code>Voice</code>,
+    <code>Network</code>, ...), and the two retained provenance
+    tags (<code>TA_Stock_Dashboard</code>,
+    <code>Requires_Cisco_ThousandEyes_DM</code>).
+
+#### Naming pipeline (preserved as `/tmp/sb_refactor/refactor.py`)
+
+Implementation summary &mdash; the script is a one-shot tool, not
+checked in, but worth keeping the design notes:
+
+1. **Parse**: split conf into stanza blocks; preserve raw lines
+   for non-touched fields. Multi-line <code>search = </code>
+   continuations (lines ending with <code>\</code>) are kept
+   intact.
+2. **SPL signature extraction** (TA Stock only): per stanza,
+   extract <code>test.type</code> filter (handles both
+   <code>IN(...)</code> and <code>="x"</code> forms),
+   filtered/aggregated metric (<code>metric_name:X</code>),
+   aggregation function, BY clause fields (with dataset prefix
+   stripped), and <code>has_time</code>/<code>has_permalink</code>
+   shape signals.
+3. **Name derivation** (per view):
+   * <code>activity_logs</code>, <code>alerts</code>,
+     <code>configuration_status</code>, <code>events</code>:
+     hand-written rules per known panel (10-12 rules per view).
+   * <code>application</code>, <code>network</code>,
+     <code>voice</code>: structured signature-based naming
+     <code>&lt;TestType&gt; &lt;MetricLabel&gt; &lt;Shape&gt;</code>
+     using a curated <code>METRIC_LABELS</code> table (~25
+     metrics) and a <code>title_field</code> alias map for
+     dimensional fields (<code>server.address</code> &rarr;
+     <code>Server Address</code>, etc.).
+   * Special-cases for <code>Path_Viz</code> dataset,
+     <code>BGP Reachability Geo Map</code>, and
+     <code>outputlookup</code>-style account-group population.
+4. **Prefix-overlap dedup**: <code>_join</code> drops redundant
+   leading words, so <code>API + API Step Duration Trend</code>
+   becomes just <code>API Step Duration Trend</code> instead of
+   <code>API API Step Duration Trend</code>.
+5. **Uniqueness pass**: append <code>(Variant N)</code> if
+   collision detected. After tuning, the final pass produces
+   zero collisions across all 100 stanzas.
+6. **Dedup detection**: normalized-SPL hash with dashboard
+   tokens (<code>$tkn_*$</code>, <code>$app_dd_*$</code>)
+   collapsed. Result: 0 SPL-identical groups in this 100-stanza
+   ingest &mdash; the upstream agent&#39;s normalized-hash dedup
+   already worked. The merge-into-survivor logic remains in the
+   pipeline for the next harvest pass.
+
+#### Tag distribution before / after
+
+| Tag                  | Before | After |
+| -------------------- | ------ | ----- |
+| Cisco                | 128    | 0     |
+| Accelerated          | 117    | 0     |
+| Cisco_TA             | 100    | 0     |
+| ThousandEyes (broad) | 180    | 80    |
+| BGP                  | 8      | 19    |
+| DNS                  | 9      | 21    |
+| HTTP                 | 3      | 18    |
+| SIP                  | 2      | 13    |
+| FTP                  | 1      | 12    |
+| Application          | 0      | 28    |
+| Voice                | 0      | 21    |
+| Trend                | 45     | 77    |
+| Drilldown            | 3      | 25    |
+| Map                  | 13     | 13    |
+
+Filtering on <code>sub_category</code> + a single subject tag
+(<code>BGP</code>, <code>DNS</code>, etc.) now narrows to a
+useful working set (e.g., <code>sub_category=TE Network AND
+BGP</code> &rarr; just the 8 BGP-specific stanzas). Previously
+this query would have returned every TE stanza because all of
+them carried <code>ThousandEyes</code>, <code>Cisco</code>, and
+<code>Accelerated</code>.
+
+### Verification
+
+* <code>yarn build</code> &mdash; clean.
+* SPL byte-equivalence between pre and post:
+  <code>diff /tmp/sb_refactor/spl_orig.txt
+  /tmp/sb_refactor/spl_new.txt | wc -l</code> &rarr; 0.
+* React frontend has zero references to either old TA Stock
+  search names or the dropped tags &mdash; the harvested entries
+  were catalog-only and never wired into a tile.
+
+### Files touched
+
+* `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf`
+  &mdash; 445 lines updated.
+* `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf`
+  &mdash; build 86 &rarr; 87.
+* `packages/splunk-cisco-dashboards/docs/SESSION_LOG.md` &mdash;
+  this entry.
+
+### What&#39;s next
+
+Same backlog as the end of Build 86 &mdash; nothing in this
+build changed those:
+
+1. Trace field-list dump for <code>cisco:thousandeyes:trace</code>
+   (operator action: <code>`index_thousandeyes`
+   sourcetype=&quot;cisco:thousandeyes:trace&quot; |
+   `field_list`</code>).
+2. DM-eligible TE alert/trace rewrites (blocked on #1).
+3. <code>latencyMs</code> plumbing cleanup in
+   <code>CustomerTopologyMap.tsx</code>.
+4. Hand-audit metadata
+   (<code>description</code>/<code>explanation</code>) on the
+   100 newly-renamed TA Stock stanzas. The boilerplate they
+   carry today is technically accurate but generic; could be
+   tightened so each panel&#39;s docs match its new precise name.
+
+---
+
 ## 2026-05-13 (Build 86) — Branding pencil hover-reveal polish
 
 ### Context
