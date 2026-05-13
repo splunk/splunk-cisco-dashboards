@@ -191,13 +191,82 @@ icon → KPI picker.
 
 ### What's next
 
-Search binding for topology sites and links (allow operator to pick a
-searchbase entry per site icon and per link from the editor) — that
-work hasn't started yet because it touches the topology editor,
-runtime fetcher, and persisted topology JSON together. Plan is to
-extend the topology editor's per-site / per-link form with a search
-picker scoped to `Topology_Site` / `Topology_Link` tags, and let
-the override flow through to dispatch.
+Search binding for topology sites and links — see the next entry. The
+wiring already existed end-to-end, but the picker was buried under a
+`search_name` label at the bottom of each card and was never being
+discovered.
+
+---
+
+## 2026-05-12 (late night, follow-up) — Topology editor: data-source picker promoted to the top of each card
+
+### Context
+
+Alan asked for "the option to simply select a different search rather
+than hard coding" for both the inter-site links and each site icon.
+Tracing the code revealed the per-site and per-link picker UI was
+already wired end-to-end:
+
+- `TopologySite.searchName` and `TopologyLink.searchName` flow through
+  the runtime dispatcher (lines 2472, 2498 in `CustomerTopologyMap.tsx`).
+- `siteSearchOptions` and `linkSearchOptions` slice the searchbase
+  catalogue by `Topology_Site` / `Topology_Link` tags so each
+  dropdown only surfaces stanzas shaped for that map element.
+- 5 site stanzas (2 live + 3 demo: TLH, AUB, plus
+  `overview_site_demo_healthy`/`warning`/`critical`) and 4 link
+  stanzas (1 live + 3 demo) are tagged appropriately.
+
+So the feature wasn't missing — it was *invisible*. The picker block
+was placed at the very bottom of each card under a literal
+`search_name` label, below the Internet Edge Mbps / Capacity Mbps
+fields. On a 600-700px tall editor panel it was below the fold for
+operators reading top-down. The label "search_name" reads like
+internal jargon and signals "advanced setting, don't touch" rather
+than "this is the most important field for binding telemetry".
+
+### Fix
+
+Pulled the data-source block to the **top** of each site and link card
+(immediately under the ID badge / action buttons row) and gave it a
+real label:
+
+- Header row: bold `Data source` label on the left, small mono `site
+  search` / `link search` typographic badge on the right (so the
+  block reads as "Data source · site search" / "Data source · link
+  search" without burying the metadata in the label).
+- Dropdown first (catalogue-bound, the discoverable / 95% interaction).
+- Free-text input below (kept for power users who want to bind to a
+  custom searchbase entry name not yet tagged).
+- Helper line beneath: *"What populates this marker. Pick from the
+  catalogue or type a custom searchbase entry name. Leave blank to
+  show the static placeholder only."* — same wording for sites; for
+  links it reads *"What measures this connection."*
+
+The existing wiring through `updateSite` / `updateLink` is unchanged
+— the persisted topology JSON shape, the runtime dispatcher, and the
+`dataState` propagation all continue to work without modification.
+This is purely a UI-discoverability fix.
+
+### Verification
+
+- Opacity fix from the prior commit means the form is actually
+  *legible* now, so the newly-promoted picker is readable in both
+  light and dark themes.
+- `yarn run tsc --noEmit` clean.
+- Lint clean on `CustomerTopologyMap.tsx`.
+- Search binding for the inter-site link uses the existing
+  `[overview_link_auburndale_tallahassee_health]` stanza by default
+  (factory topology). Operator can swap to any of the demo stanzas
+  for screenshots / walkthroughs without touching code.
+- `app.conf` build bumped to `67`.
+
+### What's next
+
+Real-stack QA on Alan's environment — confirm the new "Data source"
+picker is visible on first editor open, both for the existing TLH /
+AUB sites and for the AUB ↔ TLH link. Confirm the Tallahassee/
+Auburndale dropdown rows actually show in the catalogue list (they
+should — both stanzas carry `Topology_Site` tags).
 
 ---
 
