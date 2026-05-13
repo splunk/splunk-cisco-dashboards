@@ -7,6 +7,88 @@
 
 ---
 
+## 2026-05-12 (still very late, full catalogue browser) — TopologySearchBrowser component
+
+### Context
+
+After build 72 shipped a sky-accent dropdown, Alan deployed and
+discovered a real bug we'd missed by tunnelling on visibility:
+
+> "what is this non-sense!!!! change what??? it does not allow
+> browsing any search."
+
+He was right. The dropdown only listed entries tagged
+`Topology_Site` or `Topology_Link` — five items total. Alan's
+explicit comparison was the KPI tile picker, which browses the
+entire Cisco-tagged catalogue (~260 entries) with free-text search
+and tag chips. We were giving him a 5-item curated shortlist when
+he asked for the same browse-and-pick experience.
+
+### Fix (build 73, commit pinned below)
+
+Replaced the dropdown with a new `TopologySearchBrowser` component
+that mirrors `KpiPickerPanel`'s filter model:
+
+- **Source**: full Cisco-tagged catalogue (~260 entries), same
+  filter the KPI picker uses. Topology-tagged entries no longer
+  filter the list — they sort to the top via a new `preferredTags`
+  prop and pick up a small "site" / "link" badge so they're still
+  scan-spottable.
+- **Free-text search**: matches against `searchName`, `category`,
+  `subCategory`, and tag names. Type "ThousandEyes" to narrow to
+  TE feeds; type "TLH" to jump to Tallahassee-specific stanzas.
+- **Tag chips**: clicking "+ filter by tag" opens the top-12
+  tags by frequency in the current filtered slice. Selected tags
+  show as pills with an X to remove. Multiple tags AND together,
+  matching the KPI picker pattern.
+- **Result list**: scrollable (max-h ~18rem), shows category /
+  sub-category beneath each name, currently-bound entry has a
+  checkmark and the sky-accent highlight, click-to-apply.
+- **Free-form input** (editor only): below the list, an input +
+  Apply button for stanza names not yet in the catalogue. The
+  read-only popup hides this — picks there are scoped to the
+  vetted catalogue.
+
+The component is used in three places, identical UI:
+- Map popup (read-only) — `SelectionCard` renders it inside the
+  panel for the currently-selected site / link.
+- Editor → site card — replaces the prior dropdown.
+- Editor → link card — replaces the prior dropdown.
+
+Touch points in `CustomerTopologyMap.tsx`:
+- `popupSearchOptions` and `editorSearchOptions` are now the
+  same shape (Cisco-tagged, alphabetised). The previous
+  `popupSiteSearchOptions` / `popupLinkSearchOptions` /
+  `siteSearchOptions` / `linkSearchOptions` quartet collapsed
+  into these two.
+- `SelectionCardProps.searchOptions` replaces the previous
+  per-kind props.
+- Lucide imports add `Check`, `Search`, `Tag`.
+
+`app.conf` build 72 → 73.
+
+### Verification
+
+- `yarn tsc --noEmit` clean
+- `yarn run build` (webpack production) clean — `overview.js`
+  grew from 1.37 MiB to 1.38 MiB (~10 KB for the new component;
+  expected).
+- ReadLints clean for `CustomerTopologyMap.tsx`.
+
+### What's next
+
+Once Alan deploys build 73 and confirms he can browse the full
+catalogue + filter by name and tag, this conversation can finally
+move on. If the picker still looks wrong, the next item is likely
+ergonomic refinements (sticky headers, keyboard navigation, tile
+preview pane à la KpiPickerPanel) — but not a redesign.
+
+### Commit
+
+`5ec8be9` — TopologySearchBrowser: full catalogue browse-and-pick UI
+
+---
+
 ## 2026-05-12 (very late, picker visibility) — Make the data-source picker unmissable
 
 ### Context
