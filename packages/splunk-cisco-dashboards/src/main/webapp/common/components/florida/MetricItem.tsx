@@ -476,7 +476,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                 //
                 // mt-3/pt-2 keeps the headline-to-chart gap tight
                 // without wasting pixels at full size.
-                <div className="flex-1 min-h-[72px] max-h-28 mt-3 pt-2 opacity-80 hover:opacity-100 transition-opacity overflow-hidden">
+                <div className="flex-1 min-h-[72px] max-h-28 mt-2 pt-1 opacity-80 hover:opacity-100 transition-opacity overflow-hidden">
                     {/* Sparkline is intentionally NOT wired to the
                         drilldown click. The ExternalLink icon next to
                         the tile label is the explicit "open in Splunk

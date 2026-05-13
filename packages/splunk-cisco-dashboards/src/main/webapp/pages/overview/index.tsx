@@ -42,6 +42,7 @@ import {
 import { DashboardSection } from '@/common/components/florida/DashboardSection';
 import { MetricItem } from '@/common/components/florida/MetricItem';
 import { TableTile } from '@/common/components/florida/TableTile';
+import { BarBreakdownTile } from '@/common/components/florida/BarBreakdownTile';
 import {
     sparklineVizTypeFromSplunkViz,
     normalizeDataValuesDisplay,
@@ -67,6 +68,7 @@ import {
     useKpi,
     useTableData,
     isTableViz,
+    isBarBreakdownViz,
     deriveThresholdLines,
     type MetricConfig,
     type KpiConfig,
@@ -311,29 +313,40 @@ const METRIC_CONFIG: MetricConfig[] = [
         id: 'active_te_alerts',
         section: 'it_health',
         label: 'Active TE alerts',
-        subLabel: 'Critical + High severity (with baseline)',
+        subLabel: 'Severity breakdown (count by severity)',
         description:
-            'Count of distinct ThousandEyes alerts currently at critical or high ' +
-            'severity. Sparkline shows per-hour active count; dashed line is the ' +
-            'rolling-average baseline so a burst above normal stands out. ' +
-            'Replaces the legacy UX Score composite tile - "12 active alerts" is ' +
-            'directly actionable; an 80% blended score is not.',
-        // Hour-bucket timechart: { _time, active, baseline, total_count }.
-        savedSearch: 'IT Health - Active TE Alerts (High + Critical)',
-        valueField: 'total_count',
-        sparkDataField: 'active',
-        baselineField: 'baseline',
-        overlayLabel: 'Avg',
-        // Resting/healthy color stays neutral sky; MetricItem flips the
-        // sparkline to amber/red on warning/critical via STATUS_VIZ_COLOR.
+            'Count of currently-active ThousandEyes alerts in the dispatched ' +
+            'window, broken down by severity. Headline is the total across all ' +
+            'severities; the bars below show the per-severity counts so the ' +
+            'executive sees at a glance which severity bucket is loud right ' +
+            'now (critical vs. high vs. medium…). Replaces the legacy UX ' +
+            'Score composite tile and, as of Build 85, the time-series ' +
+            "headline-with-sparkline view (still available via the picker as " +
+            '"IT Health - Active TE Alerts (High + Critical)").',
+        // Bar-breakdown rows: { Severity, count }. Tile renders as
+        // BarBreakdownTile because the bound searchbase stanza
+        // declares default_viz = splunk.bar.
+        savedSearch: 'IT Health - Active TE Alerts by Severity',
+        // valueField/sparkDataField/baselineField are unused by the
+        // bar-breakdown leaf (it reads `rows` + `columns` from
+        // useTableData), but kept here as a safety net so a picker
+        // override that swaps to a *time-series* binding still has
+        // sensible field hints to fall back on.
+        valueField: 'count',
+        // Resting/healthy color is neutral sky; the bar tile's
+        // severity-aware color map (red for critical, orange for
+        // high, …) overrides this on a per-bar basis, but the value
+        // is preserved so a picker swap to a non-bar viz reverts
+        // cleanly.
         color: '#0ea5e9',
         thresholds: { warning: 5, critical: 20, direction: 'lower_is_better' },
         thresholdNote:
-            'Severity filter is high + critical only — informational alerts and ' +
-            'cleared events are excluded so the count tracks what an operator ' +
-            'actually needs to triage. Compare the sparkline against the dashed ' +
-            'baseline before reacting; a steady 6 is healthier than a sudden 6.',
-        mock: { seed: 14, sparkMin: 0, sparkMax: 8, value: 3, change: 0 },
+            'Threshold applies to the total count across all severities. The ' +
+            'severity-aware bar colours (red = critical, orange = high, …) ' +
+            'flag the dominant severity at a glance; pivot to ' +
+            '[it_health_thousandeyes_alerts_table] for the recent-20 ' +
+            'drill-down filtered to whichever bar is loud.',
+        mock: { seed: 14, sparkMin: 0, sparkMax: 8, value: 12, change: 0 },
     },
     {
         id: 'sites_below_threshold',
@@ -942,17 +955,36 @@ const MetricCard: React.FC<MetricCardProps> = ({
         return searchbaseByName.get(effective.savedSearch) ?? null;
     }, [effective.savedSearch, searchbaseByName]);
 
-    // Branch on viz type: tables get a wholly different rendering path
-    // (TableTile + useTableData) so we never coerce categorical row
-    // distributions through the single-value/sparkline pipeline. The
-    // branch is component-level (rather than inside the body) so each
-    // leaf calls its own data hook unconditionally — Rules of Hooks
-    // forbid switching `useMetric` ↔ `useTableData` between renders.
+    // Branch on viz type: tables and bar-breakdowns get wholly different
+    // rendering paths (TableTile / BarBreakdownTile + useTableData) so we
+    // never coerce categorical row distributions through the
+    // single-value/sparkline pipeline. The branch is component-level
+    // (rather than inside the body) so each leaf calls its own data hook
+    // unconditionally — Rules of Hooks forbid switching `useMetric` ↔
+    // `useTableData` between renders.
+    //
+    // Both table and bar-breakdown leaves use the same `useTableData`
+    // hook (rows + columns shape) but render the result differently.
     const showTable = isTableViz(sbRecord?.defaultViz);
+    const showBarBreakdown = isBarBreakdownViz(sbRecord?.defaultViz);
 
     if (showTable) {
         return (
             <TableCardLeaf
+                effective={effective}
+                dispatchedConfig={dispatchedConfig}
+                range={range}
+                refreshToken={refreshToken}
+                onStatus={onStatus}
+                onConfigure={onConfigure}
+                infoAnchor={infoAnchor}
+                isCustomized={Boolean(override)}
+            />
+        );
+    }
+    if (showBarBreakdown) {
+        return (
+            <BarBreakdownCardLeaf
                 effective={effective}
                 dispatchedConfig={dispatchedConfig}
                 range={range}
@@ -1184,6 +1216,59 @@ const TableCardLeaf: React.FC<CommonLeafProps> = ({
             rows={result.rows}
             columns={result.columns}
             totalRowCount={result.totalRowCount}
+            source={result.source}
+            onOpenInSearch={drilldownSpl ? handleClick : undefined}
+            onConfigure={onConfigure}
+            isCustomized={isCustomized}
+            noDataReason={result.noDataReason}
+            rangeLabel={result.rangeLabel}
+        />
+    );
+};
+
+/**
+ * Bar-breakdown leaf: single-series categorical distribution rendered
+ * through BarBreakdownTile. Activated when the bound searchbase stanza
+ * declares `default_viz = splunk.bar`. Reuses the table dispatcher
+ * (`useTableData`) since the underlying SPL shape is the same
+ * (`<dimension>, <count>`), then paints the rows as horizontal bars
+ * with a sum headline. Status is always `unknown` for the same reason
+ * as TableCardLeaf — no per-row threshold semantics — so the
+ * aggregate health badge math is unchanged.
+ */
+const BarBreakdownCardLeaf: React.FC<CommonLeafProps> = ({
+    effective,
+    dispatchedConfig,
+    range,
+    refreshToken,
+    onStatus,
+    onConfigure,
+    infoAnchor,
+    isCustomized,
+}) => {
+    const result = useTableData(dispatchedConfig, range, refreshToken);
+
+    useEffect(() => {
+        onStatus(effective.id, 'unknown');
+    }, [effective.id, onStatus]);
+
+    const drilldownSpl = result.spl;
+    const handleClick = useCallback(() => {
+        if (!drilldownSpl) return;
+        const url = splunkSearchAppUrl(drilldownSpl, range);
+        if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener,noreferrer');
+    }, [drilldownSpl, range]);
+
+    return (
+        <BarBreakdownTile
+            label={effective.label}
+            subLabel={effective.subLabel}
+            description={effective.description}
+            descriptionFootnote={undefined}
+            thresholdNote={effective.thresholdNote}
+            infoAnchor={infoAnchor}
+            rows={result.rows}
+            columns={result.columns}
             source={result.source}
             onOpenInSearch={drilldownSpl ? handleClick : undefined}
             onConfigure={onConfigure}
@@ -2425,8 +2510,21 @@ const OverviewPage: React.FC = () => {
                         existing right-mode splitter delivers
                         horizontally. */}
                     <div
+                        // overflow-y-auto: when the viewport is too short
+                        // to fit all three sections at their min-h-[220px]
+                        // floor (≈ 660px content, plus ticker + header +
+                        // gap), the metric column scrolls vertically
+                        // instead of squishing the chart canvases below
+                        // readability. The map column keeps its own
+                        // height so the topology stays anchor-visible.
+                        // Below xl in `right` mode, the layout has
+                        // already collapsed to a stacked column anyway,
+                        // so this overflow rule applies in every mode.
+                        // overflow-x-hidden prevents a horizontal
+                        // scrollbar from showing up due to the cards'
+                        // shadow bleed at narrow widths.
                         className={cn(
-                            'flex flex-col gap-2 min-h-0 min-w-0 w-full',
+                            'flex flex-col gap-2 min-h-0 min-w-0 w-full overflow-y-auto overflow-x-hidden',
                             mapPosition === 'right'
                                 ? 'xl:w-[var(--scd-left-pct)] xl:flex-shrink-0'
                                 : ''

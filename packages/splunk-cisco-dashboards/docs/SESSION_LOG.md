@@ -7,6 +7,212 @@
 
 ---
 
+## 2026-05-13 (Build 85) — Active TE Alerts as severity bar tile + small-viewport scroll fix
+
+### Context
+
+Three follow-ups from Alan&#39;s 2026-05-13 review of the live build:
+
+1. He sketched a TE alerts visualisation he wanted as a bar chart
+   by severity, gave us the SPL, and asked us to swap the existing
+   *Active TE alerts* tile to use it.
+2. He flagged the screenshot of the Overview page at a short
+   browser height — the sparkline canvases collapse to a thin
+   wavy line and become illegible. Dashboard Studio doesn&#39;t have
+   the same issue because it uses fixed-height grid tiles and
+   lets the page scroll. We want the Overview to behave the same
+   way.
+3. Status check on the carry-over pending tasks.
+
+This build addresses #1 and #2; #3 is documented in the Build 85
+prompt response (operator action required for the trace field
+list, then the DM rewrite sweep can run; latency cleanup is a
+small follow-up build).
+
+### What changed (Build 85)
+
+#### New searchbase stanza: `[it_health_active_te_alerts_by_severity]`
+
+Bar-chart breakdown of currently-active TE alerts grouped by
+severity. Full metadata (description, explanation, solution,
+related_info, viz_options with severity-aware colors) so the
+catalogue audit and KPI picker preview both render cleanly.
+
+```spl
+| tstats `summariesonly` count
+    FROM datamodel="Cisco_ThousandEyes.Alerts"
+    BY Alerts.severity
+| rename Alerts.severity AS Severity
+| sort -count
+```
+
+Notes on the SPL:
+
+* Cleaned `WHERE BY` (invalid SPL — likely a copy-paste artifact
+  in the original brief) to plain `BY`. No other filters: the
+  tile shows every severity bucket the TE org emits.
+* `summariesonly` keeps the tile fast on busy installs; it
+  short-circuits to empty if the DM acceleration isn&#39;t built
+  rather than running a slow uncached fallback.
+* `rename Alerts.severity AS Severity` because the React tile
+  reads the dimension column as `Severity` (no dataset prefix).
+* `sort -count` is a tiebreaker — the React layer applies a
+  canonical severity priority (critical &gt; high &gt; medium &gt;
+  low &gt; info) on top so display order is stable across
+  windows.
+
+`default_viz = splunk.bar` is the trigger for the new tile-
+rendering path (see below). `viz_options.seriesColors` carry
+the severity palette (rose / orange / amber / yellow / emerald)
+so the picker preview matches what the live tile paints.
+
+#### Updated stanza: `[it_health_active_te_alerts_high_critical]`
+
+Bumped to `version = 1.1.0`. Description and `related_info`
+updated to point at the new sibling stanza as the default
+Overview binding (Build 85+) and frame this time-series view as
+the picker-accessible alternative for users who prefer the
+spike-vs-baseline read. SPL itself unchanged.
+
+#### New tile renderer: `BarBreakdownTile`
+
+`packages/splunk-cisco-dashboards/src/main/webapp/common/components/florida/BarBreakdownTile.tsx`
+
+Sibling of `MetricItem` (sparkline) and `TableTile` (multi-row
+table). Same outer chrome (label, info tooltip, Open-in-Search
+icon, gear, status pill), same headline shape (4xl number
+matches MetricItem so a row of mixed sparkline + bar tiles
+aligns vertically). Renders rows from `useTableData` as a
+horizontal bar list — one row per dimension value, with:
+
+* Severity-aware bar color via case-insensitive substring match
+  (`critical|fatal|p1` → rose, `error|high|p2` → orange,
+  `warn|medium|moderate|p3` → amber, `low|p4` → yellow,
+  `notice|info|p5` → emerald, fallback → sky).
+* Fixed left-column for the dimension label (truncates with
+  title-attribute fallback so long labels still readable on
+  hover).
+* Bar width proportional to the *maximum* bar in the result set
+  (not the sum), with a 2% floor so non-zero values are always
+  visible at a glance.
+* Right-column count, tabular-numerals so the digits align
+  vertically across rows.
+* `visibleRowCap = 5` with a `+N more` caption when exceeded —
+  matches `TableTile`&#39;s row-cap idiom.
+* Sum-across-all-rows headline (ignores `visibleRowCap` so the
+  headline never lies about the total).
+
+Hook reuse: dispatches via `useTableData`, same as `TableTile`.
+Both renderers consume the same `{ rows, columns }` shape, so
+nothing in the dispatch / picker / drilldown layer needed to
+change.
+
+#### Dispatch wiring
+
+`useMetric.ts` now exports `isBarBreakdownViz(splunkViz)` —
+predicate that returns true when the bound stanza declares
+`default_viz = splunk.bar`.
+
+`OverviewPage.MetricCard` adds a third branch alongside the
+existing `isTableViz` branch: bar → `BarBreakdownCardLeaf` →
+`BarBreakdownTile`. Component-level branching (not in-body) so
+each leaf calls its own data hook unconditionally — Rules of
+Hooks compliance.
+
+#### `METRIC_CONFIG.active_te_alerts` rebound
+
+* `savedSearch` → `IT Health - Active TE Alerts by Severity`
+* `subLabel` → `Severity breakdown (count by severity)`
+* `description` rewritten to reflect the bar-tile reading: total
+  headline + per-severity breakdown.
+* `thresholdNote` rewritten — threshold (warning 5 / critical 20)
+  still applies to the headline total, but the severity-aware
+  bar colours give the dominant-severity signal at a glance.
+* `valueField`, `color`, `thresholds`, and `mock` retained as
+  safety-net defaults so a picker swap to a non-bar viz reverts
+  cleanly.
+
+#### Small-viewport chart fix
+
+Root cause: `OverviewPage` is `h-screen flex flex-col`, the main
+content block is `flex-1 min-h-0 overflow-hidden`, and the three
+metric sections share the available height equally. When the
+viewport gets short, each section&#39;s sparkline canvas hits its
+72px `min-h` floor and the chart line + peak label become
+illegible (Alan&#39;s screenshot).
+
+Fix is two-pronged:
+
+1. **`DashboardSection.tsx`**: each section now carries
+   `min-h-[220px] flex-shrink-0`. 220px is the lower bound at
+   which the headline + chart canvas + tile/section chrome
+   still renders legibly.
+2. **`OverviewPage`**: the metrics column wrapper got
+   `overflow-y-auto overflow-x-hidden`. When 3 × 220px exceeds
+   the column&#39;s available height (small viewport, or `right`
+   mode with a slim leftPct + tall ticker / header), the column
+   scrolls vertically instead of squishing the cards. The map
+   column stays anchored at its own height so the topology
+   visual is never compressed.
+3. **`MetricItem.tsx`**: tightened the sparkline-area padding
+   from `mt-3 pt-2` to `mt-2 pt-1`. Saves ~8px that goes
+   straight into the chart canvas at its floor — the line gains
+   visible amplitude before the next layout step kicks in.
+
+This matches Splunk Dashboard Studio&#39;s grid model (fixed-height
+panels, page scrolls when viewport &lt; sum-of-panels) and resolves
+Alan&#39;s screenshot complaint without dropping the
+exec-fits-on-one-screen promise at typical executive-display
+heights.
+
+### What did NOT change
+
+* Existing sparkline tile rendering for every other metric in
+  `METRIC_CONFIG`. Only `active_te_alerts` was rebound; the rest
+  still use `MetricItem`.
+* `[it_health_active_te_alerts_high_critical]`&#39;s SPL.
+  Description and `related_info` updated to document the
+  binding change, but the search itself is unchanged so the
+  catalogue picker preview is identical to before.
+* Aggregate `HealthBadge` math. Bar-breakdown tiles emit
+  `status: 'unknown'` (same as TableTile) so they don&#39;t move
+  the badge.
+
+### Verification
+
+* `yarn build` clean; only the pre-existing asset-size warnings
+  remain (unchanged from Build 84).
+* `ReadLints` clean across all five touched files
+  (`overview/index.tsx`, `BarBreakdownTile.tsx`,
+  `DashboardSection.tsx`, `MetricItem.tsx`, `useMetric.ts`).
+* `searchbase.conf` audit unaffected — new stanza follows the
+  full metadata template, old stanza version bumped 1.0.0 → 1.1.0
+  with `date_updated = 2026-05-13`.
+
+### Pending tasks (carry-over)
+
+* **Trace field-list dump for `cisco:thousandeyes:trace`** —
+  needs operator action: run
+  `` `index_thousandeyes` sourcetype="cisco:thousandeyes:trace" | `field_list` ``
+  in Splunk and paste the result. Once available, the
+  `splunk-cisco-thousandeyes-fields.mdc` rule placeholder gets
+  filled out and the DM-eligible rewrite sweep can run.
+* **DM-eligible TE alert/trace rewrites** — blocked on the
+  trace field list above.
+* **`latencyMs` plumbing cleanup in `CustomerTopologyMap.tsx`** —
+  small standalone refactor (~30 min). Drop dead site-level
+  type fields, threshold case() branches, and normalization
+  paths. Link-level `latencyMs` stays (still rendered in link
+  popups). Will ship as a separate small build to keep the diff
+  scannable.
+* **Comprehensive metadata sweep** of older searchbase stanzas
+  whose descriptions / explanations may have drifted across
+  Builds 79-82. Build 85 only refreshed metadata on the two
+  stanzas it touched directly; a full audit is a separate
+  metadata-only build.
+
+---
+
 ## 2026-05-13 (Build 84) — Editable header chrome (title / subtitle / logo) via per-user override
 
 ### Context

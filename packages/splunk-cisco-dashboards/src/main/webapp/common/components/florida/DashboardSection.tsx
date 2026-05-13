@@ -117,8 +117,17 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
 }) => {
     return (
         <div
+            // `min-h-[220px]` is the lower bound at which a row of
+            // tiles still renders the headline + chart at a legible
+            // size (~22px header + ~36px headline + 72px chart floor +
+            // tile margins + section chrome ≈ 220px). Below that the
+            // sparkline canvas degenerates to a wavy pixel line.
+            // Combined with `overflow-y-auto` on the metrics column
+            // wrapper in OverviewPage, the page degrades to vertical
+            // scroll instead of squishing — same model Splunk
+            // Dashboard Studio uses for fixed-height grid tiles.
             className={cn(
-                'bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-2.5 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_20px_-10px_rgba(0,0,0,0.45)] relative overflow-hidden group flex flex-col',
+                'bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-2.5 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_20px_-10px_rgba(0,0,0,0.45)] relative overflow-hidden group flex flex-col flex-shrink-0 min-h-[220px]',
                 className
             )}
         >

@@ -1107,6 +1107,23 @@ export const isTableViz = (splunkViz: string | undefined): boolean => {
     return splunkViz.trim().toLowerCase() === 'splunk.table';
 };
 
+/**
+ * Predicate that selects the BarBreakdownTile renderer instead of
+ * the default sparkline tile. Triggered when the searchbase stanza
+ * declares `default_viz = splunk.bar` — i.e. the search emits a
+ * categorical (non-temporal) `<dimension>, <count>` shape and
+ * should render as a horizontal bar list inside the same tile slot.
+ *
+ * Distinct from `isTableViz`: tables paint a generic multi-column
+ * grid, bars paint a single-series proportional visualisation with
+ * a sum headline. Both reuse `useTableData` for dispatch since the
+ * row shape is the same.
+ */
+export const isBarBreakdownViz = (splunkViz: string | undefined): boolean => {
+    if (typeof splunkViz !== 'string') return false;
+    return splunkViz.trim().toLowerCase() === 'splunk.bar';
+};
+
 export const useTableData = (
     cfg: TableDataConfig,
     range: TimeRange,
