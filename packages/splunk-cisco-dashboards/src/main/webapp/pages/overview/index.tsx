@@ -35,6 +35,9 @@ import {
     PanelRight,
     PanelBottom,
     PanelTop,
+    Edit3,
+    Upload,
+    X,
 } from 'lucide-react';
 import { DashboardSection } from '@/common/components/florida/DashboardSection';
 import { MetricItem } from '@/common/components/florida/MetricItem';
@@ -80,6 +83,13 @@ import {
 } from '@/common/hooks/usePersistedMetricOverrides';
 import { usePersistedSectionTileCounts } from '@/common/hooks/usePersistedSectionTileCounts';
 import { usePersistedSectionTileOrder } from '@/common/hooks/usePersistedSectionTileOrder';
+import {
+    useBrandingOverride,
+    readImageAsDataUri,
+    BRANDING_LOGO_DATA_URI_MAX_BYTES,
+    BRANDING_ACCEPTED_LOGO_MIME_TYPES,
+    type BrandingOverride,
+} from '@/common/hooks/useBrandingOverride';
 import { SortableMetricCard } from '@/common/components/florida/SortableMetricCard';
 import {
     DndContext,
@@ -110,6 +120,14 @@ import { cn } from '@/common/lib/utils';
 
 const APP_NAME = 'splunk-cisco-dashboards';
 const CUSTOMER_LOGO_URL = `/static/app/${APP_NAME}/images/customer_logo.png`;
+
+// Default subtitle shown beneath the customer name when no per-user
+// override is set in localStorage. Operators can change the visible
+// text per-user via the header pencil → Edit branding panel
+// (`scd_overview_branding`); this constant only defines the
+// out-of-the-box value for fresh deployments.
+const DEFAULT_HEADER_SUBTITLE = 'Splunk Executive Insights';
+const DEFAULT_HEADER_TITLE_FALLBACK = 'Operations Command Center';
 const FALLBACK_LOGO_DATA_URI =
     'data:image/svg+xml;utf8,' +
     encodeURIComponent(
@@ -1185,9 +1203,43 @@ const OverviewPage: React.FC = () => {
     const { theme, resolvedTheme, cycle: cycleTheme } = useTheme();
 
     // ------------------------------ Branding ------------------------------
+    //
+    // Three layered defaults govern what the header chrome shows:
+    //
+    //   1. `brandingOverride` (per-user, localStorage) — values from
+    //      the header pencil → Edit branding panel. Highest priority.
+    //   2. `customerName` (per-deployment, Splunk macro) — the
+    //      `[customer_name]` macro value fetched at mount. Operator-
+    //      controlled via `local/macros.conf`.
+    //   3. Hardcoded fallbacks (`DEFAULT_HEADER_TITLE_FALLBACK`,
+    //      `DEFAULT_HEADER_SUBTITLE`, `CUSTOMER_LOGO_URL`) — what
+    //      every fresh install ships with.
+    //
+    // `effectiveTitle` / `effectiveSubtitle` / `effectiveLogoSrc`
+    // (derived below) collapse those layers into the strings the
+    // JSX actually renders.
     const [customerName, setCustomerName] = useState<string>('');
     const [logoSrc, setLogoSrc] = useState<string>(CUSTOMER_LOGO_URL);
     const [splunkUsername, setSplunkUsername] = useState<string>('');
+    const {
+        override: brandingOverride,
+        setOverride: setBrandingOverride,
+        resetAll: resetBrandingOverride,
+    } = useBrandingOverride();
+    const [isBrandingEditorOpen, setBrandingEditorOpen] = useState<boolean>(false);
+
+    const effectiveTitle =
+        brandingOverride.title ||
+        customerName ||
+        DEFAULT_HEADER_TITLE_FALLBACK;
+    const effectiveSubtitle =
+        brandingOverride.subtitle || DEFAULT_HEADER_SUBTITLE;
+    // Logo precedence: explicit override (data URI from upload) →
+    // current `logoSrc` (which itself swaps to the SVG fallback if
+    // the static PNG 404s). Keeping `logoSrc` as the second layer
+    // means any deployment that swaps `customer_logo.png` on disk
+    // still wins over the SVG, just below the per-user upload.
+    const effectiveLogoSrc = brandingOverride.logoDataUri || logoSrc;
 
     // ------------------------------ Time + refresh ------------------------------
     const [timeRange, setTimeRange] = useState<TimeRange>(
@@ -1784,7 +1836,8 @@ const OverviewPage: React.FC = () => {
     //   • metricOverrides.v1            — per-tile picker bindings
     //   • sectionTileCounts.v1          — visible tile count per section
     //   • sectionTileOrder.v1           — drag-to-reorder preference
-    //   • customerTopology.v3           — Florida map customisations
+    //   • customerTopology.v4           — Florida map customisations
+    //   • branding.v1                   — title / subtitle / logo override
     //   • scd_overview_split_pct        — tiles ↔ map splitter position
     //   • scd_overview_map_pos          — map position (right / below / above)
     //
@@ -1801,6 +1854,7 @@ const OverviewPage: React.FC = () => {
         resetAllSectionTileCounts();
         resetAllSectionTileOrder();
         clearCustomerTopologyStorage();
+        resetBrandingOverride();
         setTopologyResetKey((n) => n + 1);
         setLeftPct(SPLIT_DEFAULT);
         setMapPosition(MAP_POS_DEFAULT);
@@ -1819,6 +1873,7 @@ const OverviewPage: React.FC = () => {
         resetAllOverrides,
         resetAllSectionTileCounts,
         resetAllSectionTileOrder,
+        resetBrandingOverride,
         SPLIT_KEY,
         SPLIT_DEFAULT,
         setLeftPct,
@@ -2119,11 +2174,19 @@ const OverviewPage: React.FC = () => {
                 <div className="flex items-center gap-3 min-w-0">
                     <div className="w-9 h-9 bg-sky-600 rounded-lg flex items-center justify-center text-white overflow-hidden p-1 flex-shrink-0">
                         <img
-                            src={logoSrc}
+                            src={effectiveLogoSrc}
                             alt="Customer logo"
                             className="w-full h-full object-contain"
                             onError={() => {
-                                if (logoSrc !== FALLBACK_LOGO_DATA_URI) {
+                                // Only the static-asset path (CUSTOMER_LOGO_URL)
+                                // can 404; data URIs from the override layer are
+                                // self-contained. So we only swap to the SVG
+                                // fallback when the failing source IS the static
+                                // path and we haven't already fallen through.
+                                if (
+                                    !brandingOverride.logoDataUri &&
+                                    logoSrc !== FALLBACK_LOGO_DATA_URI
+                                ) {
                                     setLogoSrc(FALLBACK_LOGO_DATA_URI);
                                 }
                             }}
@@ -2131,12 +2194,21 @@ const OverviewPage: React.FC = () => {
                     </div>
                     <div className="min-w-0">
                         <h1 className="text-base font-black text-sky-900 dark:text-sky-200 tracking-tight leading-none uppercase truncate">
-                            {customerName || 'Operations Command Center'}
+                            {effectiveTitle}
                         </h1>
                         <p className="text-[9px] font-bold text-sky-600 dark:text-sky-400 uppercase tracking-[0.3em] mt-1 leading-none truncate">
-                            Splunk Executive Control Center
+                            {effectiveSubtitle}
                         </p>
                     </div>
+                    <button
+                        type="button"
+                        onClick={() => setBrandingEditorOpen(true)}
+                        title="Edit branding (title, subtitle, logo)"
+                        aria-label="Edit branding (title, subtitle, logo)"
+                        className="flex-shrink-0 p-1 rounded text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    >
+                        <Edit3 className="w-3.5 h-3.5" />
+                    </button>
                 </div>
 
                 <div className="flex items-center gap-2.5 flex-shrink-0">
@@ -2722,6 +2794,20 @@ const OverviewPage: React.FC = () => {
                 }}
                 onResetAllCustomizations={handleResetAllCustomizations}
             />
+
+            <BrandingEditorModal
+                isOpen={isBrandingEditorOpen}
+                onClose={() => setBrandingEditorOpen(false)}
+                override={brandingOverride}
+                titlePlaceholder={customerName || DEFAULT_HEADER_TITLE_FALLBACK}
+                subtitlePlaceholder={DEFAULT_HEADER_SUBTITLE}
+                logoFallbackSrc={logoSrc}
+                onSave={(next) => setBrandingOverride(next)}
+                onResetToDefaults={() => {
+                    resetBrandingOverride();
+                    setBrandingEditorOpen(false);
+                }}
+            />
         </div>
     );
 };
@@ -2809,10 +2895,324 @@ const RegionalViewToggle: React.FC<RegionalViewToggleProps> = ({ value, onChange
     );
 };
 
+// =============================================================================
+// Branding editor (header pencil → "Edit branding" modal)
+// =============================================================================
+
+interface BrandingEditorModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    override: BrandingOverride;
+    /** Placeholder text shown in the title input when no override is set.
+     * Falls back through `customerName` (macro) → hardcoded fallback,
+     * matching the precedence rules in the live header. */
+    titlePlaceholder: string;
+    /** Placeholder text for the subtitle input. Always the
+     * out-of-the-box default ("Splunk Executive Insights"). */
+    subtitlePlaceholder: string;
+    /** Image src to display in the "current logo" preview when no
+     * override logo is set. Lets the user see what they're replacing. */
+    logoFallbackSrc: string;
+    onSave: (next: BrandingOverride) => boolean;
+    onResetToDefaults: () => void;
+}
+
+/**
+ * Centered modal for editing the per-user header branding override
+ * (title, subtitle, logo). Title and subtitle are plain text inputs;
+ * the logo is a file upload that's encoded to a `data:` URI and
+ * stored in localStorage by the parent's `useBrandingOverride` hook.
+ *
+ * Behaviour notes:
+ *  - "Save" persists whatever's in the form fields. Empty strings
+ *    are treated as "use the default" — the hook strips them so
+ *    the live header re-derives from the macro / hardcoded
+ *    constants. Returning `false` from `onSave` (e.g. logo too big)
+ *    keeps the modal open with an inline error.
+ *  - "Reset to defaults" wipes the override entirely (storage key
+ *    removed) and closes the modal.
+ *  - "Cancel" / Esc / backdrop click discards local form changes.
+ *  - The file input rejects anything outside the accepted MIME
+ *    list, and the FileReader path enforces a 256 KiB cap on the
+ *    encoded data URI (~190 KiB binary).
+ */
+const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
+    isOpen,
+    onClose,
+    override,
+    titlePlaceholder,
+    subtitlePlaceholder,
+    logoFallbackSrc,
+    onSave,
+    onResetToDefaults,
+}) => {
+    // Form state — initialised from the persisted override every time
+    // the modal opens so reopening after a Cancel doesn't show stale
+    // values. The `key` is a `useEffect` re-init pattern (sync external
+    // → internal) rather than a `key={isOpen}` remount, so we keep a
+    // single instance and avoid reinitialising the file input.
+    const [titleField, setTitleField] = useState<string>(override.title ?? '');
+    const [subtitleField, setSubtitleField] = useState<string>(override.subtitle ?? '');
+    const [logoDataUri, setLogoDataUri] = useState<string | undefined>(
+        override.logoDataUri
+    );
+    const [errorMessage, setErrorMessage] = useState<string>('');
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+    // Re-sync the form when the modal is (re)opened — picks up any
+    // override mutations from another tab while the modal was closed,
+    // and discards prior unsaved typing if the user re-opens.
+    useEffect(() => {
+        if (!isOpen) return;
+        setTitleField(override.title ?? '');
+        setSubtitleField(override.subtitle ?? '');
+        setLogoDataUri(override.logoDataUri);
+        setErrorMessage('');
+    }, [isOpen, override]);
+
+    // Esc-to-close. Listen on the window because focus moves around as
+    // the user tabs through the form fields.
+    useEffect(() => {
+        if (!isOpen) return undefined;
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [isOpen, onClose]);
+
+    if (!isOpen) return null;
+
+    const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        setErrorMessage('');
+        const file = e.target.files?.[0];
+        if (!file) return;
+        try {
+            const dataUri = await readImageAsDataUri(file);
+            if (dataUri.length > BRANDING_LOGO_DATA_URI_MAX_BYTES) {
+                const kb = Math.round(BRANDING_LOGO_DATA_URI_MAX_BYTES / 1024);
+                setErrorMessage(
+                    `Logo too large after encoding (${Math.round(
+                        dataUri.length / 1024
+                    )} KB). Maximum allowed is ${kb} KB. Please upload a smaller image.`
+                );
+                if (fileInputRef.current) fileInputRef.current.value = '';
+                return;
+            }
+            setLogoDataUri(dataUri);
+        } catch (err) {
+            setErrorMessage(
+                err instanceof Error
+                    ? err.message
+                    : 'Failed to read image. Please pick a different file.'
+            );
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
+    const handleClearLogo = () => {
+        setLogoDataUri(undefined);
+        setErrorMessage('');
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const handleSave = () => {
+        const next: BrandingOverride = {
+            title: titleField.trim() || undefined,
+            subtitle: subtitleField.trim() || undefined,
+            logoDataUri,
+        };
+        const ok = onSave(next);
+        if (!ok) {
+            setErrorMessage(
+                'Could not save branding (logo may exceed the size limit). Please try a smaller image.'
+            );
+            return;
+        }
+        onClose();
+    };
+
+    const previewLogoSrc = logoDataUri || logoFallbackSrc;
+    const acceptList = BRANDING_ACCEPTED_LOGO_MIME_TYPES.join(',');
+
+    return (
+        <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="branding-editor-title"
+            className="fixed inset-0 z-[60] flex items-center justify-center"
+            onClick={(e) => {
+                // Close only when the user clicks the backdrop itself,
+                // not when their drag started inside an input and ended
+                // on the backdrop. The shallow `e.target === e.currentTarget`
+                // check is the standard React idiom.
+                if (e.target === e.currentTarget) onClose();
+            }}
+        >
+            {/* Backdrop */}
+            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
+
+            {/* Card */}
+            <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+                    <h2
+                        id="branding-editor-title"
+                        className="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider"
+                    >
+                        Edit branding
+                    </h2>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        title="Close"
+                        aria-label="Close"
+                        className="p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+
+                <div className="px-4 py-4 space-y-4">
+                    {/* Title */}
+                    <div>
+                        <label
+                            htmlFor="branding-title-input"
+                            className="block text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1"
+                        >
+                            Title
+                        </label>
+                        <input
+                            id="branding-title-input"
+                            type="text"
+                            value={titleField}
+                            onChange={(e) => setTitleField(e.target.value)}
+                            placeholder={titlePlaceholder}
+                            maxLength={120}
+                            className="w-full px-2 py-1.5 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-400"
+                        />
+                        <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-500">
+                            Leave blank to use the value from the
+                            <code className="mx-1 px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded">
+                                [customer_name]
+                            </code>
+                            macro.
+                        </p>
+                    </div>
+
+                    {/* Subtitle */}
+                    <div>
+                        <label
+                            htmlFor="branding-subtitle-input"
+                            className="block text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1"
+                        >
+                            Subtitle
+                        </label>
+                        <input
+                            id="branding-subtitle-input"
+                            type="text"
+                            value={subtitleField}
+                            onChange={(e) => setSubtitleField(e.target.value)}
+                            placeholder={subtitlePlaceholder}
+                            maxLength={120}
+                            className="w-full px-2 py-1.5 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-400"
+                        />
+                        <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-500">
+                            Leave blank for the default
+                            (&ldquo;{subtitlePlaceholder}&rdquo;).
+                        </p>
+                    </div>
+
+                    {/* Logo */}
+                    <div>
+                        <span className="block text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">
+                            Logo
+                        </span>
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 bg-sky-600 rounded-lg flex items-center justify-center text-white overflow-hidden p-1 flex-shrink-0">
+                                <img
+                                    src={previewLogoSrc}
+                                    alt="Logo preview"
+                                    className="w-full h-full object-contain"
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                                <button
+                                    type="button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="inline-flex items-center gap-1.5 px-2 py-1 text-[11px] font-bold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-900/30 hover:bg-sky-100 dark:hover:bg-sky-900/50 rounded transition-colors"
+                                >
+                                    <Upload className="w-3 h-3" />
+                                    {logoDataUri ? 'Replace logo' : 'Upload logo'}
+                                </button>
+                                {logoDataUri ? (
+                                    <button
+                                        type="button"
+                                        onClick={handleClearLogo}
+                                        className="text-[10px] text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 underline"
+                                    >
+                                        Clear (use default)
+                                    </button>
+                                ) : null}
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept={acceptList}
+                                    onChange={handleLogoUpload}
+                                    className="hidden"
+                                />
+                            </div>
+                        </div>
+                        <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-500">
+                            PNG, SVG, JPEG, WebP, or GIF. Max{' '}
+                            {Math.round(BRANDING_LOGO_DATA_URI_MAX_BYTES / 1024)} KB after
+                            encoding. Stored in your browser only.
+                        </p>
+                    </div>
+
+                    {errorMessage ? (
+                        <div
+                            role="alert"
+                            className="text-[11px] text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 rounded px-2 py-1.5"
+                        >
+                            {errorMessage}
+                        </div>
+                    ) : null}
+                </div>
+
+                <div className="flex items-center justify-between gap-2 px-4 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+                    <button
+                        type="button"
+                        onClick={onResetToDefaults}
+                        className="text-[11px] font-bold text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-300 underline"
+                    >
+                        Reset to defaults
+                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="px-3 py-1.5 text-[11px] font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleSave}
+                            className="px-3 py-1.5 text-[11px] font-bold text-white bg-sky-600 hover:bg-sky-700 rounded transition-colors"
+                        >
+                            Save
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // Map position relative to the metric tile column. Persisted to
 // `scd_overview_map_pos` in localStorage; cleared by the factory reset.
 // See the splitter / map-position useState block in the Overview page
-// for the wiring and the rationale on defaulting to `below`.
+// for the wiring and the rationale on defaulting to `right` (Build 83).
 type MapPosition = 'right' | 'below' | 'above';
 
 interface MapPositionToggleProps {

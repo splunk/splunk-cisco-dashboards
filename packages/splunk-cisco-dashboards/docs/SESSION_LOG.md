@@ -7,6 +7,137 @@
 
 ---
 
+## 2026-05-13 (Build 84) — Editable header chrome (title / subtitle / logo) via per-user override
+
+### Context
+
+Build 83 flipped the Overview page layout defaults (map right,
+metrics 2/3, three tiles per section). The same review surfaced
+that customers had no UI-level way to change the header chrome
+without backend access — title came from the `[customer_name]`
+macro (operator edits `local/macros.conf`) and the logo lived as
+`customer_logo.png` in the Splunk app static directory. The
+subtitle "Splunk Executive Control Center" was hardcoded in JSX
+and not editable at all. Build 84 ships a header pencil → modal
+that lets any user override all three.
+
+### What changed (Build 84)
+
+#### New hook: `common/hooks/useBrandingOverride.ts`
+
+Versioned localStorage hook (`splunk-cisco-dashboards.branding.v1`)
+returning `{ override, setOverride, resetAll }`. The override is a
+sparse object — `{ title?, subtitle?, logoDataUri? }` — so the
+header layer falls through to the existing defaults whenever a
+field is unset. Cross-tab sync via the standard `storage` event
+(mirrors `usePersistedSectionTileCounts`).
+
+Sanitisation rules baked into the hook:
+
+* `title` / `subtitle` — trimmed; empty strings drop the field.
+* `logoDataUri` — must start with `data:image/`; rejected if it
+  exceeds 256 KiB (~190 KiB binary). The 256 KiB cap fits inside
+  every mainstream browser's per-origin localStorage budget while
+  comfortably accommodating the ~10 KiB PNGs and ~3 KiB SVGs
+  customers actually upload for a 36×36 header logo.
+* `setOverride` returns `false` if the supplied `logoDataUri` is
+  too big, so the editor UI can surface a friendly error instead
+  of silently dropping the upload.
+
+`readImageAsDataUri(file)` helper exported alongside the hook —
+wraps `FileReader` so the editor's file-input change handler can
+encode an upload to a `data:` URI in one promise.
+
+#### `pages/overview/index.tsx` — header rewiring
+
+* Imported `useBrandingOverride` and the `Edit3 / Upload / X`
+  lucide icons.
+* Added two new module constants:
+  * `DEFAULT_HEADER_SUBTITLE = 'Splunk Executive Insights'`
+    (replaces the hardcoded "Splunk Executive Control Center"
+    string per the 2026-05-13 review).
+  * `DEFAULT_HEADER_TITLE_FALLBACK = 'Operations Command Center'`
+    (extracted from the inline JSX so the editor's placeholder
+    matches the live header).
+* Inside `OverviewPage`:
+  * Hooked `useBrandingOverride` and added `isBrandingEditorOpen`
+    state.
+  * Computed `effectiveTitle / effectiveSubtitle / effectiveLogoSrc`
+    by collapsing the three priority layers (override → macro
+    fetch → hardcoded default).
+  * Header JSX now reads from those derived values and includes a
+    new pencil button next to the title that toggles the editor.
+  * `handleResetAllCustomizations` now calls
+    `resetBrandingOverride()` so the existing factory-reset CTA
+    in the picker also clears branding.
+
+#### New component: `BrandingEditorModal`
+
+Defined inline in `pages/overview/index.tsx` alongside
+`MapPositionToggle`. Centered modal with backdrop blur,
+keyboard-friendly (Esc to close, backdrop click to close), and
+three controls:
+
+1. Title input — placeholder shows the current macro value, so
+   leaving it blank means "use the macro".
+2. Subtitle input — placeholder shows the new default
+   "Splunk Executive Insights".
+3. Logo block — small preview swatch + "Upload logo" button
+   wired to a hidden `<input type="file">` accepting
+   `image/png,image/svg+xml,image/jpeg,image/webp,image/gif`.
+   Successful uploads are encoded by `readImageAsDataUri`,
+   size-checked against 256 KiB, and stored in component state
+   until Save. A "Clear (use default)" link reverts to the static
+   asset.
+
+Footer has Reset to defaults / Cancel / Save. Save returns the
+hook's `false` signal when the upload is too large, surfacing an
+inline error without closing the modal.
+
+#### Subtitle default flip
+
+The hardcoded subtitle text changed from
+`"Splunk Executive Control Center"` to
+`"Splunk Executive Insights"`. Per Alan's response to the
+question prompt, this is the new fresh-deployment default;
+operators who want the previous wording set it via the editor.
+
+### What did NOT change
+
+* Existing `[customer_name]` macro fetch path still runs and
+  still drives the header when no override is set. Operators
+  who already customise `local/macros.conf` keep that workflow.
+* Existing `customer_logo.png` static asset is still the
+  pre-override fallback. Deployments that already swap the file
+  on disk see no change.
+* No new build dependencies. The editor uses native
+  `FileReader`, `<input type="file">`, and existing lucide /
+  Tailwind primitives.
+
+### Verification
+
+* `yarn build` clean (only the pre-existing asset-size warnings;
+  no new warnings).
+* `ReadLints` on `overview/index.tsx` and `useBrandingOverride.ts`:
+  clean.
+* Bundle size delta: `overview.js` grew by ~6 KiB (modal markup,
+  hook, helper). Within budget.
+
+### Operator notes
+
+* Storage key: `splunk-cisco-dashboards.branding.v1`. Wipe via
+  the factory-reset button in the picker, the modal's "Reset to
+  defaults" link, or
+  `localStorage.removeItem('splunk-cisco-dashboards.branding.v1')`
+  in devtools.
+* Per-user, per-browser. To roll out a deployment-wide brand
+  change, keep editing `local/macros.conf` (title) and replacing
+  `customer_logo.png` (logo) — those still win over the fresh-
+  deployment hardcoded fallback whenever a user has no override
+  set.
+
+---
+
 ## 2026-05-13 (Build 83) — Overview page factory defaults: map right (1/3), metrics 2/3, three tiles per section
 
 ### Context
