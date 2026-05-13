@@ -108,7 +108,7 @@ prior sessions:
 
 ### Commit
 
-`8b1bd6e` — searchbase: add dedicated TE A2A link health stanza, wire as AUB↔TLH default
+`3ea18ef` — searchbase: add dedicated TE A2A link health stanza, wire as AUB↔TLH default
 
 ---
 
