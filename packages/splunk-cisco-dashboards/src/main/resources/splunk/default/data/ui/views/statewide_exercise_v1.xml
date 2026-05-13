@@ -2259,7 +2259,7 @@
 		"ds_ssid_trend_24h": {
 			"name": "Statewide - ds_ssid_client_trend_24h",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\"\n| timechart dc(macAddress) as clients by 'connection.ssid'",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\"\n| timechart dc(macAddress) as clients by connection.ssid",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -2270,7 +2270,7 @@
 		"ds_ssid_trend_7d": {
 			"name": "Statewide - ds_ssid_client_trend_24h",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\"\n| timechart dc(macAddress) as clients by 'connection.ssid'",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\"\n| timechart dc(macAddress) as clients by connection.ssid",
 				"queryParameters": {
 					"earliest": "-7d@d",
 					"latest": "now"

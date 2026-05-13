@@ -1,6 +1,15 @@
 .DS_Store
 .vscode
-.cursor/
+
+# Ignore Cursor local state (transcripts, history, settings) but keep
+# project-shared rules under .cursor/rules/ tracked so team guidance
+# ships with the repo.
+# NOTE: must use `.cursor/*` (not `.cursor/`) so git still descends
+# into the directory and honors the negation patterns below. Parent-
+# directory exclusion would otherwise block re-inclusion of children.
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
 
 ### Splunk local folders
 local/

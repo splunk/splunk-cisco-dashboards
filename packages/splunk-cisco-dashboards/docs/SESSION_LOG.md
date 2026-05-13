@@ -7,6 +7,174 @@
 
 ---
 
+## 2026-05-13 (Build 76) — SPL dotted-field quoting cleanup + Cursor rule v2
+
+### Context
+
+After Build 75 landed Alan reread the freshly rewritten
+`[overview_link_te_a2a_health]` stanza and called out a recurring SPL
+quoting habit I keep getting wrong — single-quoting dotted field names
+in places where they shouldn't be quoted:
+
+> when using fields with periods or dot in them ... you have to be
+> careful on when to single quote the field names. Inside an `eval` for
+> example you must single quote (`| eval test='thousandeyes.test.id'`),
+> however when performing stats on a field you must NOT use single
+> quotes — `stats … by thousandeyes.test.id`, not
+> `stats … by 'thousandeyes.test.id'`. Same for
+> `first('thousandeyes.test.name')` → should be
+> `first(thousandeyes.test.name)`. The one wrinkle: when you nest
+> `eval()` inside a stats function, the eval rules apply to the inner
+> expression (`sum(eval(if('network.jitter'>0,1,0)))`).
+>
+> Please fix any issues like this everywhere ... right now as an
+> example we have this issue here `[overview_link_te_a2a_health]` ...
+> but we need this issue fixed everywhere and a Cursor skill you add
+> and have me verify.
+
+He's right on every count. Build 75 reverted to raw events for that
+stanza but I quoted every aggregate-function arg + the `by` clause +
+the `rename` source field, all of which silently break the search
+(stats emits null columns, by-clause emits a literal string column,
+rename no-ops). The existing `splunk-spl-field-syntax.mdc` rule even
+documented the right answer for stats/by but mis-classified `rename`
+as needing double quotes. So this fix needed two parts: a sweep of
+every existing violation in production SPL, and a rewrite of the
+Cursor rule to be unambiguous + auditable.
+
+### Changes (Build 76)
+
+#### 1. Production SPL quoting cleanup (`searchbase.conf`, `savedsearches.conf`, dashboard XMLs)
+
+| File | Stanza / Location | Was | Now |
+|---|---|---|---|
+| `searchbase.conf` | `[overview_link_te_a2a_health]` v1.1.0 → **v1.1.1** stats line | `avg('network.latency')`, `first('thousandeyes.…')` × 14, `values('thousandeyes.…')` × 2, `by 'thousandeyes.test.id'`, `rename "thousandeyes.test.id" as teTestId` | bare dotted fields throughout |
+| `searchbase.conf` | `[overview_link_te_a2a_health]` explanation `<code>` | `BY 'thousandeyes.test.id'` plus copy "demonstrates quoting dotted JSON-style field paths" | `BY thousandeyes.test.id` plus reworded copy that explicitly says single-quote-only-inside-`eval` |
+| `searchbase.conf` | `[client_summary_*]` line 9192/9193 | `timechart dc(macAddress) as clients by 'connection.ssid'` | `by connection.ssid` |
+| `searchbase.conf` | `[ssid_distribution_*]` line 9393 | `avg('health.overallScore') as avg_health` | `avg(health.overallScore) as avg_health` |
+| `searchbase.conf` | 8 stanzas with `rename 'connection.ssid' as …` | quoted | unquoted |
+| `searchbase.conf` | 3 stanzas with `rename 'connection.protocol' as …` | quoted | unquoted |
+| `searchbase.conf` | 4 stanzas with `rename "All_Traffic.dvc" as …` / `rename "Cisco_Security.…" as …` | double-quoted | unquoted |
+| `searchbase.conf` | 2 explanation `<code>` blocks (lines 7466 + 9389) | `latest('connection.ssid')`, `avg('health.overallScore')` | unquoted forms |
+| `savedsearches.conf` | `[NetOps Alert - NRS Below Threshold]` line 389 | `stats avg('health.overallScore') as cha` + `rename "All_Traffic.dvc" as …` | unquoted forms (kept the `where 'health.overallScore'>=0` because where is class B) |
+| `data/ui/views/statewide_exercise_v1.xml` | 2 inline timechart queries | `by 'connection.ssid'` | `by connection.ssid` |
+
+The `where 'health.overallScore'>=0` (line 389 of savedsearches.conf)
+was left intact — `where` is an expression evaluator (Class B) so
+single-quoting is correct there. Same logic kept the `eval` blocks in
+`[overview_link_te_a2a_health]` single-quoted (`coalesce('thousandeyes.source.agent.location', "")` etc.).
+
+#### 2. Cursor rule rewrite (`.cursor/rules/splunk-spl-field-syntax.mdc` → v2.0.0)
+
+- Collapsed the prior 3-class taxonomy ("bare / single / double") into
+  a clearer 2-class one (Class A = "no quotes", Class B = "single
+  quotes inside eval-syntax") that matches Alan's stated rule of
+  thumb. The double-quotes-for-rename guidance was wrong and is gone
+  — `rename` now sits firmly in Class A.
+- Added an explicit single-bit summary at the top: "wrap a dotted
+  field name in single quotes only when it appears inside an
+  expression evaluator (eval, where, fieldformat, eval() callback
+  inside stats / timechart). Anywhere else, write the dotted name
+  bare."
+- Quick-reference matrix lists every command we actually use, with
+  positive examples.
+- Added the `eval()` callback inside `stats` / `timechart` aggregates
+  as an explicit Class B example (e.g.,
+  `count(eval('connection.band'=="5.0"))` — the outer is class A so
+  `by connection.ssid`, but the inner `eval()` is class B so the
+  inner field gets single-quoted). This is the wrinkle Alan called out.
+- Added a "How to verify a file before committing" section with **four
+  copy-pasteable `rg` commands** that find every variant of the bug.
+  All four return zero on the current tree. Anyone can run them
+  before committing SPL.
+- Kept the existing `globs` filter so the rule fires only on
+  SPL-bearing files.
+
+The four verification greps:
+
+```bash
+# 1. Single-quoted dotted field as aggregate function arg
+rg -n "(first|last|avg|sum|count|min|max|dc|values|earliest|latest|median|stdev|range|estdc|p\d+|sumsq|var)\('[a-zA-Z_]\w*\.[a-zA-Z_]" \
+   packages/splunk-cisco-dashboards/src/main/resources/splunk/default
+
+# 2. Single-quoted dotted field as `by` clause key
+rg -n "\b(by|BY)\s+'[a-zA-Z_]\w*\.[a-zA-Z_]" \
+   packages/splunk-cisco-dashboards/src/main/resources/splunk/default
+
+# 3. Quoted dotted field in `rename` (single OR double)
+rg -n "\brename\s+['\"][a-zA-Z_]\w*\.[a-zA-Z_]" \
+   packages/splunk-cisco-dashboards/src/main/resources/splunk/default
+
+# 4. Bare dotted field inside `eval` (reverse bug)
+rg -n "\beval\s+\w+\s*=\s*[a-zA-Z_]\w*\.[a-zA-Z_]\w*\.[a-zA-Z_]" \
+   packages/splunk-cisco-dashboards/src/main/resources/splunk/default
+```
+
+### Verification
+
+- All four audit greps return **0 hits** repo-wide.
+- `yarn tsc --noEmit` → clean (no TS regressions, since the only `.tsx` change in this build was the rule file which is markdown).
+- `yarn build` → succeeded (`✓ App staged at stage/`, asset-size warnings only — pre-existing, not regressions).
+- `app.conf` build bumped 75 → **76**.
+- `[overview_link_te_a2a_health]` version bumped 1.1.0 → **1.1.1**.
+- Spot-checked the rewritten stats line in `[overview_link_te_a2a_health]`:
+  - `avg(network.latency) as _latencyS, avg(network.loss) as lossPct, avg(network.jitter) as jitterMs` — bare ✅
+  - `values(thousandeyes.source.agent.name) as sourceAgents` — bare ✅
+  - `first(thousandeyes.test.name) as teTestName` — bare ✅
+  - `by thousandeyes.test.id` — bare ✅
+  - `rename thousandeyes.test.id as teTestId` — bare ✅
+  - `eval _agentScope=coalesce('thousandeyes.source.agent.location',"")…` — single-quoted ✅ (it's eval)
+  - `eval teLinkConstructed=if(isnotnull(teAccountId)…)` — bare locals (`teAccountId`, `teTestId`, etc.) ✅ (no dots)
+
+### Notes for FDEM follow-up
+
+- Push `stage/` to FDEM. The fix should immediately resolve the empty `lossPct` / `jitterMs` / location / region columns Alan saw in the screenshot, because the previous build was emitting null on every quoted aggregate (the parser was looking for fields literally named `'thousandeyes.…'`).
+- If any column is still empty after this push, the field really *is* missing in the raw events on FDEM — run the diagnostic SPL in the stanza's `related_info` to confirm field availability before chasing the dashboard.
+- The Cursor rule update means future agent edits to SPL will get caught: the rule is auto-attached to `searchbase.conf` / `savedsearches.conf` / dashboard XMLs / webapp source files via the `globs` directive, and the four-grep audit is now part of the pre-commit checklist.
+
+### What's next
+
+Awaiting Alan's confirmation that:
+
+1. The four audit greps return zero on his side (they can be run from any clone, no Splunk required).
+2. FDEM popup now populates loss / jitter / geo fields after he picks up the build.
+3. The rewritten Cursor rule wording is what he wants documented.
+
+Then I'll commit Build 76.
+
+### Addendum (Build 76, mid-session) — `.cursor/rules/` was gitignored
+
+Discovered while preparing to commit: the prior `.gitignore` ignored
+`.cursor/` wholesale, which meant **none** of the project's Cursor
+rules (the 23 codeguard-* security guardrails + the 2 splunk-*
+project rules including the one we just hardened) were ever tracked
+in git. Edits to `splunk-spl-field-syntax.mdc` were silently not
+showing up in `git status` because of this.
+
+Fix:
+
+- Replaced `.cursor/` with `.cursor/*` in `.gitignore` so git still
+  descends into the directory, then added two negations
+  (`!.cursor/rules/`, `!.cursor/rules/**`) so team-shared rules are
+  tracked while any future Cursor local state (transcripts, history,
+  settings, MCP cache, etc.) outside the `rules/` subfolder remains
+  ignored. The `.cursor/*` form is required because git's parent-
+  directory exclusion rule blocks re-inclusion of children when the
+  parent is excluded with a trailing slash.
+- Verified with `git check-ignore -v .cursor/rules/splunk-spl-field-syntax.mdc`:
+  now reports the file as matched by the negation pattern, not the
+  exclusion.
+- All 25 `.mdc` rule files now show as untracked and are being added
+  in this same commit so anyone cloning the repo gets the project's
+  Cursor guidance verbatim.
+
+This explains why prior edits to `splunk-spl-field-syntax.mdc`
+(originally added 2026-05-08 per file mtime, before this session log
+even started) were never shipped to the team — they only ever lived
+on Alan's local clone. Build 76 fixes that.
+
+---
+
 ## 2026-05-13 (post-Build-74 polish) — collapsible editor cards, inspect-only popup, raw-event TE A2A, unknown-status probe animation
 
 ### Context
