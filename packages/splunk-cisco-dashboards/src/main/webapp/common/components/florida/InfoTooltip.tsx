@@ -46,6 +46,7 @@ import React, { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Info } from 'lucide-react';
 import { cn } from '@/common/lib/utils';
+import type { ThresholdLine } from '@/common/hooks/useMetric';
 
 export type InfoTooltipAnchor = 'auto' | 'left' | 'right';
 
@@ -54,6 +55,22 @@ interface InfoTooltipProps {
     title?: string;
     /** Body text — supports a few short lines. */
     description: string;
+    /**
+     * Threshold rows for the THRESHOLDS section, typically derived
+     * from a tile's `MetricThresholds` via `deriveThresholdLines`.
+     * Rendered as colour-coded "Healthy / Warning / Critical" rows
+     * so the popover answers "what counts as good?" at a glance.
+     * When omitted, no THRESHOLDS section is rendered.
+     */
+    thresholdLines?: ThresholdLine[];
+    /**
+     * Optional supplemental sentence shown beneath the threshold rows
+     * (or as the entire section body when `thresholdLines` is omitted
+     * — e.g. "No fixed threshold; watch trend"). Use this to clarify
+     * unit mismatches, cite threshold sources, or explain qualitative
+     * thresholds for trend-only metrics.
+     */
+    thresholdNote?: string;
     /** Optional micro-caption shown italic at the bottom (e.g. SPL stanza name). */
     footnote?: string;
     /** Where to anchor the popover relative to the icon. */
@@ -65,6 +82,25 @@ interface InfoTooltipProps {
     iconAriaLabel?: string;
     className?: string;
 }
+
+// Tone → text colour for the threshold labels in the popover. We use
+// slightly brighter shades than the dashboard headline palette
+// because the popover background is dark slate-900 and the headline
+// palette is tuned for the white tile background — same colour roles
+// (sky/amber/red), shifted up a step for legibility on dark.
+const THRESHOLD_TONE_TEXT: Record<ThresholdLine['tone'], string> = {
+    healthy: 'text-emerald-400',
+    warning: 'text-amber-400',
+    critical: 'text-red-400',
+    unknown: 'text-slate-300',
+};
+
+const THRESHOLD_TONE_DOT: Record<ThresholdLine['tone'], string> = {
+    healthy: 'bg-emerald-400',
+    warning: 'bg-amber-400',
+    critical: 'bg-red-400',
+    unknown: 'bg-slate-400',
+};
 
 // Width of the popover in pixels. Kept in sync with the Tailwind
 // `w-[360px]` class on the popover so positioning math and rendered
@@ -113,11 +149,21 @@ const computeCoords = (
 export const InfoTooltip: React.FC<InfoTooltipProps> = ({
     title,
     description,
+    thresholdLines,
+    thresholdNote,
     footnote,
     anchor = 'auto',
     iconAriaLabel = 'What does this mean?',
     className,
 }) => {
+    // The THRESHOLDS section is rendered when *either* the structured
+    // rows or the supplemental note is provided. For tiles with no
+    // fixed numeric threshold (e.g. "Active devices" — a trend-only
+    // metric), the caller passes only `thresholdNote`, and the section
+    // becomes "Operational signal — watch the trend".
+    const showThresholds =
+        (Array.isArray(thresholdLines) && thresholdLines.length > 0) ||
+        Boolean(thresholdNote);
     const triggerRef = useRef<HTMLButtonElement | null>(null);
     const popoverRef = useRef<HTMLSpanElement | null>(null);
     const [isOpen, setIsOpen] = useState(false);
@@ -135,7 +181,11 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
             ? popoverRef.current.getBoundingClientRect().height
             : 0;
         setCoords(computeCoords(triggerRect, anchor, popoverHeight));
-    }, [isOpen, anchor, description, title, footnote]);
+        // showThresholds is included so the popover repositions when
+        // the THRESHOLDS section grows or shrinks the body height
+        // (e.g. switching between tiles with 3 threshold rows and
+        // tiles with only a note).
+    }, [isOpen, anchor, description, title, footnote, showThresholds]);
 
     // Reposition on scroll / resize so the popover follows its
     // trigger if the page scrolls underneath while the user keeps
@@ -212,6 +262,59 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
                       <span className="block text-slate-200 font-normal normal-case">
                           {description}
                       </span>
+                      {showThresholds && (
+                          <span className="block mt-3 pt-2.5 border-t border-slate-700">
+                              {/* Section header. Mirrors the all-caps
+                                  treatment of "DESCRIPTION/VALUE" in
+                                  the reference design: a tight, sky-
+                                  blue label that primes the eye for a
+                                  short data block below. */}
+                              <span className="block text-sky-400 text-[11px] font-bold tracking-wider mb-1.5 uppercase">
+                                  Thresholds
+                              </span>
+                              {Array.isArray(thresholdLines) && thresholdLines.length > 0 && (
+                                  <span className="block space-y-1">
+                                      {thresholdLines.map((line) => (
+                                          <span
+                                              key={`${line.tone}-${line.label}`}
+                                              className="flex items-baseline gap-2"
+                                          >
+                                              <span
+                                                  aria-hidden="true"
+                                                  className={cn(
+                                                      'inline-block w-1.5 h-1.5 rounded-full flex-shrink-0 translate-y-[1px]',
+                                                      THRESHOLD_TONE_DOT[line.tone]
+                                                  )}
+                                              />
+                                              <span
+                                                  className={cn(
+                                                      'font-semibold w-[68px] flex-shrink-0',
+                                                      THRESHOLD_TONE_TEXT[line.tone]
+                                                  )}
+                                              >
+                                                  {line.label}
+                                              </span>
+                                              <span className="text-slate-200 font-mono text-[12.5px]">
+                                                  {line.value}
+                                              </span>
+                                          </span>
+                                      ))}
+                                  </span>
+                              )}
+                              {thresholdNote && (
+                                  <span
+                                      className={cn(
+                                          'block text-slate-300 text-[12.5px] leading-snug',
+                                          Array.isArray(thresholdLines) && thresholdLines.length > 0
+                                              ? 'mt-1.5'
+                                              : ''
+                                      )}
+                                  >
+                                      {thresholdNote}
+                                  </span>
+                              )}
+                          </span>
+                      )}
                       {footnote && (
                           <span className="block mt-2.5 pt-2 border-t border-slate-700 text-slate-400 italic text-[11.5px] font-mono break-all leading-snug">
                               {footnote}

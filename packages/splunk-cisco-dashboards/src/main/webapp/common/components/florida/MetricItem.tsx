@@ -20,6 +20,7 @@ import type {
     DataSource,
     TimeRange,
     NoDataReason,
+    ThresholdLine,
 } from '@/common/hooks/useMetric';
 
 interface MetricItemProps {
@@ -36,6 +37,19 @@ interface MetricItemProps {
      * displayed value back to its source.
      */
     descriptionFootnote?: string;
+    /**
+     * Structured rows for the THRESHOLDS section of the info popover.
+     * Built upstream by `deriveThresholdLines(cfg.thresholds, cfg.unit)`
+     * so the rendered ranges are guaranteed to match the
+     * `computeStatus` rules that drive the live tile colour.
+     */
+    thresholdLines?: ThresholdLine[];
+    /**
+     * Optional supplemental sentence beneath the threshold rows. Use
+     * for unit clarifications, threshold-source citations, or as the
+     * sole content for tiles with no fixed numeric threshold.
+     */
+    thresholdNote?: string;
     /** Where the Info tooltip should anchor relative to the icon. */
     infoAnchor?: InfoTooltipAnchor;
     value: string | number;
@@ -199,6 +213,8 @@ export const MetricItem: React.FC<MetricItemProps> = ({
     subLabel,
     description,
     descriptionFootnote,
+    thresholdLines,
+    thresholdNote,
     infoAnchor = 'auto',
     value,
     unit = '',
@@ -287,6 +303,8 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                             <InfoTooltip
                                 title={label}
                                 description={description}
+                                thresholdLines={thresholdLines}
+                                thresholdNote={thresholdNote}
                                 footnote={descriptionFootnote}
                                 anchor={infoAnchor}
                                 iconAriaLabel={`What does ${label} measure?`}

@@ -39,6 +39,98 @@ export interface MetricThresholds {
     direction: 'higher_is_better' | 'lower_is_better';
 }
 
+/**
+ * Single row in the THRESHOLDS section of the per-tile info popover.
+ * Authored by `deriveThresholdLines` from the same `MetricThresholds`
+ * the runtime uses to colour the headline, so the popover is
+ * guaranteed to match the colour the user sees on the tile — there's
+ * no second source of truth that could drift.
+ */
+export interface ThresholdLine {
+    tone: MetricStatus;
+    /** Short status label, e.g. "Healthy", "Warning", "Critical". */
+    label: string;
+    /** Numeric range, e.g. "≥ 95%", "80% – < 95%", "< 80%". */
+    value: string;
+}
+
+/**
+ * Format a threshold number for display. Adds locale grouping for
+ * integers (so 25,000 doesn't read as 25000) and trims a single
+ * decimal otherwise. The optional `unit` is appended verbatim.
+ */
+export const formatThresholdNumber = (n: number, unit?: string): string => {
+    if (!Number.isFinite(n)) return '';
+    const body = Number.isInteger(n) ? n.toLocaleString() : n.toFixed(1);
+    return unit ? `${body}${unit}` : body;
+};
+
+/**
+ * Derive the human-readable threshold rows from a `MetricThresholds`
+ * config. Returns `undefined` when the metric has no numeric
+ * thresholds (the caller should fall back to a qualitative
+ * `thresholdNote` instead).
+ *
+ * The sentence ranges mirror `computeStatus` exactly:
+ *
+ *   higher_is_better: value < critical → critical
+ *                     critical ≤ value < warning → warning
+ *                     value ≥ warning → healthy
+ *   lower_is_better:  value > critical → critical
+ *                     warning < value ≤ critical → warning
+ *                     value ≤ warning → healthy
+ *
+ * If only one of `warning` / `critical` is set the function emits a
+ * 2-row variant rather than fabricating a fictional middle band.
+ */
+export const deriveThresholdLines = (
+    thresholds?: MetricThresholds,
+    unit?: string
+): ThresholdLine[] | undefined => {
+    if (!thresholds) return undefined;
+    const { warning, critical, direction } = thresholds;
+    if (warning === undefined && critical === undefined) return undefined;
+    const fmt = (n: number) => formatThresholdNumber(n, unit);
+    const lines: ThresholdLine[] = [];
+    if (direction === 'higher_is_better') {
+        if (warning !== undefined) {
+            lines.push({ tone: 'healthy', label: 'Healthy', value: `≥ ${fmt(warning)}` });
+            if (critical !== undefined) {
+                lines.push({
+                    tone: 'warning',
+                    label: 'Warning',
+                    value: `${fmt(critical)} – < ${fmt(warning)}`,
+                });
+                lines.push({ tone: 'critical', label: 'Critical', value: `< ${fmt(critical)}` });
+            } else {
+                lines.push({ tone: 'warning', label: 'Warning', value: `< ${fmt(warning)}` });
+            }
+        } else if (critical !== undefined) {
+            lines.push({ tone: 'healthy', label: 'Healthy', value: `≥ ${fmt(critical)}` });
+            lines.push({ tone: 'critical', label: 'Critical', value: `< ${fmt(critical)}` });
+        }
+        return lines;
+    }
+    // lower_is_better
+    if (warning !== undefined) {
+        lines.push({ tone: 'healthy', label: 'Healthy', value: `≤ ${fmt(warning)}` });
+        if (critical !== undefined) {
+            lines.push({
+                tone: 'warning',
+                label: 'Warning',
+                value: `> ${fmt(warning)} – ${fmt(critical)}`,
+            });
+            lines.push({ tone: 'critical', label: 'Critical', value: `> ${fmt(critical)}` });
+        } else {
+            lines.push({ tone: 'warning', label: 'Warning', value: `> ${fmt(warning)}` });
+        }
+    } else if (critical !== undefined) {
+        lines.push({ tone: 'healthy', label: 'Healthy', value: `≤ ${fmt(critical)}` });
+        lines.push({ tone: 'critical', label: 'Critical', value: `> ${fmt(critical)}` });
+    }
+    return lines;
+};
+
 export interface MetricConfig {
     id: string;
     section: SectionId;
@@ -107,6 +199,26 @@ export interface MetricConfig {
     unit?: string;
     color?: string;
     thresholds?: MetricThresholds;
+    /**
+     * Optional supplemental sentence shown beneath the auto-derived
+     * threshold rows in the per-tile info popover. Use it to:
+     *
+     *   1. Explain a unit mismatch — e.g. the headline shows "X of Y
+     *      sites" but the numeric threshold is on a percentage; the
+     *      auto-derived row says "≥ 99.5%" and the note clarifies
+     *      that's "per-site availability, not total count".
+     *   2. Explain a qualitative threshold for tiles that don't have
+     *      a fixed numeric cutoff (e.g. "Active devices" — watch the
+     *      day-over-day trend, not a hardcoded number).
+     *   3. Cite the source of the threshold (Catalyst Center default,
+     *      Cisco hardening guide, customer SLA, etc.).
+     *
+     * When the metric has no `thresholds` field at all, this note is
+     * the only thing rendered in the THRESHOLDS section, so for those
+     * tiles always set it — every Cisco-tagged tile should answer
+     * "what counts as good?" for the operator.
+     */
+    thresholdNote?: string;
     /**
      * When true, a successful search that returns zero rows renders an
      * honest "no data" state (value = 0, source = 'live') instead of
@@ -738,6 +850,13 @@ export interface KpiConfig {
      * optional so tiles without a description simply omit the icon.
      */
     description?: string;
+    /**
+     * Qualitative "what counts as good?" sentence rendered in the
+     * THRESHOLDS section of the info popover. KPI cards are string-
+     * valued (site labels, etc.) and have no numeric threshold, so
+     * they describe the *operational reading* instead.
+     */
+    thresholdNote?: string;
     /**
      * Same semantics as {@link MetricConfig.suppressMockOnEmpty}: when
      * true, an empty/erroring search renders "—" instead of the

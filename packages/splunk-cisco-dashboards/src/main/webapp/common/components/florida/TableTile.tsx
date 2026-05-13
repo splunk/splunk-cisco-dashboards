@@ -28,6 +28,14 @@ interface TableTileProps {
     subLabel?: string;
     description?: string;
     descriptionFootnote?: string;
+    /**
+     * Forwarded to the info tooltip's THRESHOLDS section. Tables
+     * generally have no numeric thresholds, but the parent may still
+     * pass a `thresholdNote` (e.g. "Browse the rows; no fixed
+     * threshold") so every Cisco-tagged tile answers "what counts as
+     * good?" consistently.
+     */
+    thresholdNote?: string;
     infoAnchor?: InfoTooltipAnchor;
     /** Rows already capped to the visible row-limit by the hook. */
     rows: ReadonlyArray<Record<string, unknown>>;
@@ -141,6 +149,7 @@ export const TableTile: React.FC<TableTileProps> = ({
     subLabel,
     description,
     descriptionFootnote,
+    thresholdNote,
     infoAnchor = 'auto',
     rows,
     columns,
@@ -206,6 +215,7 @@ export const TableTile: React.FC<TableTileProps> = ({
                             <InfoTooltip
                                 title={label}
                                 description={description}
+                                thresholdNote={thresholdNote}
                                 footnote={descriptionFootnote}
                                 anchor={infoAnchor}
                                 iconAriaLabel={`What does ${label} measure?`}

@@ -64,6 +64,7 @@ import {
     useKpi,
     useTableData,
     isTableViz,
+    deriveThresholdLines,
     type MetricConfig,
     type KpiConfig,
     type SectionId,
@@ -210,6 +211,12 @@ const METRIC_CONFIG: MetricConfig[] = [
         unit: '%',
         color: '#16A34A',
         thresholds: { warning: 99.5, critical: 90, direction: 'higher_is_better' },
+        thresholdNote:
+            'Threshold applies to the per-window availability percentage that drives ' +
+            'the headline colour. The "X of Y" headline counts each site whose ' +
+            'individual ThousandEyes HTTP Server Availability AVG is ≥ 99.5%. ' +
+            '99.5% is the standard four-nines-plus SLO operators expect from ' +
+            'public-facing critical sites.',
         // Mock falls back to a "16 of 18" feel so the tile is
         // recognisable even before the search resolves.
         mock: { seed: 10, sparkMin: 88, sparkMax: 100, value: 89, change: -1 },
@@ -222,12 +229,16 @@ const METRIC_CONFIG: MetricConfig[] = [
         description:
             "Latest network-wide health score from Catalyst Center for the 'All' " +
             'category. Combines link state, throughput and protocol metrics into a ' +
-            "0-100 grade. Healthy >= 95; Critical < 80.",
+            '0-100 grade.',
         // Single row: { score: 0..100 }
         savedSearch: 'IT - Critical Systems - Network Health Score (Current)',
         valueField: 'score',
         unit: '%',
         thresholds: { warning: 95, critical: 80, direction: 'higher_is_better' },
+        thresholdNote:
+            'Bands match the Catalyst Center default policy: ≥ 95 is "good", ' +
+            '80–94 is "fair" (Cisco labels this orange in CC), < 80 is "poor". ' +
+            'Tune via override if your network has a different baseline normal.',
         mock: { seed: 11, sparkMin: 80, sparkMax: 100, value: 99, change: 0 },
     },
     {
@@ -238,12 +249,17 @@ const METRIC_CONFIG: MetricConfig[] = [
         description:
             'Average reachability + manageability across every device tracked by ' +
             'Catalyst Center. Devices that are reachable AND managed score 100, ' +
-            'reachable-only score 50, otherwise 0. Healthy >= 98; Critical < 90.',
+            'reachable-only score 50, otherwise 0.',
         // Single row: { score: 0..100 }
         savedSearch: 'Executive Dashboard - Current Device Health',
         valueField: 'score',
         unit: '%',
         thresholds: { warning: 98, critical: 90, direction: 'higher_is_better' },
+        thresholdNote:
+            'Tighter than network-health on purpose: any non-managed device drags ' +
+            'the average by 50, so 98% means at most ~4% of the fleet is ' +
+            'reachable-only. < 90% typically signals more than one site has lost ' +
+            'a device-management integration.',
         mock: { seed: 12, sparkMin: 95, sparkMax: 100, value: 100, change: 0 },
     },
     {
@@ -253,12 +269,15 @@ const METRIC_CONFIG: MetricConfig[] = [
         subLabel: 'Active Catalyst Center issues',
         description:
             'Count of open issues raised by Catalyst Center across every priority. ' +
-            'Source: cisco:dnac:issue. Crosses warning at 500 active issues and is ' +
-            'critical above 1,000.',
+            'Source: cisco:dnac:issue. ',
         // Single row: { total, critical, high, affected_devices, affected_sites }
         savedSearch: 'Executive Dashboard - Issue Summary KPIs',
         valueField: 'total',
         thresholds: { warning: 500, critical: 1000, direction: 'lower_is_better' },
+        thresholdNote:
+            'Counts issues across every priority, including informational. The ' +
+            'companion "active TE alerts" tile narrows to high+critical only when ' +
+            'you want a more selective signal.',
         mock: { seed: 13, sparkMin: 100, sparkMax: 800, value: 650, change: -50 },
     },
     // Composite-metric replacements per Alan's 2026-05-11 review:
@@ -291,6 +310,11 @@ const METRIC_CONFIG: MetricConfig[] = [
         // sparkline to amber/red on warning/critical via STATUS_VIZ_COLOR.
         color: '#0ea5e9',
         thresholds: { warning: 5, critical: 20, direction: 'lower_is_better' },
+        thresholdNote:
+            'Severity filter is high + critical only — informational alerts and ' +
+            'cleared events are excluded so the count tracks what an operator ' +
+            'actually needs to triage. Compare the sparkline against the dashed ' +
+            'baseline before reacting; a steady 6 is healthier than a sudden 6.',
         mock: { seed: 14, sparkMin: 0, sparkMax: 8, value: 3, change: 0 },
     },
     {
@@ -299,17 +323,21 @@ const METRIC_CONFIG: MetricConfig[] = [
         label: 'Sites < 90%',
         subLabel: 'Sites below health threshold',
         description:
-            'How many of the three FDEM sites (Tallahassee, Orlando, Auburndale) ' +
-            'have a current device-health rollup below 90%. Discrete count, not ' +
-            'a composite - 0 = all sites healthy, 1+ = open the Overview map to ' +
-            'identify which site is degraded. Uses the same HA-pair-aware filter ' +
-            'as the Overview site markers so a standby device reporting 0 does ' +
-            'not unfairly flag its site.',
+            'How many FDEM sites (Tallahassee, Auburndale) have a current ' +
+            'device-health rollup below 90%. Discrete count, not a composite — ' +
+            '0 = all sites healthy, 1+ = open the Overview map to identify which ' +
+            'site is degraded. Uses the same HA-pair-aware filter as the Overview ' +
+            'site markers so a standby device reporting 0 does not unfairly flag ' +
+            'its site.',
         // Single row: { sites_below, sites_total }
         savedSearch: 'IT Health - Sites Below Health Threshold',
         valueField: 'sites_below',
         color: '#0ea5e9',
         thresholds: { warning: 1, critical: 2, direction: 'lower_is_better' },
+        thresholdNote:
+            'The 90% per-site cutoff matches the Catalyst Center "fair vs poor" ' +
+            'boundary; widen / narrow it in the underlying SPL stanza if your ' +
+            'network has a different normal.',
         mock: { seed: 15, sparkMin: 0, sparkMax: 1, value: 0, change: 0 },
     },
     // ----- Security -----
@@ -321,9 +349,9 @@ const METRIC_CONFIG: MetricConfig[] = [
         description:
             'Distinct (source, destination, dest-port) tuples blocked by the ' +
             'firewall over the dispatched window. The headline is the window-total ' +
-            "count - same meaning as the original 'Firewall Blocked Count' tile. " +
+            "count — same meaning as the original 'Firewall Blocked Count' tile. " +
             'The sparkline shows per-hour distinct blocks; the dashed line is the ' +
-            "rolling-average baseline so an anomalous spike stands out at a glance.",
+            'rolling-average baseline so an anomalous spike stands out at a glance.',
         // Hour-bucket timechart: { _time, blocked, baseline, total_blocked }.
         // total_blocked is broadcast (window-total, headline value);
         // blocked is per-hour (sparkline); baseline is window-avg
@@ -336,6 +364,12 @@ const METRIC_CONFIG: MetricConfig[] = [
         overlayLabel: 'Avg',
         color: '#f59e0b',
         thresholds: { warning: 5000, critical: 25000, direction: 'lower_is_better' },
+        thresholdNote:
+            'Tuned for a typical mid-size enterprise edge: < 5k blocks per window ' +
+            'is steady-state internet noise, > 25k usually means a scanning campaign ' +
+            'or a misconfigured peer hammering the policy. Compare against the ' +
+            'baseline overlay before sounding the alarm — sustained elevation ' +
+            'matters more than a single hot bucket.',
         mock: { seed: 21, sparkMin: 10, sparkMax: 50, value: 142, change: 12 },
     },
     {
@@ -346,7 +380,7 @@ const METRIC_CONFIG: MetricConfig[] = [
         description:
             'Number of distinct external source IPs being denied by the firewall. ' +
             'Climbing values usually indicate distributed scanning or a low-and-slow ' +
-            'campaign. Warning at 25 unique sources, critical at 100.',
+            'campaign.',
         // Promoted to a first-class searchbase stanza so the picker
         // can offer it like the other 14 tiles and authors can tune
         // viz_options + tags from the conf instead of editing this
@@ -361,6 +395,11 @@ const METRIC_CONFIG: MetricConfig[] = [
         // "actually bad" state across every tile in the dashboard.
         color: '#0ea5e9',
         thresholds: { warning: 25, critical: 100, direction: 'lower_is_better' },
+        thresholdNote:
+            'Distinct *source* IPs, not block events. A single IP retrying 10,000 ' +
+            'times still counts as one. > 100 distinct sources in a 24h window is ' +
+            'the classic distributed-scan signature and warrants a look at the ' +
+            'firewall logs.',
         mock: { seed: 22, sparkMin: 5, sparkMax: 20, value: 18, change: -5 },
     },
     {
@@ -369,9 +408,9 @@ const METRIC_CONFIG: MetricConfig[] = [
         label: 'Failed auth',
         subLabel: 'ISE + AD failures (with baseline)',
         description:
-            "Total failed authentication events from ISE syslog (5400) and Windows " +
-            "Security log (EventCode=4625) over the dispatched window. Sparkline " +
-            "shows per-hour failures; dashed line is the rolling-average baseline. " +
+            'Total failed authentication events from ISE syslog (5400) and Windows ' +
+            'Security log (EventCode=4625) over the dispatched window. Sparkline ' +
+            'shows per-hour failures; dashed line is the rolling-average baseline. ' +
             'Sustained elevation above the baseline often indicates credential-' +
             'stuffing or a lockout storm.',
         // Hour-bucket timechart: { _time, failures, baseline, total_count }.
@@ -383,6 +422,11 @@ const METRIC_CONFIG: MetricConfig[] = [
         overlayLabel: 'Avg',
         color: '#0ea5e9',
         thresholds: { warning: 25, critical: 100, direction: 'lower_is_better' },
+        thresholdNote:
+            'Window-total across both ISE and Windows AD. The bands assume a ' +
+            'typical mid-size workforce; raise them by an order of magnitude for ' +
+            'large fleets. Sustained drift above the dashed baseline matters more ' +
+            'than the absolute count for stuffing detection.',
         mock: { seed: 23, sparkMin: 0, sparkMax: 5, value: 1, change: 0 },
     },
     {
@@ -392,8 +436,7 @@ const METRIC_CONFIG: MetricConfig[] = [
         subLabel: 'Distinct Cisco XDR incident IDs',
         description:
             'Count of distinct Cisco XDR / SecureX incident IDs in the dispatched ' +
-            'window. Includes both real-time and summary incident sourcetypes. ' +
-            'Warning at 5 active incidents, critical at 20.',
+            'window. Includes both real-time and summary incident sourcetypes.',
         // Single row: { total }
         savedSearch: 'Executive Dashboard - XDR Incidents',
         valueField: 'total',
@@ -402,6 +445,10 @@ const METRIC_CONFIG: MetricConfig[] = [
         // red when the count crosses warning/critical thresholds.
         color: '#0ea5e9',
         thresholds: { warning: 5, critical: 20, direction: 'lower_is_better' },
+        thresholdNote:
+            'XDR groups related detections into a single incident ID, so even small ' +
+            'numbers matter. > 5 simultaneous open incidents typically exceeds what a ' +
+            'single SOC analyst can triage at once; > 20 is "all hands" territory.',
         mock: { seed: 24, sparkMin: 0, sparkMax: 4, value: 2, change: 0 },
     },
     {
@@ -412,16 +459,29 @@ const METRIC_CONFIG: MetricConfig[] = [
         description:
             'Authentication-success score blending ISE syslog ' +
             '(CISE_Passed_Authentications vs CISE_Failed_Attempts) with ' +
-            'Windows AD events (4624 vs 4625). 0-100. Healthy >= 95; Critical < 80.',
+            'Windows AD events (4624 vs 4625). 0-100.',
         // Single row: { score: 0..100 }
         savedSearch: 'Executive Dashboard - Security Domain Score',
         valueField: 'score',
         unit: '%',
         color: '#10b981',
         thresholds: { warning: 95, critical: 80, direction: 'higher_is_better' },
+        thresholdNote:
+            'A success-rate metric, not a posture score: 100% means every auth ' +
+            'attempt succeeded in the window. < 95% usually flags a misconfigured ' +
+            'service account, an MFA outage, or active credential-stuffing — the ' +
+            '"failed auth" tile next to this one is the natural companion drilldown.',
         mock: { seed: 25, sparkMin: 80, sparkMax: 100, value: 98, change: 0 },
     },
     // ----- Building Intelligence -----
+    //
+    // The four "presence" tiles below (active devices, Wi-Fi clients,
+    // occupancy, Webex devices) deliberately have no numeric
+    // thresholds — they're trend signals against an environment-
+    // specific baseline, not pass/fail metrics. Each carries a
+    // `thresholdNote` so the operator still gets a clear answer to
+    // "what counts as good?". Building score is a composite with
+    // numeric bands.
     {
         id: 'active_devices',
         section: 'building',
@@ -435,6 +495,11 @@ const METRIC_CONFIG: MetricConfig[] = [
         savedSearch: 'Executive Dashboard - Active Devices',
         valueField: 'active_devices',
         color: '#10b981',
+        thresholdNote:
+            'Trend metric — no fixed cutoff. The "right" number depends on the ' +
+            'campus, day-of-week, and event calendar. Watch for sudden drops vs. ' +
+            'the same hour the prior week (likely a feed outage) or sustained ' +
+            'climbs above seasonal norm (planning signal for capacity).',
         mock: { seed: 31, sparkMin: 30, sparkMax: 60, value: 54, change: 2600 },
     },
     {
@@ -448,6 +513,11 @@ const METRIC_CONFIG: MetricConfig[] = [
         // Single row: { score }
         savedSearch: 'Executive Dashboard - Wifi Clients',
         valueField: 'score',
+        thresholdNote:
+            'Trend metric — no fixed cutoff. Use this against the AP-capacity ' +
+            'baseline for the campus: a sudden drop usually means an AP cluster ' +
+            'has gone offline; a sustained climb signals it is time to revisit ' +
+            'AP density planning.',
         mock: { seed: 32, sparkMin: 1, sparkMax: 5, value: 2, change: 0 },
     },
     {
@@ -463,6 +533,11 @@ const METRIC_CONFIG: MetricConfig[] = [
         savedSearch: 'Executive Dashboard - Building Occupancy (Dashboard Tile)',
         valueField: 'score',
         unit: '%',
+        thresholdNote:
+            'Operational signal, not a pass/fail. Building managers typically ' +
+            'target 60-75% peak utilisation for healthy work patterns; sustained ' +
+            '> 85% suggests booking pressure, < 20% during business hours suggests ' +
+            'the space is underused.',
         mock: { seed: 33, sparkMin: 0, sparkMax: 10, value: 0, change: 0 },
     },
     {
@@ -473,13 +548,18 @@ const METRIC_CONFIG: MetricConfig[] = [
         description:
             'Composite building-domain score: AP health (Catalyst Center) + ' +
             'device-presence connectivity (Cisco Spaces) + room occupancy + ' +
-            'compliance pass-rate, averaged. 0-100. Healthy >= 90; Critical < 70.',
+            'compliance pass-rate, averaged. 0-100.',
         // Single row: { score: 0..100 }
         savedSearch: 'Executive Dashboard - Building Score',
         valueField: 'score',
         unit: '%',
         color: '#10b981',
         thresholds: { warning: 90, critical: 70, direction: 'higher_is_better' },
+        thresholdNote:
+            'Composite of four sub-scores averaged equally. A 70% headline can ' +
+            'still hide one fully-failed sub-score (e.g. compliance at 0 with ' +
+            'others at 90+). When this drops, expand each contributor on the ' +
+            'Building dashboard before reacting at a building-wide level.',
         mock: { seed: 34, sparkMin: 70, sparkMax: 100, value: 87, change: 1 },
     },
     {
@@ -495,6 +575,11 @@ const METRIC_CONFIG: MetricConfig[] = [
         savedSearch: 'Executive Dashboard - Collab Devices',
         valueField: 'score',
         color: '#0ea5e9',
+        thresholdNote:
+            'Trend metric — no fixed cutoff. The number you expect is "the count ' +
+            'of Webex endpoints you own". A drop of more than ~10% from yesterday ' +
+            'is the actionable signal — it usually means a telemetry feed has ' +
+            'stalled, not that devices were physically removed.',
         mock: { seed: 35, sparkMin: 5, sparkMax: 50, value: 32, change: 0 },
     },
 ];
@@ -543,6 +628,11 @@ const KPI_CONFIG: KpiConfig[] = [
             'Site name producing the most distinct XDR/SecureX incident IDs in ' +
             'the selected window. Helps the operator answer "which site is ' +
             'noisiest right now?". Outputs a single string (the site label).',
+        thresholdNote:
+            'A ranking metric, not a pass/fail. The lead site rotates day-to-day ' +
+            'in normal operation; a single site dominating across multiple time ' +
+            'windows is what warrants attention. Use the XDR Incidents tile for ' +
+            'absolute counts.',
         savedSearch: 'Overview - Top Incident Volume',
         valueField: 'value',
         mockValue: 'Awaiting data',
@@ -554,6 +644,11 @@ const KPI_CONFIG: KpiConfig[] = [
             'Site name with the strongest IT health, derived from Catalyst ' +
             'Center device health rolled up by Site (Reachable+Managed=100, ' +
             'Reachable=50, else=0). Outputs a single string (the site label).',
+        thresholdNote:
+            'Recognition metric, not a threshold. Use this to spot-check the ' +
+            'best-performing site for what "good" looks like before troubleshooting ' +
+            'a degraded one. The companion "sites < 90%" tile is what drives ' +
+            'alarm-style escalation.',
         savedSearch: 'Overview - Operational Lead',
         valueField: 'value',
         mockValue: 'Awaiting data',
@@ -868,6 +963,18 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
         if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener,noreferrer');
     }, [drilldownSpl, range]);
 
+    // Threshold rows are derived from the same `MetricThresholds` the
+    // runtime uses to colour the headline (`computeStatus`), so the
+    // popover and the live tile colour can never disagree. The unit
+    // ("%", "ms", etc.) is appended verbatim. For tiles whose unit
+    // doesn't apply to the threshold (e.g. `critical_website_availability`
+    // headline is "X of Y" but the threshold is on a percentage),
+    // `thresholdNote` clarifies — see METRIC_CONFIG.
+    const thresholdLines = useMemo(
+        () => deriveThresholdLines(effective.thresholds, effective.unit),
+        [effective.thresholds, effective.unit]
+    );
+
     return (
         <MetricItem
             label={effective.label}
@@ -879,6 +986,8 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
             // exposes. The SPL is one click away — we don't need to
             // dump it into a hover popover too.
             descriptionFootnote={undefined}
+            thresholdLines={thresholdLines}
+            thresholdNote={effective.thresholdNote}
             infoAnchor={infoAnchor}
             // `displayValue` (string broadcast from the search) wins
             // over the numeric `value` when present. Status, threshold,
@@ -959,6 +1068,7 @@ const TableCardLeaf: React.FC<CommonLeafProps> = ({
             subLabel={effective.subLabel}
             description={effective.description}
             descriptionFootnote={undefined}
+            thresholdNote={effective.thresholdNote}
             infoAnchor={infoAnchor}
             rows={result.rows}
             columns={result.columns}
@@ -2407,6 +2517,7 @@ const OverviewPage: React.FC = () => {
                                     source={topIncidentCard.source}
                                     accentClassName="bg-red-500"
                                     description={KPI_CONFIG[0].description}
+                                    thresholdNote={KPI_CONFIG[0].thresholdNote}
                                     bindingFootnote={topIncidentBindingFootnote}
                                     onOpenInSearch={
                                         topIncidentDrilldownSpl
@@ -2427,6 +2538,7 @@ const OverviewPage: React.FC = () => {
                                     source={operationalLeadCard.source}
                                     accentClassName="bg-emerald-500"
                                     description={KPI_CONFIG[1].description}
+                                    thresholdNote={KPI_CONFIG[1].thresholdNote}
                                     bindingFootnote={operationalLeadBindingFootnote}
                                     onOpenInSearch={
                                         operationalLeadDrilldownSpl
@@ -2505,6 +2617,14 @@ interface KpiCardProps {
     isCustomized?: boolean;
     /** Body text for the (?) info tooltip. Hides the icon when omitted. */
     description?: string;
+    /**
+     * Qualitative "what counts as good?" sentence rendered in the
+     * THRESHOLDS section. The KPI cards in this column are string-
+     * valued (site labels — top incident volume, operational lead),
+     * so they have no numeric threshold; this note explains how to
+     * read the value instead.
+     */
+    thresholdNote?: string;
     /**
      * Italic footnote shown at the bottom of the tooltip — typically the
      * search binding (saved-search stanza or "(inline SPL)") so the
@@ -2633,6 +2753,7 @@ const KpiCard: React.FC<KpiCardProps> = ({
     onConfigure,
     isCustomized = false,
     description,
+    thresholdNote,
     bindingFootnote,
     onOpenInSearch,
 }) => (
@@ -2663,6 +2784,7 @@ const KpiCard: React.FC<KpiCardProps> = ({
                 <InfoTooltip
                     title={label}
                     description={description}
+                    thresholdNote={thresholdNote}
                     footnote={bindingFootnote}
                     anchor="right"
                     iconAriaLabel={`What is ${label}?`}

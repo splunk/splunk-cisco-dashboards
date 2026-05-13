@@ -7,6 +7,190 @@
 
 ---
 
+## 2026-05-12 (night) — KPI info popovers gain a THRESHOLDS section
+
+### Context
+
+Alan asked for every Cisco-tagged tile to "have an excellent
+description and a clear threshold" — using a reference image of a
+product card with stacked sections (DESCRIPTION / VALUE / SUPPORT)
+as a visual cue, but explicitly noting "don't need it to be the
+same; having a section below the description with threshold details
+will be fantastic." So the ask is structural: take the existing
+description-only `InfoTooltip` and grow a clearly delineated
+THRESHOLDS section below the body that answers "what counts as
+good?" for every tile in the dashboard.
+
+The existing model already had `MetricThresholds { warning, critical,
+direction }` driving the live tile colour via `computeStatus`, but
+the popover only showed prose. The numbers were in the description
+sometimes, missing other times, and had drifted in a couple of
+places (e.g. open-issues description said "warning at 500" but the
+config said `warning: 500` — accidentally consistent, but easy for
+either to drift independently).
+
+### Commit `<TBD>` — single source of truth, structured render
+
+**Files:**
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/hooks/useMetric.ts`
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/florida/InfoTooltip.tsx`
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/florida/MetricItem.tsx`
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/florida/TableTile.tsx`
+- `packages/splunk-cisco-dashboards/src/main/webapp/pages/overview/index.tsx`
+
+**The deriver** (`useMetric.ts`):
+
+`deriveThresholdLines(thresholds, unit)` translates a
+`MetricThresholds` record into 2-3 colour-coded `ThresholdLine`
+rows. The output ranges mirror `computeStatus` exactly so the
+popover can never disagree with the live tile colour:
+
+```
+higher_is_better:  Healthy ≥ warning · Warning critical – < warning · Critical < critical
+lower_is_better:   Healthy ≤ warning · Warning > warning – critical · Critical > critical
+```
+
+When only one of `warning`/`critical` is set, the deriver emits a
+2-row variant rather than fabricating a fictional middle band.
+`formatThresholdNumber` adds locale grouping for integers (`25,000`
+not `25000`) and trims one decimal otherwise; the optional `unit`
+is appended verbatim.
+
+A new `MetricConfig.thresholdNote?` field carries supplemental
+prose for cases where the auto-derived rows aren't the whole
+story:
+
+1. **Unit mismatch** — e.g. `critical_website_availability` has the
+   threshold on a per-window availability percentage but the
+   headline reads "X of Y sites". The note clarifies that "X of Y"
+   counts each site whose individual availability AVG is ≥ 99.5%.
+2. **Threshold provenance** — e.g. network-health bands match the
+   Catalyst Center default policy (good/fair/poor); device-health
+   uses the tighter "any non-managed device drags the average"
+   reasoning; open-issues notes that it counts every priority
+   including informational.
+3. **Trend-only metrics** — the four Building Intelligence presence
+   tiles (active devices, Wi-Fi clients, occupancy, Webex devices)
+   have no fixed numeric cutoff, so they ship with `thresholdNote`
+   only and the deriver returns nothing. The popover renders just
+   the qualitative sentence — "Trend metric — no fixed cutoff. The
+   right number depends on…" — so every Cisco-tagged tile still
+   answers "what counts as good?".
+
+**The render** (`InfoTooltip.tsx`):
+
+Threshold rows render as `[colour-dot] [Healthy/Warning/Critical
+label] [range value]` with a fixed-width label column so the
+ranges line up vertically. Tones use brighter shades than the
+dashboard headline palette (emerald-400, amber-400, red-400)
+because the popover background is dark slate-900 and the headline
+palette is tuned for a white tile background. Same colour roles
+(sky/amber/red), shifted up a step for legibility on dark.
+
+The section is rendered when *either* the structured rows or the
+supplemental note is provided, and the `useLayoutEffect` that
+positions the popover now depends on `showThresholds` so the
+above/below flip recalculates when the body height changes.
+
+**Plumbing** (`MetricItem`, `TableTile`, overview/index.tsx):
+
+`MetricItem` and `TableTile` forward `thresholdLines` and
+`thresholdNote` into `InfoTooltip`. The overview page derives the
+lines once per leaf via `useMemo` against the tile's effective
+config so picker overrides don't recompute on every render.
+
+`KpiCard` (the right-column site-name cards) forwards
+`thresholdNote` only — those are string-valued tiles with no
+numeric threshold, so the section reads as a "how to interpret
+this ranking" guide instead.
+
+### Threshold copy authored
+
+All sixteen tiles in `METRIC_CONFIG` plus both `KPI_CONFIG` cards
+got a fresh `thresholdNote`. A few worth calling out:
+
+- **`critical_website_availability`** — clarifies the headline /
+  threshold unit mismatch and cites 99.5% as the "four-nines-plus
+  SLO operators expect from public-facing critical sites".
+- **`device_health`** vs **`network_health`** — device is tighter
+  (98 vs 95) on purpose because any non-managed device drags the
+  blended score by 50; the note explains that math.
+- **`open_issues`** vs **`active_te_alerts`** — the former counts
+  *every* priority including informational; the latter narrows to
+  high+critical. The note for each cross-references the other so
+  the operator picks the right one for their question.
+- **`fw_blocked`** — adds "compare against the baseline overlay
+  before sounding the alarm — sustained elevation matters more
+  than a single hot bucket", reinforcing the dashed-line UI.
+- **Building presence tiles** — all four call out "trend metric —
+  no fixed cutoff" and direct the operator to compare against
+  baselines (week-over-week, AP-capacity, seasonal, etc.) rather
+  than a hardcoded number.
+
+### Drive-by description fixes
+
+While editing the descriptions to land naturally with the new
+section, dropped the trailing "Healthy >= X; Critical < Y" prose
+that several descriptions ended with — that's now redundant with
+the THRESHOLDS section and was the most likely place for the
+description and the threshold config to drift apart. Also fixed a
+stale "Tallahassee, Orlando, Auburndale" mention in
+`sites_below_threshold` (Orlando was removed from the topology in
+commit `27a207b`; the description hadn't been refreshed).
+
+### Verification
+
+- TypeScript `tsc --noEmit`: clean.
+- Lints on all five touched files: clean.
+- Threshold deriver walked through manually for representative
+  cases: `network_health` (95/80 higher_is_better with %),
+  `open_issues` (500/1000 lower_is_better no unit), `fw_blocked`
+  (5000/25000 with locale grouping → "5,000" / "25,000"),
+  `sites_below_threshold` (1/2 lower_is_better — narrow band but
+  technically accurate), `bldg_score` (90/70 higher_is_better).
+  Building presence tiles render note-only with no derived rows.
+- Override path: `applyOverride` carries `thresholds` and
+  `thresholdNote` forward verbatim because of the `...cfg` spread.
+  Picker swaps preserve the original tile's threshold semantics
+  even after a search rebind, which matches the operator's
+  mental model — overriding switches *which* search drives the
+  tile, not what counts as healthy.
+
+### What's deliberately deferred
+
+- **Threshold authoring in `searchbase.conf`.** Today the threshold
+  numbers live in `MetricConfig` (TypeScript). A future cleanup
+  could move them into `searchbase.conf` so non-engineers can tune
+  bands without a rebuild. The `MetricThresholds` shape is already
+  small enough to express in conf (`warning_threshold = 95`,
+  `critical_threshold = 80`, `direction = higher_is_better`); the
+  catalogue loader would parse and merge with the static config
+  for any tile bound to a stanza.
+- **Per-tenant threshold overrides via KV-Store.** Same migration
+  as the other layout prefs (split percentage, map position) —
+  a single workstream when we move all per-operator UI prefs
+  into KV-Store.
+- **Localised number formatting beyond grouping.** `Number#toLocaleString`
+  uses the browser's locale for grouping but our threshold numbers
+  are always in one canonical unit (counts, %, ms). If the dashboard
+  ever localises to languages where the percent sign comes before
+  the number (Turkish, Arabic), the derived strings will need a
+  format-aware path. Not in scope today.
+
+### What's next
+
+- Visual QA on a real Splunk environment — the dark popover with
+  three coloured threshold rows is the most visually-novel UI
+  change since the InfoTooltip portal fix; eyeball it on a 1280px
+  display and a 4K display, and confirm the popover still fits
+  inside the viewport at the bottom-right tile of each section.
+- Demo data generator fix is in another Cursor session; once
+  landed, the test-name filter swap from `"TLH - BLA Connection"`
+  to `"TLH - AUB Connection"` in `searchbase.conf` is a two-line
+  edit.
+
+---
+
 ## 2026-05-12 (late evening) — Overview map: configurable position + vertical resize
 
 ### Context
