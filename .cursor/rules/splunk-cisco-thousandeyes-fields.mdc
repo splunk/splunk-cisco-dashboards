@@ -1,0 +1,405 @@
+---
+description: Cisco ThousandEyes field reference and SPL conventions for the Cisco Exec Dashboards app. Authoritative source for DM dataset/field names and the metric_name: prefix convention.
+globs: **/searchbase.conf,**/savedsearches.conf,**/data/ui/views/*.xml,**/webapp/**/*.tsx,**/webapp/**/*.ts
+version: 1.0.0
+alwaysApply: false
+---
+
+rule_id: splunk-cisco-thousandeyes-fields
+
+# Cisco ThousandEyes Field Reference
+
+This is the **single source of truth** for the `Cisco_ThousandEyes`
+data model and the canonical field names of `cisco:thousandeyes:*`
+sourcetypes as seen on the FDEM stack. Confirmed against the live
+DM via `| from datamodel:Cisco_ThousandEyes...` on 2026-05-13
+(operator-provided field list).
+
+For the underlying DM JSON definition, see
+`/opt/splunk/etc/apps/ta_cisco_thousandeyes/default/data/models/Cisco_ThousandEyes.json`
+on the user's stack. Per the DM-discovery rule, ask the user for
+that JSON whenever you need to verify a dataset or field name not
+listed here.
+
+## Hard rules (read this first)
+
+1. **Use the data model whenever possible.** Operator preference is
+   DM-first (`tstats … from datamodel=Cisco_ThousandEyes ...`) for
+   consistency across deployments. Fall back to raw-event SPL only
+   when the DM doesn't accelerate what you need.
+2. **Metric fields always carry the `metric_name:` prefix.** This
+   is true in BOTH raw-event SPL AND DM-backed SPL. The bare field
+   name (e.g. `network.jitter`) does **not** exist as a column in
+   the metric store; it exists only as a value of the `metric_name`
+   dimension.
+   - ✅ DM:  `avg(Test_Metrics.metric_name:network.latency)`
+   - ✅ raw: `avg(metric_name:network.latency)`
+   - ❌ DM:  `avg(Test_Metrics.network.latency)` → returns null
+   - ❌ raw: `avg(network.latency)` → returns null
+3. **Dotted-field quoting follows `splunk-spl-field-syntax.mdc`.**
+   Bare in `tstats` / `stats` aggregate args and `by` clauses;
+   single-quoted only in `eval` / `where` / `fieldformat`
+   expressions. The `metric_name:` prefix does not change this —
+   it's part of the field identifier, not a quoting hint.
+4. **Use the single TE index macro.** All ThousandEyes feeds (test
+   metrics, traces, path viz, activities, events, alerts) land in
+   the same index per FDEM convention. Use `` `index_thousandeyes` ``
+   for every raw-event SPL. The per-feed aliases (`stream_index`,
+   `path_viz_index`, `event_index`, `activity_index`) were removed
+   in Build 78 and must not be reintroduced.
+5. **NEVER invent field names.** If a field you want isn't listed
+   below, ask the user to run
+   `` `index_thousandeyes` sourcetype="<sourcetype>" | `field_list` ``
+   or `| from datamodel:Cisco_ThousandEyes.<DataSet>` and paste
+   the output. Do not write SPL referencing speculative field
+   names — TE silently returns null for unknown columns.
+
+## Data model overview
+
+The `Cisco_ThousandEyes` data model exposes six datasets:
+
+| Dataset | Purpose | Backing store |
+|---|---|---|
+| `Test_Metrics` | Synthetic test results (network, DNS, HTTP, FTP, SIP, RTP, web page, web transaction, BGP, API) | Metric store — every measurement is a `metric_name:` column |
+| `Test_Traces` | Per-span trace data for transaction tests (HTTP request method, response code, span kind, parent/child spans, durations as `*_unix_nano`) | Event store |
+| `Path_Viz` | Path visualization (hop list per probe) — currently very thin (only `hops`, `server`, `serverIp`); deeper hop fields exist on raw events | Event store |
+| `Activities` | TE platform audit / activity log (account, user, event type) | Event store |
+| `Events` | Internet Insights events (broad outage / disruption signals: severity, state, type, affectedTargets.total) | Event store |
+| `Alerts` | Per-test alert engine triggers (alertId, severity, signature, testId/testName, eventType, src) | Event store |
+
+When the operator queries `| from datamodel:Cisco_ThousandEyes`
+without a dataset suffix, it returns `Test_Metrics` (the default
+root). For everything except metrics, name the dataset explicitly.
+
+## Index macro
+
+All TE searches use `` `index_thousandeyes` ``. There is no per-feed
+alias. The macro is written as the FIRST token of the search,
+with no `index=` prefix:
+
+```spl
+`index_thousandeyes` sourcetype="cisco:thousandeyes:metric" "thousandeyes.test.type"="agent-to-agent"
+```
+
+Sourcetype names commonly observed in this codebase:
+
+- `cisco:thousandeyes:metric` — backs `Test_Metrics`
+- `cisco:thousandeyes:trace`  — backs `Test_Traces`
+- `cisco:thousandeyes:pathviz` — backs `Path_Viz` (operator to confirm)
+- `cisco:thousandeyes:activity` / `:audit` — backs `Activities`
+- `cisco:thousandeyes:event`  — backs `Events`
+- `cisco:thousandeyes:alert`  — backs `Alerts`
+
+If you need to author SPL that filters by sourcetype, ask the user
+to confirm the exact sourcetype string for the target dataset on
+their stack — Splunk Add-ons occasionally rename these between
+versions.
+
+## Per-dataset field inventory (DM-confirmed 2026-05-13)
+
+### `Cisco_ThousandEyes.Test_Metrics` (default root)
+
+The same 39-field list (25 metric measurements + 14 dimensions) is
+returned whether you query `| from datamodel:Cisco_ThousandEyes` or
+`| from datamodel:Cisco_ThousandEyes.Test_Metrics`.
+
+**Metric fields** (every one requires the `metric_name:` prefix):
+
+```
+metric_name:api.step.completion
+metric_name:api.step.duration
+metric_name:bgp.path_changes.count
+metric_name:bgp.reachability
+metric_name:bgp.updates.count
+metric_name:dns.lookup.availability
+metric_name:dns.lookup.duration
+metric_name:dns.lookup.validity
+metric_name:ftp.client.request.duration
+metric_name:ftp.server.request.availability
+metric_name:ftp.server.throughput
+metric_name:http.client.request.duration
+metric_name:http.server.request.availability
+metric_name:http.server.throughput
+metric_name:network.jitter
+metric_name:network.latency
+metric_name:network.loss
+metric_name:rtp.client.request.mos
+metric_name:sip.client.request.duration
+metric_name:sip.client.request.total_time
+metric_name:sip.server.request.availability
+metric_name:web.page_load.completion
+metric_name:web.page_load.duration
+metric_name:web.transaction.completion
+metric_name:web.transaction.duration
+```
+
+**Dimension fields** (no `metric_name:` prefix):
+
+```
+dns.question.name
+server.address
+thousandeyes.account.id
+thousandeyes.monitor.location
+thousandeyes.monitor.name
+thousandeyes.permalink
+thousandeyes.source.agent.id
+thousandeyes.source.agent.name
+thousandeyes.stream.id
+thousandeyes.target.agent.name
+thousandeyes.test.domain
+thousandeyes.test.id
+thousandeyes.test.name
+thousandeyes.test.type
+```
+
+**Common `thousandeyes.test.type` values:** `agent-to-agent`,
+`agent-to-server`, `bgp`, `http-server`, `page-load`, `transaction`,
+`dns-server`, `dns-trace`, `ftp-server`, `sip-server`,
+`voice` (RTP). Filter by these to narrow `Test_Metrics` to a
+specific test family.
+
+**Units (per ThousandEyes OTel mapping in this codebase):**
+
+- `metric_name:network.latency` — **seconds** (multiply by 1000
+  for ms display: `eval avg_latency_ms = round(avg_latency_s*1000,1)`).
+- `metric_name:network.jitter` — milliseconds (already).
+- `metric_name:network.loss` — percent (0–100 scale).
+- `metric_name:dns.lookup.duration`, `metric_name:http.*.duration`,
+  `metric_name:sip.*.duration`, `metric_name:web.*.duration` —
+  milliseconds.
+- `metric_name:*.availability`, `metric_name:*.completion`,
+  `metric_name:*.validity`, `metric_name:bgp.reachability` —
+  percent (0–100), where 100 is healthy.
+- `metric_name:*.throughput` — bits per second (or as the OTel
+  schema defines on the user's tenant — confirm before unit math).
+- `metric_name:rtp.client.request.mos` — MOS score (1–5, higher
+  is better; below 3.5 is poor).
+
+If a unit assumption matters for the SPL output (alert thresholds,
+chart axis labels), call it out in the stanza's `description` and
+have the user confirm.
+
+### `Cisco_ThousandEyes.Test_Traces`
+
+```
+duration
+end_time_unix_nano
+http.request.method
+http.response.code
+parent_span_id
+server.address
+server.port
+span_id
+span_kind
+span_name
+start_time_unix_nano
+status_code
+status_message
+thousandeyes.account.id
+thousandeyes.permalink
+thousandeyes.source.agent.id
+thousandeyes.source.agent.location
+thousandeyes.source.agent.name
+thousandeyes.stream.id
+thousandeyes.test.id
+thousandeyes.test.name
+thousandeyes.test.type
+trace_id
+url.full
+```
+
+OpenTelemetry-style spans. Each event is one span; group by
+`trace_id` to reconstruct a request's full transaction path.
+`*_unix_nano` fields are nanosecond Unix epoch timestamps —
+divide by 1e9 for seconds, by 1e6 for milliseconds.
+
+### `Cisco_ThousandEyes.Path_Viz`
+
+```
+hops
+server
+serverIp
+```
+
+Note: the DM exposes only these three fields, which is unusually
+thin. If your search needs hop-level detail (per-hop loss,
+latency, ASN, geo), the data exists on the raw
+`cisco:thousandeyes:pathviz` events but is not accelerated in the
+DM. Use raw-event SPL for hop-level analysis and ask the user to
+run `field_list` against that sourcetype to discover the available
+hop-level fields on their tenant.
+
+### `Cisco_ThousandEyes.Activities`
+
+```
+accountGroupName
+aid
+date
+event
+thousandeyes.account.id
+thousandeyes.account.name
+thousandeyes.activitylog.resources
+thousandeyes.user.address
+thousandeyes.user.email
+thousandeyes.user.id
+thousandeyes.user.name
+uid
+user
+```
+
+TE platform audit log. Use for tracking who did what to TE tests,
+agents, and account configuration. Common `event` values include
+`testCreated`, `testDeleted`, `testEnabled`, `userLogin`, etc. —
+ask the user for the value list before authoring filters.
+
+### `Cisco_ThousandEyes.Events`
+
+```
+affectedTargets.total
+aid
+endDate
+id
+severity
+startDate
+state
+title
+type
+typeName
+```
+
+Internet Insights events (broad outage / disruption signals).
+`severity` is a string label (`info`, `warning`, `critical` per the
+TA). `state` is `active` / `resolved`. `type` examples: `outage`,
+`reachability`. `affectedTargets.total` is a numeric breadth measure.
+
+### `Cisco_ThousandEyes.Alerts`
+
+```
+accountId
+alertId
+alert_type
+app
+eventId
+eventType
+expression
+itsiDrilldownURI
+orgId
+organizationId
+permalink
+severity
+severity_id
+signature
+src
+testId
+testName
+testType
+test_description
+thousandeyes_test_id
+triggerTime
+vendor_severity
+```
+
+Per-test alert engine triggers. Key fields:
+
+- `severity` is a string label, `severity_id` is the numeric form.
+- `eventType` distinguishes the alert family
+  (`ALERT`, `ALERT_CLEARED`, etc.).
+- `signature` is the rule expression that fired.
+- `permalink` is a deep-link URL into the TE web UI for the alert.
+- `testId` / `testName` / `testType` tie the alert back to a
+  specific synthetic test.
+- `triggerTime` is the alert fire time as recorded by TE
+  (separate from Splunk's `_time`).
+
+## SPL patterns
+
+### DM-first metric query (preferred)
+
+```spl
+| tstats
+    avg(Test_Metrics.metric_name:network.latency) as avg_latency_s
+    avg(Test_Metrics.metric_name:network.loss) as avg_loss_pct
+    avg(Test_Metrics.metric_name:network.jitter) as avg_jitter_ms
+  from datamodel=Cisco_ThousandEyes
+  where Test_Metrics.thousandeyes.test.type="agent-to-agent"
+  by Test_Metrics.thousandeyes.source.agent.name,
+     Test_Metrics.thousandeyes.target.agent.name
+| eval avg_latency_ms = round(avg_latency_s * 1000, 1)
+| sort -avg_latency_ms
+```
+
+Note: dataset field paths are bare in `tstats` and `by` clauses
+(no quotes). Single-quoting only happens in `eval` / `where`
+expressions per `splunk-spl-field-syntax.mdc`.
+
+### Raw-event metric query (DM unavailable / per-test debugging)
+
+```spl
+`index_thousandeyes` sourcetype="cisco:thousandeyes:metric"
+    "thousandeyes.test.type"="agent-to-agent"
+| stats
+    avg(metric_name:network.latency) as avg_latency_s
+    avg(metric_name:network.loss) as avg_loss_pct
+    avg(metric_name:network.jitter) as avg_jitter_ms
+  by thousandeyes.source.agent.name, thousandeyes.target.agent.name
+| eval avg_latency_ms = round(avg_latency_s * 1000, 1)
+| sort -avg_latency_ms
+```
+
+### Alert table
+
+```spl
+`index_thousandeyes` sourcetype="cisco:thousandeyes:alert"
+| stats
+    count
+    latest(severity) as severity
+    latest(testName) as testName
+    latest(permalink) as permalink
+  by alertId
+| sort -count
+```
+
+## Common pitfalls
+
+- ❌ `avg(Test_Metrics.network.latency)` — bare measurement name
+  on a metric-store-backed DM dataset returns null. Use
+  `avg(Test_Metrics.metric_name:network.latency)`.
+- ❌ `avg(network.jitter)` — same bug in raw-event SPL. Use
+  `avg(metric_name:network.jitter)`.
+- ❌ `| stats avg('metric_name:network.latency')` — single-quoting
+  the field path in a `stats` argument breaks the dotted-name
+  parser. Bare-field rule applies; use
+  `avg(metric_name:network.latency)`.
+- ❌ `| where 'metric_name:network.latency' > 0.1` paired with
+  `| eval ms = 'metric_name:network.latency' * 1000` — these are
+  fine **inside `eval` / `where`**, where dotted/colon-bearing
+  identifiers must be single-quoted. The bug is mixing styles
+  between `stats`/`tstats` (bare) and `eval`/`where` (quoted).
+- ❌ `index=*` or `index="thousandeyes_*"` — always go through
+  `` `index_thousandeyes` ``.
+- ❌ Using the deleted `stream_index`, `path_viz_index`,
+  `event_index`, `activity_index` macros — they no longer exist
+  (Build 78 cleanup).
+- ❌ Assuming `Path_Viz` carries hop-level loss / latency / ASN
+  fields. The DM dataset is intentionally thin. Use raw events
+  via `cisco:thousandeyes:pathviz` (sourcetype name pending
+  operator confirmation) and call out the limitation in the
+  stanza's `description`.
+- ❌ Speculatively renaming `thousandeyes.test.type` to
+  `testType` etc. mid-pipeline. Keep DM-original names so the
+  data source is auditable.
+
+## When in doubt
+
+1. Re-run the operator's command to confirm fields:
+   - DM: `| from datamodel:Cisco_ThousandEyes.<DataSet>`
+   - Raw: `` `index_thousandeyes` sourcetype="cisco:thousandeyes:<feed>" | `field_list` ``
+2. If a field is missing from the inventories above, ask the user
+   to paste the output. Do not guess.
+3. If you need the upstream JSON for verification, ask for
+   `/opt/splunk/etc/apps/ta_cisco_thousandeyes/default/data/models/Cisco_ThousandEyes.json`
+   on their stack (path may differ).
+
+When the user adds new fields or sourcetypes to their TE
+deployment, append the inventory below the existing one with a
+date stamp and bump this rule's `version`.
