@@ -7,6 +7,169 @@
 
 ---
 
+## 2026-05-13 (Build 88) — Tag cleanup, TA Stock SPL reformat, Cursor skill, critical-website logic fix
+
+### Context
+
+Two follow-ups from Build 87. First, the tag taxonomy still leaked underscores
+(`Catalyst_Center`, `IT_Health`, `Active_Directory`, `Health_Score`, …) and
+still carried noise tags (`TEUC` on 61 stanzas, two flavours of
+`Requires_Cisco_ThousandEyes_*_DM`, plus `Migrated_From_SavedSearch` and
+`Composite_Replacement`). The user also flagged that the 100 newly-harvested
+TA Stock searches were sitting on a single very long line each, in violation
+of the project's multi-line `\`-continuation style — they wanted a Cursor
+skill that codifies the format so future additions cannot drift.
+
+Second, the user is suspicious of
+`[executive_dashboard_critical_website_availability]` and shipped a CSV
+(`1778708954_15209.csv`) of the live results. Reading the CSV, the logic has
+three real problems:
+
+1. **Flapping denominator.** `sites_total = dc(site)` was inside the
+   `timechart`, so it counted only sites that reported in each hour. The CSV
+   shows it flipping between 19 and 20 hour-to-hour for no real reason.
+2. **Silent sites bump availability up.** When a critical site briefly stops
+   reporting, both numerator and denominator drop together, so the percentage
+   *increases* — the opposite of what an exec dashboard should show.
+3. **Mean baseline biased by a single bad hour.** `eventstats avg(current_pct)`
+   averaged a 47.4% dip in equally with healthy hours, dragging the baseline
+   to 62.1% — well below most of the chart, useless as an anomaly reference
+   line.
+
+### Changes
+
+#### 1. Tag taxonomy revision (530 stanzas, 395 tag lines rewritten)
+
+- **Dropped tags app-wide:** `TEUC` (61 stanzas), `Requires_Cisco_ThousandEyes_DM`
+  (111), `Requires_Cisco_ThousandEyes_Alerts_DM` (6),
+  `Migrated_From_SavedSearch` (3), `Composite_Replacement` (2). All five
+  were either pure noise or capability flags better expressed in
+  `description`/`explanation`.
+- **Underscore → space everywhere else:** `Catalyst_Center` → `Catalyst Center`,
+  `IT_Health` → `IT Health`, `Active_Directory` → `Active Directory`,
+  `Health_Score` → `Health Score`, `Lookup_Enriched` → `Lookup Enriched`,
+  `Internet_Insights` → `Internet Insights`, etc. 39 distinct underscored
+  tag names normalized; the post-refactor inventory has zero underscores in
+  any tag value.
+- **Within-stanza dedupe:** the rewriter dedupes case-insensitively after the
+  rename so collisions (e.g., a stanza that had both `Page_Load` and
+  `Page Load`) collapse.
+
+#### 2. TA Stock SPL reformat (100 stanzas)
+
+Every `ta_te_stock_*` stanza had its `search = ` field rewritten from a
+single long line into the project's standard multi-line shape:
+
+- Each top-level pipe begins a new line with `\` continuation on the previous
+  line.
+- `tstats` clauses break onto separate lines: aggregate list on the `tstats`
+  line; `FROM`, `WHERE`, `BY` each indented 4 spaces.
+- Multi-condition `WHERE` clauses keep the first filter on the `WHERE` line
+  and indent subsequent filters 10 spaces (so they line up under the first
+  filter, not under `WHERE`).
+- Subsearches stay on a single line *within* their own pipeline segment.
+
+Verified semantically: a Python verifier collapses `\<newline>` continuations
+and runs of whitespace to single spaces, then diffs every stanza's `search`
+field across the original and reformatted file. **All 530 stanzas
+whitespace-normalize to byte-identical SPL** — the reformatter only touched
+formatting, never logic.
+
+#### 3. Cursor skill: `splunk-spl-searchbase-format`
+
+New project skill at
+`/Users/akhamis/repo/splunk-cisco-dashboards/.cursor/skills/splunk-spl-searchbase-format/SKILL.md`.
+Codifies:
+
+- Stanza skeleton (required field order: `search_name` → … → `search`).
+- Search-field formatting rules (the multi-line shape above) with a canonical
+  good example and a single-long-line anti-pattern.
+- Tag rules: spaces not underscores; no noise tags
+  (`Cisco`, `Accelerated`, `Cisco_TA`, `TEUC`,
+  `Migrated_From_SavedSearch`, `Composite_Replacement`,
+  `Requires_Cisco_ThousandEyes_*_DM`); subject + intent mix
+  (`BGP,DNS,Trend,Detail,Drilldown`); `TA Stock Dashboard` allowed for
+  provenance.
+- `category` / `sub_category` taxonomy (Building / Customer Experience /
+  Executive / IT Health / Monitoring / Network / Reference / Security; sub
+  buckets use spaces).
+- `search_name` shape: `<Domain> - <Area> - <Specific Title>`.
+- Workflow for harvesting from upstream TAs: keep SPL byte-identical, apply
+  formatting, name from SPL signature not from upstream view filename.
+- Cross-references to existing rules (`splunk-spl-field-syntax`,
+  `splunk-cisco-thousandeyes-fields`, `splunk-data-model-discovery`,
+  `splunk-cisco-dnac-fields`).
+
+Skill is project-scoped (`.cursor/skills/`) so the team picks it up
+automatically when working anywhere in this repo.
+
+#### 4. `executive_dashboard_critical_website_availability` logic fix (1.0.0 → 1.1.0)
+
+Two surgical SPL changes:
+
+- **Stable denominator.** Insert `eventstats dc(site) AS sites_total_window`
+  *before* the `timechart`, then carry it through with
+  `timechart … max(sites_total_window) AS sites_total`. Now `sites_total` is
+  constant across every output bucket (= the distinct critical-site count
+  seen anywhere in the dispatched window). A site that briefly goes silent
+  in any hour falls out of `sum(available)` only — counted as down for that
+  hour — but stays in the denominator, so the percentage can no longer
+  inflate from missing samples.
+- **Median baseline, not mean.** Replace
+  `eventstats avg(current_pct) AS baseline_pct` with
+  `eventstats median(current_pct) AS baseline_pct`. The dashed line now
+  reflects the typical hour, not "average including this drop".
+
+Also bumped the stanza version (1.0.0 → 1.1.0), refreshed `description` and
+`explanation` to spell out the new shape, added two `related_info` notes
+(why the denominator is window-wide, why median not mean), and tagged a
+known limitation: a critical site silent for the *entire* dispatched window
+still won't appear in `sites_total`. The proper fix is a lookup of expected
+critical sites; tracked as a follow-up.
+
+### Verification
+
+- `yarn build` — clean (no React/TypeScript code changed; the build is just
+  asserting the conf changes don't break packaging).
+- SPL byte-equivalence (whitespace-normalized) across all 530 stanzas
+  pre/post: 0 mismatches, 0 missing, 0 added.
+- Tag inventory post-refactor: 0 stanzas tagged with any of the five drop
+  tags; 0 underscored tag values remain.
+- Manually spot-checked rewritten TA Stock searches in the diff (activity
+  logs, alerts, application, network, voice) — multi-line shape matches the
+  canonical example.
+
+### Files touched
+
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf`
+  — tag taxonomy revision (395 stanzas), TA Stock SPL reformat (100 stanzas),
+  `[executive_dashboard_critical_website_availability]` logic fix
+  (1.0.0 → 1.1.0).
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf`
+  — `build = 87` → `build = 88`.
+- `.cursor/skills/splunk-spl-searchbase-format/SKILL.md` — new file.
+- `packages/splunk-cisco-dashboards/docs/SESSION_LOG.md` — this entry.
+
+### What's next
+
+- **Hand-audit description/explanation on the 100 renamed TA Stock stanzas.**
+  Build 87 gave them precise `search_name`s but kept boilerplate
+  description/explanation. They are technically accurate but generic; could
+  be tightened so each panel's docs match its new precise name.
+- **Trace field-list dump for `cisco:thousandeyes:trace`.** Still blocked on
+  operator action — once supplied, the
+  `splunk-cisco-thousandeyes-fields.mdc` placeholder gets filled out and the
+  DM-eligible TE alert/trace rewrite sweep can run.
+- **`latencyMs` plumbing cleanup in `CustomerTopologyMap.tsx`.** Small
+  standalone refactor; site-level dead types can be dropped while link-level
+  `latencyMs` stays.
+- **Lookup of expected critical sites** for the website-availability
+  stanza, so totally-silent sites still count as down. The denominator fix
+  in 1.1.0 covers intermittent silence; a lookup covers full-window
+  silence.
+
+---
+
 ## 2026-05-13 (Build 87) — Searchbase taxonomy refactor (530 stanzas)
 
 ### Context
