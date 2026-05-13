@@ -7,6 +7,200 @@
 
 ---
 
+## 2026-05-12 (late night) — Topology editor opacity, section defaults, and replacing the two right-column KPIs
+
+### Context
+
+Three discrete asks on top of the threshold-popover landing:
+
+1. **Topology editor is unreadable.** Alan posted a screenshot of the
+   editor panel where the entire form was visibly transparent — the
+   underlying map, road outlines, and city labels (Tallahassee,
+   Jacksonville, Daytona Beach) bleed straight through the inputs.
+   "It's hard to work here, I think the opacity can be adjusted to
+   make it easier to read."
+2. **Section defaults.** From the previous round of questions: bump
+   the per-section maximum tile count to 6, and default *all three*
+   sections to 6 visible tiles. The earlier `defaultCount: { it_health: 3 }`
+   landed before Alan saw the result; once he did, the executive view
+   felt half-empty on wider monitors.
+3. **Replace the two right-column KPIs** next to the topology map.
+   Alan: *"In screenshot 2, find 2 better metrics please and make
+   sure they work, I don't like what we have now unless you
+   disagree."* The two existing tiles are "Top incident volume"
+   (showing the `Site enrichment unavailable` sentinel) and
+   "Operational lead" (showing `Global/APAC/Sydney-AU/WAN-Edge` —
+   demo data leakage from a different customer's DNAC fixture).
+
+### Diagnosis: opacity
+
+The editor panel's parent element used `bg-slate-950/96` (dark) and
+`bg-white/98` (light) — slash-opacity modifiers `/96` and `/98` that
+**don't exist in Tailwind's default opacity scale and aren't
+extended in `tailwind.config.js`** (`important: '#scan-root'` plus
+basic font-family extensions, no opacity scale). Tailwind silently
+drops unknown slash modifiers, so the rendered class string had no
+generated CSS and the panel rendered effectively transparent. The
+`shadow-2xl` was carrying the entire visual separation.
+
+### Fix: opacity
+
+Replaced both classes with their solid equivalents (`bg-slate-950`,
+`bg-white`) and added `backdrop-blur-sm` for a subtle frosted feel
+on whatever the rounded corners or shadow penumbra reveal. The
+nested per-site row uses `bg-slate-50` (light) and `bg-slate-900/70`
+(dark) — `/70` *is* in the default Tailwind scale, so once the
+parent panel is fully opaque the per-site cards stack legibly on
+top.
+
+Also did a sweep for any other `/9[678]` slash-opacity values across
+`packages/splunk-cisco-dashboards/src/main/webapp` — only the comment
+referencing the old pattern came back, so nothing else was silently
+broken.
+
+### Section defaults
+
+`usePersistedSectionTileCounts` parameters in `pages/overview/index.tsx`:
+
+- `minCount: 3` (unchanged)
+- `maxCount: 6` (unchanged — already cap from the IT Health 6th tile)
+- `defaultCount: {}` (was `{ it_health: 3 }`)
+- `fallbackDefault: 6` (was `5`)
+
+Returning users keep whatever count they previously set because the
+preference is keyed off `localStorage`. This only flips the *first
+load* default to "show everything in the catalogue" so the operator
+dials *down* with the count pill if they want a tighter focus.
+Updated the long block comment over the parameters and the
+matching IT Health section comment over `METRIC_CONFIG` so future
+readers know the rationale.
+
+### Diagnosis: the two broken KPIs
+
+`overview/index.tsx`'s right-column tiles bind to two saved searches
+via `KPI_CONFIG[0]` (Top Incident Volume) and `KPI_CONFIG[1]`
+(Operational Lead). Both also have their SPL embedded inside
+`overview_topology_overview` as `append [search ...]` summary blocks
+— the React component reads those rows via `topologySummaryById` and
+shadows the `useKpi` value when no override is bound. So the
+"Topology Overview" feed was the actual source of the displayed
+strings, not the standalone stanzas.
+
+- **Top Incident Volume.** Pulls from
+  `cisco:xdr:incidents` / `cisco:xdr:incidents-summary` and groups
+  by a `site` field that is *not* shipped by default by the XDR TA.
+  The stanza already has a defensive `eval site=coalesce(site,
+  "Site enrichment unavailable")` sentinel — and that sentinel is
+  exactly what was visible on Alan's stack. The bug is real but
+  upstream (Cisco TA / customer enrichment), not something the
+  dashboard can fix.
+- **Operational Lead.** Pulls from `cisco:dnac:devicehealth`,
+  groups per `Site`, ranks by reachable+managed score. The fixture
+  on Alan's stack carries Sydney/APAC `WAN-Edge` rows from a
+  different demo customer's DNAC dump (the FDEM data this app
+  expects has *only* TLH and AUB Sites). So the leaderboard
+  surfaces an unrelated site name.
+
+Both are *site-ranking* strings. Even with the data fixed, ranking
+is barely informative for FDEM's 2-site footprint — the leader and
+the trailer would be the same two sites every refresh. The map
+already shows per-site colours and per-link colours; the right
+column is more useful as **aggregate signals** the map can't show.
+
+### Replacement: two new KPIs
+
+Two new searchbase stanzas, both using TE data we already prove
+works on Alan's stack via the link-health and IT-Health-alerts tiles:
+
+- `[overview_active_critical_alerts]` → "Active critical alerts"
+  — single-row count of currently-firing TE alerts at
+  critical/error severity, expressed as a string. Pulls from the
+  accelerated `Cisco_ThousandEyes.Alerts` data model with the
+  standard "all the spellings" severity filter (`critical`,
+  `Critical`, `CRITICAL`, `error`, `Error`). `appendpipe [ stats
+  count | where count=0 | eval active=0 ]` guarantees one row when
+  the data model is empty so the tile renders `"0"` instead of
+  going blank. Tagged `Cisco,Overview,KPI,IT_Health,ThousandEyes,
+  Alerts,Critical,Operations_Pressure`.
+- `[overview_inter_site_latency]` → "TLH ↔ AUB latency" — single-row
+  formatted-string of the current path latency between Tallahassee
+  and Auburndale ThousandEyes agents. Pulls from
+  `Cisco_ThousandEyes.Test_Metrics` with the same A2A test name
+  placeholder (`"TLH - BLA Connection"`) the link-health stanza is
+  using until Cisco support repoints the broken test. The data
+  model field is in seconds; eval rounds to one decimal and
+  appends `" ms"`. Renders `"—"` when no measurement exists in the
+  window. Tagged `Cisco,Overview,KPI,IT_Health,ThousandEyes,Latency,
+  Site_Connectivity,Tallahassee,Auburndale`.
+
+`overview_topology_overview` was updated in lockstep — the two
+trailing `append` summary blocks were rewritten to emit the new
+`summaryId="active_critical_alerts"` and `summaryId="inter_site_latency"`
+rows so the topology summary feed continues to short-circuit useKpi
+in the common case (no override bound). Bumped that stanza to v1.2.0
+with a description that names both the new bindings and the legacy
+alternates.
+
+### Legacy alternates kept in catalogue
+
+The original `[overview_top_incident_volume]`, `[overview_operational_lead]`,
+`[overview_top_incident_volume_demo]`, and
+`[overview_operational_lead_demo]` stanzas are unchanged in their SPL,
+just retagged with `Legacy_KPI` so the picker filter can hide them
+from the default "Cisco" view. Customers with real XDR `site`
+enrichment or a multi-site footprint can still rebind via the gear
+icon → KPI picker.
+
+### React wiring
+
+`overview/index.tsx`:
+
+- `KPI_CONFIG[0]` rewritten to bind `id: 'active_critical_alerts'`,
+  `label: 'Active critical alerts'`,
+  `savedSearch: 'Overview - Active Critical Alerts'`, with a
+  description and `thresholdNote` pointed at the IT Health alerts
+  table for triage.
+- `KPI_CONFIG[1]` rewritten to bind `id: 'inter_site_latency'`,
+  `label: 'TLH ↔ AUB latency'`,
+  `savedSearch: 'Overview - Inter-Site Latency (TLH <-> AUB)'`, with
+  `thresholdNote` listing the same health bands the link-health
+  stanza uses (<30 calm, 30–100 warning, ≥100 critical) and pointing
+  at the topology link popup's "View in ThousandEyes" deep link for
+  path-level detail.
+- `topologySummaryById` reads moved from `top_incident` /
+  `operational_lead` keys to `active_critical_alerts` /
+  `inter_site_latency` to match the new SPL summary IDs.
+- All variable names migrated for clarity:
+  `topIncident*` / `TopIncident*` → `activeAlerts*` / `ActiveAlerts*`,
+  `operationalLead*` / `OperationalLead*` / `OpLead*` →
+  `interSiteLatency*` / `InterSiteLatency*`. (~70 references touched
+  across the file via four targeted `replace_all` runs to handle
+  each casing of the substring; tsc clean afterwards.)
+- `accentClassName` for the right card flipped `bg-emerald-500` →
+  `bg-sky-500` — emerald reads "operational lead = healthy", sky
+  reads "network metric", which fits the new latency tile better.
+- Binding-footnote comment block updated to name the new saved
+  searches.
+
+### Verification
+
+- `yarn run tsc --noEmit` clean after each step.
+- Lint clean on both `pages/overview/index.tsx` and
+  `common/components/florida/CustomerTopologyMap.tsx`.
+- `app.conf` build bumped to `66`.
+
+### What's next
+
+Search binding for topology sites and links (allow operator to pick a
+searchbase entry per site icon and per link from the editor) — that
+work hasn't started yet because it touches the topology editor,
+runtime fetcher, and persisted topology JSON together. Plan is to
+extend the topology editor's per-site / per-link form with a search
+picker scoped to `Topology_Site` / `Topology_Link` tags, and let
+the override flow through to dispatch.
+
+---
+
 ## 2026-05-12 (night) — KPI info popovers gain a THRESHOLDS section
 
 ### Context

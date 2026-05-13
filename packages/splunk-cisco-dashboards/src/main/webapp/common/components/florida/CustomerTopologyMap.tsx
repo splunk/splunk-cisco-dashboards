@@ -3789,10 +3789,24 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                     animate={{ opacity: 1, x: 0, scale: 1 }}
                     exit={{ opacity: 0, x: 28, scale: 0.98 }}
                     className={cn(
-                        'absolute top-3 right-3 bottom-3 z-[2200] w-[min(430px,calc(100%-1.5rem))] rounded-xl border shadow-2xl overflow-hidden flex flex-col',
+                        // Background is fully opaque so map labels (city
+                        // names, road outlines) don't bleed through the
+                        // form fields — that was the "I can't read what
+                        // I'm typing" complaint. Earlier revisions used
+                        // `bg-slate-950/96` / `bg-white/98` for a frosted
+                        // feel, but those slash-opacity values aren't in
+                        // Tailwind's default scale and aren't in
+                        // `tailwind.config.js`, so they were silently
+                        // dropped — the panel rendered effectively
+                        // transparent. `backdrop-blur-sm` keeps a subtle
+                        // overlay feel for the small areas around the
+                        // rounded corners and on top of any drag-handle
+                        // sticker that pokes out, without sacrificing
+                        // legibility of the main form area.
+                        'absolute top-3 right-3 bottom-3 z-[2200] w-[min(430px,calc(100%-1.5rem))] rounded-xl border shadow-2xl overflow-hidden flex flex-col backdrop-blur-sm',
                         isDark
-                            ? 'bg-slate-950/96 border-slate-700 text-slate-100'
-                            : 'bg-white/98 border-slate-200 text-slate-800'
+                            ? 'bg-slate-950 border-slate-700 text-slate-100'
+                            : 'bg-white border-slate-200 text-slate-800'
                     )}
                 >
                     <div

@@ -174,18 +174,18 @@ const METRIC_CONFIG: MetricConfig[] = [
     // ----- IT Health -----
     //
     // Per the FDEM Overview review with Alan on 2026-05-11, the IT
-    // Health row is intentionally pared down at the top: the new
-    // `critical_website_availability` tile sits at position 1, then
-    // Network health, then Device health (the three Alan defaulted
-    // onto). The two legacy composite-score tiles (UX Score, Compliance)
-    // were replaced in the same review with named, countable signals:
-    // Active TE alerts (Critical+High) and Sites < 90%. The composite
-    // searchbase entries themselves stay in the catalogue so anyone
-    // who wants them back can re-bind via the KPI picker. The
-    // section's *default* visible tile count is dropped to 3 in
-    // `usePersistedSectionTileCounts` so a fresh user lands on the
-    // three Alan asked for; the increase/decrease tile-count control
-    // stays in place. Drag-to-reorder also stays in place.
+    // Health row was reworked: `critical_website_availability` sits
+    // at position 1, then Network health, then Device health (the
+    // three Alan defaulted onto). The two legacy composite-score
+    // tiles (UX Score, Compliance) were replaced in the same review
+    // with named, countable signals: Active TE alerts (Critical+High)
+    // and Sites < 90%. The composite searchbase entries themselves
+    // stay in the catalogue so anyone who wants them back can re-bind
+    // via the KPI picker. As of 2026-05-12 every section defaults to
+    // 6 visible tiles (the `usePersistedSectionTileCounts` cap) so
+    // the executive view surfaces the whole catalogue at first paint
+    // and the operator dials *down* with the count pill if they want
+    // a tighter focus. Drag-to-reorder stays in place.
     {
         id: 'critical_website_availability',
         section: 'it_health',
@@ -620,36 +620,77 @@ const METRIC_CONFIG: MetricConfig[] = [
 // React component reads it as a single summary feed and shadows the
 // useKpi value when no override is bound. Both paths now reference
 // the canonical SPL string; neither is duplicated in TypeScript.
+// Default bindings (2026-05-12): the right-column KPI tiles next to
+// the topology map were originally site-ranking strings ("Top
+// incident volume", "Operational lead"). Both broke on Alan's stack:
+// XDR `site` enrichment isn't wired so the incident-ranking tile
+// always shows the "Site enrichment unavailable" sentinel, and the
+// DNAC fixture on the stack carries Sydney/APAC sites from a
+// different demo customer's data so the operational-lead tile
+// surfaces those instead of TLH or AUB.
+//
+// Even with the data fixed, ranking is barely informative for an
+// FDEM-style 2-site footprint — leader and trailer are the same two
+// sites every refresh. The map already shows per-site health colours
+// and per-link colours, so the right-column tiles add more value as
+// **aggregate signals** the map can't show:
+//
+//   - `active_critical_alerts` — count of currently-firing TE alerts
+//     at critical/error severity. Direct pressure-gauge answer to
+//     "is anything firing?". Sourced from the same accelerated
+//     `Cisco_ThousandEyes.Alerts` data model that powers the IT
+//     Health "Active TE Alerts" sparkline tile, so the data path is
+//     proven on FDEM.
+//   - `inter_site_latency` — current path latency between TLH and
+//     AUB ThousandEyes agents, as a formatted "12 ms" / "—" string.
+//     Sourced from the same A2A test that powers the topology map
+//     link health (via `[overview_link_auburndale_tallahassee_health]`).
+//
+// Both saved searches `appendpipe` a `count==0` fallback so the tile
+// never renders blank — `0` for the alert count, `—` for latency
+// when no measurement exists in the window.
+//
+// **Legacy alternates:** the original `[overview_top_incident_volume]`
+// and `[overview_operational_lead]` stanzas (and their `_demo`
+// counterparts) stay in the catalogue tagged `Legacy_KPI` so any
+// customer with real XDR `site` enrichment or a bigger-than-2-site
+// footprint can rebind via the picker.
 const KPI_CONFIG: KpiConfig[] = [
     {
-        id: 'top_incident',
-        label: 'Top incident volume',
+        id: 'active_critical_alerts',
+        label: 'Active critical alerts',
         description:
-            'Site name producing the most distinct XDR/SecureX incident IDs in ' +
-            'the selected window. Helps the operator answer "which site is ' +
-            'noisiest right now?". Outputs a single string (the site label).',
+            'Count of currently-active ThousandEyes alerts at critical or ' +
+            'error severity. Pulled from the accelerated ' +
+            'Cisco_ThousandEyes.Alerts data model with a defensive ' +
+            'fallback to "0" when the data model is empty so the tile ' +
+            'never renders blank.',
         thresholdNote:
-            'A ranking metric, not a pass/fail. The lead site rotates day-to-day ' +
-            'in normal operation; a single site dominating across multiple time ' +
-            'windows is what warrants attention. Use the XDR Incidents tile for ' +
-            'absolute counts.',
-        savedSearch: 'Overview - Top Incident Volume',
+            'Pressure gauge: 0 = quiet window, no action. 1+ = pivot to ' +
+            'the IT Health "ThousandEyes Active Alerts" table for the ' +
+            'recent-20 list and triage from the top. Sustained elevation ' +
+            'across refreshes = long-running incident not yet cleared.',
+        savedSearch: 'Overview - Active Critical Alerts',
         valueField: 'value',
         mockValue: 'Awaiting data',
     },
     {
-        id: 'operational_lead',
-        label: 'Operational lead',
+        id: 'inter_site_latency',
+        label: 'TLH ↔ AUB latency',
         description:
-            'Site name with the strongest IT health, derived from Catalyst ' +
-            'Center device health rolled up by Site (Reachable+Managed=100, ' +
-            'Reachable=50, else=0). Outputs a single string (the site label).',
+            'Current path latency between Tallahassee and Auburndale ' +
+            'ThousandEyes agents-to-agent test, formatted as "12 ms". ' +
+            'Renders "—" when the data model returns no measurement ' +
+            '(typically because the source/target agent is offline). The ' +
+            'topology map link popup names which agents are being measured.',
         thresholdNote:
-            'Recognition metric, not a threshold. Use this to spot-check the ' +
-            'best-performing site for what "good" looks like before troubleshooting ' +
-            'a degraded one. The companion "sites < 90%" tile is what drives ' +
-            'alarm-style escalation.',
-        savedSearch: 'Overview - Operational Lead',
+            'Health bands match the inter-site link health stanza: under ' +
+            '30 ms is calm, 30–100 ms is warning territory, ≥100 ms is ' +
+            'critical. A reading of "—" means the A2A test isn\'t producing ' +
+            'data — check agent status on both ends. For path-level detail ' +
+            '(loss, jitter, hops), open the topology map link popup and use ' +
+            'the "View in ThousandEyes" deep link.',
+        savedSearch: 'Overview - Inter-Site Latency (TLH <-> AUB)',
         valueField: 'value',
         mockValue: 'Awaiting data',
     },
@@ -1120,20 +1161,26 @@ const OverviewPage: React.FC = () => {
     // who customises tile #5, dials down to 3, then back up to 5,
     // gets their customisation back unchanged.
     //
-    // Bounds: 3..6 with per-section defaults. The cap was bumped from
-    // 5 to 6 when the new `critical_website_availability` tile landed
-    // in the IT Health section so users can still dial up to "show
-    // everything"; Security and Building keep 5 tiles each. The
-    // *default* tile count for IT Health is 3 per Alan's review
-    // (2026-05-11) — the row at first load shows Critical sites,
-    // Network health, and Device health (the top three of the
-    // section) so the executive view stays focused on what matters.
+    // Bounds: 3..6 with per-section defaults. Cap is 6 so the IT
+    // Health section (six catalogue entries today —
+    // critical_website_availability, network_health, device_health,
+    // open_issues, active_te_alerts, sites_below_threshold) can show
+    // every tile. Security and Building have five catalogue entries
+    // each, so 6 is just headroom for future additions; today they
+    // simply show what they have.
+    //
+    // *Default* count is 6 across every section. Per the 2026-05-12
+    // review, the executive view's job is to surface everything in
+    // the catalogue at first paint and let the operator dial *down*
+    // if they want a tighter focus — the trailing-hide rule plus the
+    // count pill make that easy. Earlier revisions defaulted IT
+    // Health to 3 (Alan's "show me the three I asked for"), but on
+    // wider monitors that left the rest of the row blank and the
+    // operator had to discover the +/− pill before they could see
+    // the rest.
+    //
     // Returning users keep whatever count they had configured because
     // the per-section preference is keyed off localStorage.
-    //
-    // The increase / decrease tile-count pill and drag-to-reorder
-    // both stay - this only changes the *default* count for new
-    // sessions in IT Health.
     //
     // Declared up here (before the aggregate status block) because
     // the HealthBadge filter below needs to know which tiles are
@@ -1146,8 +1193,8 @@ const OverviewPage: React.FC = () => {
     } = usePersistedSectionTileCounts({
         minCount: 3,
         maxCount: 6,
-        defaultCount: { it_health: 3 },
-        fallbackDefault: 5,
+        defaultCount: {},
+        fallbackDefault: 6,
     });
 
     // ------------------------------ Section tile-order preference ------------------------------
@@ -1808,47 +1855,53 @@ const OverviewPage: React.FC = () => {
             suppressMockOnEmpty: true,
         };
     };
-    const effectiveTopIncidentCfg = useMemo<KpiConfig>(
+    const effectiveActiveAlertsCfg = useMemo<KpiConfig>(
         () => buildEffectiveKpiCfg(KPI_CONFIG[0], overrides[KPI_CONFIG[0].id]),
         [overrides, searchbaseByName]
     );
-    const effectiveOpLeadCfg = useMemo<KpiConfig>(
+    const effectiveInterSiteLatencyCfg = useMemo<KpiConfig>(
         () => buildEffectiveKpiCfg(KPI_CONFIG[1], overrides[KPI_CONFIG[1].id]),
         [overrides, searchbaseByName]
     );
-    const topIncident = useKpi(effectiveTopIncidentCfg, timeRange, refreshToken);
-    const operationalLead = useKpi(effectiveOpLeadCfg, timeRange, refreshToken);
-    const topologyTopIncident = topologySummaryById.top_incident;
-    const topologyOperationalLead = topologySummaryById.operational_lead;
+    const activeAlerts = useKpi(effectiveActiveAlertsCfg, timeRange, refreshToken);
+    const interSiteLatency = useKpi(effectiveInterSiteLatencyCfg, timeRange, refreshToken);
+    // Topology summary feed key parity with KPI_CONFIG ids — when the
+    // overview_topology_overview SPL emits a `summary` row with
+    // `summaryId="active_critical_alerts"` / `"inter_site_latency"`
+    // it shadows the standalone useKpi value. Earlier revisions keyed
+    // these on `top_incident` / `operational_lead`; both sides moved
+    // in lockstep on 2026-05-12.
+    const topologyActiveAlerts = topologySummaryById.active_critical_alerts;
+    const topologyInterSiteLatency = topologySummaryById.inter_site_latency;
     // Picker-override precedence: when the operator has explicitly bound
     // a different search via the gear icon (overrides[id] present), the
     // user's `useKpi` result wins. Otherwise we fall through to the
     // topology overview SPL summary row (cheap, already-running, kept in
     // lockstep with the map). Without this branch, the topology summary
     // silently shadowed the override and the picker appeared broken.
-    const topIncidentOverride = overrides[KPI_CONFIG[0].id];
-    const operationalLeadOverride = overrides[KPI_CONFIG[1].id];
-    const topIncidentCard = topIncidentOverride
+    const activeAlertsOverride = overrides[KPI_CONFIG[0].id];
+    const interSiteLatencyOverride = overrides[KPI_CONFIG[1].id];
+    const activeAlertsCard = activeAlertsOverride
         ? {
-              label: effectiveTopIncidentCfg.label,
-              value: topIncident.value,
-              source: topIncident.source,
+              label: effectiveActiveAlertsCfg.label,
+              value: activeAlerts.value,
+              source: activeAlerts.source,
           }
         : {
-              label: topologyTopIncident?.label ?? effectiveTopIncidentCfg.label,
-              value: topologyTopIncident?.value ?? topIncident.value,
-              source: topologyTopIncident?.source ?? topIncident.source,
+              label: topologyActiveAlerts?.label ?? effectiveActiveAlertsCfg.label,
+              value: topologyActiveAlerts?.value ?? activeAlerts.value,
+              source: topologyActiveAlerts?.source ?? activeAlerts.source,
           };
-    const operationalLeadCard = operationalLeadOverride
+    const interSiteLatencyCard = interSiteLatencyOverride
         ? {
-              label: effectiveOpLeadCfg.label,
-              value: operationalLead.value,
-              source: operationalLead.source,
+              label: effectiveInterSiteLatencyCfg.label,
+              value: interSiteLatency.value,
+              source: interSiteLatency.source,
           }
         : {
-              label: topologyOperationalLead?.label ?? effectiveOpLeadCfg.label,
-              value: topologyOperationalLead?.value ?? operationalLead.value,
-              source: topologyOperationalLead?.source ?? operationalLead.source,
+              label: topologyInterSiteLatency?.label ?? effectiveInterSiteLatencyCfg.label,
+              value: topologyInterSiteLatency?.value ?? interSiteLatency.value,
+              source: topologyInterSiteLatency?.source ?? interSiteLatency.source,
           };
     // Footnote shown at the bottom of the info tooltip — surfaces the
     // current data source so the operator can trace lineage. When an
@@ -1856,51 +1909,52 @@ const OverviewPage: React.FC = () => {
     // we name the topology overview stanza that's actually emitting the
     // value (or "(inline SPL)" if both are absent).
     // Drilldown SPL: always the literal SPL useKpi just dispatched
-    // (`topIncident.spl` / `operationalLead.spl`). When no override is
+    // (`activeAlerts.spl` / `interSiteLatency.spl`). When no override is
     // bound, that's the inline KPI_CONFIG SPL — a clean, single-purpose
     // query — which is a far better drilldown target than the giant
     // `overview_topology_overview` pipeline. When an override is bound,
     // it's the resolved searchbase SPL → exactly what the picker preview
     // showed. Either way: see-and-click parity with what's running.
-    const topIncidentDrilldownSpl = topIncident.spl;
-    const operationalLeadDrilldownSpl = operationalLead.spl;
-    const handleTopIncidentOpenInSearch = useCallback(() => {
-        if (!topIncidentDrilldownSpl) return;
-        const url = splunkSearchAppUrl(topIncidentDrilldownSpl, timeRange);
+    const activeAlertsDrilldownSpl = activeAlerts.spl;
+    const interSiteLatencyDrilldownSpl = interSiteLatency.spl;
+    const handleActiveAlertsOpenInSearch = useCallback(() => {
+        if (!activeAlertsDrilldownSpl) return;
+        const url = splunkSearchAppUrl(activeAlertsDrilldownSpl, timeRange);
         if (typeof window !== 'undefined') {
             window.open(url, '_blank', 'noopener,noreferrer');
         }
-    }, [topIncidentDrilldownSpl, timeRange]);
-    const handleOperationalLeadOpenInSearch = useCallback(() => {
-        if (!operationalLeadDrilldownSpl) return;
-        const url = splunkSearchAppUrl(operationalLeadDrilldownSpl, timeRange);
+    }, [activeAlertsDrilldownSpl, timeRange]);
+    const handleInterSiteLatencyOpenInSearch = useCallback(() => {
+        if (!interSiteLatencyDrilldownSpl) return;
+        const url = splunkSearchAppUrl(interSiteLatencyDrilldownSpl, timeRange);
         if (typeof window !== 'undefined') {
             window.open(url, '_blank', 'noopener,noreferrer');
         }
-    }, [operationalLeadDrilldownSpl, timeRange]);
+    }, [interSiteLatencyDrilldownSpl, timeRange]);
     // Footnote precedence:
     //   1. Override bound  → user's saved search (or "(inline SPL)" if
     //      they wired a free-form SPL via the picker).
     //   2. Topology summary feed  → that's the actual source of the
     //      displayed value; surface the topology overview stanza.
     //   3. useKpi default path  → the static binding from KPI_CONFIG,
-    //      which is a real searchbase entry now (`Overview - Top Incident
-    //      Volume` / `Overview - Operational Lead`). Surface that name
-    //      so the footnote credits the actual SPL that ran.
-    const topIncidentBindingFootnote = topIncidentOverride
-        ? topIncidentOverride.savedSearch
-            ? `Saved search: ${topIncidentOverride.savedSearch}`
+    //      which is a real searchbase entry (`Overview - Active
+    //      Critical Alerts` / `Overview - Inter-Site Latency (TLH <->
+    //      AUB)`). Surface that name so the footnote credits the
+    //      actual SPL that ran.
+    const activeAlertsBindingFootnote = activeAlertsOverride
+        ? activeAlertsOverride.savedSearch
+            ? `Saved search: ${activeAlertsOverride.savedSearch}`
             : '(inline SPL)'
-        : topologyTopIncident
+        : topologyActiveAlerts
         ? 'Saved search: Overview - Topology Overview'
         : KPI_CONFIG[0].savedSearch
         ? `Saved search: ${KPI_CONFIG[0].savedSearch}`
         : '(inline SPL)';
-    const operationalLeadBindingFootnote = operationalLeadOverride
-        ? operationalLeadOverride.savedSearch
-            ? `Saved search: ${operationalLeadOverride.savedSearch}`
+    const interSiteLatencyBindingFootnote = interSiteLatencyOverride
+        ? interSiteLatencyOverride.savedSearch
+            ? `Saved search: ${interSiteLatencyOverride.savedSearch}`
             : '(inline SPL)'
-        : topologyOperationalLead
+        : topologyInterSiteLatency
         ? 'Saved search: Overview - Topology Overview'
         : KPI_CONFIG[1].savedSearch
         ? `Saved search: ${KPI_CONFIG[1].savedSearch}`
@@ -2512,16 +2566,16 @@ const OverviewPage: React.FC = () => {
 
                             <div className="mt-3 grid grid-cols-2 gap-3 flex-shrink-0">
                                 <KpiCard
-                                    label={topIncidentCard.label}
-                                    value={topIncidentCard.value}
-                                    source={topIncidentCard.source}
+                                    label={activeAlertsCard.label}
+                                    value={activeAlertsCard.value}
+                                    source={activeAlertsCard.source}
                                     accentClassName="bg-red-500"
                                     description={KPI_CONFIG[0].description}
                                     thresholdNote={KPI_CONFIG[0].thresholdNote}
-                                    bindingFootnote={topIncidentBindingFootnote}
+                                    bindingFootnote={activeAlertsBindingFootnote}
                                     onOpenInSearch={
-                                        topIncidentDrilldownSpl
-                                            ? handleTopIncidentOpenInSearch
+                                        activeAlertsDrilldownSpl
+                                            ? handleActiveAlertsOpenInSearch
                                             : undefined
                                     }
                                     onConfigure={() =>
@@ -2533,16 +2587,16 @@ const OverviewPage: React.FC = () => {
                                     isCustomized={Boolean(overrides[KPI_CONFIG[0].id])}
                                 />
                                 <KpiCard
-                                    label={operationalLeadCard.label}
-                                    value={operationalLeadCard.value}
-                                    source={operationalLeadCard.source}
-                                    accentClassName="bg-emerald-500"
+                                    label={interSiteLatencyCard.label}
+                                    value={interSiteLatencyCard.value}
+                                    source={interSiteLatencyCard.source}
+                                    accentClassName="bg-sky-500"
                                     description={KPI_CONFIG[1].description}
                                     thresholdNote={KPI_CONFIG[1].thresholdNote}
-                                    bindingFootnote={operationalLeadBindingFootnote}
+                                    bindingFootnote={interSiteLatencyBindingFootnote}
                                     onOpenInSearch={
-                                        operationalLeadDrilldownSpl
-                                            ? handleOperationalLeadOpenInSearch
+                                        interSiteLatencyDrilldownSpl
+                                            ? handleInterSiteLatencyOpenInSearch
                                             : undefined
                                     }
                                     onConfigure={() =>
