@@ -3,7 +3,7 @@
 Audit packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf
 for structural problems that almost certainly produce "no results":
 
-  - Sourcetype not present on the FDEM/dev stack
+  - Sourcetype not present on the customer/dev stack
   - Macro not defined in macros.conf
   - Lookup not defined in transforms.conf
   - Bare `index=*` not wrapped by an index_* macro
@@ -27,9 +27,9 @@ TRANSFORMS = CONF_DIR / "transforms.conf"
 
 # ---------- 1. Ground truth ----------------------------------------------------
 
-# Sourcetypes observed on FDEM (per SESSION_LOG.md / DNAC field rule). Anything
-# else is "may not return data on the demo/dev stack".
-FDEM_DNAC_SOURCETYPES = {
+# Sourcetypes observed on the customer stack (per SESSION_LOG.md / DNAC field
+# rule). Anything else is "may not return data on the demo/dev stack".
+CUSTOMER_DNAC_SOURCETYPES = {
     "cisco:dnac:devicehealth",
     "cisco:dnac:issue",
     "cisco:dnac:networkhealth",
@@ -76,13 +76,13 @@ OTHER_AVAILABLE_SOURCETYPES = {
     "cisco:cloud_security:dns",
     "cisco:sdwan:utd",
 }
-# Sourcetypes we know are NOT on FDEM today (per SESSION_LOG inquiries). Anything
-# matching these will be flagged as "data gap".
+# Sourcetypes we know are NOT on the customer stack today (per SESSION_LOG
+# inquiries). Anything matching these will be flagged as "data gap".
 KNOWN_MISSING_SOURCETYPES = {
     "cisco:sdwan:linkhealth",  # Sarav investigated; no TA path yet
 }
 ALL_KNOWN_SOURCETYPES = (
-    FDEM_DNAC_SOURCETYPES | OTHER_AVAILABLE_SOURCETYPES | KNOWN_MISSING_SOURCETYPES
+    CUSTOMER_DNAC_SOURCETYPES | OTHER_AVAILABLE_SOURCETYPES | KNOWN_MISSING_SOURCETYPES
 )
 
 # Built-in lookups the splunk install always ships
@@ -228,10 +228,9 @@ def detect_issues(stanza: Stanza, defined_macros: set[str], defined_lookups: set
     concrete = {s for s in sourcetypes if "*" not in s}
     for st in concrete:
         if st in KNOWN_MISSING_SOURCETYPES:
-            issues.append(("HIGH", f'sourcetype "{st}" is known-missing on FDEM (data gap)'))
-        elif st.startswith("cisco:dnac:") and st not in FDEM_DNAC_SOURCETYPES:
-            # DNAC sourcetype not in our FDEM set -> almost certainly empty
-            issues.append(("HIGH", f'DNAC sourcetype "{st}" not seen on FDEM'))
+            issues.append(("HIGH", f'sourcetype "{st}" is known-missing on the customer stack (data gap)'))
+        elif st.startswith("cisco:dnac:") and st not in CUSTOMER_DNAC_SOURCETYPES:
+            issues.append(("HIGH", f'DNAC sourcetype "{st}" not seen on the customer stack'))
         elif st not in ALL_KNOWN_SOURCETYPES:
             issues.append(("LOW", f'unknown sourcetype "{st}" — verify it exists'))
 

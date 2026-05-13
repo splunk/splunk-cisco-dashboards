@@ -17,7 +17,7 @@
  * own chrome around the panel. So on `<body>` directly, none of
  * `bg-slate-900`, `p-4`, `rounded-lg`, `shadow-xl`, etc. were applied
  * - the popover rendered as raw unstyled text floating over the tile
- * content (caught immediately by Alan in the FDEM 2026-05-11 review).
+ * content (caught immediately by Alan in the customer 2026-05-11 review).
  *
  * `#scan-root` is the right portal target because:
  *  - It's INSIDE the Tailwind scope, so utility classes apply

@@ -62,6 +62,16 @@ import { VizIcon, resolveVizMapping } from './vizIcons';
 const ALL_CATEGORIES = '__all__';
 const ALL_SUB_CATEGORIES = '__all_sub__';
 
+// Dispatch-context scope for the picker. Only searchbase entries whose
+// `dispatch_context` matches this value show up in the browser. Every
+// stanza shipped in this app's `default/searchbase.conf` carries
+// `dispatch_context = splunk-cisco-dashboards` (with
+// `dispatch_context_force = 1`), so this filter passes the full app
+// catalogue while excluding entries pulled from other apps' searchbase
+// files via the `/servicesNS/-/<app>/configs/conf-searchbase` REST
+// fetch. Change this constant to broaden or retarget the picker.
+const DISPATCH_CONTEXT_SCOPE = 'splunk-cisco-dashboards';
+
 const MAX_FIELD_LENGTH = 64;
 const FIELD_NAME_PATTERN = /^[A-Za-z_][\w.]{0,63}$/;
 const TAG_CHIP_LIMIT = 24;
@@ -431,16 +441,26 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         setLoadState('loading');
         setErrorMsg('');
 
-        const sortAndApplyCiscoFilter = (list: SearchbaseRecord[]) => {
-            // Cisco-only browsing gate: hide every entry that
-            // isn't tagged "Cisco" so the picker only surfaces
-            // searches vetted for this app. Categories, sub-
-            // categories, tag dropdown, and result list all
-            // derive from `catalogue`, so a single filter here
-            // scopes the entire browse experience. Drop the
-            // .filter() call to restore the full catalogue.
-            const ciscoOnly = list.filter((entry) => entry.tags.includes('Cisco'));
-            return [...ciscoOnly].sort((a, b) =>
+        const sortAndApplyDispatchFilter = (list: SearchbaseRecord[]) => {
+            // Dispatch-context gate: hide every entry whose
+            // `dispatch_context` does not match this app, so the
+            // picker only surfaces searches vetted for this
+            // dashboard pack. Categories, sub-categories, tag
+            // dropdown, and result list all derive from
+            // `catalogue`, so a single filter here scopes the
+            // entire browse experience.
+            //
+            // Replaces the previous Cisco-tag gate (Build 87
+            // dropped the noise tag `Cisco` from every stanza,
+            // which collapsed the picker to zero results — see
+            // Build 91 SESSION_LOG entry). To broaden the picker
+            // (e.g., to expose searches from other apps' own
+            // searchbase.conf files), bump
+            // `DISPATCH_CONTEXT_SCOPE` or relax this filter.
+            const inScope = list.filter(
+                (entry) => entry.dispatchContext === DISPATCH_CONTEXT_SCOPE
+            );
+            return [...inScope].sort((a, b) =>
                 a.searchName.localeCompare(b.searchName, undefined, {
                     sensitivity: 'base',
                 })
@@ -449,7 +469,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
 
         const applyList = (list: SearchbaseRecord[]) => {
             if (cancelled) return;
-            setCatalogue(sortAndApplyCiscoFilter(list));
+            setCatalogue(sortAndApplyDispatchFilter(list));
             setLoadState('idle');
         };
 
@@ -466,7 +486,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         getSearchbaseCatalogue()
             .then((list) => {
                 if (cancelled) return;
-                const filtered = sortAndApplyCiscoFilter(list);
+                const filtered = sortAndApplyDispatchFilter(list);
                 const cacheRecognisesBinding =
                     !expectedKey ||
                     filtered.some((entry) => entryMatchesKey(entry, expectedKey));

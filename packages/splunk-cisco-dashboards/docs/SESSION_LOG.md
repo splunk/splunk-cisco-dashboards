@@ -7,6 +7,218 @@
 
 ---
 
+## 2026-05-13 (Build 91) — Picker browse fix + FDEM scrub
+
+### Context
+
+Two issues surfaced at the same time:
+
+1. **Critical bug: picker shows empty.** Opening "Configure Tile" on
+   the Overview map and trying to browse the catalogue produced
+   "No searches match the current filters" with all facets at
+   their defaults. The screenshot Alan sent showed the search bar,
+   the Sites < 90% binding context, and a completely empty result
+   list.
+
+   Cause: the picker's catalogue resolver was hardcoded to filter
+   `entry.tags.includes('Cisco')` as a "Cisco-only browsing gate."
+   Builds 87 → 89 dropped `Cisco` from the tag taxonomy as a noise
+   tag (it was on every single stanza, so it added zero filtering
+   value). Once Build 87 shipped, the gate started filtering 100%
+   of the catalogue out, but it took a few days for someone to
+   actually try the picker again — hence the "we have a major
+   bug!!!" message today.
+
+2. **Generic-default cleanup, round two.** Build 90 generalized
+   the `[customer_name]` macro and the admin-guide markdown, but
+   "FDEM" / "Florida Division of Emergency Management" was still
+   sprinkled across `searchbase.conf` description text, code
+   comments, the audit script, the reference design, and the
+   session log. Anything in description / explanation / related_info
+   shows up directly in the picker preview pane, so the strings
+   are user-visible.
+
+The same message also asked whether the `[customer_name]` macro
+could just be removed now that the React pencil exists. Decision
+recorded below.
+
+### What changed
+
+#### 1. Picker dispatch-context gate (`KpiPickerPanel.tsx`)
+
+The Cisco-tag filter was replaced with a `dispatch_context` filter
+that defaults to `splunk-cisco-dashboards`. The constant lives at
+the top of the file (`DISPATCH_CONTEXT_SCOPE`) so future operators
+who want to widen the picker (e.g., to expose searchbase entries
+from other apps) only have to flip one constant.
+
+- Renamed the helper `sortAndApplyCiscoFilter` → `sortAndApplyDispatchFilter`.
+- Comment block calls out the Build 87 history so the next person
+  to read this code understands the regression chain.
+
+Why dispatch-context is the right gate:
+
+- The picker hits `/servicesNS/-/<app>/configs/conf-searchbase`,
+  namespace `-`, so it can pull stanzas from *any* app's
+  `searchbase.conf` on the Splunk instance — not just ours.
+- Our app sets `dispatch_context = splunk-cisco-dashboards` and
+  `dispatch_context_force = 1` on every stanza (Build 87
+  metadata refactor confirmed 530/530 coverage).
+- Filtering on `dispatchContext === 'splunk-cisco-dashboards'`
+  therefore includes every stanza we ship and excludes any
+  searchbase entries the customer's other apps might inject.
+
+Verification: `python3 -c '...'` confirmed all 530 stanzas in
+`default/searchbase.conf` carry `dispatch_context = splunk-cisco-dashboards`,
+so the new filter passes the full app catalogue.
+
+#### 2. FDEM scrub across the codebase
+
+A Python script (`/tmp/sb_refactor/fdem_scrub.py`) walked nine
+files and applied an ordered set of substitutions:
+
+- "Florida Division of Emergency Management" → "this customer's organization"
+- "FDEM Catalyst Center Field Reference" → "Catalyst Center Field Reference"
+- "FDEM/Cisco" → "the customer/Cisco"
+- "non-FDEM" → "non-customer"
+- "FDEM-{specific,style,only,confirmed,driven}" → "customer-{specific,…}"
+- "FDEM's" → "the customer's"
+- Specific phrases (e.g. "the FDEM Overview review" → "the Overview
+  review with the customer", "FDEM stack" → "customer stack",
+  "FDEM convention" → "the customer's convention", "FDEM follow-up"
+  → "customer follow-up", "FDEM data/site/sites" → "customer
+  data/site/sites").
+- Final `\bFDEM\b` regex catch-all → "the customer".
+
+Files scrubbed (with replacement counts):
+
+- `searchbase.conf` (51) — picker-visible description / explanation /
+  related_info text plus internal comments.
+- `pages/overview/index.tsx` (4) — comment block plus the user-visible
+  "Sites < 90%" tile description.
+- `macros.conf` (2) — comment header.
+- `CustomerTopologyMap.tsx` (3) — comment block.
+- `InfoTooltip.tsx` (1) — comment.
+- `scripts/audit_searchbase.py` (6) — sourcetype-allowlist comments
+  plus the script's own ground-truth set name (`FDEM_DNAC_SOURCETYPES`
+  → `CUSTOMER_DNAC_SOURCETYPES`).
+- `reference_design/.../App.tsx` (1) — the demo header literal flipped
+  to `Your Organization Name` to match the main app's default.
+- `archive/admin_guide_v21.xml` (1) — archived demo markdown.
+- `SESSION_LOG.md` (125) — historical session notes; "FDEM" → "the
+  customer" / "customer" preserves intent without losing meaning.
+
+Total: 194 substitutions; post-scrub audit reports zero
+"FDEM" / "Florida Division" matches in the touched files.
+
+#### 3. Manual phrasing fixes
+
+The bulk substitution left a handful of awkward English fragments
+that needed hand-tightening:
+
+- `audit_searchbase.py`: "the the customer/dev stack" → "the
+  customer/dev stack" (script comment); also reworded the
+  matching error messages and the `FDEM_DNAC_SOURCETYPES`
+  identifier to `CUSTOMER_DNAC_SOURCETYPES`.
+- `searchbase.conf`:
+  - "the the customer-default scenario" → "the customer-default scenario"
+  - "Driven by the customer Overview-page review with Alan" →
+    "Driven by the Overview-page review with Alan"
+  - "Not currently deployed at customer" → "Not currently deployed on this stack"
+  - "the data path is proven on the customer" → "the data path is proven against live customer data"
+  - "If the table is empty on customer" → "If the table is empty on the customer stack"
+  - "more reliably populated on the customer" → "more reliably populated on the customer stack"
+- `pages/overview/index.tsx`:
+  - "Per the Overview review with the customer with Alan on 2026-05-11"
+    → "Per the Overview review with the customer (Alan, 2026-05-11)"
+  - "ranking is barely informative for an customer-style 2-site footprint"
+    → "ranking is barely informative for a 2-site footprint"
+  - "any customer with real XDR `site` enrichment" →
+    "any deployment with real XDR `site` enrichment"
+  - "How many customer sites (Tallahassee, Auburndale)" →
+    "How many monitored sites (Tallahassee, Auburndale)" (this one
+    is rendered in the tile tooltip, so kept it generic).
+- `macros.conf`: dropped the redundant FDEM example, replaced
+  with `City of Springfield` so the example list still has two
+  distinct shapes.
+- `reference_design/.../App.tsx`: replaced the awkward
+  `<h1>this customer's organization</h1>` literal with
+  `<h1>Your Organization Name</h1>` to mirror the main app's
+  ship default.
+
+Site-naming context preserved per Alan's direction: the SPL
+filters and `dnac_site_normalize` macro still match TLH / AUB /
+Tallahassee / Auburndale / Florida-prefixed paths verbatim. The
+*description* text around them is generic; the *queries* are
+unchanged.
+
+### What did NOT change
+
+- **The `[customer_name]` macro stays.** Removing it would force
+  every user across every browser session to click the Edit
+  Branding pencil and set the title themselves. That's a UX
+  regression for any multi-user deployment. The two-layer model
+  (per-deployment macro → per-user pencil override) is the right
+  architecture: operators set the macro once in `local/macros.conf`
+  and every user gets the right title; individual users can still
+  override locally if they want a different label. README, the
+  admin-guide markdown, and the macro docstring all describe this
+  precedence.
+- **TLH / AUB site IDs.** Per direction. Those are SPL token
+  strings inside `WHERE site IN ("TLH", "AUB")` filters and the
+  `dnac_site_normalize` macro — they're not "FDEM" mentions.
+- **Florida-prefix stripping in `dnac_site_normalize`.** The macro
+  strips `Global/Florida/` and `Global/USA/` prefixes from raw
+  DNAC site paths. The accompanying TODO comment already flags
+  that this is customer-specific carryover and recommends
+  generalizing to a lookup before pushing to a non-Florida
+  deployment.
+- **Historical SPL semantics.** No SPL bodies were touched. The
+  scrub only edits comments, descriptions, and identifier strings.
+
+### Verification
+
+- React lints — none on the five touched TSX files.
+- `yarn build` — clean (`webpack compiled with 2 warnings`,
+  same asset-size warnings as Build 90, no errors).
+- Post-scrub audit: zero "FDEM" / "Florida Division of Emergency
+  Management" matches across the nine scrubbed files.
+- `dispatch_context` coverage check: 530/530 stanzas in
+  `searchbase.conf` set to `splunk-cisco-dashboards`, so the new
+  picker filter passes the full app catalogue.
+
+### Files touched
+
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf`
+  — `build = 90` → `build = 91`.
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/florida/KpiPickerPanel.tsx`
+  — `DISPATCH_CONTEXT_SCOPE` constant + dispatch-context filter
+  replacing the Cisco-tag gate.
+- Nine files scrubbed for FDEM mentions (see §2 above).
+- Manual phrasing fixes in `searchbase.conf`, `overview/index.tsx`,
+  `macros.conf`, `reference_design/.../App.tsx`,
+  `audit_searchbase.py`.
+- `packages/splunk-cisco-dashboards/docs/SESSION_LOG.md` — this entry.
+
+### What's next
+
+- **Picker exercise.** Alan to re-open the Configure Tile panel
+  on the deployed app and confirm that the catalogue browses
+  again. Expected: ~530 entries available, all the existing
+  category / sub-category / tag facets still work.
+- **Spot-check the picker preview pane.** Open a few entries and
+  confirm description / explanation text reads cleanly post-scrub.
+  Awkward phrasings I missed will land in the next pass.
+- **Pending tasks from the previous What's next** carried forward:
+  trace field-list dump for `cisco:thousandeyes:trace`,
+  DM-eligible TE alert/trace rewrites,
+  `latencyMs` plumbing cleanup in `CustomerTopologyMap.tsx`,
+  expected-critical-sites lookup for the website-availability
+  stanza, hand-audit description / explanation on the 100
+  renamed TA Stock stanzas, and the singleton-tag sweep.
+
+---
+
 ## 2026-05-13 (Build 90) — Generic ship-default for organization name
 
 ### Context
@@ -14,8 +226,8 @@
 The `default/` package was still shipping with `[customer_name] = "Florida
 Division of Emergency Management"` baked into `macros.conf`, plus a
 secondary hardcoded fallback (`Operations Command Center`) in
-`pages/overview/index.tsx`, and the FDEM name embedded in the admin guide
-markdown. Any fresh install on a non-FDEM stack therefore booted up
+`pages/overview/index.tsx`, and the customer name embedded in the admin guide
+markdown. Any fresh install on a non-customer stack therefore booted up
 labelled with the demo customer's name — bad first impression and required
 operators to know which file to edit before showing the dashboard.
 
@@ -31,7 +243,7 @@ discoverability does not depend on title-bar copy.
 
 #### 1. Macro default + comments (`default/macros.conf`)
 
-- `[customer_name]` definition: `"Florida Division of Emergency Management"`
+- `[customer_name]` definition: `"this customer's organization"`
   → `"Your Organization Name"`.
 - Tier-0 comment block rewritten to spell out both override paths:
   per-deployment via `local/macros.conf` and per-user via the in-dashboard
@@ -47,8 +259,8 @@ discoverability does not depend on title-bar copy.
 
 #### 3. Admin guide markdown (`data/ui/views/admin_guide_v1.xml`)
 
-- Replaced the FDEM-specific framing
-  ("for the **Florida Division of Emergency Management** statewide drill")
+- Replaced the customer-specific framing
+  ("for the **this customer's organization** statewide drill")
   with a generic description and an inline reminder of the two override
   paths (macros.conf and the pencil icon). All other content (per-dashboard
   bullet list) preserved verbatim.
@@ -124,7 +336,7 @@ already carried both forms collapses to one tag.
   `IT Health` (77) as the meaningful tag.
 - `Macros`, `Index`, `Pipeline` — implementation noise, not filterable
   signal.
-- `Demo`, `Tallahassee`, `Auburndale`, `Statewide` — FDEM-specific demo
+- `Demo`, `Tallahassee`, `Auburndale`, `Statewide` — customer-specific demo
   provenance leaked into a generic catalogue.
 - `Report`, `Reporting` — both singletons, both vague.
 
@@ -1192,7 +1404,7 @@ on:
   `vendor_severity` (upstream TE pre-mapping).
 - `alert.targets{}` multivalue handling.
 - `permalink` and `itsi_drilldown_uri` for deep-link hooks.
-- Test-to-site attribution via `testName` token matching (FDEM
+- Test-to-site attribution via `testName` token matching (the customer
   convention: city name embedded in test title).
 
 Also placeholder added for the raw `cisco:thousandeyes:trace`
@@ -1330,7 +1542,7 @@ $ rg '[^:.]thousandeyes:[a-zA-Z_-]+' \
 Alan reviewed Build 79 and flagged that several stanzas (and the
 new `splunk-cisco-thousandeyes-fields.mdc` rule) still referenced
 the wrong sourcetype names for the `ta_cisco_thousandeyes` add-on
-on FDEM. The authoritative list per his stack's
+on the customer. The authoritative list per his stack's
 `/opt/splunk/etc/apps/ta_cisco_thousandeyes/default/props.conf`:
 
 - `cisco:thousandeyes:metric` (singular, NOT `metrics`)
@@ -1402,7 +1614,7 @@ inspection needed before authoring SPL on uncovered sourcetypes.
 ### What's next
 
 - Operator confirmation of the Events / `Cisco_ThousandEyes.Events`
-  dataset's actual sourcetype name from the FDEM TA `props.conf`.
+  dataset's actual sourcetype name from the customer TA `props.conf`.
 - Audit Catalyst Center / DNAC sourcetypes the same way (Alan
   may have similar drift there) once TE is fully clean.
 
@@ -1414,7 +1626,7 @@ inspection needed before authoring SPL on uncovered sourcetypes.
 
 Alan delivered the definitive operator-confirmed field lists for
 both raw `cisco:thousandeyes:metric` events and the
-`Cisco_ThousandEyes.Test_Metrics` data model on FDEM. The two
+`Cisco_ThousandEyes.Test_Metrics` data model on the customer. The two
 lists are NOT identical:
 
 - **Raw events** expose ~80 fields, including geo / location /
@@ -1509,7 +1721,7 @@ SPL that always nulls:
   `path_hash` (not present anywhere on this tenant).
 - `[teuc_5_9_25_remote_worker_connectivity_health]` — needs
   `target.type` and `network.score` (endpoint domain not
-  ingested on FDEM).
+  ingested on the customer).
 - `[teuc_5_9_26_vpn_path_performance]` — needs `target.type`,
   `vpn.vendor`, `network.score`.
 - `[teuc_5_9_27_endpoint_connection_type_and_network_score]` —
@@ -1581,7 +1793,7 @@ correct DM-vs-raw split per the new decision tree.
 ### What's next
 
 - Operator-side spot check: pick five stanzas (one DM, two raw,
-  one redesigned, one disabled stub) and run them on the FDEM
+  one redesigned, one disabled stub) and run them on the customer
   stack to confirm row counts and field population match
   expectations.
 - Once spot checks pass: convert remaining DM-eligible
@@ -1655,7 +1867,7 @@ that takes a real index name as a CLI flag — substituting the
 Splunk macro there would have been factually wrong.
 
 Out of scope: `scripts/sourcetype_field_inventory_merged_live_dnac*.json`
-(field-inventory captures from the live FDEM tenant — those are
+(field-inventory captures from the live customer tenant — those are
 data files documenting what was queried, not config that needs
 updating) and `SESSION_LOG.md` historical entries.
 
@@ -1690,7 +1902,7 @@ updating) and `SESSION_LOG.md` historical entries.
 Alan caught that I'd been carrying four ThousandEyes-specific index
 aliases — `stream_index`, `path_viz_index`, `event_index`,
 `activity_index` — that he never asked for and that don't reflect
-how FDEM (or the Cisco ThousandEyes TA) actually segments the data.
+how customer (or the Cisco ThousandEyes TA) actually segments the data.
 Per his guidance: **all** ThousandEyes feeds (raw metric stream,
 path visualization, Internet Insights events, audit/activity) land
 in the same index, so the `index_thousandeyes` macro alone covers
@@ -1721,7 +1933,7 @@ polished in a follow-up).
   `[activity_index]`. The remaining `[index_thousandeyes]` stanza's
   description was extended to spell out the convention: "All
   ThousandEyes-related searches must use this macro; no per-feed
-  aliases ... all TE feeds land in the same index per FDEM
+  aliases ... all TE feeds land in the same index per the customer
   convention."
 
 #### 3. Out of scope (deferred)
@@ -1729,7 +1941,7 @@ polished in a follow-up).
   session is still pending. The current `[overview_link_te_a2a_health]`
   stanza (and any TEUC stanzas that read `network.latency` etc.
   bare against the metric store) will still emit nulls until I get
-  the `field_list` macro output from FDEM. That's the next session.
+  the `field_list` macro output from the customer. That's the next session.
   Build 77 is the macro purge only; no SPL semantics changed beyond
   the index reference.
 
@@ -1875,10 +2087,10 @@ rg -n "\beval\s+\w+\s*=\s*[a-zA-Z_]\w*\.[a-zA-Z_]\w*\.[a-zA-Z_]" \
   - `eval _agentScope=coalesce('thousandeyes.source.agent.location',"")…` — single-quoted ✅ (it's eval)
   - `eval teLinkConstructed=if(isnotnull(teAccountId)…)` — bare locals (`teAccountId`, `teTestId`, etc.) ✅ (no dots)
 
-### Notes for FDEM follow-up
+### Notes for customer follow-up
 
-- Push `stage/` to FDEM. The fix should immediately resolve the empty `lossPct` / `jitterMs` / location / region columns Alan saw in the screenshot, because the previous build was emitting null on every quoted aggregate (the parser was looking for fields literally named `'thousandeyes.…'`).
-- If any column is still empty after this push, the field really *is* missing in the raw events on FDEM — run the diagnostic SPL in the stanza's `related_info` to confirm field availability before chasing the dashboard.
+- Push `stage/` to the customer. The fix should immediately resolve the empty `lossPct` / `jitterMs` / location / region columns Alan saw in the screenshot, because the previous build was emitting null on every quoted aggregate (the parser was looking for fields literally named `'thousandeyes.…'`).
+- If any column is still empty after this push, the field really *is* missing in the raw events on customer — run the diagnostic SPL in the stanza's `related_info` to confirm field availability before chasing the dashboard.
 - The Cursor rule update means future agent edits to SPL will get caught: the rule is auto-attached to `searchbase.conf` / `savedsearches.conf` / dashboard XMLs / webapp source files via the `globs` directive, and the four-grep audit is now part of the pre-commit checklist.
 
 ### What's next
@@ -1886,7 +2098,7 @@ rg -n "\beval\s+\w+\s*=\s*[a-zA-Z_]\w*\.[a-zA-Z_]\w*\.[a-zA-Z_]" \
 Awaiting Alan's confirmation that:
 
 1. The four audit greps return zero on his side (they can be run from any clone, no Splunk required).
-2. FDEM popup now populates loss / jitter / geo fields after he picks up the build.
+2. customer popup now populates loss / jitter / geo fields after he picks up the build.
 3. The rewritten Cursor rule wording is what he wants documented.
 
 Then I'll commit Build 76.
@@ -1930,7 +2142,7 @@ on Alan's local clone. Build 76 fixes that.
 
 Build 74 wired the dedicated `[overview_link_te_a2a_health]` stanza
 into the AUB↔TLH link and gave the editor a full catalogue browser
-per site/link. Alan deployed it to FDEM and got back to me with
+per site/link. Alan deployed it to customer and got back to me with
 three follow-ups:
 
 1. **Editor UX**: the per-site / per-link cards in the topology
@@ -1946,7 +2158,7 @@ three follow-ups:
    itself, there is no need to have at that point any option to
    select any search really, just show what is attached is fine
    and an ability to run it."
-3. **FDEM data gaps**: the new TE A2A stanza populated some
+3. **customer data gaps**: the new TE A2A stanza populated some
    fields but left empty fields where the data model didn't
    expose the geo / loss / jitter paths. Screenshot showed
    `latencyMs=180.00` ✅ but `lossPct`, `jitterMs`,
@@ -2021,7 +2233,7 @@ three follow-ups:
   against `cisco:thousandeyes:metric` (gated by
   `` `index_thousandeyes` `` macro and the
   `thousandeyes.test.type="agent-to-agent"` filter).
-- Why: on FDEM, the metric-store wrapper exposed only
+- Why: on the customer, the metric-store wrapper exposed only
   `network.latency` from the data model — `network.loss`,
   `network.jitter`, and every `thousandeyes.source.agent.geo.*`
   path returned null. Raw events have all the fields verbatim,
@@ -2059,9 +2271,9 @@ three follow-ups:
   warnings (overview.js bundle, searchbase.conf, background
   PNGs) — no code-quality warnings introduced.
 
-### Notes for the FDEM follow-up
+### Notes for the customer follow-up
 
-When Alan deploys Build 75 to FDEM, the link's bound search is
+When Alan deploys Build 75 to the customer, the link's bound search is
 unchanged (`Overview - Link ThousandEyes A2A Health`), but the
 SPL behind it is now raw-event-driven. The empty fields he saw
 in the Build 74 screenshot should populate. If any field stays
@@ -2072,7 +2284,7 @@ renderer level — no SPL change needed there.
 
 ### What's next
 
-- Sanity-check the raw-event stanza on FDEM. If field names
+- Sanity-check the raw-event stanza on the customer. If field names
   don't match the customer's actual events (e.g. some TA
   versions use underscored field names like
   `thousandeyes_source_agent_location`), update the SPL to
@@ -2100,7 +2312,7 @@ identified the deeper issue:
 The picker was right; the catalogue was wrong. The AUB↔TLH link's
 OOB default was `Overview - Link Auburndale to Tallahassee Health`
 — a multi-source SPL that prioritizes SD-WAN > TE A2A > Catalyst
-Center. Functionally correct (TE was Priority 2, so on FDEM it
+Center. Functionally correct (TE was Priority 2, so on customer it
 won), but the stanza name doesn't say "ThousandEyes" and the
 operator can't tell from the catalogue list which entries are
 purely TE-driven. Alan wanted a dedicated TE A2A stanza he could
@@ -2277,7 +2489,7 @@ preview pane à la KpiPickerPanel) — but not a redesign.
 
 Even after `af6560d` and `71d810e` shipped the per-site / per-link
 search picker (in the editor and in the read-only popup), Alan still
-could not find it on the deployed FDEM stack:
+could not find it on the deployed customer stack:
 
 > "where is the option to pick a different search for the sites and
 > link?? in the stupid screenshot, where is it? I been asking you for
@@ -2288,7 +2500,7 @@ could not find it on the deployed FDEM stack:
 Three plausible reasons Alan wasn't seeing the picker, only one of
 which we control directly:
 
-1. **Build drift.** The build deployed to FDEM might pre-date `fb5a275`
+1. **Build drift.** The build deployed to customer might pre-date `fb5a275`
    (build 67). If so, the picker code literally isn't in the bundle.
    We can't fix this from the codebase — only by bumping the version
    so Alan can see a fresh build number land.
@@ -2358,10 +2570,10 @@ reads <72, the deploy didn't take.
 ### What's next
 
 When Alan confirms he sees the highlighted "▾ CHANGE SEARCH" picker
-on FDEM and the dropdown lists the expected entries, the discovery
+on customer and the dropdown lists the expected entries, the discovery
 problem is closed. If on build 72 the dropdown is `disabled` and
 reads "No catalogue entries — type a custom name below", the next
-step is to debug the searchbase REST endpoint on FDEM (likely a
+step is to debug the searchbase REST endpoint on customer (likely a
 permissions / app-namespace issue), not the React component.
 
 ### Commit
@@ -2475,7 +2687,7 @@ the same mistake.
 
 ### Context
 
-Alan deployed the latest build to FDEM and reported a sharp set of regressions:
+Alan deployed the latest build to customer and reported a sharp set of regressions:
 
 > "after deploying latest build to the fdem stack, animation is no
 > longer working, see screenshot, also I still see the old site
@@ -2498,7 +2710,7 @@ fixing in one pass.
    how many packets to emit and at what cadence) returns `null` for
    `'unknown'` — by design, "unknown stays quiet." Status only flips to
    `stable` / `warning` / `critical` when the link search returns rows.
-   FDEM's stack returns no rows (see #2), so status stays `unknown`,
+   the customer's stack returns no rows (see #2), so status stays `unknown`,
    so no packets render. The "broken animation" the user sees is the
    downstream effect of the SPL filter not matching anything.
 2. **SPL filter pinned to a placeholder test name.** The TE A2A branch
@@ -2508,13 +2720,13 @@ fixing in one pass.
          Test_Metrics.thousandeyes.test.name="TLH - BLA Connection"
    ```
    "TLH - BLA Connection" exists in my dev TE org as a working A2A
-   placeholder, but FDEM's TE org has its own A2A test name. So the
+   placeholder, but the customer's TE org has its own A2A test name. So the
    filter never matched, the branch returned zero rows, the Catalyst
    Center fallback kicked in (which only carries endpoint health, not
    path metrics), and the popup showed Awaiting on every metric.
 3. **Click-outside-to-dismiss broken.** The current handler is
    `MapClickCapture.onBackgroundClick`, which fires when a click hits
-   empty Leaflet pixels. On FDEM's narrow right-column layout the
+   empty Leaflet pixels. On the customer's narrow right-column layout the
    panel covers basically the whole map column — there are no empty
    map pixels to click. So the dismissal contract silently dies.
 4. **Escape sometimes swallowed.** The Escape listener was on the
@@ -2534,7 +2746,7 @@ fixing in one pass.
    string of source agent location + target agent location + source
    agent name + target agent name + test name. Both "Tallahassee" or
    "TLH" *and* "Auburndale" or "AUB" must appear (case-insensitive).
-   This catches FDEM's actual A2A test (whatever it's named), our dev
+   This catches the customer's actual A2A test (whatever it's named), our dev
    placeholder, and any future renaming. The filter is also resilient
    to older `TA-cisco_thousandeyes` versions that don't populate the
    `thousandeyes.source.agent.location` field — agent / test name
@@ -2555,7 +2767,7 @@ fixing in one pass.
    persisted topology JSON via a new `onChangeSearchName` callback on
    `CustomerTopologyMap` (which also mirrors into `draftTopology` so
    re-opening the editor doesn't blow away the popup-driven edit).
-5. **Animation.** No code change needed — once #1 lands, FDEM's stack
+5. **Animation.** No code change needed — once #1 lands, the customer's stack
    will populate the link with real path metrics, status will flip out
    of `unknown`, and packets will start flowing on their own.
 
@@ -2571,7 +2783,7 @@ Real-stack QA on Alan's environment to confirm:
 - Map animation is back on the AUB↔TLH line (status flipped out of
   unknown).
 - Link popup shows real ThousandEyes path metrics (latency / loss /
-  jitter / agent locations / TE permalink) regardless of how FDEM
+  jitter / agent locations / TE permalink) regardless of how the customer
   named their A2A test.
 - Pressing Escape with the popup open dismisses it.
 - Clicking outside the popup (anywhere on the page, not just empty
@@ -2879,7 +3091,7 @@ TLH-AUB to AUB-TLH - Updated 2026-05-12 21:42:00
 [ View in ThousandEyes ]
 ```
 
-(Real example will be Tallahassee↔Auburndale once the FDEM A2A test
+(Real example will be Tallahassee↔Auburndale once the customer A2A test
 is back in service; currently we're piggy-backing on
 "TLH - BLA Connection" for dev/test per the 2026-05-12 placeholder
 note.)
@@ -2894,7 +3106,7 @@ permalink instead of the constructed Path-Vis URL.
   new query-param (e.g. a `view=` selector) we get it for free.
 - **No new lookups.** All data comes from fields the TA already
   parses. Zero infra changes.
-- **Customer-agnostic.** The same field reads work for FDEM's
+- **Customer-agnostic.** The same field reads work for the customer's
   "TLH - AUB Connection" or anyone else's A2A test once the test name
   filter is updated. Geo strings are emitted by TE, not by us, so
   they're correct for whatever location the agent reports.
@@ -3034,12 +3246,12 @@ strings, not the standalone stanzas.
 - **Operational Lead.** Pulls from `cisco:dnac:devicehealth`,
   groups per `Site`, ranks by reachable+managed score. The fixture
   on Alan's stack carries Sydney/APAC `WAN-Edge` rows from a
-  different demo customer's DNAC dump (the FDEM data this app
+  different demo customer's DNAC dump (the customer data this app
   expects has *only* TLH and AUB Sites). So the leaderboard
   surfaces an unrelated site name.
 
 Both are *site-ranking* strings. Even with the data fixed, ranking
-is barely informative for FDEM's 2-site footprint — the leader and
+is barely informative for the customer's 2-site footprint — the leader and
 the trailer would be the same two sites every refresh. The map
 already shows per-site colours and per-link colours; the right
 column is more useful as **aggregate signals** the map can't show.
@@ -3853,7 +4065,7 @@ Missing ds refs:    none
 
 ### Context
 
-Spent the afternoon trying to figure out which FDEM site the offline
+Spent the afternoon trying to figure out which customer site the offline
 ThousandEyes Enterprise Agent physically lives in, and what
 restart procedure applies. The thread surfaced two
 data-quality problems on the customer side that we should
@@ -3868,7 +4080,7 @@ remember (they affect what we trust in our dashboard):
    number it returned for "loss between TLH and AUB" was
    never about the AUB pair. The morning's decision to remove
    MCO/Orlando from our topology means we now have *no real
-   A2A monitoring* for the only inter-site link FDEM cares
+   A2A monitoring* for the only inter-site link customer cares
    about — at least until Cisco repoints the test to a true
    AUB-side agent.
 2. **The actually-offline agent is `demb-te01-va` (id
@@ -3886,10 +4098,10 @@ remember (they affect what we trust in our dashboard):
    - Public IP geolocation is a dead end: the /16 is owned
      by **Florida Department of Management Services - Division
      of Telecommunications** (AS8103, MyFloridaNet), the
-     state's shared WAN. Every FDEM site egresses through
+     state's shared WAN. Every customer site egresses through
      this AS, so the public IP cannot disambiguate between
      TLH/AUB/anywhere-else. The private IP would, but only
-     if FDEM publishes their internal subnet plan — which
+     if customer publishes their internal subnet plan — which
      they don't expose to us.
    - David told us verbally the VA is in **Auburndale** but
      we have no independent confirmation. Treat as
@@ -3901,7 +4113,7 @@ The agent recovery is not in our scope and the diagnostic
 loop was burning time without closing. **David has the
 correct VA-vs-Linux instruction set and the contact info
 for `davijime@cisco.com`** (David A. Jimenez Martinez, Cisco
-TE specialist who did FDEM's original setup). When/if the
+TE specialist who did the customer's original setup). When/if the
 agent comes back online and the test is repointed to a real
 AUB-side agent, the data will flow into our existing
 `[overview_link_auburndale_tallahassee_health]` stanza
@@ -4021,7 +4233,7 @@ Three-tier priority chain replaces the previous two-tier:
 
 1. **Priority 1 — Cisco SD-WAN linkhealth** (unchanged).
    Capacity / throughput / utilization from
-   `cisco:sdwan:linkhealth`. Won't fire at FDEM (no
+   `cisco:sdwan:linkhealth`. Won't fire at customer (no
    SD-WAN deployed) but kept for portability.
 2. **Priority 2 — ThousandEyes A2A** (NEW). `tstats`
    against `Cisco_ThousandEyes.Test_Metrics` filtered to
@@ -4147,29 +4359,29 @@ unit assumption was wrong and we should drop the `*1000`.
 
 ---
 
-## 2026-05-12 — David call: FDEM is TLH + AUB only; MCO removed from the topology
+## 2026-05-12 — David call: customer is TLH + AUB only; MCO removed from the topology
 
 ### Context
 
 Quick post-meeting cleanup based on a customer call with David
-(FDEM). Three substantive truths surfaced that we hadn't been
+(the customer). Three substantive truths surfaced that we hadn't been
 designing against:
 
-1. **FDEM's actual site footprint is two locations**: Tallahassee
+1. **the customer's actual site footprint is two locations**: Tallahassee
    (TLH, State EOC) and Auburndale (AUB, Logistics). Everything else
    is being decommissioned, including BLA. **MCO/Orlando was never
-   an FDEM site** — it had been carried in our topology config and
+   an customer site** — it had been carried in our topology config and
    demo narrative as a placeholder third-site, but it has no
    real-world counterpart at the customer.
 2. **The TLH↔AUB ThousandEyes agent-to-agent test is broken**: the
    Tallahassee enterprise agent (`demt-te01-va`) is unresponsive to
    probes. TE currently shows 100% network loss on the link, which
    is an artifact of the broken probe-response, not real packet
-   loss. Recovering the agent is on FDEM/Cisco; once it's back,
+   loss. Recovering the agent is on the customer/Cisco; once it's back,
    anything we wire to the A2A test will start populating
    automatically.
 3. **TE configuration ownership**: David confirmed Cisco did all the
-   original TE setup; FDEM has minimal in-house TE knowledge beyond
+   original TE setup; customer has minimal in-house TE knowledge beyond
    a login. Future TE changes (test reconfigs, agent rebuild) will
    need Cisco-side support. **TE data trust is low** until the agent
    is fixed and we can validate against ground truth.
@@ -4265,7 +4477,7 @@ them:
   `[admin_dashboard_drift_panel]` (Site Topology - Drift Panel):
   `makeresults count=3` → `count=2`, the inline expected-set
   hardcoded list drops `Orlando: MCO`, and the description /
-  explanation prose drops the FDEM-specific Orlando paragraph.
+  explanation prose drops the customer-specific Orlando paragraph.
 
 #### Dashboard view JSON
 
@@ -4284,7 +4496,7 @@ them:
 
 - **`dnac_site_normalize` macro** (`macros.conf`): still maps
   `MCO` / `Orlando` paths to a normalized `Orlando: MCO` label.
-  This is a defensive no-op — even with no FDEM Orlando site, if
+  This is a defensive no-op — even with no customer Orlando site, if
   any stray Orlando data ever shows up in the indexes the macro
   classifies it correctly instead of leaking through. Cheap to
   keep, costly to re-derive if a future customer needs it.
@@ -4310,7 +4522,7 @@ them:
 - **Did NOT wire A2A `Test_Metrics` into the AUB↔TLH link yet.**
   The test exists in TE, but the TLH agent is down so the data
   is currently 100% loss / null latency. Wiring it would just
-  make the popup look broken. Once FDEM/Cisco recover the agent,
+  make the popup look broken. Once the customer/Cisco recover the agent,
   the right move is to extend
   `[overview_link_auburndale_tallahassee_health]` with a Priority-0
   `tstats` against `Cisco_ThousandEyes.Test_Metrics` (latency,
@@ -4343,14 +4555,14 @@ them:
 
 ### Commit
 
-Landed as `27a207b` — "Topology: drop MCO/Orlando; FDEM is
+Landed as `27a207b` — "Topology: drop MCO/Orlando; customer is
 TLH+AUB only". Five files changed, 295 insertions / 295
 deletions.
 
 ### What's next
 
 1. **Send the David-call summary to Alan** (drafted in chat).
-2. **Wait on FDEM/Cisco to recover the TLH enterprise agent
+2. **Wait on the customer/Cisco to recover the TLH enterprise agent
    (`demt-te01-va`)**. When it's back:
    - Verify TE shows healthy A2A samples between TLH and AUB.
    - Extend `[overview_link_auburndale_tallahassee_health]` to
@@ -4367,7 +4579,7 @@ deletions.
 
 ---
 
-## 2026-05-11 — FDEM Overview review with Alan, Cloud Vetting, layout & tooltip hardening
+## 2026-05-11 — customer Overview review with Alan, Cloud Vetting, layout & tooltip hardening
 
 ### Context
 
@@ -4376,7 +4588,7 @@ Two threads interleaved through the day:
 1. **Splunk Cloud Vetting** flagged the package on lookup-file naming
    conflicts and a missing custom-conf reload trigger. Blocking issue
    for the customer's deployment.
-2. **FDEM Overview review with Alan** — narrowed the top of the
+2. **customer Overview review with Alan** — narrowed the top of the
    Overview to 3-4 high-signal tiles (Network Health, new Critical
    Website Availability, WAN/site map), added rolling-average baseline
    overlays so anomalies are visible at a glance, and cleaned up
@@ -4391,8 +4603,8 @@ Five commits landed:
 | Commit | Subject |
 |---|---|
 | `515e999` | minor updates — Cloud Vetting fixes |
-| `bd2ba4e` | FDEM Overview review: critical-site availability, baselines, HA-pair, composite swap |
-| `e9ecdba` | FDEM Overview review: SPL math fix, layout overflow, capacity honesty |
+| `bd2ba4e` | customer Overview review: critical-site availability, baselines, HA-pair, composite swap |
+| `e9ecdba` | customer Overview review: SPL math fix, layout overflow, capacity honesty |
 | `521f3c3` | Topology editor: add per-site "Internet edge Mbps" input |
 | `f2256a2` | InfoTooltip: portal popover so it can't be clipped by ancestors |
 
@@ -4420,7 +4632,7 @@ Five commits landed:
 A new top-level tile on the IT Health section, replacing one of the
 older composite metrics. Reads the ThousandEyes
 `Test_Metrics.metric_name:http.server.request.availability` data model
-across an FDEM-curated list of 18 business-critical sites
+across an the customer-curated list of 18 business-critical sites
 (`server.address` allow-list pulled from Alan's throughput-by-site
 table — ranges from `www.floridadisaster.org` and the Salesforce login
 endpoints through to `outlook.office.com` and `demftp.floridadisaster.org`).
@@ -4479,7 +4691,7 @@ immediately rather than having to remember last week's baseline.
   baseline overlay. The baseline line was readability-tuned in
   `e9ecdba` (gray-800 / 1.75px / `6 3` dash at 90% opacity) after
   Alan said the original slate-400 / 1px stroke was too faint
-  against the column bars on the live FDEM stack.
+  against the column bars on the live customer stack.
 - `useMetric` extended with `baselineField` so the baseline series
   is read from the main search result instead of dispatching a
   second job — keeps tile load behavior identical to the single-
@@ -4512,7 +4724,7 @@ Numeric headlines and short strings keep the traditional punch.
 
 #### HA-pair-aware site composite (`bd2ba4e`)
 
-FDEM's site composites (Tallahassee, Orlando, Auburndale) were
+the customer's site composites (Tallahassee, Orlando, Auburndale) were
 double-counting standby HA peers as "down": Catalyst Center reports
 the standby device with a 0 health score, which silently dragged
 the site composite down to 50% even when both physical devices were
@@ -4531,12 +4743,12 @@ score reflects the active devices only.
 Alan said the UX Score and Compliance composite tiles felt
 arbitrary — they were aggregations of aggregations and he couldn't
 trace what made the number move. Replaced both with single-source
-tiles whose semantics he can explain to FDEM directly:
+tiles whose semantics he can explain to customer directly:
 
 - `[it_health_active_te_alerts_high_critical]` — counts per-hour
   distinct critical+high ThousandEyes alerts with a rolling-average
   baseline.
-- `[it_health_sites_below_threshold]` — counts FDEM sites whose
+- `[it_health_sites_below_threshold]` — counts customer sites whose
   device-health rollup is below the configurable warn threshold
   (default 90%).
 
@@ -4791,7 +5003,7 @@ Tailwind scope or the portal pattern changes.
   PNGs).
 - Lint clean on every edited TSX/TS file across all five commits.
 - Manually traced every flow that changed:
-  - Critical Sites SPL on FDEM stack: headline reads
+  - Critical Sites SPL on customer stack: headline reads
     `17 of 18 available` (was `3870 of 4471 available` pre-fix),
     drill-down table sorted ascending with worst sites first.
   - Baseline overlay readable on FW Blocked / Failed Auth /
@@ -5864,7 +6076,7 @@ fix obviously the right move.
 
 ### Goal of the addendum
 
-User pulled a fresh export of `cisco:dnac:site:topology` from FDEM (130
+User pulled a fresh export of `cisco:dnac:site:topology` from customer (130
 events, up from the 13 we had on 2026-05-08) and asked us to re-import,
 diff against the prior state, and adjust any consumer searches if the new
 data exposed something the smaller sample missed.
@@ -5910,7 +6122,7 @@ loaded with default samples enabled.
 
 | Schema | Distinguishing fields | Example `name` values | Source |
 |---|---|---|---|
-| **Hierarchy snapshot** (FDEM real data) | `type IN ("global","area","building","floor")`, `id` UUID, `nameHierarchy`, `latitude`/`longitude` | `TLH`, `First Floor`, `Florida` | Customer Catalyst Center poll |
+| **Hierarchy snapshot** (customer real data) | `type IN ("global","area","building","floor")`, `id` UUID, `nameHierarchy`, `latitude`/`longitude` | `TLH`, `First Floor`, `Florida` | Customer Catalyst Center poll |
 | **Event-style change feed** (demo only on this stack) | `type="NETWORK"`, `eventId="NETWORK-DEVICE-1-301"`, `details.siteName`, `severity` | `device_removed_from_site`, `topology_link_added` | Cisco TA demo input |
 
 **The bug the re-import surfaced:** three of our existing stanzas
@@ -5919,7 +6131,7 @@ loaded with default samples enabled.
 against the event-style schema. On a stack that ingests both schemas,
 they were silently displaying hierarchy-snapshot rows as if they were
 "recent changes" — `recent_changes` was returning 771 rows where 765
-were FDEM hierarchy entries (`name="First Floor"` listed alongside
+were customer hierarchy entries (`name="First Floor"` listed alongside
 `name="device_removed_from_site"`, both with the same severity label,
 indistinguishable to a viewer).
 
@@ -5966,7 +6178,7 @@ REST API.
 | `site_topology_drift_panel` rows | 3 (MCO=Missing, TLH/AUB=Managed) | 3 (same — drift status correct) |
 | `clients_by_building_lookup_join_demo` rows | 4 (TLH 324 / AUB 27 / Warehouse 5 / SEOC 4 unique clients) | 4 (identical) |
 | `audit_logs_by_site_lookup_join` rows | 4 (path-fallback resolved demo data correctly) | 4 (identical) |
-| `clienthealth_by_site_lookup_join` rows | 0 (FDEM siteId="global" caveat documented) | 0 (expected) |
+| `clienthealth_by_site_lookup_join` rows | 0 (customer siteId="global" caveat documented) | 0 (expected) |
 | `it_critical_systems_site_topology_recent_changes` rows | **771 (765 polluted)** | **642 (all clean event-style)** |
 | `it_critical_systems_site_topology_event_type_distribution` rows | 22 (16 polluted with hierarchy values) | 11 (only event names) |
 | `it_critical_systems_site_topology_site_type_distribution` rows | 6 (incidentally clean — was filtering by `details.siteType`) | 6 (still clean, now with explicit filter) |
@@ -6440,12 +6652,12 @@ that DO have data on the stack but still returned 0 rows:
   - `user_experience_guest_client_surge` — `latest(*) by macAddress` then
     `bucket _time` produces 1 row per MAC, breaks 48-bucket trend logic
   - `user_experience_client_onboarding_failures` — quoted nested-JSON path
-    `'onboarding.latestFailureReason'` likely not extracting on FDEM
+    `'onboarding.latestFailureReason'` likely not extracting on the customer
   - `user_experience_client_roaming_analysis` — same nested-path issue
   - `clients_by_building_lookup_join_demo` — already known: depends on
     `site_topology_lookup` being non-empty (regenerate the lookup)
-  - `clienthealth_by_site_lookup_join` — known FDEM caveat documented in
-    cursor rule: FDEM `clienthealth.siteId="global"` always; the
+  - `clienthealth_by_site_lookup_join` — known customer caveat documented in
+    cursor rule: customer `clienthealth.siteId="global"` always; the
     `siteId!="global"` filter empties the result. Defensive by design.
 * **Firewall/IOS overlap with healthy data (~7):** per-stanza fix-or-defer.
 
@@ -6520,7 +6732,7 @@ Four asks from the user, all landed in this session:
 Confirmed expected behavior: the cont. 3 enrichment work attached
 `site:topology` data (address, GPS, country, building label) to the **site**
 detail card, not the **link** detail card. The link rows still come from
-`[overview_link_*_health]`, which on FDEM falls through to the Catalyst Center
+`[overview_link_*_health]`, which on customer falls through to the Catalyst Center
 device-health priority-2 path (no `cisco:sdwan:linkhealth` data exists). That
 priority-2 branch was explicitly setting `capacityMbps=null()`,
 `txMbps=null()`, `rxMbps=null()`, `utilizationPct=null()` &mdash; which is
@@ -6606,7 +6818,7 @@ securityadvisory (where it's `DeviceReachability`), and the documented
 1. `[it_critical_systems_sitelevel_health]` (searchbase.conf): grouped by
    `SiteName` on `cisco:dnac:networkhealth`. That sourcetype's only dimensions
    are `category` (AP / Access / Distribution / Core / WLC / All). Result on
-   FDEM: empty table. **Fixed** by rebasing the stanza onto
+   the customer: empty table. **Fixed** by rebasing the stanza onto
    `cisco:dnac:devicehealth` with `dnac_site_normalize(coalesce(Site, Location))`
    and a 0&ndash;100 rescaled `OverallHealth` average per Site (with `-1`
    sentinel pre-filtered). Output schema preserved (`Site, health, devices`).
@@ -6651,7 +6863,7 @@ securityadvisory (where it's `DeviceReachability`), and the documented
 
 - `yarn run typecheck` &mdash; clean (no errors introduced by the
   `internetEdgeMbps` field or `Globe` icon import).
-- `it_critical_systems_sitelevel_health` query on FDEM now returns
+- `it_critical_systems_sitelevel_health` query on customer now returns
   4 rows (Atlanta-GA, Boston-MA x2, Plano-TX) with proper per-site health
   rollups; previously returned 0 rows.
 - Re-ran the audit script against the modified files: 0 occurrences of any
@@ -6659,7 +6871,7 @@ securityadvisory (where it's `DeviceReachability`), and the documented
 - All 3 link stanzas verified to have `capacityMbps=1000|1000|100` in their
   fallback branches with the updated `telemetrySourceLabel`.
 - No regressions in the `[overview_link_*]` SPL syntax (the `cisco:sdwan:linkhealth`
-  CLI test failure was a pre-existing FDEM-empty-events artifact, not a
+  CLI test failure was a pre-existing the customer-empty-events artifact, not a
   regression).
 
 ### Files touched
@@ -6743,16 +6955,16 @@ Verified end-to-end:
 
 Built per the documented two-stage stats pattern (snapshot data: stats
 by `siteId` first, then lookup, then re-stats by `Site`). Filters out
-the `siteId="global"` literal early — see "FDEM caveat" below.
+the `siteId="global"` literal early — see "customer caveat" below.
 
 #### 3. `audit_logs_by_site_lookup_join` searchbase stanza
 
 Originally drafted as a pure UUID-lookup join, but **local data
 inspection forced a pivot to a hybrid pattern**:
 
-- FDEM-style schema would emit UUID-form `network.siteId` matching
+- customer-style schema would emit UUID-form `network.siteId` matching
   topology lookups directly.
-- Demo data (and apparently some FDEM events) emit `network.siteId`
+- Demo data (and apparently some customer events) emit `network.siteId`
   in **path form** — `Global/Florida/Tallahassee` — or short label form
   — `Tallahassee` — neither of which matches a UUID.
 - The literal-string `"null"` value also appears for ~94% of demo
@@ -6765,7 +6977,7 @@ into a single `Site` column. Empty / `"null"` / unmatched inputs are
 filtered out at the top so they don't pollute the rollup. Verified
 against ~1.3M demo audit events: 93 events resolve to "Tallahassee:
 TLH" via the macro path (no UUIDs in demo data, so the lookup arm is
-dormant for now but ready when FDEM emits real UUIDs).
+dormant for now but ready when customer emits real UUIDs).
 
 Both stanzas tagged `Cisco,Catalyst_Center,Network,Topology,Lookup_Join`
 so they appear in the KPI picker's Cisco-only filter.
@@ -6800,16 +7012,16 @@ Tallahassee: TLH Managed by DNAC   TLH       (green)
 
 Exactly the diff we wanted: every site the React `CUSTOMER_TOPOLOGY`
 factory expects is checked against `site_topology_lookup`, and Orlando
-is correctly flagged because FDEM's DNAC isn't managing it today.
+is correctly flagged because the customer's DNAC isn't managing it today.
 
-### FDEM caveat captured in cursor rule
+### customer caveat captured in cursor rule
 
-Local data verification surfaced two FDEM-specific facts that need to
+Local data verification surfaced two customer-specific facts that need to
 travel forward:
 
 1. `cisco:dnac:clienthealth.siteId` is **always literally `"global"`**
-   on FDEM (and on demo data). 31,577 events, one distinct value. So
-   the per-site clienthealth join returns zero rows on FDEM until DNAC
+   on customer (and on demo data). 31,577 events, one distinct value. So
+   the per-site clienthealth join returns zero rows on customer until DNAC
    is configured to emit per-site rollups. The `siteId="global"` filter
    in the stanza prevents a useless single-row "global" entry from
    polluting the table.
@@ -6827,7 +7039,7 @@ relearn them.
 ### What's next
 
 - User to deploy and visually verify the drift panel + map popup
-  enrichment + new KPI-picker entries on FDEM.
+  enrichment + new KPI-picker entries on the customer.
 - Pending Tier 2C (composite scoring) review.
 - Studio v2 dashboards for `network`, `devices`, `security`, `overview`
   still pending.
@@ -6897,7 +7109,7 @@ inheritedFromBuilding, updated`.
 
 #### B. Three new searchbase.conf stanzas (the user's three options)
 
-New section "Site Topology Lookup & UUID-Chain Joins (FDEM build,
+New section "Site Topology Lookup & UUID-Chain Joins (customer build,
 2026-05-08)" with full description / explanation / solution / related_info
 HTML treatment for each:
 
@@ -6907,7 +7119,7 @@ HTML treatment for each:
 | `site_topology_drift_panel` | Diff between expected sites (TLH, MCO, AUB hardcoded inline to mirror `CUSTOMER_TOPOLOGY`) and DNAC-managed sites. | `makeresults`-built expected list, left-joined to lookup |
 | `clients_by_building_lookup_join_demo` | Demonstrates the UUID-chain extraction + lookup-join pattern by counting clients per building. Spans both `building` and `floor` leaf granularity. | `cisco:dnac:client` + lookup |
 
-All three stanzas tagged `Cisco` so they surface in the FDEM-only KPI picker
+All three stanzas tagged `Cisco` so they surface in the customer-only KPI picker
 filter, and use the project-standard `default_viz = splunk.table` since
 they all return categorical data.
 
@@ -6924,7 +7136,7 @@ they all return categorical data.
 ### Verification
 
 Seeded the lookup locally (`/opt/splunk/etc/apps/splunk-cisco-dashboards/lookups/site_topology_lookup.csv`)
-by running the generator search against the imported FDEM data. All 13
+by running the generator search against the imported customer data. All 13
 topology rows produced; floor rows correctly inherited their building's
 address.
 
@@ -6933,7 +7145,7 @@ All three stanzas validated end-to-end:
 | Stanza | Output | Notes |
 |---|---|---|
 | `site_topology_marker_enrichment` | 4 buildings (TLH, SEOC, AUB, Warehouse) with GPS + full address | All GPS pairs unique to their physical campus pair |
-| `site_topology_drift_panel` | 3 expected sites; **Orlando: MCO flagged as "Missing from DNAC"** | Confirms FDEM operational gap operationally visible |
+| `site_topology_drift_panel` | 3 expected sites; **Orlando: MCO flagged as "Missing from DNAC"** | Confirms customer operational gap operationally visible |
 | `clients_by_building_lookup_join_demo` | 4 sites, 365 unique clients across 7,332 events | TLH = 328 clients (largest), AUB = 28, Warehouse = 5, SEOC = 4. All four sites carry full street addresses thanks to floor-row enrichment. |
 
 ### Bug found and fixed during validation
@@ -6977,11 +7189,11 @@ to `first()` (the lookup has no `_time` so `latest` was undefined behavior).
 
 ---
 
-## 2026-05-08 (cont.) — `cisco:dnac:site:topology` onboarded on FDEM
+## 2026-05-08 (cont.) — `cisco:dnac:site:topology` onboarded on the customer
 
 ### Goal of the addendum
 
-FDEM operations team added the `cisco:dnac:site:topology` input ~1 hour
+customer operations team added the `cisco:dnac:site:topology` input ~1 hour
 before the user noticed events flowing. Establish what the sourcetype
 actually contains, lock canonical fields into the Cursor rule, ingest a
 clean local copy, and decide what we can build with it.
@@ -7013,7 +7225,7 @@ clean local copy, and decide what we can build with it.
    actual device-and-link topology, a different DNAC API (e.g. physical
    topology) would need a separate input definition.
 
-5. **Three meaningful caveats from inspecting FDEM's 13 events:**
+5. **Three meaningful caveats from inspecting the customer's 13 events:**
    - **Floor dimensions are placeholder defaults** — TLH First Floor and
      SEOC First Floor share identical `width × length` (595.4196 ×
      389.6426); AUB Floor 1 and Warehouse Floor 1 share identical
@@ -7027,9 +7239,9 @@ clean local copy, and decide what we can build with it.
      existing TLH+SEOC and AUB+Warehouse rollups** in our
      `[overview_site_*_health]` stanzas — DNAC also treats each campus
      as one location with multiple logical buildings.
-   - **Orlando / MCO is absent from FDEM's hierarchy.** No `area`,
+   - **Orlando / MCO is absent from the customer's hierarchy.** No `area`,
      `building`, or `floor` rows for Orlando. DNAC is not currently
-     managing the Orlando site. Worth raising with FDEM operationally.
+     managing the Orlando site. Worth raising with customer operationally.
 
 ### What we built
 
@@ -7042,7 +7254,7 @@ File: `.cursor/rules/splunk-cisco-dnac-fields.mdc`. Changes:
   to `nameHierarchy` / `name` / `id` / `parentId`.
 - New dedicated section replaces the old "Awaiting field lists"
   placeholder. Documents: 18-field inventory, per-`type` field
-  availability matrix, the three FDEM caveats, three recommended use
+  availability matrix, the three customer caveats, three recommended use
   patterns (GPS lookup, hierarchy traversal, data-quality drift check),
   and an explicit "what this sourcetype does NOT give us" anti-list to
   prevent future mistakes (no devices, no links, no CDP/LLDP, no
@@ -7050,7 +7262,7 @@ File: `.cursor/rules/splunk-cisco-dnac-fields.mdc`. Changes:
 
 #### B. Local one-shot import for ad-hoc verification
 
-User cleaned the JSON envelope from the original FDEM export and
+User cleaned the JSON envelope from the original customer export and
 provided a flat line-delimited JSON at
 `~/Downloads/cisco_sample_data/new/cisco_dnac_site_topology.txt` (13
 events, 4467 bytes). Imported into local Splunk:
@@ -7111,24 +7323,24 @@ Defer until the user picks a direction.
 
 ---
 
-## 2026-05-08 — Map rewrite (FDEM-aware) + 7 dashboard tiles
+## 2026-05-08 — Map rewrite (the customer-aware) + 7 dashboard tiles
 
 ### Goal of the session
 
-Make the executive overview map work cleanly on FDEM's 9-sourcetype Catalyst
+Make the executive overview map work cleanly on the customer's 9-sourcetype Catalyst
 Center stack (no SD-WAN, no `cisco:dnac:site:topology`, no `cisco:catalyst:center:inventory:report`)
 without breaking the rich-metrics behavior on demo data.
 
 ### Discovery & decisions before any code changed
 
-1. **Validated FDEM has 8 of the expected 11 Catalyst Center sourcetypes.**
+1. **Validated customer has 8 of the expected 11 Catalyst Center sourcetypes.**
    User provided complete field lists for `cisco:dnac:devicehealth`, `issue`,
    `networkhealth`, `client`, `clienthealth`, `compliance`, `audit:logs`, and
    `securityadvisory`. Three sourcetypes are present locally but missing from
-   FDEM: `site:topology` (high value), `inventory:report` (medium), and
+   the customer: `site:topology` (high value), `inventory:report` (medium), and
    `compliance:report` (redundant with `compliance`).
 
-2. **Macro-prefix policy**: when running ad-hoc tests on FDEM's stack the
+2. **Macro-prefix policy**: when running ad-hoc tests on the customer's stack the
    user swaps to `fdem_*` prefixed macros (their stack uses
    `fdem_index_catalyst`, `fdem_dnac_site_normalize`). All
    `searchbase.conf` SPL stays on **our app's macros** (`index_catalyst`,
@@ -7137,15 +7349,15 @@ without breaking the rich-metrics behavior on demo data.
 3. **Field-name compliance failure**: I made repeated case mistakes (e.g.
    `site` vs `Site`, inventing `site_short`). User called it out. We
    committed to a permanent fix: a Cursor rule file that documents
-   canonical field names per FDEM sourcetype so case/scale errors don't
+   canonical field names per customer sourcetype so case/scale errors don't
    happen again.
 
-4. **Data sparseness reality-check on FDEM live**: `cisco:dnac:client`
-   returned only 6 events in 30 days on FDEM's stack — too sparse for
-   reliable dashboard metrics. We deferred client-traffic tiles for FDEM
+4. **Data sparseness reality-check on customer live**: `cisco:dnac:client`
+   returned only 6 events in 30 days on the customer's stack — too sparse for
+   reliable dashboard metrics. We deferred client-traffic tiles for the customer
    and chose `cisco:dnac:issue` "high input/output utilization" events as
    a bandwidth pressure proxy. `cisco:dnac:networkhealth.kpiMetrics{}.key`
-   was always null on FDEM's data, making `kpiMetrics{}` unusable.
+   was always null on the customer's data, making `kpiMetrics{}` unusable.
 
 5. **CDP/LLDP not adopted** (asked at end of session): Layer-2 neighbor
    protocols can't see across WAN boundaries and carry structural not
@@ -7159,15 +7371,15 @@ without breaking the rich-metrics behavior on demo data.
 #### A. New Cursor rule for DNAC field discipline
 
 File: `.cursor/rules/splunk-cisco-dnac-fields.mdc` (404 lines).
-Documents per FDEM-confirmed sourcetype: canonical site field name, key
+Documents per customer-confirmed sourcetype: canonical site field name, key
 fields, fields that DO NOT EXIST, scale conventions (0-10 vs 0-100), the
 `-1` "no data" sentinel, and common SPL patterns. Two anti-patterns are
 called out explicitly: lowercase aliasing (creating `site` instead of
 overwriting `Site`) and assuming all health fields share one scale.
 
-#### B. Imported FDEM sample data into local Splunk
+#### B. Imported customer sample data into local Splunk
 
-User exported 6 sourcetypes from FDEM's stack to `~/Downloads/cisco_sample_data/new/`.
+User exported 6 sourcetypes from the customer's stack to `~/Downloads/cisco_sample_data/new/`.
 Oneshot-imported into `index=fdem` on local Splunk (port 8089) with
 `host=fdem-import-2026-05-08`:
 
@@ -7190,7 +7402,7 @@ is degraded (Panel 1 link health 82.2%, Panel 3 device-unreachable count
 
 #### C. Drafted 7 new dashboard tile stanzas
 
-Section: "Site Connectivity & Link Health (FDEM build, 2026-05-08)".
+Section: "Site Connectivity & Link Health (customer build, 2026-05-08)".
 File: `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf`,
 lines 9780-9959.
 
@@ -7208,7 +7420,7 @@ Every stanza:
 - Uses `` `index_catalyst` `` and `` `dnac_site_normalize` ``
 - Filters the `-1` sentinel on health-score aggregations
 - Returns `_time + single value` shape for sparkline tiles
-- Tagged `Cisco` so the FDEM-only KPI picker filter surfaces them
+- Tagged `Cisco` so the customer-only KPI picker filter surfaces them
 - Includes the project-standard `description` / `explanation` /
   `solution` / `related_info` HTML treatment
 
@@ -7223,8 +7435,8 @@ the legacy map stanzas:
 
 1. Site stanzas used hand-rolled `Site="*Tallahassee*" OR Site="*TLH*"`
    filters instead of `dnac_site_normalize`.
-2. Link stanzas depended on `cisco:sdwan:linkhealth` (FDEM doesn't have it).
-3. Link stanzas referenced FDEM-nonexistent fields: `IsWanEdge`,
+2. Link stanzas depended on `cisco:sdwan:linkhealth` (customer doesn't have it).
+3. Link stanzas referenced the customer-nonexistent fields: `IsWanEdge`,
    `WANInterfaceUtilizationPct`, `WANLinkSpeedMbps`, `WANInterfaceTxKbps`,
    `WANInterfaceRxKbps`, `WANInterfaceName`.
 
@@ -7238,7 +7450,7 @@ the legacy map stanzas:
 | Stanza | Change |
 |---|---|
 | `[overview_site_tallahassee_health]` | Drop hand-rolled filter, use `dnac_site_normalize` + `match(Site,"(?i)Tallahassee")`. Aggregates TLH+SEOC+Betty Easley into one `siteId="tlh"` rollup. Same output shape. |
-| `[overview_site_orlando_health]` | Same pattern, `match(Site,"(?i)Orlando")`. Returns no rows when Orlando data is absent (FDEM scenario) so the marker shows "Awaiting telemetry" instead of fabricating. |
+| `[overview_site_orlando_health]` | Same pattern, `match(Site,"(?i)Orlando")`. Returns no rows when Orlando data is absent (customer scenario) so the marker shows "Awaiting telemetry" instead of fabricating. |
 | `[overview_site_auburndale_health]` | Same pattern, `match(Site,"(?i)Auburndale")`. Aggregates AUB + Warehouse. |
 
 Each site stanza:
@@ -7252,7 +7464,7 @@ Each site stanza:
 |---|---|
 | `[overview_link_orlando_tallahassee_health]` | Rewritten |
 | `[overview_link_auburndale_tallahassee_health]` | Rewritten |
-| `[overview_link_orlando_auburndale_health]` | **NEW** — completes the FDEM tri-site mesh |
+| `[overview_link_orlando_auburndale_health]` | **NEW** — completes the customer tri-site mesh |
 
 Each link stanza now uses a clean two-tier telemetry priority:
 - **Priority 1**: `cisco:sdwan:linkhealth` → full bandwidth metrics
@@ -7275,7 +7487,7 @@ when bandwidth fields are null.
   `TOPOLOGY_STORAGE_VERSION` from `3` → `4` so users with persisted
   customizations get a clean reseed that includes the new link
 
-### Verification (against the imported FDEM data)
+### Verification (against the imported customer data)
 
 All 6 stanzas validated end-to-end:
 
@@ -7308,7 +7520,7 @@ All 6 stanzas validated end-to-end:
    bound to any tile slot.
 3. **Future "data sources to tap" pass.** Three explicit candidates:
    - Cisco IOS syslog (CDP/LLDP %-events from 9300X if forwarded)
-   - `cisco:dnac:site:topology` if the FDEM TA can be extended
+   - `cisco:dnac:site:topology` if the customer TA can be extended
    - SD-WAN linkhealth if Sarav can identify a TA path
 4. **Commit when you're satisfied** — work is staged but unmerged.
 
@@ -7322,7 +7534,7 @@ be on record alongside the May-8 narrative. Compressed summary by area:
 ### Dashboard infrastructure (React side)
 
 - **Initial build**: monorepo (`lerna`-managed) with React executive
-  dashboard for FDEM. Florida map, time selector, dark mode, dynamic KPIs.
+  dashboard for the customer. Florida map, time selector, dark mode, dynamic KPIs.
 - **`splunkSearchService.js`**: search dispatcher with session-scoped
   fail-cache for 400 errors and `addLeadingSearchCommand` to ensure SPL
   is properly prefixed before hitting Splunk's `/search/v2/jobs`.
@@ -7410,9 +7622,9 @@ be on record alongside the May-8 narrative. Compressed summary by area:
 
 ### Communications
 
-- Drafted Sarav-message about FDEM bandwidth telemetry options. Final
+- Drafted Sarav-message about customer bandwidth telemetry options. Final
   message kept concise (Q1 only — TA extension question dropped).
-- Searched FDEM Splunk for any 9300X telemetry signals beyond the 9
+- Searched customer Splunk for any 9300X telemetry signals beyond the 9
   confirmed sourcetypes; none found that would substitute for SD-WAN
   link visibility.
 

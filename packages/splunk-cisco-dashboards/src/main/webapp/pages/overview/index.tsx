@@ -193,7 +193,7 @@ const AUTO_REFRESH_OPTIONS: { label: string; seconds: number }[] = [
 const METRIC_CONFIG: MetricConfig[] = [
     // ----- IT Health -----
     //
-    // Per the FDEM Overview review with Alan on 2026-05-11, the IT
+    // Per the Overview review with the customer (Alan, 2026-05-11), the IT
     // Health row was reworked: `critical_website_availability` sits
     // at position 1, then Network health, then Device health (the
     // three Alan defaulted onto). The two legacy composite-score
@@ -354,7 +354,7 @@ const METRIC_CONFIG: MetricConfig[] = [
         label: 'Sites < 90%',
         subLabel: 'Sites below health threshold',
         description:
-            'How many FDEM sites (Tallahassee, Auburndale) have a current ' +
+            'How many monitored sites (Tallahassee, Auburndale) have a current ' +
             'device-health rollup below 90%. Discrete count, not a composite — ' +
             '0 = all sites healthy, 1+ = open the Overview map to identify which ' +
             'site is degraded. Uses the same HA-pair-aware filter as the Overview ' +
@@ -712,8 +712,8 @@ const METRIC_CONFIG: MetricConfig[] = [
 // different demo customer's data so the operational-lead tile
 // surfaces those instead of TLH or AUB.
 //
-// Even with the data fixed, ranking is barely informative for an
-// FDEM-style 2-site footprint — leader and trailer are the same two
+// Even with the data fixed, ranking is barely informative for a
+// 2-site footprint — leader and trailer are the same two
 // sites every refresh. The map already shows per-site health colours
 // and per-link colours, so the right-column tiles add more value as
 // **aggregate signals** the map can't show:
@@ -723,7 +723,7 @@ const METRIC_CONFIG: MetricConfig[] = [
 //     "is anything firing?". Sourced from the same accelerated
 //     `Cisco_ThousandEyes.Alerts` data model that powers the IT
 //     Health "Active TE Alerts" sparkline tile, so the data path is
-//     proven on FDEM.
+//     proven against live customer data.
 //   - `inter_site_latency` — current path latency between TLH and
 //     AUB ThousandEyes agents, as a formatted "12 ms" / "—" string.
 //     Sourced from the same A2A test that powers the topology map
@@ -736,7 +736,7 @@ const METRIC_CONFIG: MetricConfig[] = [
 // **Legacy alternates:** the original `[overview_top_incident_volume]`
 // and `[overview_operational_lead]` stanzas (and their `_demo`
 // counterparts) stay in the catalogue tagged `Legacy_KPI` so any
-// customer with real XDR `site` enrichment or a bigger-than-2-site
+// deployment with real XDR `site` enrichment or a bigger-than-2-site
 // footprint can rebind via the picker.
 const KPI_CONFIG: KpiConfig[] = [
     {

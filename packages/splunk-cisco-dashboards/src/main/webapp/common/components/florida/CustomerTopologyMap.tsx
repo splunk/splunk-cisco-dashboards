@@ -84,7 +84,7 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
     telemetrySearchName: 'Overview - Topology Overview',
     map: {
         // Center re-derived for the TLH+AUB-only topology (David call,
-        // 2026-05-12): MCO/Orlando was never an FDEM site and has been
+        // 2026-05-12): MCO/Orlando was never an customer site and has been
         // removed. The midpoint between TLH (30.4383, -84.2807) and
         // AUB (28.0653, -81.7876) sits at ~(29.25, -83.03), which
         // keeps both markers visible at the default zoom without
@@ -112,7 +112,7 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
     // topology editor pencil-tool ("Internet edge Mbps" field), which
     // writes to the persisted localStorage payload
     // (`splunk-cisco-dashboards.customerTopology.v4`) and immediately
-    // repopulates the popup. If FDEM's network team ever confirms
+    // repopulates the popup. If the customer's network team ever confirms
     // actual circuit bandwidths, the values can be restored here as a
     // packaged default and the editor entry will override them
     // per-user as before.
@@ -3854,7 +3854,7 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
     // mousedown listener that dismisses when the user clicks outside
     // the panel. The map's MapClickCapture only fires when the click
     // hits empty map pixels, which doesn't help when the panel covers
-    // basically the entire map column (FDEM's narrow right-column
+    // basically the entire map column (the customer's narrow right-column
     // layout). With this ref we catch clicks anywhere on the page.
     const panelRef = useRef<HTMLDivElement>(null);
     const selectedKey = selected
