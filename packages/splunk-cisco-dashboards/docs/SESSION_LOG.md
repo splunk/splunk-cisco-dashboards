@@ -7,6 +7,80 @@
 
 ---
 
+## 2026-05-13 (Build 90) — Generic ship-default for organization name
+
+### Context
+
+The `default/` package was still shipping with `[customer_name] = "Florida
+Division of Emergency Management"` baked into `macros.conf`, plus a
+secondary hardcoded fallback (`Operations Command Center`) in
+`pages/overview/index.tsx`, and the FDEM name embedded in the admin guide
+markdown. Any fresh install on a non-FDEM stack therefore booted up
+labelled with the demo customer's name — bad first impression and required
+operators to know which file to edit before showing the dashboard.
+
+User asked for a generic placeholder that signals "this slot is yours to
+edit". Considered an inline instructional variant
+("Organization Name (click the pencil to edit)") but rejected it: the h1
+has Tailwind `uppercase`, so any instructional text renders ALL CAPS and
+reads loud. The pencil is already on cluster-hover (Build 86) with
+`title`/`aria-label` of "Edit branding (title, subtitle, logo)", so
+discoverability does not depend on title-bar copy.
+
+### Changes
+
+#### 1. Macro default + comments (`default/macros.conf`)
+
+- `[customer_name]` definition: `"Florida Division of Emergency Management"`
+  → `"Your Organization Name"`.
+- Tier-0 comment block rewritten to spell out both override paths:
+  per-deployment via `local/macros.conf` and per-user via the in-dashboard
+  pencil. Kept "Acme Corporation" and "Florida Division of Emergency
+  Management" as commented examples so operators can see the shape.
+
+#### 2. Hardcoded React fallback (`pages/overview/index.tsx`)
+
+- `DEFAULT_HEADER_TITLE_FALLBACK = 'Operations Command Center'` →
+  `'Your Organization Name'`. Aligns the macro-load-failed safety net with
+  the macro default so the rendered title is consistent regardless of
+  whether the Splunk macro lookup completed.
+
+#### 3. Admin guide markdown (`data/ui/views/admin_guide_v1.xml`)
+
+- Replaced the FDEM-specific framing
+  ("for the **Florida Division of Emergency Management** statewide drill")
+  with a generic description and an inline reminder of the two override
+  paths (macros.conf and the pencil icon). All other content (per-dashboard
+  bullet list) preserved verbatim.
+
+### Verification
+
+- `yarn build` — clean.
+- React lints — none.
+- Behavioural precedence preserved: per-user override (pencil →
+  localStorage) → `customer_name` macro → hardcoded fallback. Same logic,
+  cleaner default strings at every layer.
+
+### Files touched
+
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/macros.conf`
+  — `[customer_name]` default + Tier-0 comments.
+- `packages/splunk-cisco-dashboards/src/main/webapp/pages/overview/index.tsx`
+  — `DEFAULT_HEADER_TITLE_FALLBACK` constant.
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/data/ui/views/admin_guide_v1.xml`
+  — Dashboard Overview markdown.
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf`
+  — `build = 89` → `build = 90`.
+- `packages/splunk-cisco-dashboards/docs/SESSION_LOG.md` — this entry.
+
+### What's next
+
+Same carryover as Build 89. Operator-side override path is now self-documenting
+(macros.conf comments + admin guide both name the two override mechanisms),
+so this should be the last build that needs to touch demo branding.
+
+---
+
 ## 2026-05-13 (Build 89) — Tag taxonomy round 2: collapses, drops, locked vocabulary
 
 ### Context
@@ -789,7 +863,7 @@ that customers had no UI-level way to change the header chrome
 without backend access — title came from the `[customer_name]`
 macro (operator edits `local/macros.conf`) and the logo lived as
 `customer_logo.png` in the Splunk app static directory. The
-subtitle "Splunk Executive Control Center" was hardcoded in JSX
+subtitle "Splunk Executive Insights" was hardcoded in JSX
 and not editable at all. Build 84 ships a header pencil → modal
 that lets any user override all three.
 
@@ -826,7 +900,7 @@ encode an upload to a `data:` URI in one promise.
   lucide icons.
 * Added two new module constants:
   * `DEFAULT_HEADER_SUBTITLE = 'Splunk Executive Insights'`
-    (replaces the hardcoded "Splunk Executive Control Center"
+    (replaces the hardcoded "Splunk Executive Insights"
     string per the 2026-05-13 review).
   * `DEFAULT_HEADER_TITLE_FALLBACK = 'Operations Command Center'`
     (extracted from the inline JSX so the editor's placeholder
@@ -869,7 +943,7 @@ inline error without closing the modal.
 #### Subtitle default flip
 
 The hardcoded subtitle text changed from
-`"Splunk Executive Control Center"` to
+`"Splunk Executive Insights"` to
 `"Splunk Executive Insights"`. Per Alan's response to the
 question prompt, this is the new fresh-deployment default;
 operators who want the previous wording set it via the editor.
@@ -977,7 +1051,7 @@ a header pencil affordance + inline editor:
 
 - Title: localStorage override layer on top of the existing
   `[customer_name]` macro. Default falls back to the macro.
-- Subtitle: hardcoded `"Splunk Executive Control Center"` becomes
+- Subtitle: hardcoded `"Splunk Executive Insights"` becomes
   `"Splunk Executive Insights"` as the new default fallback,
   overridable via the same editor.
 - Logo: file-upload encoded to base64 data URI (~200KB cap),

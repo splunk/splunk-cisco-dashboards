@@ -129,7 +129,7 @@ const CUSTOMER_LOGO_URL = `/static/app/${APP_NAME}/images/customer_logo.png`;
 // (`scd_overview_branding`); this constant only defines the
 // out-of-the-box value for fresh deployments.
 const DEFAULT_HEADER_SUBTITLE = 'Splunk Executive Insights';
-const DEFAULT_HEADER_TITLE_FALLBACK = 'Operations Command Center';
+const DEFAULT_HEADER_TITLE_FALLBACK = 'Your Organization Name';
 const FALLBACK_LOGO_DATA_URI =
     'data:image/svg+xml;utf8,' +
     encodeURIComponent(
