@@ -7,6 +7,107 @@
 
 ---
 
+## 2026-05-12 (late, two missed stanzas) — Location filter applied to umbrella + inter-site latency
+
+### Context
+
+After the previous session committed the agent-location filter to
+`[overview_link_auburndale_tallahassee_health]` (v1.7.0, commit
+`af6560d`), Alan deployed and reported the link search still showed
+the old SPL. Frustrated and rightly so:
+
+> "for the love of God, what are you doing?????? where the heck is
+> the change!!! I don't see nothing. and the link search for the
+> 11th time is still wrong!!!"
+
+### Diagnosis
+
+Ran `awk '/^\[/ { stanza = $0 } /TLH - BLA Connection/ { print
+NR": "stanza }' searchbase.conf` and got back **three** stanzas
+referencing the placeholder test name:
+
+1. `[overview_topology_overview]` line 9494 — SPL body. Umbrella feed
+   that drives the topology map's overall summary and the right-column
+   "TLH ↔ AUB latency" tile.
+2. `[overview_inter_site_latency]` lines 9582 (explanation) and 9587
+   (SPL body) — standalone tile for the same metric.
+3. `[overview_link_auburndale_tallahassee_health]` line 9881
+   (explanation only — already fixed in v1.7.0).
+
+The `af6560d` commit only fixed stanza #3. The umbrella and the
+right-column tile both kept the hardcoded test name. Alan was
+clicking through to "Show SPL" or running the inter-site latency
+search and seeing the old filter — which is exactly what was
+deployed.
+
+### Fix (commit pending, build 71)
+
+Applied the same agent-location-match pattern to both remaining
+stanzas:
+
+```
+| tstats `summariesonly` avg(...) AS latencyS,
+    latest(Test_Metrics.thousandeyes.source.agent.location) as sourceLocation,
+    latest(Test_Metrics.thousandeyes.target.agent.location) as targetLocation,
+    latest(Test_Metrics.thousandeyes.test.name) as teTestName
+    FROM datamodel="Cisco_ThousandEyes.Test_Metrics"
+    WHERE Test_Metrics.thousandeyes.test.type="agent-to-agent"
+    BY Test_Metrics.thousandeyes.source.agent.name,
+       Test_Metrics.thousandeyes.target.agent.name,
+       Test_Metrics.thousandeyes.test.id
+| rename Test_Metrics.thousandeyes.source.agent.name as sourceAgent,
+         Test_Metrics.thousandeyes.target.agent.name as targetAgent
+| eval _agentScope=coalesce(sourceLocation,"")."|".coalesce(targetLocation,"")
+        ."|".coalesce(sourceAgent,"")."|".coalesce(targetAgent,"")
+        ."|".coalesce(teTestName,"")
+| where match(_agentScope,"(?i)Tallahassee|TLH")
+    AND match(_agentScope,"(?i)Auburndale|AUB")
+| stats avg(latencyS) AS latencyS
+| appendpipe [ stats count | where count=0 | eval latencyS=null() ]
+...
+```
+
+- `[overview_topology_overview]` v1.3.0 — umbrella's inner inter-site
+  latency block now uses the location-match filter.
+- `[overview_inter_site_latency]` v1.1.0 — standalone tile uses the
+  same filter; explanation rewritten to match.
+- `app.conf` build = 71.
+
+### Verification
+
+`grep "TLH - BLA Connection"` against the entire `default/`
+directory returns zero matches outside of historical narrative.
+`yarn run tsc --noEmit` clean (no React changes this round).
+
+### What's next
+
+Operator needs to re-package and push: `yarn run package:app` then
+ACS install the resulting `dist/splunk-cisco-dashboards-1.0.10.tar.gz`.
+After that, the diagnostic search:
+
+```
+| rest /servicesNS/-/splunk-cisco-dashboards/configs/conf-searchbase
+| search title="overview_link_auburndale_tallahassee_health"
+        OR title="overview_inter_site_latency"
+        OR title="overview_topology_overview"
+| eval has_new_filter=if(match('content.search', "_agentScope"),
+        "YES — new SPL", "NO — old SPL")
+| table title 'content.version' has_new_filter
+```
+
+…should return three rows, all with `has_new_filter="YES"`.
+
+### Process callout
+
+I owe the user a clearer "no stone unturned" pass when applying
+multi-stanza changes. The right pre-flight check before claiming a
+fix is complete is the same `awk` one-liner above against the
+identifying string. Adding a `pre-commit-check.sh` that greps for
+known placeholders against the conf tree is the cheap way to prevent
+the same mistake.
+
+---
+
 ## 2026-05-12 (late, post-deploy regression triage) — Map animation, popup dismiss, in-popup data-source picker, location-based TE A2A filter
 
 ### Context
