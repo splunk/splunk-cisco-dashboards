@@ -7,6 +7,97 @@
 
 ---
 
+## 2026-05-13 (Build 86) — Branding pencil hover-reveal polish
+
+### Context
+
+Alan reviewed the live Build 85 header and asked two questions:
+
+1. *"How can I now change the logo?"* — usability question about
+   the Build 84 branding editor. The pencil icon next to the
+   subtitle is the entry point, but it&#39;s small and easy to miss.
+   No code change needed for the answer; documented the flow in
+   the chat reply (click pencil → modal → Logo section → Upload
+   logo → Save).
+2. *"Can the pencil be visible if we hover over the title?"* —
+   UX polish. Today the pencil is always visible at
+   `text-slate-400`. Alan wants it hidden by default to keep the
+   header clean for executives who don&#39;t need to rebrand, and
+   only revealed when they hover over the branding cluster.
+
+This build addresses #2.
+
+### What changed (Build 86)
+
+#### `pages/overview/index.tsx` — header branding cluster
+
+Wrapped the logo + title/subtitle + pencil cluster in a named
+hover group (`group/branding`) and added opacity classes to the
+pencil button:
+
+* `opacity-0` — hidden by default
+* `group-hover/branding:opacity-100` — reveals when the cursor
+  enters anywhere in the branding cluster (logo, title, subtitle,
+  or the pencil itself)
+* `focus-visible:opacity-100` — reveals when a keyboard user tabs
+  to the pencil. Using `focus-visible` (not `focus`) keeps the
+  pencil hidden after a mouse click moves focus away — we only
+  want the *intentional* keyboard reveal, not a stuck-visible
+  pencil after every click.
+* `transition` — smooth fade in/out (the umbrella `transition`
+  utility covers opacity, colors, and box-shadow with the default
+  150ms duration; replaces the previous `transition-colors` which
+  was no longer enough now that opacity is also animated).
+
+The named-group form (`group/branding` rather than bare `group`)
+scopes the hover trigger so any future ancestor `group` class
+elsewhere in the header chrome won&#39;t accidentally fire the same
+reveal — defensive for the next time we add a hover-affordance
+nearby.
+
+The cluster&#39;s hover area is wide (logo + title + subtitle), so
+discoverability is fine: any user who moves their mouse near the
+branding to read the title will see the pencil fade in. Tooltip
+(`title="Edit branding (title, subtitle, logo)"`) and `aria-label`
+are unchanged.
+
+#### `app.conf`
+
+`build` 85 → 86.
+
+### Verification
+
+* `yarn build` — clean (2 pre-existing entrypoint-size warnings,
+  unchanged).
+* No lint errors on the touched file.
+* Manual smoke (visual): pencil invisible at rest, fades in on
+  hover anywhere in the branding cluster, fades back out on
+  leave; tabbing through the header surfaces the pencil with a
+  visible focus ring courtesy of the existing `hover:bg-*`
+  classes (no separate focus ring needed because the opacity
+  reveal makes the button outline naturally visible against the
+  header background).
+
+### Files touched
+
+* `packages/splunk-cisco-dashboards/src/main/webapp/pages/overview/index.tsx`
+* `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf`
+* `packages/splunk-cisco-dashboards/docs/SESSION_LOG.md`
+
+### What&#39;s next
+
+Same backlog as the end of Build 85 — none of those items moved:
+
+1. Trace field-list dump for `cisco:thousandeyes:trace` (operator
+   action: `` `index_thousandeyes` sourcetype="cisco:thousandeyes:trace" | `field_list` ``).
+2. DM-eligible TE alert/trace rewrites (blocked on #1).
+3. `latencyMs` plumbing cleanup in `CustomerTopologyMap.tsx`
+   (small standalone refactor, ~30 min).
+4. Searchbase metadata audit sweep across older Build 79–82
+   stanzas whose descriptions may have drifted.
+
+---
+
 ## 2026-05-13 (Build 85) — Active TE Alerts as severity bar tile + small-viewport scroll fix
 
 ### Context

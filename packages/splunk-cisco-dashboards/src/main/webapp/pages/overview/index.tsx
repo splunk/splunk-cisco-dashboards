@@ -2256,7 +2256,22 @@ const OverviewPage: React.FC = () => {
         >
             {/* Header */}
             <header className="h-14 flex-shrink-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 flex items-center justify-between shadow-sm">
-                <div className="flex items-center gap-3 min-w-0">
+                {/*
+                  * The branding cluster (logo + title/subtitle + edit
+                  * pencil) is the hover-trigger group. The pencil sits
+                  * hidden by default (`opacity-0`) and reveals on hover
+                  * anywhere in the cluster, OR on keyboard focus of the
+                  * pencil itself via `focus-visible`. `focus-visible`
+                  * (not `focus`) keeps the pencil hidden when the user
+                  * clicks elsewhere and the button is mouse-focused —
+                  * we only want the hover/keyboard reveal so the
+                  * default header stays visually clean for executives
+                  * who don't need to rebrand. The named-group form
+                  * (`group/branding`) scopes the hover trigger to the
+                  * cluster so any future ancestor `group` class doesn't
+                  * accidentally fire the same reveal.
+                  */}
+                <div className="flex items-center gap-3 min-w-0 group/branding">
                     <div className="w-9 h-9 bg-sky-600 rounded-lg flex items-center justify-center text-white overflow-hidden p-1 flex-shrink-0">
                         <img
                             src={effectiveLogoSrc}
@@ -2290,7 +2305,7 @@ const OverviewPage: React.FC = () => {
                         onClick={() => setBrandingEditorOpen(true)}
                         title="Edit branding (title, subtitle, logo)"
                         aria-label="Edit branding (title, subtitle, logo)"
-                        className="flex-shrink-0 p-1 rounded text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        className="flex-shrink-0 p-1 rounded text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-800 opacity-0 group-hover/branding:opacity-100 focus-visible:opacity-100 transition"
                     >
                         <Edit3 className="w-3.5 h-3.5" />
                     </button>
