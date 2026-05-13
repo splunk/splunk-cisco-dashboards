@@ -7,6 +7,168 @@
 
 ---
 
+## 2026-05-13 (Build 78) — DM-discovery Cursor rule + scrub `index=dnac` from doc copy
+
+### Context
+
+Two related corrections from Alan in one turn:
+
+1. **Process correction.** When I'm about to write SPL that reads
+   from a Splunk data model (`tstats … from datamodel=…`,
+   `| from datamodel:…`, `| pivot …`), I have a long history of
+   inventing field names. The fix is procedural: **always ask the
+   user for the DM JSON** that the add-on ships (e.g.
+   `/opt/splunk/etc/apps/ta_cisco_thousandeyes/default/data/models/Cisco_ThousandEyes.json`),
+   read its `objects[].fields[]`, and only then write SPL.
+2. **Concrete fix.** Alan saw the literal string `index=dnac`
+   appear in `searchbase.conf`. He wants every reference moved
+   to the existing `[index_catalyst]` macro.
+
+### What changed (Build 78)
+
+#### 1. New Cursor rule — `.cursor/rules/splunk-data-model-discovery.mdc`
+
+- Glob targets: same as `splunk-spl-field-syntax.mdc`
+  (`**/*.conf`, `**/data/ui/views/*.xml`, `**/webapp/**`).
+- Codifies the "ask for the DM JSON" process verbatim:
+  - Identify which DM the search uses.
+  - Ask the user for the JSON file path or contents (default
+    location `/opt/splunk/etc/apps/<ta_app>/default/data/models/<Model>.json`,
+    but always confirm).
+  - Parse `objects[]` for dataset names, `fields[]` for field
+    names, `calculations[]` for derived fields, `constraints[]`
+    for the dataset's base search.
+  - Build SPL using exact names; for the metric store, keep the
+    `metric_name:` prefix.
+  - Document the DM source in the stanza's `description` /
+    `explanation` so the data-source assumption is auditable.
+- Lists the historical mistakes this rule is meant to prevent:
+  guessing `Test_Metrics.network.jitter` when the DM has
+  `Test_Metrics.metric_name:network.jitter`; using a dataset
+  name that doesn't exist; single-quoting DM field paths in
+  `tstats` arguments.
+
+#### 2. `searchbase.conf` — `index=dnac` doc-copy scrub
+
+Audit: zero actual SPL searches in the file used a literal
+`index=dnac` clause (the working SPL already used
+`` `index_catalyst` `` macro everywhere). The four hits Alan saw
+were all in HTML/comment narrative:
+
+| Where | Before | After |
+|---|---|---|
+| L542 (`explanation` HTML) | `<code>scripts/audit_sourcetype_fields.py --index=dnac</code>` | `<code>scripts/audit_sourcetype_fields.py</code> against `cisco:dnac:*` sourcetypes |
+| L1245 (`related_info` HTML) | same | same |
+| L1374 (`#` audit comment) | `Verified against live `index=dnac` (78 events)` | `Verified against live `index_catalyst` (78 events)` |
+| L10521 (`#` audit comment) | `on the live Catalyst Center TA in `index=dnac`` | `on the live Catalyst Center TA in `index_catalyst`` |
+
+The CLI examples were rephrased to drop the literal-index detail
+because `scripts/audit_sourcetype_fields.py` is a Python tool
+that takes a real index name as a CLI flag — substituting the
+Splunk macro there would have been factually wrong.
+
+Out of scope: `scripts/sourcetype_field_inventory_merged_live_dnac*.json`
+(field-inventory captures from the live FDEM tenant — those are
+data files documenting what was queried, not config that needs
+updating) and `SESSION_LOG.md` historical entries.
+
+#### 3. Bookkeeping
+
+- `app.conf` build 77 → **78**.
+- `yarn tsc --noEmit` clean.
+- `yarn build` clean (pre-existing 1.38 MiB asset-size warning
+  only).
+- `git check-ignore .cursor/rules/splunk-data-model-discovery.mdc`
+  → not ignored, ready to commit.
+
+### Still pending (deferred)
+
+- The `metric_name:` prefix bug in `[overview_link_te_a2a_health]`
+  (and any TEUC stanza reading `network.*` bare against the
+  metric store) is still present. Build 78 only adds the rule
+  that will guide its fix; the actual SPL rewrite waits on
+  Alan's `field_list` macro outputs and the
+  `Cisco_ThousandEyes.json` paste.
+- The doc-copy in a few migrated TEUC stanzas now reads
+  self-referentially (e.g. comparing `index_thousandeyes` to
+  `index_thousandeyes`) after the Build 77 macro purge. Polish
+  pass deferred to the same TE-fields work.
+
+---
+
+## 2026-05-13 (Build 77) — purge per-feed ThousandEyes index macros, consolidate on `index_thousandeyes`
+
+### Context
+
+Alan caught that I'd been carrying four ThousandEyes-specific index
+aliases — `stream_index`, `path_viz_index`, `event_index`,
+`activity_index` — that he never asked for and that don't reflect
+how FDEM (or the Cisco ThousandEyes TA) actually segments the data.
+Per his guidance: **all** ThousandEyes feeds (raw metric stream,
+path visualization, Internet Insights events, audit/activity) land
+in the same index, so the `index_thousandeyes` macro alone covers
+every TE-related search. The per-feed aliases were over-engineering
+that just made it easier for me to write inconsistent SPL.
+
+### Changes (Build 77)
+
+#### 1. `searchbase.conf` — bulk migration
+- 82× `` `stream_index` `` → `` `index_thousandeyes` ``
+- 5× `` `path_viz_index` `` → `` `index_thousandeyes` ``
+- 1× `` `activity_index` `` → `` `index_thousandeyes` ``
+- 8× `` `event_index` `` → `` `index_thousandeyes` ``
+- 60 additional bare references inside `<code>...</code>` blocks
+  in `description` / `explanation` / `solution` / `related_info`
+  HTML also replaced for consistency.
+- Total: 156 substitutions across the searchbase.
+
+After-migration grep for the four old macro names returns zero
+matches in `searchbase.conf`. Doc copy in a handful of stanzas now
+reads slightly awkwardly (e.g. one stanza compared
+`stream_index` to `event_index` to teach learners about feed
+separation; that comparison is now self-referential and will be
+polished in a follow-up).
+
+#### 2. `macros.conf` — stanzas removed
+- Deleted `[stream_index]`, `[path_viz_index]`, `[event_index]`,
+  `[activity_index]`. The remaining `[index_thousandeyes]` stanza's
+  description was extended to spell out the convention: "All
+  ThousandEyes-related searches must use this macro; no per-feed
+  aliases ... all TE feeds land in the same index per FDEM
+  convention."
+
+#### 3. Out of scope (deferred)
+- The `metric_name:<measurement>` prefix bug Alan flagged in this
+  session is still pending. The current `[overview_link_te_a2a_health]`
+  stanza (and any TEUC stanzas that read `network.latency` etc.
+  bare against the metric store) will still emit nulls until I get
+  the `field_list` macro output from FDEM. That's the next session.
+  Build 77 is the macro purge only; no SPL semantics changed beyond
+  the index reference.
+
+### Verification
+
+- 0 hits for `stream_index|path_viz_index|activity_index|event_index`
+  in `searchbase.conf` and `macros.conf` (only `SESSION_LOG.md`
+  retains historical references).
+- `yarn tsc --noEmit` clean.
+- `yarn build` clean (asset-size warnings only, pre-existing).
+- `app.conf` build 76 → **77**.
+
+### What's next
+
+Awaiting Alan's `field_list` query outputs (Q1–Q9 from the prior
+turn) to:
+
+1. Build the new `splunk-cisco-thousandeyes-fields.mdc` rule.
+2. Rewrite `[overview_link_te_a2a_health]` v1.1.1 → 2.0.0 with
+   DM-first SPL using the correct `Test_Metrics.metric_name:network.X`
+   prefix.
+3. Audit + fix every TEUC stanza for the `metric_name:` prefix
+   on raw `cisco:thousandeyes:metric` events.
+
+---
+
 ## 2026-05-13 (Build 76) — SPL dotted-field quoting cleanup + Cursor rule v2
 
 ### Context
