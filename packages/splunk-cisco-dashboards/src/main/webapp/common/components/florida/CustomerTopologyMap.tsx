@@ -158,7 +158,18 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
             targetSiteId: 'tlh',
             status: 'unknown',
             telemetrySource: 'Awaiting topology link telemetry',
-            searchName: 'Overview - Link Auburndale to Tallahassee Health',
+            // OOB default is the dedicated TE A2A stanza
+            // `[overview_link_te_a2a_health]` (added 2026-05-12). It
+            // returns one normalized row per A2A test path between the
+            // two cities with all three network metrics (latency, loss,
+            // jitter) plus geo-enriched agent identity and the TE
+            // permalink. The multi-source umbrella stanza
+            // `Overview - Link Auburndale to Tallahassee Health` is
+            // still in the catalogue for customers running SD-WAN who
+            // want SD-WAN > TE > Catalyst Center prioritization;
+            // operators can swap back to it via the in-popup catalogue
+            // browser.
+            searchName: 'Overview - Link ThousandEyes A2A Health',
         },
     ],
 };

@@ -7,6 +7,111 @@
 
 ---
 
+## 2026-05-12 (very, very late, dedicated TE A2A stanza) — `[overview_link_te_a2a_health]`
+
+### Context
+
+After the catalogue browser shipped (build 73), Alan opened the
+picker, found ~260 entries he could browse, and immediately
+identified the deeper issue:
+
+> "we need one search that returns latency, jitter, loss and other
+> metrics per our discussion and per the csv I gave you earlier to
+> learn to use to build good searches for the TE data!!!! do you
+> understand???"
+
+The picker was right; the catalogue was wrong. The AUB↔TLH link's
+OOB default was `Overview - Link Auburndale to Tallahassee Health`
+— a multi-source SPL that prioritizes SD-WAN > TE A2A > Catalyst
+Center. Functionally correct (TE was Priority 2, so on FDEM it
+won), but the stanza name doesn't say "ThousandEyes" and the
+operator can't tell from the catalogue list which entries are
+purely TE-driven. Alan wanted a dedicated TE A2A stanza he could
+pick on purpose.
+
+### Fix (build 74, commit pinned below)
+
+Added `[overview_link_te_a2a_health]` (search_name = `Overview -
+Link ThousandEyes A2A Health`) to `searchbase.conf`. Standalone
+counterpart to the umbrella stanza — TE A2A only, no SD-WAN /
+Catalyst Center fallbacks. Same agent-location filter (both
+"Tallahassee" / "TLH" AND "Auburndale" / "AUB" must appear in the
+combined source location | target location | source agent name |
+target agent name | test name string), so it's self-installing
+across customers.
+
+Returns one normalized row with every field the map renderer
+reads, derived from the schema Alan documented in the 2026-05-12
+CSV export of `cisco:thousandeyes:metric` events:
+
+- `id`, `linkId`, `sourceSiteId`, `targetSiteId` — topology shape
+- `status` (critical / warning / stable / unknown) scored from
+  loss / latency / jitter using the same thresholds as the umbrella
+- `latencyMs`, `lossPct`, `jitterMs` — the three network metrics
+- `sourceAgent` / `targetAgent` (single) and `sourceAgents` /
+  `targetAgents` (multivalue, in case more than one A2A test
+  matches)
+- `sourceLocation`, `targetLocation` — human-readable city strings
+  ("Tallahassee, Florida, US")
+- `sourceCountry`, `targetCountry`, `sourceRegion`, `targetRegion`
+  — ISO codes
+- `teAccountId`, `teTestId`, `teTestName` — test identity
+- `teLink` = `coalesce(teLinkPermalink, teLinkConstructed)` — TE
+  emits a permalink with every metric event, so we prefer it; the
+  Path Visualization URL is constructed defensively as fallback
+- `lastUpdated`, `telemetrySource` — for the popup footer
+- Defensive `appendpipe [stats count | where count=0 | eval ... ]`
+  guarantees one row even when the data model returns nothing,
+  surfacing as `status="unknown"` instead of an empty result.
+
+Tagged `Cisco, Map, Link, Topology, Topology_Link, ThousandEyes,
+A2A, Agent_to_Agent, Requires_Cisco_ThousandEyes_DM, Auburndale,
+Tallahassee, Geo_Enriched, Agent_Location_Match`. The
+`Topology_Link` tag means the stanza floats to the top of the
+catalogue browser's link picker with the `[link]` badge; the
+`A2A` and `Agent_to_Agent` tags let operators filter to TE-only
+entries with a single chip.
+
+### Wire-up
+
+Updated the factory `CUSTOMER_TOPOLOGY` in `CustomerTopologyMap.tsx`:
+the AUB↔TLH link's `searchName` now points to `Overview - Link
+ThousandEyes A2A Health` instead of the multi-source umbrella.
+The umbrella stanza stays in the catalogue (still selectable via
+the browser) for customers running SD-WAN who want the
+prioritization. Comment in the factory entry explains the choice
+and points operators at the picker for the swap-back path.
+
+### Verification
+
+- `yarn tsc --noEmit` clean
+- `yarn run build` clean — `searchbase.conf` 1.80 MiB → 1.81 MiB
+  (the new ~10 KB stanza); `overview.js` unchanged
+- Lint clean
+
+### What's next
+
+When Alan deploys build 74 and confirms the AUB↔TLH map line is
+driven by `Overview - Link ThousandEyes A2A Health` (visible in
+the popup's Show SPL and the catalogue browser's checkmark), the
+data-source story is closed. Follow-ups left on the backlog from
+prior sessions:
+
+- Auto-discover topology from A2A event fields (every distinct
+  agent → site, every test → link, lat/lng resolved via geonameId
+  lookup). The dedicated stanza here makes that discovery
+  conceptually simpler — same data shape, just enumerate instead
+  of filter.
+- A `[overview_link_te_a2a_overview]` umbrella that returns one
+  row per A2A test path globally (not pre-filtered to AUB↔TLH),
+  so a future multi-link topology gets fed by a single search.
+
+### Commit
+
+`8b1bd6e` — searchbase: add dedicated TE A2A link health stanza, wire as AUB↔TLH default
+
+---
+
 ## 2026-05-12 (still very late, full catalogue browser) — TopologySearchBrowser component
 
 ### Context
