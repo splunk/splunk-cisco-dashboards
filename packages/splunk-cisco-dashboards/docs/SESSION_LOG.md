@@ -102,7 +102,7 @@ permissions / app-namespace issue), not the React component.
 
 ### Commit
 
-_Pinned post-commit._
+`4d59ad7` — Topology pickers: render unconditionally with sky-accent visual treatment
 
 ---
 
