@@ -1221,18 +1221,21 @@ const OverviewPage: React.FC = () => {
     // each, so 6 is just headroom for future additions; today they
     // simply show what they have.
     //
-    // *Default* count is 6 across every section. Per the 2026-05-12
-    // review, the executive view's job is to surface everything in
-    // the catalogue at first paint and let the operator dial *down*
-    // if they want a tighter focus — the trailing-hide rule plus the
-    // count pill make that easy. Earlier revisions defaulted IT
-    // Health to 3 (Alan's "show me the three I asked for"), but on
-    // wider monitors that left the rest of the row blank and the
-    // operator had to discover the +/− pill before they could see
-    // the rest.
+    // *Default* count is 3 across every section (Build 83). The exec
+    // view boots with a tight, three-headline-per-row layout that
+    // fits cleanly into the new 2/3-tiles / 1/3-map split. Operators
+    // who want more breadth dial up via the `−  N  +` pill on each
+    // section header (cap is 6).
     //
-    // Returning users keep whatever count they had configured because
-    // the per-section preference is keyed off localStorage.
+    // History: earlier revisions defaulted to 3 (Alan's original
+    // "show me the three I asked for"), then bumped to 6 on
+    // 2026-05-12 because the right-side map fought for horizontal
+    // width and the wider tile column looked empty at 3 tiles. With
+    // Build 83's 2/3-tile column the visual balance flips back —
+    // 3 tiles fill the row cleanly without collisions, and 6 starts
+    // truncating headlines at 1280px. Returning users keep whatever
+    // count they had configured because the per-section preference
+    // is keyed off localStorage.
     //
     // Declared up here (before the aggregate status block) because
     // the HealthBadge filter below needs to know which tiles are
@@ -1246,7 +1249,7 @@ const OverviewPage: React.FC = () => {
         minCount: 3,
         maxCount: 6,
         defaultCount: {},
-        fallbackDefault: 6,
+        fallbackDefault: 3,
     });
 
     // ------------------------------ Section tile-order preference ------------------------------
@@ -1376,17 +1379,24 @@ const OverviewPage: React.FC = () => {
 
     // ------------------------------ Map position (right / below / above) ------------------------------
     // Where the topology map sits relative to the metric tiles. Default
-    // is `below` (tiles on top, map below) because the original
-    // right-side-only layout meant the map and the three tile sections
-    // always fought for horizontal width on standard 1280-1440px
-    // displays. Stacking vertically lets each region use the full
-    // width, which is friendlier for both the map (region labels stay
-    // legible) and the tile rails (no truncated headlines).
+    // is `right` (per the 2026-05-13 review): the topology map is the
+    // executive's anchor visual, so it lives on the right where the eye
+    // returns after scanning the metric rails on the left. Build 83
+    // pairs this with a tighter map column (≈1/3 of the width — see
+    // `SPLIT_DEFAULT` below) so the metric tiles still get 2/3 of the
+    // viewport for headline KPIs.
     //
-    // `right` preserves the original split-pane behaviour with the
-    // draggable horizontal splitter; `above` swaps the order (map on
-    // top, tiles below) for operators who treat the map as the primary
-    // view; `below` puts tiles on top.
+    // Earlier revisions defaulted to `below` because the original
+    // right-side-only layout fought for horizontal width on
+    // 1280-1440px displays. That concern is addressed by the new
+    // 66.67% tile / 33.33% map split, which keeps tile headlines
+    // legible at 1280px while still giving the map enough room for
+    // region labels.
+    //
+    // `right` is the side-by-side split-pane (draggable vertical
+    // splitter); `below` stacks tiles-on-top + map-below; `above`
+    // stacks the other way for operators who treat the map as the
+    // primary view.
     //
     // Declared *above* the layout-split block because the drag and
     // keyboard handlers below need to read this value to decide which
@@ -1396,7 +1406,7 @@ const OverviewPage: React.FC = () => {
     // reloads, cleared by the factory reset alongside the splitter
     // position.
     const MAP_POS_KEY = 'scd_overview_map_pos';
-    const MAP_POS_DEFAULT: MapPosition = 'below';
+    const MAP_POS_DEFAULT: MapPosition = 'right';
     const [mapPosition, setMapPosition] = useState<MapPosition>(() => {
         if (typeof window === 'undefined') return MAP_POS_DEFAULT;
         try {
@@ -1442,8 +1452,16 @@ const OverviewPage: React.FC = () => {
     // read region labels on. The same range applies vertically — at
     // 35% map (= 65% tiles) the map height drops to ~280px on a
     // standard 1080p display, which is the bottom of "still useful".
+    //
+    // Default 66.67% (Build 83): metrics get 2/3 of the width, map
+    // gets 1/3. Pairs with `MAP_POS_DEFAULT = 'right'` to put the
+    // headline KPI rails on the left and the topology map as the
+    // anchor visual on the right at boot. Earlier revisions used
+    // 58.33% (= 7/12, matching the legacy fixed grid), but that left
+    // the map column too wide for an exec view where the metrics are
+    // the primary read.
     const SPLIT_KEY = 'scd_overview_split_pct';
-    const SPLIT_DEFAULT = 58.33;
+    const SPLIT_DEFAULT = 66.67;
     const SPLIT_MIN = 35;
     const SPLIT_MAX = 80;
     const [leftPct, setLeftPct] = useState<number>(() => {

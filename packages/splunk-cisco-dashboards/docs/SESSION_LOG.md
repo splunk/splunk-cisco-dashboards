@@ -7,6 +7,86 @@
 
 ---
 
+## 2026-05-13 (Build 83) — Overview page factory defaults: map right (1/3), metrics 2/3, three tiles per section
+
+### Context
+
+Alan reviewed the Build 82 popup work and immediately raised four
+customization asks on the Overview page header & layout. The first
+three are factory-defaults flips with one-line code changes; the
+fourth (editable header chrome) is the meatier follow-up shipping
+as Build 84.
+
+### What changed (Build 83)
+
+`pages/overview/index.tsx`:
+
+1. **`MAP_POS_DEFAULT`**: `'below'` → `'right'`. Topology map
+   becomes the executive's anchor visual on the right side at boot.
+   The previous `below` default came from a 2026-05-12 review when
+   the right-side map fought for horizontal width on 1280-1440px
+   monitors. Build 83 fixes that pressure by also tightening the
+   map column width (next item).
+
+2. **`SPLIT_DEFAULT`**: `58.33` → `66.67`. Metrics get 2/3 of the
+   horizontal width, map gets 1/3. The 35-80% clamp range stays
+   (the splitter still works as before for operators who want a
+   different ratio). 66.67% is well inside the safe range and
+   matches the new "metrics are the headline read; map is the
+   anchor visual" framing from the 2026-05-13 review.
+
+3. **`usePersistedSectionTileCounts.fallbackDefault`**: `6` → `3`.
+   Each of the three sections (IT Health, Security, Building
+   Intelligence) boots with three tiles instead of six. Cap stays
+   at 6 — the `−  N  +` pill on each section header lets operators
+   dial up to the catalogue cap.
+
+   This reverts the 2026-05-12 bump-to-6 decision. Reason: with
+   the new 2/3-tile column, 6 tiles start truncating headlines at
+   1280px while 3 tiles fill the row cleanly. The exec view's job
+   is to surface the most important three signals; operators who
+   want more breadth still have one click to add them.
+
+### What did NOT change
+
+- **localStorage migration**: not needed. Returning users with a
+  saved `scd_overview_map_pos`, `scd_overview_split_pct`, or
+  `splunk-cisco-dashboards.sectionTileCounts.v1` keep their
+  preferences unchanged. Only first-paint defaults shift, plus
+  the "Reset all customizations" button now resets to the new
+  values.
+- **Splitter clamp range** (35-80%): unchanged.
+- **Map position toggle** (PanelRight / PanelBottom / PanelTop):
+  unchanged, all three modes still work.
+- **TileCountPill** UI: unchanged.
+
+### Verification
+
+- `yarn build` clean, no new warnings.
+- `ReadLints` on `overview/index.tsx`: clean.
+- All affected localStorage keys still readable; clamps still
+  apply to user-saved values.
+
+### Up next: Build 84 (editable header)
+
+Header title, subtitle, and logo will become customer-editable via
+a header pencil affordance + inline editor:
+
+- Title: localStorage override layer on top of the existing
+  `[customer_name]` macro. Default falls back to the macro.
+- Subtitle: hardcoded `"Splunk Executive Control Center"` becomes
+  `"Splunk Executive Insights"` as the new default fallback,
+  overridable via the same editor.
+- Logo: file-upload encoded to base64 data URI (~200KB cap),
+  stored in localStorage, falls back to
+  `/static/app/splunk-cisco-dashboards/images/customer_logo.png`.
+
+Persistence key: `scd_overview_branding`. Wired into the
+factory-reset scope so customers can revert to defaults from the
+header reset button.
+
+---
+
 ## 2026-05-13 (Build 82) — Wire real Alerts data into the site map popup, drop the placeholder Latency tile
 
 ### Context
