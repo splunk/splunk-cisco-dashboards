@@ -29,7 +29,7 @@ places (e.g. open-issues description said "warning at 500" but the
 config said `warning: 500` — accidentally consistent, but easy for
 either to drift independently).
 
-### Commit `<TBD>` — single source of truth, structured render
+### Commit `3f522c1` — single source of truth, structured render
 
 **Files:**
 - `packages/splunk-cisco-dashboards/src/main/webapp/common/hooks/useMetric.ts`
