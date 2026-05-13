@@ -7,6 +7,79 @@
 
 ---
 
+## 2026-05-13 (Build 81) — Finish the sourcetype sweep (catch the bare `thousandeyes:*` variants Build 80 missed)
+
+### Context
+
+Alan opened `searchbase.conf` to line 6420 and pointed out:
+
+```
+search = `index_thousandeyes` sourcetype="thousandeyes:alerts" \
+```
+
+Wrong on its face — should be `cisco:thousandeyes:alerts`. He
+asked, fairly, why I hadn't already fixed this in Build 80.
+
+### Root cause of the miss
+
+In Build 80 I audited with a regex pinned to `cisco:thousandeyes:*`
+(my eyes were on misspellings of the trailing word — `pathviz`,
+`metrics`, `alert`, `tests`, `audit`). That regex never matched
+the bare-prefix variant `sourcetype="thousandeyes:*"` because it
+was missing the `cisco:` segment entirely. Whole class of bugs
+slipped past: 4 alert stanzas + 1 trace stanza in `searchbase.conf`,
+plus their description / related_info copy.
+
+### What changed (Build 81)
+
+`packages/.../splunk/default/searchbase.conf`
+
+- 4× `sourcetype="thousandeyes:alerts"` → `sourcetype="cisco:thousandeyes:alerts"`
+  - `[teuc_5_9_19_isp_performance_degradation_alerts]` (line 5686)
+  - `[teuc_5_9_46_alert_severity_distribution]` (line 6250)
+  - `[teuc_5_9_47_alert_timeline_trending]` (line 6272)
+  - `[teuc_5_9_54_mttr_reduction_via_network_vs_application_isolation]` (line 6420)
+- 1× `sourcetype="thousandeyes:traces"` → `sourcetype="cisco:thousandeyes:trace"`
+  (also fixed plural→singular per authoritative list)
+  - `[teuc_5_9_52_trace_span_analysis]` (line 6375)
+- HTML doc copy in those stanzas (`<code>thousandeyes:alerts</code>`,
+  `<code>thousandeyes:traces</code>`, `<b>thousandeyes:alerts sourcetype</b>`,
+  `raw <code>thousandeyes:alert</code> events`,
+  `raw <code>thousandeyes:metric</code> events`) all corrected to
+  the `cisco:thousandeyes:*` form.
+- Verified via grep: zero remaining `[^:.]thousandeyes:*` matches
+  in `searchbase.conf`.
+
+### Files NOT touched (intentional)
+
+- `docs/SESSION_LOG.md` historical entries (Build 76/78/79/80
+  references in older sections) — those are the historical record
+  of what was true at the time. Revising them would be revisionist.
+- `scripts/sourcetype_field_inventory*.json` and `.md` — those are
+  audit snapshots produced by `scripts/audit_searchbase.py`; they
+  reflect what stanzas referenced at audit time. Next audit run
+  will regenerate them with the corrected sourcetype names.
+
+### Verification
+
+```
+$ rg '[^:.]thousandeyes:[a-zA-Z_-]+' \
+    packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf
+(no matches)
+```
+
+`app.conf` build bumped 80 → 81. `yarn build` clean.
+
+### What's next
+
+- Wire real Alerts data into the site map popup (next build).
+- Drop the unused per-site Latency tile from the popup (next build).
+- Operator field-list dump for `cisco:thousandeyes:alerts` and
+  `cisco:thousandeyes:trace` so we can stop guessing on field names
+  the same way we stopped guessing on sourcetype strings.
+
+---
+
 ## 2026-05-13 (Build 80) — Correct ThousandEyes sourcetype names everywhere
 
 ### Context
