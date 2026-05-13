@@ -7,6 +7,109 @@
 
 ---
 
+## 2026-05-13 (Build 89) — Tag taxonomy round 2: collapses, drops, locked vocabulary
+
+### Context
+
+Build 88 dropped noisy tags and replaced underscores with spaces, but a closer
+look at the inventory still showed plenty of inconsistency: same concept
+under two different spellings (`Alert` / `Alerts`, `Site` / `Sites`, `UX` /
+`User Experience`, `DNAC` / `Catalyst Center`, `Spaces` / `Cisco Spaces`),
+panel-shape tags drifting (`Timechart` next to `Trend`), demo provenance
+leaking into the catalogue (`Demo`, `Tallahassee`, `Auburndale`, `Statewide`),
+case mistakes (`NON COMPLIANT`), and singleton noise (`IT`, `Macros`,
+`Index`, `Pipeline`, `Report`, `Reporting`). The user reviewed the inventory,
+flagged that this needed another pass, and approved a full set of collapses
+and drops.
+
+### Changes
+
+#### 1. Tag collapses (rename + dedupe, 119 stanzas updated)
+
+| From | To | Reason |
+|---|---|---|
+| `Alert` | `Alerts` | subject tags are plural |
+| `Trace` | `Traces` | same |
+| `Site` | `Sites` | same |
+| `Client` | `Clients` | same |
+| `UX` | `User Experience` | reads better in filter UI |
+| `DNAC` | `Catalyst Center` | DNAC is the legacy product name |
+| `Spaces` | `Cisco Spaces` | bare `Spaces` is ambiguous |
+| `Pool Exhausted` | `Pool Exhaustion` | noun form |
+| `Timechart` | `Trend` | `Timechart` is the SPL command; `Trend` is the panel shape |
+| `Geographic` | `Map` | `Map` covers the geo subject and shape |
+| `Geolocation` | `Map` | same |
+| `NON COMPLIANT` | `Non Compliant` | matches the rest of the file's casing |
+
+Per-stanza dedupe is case-insensitive after the rename, so a stanza that
+already carried both forms collapses to one tag.
+
+#### 2. Tag drops (no replacement)
+
+- `IT` — every stanza that was tagged with bare `IT` already carried
+  `IT Health` (77) as the meaningful tag.
+- `Macros`, `Index`, `Pipeline` — implementation noise, not filterable
+  signal.
+- `Demo`, `Tallahassee`, `Auburndale`, `Statewide` — FDEM-specific demo
+  provenance leaked into a generic catalogue.
+- `Report`, `Reporting` — both singletons, both vague.
+
+#### 3. Format skill: locked vocabulary
+
+`splunk-spl-searchbase-format` skill expanded with three explicit rules:
+
+- **Subject tags are plural; intent tags are singular.** Subject tags
+  (`Alerts`, `Sites`, `Clients`, `Devices`, `Issues`, `Sessions`, `Events`,
+  `Traces`, `Transactions`) name a class of entities. Intent / panel-shape
+  tags (`Trend`, `Detail`, `Drilldown`, `KPI`, `Map`, `Bar`, `Pie`, `Table`,
+  `Comparison`, `Distribution`, `Breakdown`, `Leaderboard`) name what the
+  panel looks like. Acronyms (`BGP`, `DNS`, `ISE`, `XDR`, `RTP`, `SIP`) stay
+  as-is. `Bar Chart`, `Pie Chart`, `Timechart` are explicitly called out as
+  forbidden synonyms.
+- **One canonical name per concept.** `Catalyst Center` not `DNAC`,
+  `User Experience` not `UX`, `Cisco Spaces` not `Spaces`, `Map` not
+  `Geographic` / `Geolocation`. `Geo Enriched` is allowed only when the
+  SPL has joined data to a geo lookup.
+- **Expanded "no noise tags" list.** Now spells out vague-single-word noise
+  (bare `IT` → use `IT Health`), implementation noise (`Macros`, `Index`,
+  `Pipeline`), demo-provenance leaks (`Demo`, `Tallahassee`, `Auburndale`,
+  `Statewide`), and generic verbs (`Report`, `Reporting`) alongside the
+  existing list.
+
+### Verification
+
+- `yarn build` clean; only pre-existing asset-size warnings.
+- SPL byte-equivalence (whitespace-normalized) across all 530 stanzas: 0
+  mismatches.
+- All 22 target tag values (12 collapsed-from + 10 dropped) confirmed at
+  count = 0 post-pass.
+- Canonical winners absorbed the merges as expected: `Catalyst Center`
+  119 → 128, `Trend` 77 → 81, `Alerts` 15 → 23, `Cisco Spaces` 3 → 18,
+  `User Experience` 14 → 26, `Sites` 16 → 17.
+
+### Files touched
+
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf`
+  — 119 tag lines rewritten; SPL untouched.
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf`
+  — `build = 88` → `build = 89`.
+- `.cursor/skills/splunk-spl-searchbase-format/SKILL.md` — `tags` section
+  rewritten with subject-plural / intent-singular rule, canonical-name
+  rule, and expanded noise-tag list.
+- `packages/splunk-cisco-dashboards/docs/SESSION_LOG.md` — this entry.
+
+### What's next
+
+Same carryover as Build 88, plus:
+
+- **Singleton sweep (deferred).** The post-Build-89 inventory still has a
+  long tail of count-1 tags (`A2A`, `AWS`, `Azure`, `GCP`, `Brute Force`,
+  `External IP`, …). Some are genuinely unique and useful; some are
+  drift. Worth another pass once the dashboards stabilize, but not
+  blocking.
+
+---
+
 ## 2026-05-13 (Build 88) — Tag cleanup, TA Stock SPL reformat, Cursor skill, critical-website logic fix
 
 ### Context

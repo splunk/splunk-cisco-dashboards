@@ -91,10 +91,18 @@ A single very long line is unreadable in code review and in the .conf file. Alwa
 Tags are the primary fast-filter signal in the UI. Treat them as **what would I search for to find this stanza?**
 
 - **Use spaces, not underscores.** `Catalyst Center`, not `Catalyst_Center`. `IT Health`, not `IT_Health`.
-- **No noise tags.** Do not add `Cisco`, `Accelerated`, `Cisco_TA`, `TEUC`, `Migrated_From_SavedSearch`, `Composite_Replacement`, or capability flags like `Requires_Cisco_ThousandEyes_DM` / `Requires_Cisco_ThousandEyes_Alerts_DM`. The dependency belongs in `description`/`explanation`, not the filterable tag set.
+- **Subject tags are plural; intent tags are singular.**
+  - **Subject** (what the search is *about* — a class of entities the search counts/lists/groups): `Alerts`, `Sites`, `Clients`, `Devices`, `Issues`, `Sessions`, `Events`, `Traces`, `Transactions`. Do not commit `Alert`, `Site`, `Client`, `Trace`, `Transaction`.
+  - **Intent / shape** (what the panel *looks like*): `Trend`, `Detail`, `Drilldown`, `KPI`, `Map`, `Bar`, `Pie`, `Table`, `Comparison`, `Distribution`, `Breakdown`, `Leaderboard`. Do not invent variants like `Bar Chart`, `Pie Chart`, `Timechart` (`Timechart` is the SPL command — the panel shape is `Trend`).
+  - **Acronyms and protocols stay as-is** regardless of plurality: `BGP`, `DNS`, `ISE`, `XDR`, `RTP`, `SIP`.
+- **One canonical name per concept.** Do not commit aliases that mean the same thing as an existing tag:
+  - `Catalyst Center`, never `DNAC` (DNAC is the legacy name).
+  - `User Experience`, never `UX`.
+  - `Cisco Spaces`, never bare `Spaces`.
+  - `Map`, never `Geographic` or `Geolocation` (use `Geo Enriched` only when the data has been joined to a geo lookup and the SPL output shape reflects that).
+- **No noise tags.** Do not add `Cisco`, `Accelerated`, `Cisco_TA`, `TEUC`, `Migrated_From_SavedSearch`, `Composite_Replacement`, capability flags like `Requires_Cisco_ThousandEyes_DM` / `Requires_Cisco_ThousandEyes_Alerts_DM`, vague single-word tags like bare `IT` (use `IT Health` instead), implementation noise like `Macros` / `Index` / `Pipeline`, demo provenance like `Demo` / `Tallahassee` / `Auburndale` / `Statewide`, or generic verbs like `Report` / `Reporting`. The dependency or context belongs in `description` / `explanation`, not the filterable tag set.
 - **Be specific.** A bar-chart panel of TE alerts by severity should be tagged `Alerts,ThousandEyes,Severity,Bar`, not `ThousandEyes,Alerts`.
-- **Mix subject + intent.** Subject tags name what the search is about (`BGP`, `DNS`, `Catalyst Center`, `ThousandEyes`, `Voice`). Intent tags name what shape it returns (`Trend`, `Detail`, `Drilldown`, `KPI`, `Geo Map`, `Bar`, `Pie`, `Table`).
-- **Provenance is fine.** `TA Stock Dashboard` is a useful tag to mark stanzas harvested from upstream TA dashboards because consumers may want to filter for or against them.
+- **Provenance is fine.** `TA Stock Dashboard` is a useful tag to mark stanzas harvested from upstream TA dashboards because consumers may want to filter for or against them. `ESCU`, `ITSI` are also acceptable provenance tags.
 
 ### `search_name`
 
