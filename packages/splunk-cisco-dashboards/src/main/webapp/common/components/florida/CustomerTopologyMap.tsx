@@ -3598,6 +3598,23 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
                             opening the editor afterwards doesn't
                             clobber the change).
                         */}
+                        {/*
+                            Data-source picker — visually loud on purpose.
+                            Operators have repeatedly told us they couldn't
+                            find this control when it was a quiet greyed-out
+                            row, so we wrap it in a sky-accent border + bold
+                            "CHANGE SEARCH" header that's unmissable inside
+                            the popup. We render it UNCONDITIONALLY: when
+                            the catalogue is still loading, the dropdown is
+                            disabled with a "Loading catalogue…" placeholder
+                            so the affordance is obviously present even
+                            before options arrive. When the catalogue is
+                            empty (no stanzas tagged Topology_Site /
+                            Topology_Link in this app), the dropdown stays
+                            disabled but still proves the picker exists —
+                            with a hint pointing at the editor's free-form
+                            input as a fallback.
+                        */}
                         {(() => {
                             const kind = selected.kind;
                             const id =
@@ -3612,35 +3629,34 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
                                 kind === 'site'
                                     ? siteSearchOptions
                                     : linkSearchOptions;
-                            if (!catalogueLoaded || options.length === 0) {
-                                return null;
-                            }
+                            const optionsReady =
+                                catalogueLoaded && options.length > 0;
                             return (
                                 <div
                                     className={cn(
-                                        'space-y-1 rounded-md border px-2 py-2',
+                                        'space-y-1.5 rounded-md border-2 px-2.5 py-2.5',
                                         isDark
-                                            ? 'border-slate-800 bg-slate-900/40'
-                                            : 'border-slate-200 bg-slate-50/80'
+                                            ? 'border-sky-500/60 bg-sky-500/10'
+                                            : 'border-sky-500/70 bg-sky-50'
                                     )}
                                 >
                                     <div className="flex items-center justify-between gap-2">
                                         <span
                                             className={cn(
-                                                'text-[8px] font-black uppercase tracking-widest',
+                                                'text-[10px] font-black uppercase tracking-widest',
                                                 isDark
-                                                    ? 'text-slate-500'
-                                                    : 'text-slate-500'
+                                                    ? 'text-sky-300'
+                                                    : 'text-sky-700'
                                             )}
                                         >
-                                            Data source
+                                            ▾ Change search ({kind})
                                         </span>
                                         <span
                                             className={cn(
                                                 'text-[8px] font-mono uppercase tracking-wider',
                                                 isDark
-                                                    ? 'text-slate-600'
-                                                    : 'text-slate-400'
+                                                    ? 'text-sky-400/70'
+                                                    : 'text-sky-600/80'
                                             )}
                                         >
                                             {kind === 'site'
@@ -3649,11 +3665,13 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
                                         </span>
                                     </div>
                                     <select
+                                        disabled={!optionsReady}
                                         className={cn(
-                                            'w-full rounded-md border px-2 py-1.5 text-[11px] font-semibold outline-none transition-colors focus:ring-1 focus:ring-sky-400 cursor-pointer',
+                                            'w-full rounded-md border-2 px-2 py-1.5 text-[11px] font-semibold outline-none transition-colors focus:ring-2 focus:ring-sky-400',
+                                            optionsReady && 'cursor-pointer',
                                             isDark
-                                                ? 'bg-slate-950 border-slate-700 text-slate-100'
-                                                : 'bg-white border-slate-200 text-slate-800'
+                                                ? 'bg-slate-950 border-sky-500/50 text-slate-100 disabled:opacity-60'
+                                                : 'bg-white border-sky-400 text-slate-800 disabled:opacity-60'
                                         )}
                                         value={
                                             options.some(
@@ -3687,9 +3705,13 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
                                             reads as a broken control.
                                         */}
                                         <option value="" disabled>
-                                            {currentSearchName
-                                                ? `Currently: ${currentSearchName}`
-                                                : 'Pick a search…'}
+                                            {!catalogueLoaded
+                                                ? 'Loading catalogue…'
+                                                : options.length === 0
+                                                  ? 'No tagged searches found — use the editor to type a custom name'
+                                                  : currentSearchName
+                                                    ? `Currently: ${currentSearchName}`
+                                                    : 'Pick a search…'}
                                         </option>
                                         {options.map((record) => (
                                             <option
@@ -3704,13 +3726,13 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
                                         className={cn(
                                             'text-[9px] leading-relaxed',
                                             isDark
-                                                ? 'text-slate-500'
-                                                : 'text-slate-500'
+                                                ? 'text-sky-200/80'
+                                                : 'text-sky-800/80'
                                         )}
                                     >
                                         {kind === 'site'
-                                            ? 'What populates this site marker. Switch to a Demo stanza to preview a green / amber / red state, or to a different live feed.'
-                                            : 'What measures this connection. Includes the live ThousandEyes A2A stanza and Demo feeds for state preview.'}
+                                            ? 'Swap which searchbase.conf entry powers this site marker. Demo stanzas let you preview green / amber / red states without real telemetry.'
+                                            : 'Swap which searchbase.conf entry measures this connection. Includes the live ThousandEyes A2A stanza and Demo feeds.'}
                                     </p>
                                 </div>
                             );
@@ -4370,93 +4392,129 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                             was treated as opaque jargon and
                                             rarely touched.
                                         */}
-                                        <div className="space-y-1">
+                                        {/*
+                                            Editor variant of the data-source
+                                            picker. Same accent treatment as
+                                            the read-only popup so operators
+                                            land on the SAME visual affordance
+                                            in both surfaces. Always renders
+                                            the dropdown — disabled with a
+                                            helpful placeholder when no
+                                            catalogue entries match — so the
+                                            picker can't appear "missing"
+                                            just because the catalogue is
+                                            still loading.
+                                        */}
+                                        <div
+                                            className={cn(
+                                                'space-y-1.5 rounded-md border-2 px-2.5 py-2.5',
+                                                isDark
+                                                    ? 'border-sky-500/60 bg-sky-500/10'
+                                                    : 'border-sky-500/70 bg-sky-50'
+                                            )}
+                                        >
                                             <div className="flex items-center justify-between gap-2">
                                                 <span
                                                     className={cn(
-                                                        editorLabelClass,
+                                                        'text-[10px] font-black uppercase tracking-widest',
                                                         isDark
-                                                            ? 'text-slate-500'
-                                                            : 'text-slate-400'
+                                                            ? 'text-sky-300'
+                                                            : 'text-sky-700'
                                                     )}
                                                 >
-                                                    Data source
+                                                    ▾ Change search (site)
                                                 </span>
                                                 <span
                                                     className={cn(
                                                         'text-[8px] font-mono uppercase tracking-wider',
                                                         isDark
-                                                            ? 'text-slate-600'
-                                                            : 'text-slate-400'
+                                                            ? 'text-sky-400/70'
+                                                            : 'text-sky-600/80'
                                                     )}
                                                 >
                                                     site search
                                                 </span>
                                             </div>
-                                            {siteSearchOptions.length > 0 ? (
-                                                <select
-                                                    className={cn(
-                                                        editorInputClass(isDark),
-                                                        'cursor-pointer'
-                                                    )}
-                                                    value={
-                                                        siteSearchOptions.some(
-                                                            (record) =>
-                                                                record.searchName ===
-                                                                site.searchName
-                                                        )
-                                                            ? site.searchName ?? ''
-                                                            : ''
-                                                    }
-                                                    onChange={(event) => {
-                                                        const next =
-                                                            event.target.value;
-                                                        if (!next) return;
-                                                        updateSite(site.id, {
-                                                            searchName: next,
-                                                        });
-                                                    }}
-                                                    title="Pick a search from the catalogue (filtered to Topology_Site stanzas, including Demo feeds)"
-                                                >
-                                                    <option value="" disabled>
-                                                        {site.searchName
-                                                            ? `Currently: ${site.searchName}`
-                                                            : 'Pick a search…'}
-                                                    </option>
-                                                    {siteSearchOptions.map((record) => (
+                                            <select
+                                                disabled={
+                                                    siteSearchOptions.length ===
+                                                    0
+                                                }
+                                                className={cn(
+                                                    'w-full rounded-md border-2 px-2 py-1.5 text-[11px] font-semibold outline-none transition-colors focus:ring-2 focus:ring-sky-400',
+                                                    siteSearchOptions.length >
+                                                        0 && 'cursor-pointer',
+                                                    isDark
+                                                        ? 'bg-slate-950 border-sky-500/50 text-slate-100 disabled:opacity-60'
+                                                        : 'bg-white border-sky-400 text-slate-800 disabled:opacity-60'
+                                                )}
+                                                value={
+                                                    siteSearchOptions.some(
+                                                        (record) =>
+                                                            record.searchName ===
+                                                            site.searchName
+                                                    )
+                                                        ? site.searchName ?? ''
+                                                        : ''
+                                                }
+                                                onChange={(event) => {
+                                                    const next =
+                                                        event.target.value;
+                                                    if (!next) return;
+                                                    updateSite(site.id, {
+                                                        searchName: next,
+                                                    });
+                                                }}
+                                                title="Pick a search from the catalogue (filtered to Topology_Site stanzas, including Demo feeds)"
+                                            >
+                                                <option value="" disabled>
+                                                    {siteSearchOptions.length ===
+                                                    0
+                                                        ? 'No catalogue entries — type a custom name below'
+                                                        : site.searchName
+                                                          ? `Currently: ${site.searchName}`
+                                                          : 'Pick a search…'}
+                                                </option>
+                                                {siteSearchOptions.map(
+                                                    (record) => (
                                                         <option
                                                             key={record.id}
-                                                            value={record.searchName}
+                                                            value={
+                                                                record.searchName
+                                                            }
                                                         >
                                                             {record.searchName}
                                                         </option>
-                                                    ))}
-                                                </select>
-                                            ) : null}
+                                                    )
+                                                )}
+                                            </select>
                                             <input
-                                                className={editorInputClass(isDark)}
+                                                className={editorInputClass(
+                                                    isDark
+                                                )}
                                                 value={site.searchName ?? ''}
-                                                placeholder="Custom search name (e.g. Overview - Site Tallahassee Health)"
+                                                placeholder="Or type a custom search name (e.g. Overview - Site Tallahassee Health)"
                                                 onChange={(event) =>
                                                     updateSite(site.id, {
-                                                        searchName: event.target.value,
+                                                        searchName:
+                                                            event.target.value,
                                                     })
                                                 }
                                             />
                                             <span
                                                 className={cn(
-                                                    'block text-[9px] tracking-wide',
+                                                    'block text-[9px] leading-relaxed',
                                                     isDark
-                                                        ? 'text-slate-500'
-                                                        : 'text-slate-400'
+                                                        ? 'text-sky-200/80'
+                                                        : 'text-sky-800/80'
                                                 )}
                                             >
-                                                What populates this marker.
+                                                Swap which searchbase.conf
+                                                entry powers this site marker.
                                                 Pick from the catalogue or
-                                                type a custom searchbase
-                                                entry name. Leave blank to
-                                                show the static placeholder
-                                                only.
+                                                type a custom name. Leave
+                                                blank for the static
+                                                placeholder.
                                             </span>
                                         </div>
                                         <div className="grid grid-cols-2 gap-2">
@@ -4728,93 +4786,123 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                             searchbase entry name not yet
                                             tagged.
                                         */}
-                                        <div className="space-y-1">
+                                        {/*
+                                            Editor variant of the link
+                                            data-source picker. Mirrors the
+                                            site card and the read-only
+                                            popup so the affordance is
+                                            identical on every surface.
+                                        */}
+                                        <div
+                                            className={cn(
+                                                'space-y-1.5 rounded-md border-2 px-2.5 py-2.5',
+                                                isDark
+                                                    ? 'border-sky-500/60 bg-sky-500/10'
+                                                    : 'border-sky-500/70 bg-sky-50'
+                                            )}
+                                        >
                                             <div className="flex items-center justify-between gap-2">
                                                 <span
                                                     className={cn(
-                                                        editorLabelClass,
+                                                        'text-[10px] font-black uppercase tracking-widest',
                                                         isDark
-                                                            ? 'text-slate-500'
-                                                            : 'text-slate-400'
+                                                            ? 'text-sky-300'
+                                                            : 'text-sky-700'
                                                     )}
                                                 >
-                                                    Data source
+                                                    ▾ Change search (link)
                                                 </span>
                                                 <span
                                                     className={cn(
                                                         'text-[8px] font-mono uppercase tracking-wider',
                                                         isDark
-                                                            ? 'text-slate-600'
-                                                            : 'text-slate-400'
+                                                            ? 'text-sky-400/70'
+                                                            : 'text-sky-600/80'
                                                     )}
                                                 >
                                                     link search
                                                 </span>
                                             </div>
-                                            {linkSearchOptions.length > 0 ? (
-                                                <select
-                                                    className={cn(
-                                                        editorInputClass(isDark),
-                                                        'cursor-pointer'
-                                                    )}
-                                                    value={
-                                                        linkSearchOptions.some(
-                                                            (record) =>
-                                                                record.searchName ===
-                                                                link.searchName
-                                                        )
-                                                            ? link.searchName ?? ''
-                                                            : ''
-                                                    }
-                                                    onChange={(event) => {
-                                                        const next =
-                                                            event.target.value;
-                                                        if (!next) return;
-                                                        updateLink(link.id, {
-                                                            searchName: next,
-                                                        });
-                                                    }}
-                                                    title="Pick a search from the catalogue (filtered to Topology_Link stanzas, including Demo feeds)"
-                                                >
-                                                    <option value="" disabled>
-                                                        {link.searchName
-                                                            ? `Currently: ${link.searchName}`
-                                                            : 'Pick a search…'}
-                                                    </option>
-                                                    {linkSearchOptions.map((record) => (
+                                            <select
+                                                disabled={
+                                                    linkSearchOptions.length ===
+                                                    0
+                                                }
+                                                className={cn(
+                                                    'w-full rounded-md border-2 px-2 py-1.5 text-[11px] font-semibold outline-none transition-colors focus:ring-2 focus:ring-sky-400',
+                                                    linkSearchOptions.length >
+                                                        0 && 'cursor-pointer',
+                                                    isDark
+                                                        ? 'bg-slate-950 border-sky-500/50 text-slate-100 disabled:opacity-60'
+                                                        : 'bg-white border-sky-400 text-slate-800 disabled:opacity-60'
+                                                )}
+                                                value={
+                                                    linkSearchOptions.some(
+                                                        (record) =>
+                                                            record.searchName ===
+                                                            link.searchName
+                                                    )
+                                                        ? link.searchName ?? ''
+                                                        : ''
+                                                }
+                                                onChange={(event) => {
+                                                    const next =
+                                                        event.target.value;
+                                                    if (!next) return;
+                                                    updateLink(link.id, {
+                                                        searchName: next,
+                                                    });
+                                                }}
+                                                title="Pick a search from the catalogue (filtered to Topology_Link stanzas, including Demo feeds)"
+                                            >
+                                                <option value="" disabled>
+                                                    {linkSearchOptions.length ===
+                                                    0
+                                                        ? 'No catalogue entries — type a custom name below'
+                                                        : link.searchName
+                                                          ? `Currently: ${link.searchName}`
+                                                          : 'Pick a search…'}
+                                                </option>
+                                                {linkSearchOptions.map(
+                                                    (record) => (
                                                         <option
                                                             key={record.id}
-                                                            value={record.searchName}
+                                                            value={
+                                                                record.searchName
+                                                            }
                                                         >
                                                             {record.searchName}
                                                         </option>
-                                                    ))}
-                                                </select>
-                                            ) : null}
+                                                    )
+                                                )}
+                                            </select>
                                             <input
-                                                className={editorInputClass(isDark)}
+                                                className={editorInputClass(
+                                                    isDark
+                                                )}
                                                 value={link.searchName ?? ''}
-                                                placeholder="Custom search name (e.g. Overview - Link Auburndale to Tallahassee Health)"
+                                                placeholder="Or type a custom search name (e.g. Overview - Link Auburndale to Tallahassee Health)"
                                                 onChange={(event) =>
                                                     updateLink(link.id, {
-                                                        searchName: event.target.value,
+                                                        searchName:
+                                                            event.target.value,
                                                     })
                                                 }
                                             />
                                             <span
                                                 className={cn(
-                                                    'block text-[9px] tracking-wide',
+                                                    'block text-[9px] leading-relaxed',
                                                     isDark
-                                                        ? 'text-slate-500'
-                                                        : 'text-slate-400'
+                                                        ? 'text-sky-200/80'
+                                                        : 'text-sky-800/80'
                                                 )}
                                             >
-                                                What measures this connection.
+                                                Swap which searchbase.conf
+                                                entry measures this connection.
                                                 Pick from the catalogue or
-                                                type a custom searchbase
-                                                entry name. Leave blank to
-                                                show the static placeholder
-                                                only.
+                                                type a custom name. Leave
+                                                blank for the static
+                                                placeholder.
                                             </span>
                                         </div>
                                         <label className="block space-y-1">

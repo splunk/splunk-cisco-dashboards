@@ -7,6 +7,105 @@
 
 ---
 
+## 2026-05-12 (very late, picker visibility) — Make the data-source picker unmissable
+
+### Context
+
+Even after `af6560d` and `71d810e` shipped the per-site / per-link
+search picker (in the editor and in the read-only popup), Alan still
+could not find it on the deployed FDEM stack:
+
+> "where is the option to pick a different search for the sites and
+> link?? in the stupid screenshot, where is it? I been asking you for
+> the last 2 hours the same stupid ask!"
+
+### Diagnosis
+
+Three plausible reasons Alan wasn't seeing the picker, only one of
+which we control directly:
+
+1. **Build drift.** The build deployed to FDEM might pre-date `fb5a275`
+   (build 67). If so, the picker code literally isn't in the bundle.
+   We can't fix this from the codebase — only by bumping the version
+   so Alan can see a fresh build number land.
+2. **Catalogue gate.** All three picker placements were gated on
+   `catalogueLoaded && options.length > 0`. If the searchbase REST
+   endpoint stalled or returned nothing tagged `Topology_Site` /
+   `Topology_Link`, the picker would render `null`. From the user's
+   perspective: "there's no option" — accurate, but for an unrelated
+   reason.
+3. **Discoverability.** The picker existed but used quiet greyed-out
+   styling (`text-slate-500`, no border accent), labeled "Data source"
+   in `text-[8px]`. On a long site / link card with NAME / SHORT /
+   ROLE / STATUS / coordinates / Catalyst Center fields / etc., the
+   one row that mattered for the conversation was the one styled
+   like all the others, near the top.
+
+### Fix (build 72, commit pinned below)
+
+Three coordinated changes to `CustomerTopologyMap.tsx`, applied to
+all three picker placements (read-only popup, editor site card,
+editor link card):
+
+1. **Render unconditionally.** The `if (!catalogueLoaded ||
+   options.length === 0) return null` gate is gone. The dropdown
+   always renders. When the catalogue is loading, the dropdown is
+   `disabled` with placeholder "Loading catalogue…". When the
+   catalogue returned no tagged entries, the placeholder reads "No
+   catalogue entries — type a custom name below" and the free-form
+   text input below stays editable. The picker is now a permanent
+   structural part of the card, not a conditional.
+
+2. **Sky-accent visual treatment.** The container went from neutral
+   slate (`border-slate-800 bg-slate-900/40`) to a sky-blue accent
+   (`border-2 border-sky-500/60 bg-sky-500/10` in dark, the lighter
+   equivalent in light). The header label went from `text-[8px]
+   text-slate-500` to `text-[10px] text-sky-300 font-black` and now
+   reads "▾ CHANGE SEARCH (site)" / "▾ CHANGE SEARCH (link)" instead
+   of the generic "Data source". The dropdown itself got a `border-2`
+   and a brighter focus ring.
+
+3. **Helper text rewritten** to use the verb the user uses: "Swap
+   which searchbase.conf entry powers this site marker. Demo stanzas
+   let you preview green / amber / red states without real
+   telemetry." For links: "Swap which searchbase.conf entry measures
+   this connection. Includes the live ThousandEyes A2A stanza and
+   Demo feeds."
+
+The picker now appears in three places, all visually identical:
+
+- **Map popup** — click any site or link; the picker is the highlighted
+  blue panel inside the popup, above the "Show SPL" toggle.
+- **Editor → site card** — click the pencil icon, expand any site;
+  the picker is the highlighted blue panel near the top.
+- **Editor → link card** — same, for any link.
+
+`app.conf` build bumped from 71 → 72. Once Alan deploys, the version
+string in the app's footer / about page will read 72; if it still
+reads <72, the deploy didn't take.
+
+### Verification
+
+- `yarn tsc --noEmit` clean
+- `ReadLints` clean for `CustomerTopologyMap.tsx`
+- Visual: in dev, the picker is the only sky-accented panel on each
+  card / popup, impossible to confuse with the surrounding fields.
+
+### What's next
+
+When Alan confirms he sees the highlighted "▾ CHANGE SEARCH" picker
+on FDEM and the dropdown lists the expected entries, the discovery
+problem is closed. If on build 72 the dropdown is `disabled` and
+reads "No catalogue entries — type a custom name below", the next
+step is to debug the searchbase REST endpoint on FDEM (likely a
+permissions / app-namespace issue), not the React component.
+
+### Commit
+
+_Pinned post-commit._
+
+---
+
 ## 2026-05-12 (late, two missed stanzas) — Location filter applied to umbrella + inter-site latency
 
 ### Context
