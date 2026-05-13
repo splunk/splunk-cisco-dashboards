@@ -1,7 +1,7 @@
 ---
 description: Cisco ThousandEyes field reference and SPL conventions for the Cisco Exec Dashboards app. Authoritative source for DM dataset/field names and the metric_name: prefix convention.
 globs: **/searchbase.conf,**/savedsearches.conf,**/data/ui/views/*.xml,**/webapp/**/*.tsx,**/webapp/**/*.ts
-version: 1.0.0
+version: 1.1.0
 alwaysApply: false
 ---
 
@@ -12,8 +12,19 @@ rule_id: splunk-cisco-thousandeyes-fields
 This is the **single source of truth** for the `Cisco_ThousandEyes`
 data model and the canonical field names of `cisco:thousandeyes:*`
 sourcetypes as seen on the FDEM stack. Confirmed against the live
-DM via `| from datamodel:Cisco_ThousandEyes...` on 2026-05-13
-(operator-provided field list).
+DM via `| from datamodel:Cisco_ThousandEyes...` and the live raw
+event index via
+`` `index_thousandeyes` sourcetype="cisco:thousandeyes:metric" | `field_list` ``
+on 2026-05-13 (operator-provided field lists).
+
+**The raw-event field list and the DM field list are NOT the
+same.** Raw events expose ~80 fields (geo, location,
+`network.io.direction`, `network.prefix`, `network.as.path`,
+`target.agent.id`/`location`, additional metrics, etc.) that the
+DM intentionally omits. The DM is a curated subset of 39
+fields. You MUST pick the right list for whichever source you
+query — never assume a field that exists on raw events also
+exists in the DM, and vice versa.
 
 For the underlying DM JSON definition, see
 `/opt/splunk/etc/apps/ta_cisco_thousandeyes/default/data/models/Cisco_ThousandEyes.json`
@@ -178,6 +189,196 @@ specific test family.
 If a unit assumption matters for the SPL output (alert thresholds,
 chart axis labels), call it out in the stanza's `description` and
 have the user confirm.
+
+### Raw `cisco:thousandeyes:metric` field inventory (FDEM-confirmed 2026-05-13)
+
+This is the field list returned by
+`` `index_thousandeyes` sourcetype="cisco:thousandeyes:metric" | `field_list` ``
+on the operator's stack. **Use this list when writing raw-event
+SPL — not the DM list.** The two lists are different.
+
+**Metric measurements** (every one requires the `metric_name:`
+prefix on raw events, same as the DM):
+
+```
+metric_name:bgp.path_changes.count
+metric_name:bgp.reachability
+metric_name:bgp.updates.count
+metric_name:dns.lookup.availability
+metric_name:dns.lookup.duration
+metric_name:http.client.request.duration
+metric_name:http.server.request.availability
+metric_name:http.server.throughput
+metric_name:network.jitter
+metric_name:network.latency
+metric_name:network.loss
+metric_name:web.page_load.completion
+metric_name:web.page_load.duration
+metric_name:web.transaction.completion
+metric_name:web.transaction.duration
+metric_name:web.transaction.errors.count
+```
+
+Note: this set is **smaller than the DM list** (no
+`api.step.*`, no `dns.lookup.validity`, no `ftp.*`, no `rtp.*`,
+no `sip.*`). On this tenant those measurements are not present
+on the raw `cisco:thousandeyes:metric` sourcetype — they are
+created by the TA's data-model field calculations and only
+materialize when querying via the DM. If you need RTP MOS, FTP
+metrics, or SIP measurements, you MUST use the DM, not raw
+events.
+
+Note also: raw events expose `metric_name:web.transaction.errors.count`,
+which the DM does NOT expose. If you need transaction error
+counts, you must use raw events.
+
+**Dimension fields on raw events** (no `metric_name:` prefix):
+
+```
+dest
+dest_port
+direction
+dns.question.name
+duration
+dvc
+error.type
+error_code
+http.request.method
+http.response.status_code
+http.route
+http_method
+marker
+metric_type
+network.as.path
+network.io.direction
+network.prefix
+network.transport
+query
+response_time
+server.address
+server.port
+signature_id
+status
+target
+thousandeyes.account.id
+thousandeyes.data.version
+thousandeyes.monitor.id
+thousandeyes.monitor.location
+thousandeyes.monitor.name
+thousandeyes.permalink
+thousandeyes.source.agent.geo.country.iso_code
+thousandeyes.source.agent.geo.region.iso_code
+thousandeyes.source.agent.geoname.id
+thousandeyes.source.agent.id
+thousandeyes.source.agent.location
+thousandeyes.source.agent.name
+thousandeyes.stream.id
+thousandeyes.target.agent.geo.country.iso_code
+thousandeyes.target.agent.geo.region.iso_code
+thousandeyes.target.agent.geoname.id
+thousandeyes.target.agent.id
+thousandeyes.target.agent.location
+thousandeyes.target.agent.name
+thousandeyes.test.domain
+thousandeyes.test.id
+thousandeyes.test.name
+thousandeyes.test.type
+thruput
+transport
+url.scheme
+```
+
+Test/group "sticky" string fields also seen on this tenant
+(these are FDEM-specific saved-search / test-name tokens, not
+generic schema):
+
+```
+Cloud_Agents
+Firewall_Connection
+Florida_Disaster
+Florida_PA
+Microsoft_Teams
+O365
+SWO
+SaaS_Application_Health_Overview
+Salesforce
+Salesforce_Lightning
+Transport_Relay
+Webex
+```
+
+These are not part of the schema; do not use them as
+generic field names. They appear because of how the user's
+saved searches tag results.
+
+### Raw vs DM — fields the DM has but raw events do NOT
+
+These exist only via the DM (calculated fields the TA materializes
+in the data-model wrapper):
+
+- `metric_name:api.step.completion`
+- `metric_name:api.step.duration`
+- `metric_name:dns.lookup.validity`
+- `metric_name:ftp.client.request.duration`
+- `metric_name:ftp.server.request.availability`
+- `metric_name:ftp.server.throughput`
+- `metric_name:rtp.client.request.mos`
+- `metric_name:sip.client.request.duration`
+- `metric_name:sip.client.request.total_time`
+- `metric_name:sip.server.request.availability`
+
+If a stanza needs any of these, it MUST use the DM. Raw-event SPL
+will silently null on these.
+
+### Raw vs DM — fields raw events have but the DM does NOT
+
+These exist only on raw `cisco:thousandeyes:metric` events:
+
+- `metric_name:web.transaction.errors.count` (extra metric)
+- `network.io.direction` (a2a bidirectional split)
+- `network.prefix` (BGP)
+- `network.as.path` (BGP)
+- `network.transport`
+- `thousandeyes.source.agent.geo.country.iso_code`
+- `thousandeyes.source.agent.geo.region.iso_code`
+- `thousandeyes.source.agent.geoname.id`
+- `thousandeyes.source.agent.location`
+- `thousandeyes.target.agent.id`
+- `thousandeyes.target.agent.location`
+- `thousandeyes.target.agent.geo.*`
+- `thousandeyes.monitor.id`
+- `dest`, `dest_port`, `direction`, `target`, `dvc`, `transport`
+- `http.request.method`, `http.response.status_code`,
+  `http.route`, `url.scheme`
+- `error.type`, `error_code`, `signature_id`, `status`,
+  `response_time`, `query`, `marker`, `metric_type`,
+  `thruput`, `duration`
+
+If a stanza needs any of these, it MUST use raw events. The DM
+will not return them.
+
+### Decision tree — DM or raw?
+
+For every TE-related stanza:
+
+1. **Does the stanza only need fields in the DM list?** → Use DM
+   (`tstats avg(Test_Metrics.metric_name:...) ... from datamodel="Cisco_ThousandEyes.Test_Metrics" ...`).
+   Operator preference is DM-first.
+2. **Does the stanza need any field in the raw-only set above
+   (geo, location, `io.direction`, `prefix`, `as.path`,
+   `web.transaction.errors.count`, etc.)?** → Use raw events
+   (`` `index_thousandeyes` sourcetype="cisco:thousandeyes:metric" ... ``)
+   with bare field names.
+3. **Does the stanza reference a field that's in NEITHER list**
+   (`network.score`, `target.type`, `vpn.vendor`,
+   `thousandeyes.source.agent.connection.type`, `network.as.path`
+   on a non-BGP context, etc.)? → That field does not exist on
+   this tenant. Drop the field, redesign the stanza to use only
+   allowed fields, or delete the stanza if it is meaningless
+   without that field. Do NOT guess.
+4. `api.completion` is **wrong**. The correct field is
+   `api.step.completion` (DM only). Same for `api.duration` →
+   `api.step.duration` (DM only).
 
 ### `Cisco_ThousandEyes.Test_Traces`
 

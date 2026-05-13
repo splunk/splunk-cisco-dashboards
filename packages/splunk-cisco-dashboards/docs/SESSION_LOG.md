@@ -7,6 +7,192 @@
 
 ---
 
+## 2026-05-13 (Build 79) — ThousandEyes SPL reconciliation: `metric_name:` prefix sweep, DM/raw split, dead-stanza disable
+
+### Context
+
+Alan delivered the definitive operator-confirmed field lists for
+both raw `cisco:thousandeyes:metric` events and the
+`Cisco_ThousandEyes.Test_Metrics` data model on FDEM. The two
+lists are NOT identical:
+
+- **Raw events** expose ~80 fields, including geo / location /
+  `network.io.direction` / `network.prefix` / `network.as.path` /
+  `target.agent.id` / `target.agent.location` and an extra
+  `metric_name:web.transaction.errors.count` metric.
+- **`Test_Metrics` DM** is a curated 39-field subset: NO geo,
+  NO location, NO `io.direction`, NO `prefix`, NO `as.path`.
+  Adds `metric_name:api.step.*`, `metric_name:dns.lookup.validity`,
+  `metric_name:ftp.*`, `metric_name:rtp.client.request.mos`,
+  `metric_name:sip.*` (DM-only metrics).
+
+Every metric measurement requires the `metric_name:` prefix in
+both forms — `Test_Metrics.metric_name:network.latency` in
+`tstats`, `metric_name:network.latency` on raw events. The prior
+SPL routinely wrote bare `avg(network.latency)` which silently
+returns null.
+
+### What changed (Build 79)
+
+#### 1. `.cursor/rules/splunk-cisco-thousandeyes-fields.mdc` v1.1.0
+
+- Added the raw-event `cisco:thousandeyes:metric` field
+  inventory verbatim from the operator-confirmed `field_list`
+  output.
+- Made it explicit that the raw and DM lists are different and
+  why: enumerated the DM-only metrics (`api.step.*`,
+  `dns.lookup.validity`, `ftp.*`, `rtp.client.request.mos`,
+  `sip.*`) and the raw-only fields (`web.transaction.errors.count`,
+  geo / location / `io.direction` / `prefix` / `as.path` /
+  `target.agent.*` / `monitor.id` / etc.).
+- Added a four-step decision tree the agent walks for every TE
+  stanza: DM-eligible → DM, needs raw-only field → raw events,
+  field in neither list → drop / redesign / disable.
+- Called out specific common errors (`api.completion` → wrong
+  name, real field is `api.step.completion`, DM-only).
+
+#### 2. `searchbase.conf` — TE SPL reconciliation
+
+**Mass `metric_name:` prefix sweep.** 104 raw-event aggregation
+calls had bare measurement names. Replaced exact substrings (e.g.
+`avg(network.latency)` → `avg(metric_name:network.latency)`) so
+the DM-prefixed forms `avg(Test_Metrics.metric_name:network.X)`
+are not double-prefixed. Coverage: `network.{latency, loss,
+jitter}`, `bgp.{reachability, path_changes.count, updates.count}`,
+`dns.lookup.{availability, duration, validity}`,
+`http.{client.request.duration, server.request.availability,
+server.throughput}`, `web.{page_load.{completion, duration},
+transaction.{completion, duration, errors.count}}`,
+`api.{completion, duration}` → renamed to
+`api.step.{completion, duration}`, `ftp.*`, `sip.*`,
+`rtp.client.request.mos`.
+
+**DM-only stanzas converted from raw to `tstats`.** These
+metrics are not present on raw `cisco:thousandeyes:metric`
+events on this tenant; querying raw would silently null:
+
+- `[teuc_5_9_15_dnssec_validity_monitoring]` —
+  `dns.lookup.validity` (DM-only).
+- `[teuc_5_9_39_api_endpoint_completion_rate]` —
+  `api.step.completion` (DM-only); also corrected the field
+  name from `api.completion` (wrong) to `api.step.completion`.
+- `[teuc_5_9_40_api_response_time_monitoring]` —
+  `api.step.duration`, converted from `timechart` to
+  `tstats … by _time span=5m … | timechart`.
+- `[teuc_5_9_45_ftp_server_availability_and_throughput]` —
+  `ftp.{server.request.availability, client.request.duration,
+  server.throughput}`.
+- `[teuc_11_3_25_sip_server_availability_and_response]` —
+  `sip.server.request.availability`.
+- `[teuc_11_3_26_sip_registration_time_tracking]` —
+  `sip.client.request.{duration, total_time}`.
+- `[teuc_11_3_27_rtp_mos_score_monitoring]` —
+  `rtp.client.request.mos` (DM-only); dropped the original
+  `rtp.client.request.{loss, pdv, discards}` aggregations because
+  those metrics exist in neither list. Stanza now produces
+  per-test/agent MOS averages only.
+
+All DM conversions use `Test_Metrics.metric_name:<measurement>`
+inside `tstats` and a follow-on `rename Test_Metrics.<dim> as
+<dim>` for any `by`-clause dimensions, per the operator's spec.
+
+**Dead-stanza disable.** Six stanzas reference fields present in
+neither the raw event list nor any `Cisco_ThousandEyes` DM
+dataset on this tenant. Disabling them keeps the metadata for
+future re-enable but prevents the search browser from running
+SPL that always nulls:
+
+- `[teuc_5_9_5_path_hop_count_analysis]` — needs `hop_count`
+  (Path_Viz DM exposes only `hops`/`server`/`serverIp`).
+- `[teuc_5_9_6_network_path_change_detection]` — needs
+  `path_hash` (not present anywhere on this tenant).
+- `[teuc_5_9_25_remote_worker_connectivity_health]` — needs
+  `target.type` and `network.score` (endpoint domain not
+  ingested on FDEM).
+- `[teuc_5_9_26_vpn_path_performance]` — needs `target.type`,
+  `vpn.vendor`, `network.score`.
+- `[teuc_5_9_27_endpoint_connection_type_and_network_score]` —
+  needs `thousandeyes.source.agent.connection.type` and
+  `network.score`.
+
+Each disabled stanza:
+- gets `tags = …,Disabled` appended.
+- gets the `description` rewritten to start with
+  `[DISABLED Build 79]` and explain which field is missing.
+- has its `search` body replaced with
+  `| makeresults | head 0 | eval message="DISABLED Build 79: …"`
+  so dashboards that reference the saved-search ID render an
+  empty result set with a self-explanatory diagnostic message
+  instead of erroring or silently nulling.
+
+**TEUC-28 redesigned, not disabled.**
+`[teuc_5_9_28_geographic_workforce_performance_comparison]`
+originally aggregated `network.score` (unsupported) by
+`thousandeyes.source.agent.geo.*` (raw-only). Dropped the
+`network.score` aggregation, removed the
+`thousandeyes.test.domain="endpoint"` filter (endpoint domain
+not ingested), and reshaped the SPL to:
+
+```
+| stats avg(metric_name:network.latency), avg(metric_name:network.loss),
+        count, dc(thousandeyes.source.agent.id) as agent_count
+        by thousandeyes.source.agent.geo.country.iso_code,
+           thousandeyes.source.agent.geo.region.iso_code
+```
+
+Stays on raw events (geo fields are raw-only). Description
+rewritten to call out the rewrite explicitly.
+
+**`[overview_link_te_a2a_health]` left as raw events.** The
+stanza requires geo / location fields (source/target agent
+location, country / region ISO codes) for its AUB↔TLH location
+match, and those fields exist only on raw events. This is the
+correct DM-vs-raw split per the new decision tree.
+`metric_name:` prefixes are correct after the sweep.
+
+#### 3. `app.conf`
+
+`build = 78` → `79`.
+
+### Verification
+
+- `yarn build` (Build 79) — green, no regressions, app stages
+  cleanly. Same two pre-existing webpack asset-size warnings as
+  Build 78 (`overview.js`, background images) — informational
+  only, not Build-79 caused.
+- Manual grep audits:
+  - No remaining `(avg|sum|...)(network|http|dns|bgp|web|api|ftp|sip|rtp).*` calls on bare measurement names in any
+    `search = …` line.
+  - All references to unsupported fields (`network.score`,
+    `target.type`, `vpn.vendor`, `connection.type`, `hop_count`,
+    `path_hash`, `rtp.client.request.{loss,pdv,discards}`) are
+    confined to documentation copy in disabled stanzas; no live
+    SPL references them.
+  - All TE searches use `` `index_thousandeyes` `` (per Build 78);
+    no per-feed alias macros reintroduced.
+  - DM stanzas use `Test_Metrics.metric_name:<measurement>` and
+    rename `Test_Metrics.<dim>` back to bare dim names before
+    follow-on commands.
+- TE field-dictionary rule (`splunk-cisco-thousandeyes-fields.mdc`)
+  is the single source of truth going forward; raw-vs-DM picks
+  follow the four-step decision tree it documents.
+
+### What's next
+
+- Operator-side spot check: pick five stanzas (one DM, two raw,
+  one redesigned, one disabled stub) and run them on the FDEM
+  stack to confirm row counts and field population match
+  expectations.
+- Once spot checks pass: convert remaining DM-eligible
+  network/HTTP/web TEUC stanzas (currently raw-events with
+  correct `metric_name:` prefix) to `tstats` for consistency
+  with operator DM-first preference.
+- Re-enable disabled stanzas only after the operator confirms
+  the missing fields exist on this tenant via field_list /
+  datamodel inspection. Don't reintroduce them speculatively.
+
+---
+
 ## 2026-05-13 (Build 78) — DM-discovery Cursor rule + scrub `index=dnac` from doc copy
 
 ### Context
