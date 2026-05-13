@@ -473,6 +473,31 @@ const METRIC_CONFIG: MetricConfig[] = [
             '"failed auth" tile next to this one is the natural companion drilldown.',
         mock: { seed: 25, sparkMin: 80, sparkMax: 100, value: 98, change: 0 },
     },
+    // 6th Security tile (added 2026-05-12 to unlock the section's + button
+    // up to its 6-tile cap). Narrows XDR Incidents to severity=Critical
+    // only — answers "how many incidents need a war-room right now?"
+    // separately from the broader xdr_incidents trend.
+    {
+        id: 'xdr_critical',
+        section: 'security',
+        label: 'XDR critical',
+        subLabel: 'Severity=Critical incidents only',
+        description:
+            'Distinct Cisco XDR incident IDs at Critical severity in the ' +
+            'dispatched window. Companion to the broader "XDR incidents" tile ' +
+            'next door; this one isolates the escalation-pressure tier.',
+        // Single row: { total }
+        savedSearch: 'Overview - XDR Critical Incidents',
+        valueField: 'total',
+        color: '#dc2626',
+        thresholds: { warning: 1, critical: 5, direction: 'lower_is_better' },
+        thresholdNote:
+            'Critical XDR incidents are pre-triaged by SecureX as the tier most ' +
+            'likely to require executive escalation. > 1 already warrants war-room ' +
+            'consideration; > 5 simultaneously open exceeds the routing capacity ' +
+            'of a single SOC shift on most SecOps teams.',
+        mock: { seed: 26, sparkMin: 0, sparkMax: 2, value: 0, change: 0 },
+    },
     // ----- Building Intelligence -----
     //
     // The four "presence" tiles below (active devices, Wi-Fi clients,
@@ -581,6 +606,33 @@ const METRIC_CONFIG: MetricConfig[] = [
             'is the actionable signal — it usually means a telemetry feed has ' +
             'stalled, not that devices were physically removed.',
         mock: { seed: 35, sparkMin: 5, sparkMax: 50, value: 32, change: 0 },
+    },
+    // 6th Building tile (added 2026-05-12 to unlock the section's + button
+    // up to its 6-tile cap). Catalyst Center AP reachability % — the
+    // obvious complement to "Wi-Fi clients" and "Active devices": if APs
+    // are unreachable, the rest of the building section is fiction.
+    {
+        id: 'ap_health',
+        section: 'building',
+        label: 'AP health',
+        subLabel: 'Reachable APs (Catalyst Center)',
+        description:
+            'Percentage of access points reporting Reachable in Catalyst Center ' +
+            'device-health snapshots. The control-plane availability metric for ' +
+            'the wireless infrastructure that backs Wi-Fi clients and presence.',
+        // Single row: { pct, total, up, down }
+        savedSearch: 'Overview - AP Health',
+        valueField: 'pct',
+        unit: '%',
+        color: '#10b981',
+        thresholds: { warning: 97, critical: 92, direction: 'higher_is_better' },
+        thresholdNote:
+            'Wireless availability ladder. ≥99% is steady-state for a healthy AP ' +
+            'fleet; 92-96% means active wireless impact (open a wireless bridge ' +
+            'call); <92% is a major outage cluster. Calibrate to your fleet — ' +
+            'some campuses normally run at 97-98% because of permanently-offline ' +
+            'spare-pool APs.',
+        mock: { seed: 36, sparkMin: 90, sparkMax: 100, value: 99, change: 0 },
     },
 ];
 

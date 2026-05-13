@@ -105,12 +105,34 @@ export interface TopologyLink {
     sourceAgents?: string;
     targetAgents?: string;
     /**
-     * Optional deep link into the ThousandEyes console for the underlying
-     * test (`https://app.thousandeyes.com/network-app-synthetics/views?
-     * __a=<account>&testId=<test>`). Populated by the TE branch of the
-     * link searchbase stanza using `teAccountId` and `teTestId` captured
-     * from the data model. Map popup renders this as a "View in
-     * ThousandEyes" affordance when present.
+     * Geo-enriched agent location strings sourced from
+     * `thousandeyes.source.agent.location` / `.target.agent.location`
+     * (e.g. "Tallahassee, Florida, US"). Each A2A event ships full geo
+     * metadata; we surface the human-readable location string for the map
+     * popup so operators can see *where* each agent is, not just the agent
+     * name. See `[overview_link_auburndale_tallahassee_health]` v1.6.0.
+     */
+    sourceLocation?: string;
+    targetLocation?: string;
+    /**
+     * ISO 3166-1 alpha-2 country code for each TE agent (e.g. "US"),
+     * sourced from `thousandeyes.source.agent.geo.country.iso_code`.
+     */
+    sourceCountry?: string;
+    targetCountry?: string;
+    /**
+     * ISO 3166-2 region/state code for each TE agent (e.g. "FL"),
+     * sourced from `thousandeyes.source.agent.geo.region.iso_code`.
+     */
+    sourceRegion?: string;
+    targetRegion?: string;
+    /**
+     * Deep link into the ThousandEyes console for the underlying test.
+     * v1.6.0: prefers the per-event `thousandeyes.permalink` (the URL TE
+     * itself emits with every metric event, scoped to the right test /
+     * agent / direction) and falls back to a constructed Path Visualization
+     * URL when the permalink is missing. Map popup renders this as a
+     * "View in ThousandEyes" affordance when present.
      */
     teLink?: string;
     lastUpdated?: string;

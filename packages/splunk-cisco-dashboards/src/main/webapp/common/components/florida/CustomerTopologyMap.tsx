@@ -1195,6 +1195,42 @@ const parseLinkRow = (
         targetAgents:
             textFromRow(row, ['targetAgents', 'target_agents', 'targetAgent']) ??
             base.targetAgents,
+        sourceLocation:
+            textFromRow(row, [
+                'sourceLocation',
+                'source_location',
+                'thousandeyes.source.agent.location',
+            ]) ?? base.sourceLocation,
+        targetLocation:
+            textFromRow(row, [
+                'targetLocation',
+                'target_location',
+                'thousandeyes.target.agent.location',
+            ]) ?? base.targetLocation,
+        sourceCountry:
+            textFromRow(row, [
+                'sourceCountry',
+                'source_country',
+                'thousandeyes.source.agent.geo.country.iso_code',
+            ]) ?? base.sourceCountry,
+        targetCountry:
+            textFromRow(row, [
+                'targetCountry',
+                'target_country',
+                'thousandeyes.target.agent.geo.country.iso_code',
+            ]) ?? base.targetCountry,
+        sourceRegion:
+            textFromRow(row, [
+                'sourceRegion',
+                'source_region',
+                'thousandeyes.source.agent.geo.region.iso_code',
+            ]) ?? base.sourceRegion,
+        targetRegion:
+            textFromRow(row, [
+                'targetRegion',
+                'target_region',
+                'thousandeyes.target.agent.geo.region.iso_code',
+            ]) ?? base.targetRegion,
         teLink:
             textFromRow(row, [
                 'teLink',
@@ -2879,6 +2915,68 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
             ? selectedRecord.search.trim()
             : '';
 
+    // Filtered slices of the searchbase catalogue surfaced INTO the
+    // read-only popup so the operator can swap a marker / line onto a
+    // different feed without having to discover the editor pencil
+    // first. Same filter that the editor's per-card picker uses (tag
+    // membership), so the two surfaces stay in lockstep — anything
+    // selectable here is also selectable in the editor.
+    const popupSiteSearchOptions = useMemo(() => {
+        if (!catalogueByName) return [] as SearchbaseRecord[];
+        return Object.values(catalogueByName)
+            .filter((record) => record.tags.includes('Topology_Site'))
+            .sort((a, b) =>
+                a.searchName.localeCompare(b.searchName, undefined, {
+                    sensitivity: 'base',
+                })
+            );
+    }, [catalogueByName]);
+    const popupLinkSearchOptions = useMemo(() => {
+        if (!catalogueByName) return [] as SearchbaseRecord[];
+        return Object.values(catalogueByName)
+            .filter((record) => record.tags.includes('Topology_Link'))
+            .sort((a, b) =>
+                a.searchName.localeCompare(b.searchName, undefined, {
+                    sensitivity: 'base',
+                })
+            );
+    }, [catalogueByName]);
+
+    // Mutating-from-the-popup callback. Bypasses the editor's draft
+    // layer and writes straight to the persisted topology — appropriate
+    // here because picking a different searchbase entry is a
+    // one-line, instantly-revertable change (just pick the previous
+    // entry again). The editor's atomic save/discard semantics are
+    // still useful for multi-field edits like coordinates and
+    // capacity, where you want to bail without saving.
+    const updateSelectedSearchName = useCallback(
+        (kind: 'site' | 'link', id: string, nextSearchName: string) => {
+            const nextTopology: CustomerTopology =
+                kind === 'site'
+                    ? {
+                          ...storedTopology,
+                          sites: storedTopology.sites.map((site) =>
+                              site.id === id
+                                  ? { ...site, searchName: nextSearchName }
+                                  : site
+                          ),
+                      }
+                    : {
+                          ...storedTopology,
+                          links: storedTopology.links.map((link) =>
+                              link.id === id
+                                  ? { ...link, searchName: nextSearchName }
+                                  : link
+                          ),
+                      };
+            saveTopology(nextTopology);
+            // Also update the live draft so a re-open of the editor
+            // doesn't blow away the popup-driven edit.
+            setDraftTopology(nextTopology);
+        },
+        [storedTopology, saveTopology]
+    );
+
     const spotlightOrder = useMemo(
         () =>
             [...resolvedTopology.sites].sort((a, b) => {
@@ -2906,14 +3004,13 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         return () => window.clearInterval(id);
     }, [spotlightIntervalMs, spotlightOrder, paused, resolvedSelected]);
 
-    useEffect(() => {
-        if (!resolvedSelected) return undefined;
-        const onKey = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') setSelected(null);
-        };
-        document.addEventListener('keydown', onKey);
-        return () => document.removeEventListener('keydown', onKey);
-    }, [resolvedSelected]);
+    // Escape-to-dismiss + click-outside-to-dismiss now both live inside
+    // `SelectionCard` so the panel's lifecycle behaviour is colocated
+    // with the panel. The earlier copy of the Escape listener lived
+    // here at the parent level and used the bubble phase, which let
+    // focused descendants (editor inputs, Leaflet keyboard handlers)
+    // swallow the key by stopPropagation. The new copy uses capture
+    // phase from inside the popup component itself.
 
     const tilePreset =
         TILE_LAYER_PRESETS.find((preset) => preset.id === tilePresetId) ??
@@ -3132,6 +3229,9 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 selectedSearchName={selectedSearchName}
                 selectedSpl={selectedSpl}
                 siteEnrichmentByShortName={siteEnrichmentByShortName}
+                siteSearchOptions={popupSiteSearchOptions}
+                linkSearchOptions={popupLinkSearchOptions}
+                onChangeSearchName={updateSelectedSearchName}
                 onClose={() => setSelected(null)}
                 onOpenInSearch={onOpenInSearch ? openSelectedInSearch : undefined}
             />
@@ -3268,6 +3368,16 @@ interface SelectionCardProps {
     selectedSearchName?: string;
     selectedSpl: string;
     siteEnrichmentByShortName?: Record<string, SiteEnrichment>;
+    /** Catalogue records tagged `Topology_Site` — populates the site picker dropdown surfaced inside the read-only popup. */
+    siteSearchOptions: SearchbaseRecord[];
+    /** Catalogue records tagged `Topology_Link` — populates the link picker dropdown surfaced inside the read-only popup. */
+    linkSearchOptions: SearchbaseRecord[];
+    /** Persists a search-name swap directly into the stored topology, bypassing the editor's atomic draft layer. */
+    onChangeSearchName: (
+        kind: 'site' | 'link',
+        id: string,
+        searchName: string
+    ) => void;
     onClose: () => void;
     onOpenInSearch?: () => void;
 }
@@ -3281,11 +3391,21 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
     selectedSearchName,
     selectedSpl,
     siteEnrichmentByShortName,
+    siteSearchOptions,
+    linkSearchOptions,
+    onChangeSearchName,
     onClose,
     onOpenInSearch,
 }) => {
     const dragControls = useDragControls();
     const [showSpl, setShowSpl] = useState(false);
+    // Ref on the popup container so we can register a *document-level*
+    // mousedown listener that dismisses when the user clicks outside
+    // the panel. The map's MapClickCapture only fires when the click
+    // hits empty map pixels, which doesn't help when the panel covers
+    // basically the entire map column (FDEM's narrow right-column
+    // layout). With this ref we catch clicks anywhere on the page.
+    const panelRef = useRef<HTMLDivElement>(null);
     const selectedKey = selected
         ? selected.kind === 'site'
             ? `site:${selected.site.id}`
@@ -3303,6 +3423,55 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
     useEffect(() => {
         setShowSpl(false);
     }, [selectedKey, selectedSearchName]);
+
+    // Document-level click-outside dismiss. We deliberately skip the
+    // dismissal when the click lands on a leaflet marker or
+    // interactive svg path — those have their own click-to-toggle
+    // handlers and we don't want to fight them. We also skip clicks
+    // inside leaflet popups / tooltips (used by the editor pick
+    // mode).
+    useEffect(() => {
+        if (!selected) return undefined;
+        const onMouseDown = (event: MouseEvent) => {
+            const target = event.target;
+            if (!(target instanceof Node)) return;
+            const panel = panelRef.current;
+            if (panel && panel.contains(target)) return;
+            if (
+                target instanceof Element &&
+                target.closest(
+                    '.leaflet-marker-icon, .leaflet-interactive, .leaflet-popup, .leaflet-tooltip'
+                )
+            ) {
+                return;
+            }
+            onClose();
+        };
+        // Capture phase so descendant `stopPropagation()` calls (the
+        // editor panel, the map's marker handlers, etc.) cannot
+        // swallow the dismissal.
+        document.addEventListener('mousedown', onMouseDown, true);
+        return () =>
+            document.removeEventListener('mousedown', onMouseDown, true);
+    }, [selected, onClose]);
+
+    // Document-level Escape dismiss. Owned by SelectionCard rather
+    // than the parent so the dismissal contract sits next to the
+    // panel's other lifecycle behaviour (drag, click-outside, X
+    // button). Capture phase for the same reason as the mousedown
+    // handler above — we never want a focused editor input or a
+    // Leaflet keyboard handler to eat the Escape.
+    useEffect(() => {
+        if (!selected) return undefined;
+        const onKey = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                event.stopPropagation();
+                onClose();
+            }
+        };
+        document.addEventListener('keydown', onKey, true);
+        return () => document.removeEventListener('keydown', onKey, true);
+    }, [selected, onClose]);
 
     const title =
         selected?.kind === 'site'
@@ -3329,6 +3498,7 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
         <AnimatePresence>
             {selected && (
                 <motion.div
+                    ref={panelRef}
                     initial={{ opacity: 0, x: 20, scale: 0.94 }}
                     animate={{ opacity: 1, x: 0, scale: 1 }}
                     exit={{ opacity: 0, x: 20, scale: 0.94 }}
@@ -3411,6 +3581,140 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
                                 isDark={isDark}
                             />
                         )}
+
+                        {/*
+                            Data-source picker — surfaced INSIDE the
+                            read-only popup so operators don't have to
+                            discover the editor's pencil icon to swap
+                            which search powers a given marker / line.
+                            The dropdown is filtered by tag (Topology_Site
+                            for site selections, Topology_Link for link
+                            selections), same filter the editor's
+                            per-card picker uses, so picks are
+                            interchangeable. Writes go straight through
+                            to the persisted topology via the parent's
+                            `onChangeSearchName` callback (which also
+                            mirrors into the editor's draft state so
+                            opening the editor afterwards doesn't
+                            clobber the change).
+                        */}
+                        {(() => {
+                            const kind = selected.kind;
+                            const id =
+                                kind === 'site'
+                                    ? selected.site.id
+                                    : selected.link.id;
+                            const currentSearchName =
+                                kind === 'site'
+                                    ? selected.site.searchName ?? ''
+                                    : selected.link.searchName ?? '';
+                            const options =
+                                kind === 'site'
+                                    ? siteSearchOptions
+                                    : linkSearchOptions;
+                            if (!catalogueLoaded || options.length === 0) {
+                                return null;
+                            }
+                            return (
+                                <div
+                                    className={cn(
+                                        'space-y-1 rounded-md border px-2 py-2',
+                                        isDark
+                                            ? 'border-slate-800 bg-slate-900/40'
+                                            : 'border-slate-200 bg-slate-50/80'
+                                    )}
+                                >
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span
+                                            className={cn(
+                                                'text-[8px] font-black uppercase tracking-widest',
+                                                isDark
+                                                    ? 'text-slate-500'
+                                                    : 'text-slate-500'
+                                            )}
+                                        >
+                                            Data source
+                                        </span>
+                                        <span
+                                            className={cn(
+                                                'text-[8px] font-mono uppercase tracking-wider',
+                                                isDark
+                                                    ? 'text-slate-600'
+                                                    : 'text-slate-400'
+                                            )}
+                                        >
+                                            {kind === 'site'
+                                                ? 'site search'
+                                                : 'link search'}
+                                        </span>
+                                    </div>
+                                    <select
+                                        className={cn(
+                                            'w-full rounded-md border px-2 py-1.5 text-[11px] font-semibold outline-none transition-colors focus:ring-1 focus:ring-sky-400 cursor-pointer',
+                                            isDark
+                                                ? 'bg-slate-950 border-slate-700 text-slate-100'
+                                                : 'bg-white border-slate-200 text-slate-800'
+                                        )}
+                                        value={
+                                            options.some(
+                                                (record) =>
+                                                    record.searchName ===
+                                                    currentSearchName
+                                            )
+                                                ? currentSearchName
+                                                : ''
+                                        }
+                                        onChange={(event) => {
+                                            const next = event.target.value;
+                                            if (!next) return;
+                                            onChangeSearchName(kind, id, next);
+                                        }}
+                                        title={
+                                            kind === 'site'
+                                                ? 'Pick a search from the catalogue (filtered to Topology_Site stanzas, including Demo feeds)'
+                                                : 'Pick a search from the catalogue (filtered to Topology_Link stanzas, including Demo feeds)'
+                                        }
+                                    >
+                                        {/*
+                                            Placeholder option is `disabled`
+                                            so it visually greys out — it's
+                                            a header label, not a choice.
+                                            Without `disabled`, operators
+                                            click it expecting a
+                                            "deselect / clear" action and
+                                            see no response (the onChange
+                                            no-ops on empty value), which
+                                            reads as a broken control.
+                                        */}
+                                        <option value="" disabled>
+                                            {currentSearchName
+                                                ? `Currently: ${currentSearchName}`
+                                                : 'Pick a search…'}
+                                        </option>
+                                        {options.map((record) => (
+                                            <option
+                                                key={record.id}
+                                                value={record.searchName}
+                                            >
+                                                {record.searchName}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <p
+                                        className={cn(
+                                            'text-[9px] leading-relaxed',
+                                            isDark
+                                                ? 'text-slate-500'
+                                                : 'text-slate-500'
+                                        )}
+                                    >
+                                        {kind === 'site'
+                                            ? 'What populates this site marker. Switch to a Demo stanza to preview a green / amber / red state, or to a different live feed.'
+                                            : 'What measures this connection. Includes the live ThousandEyes A2A stanza and Demo feeds for state preview.'}
+                                    </p>
+                                </div>
+                            );
+                        })()}
 
                         <div className="space-y-1">
                             <div className="flex items-center justify-between gap-2">
@@ -4114,8 +4418,10 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                     }}
                                                     title="Pick a search from the catalogue (filtered to Topology_Site stanzas, including Demo feeds)"
                                                 >
-                                                    <option value="">
-                                                        Pick search…
+                                                    <option value="" disabled>
+                                                        {site.searchName
+                                                            ? `Currently: ${site.searchName}`
+                                                            : 'Pick a search…'}
                                                     </option>
                                                     {siteSearchOptions.map((record) => (
                                                         <option
@@ -4470,8 +4776,10 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                     }}
                                                     title="Pick a search from the catalogue (filtered to Topology_Link stanzas, including Demo feeds)"
                                                 >
-                                                    <option value="">
-                                                        Pick search…
+                                                    <option value="" disabled>
+                                                        {link.searchName
+                                                            ? `Currently: ${link.searchName}`
+                                                            : 'Pick a search…'}
                                                     </option>
                                                     {linkSearchOptions.map((record) => (
                                                         <option
@@ -5063,6 +5371,18 @@ const LinkDetails: React.FC<LinkDetailsProps> = ({ link, siteById, isDark }) => 
                         Measured by {link.sourceAgents}
                         {' \u2194 '}
                         {link.targetAgents}
+                    </p>
+                )}
+                {(link.sourceLocation || link.targetLocation) && (
+                    <p
+                        className={cn(
+                            'text-[9px] leading-relaxed',
+                            isDark ? 'text-slate-400' : 'text-slate-600'
+                        )}
+                    >
+                        {link.sourceLocation ?? '\u2014'}
+                        {' \u2194 '}
+                        {link.targetLocation ?? '\u2014'}
                     </p>
                 )}
                 <p className="text-[9px] text-slate-500 leading-relaxed">

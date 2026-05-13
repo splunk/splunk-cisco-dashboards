@@ -7,6 +7,479 @@
 
 ---
 
+## 2026-05-12 (late, post-deploy regression triage) — Map animation, popup dismiss, in-popup data-source picker, location-based TE A2A filter
+
+### Context
+
+Alan deployed the latest build to FDEM and reported a sharp set of regressions:
+
+> "after deploying latest build to the fdem stack, animation is no
+> longer working, see screenshot, also I still see the old site
+> link search, it did not update like you promised at all, I also
+> need the modal to go away on escape or after clicking outside of
+> it, that use to work but now broken. I am getting frustrated with
+> asking 10 times for the ThousandEyes search we agreed we will be
+> using, i.e. the agent-to-agent search. what is going on with that
+> and why we still don't have an option in the editor to slect a
+> search from searchbase for either the site icons or the links
+> between them."
+
+Five distinct complaints in one message, all valid, all worth
+fixing in one pass.
+
+### Diagnosis
+
+1. **Animation dead.** The AUB↔TLH link's `CUSTOMER_TOPOLOGY` default
+   status is `'unknown'`. `packetProfile()` (the function that decides
+   how many packets to emit and at what cadence) returns `null` for
+   `'unknown'` — by design, "unknown stays quiet." Status only flips to
+   `stable` / `warning` / `critical` when the link search returns rows.
+   FDEM's stack returns no rows (see #2), so status stays `unknown`,
+   so no packets render. The "broken animation" the user sees is the
+   downstream effect of the SPL filter not matching anything.
+2. **SPL filter pinned to a placeholder test name.** The TE A2A branch
+   of `[overview_link_auburndale_tallahassee_health]` (v1.6.0) had:
+   ```
+   WHERE Test_Metrics.thousandeyes.test.type="agent-to-agent"
+         Test_Metrics.thousandeyes.test.name="TLH - BLA Connection"
+   ```
+   "TLH - BLA Connection" exists in my dev TE org as a working A2A
+   placeholder, but FDEM's TE org has its own A2A test name. So the
+   filter never matched, the branch returned zero rows, the Catalyst
+   Center fallback kicked in (which only carries endpoint health, not
+   path metrics), and the popup showed Awaiting on every metric.
+3. **Click-outside-to-dismiss broken.** The current handler is
+   `MapClickCapture.onBackgroundClick`, which fires when a click hits
+   empty Leaflet pixels. On FDEM's narrow right-column layout the
+   panel covers basically the whole map column — there are no empty
+   map pixels to click. So the dismissal contract silently dies.
+4. **Escape sometimes swallowed.** The Escape listener was on the
+   bubble phase. Any focused descendant (editor input, Leaflet
+   keyboard handler) that called `event.stopPropagation()` would eat
+   the key before document-level handler ran.
+5. **No data-source picker visible.** The picker `fb5a275` added is
+   inside the `TopologyEditorPanel`, which only opens when the user
+   clicks the pencil icon under the map. From the read-only popup
+   there was no path to swap searches. The user expected the swap to
+   live where they were already looking.
+
+### Fixes (single commit, build 70)
+
+1. **`searchbase.conf` v1.7.0**: replaced the hardcoded test-name
+   filter with a post-aggregation `where` that matches on a combined
+   string of source agent location + target agent location + source
+   agent name + target agent name + test name. Both "Tallahassee" or
+   "TLH" *and* "Auburndale" or "AUB" must appear (case-insensitive).
+   This catches FDEM's actual A2A test (whatever it's named), our dev
+   placeholder, and any future renaming. The filter is also resilient
+   to older `TA-cisco_thousandeyes` versions that don't populate the
+   `thousandeyes.source.agent.location` field — agent / test name
+   matches still pass.
+2. **Click-outside.** Moved the dismissal from the map's
+   `onBackgroundClick` to a document-level `mousedown` listener owned
+   by `SelectionCard` itself. Capture phase, so descendant
+   `stopPropagation()` calls can't break it. Skips dismissal when the
+   click lands on a Leaflet marker, interactive svg path, popup, or
+   tooltip — those have their own click-to-toggle semantics.
+3. **Escape.** Same component, same capture-phase pattern. Removed the
+   parent-level Escape effect to keep the contract in one place.
+4. **In-popup data-source picker.** Added a "DATA SOURCE / site search
+   (or link search)" block inside the read-only popup, between the
+   metric details and the Show SPL toggle. Same dropdown-of-catalogue
+   pattern as the editor, same tag filter (`Topology_Site` /
+   `Topology_Link`). On change, writes straight through to the
+   persisted topology JSON via a new `onChangeSearchName` callback on
+   `CustomerTopologyMap` (which also mirrors into `draftTopology` so
+   re-opening the editor doesn't blow away the popup-driven edit).
+5. **Animation.** No code change needed — once #1 lands, FDEM's stack
+   will populate the link with real path metrics, status will flip out
+   of `unknown`, and packets will start flowing on their own.
+
+### Verification
+
+- `yarn run tsc --noEmit` clean.
+- `ReadLints` clean for `CustomerTopologyMap.tsx`.
+
+### What's next
+
+Real-stack QA on Alan's environment to confirm:
+
+- Map animation is back on the AUB↔TLH line (status flipped out of
+  unknown).
+- Link popup shows real ThousandEyes path metrics (latency / loss /
+  jitter / agent locations / TE permalink) regardless of how FDEM
+  named their A2A test.
+- Pressing Escape with the popup open dismisses it.
+- Clicking outside the popup (anywhere on the page, not just empty
+  map pixels) dismisses it.
+- The "Data source" dropdown shows in the read-only popup with
+  catalogue entries listed, and picking one swaps the marker / line
+  to that feed without needing to open the editor first.
+
+---
+
+## 2026-05-12 (late, post-geo) — Unlocking the 6th tile in Security and Building
+
+### Context
+
+Alan posted a screenshot of the Security section showing five tiles
+(FW Blocked, Threat Sources, Failed Auth, XDR Incidents, Security
+Score) with the count pill at "5" and the + button greyed out. His
+report:
+
+> "Section 2 and 3 are still maxing out at 6 tiles, not letting me
+> add one more, the + sign is shaded out."
+
+### Diagnosis
+
+The + button's `max` isn't simply `sectionTileBounds.maxCount` — the
+overview render computes:
+
+```
+const sectionMaxAvailable = Math.min(
+    sectionTileBounds.maxCount,        // 6 (global cap)
+    allSectionMetrics.length            // 5 for security / building
+);
+```
+
+…and feeds `sectionMaxAvailable` to the count pill. So even though
+the global cap is 6, Security and Building cap at 5 because
+`METRIC_CONFIG` only has five entries in each section. IT Health has
+six entries (its + button works to 6), which is why Alan didn't hit
+this on the IT Health row.
+
+The render logic is correct — there's no use bumping the count past
+the catalogue size because the slice `orderedIds.slice(0, count)` has
+nothing to render past slot 5. The fix is to **add a 6th catalogue
+entry** to each section.
+
+### Decision: pick KPIs that complement, don't duplicate
+
+Asked Alan via the structured-question prompt for each section. He
+picked:
+
+- **Security 6th: XDR Critical incidents** — narrower variant of the
+  existing `xdr_incidents` tile, scoped to `severity="Critical"`
+  only. The existing tile mixes Low / Medium / High / Critical and
+  can drown a real critical spike in detection-tuning noise; the new
+  tile answers the more direct executive question of *"how many
+  incidents need a war-room right now?"* The two are complementary:
+  `xdr_incidents` for SOC workload trend, `xdr_critical` for
+  escalation pressure.
+- **Building 6th: AP Health %** — Catalyst Center reachability
+  percentage for the AP fleet. The obvious complement to "Wi-Fi
+  clients" (clients on APs) and "Active devices" (everything
+  tracked): if APs are unreachable, the rest of the building section
+  is fiction.
+
+### Implementation
+
+**Two new searchbase stanzas** added in the Overview KPI cluster
+(right after `[overview_inter_site_latency]`, before the legacy
+site-leaderboard block):
+
+`[overview_xdr_critical_incidents]`:
+
+```spl
+| `index_security` (sourcetype="cisco:xdr:incidents" OR sourcetype="cisco:xdr:incidents-summary")
+  severity IN ("Critical","critical","CRITICAL")
+| stats dc(id) as total
+| appendpipe [ stats count | where count=0 | eval total=0 ]
+| stats max(total) as total
+| fields total
+```
+
+The case spread on `severity` defends against TA version differences
+(older builds normalised to lowercase, current TA keeps title-case).
+Uses the canonical `id` field (top-level on both sourcetypes) — same
+schema lesson the parent stanzas learned in their 1.0.1 revision.
+Tagged `Cisco,Overview,KPI,Security,XDR,Critical,Incidents`.
+
+`[overview_ap_health]`:
+
+```spl
+| `index_catalyst` sourcetype="cisco:dnac:devicehealth"
+| stats latest(DeviceFamily) as DeviceFamily, latest(Reachability) as Reachability by DeviceID
+| where match(DeviceFamily, "(?i)ap|access.point|unified.ap")
+| eval healthy=if(Reachability=="Reachable", 1, 0)
+| stats count as total, sum(healthy) as up
+| eval pct=round(up/total*100), down=total-up
+| appendpipe [ stats count | where count=0 | eval total=0, up=0, down=0, pct=null() ]
+| stats max(total) as total, max(up) as up, max(down) as down, max(pct) as pct
+| fields pct total up down
+```
+
+Modeled directly on `executive_summary_ds_ap_count` — same family
+regex (`AP | Access Point | Unified AP`, all three labels Catalyst
+Center has used), same `Reachability=="Reachable"` flag (not
+`Manageability` — control-plane manageability hiccups don't break
+Wi-Fi for users). Defensive `appendpipe` so an empty feed renders
+the tile with a `pct=null` em-dash rather than misleading "0%".
+Tagged `Cisco,Overview,KPI,Building,Wireless,Catalyst_Center,Access_Points`.
+
+**Two new `KPI_CONFIG` entries** in `overview/index.tsx`:
+
+- `xdr_critical` (Security): `valueField: 'total'`,
+  `thresholds: { warning: 1, critical: 5, direction: 'lower_is_better' }`,
+  red accent (`#dc2626`) so it visually differentiates from the
+  parent `xdr_incidents` tile (sky/neutral).
+- `ap_health` (Building): `valueField: 'pct'`, `unit: '%'`,
+  `thresholds: { warning: 97, critical: 92, direction: 'higher_is_better' }`,
+  emerald accent (`#10b981`). Threshold ladder mirrors the existing
+  `executive_summary_ds_ap_count` recommended-alerts block so alerts
+  and tile colour stay coherent.
+
+Both entries carry detailed `thresholdNote` text for the info popover
+per the 2026-05-12 popover-thresholds work.
+
+**No change to the rendering math** — once `METRIC_CONFIG` has 6
+entries per section, the existing
+`Math.min(sectionTileBounds.maxCount, allSectionMetrics.length)`
+naturally lifts the cap to 6 for those sections.
+
+### Why this approach (and not "decouple cap from catalogue")
+
+The other obvious option was to let the + button go to 6 regardless
+of catalogue size and render an empty 6th tile that the user could
+fill via the picker. Two reasons against:
+
+1. **Empty tiles look broken.** A blank slot in a row of working
+   metrics reads as "this didn't load" — which is the actual error
+   state we use elsewhere on the page. Conflating the two breaks the
+   "everything is fine" / "something is broken" visual contract.
+2. **The picker swaps, doesn't add.** Today's picker overrides assign
+   a saved search to an *existing* slot. There's no UX path to
+   create a slot ex nihilo without also adding it to METRIC_CONFIG,
+   which is the same thing we just did. Decoupling would have been
+   half a feature.
+
+So adding real defaults is the cleanest path: + reaches 6
+naturally, the tile shows useful data on first paint, and the user
+can still swap either of the new defaults via the picker for a
+different Cisco-tagged KPI.
+
+### Verification
+
+- `tsc --noEmit` from package root: clean (~2.3s).
+- `ReadLints` on `overview/index.tsx` and `searchbase.conf`: clean.
+- Pre-existing localStorage state behavior: users who saved count=5
+  will reopen with count=5 (correct — they explicitly chose 5), but
+  the + button now lights up so they can dial up to 6 if they want.
+  New users get fallbackDefault=6 across all three sections.
+- Stanza schemas: both new searches return single-row outputs with
+  the `valueField` named in `KPI_CONFIG` (`total` and `pct`), and
+  both end with explicit `| fields ...` lines so no extra columns
+  leak into the picker preview.
+- Both stanzas tagged `Cisco` so the picker surfaces them as
+  swappable defaults for any other tile in the overview.
+
+### What's next
+
+- **Real-stack QA on Alan's environment.** Open the Overview page,
+  confirm Security count pill now reads "6" and the + button is
+  grayed when at the new ceiling; confirm the new XDR Critical and
+  AP Health tiles render real numbers (and fall back to 0 / em-dash
+  cleanly when their feeds are empty). Verify the info popover for
+  each shows the new threshold ladder.
+- **App.conf build → 69** so Alan's next package picks up the new
+  stanzas and KPI bindings.
+
+---
+
+## 2026-05-12 (late, post-CSV) — Geo-enriching the AUB↔TLH link from ThousandEyes A2A event fields
+
+### Context
+
+Alan reviewed a raw export of `cisco:thousandeyes:metric` events
+(`thousandeyes.test.type="agent-to-agent"`, sample test "Detroit to
+Chicago Test" — 760+ rows, every field intact) and pushed back with
+clear conviction:
+
+> "I am convinced now we should use ThousandEyes agent-to-agent tests
+> between locations and the event itself (see sample) has everything
+> we need!!! we can derive the country, state, location etc...even
+> the link to the test which we need so we can launch TE's web UI
+> see `thousandeyes.permalink`. I ran this non-data-model search ...
+> this is just so you have all the field names right and so we can
+> populate the map data with it."
+
+The CSV confirms three things we'd previously been hand-waving:
+
+1. **Per-event `thousandeyes.permalink`** ships with every metric event,
+   already URL-encoded, scoped to test / agent / direction:
+   `https://app.thousandeyes.com/network-app-synthetics/views?__a=...&agentId=...&direction=round-trip&teRegion=2&testId=...`.
+   This is **TE-authored** — they own the URL format, so it's the most
+   resilient deep-link source.
+2. **Per-agent geo metadata** is structured — `iso_code` for country
+   (US), `iso_code` for region (FL, MI, OR), human-readable
+   `location` ("Tallahassee, Florida, US"), and a `geoname.id`
+   pointing at the geonames.org row for that city. We don't need a
+   separate enrichment pipeline; the event already carries all of it.
+3. **Schema is uniform across A2A tests** — same field shape for
+   "Detroit to Chicago" as for "TLH - BLA Connection", which means
+   anything we do for one test works for any A2A test in any
+   customer's TE org.
+
+### Decision: enrich the existing link stanza now, defer auto-discovery
+
+Two ways to consume this. (a) Auto-discover the entire topology from
+A2A event fields — every distinct agent becomes a site, every
+distinct test becomes a link, lat/lng resolved from a
+`geonameId → coordinates` lookup. (b) Keep the hand-authored TLH/AUB
+topology and enrich the existing link stanza with the new fields.
+
+Going with (b) for this round. It's a tight, scoped change that
+delivers Alan's direct ask ("populate the map data with it") without
+opening the lat/lng-from-geoname rabbit hole. Auto-discovery stays
+on the backlog — it's the right long-term direction, but it needs
+either a CSV lookup of geoname → lat/lng or an inline `case()` of
+known cities, plus a plan for what happens when a TE A2A test
+references an agent that isn't in our topology. Bigger conversation.
+
+### Implementation: `[overview_link_auburndale_tallahassee_health]` v1.6.0
+
+**TE branch (Priority 2) tstats now also captures:**
+
+```spl
+latest(Test_Metrics.thousandeyes.permalink) as teLinkPermalink,
+latest(Test_Metrics.thousandeyes.source.agent.location) as sourceLocation,
+latest(Test_Metrics.thousandeyes.target.agent.location) as targetLocation,
+latest(Test_Metrics.thousandeyes.source.agent.geo.country.iso_code) as sourceCountry,
+latest(Test_Metrics.thousandeyes.target.agent.geo.country.iso_code) as targetCountry,
+latest(Test_Metrics.thousandeyes.source.agent.geo.region.iso_code) as sourceRegion,
+latest(Test_Metrics.thousandeyes.target.agent.geo.region.iso_code) as targetRegion,
+```
+
+These all live inside the existing `BY source.agent.name,
+target.agent.name, account.id, test.id` grouping. Agent location is a
+1:1 attribute of the agent — every event for one (sourceAgent,
+targetAgent) pair carries the same location string — so `latest()`
+within the BY plus `first()` through the outer aggregation is safe.
+
+**SD-WAN branch (Priority 1)** and **Catalyst Center fallback
+(Priority 3)** explicitly null these new fields so the `append`
+schemas line up.
+
+**Outer `stats by linkId` propagates** the new fields via `first(...)`
+(except agents, which stay `values()` because they can be multivalue).
+
+**`teLink` switches strategy:**
+
+```spl
+| eval teLinkConstructed=if(isnotnull(teAccountId) AND isnotnull(teTestId) AND isnotnull(lastSeen),
+    "https://app.thousandeyes.com/network-app-synthetics/views/?testId=...&direction=BIDIRECTIONAL&...",
+    null())
+| eval teLink=coalesce(teLinkPermalink, teLinkConstructed)
+```
+
+Prefers the TE-emitted permalink. Falls back to the constructed
+Path-Visualization URL only if the permalink is missing (e.g.
+older TA-cisco_thousandeyes versions where `permalink` wasn't in the
+data model, or aggregated rows where the field didn't survive).
+
+**Final `| fields ...`** adds `sourceLocation, targetLocation,
+sourceCountry, targetCountry, sourceRegion, targetRegion` after
+`sourceAgents, targetAgents` and before `teAccountId, teTestId,
+teLink`.
+
+### Implementation: TS / React side
+
+**`TopologyLink` interface** (`common/types.ts`) gains six new
+optional string fields with JSDoc explaining their TE provenance and
+linking back to the searchbase stanza. Kept `teLink`'s comment up to
+date with the v1.6.0 strategy.
+
+**`parseLinkRow`** (`CustomerTopologyMap.tsx`) reads all six new
+fields with both camelCase aliases and the raw `thousandeyes.*` field
+names — defensive against future raw-event piping where the dotted
+field names might survive. Falls back to `base.<field>` so a
+hand-authored topology row that already had a value isn't clobbered
+by a missing field on a refresh.
+
+**`LinkDetails` popup** renders a new line under the agent-pair line:
+
+```tsx
+{(link.sourceLocation || link.targetLocation) && (
+    <p className="text-[9px] leading-relaxed text-slate-400/600">
+        {link.sourceLocation ?? '\u2014'} ↔ {link.targetLocation ?? '\u2014'}
+    </p>
+)}
+```
+
+So the operator sees:
+
+```
+Measured by demt-te01-va ↔ demc-te01-bla
+Tallahassee, Florida, US ↔ Boulder, Colorado, US
+TLH-AUB to AUB-TLH - Updated 2026-05-12 21:42:00
+[ View in ThousandEyes ]
+```
+
+(Real example will be Tallahassee↔Auburndale once the FDEM A2A test
+is back in service; currently we're piggy-backing on
+"TLH - BLA Connection" for dev/test per the 2026-05-12 placeholder
+note.)
+
+The "View in ThousandEyes" button is unchanged in code — it reads
+`link.teLink` — but its target now points at TE's per-event
+permalink instead of the constructed Path-Vis URL.
+
+### Why this is the right shape
+
+- **Authoritative URL.** TE owns the permalink format. If they ship a
+  new query-param (e.g. a `view=` selector) we get it for free.
+- **No new lookups.** All data comes from fields the TA already
+  parses. Zero infra changes.
+- **Customer-agnostic.** The same field reads work for FDEM's
+  "TLH - AUB Connection" or anyone else's A2A test once the test name
+  filter is updated. Geo strings are emitted by TE, not by us, so
+  they're correct for whatever location the agent reports.
+- **Backwards-compatible.** Hand-authored topologies on customer
+  installs that haven't refreshed yet still render fine — the new
+  fields are optional and the popup hides the location line when
+  both are null.
+
+### Verification
+
+- `tsc --noEmit` from `packages/splunk-cisco-dashboards`: clean.
+- `ReadLints` on the two changed React files: no lint errors.
+- Searchbase grammar: spot-checked the four append/`fields` stanzas
+  for matching column lists; SD-WAN, TE A2A, and DNAC fallback all
+  emit `teLinkPermalink, sourceLocation, targetLocation,
+  sourceCountry, targetCountry, sourceRegion, targetRegion` so the
+  union is well-formed.
+- The popup will render gracefully even if Alan's TE event flow
+  doesn't have `permalink` populated — the `coalesce` falls back to
+  the constructed URL, and the location line conditionally hides if
+  both `sourceLocation` and `targetLocation` are missing.
+
+### What's next
+
+- **Real-stack QA on Alan's environment.** Open the Overview map,
+  hover the AUB↔TLH link, and confirm the popup shows the new
+  "Tallahassee, Florida, US ↔ ..." line and that "View in
+  ThousandEyes" lands on the per-event permalink (not the
+  constructed URL). The placeholder test "TLH - BLA Connection"
+  should expose the BLA agent's location string — that's the
+  smoke-test that tells us geo enrichment is wired up end-to-end.
+- **Auto-discovery follow-up.** Decide whether to ship a
+  `geonameId → {lat, lng}` lookup (CSV in `lookups/`) and a new
+  `[overview_thousandeyes_a2a_topology]` searchbase entry that
+  emits one `itemType=site` row per distinct A2A agent and one
+  `itemType=link` row per A2A test. That's the unlock for "the map
+  builds itself from TE data". The existing hand-authored topology
+  would stay as the canonical layout; auto-discovery would add
+  newly-observed agents as suggestions in the editor's "discovered"
+  list.
+- **Country / region badges.** We capture `sourceCountry` /
+  `sourceRegion` (US / FL etc.) but the popup only renders the
+  location string today. A small follow-up could surface them as
+  flag emojis or pill badges next to each agent name. Holding for
+  now until we see how the location-string line lands visually on
+  Alan's stack.
+
+---
+
 ## 2026-05-12 (late night) — Topology editor opacity, section defaults, and replacing the two right-column KPIs
 
 ### Context
