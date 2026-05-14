@@ -37,8 +37,10 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+    ChevronDown,
     ChevronRight,
     ExternalLink,
+    Gauge,
     Loader2,
     Play,
     RotateCcw,
@@ -55,35 +57,49 @@ import {
     type SearchbaseRecord,
 } from '@/common/services/searchbaseCatalogue';
 import type { MetricOverride } from '@/common/hooks/usePersistedMetricOverrides';
+import {
+    deriveThresholdLines,
+    formatThresholdNumber,
+    type MetricThresholds,
+} from '@/common/hooks/useMetric';
 import { VizIcon, resolveVizMapping } from './vizIcons';
 
 // "All" sentinel for the facet dropdowns — using a sentinel rather
 // than '' keeps the <select> element rendering predictable.
 const ALL_CATEGORIES = '__all__';
 const ALL_SUB_CATEGORIES = '__all_sub__';
-const ALL_DISPATCH_CONTEXTS = '__all_dispatch__';
+const ALL_APPS = '__all_apps__';
 
-// Default dispatch-context for the picker. The catalogue REST endpoint
-// pulls from any app namespace (`/servicesNS/-/<app>/configs/conf-searchbase`),
+// Default app scope for the picker. The catalogue REST endpoint pulls
+// from any app namespace (`/servicesNS/-/<app>/configs/conf-searchbase`),
 // so on a Splunk stack with multiple apps that ship their own
 // `searchbase.conf` the catalogue can grow beyond what this app vetted.
 // To keep the picker scoped to dashboard-pack searches by default, the
-// Dispatch facet starts at this value and only shows entries whose
-// `dispatch_context` matches it. Users can switch to "All dispatch
-// contexts" or pick a specific other app from the same dropdown to
-// browse wider — same UX as the Category facet.
+// App facet starts at this value and only shows entries whose
+// `dispatch_context` matches it. Users can switch to "All apps" or pick
+// a specific other app from the same dropdown to browse wider — same UX
+// as the Category facet.
+//
+// The underlying searchbase field is still `dispatch_context` (Splunk
+// conf semantics); the UI just labels it "App" because that's what
+// operators recognise.
 //
 // Every stanza shipped in this app's `default/searchbase.conf` carries
 // `dispatch_context = splunk-cisco-dashboards` (with
 // `dispatch_context_force = 1`), so this default passes the full
 // 530-entry catalogue.
 //
-// Replaces the previous hardcoded Cisco-tag gate (Build 87 dropped the
-// `Cisco` noise tag from every stanza, which silently collapsed the
-// picker to zero results until Build 91 swapped to a dispatch-context
-// constant; Build 92 promoted the constant to a real user-facing facet
-// because operators couldn't see why the catalogue was scoped).
-const DEFAULT_DISPATCH_CONTEXT = 'splunk-cisco-dashboards';
+// Build trail:
+//   - Build 87: dropped the `Cisco` noise tag from every stanza,
+//     which silently collapsed the picker to zero results because the
+//     picker used a hardcoded `tags.includes('Cisco')` gate.
+//   - Build 91: swapped the gate for a hardcoded
+//     `dispatch_context === 'splunk-cisco-dashboards'` check.
+//   - Build 92: promoted the constant to a real user-facing facet
+//     (Dispatch dropdown).
+//   - Build 93: renamed Dispatch → App for clarity, collapsed the
+//     facet block by default to give the result list more room.
+const DEFAULT_APP_SCOPE = 'splunk-cisco-dashboards';
 
 const MAX_FIELD_LENGTH = 64;
 const FIELD_NAME_PATTERN = /^[A-Za-z_][\w.]{0,63}$/;
@@ -163,6 +179,32 @@ export interface KpiPickerContext {
     currentValueField?: string;
     /** Currently-bound friendly label override, if any. */
     currentLabel?: string;
+    /**
+     * Static (code-defined) threshold tuple for this tile — the
+     * factory baseline. Used by the THRESHOLDS form to:
+     *   1. Render the "default: <n>" helper text under each input
+     *      so the user always sees the shipped value.
+     *   2. Drive the per-field "Reset to default" affordance — only
+     *      fields that differ from this baseline are persisted in
+     *      the override, so the storage payload stays minimal and
+     *      Reset is just "clear the field, drop the override".
+     * Undefined for tiles that shipped without numeric thresholds
+     * (e.g. KPI cards). The form still renders so the user can
+     * establish thresholds if they swap the tile to a numeric search.
+     */
+    defaultThresholds?: MetricThresholds;
+    /**
+     * Currently-effective threshold tuple (override merged on top of
+     * `defaultThresholds`). Pre-fills the THRESHOLDS form so re-opening
+     * the picker on a customised tile shows the customised values, not
+     * the static defaults.
+     */
+    currentThresholds?: MetricThresholds;
+    /**
+     * Static unit (`%`, `ms`, etc.) for threshold preview formatting.
+     * Drives the suffix on the helper text and the live preview ranges.
+     */
+    thresholdUnit?: string;
     /** Saved-search names already bound to other tiles — for "in use" hints. */
     usedSavedSearches?: Set<string>;
 }
@@ -416,12 +458,13 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     const [query, setQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<string>(ALL_CATEGORIES);
     const [selectedSubCategory, setSelectedSubCategory] = useState<string>(ALL_SUB_CATEGORIES);
-    // Dispatch-context facet — defaults to this app's namespace so the
-    // picker stays scoped to dashboard-pack searches at first open.
-    // Switch to ALL_DISPATCH_CONTEXTS or another app's namespace via
+    // App facet — defaults to this app's namespace (read from the
+    // searchbase entry's `dispatch_context` field) so the picker stays
+    // scoped to dashboard-pack searches at first open.
+    // Switch to ALL_APPS or another app's namespace via
     // the dropdown to browse wider.
-    const [selectedDispatchContext, setSelectedDispatchContext] = useState<string>(
-        DEFAULT_DISPATCH_CONTEXT
+    const [selectedApp, setSelectedApp] = useState<string>(
+        DEFAULT_APP_SCOPE
     );
     const [activeTags, setActiveTags] = useState<Set<string>>(() => new Set());
     // Free-text input that powers the tag multi-select dropdown. As
@@ -431,6 +474,25 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     // so the result list isn't polluted while hunting for a tag.
     const [tagFilter, setTagFilter] = useState('');
     const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
+    // Collapse the App / Category / Sub-cat / Tag facet block behind a
+    // single "Filters" toggle so the result list gets back ~140px of
+    // vertical real-estate at rest (Build 93 — the picker was eating
+    // most of the popover height with facets the user often didn't
+    // touch). Free-text search stays visible. The block auto-expands
+    // whenever any facet is non-default so applied filters are never
+    // hidden silently.
+    const [filtersOpen, setFiltersOpen] = useState(false);
+    // Dismiss the green "Bound: <name>" strip for the current panel
+    // open. Once the user has used Jump-To (or seen which search is
+    // bound), the ~32px strip is dead weight; this lets them reclaim
+    // it. Resets every time the panel reopens so the strip is always
+    // available for a fresh tile context. Build 94.
+    const [boundDismissed, setBoundDismissed] = useState(false);
+    // Show/hide the long DESCRIPTION block in the bottom preview
+    // panel. Collapsed by default — for a vetted catalogue most of
+    // the picker time is browse-and-apply, not read-the-narrative,
+    // and the block costs ~80–100px every render. Build 94.
+    const [descOpen, setDescOpen] = useState(false);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [valueField, setValueField] = useState('');
     const [labelOverride, setLabelOverride] = useState('');
@@ -438,6 +500,39 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     // re-read the SPL each time, and the block ate ~150px of vertical
     // real-estate. Reset when the user picks a different entry.
     const [showSpl, setShowSpl] = useState(false);
+    // ---------- THRESHOLDS form state (Build 97) ----------
+    //
+    // The form drives the same `MetricThresholds` shape the runtime
+    // already consumes via `computeStatus` and `deriveThresholdLines`,
+    // so editing here is equivalent to editing the static config in
+    // code — but per-user, persisted in localStorage, and reversible.
+    //
+    // State shape:
+    //   • `thresholdsOpen` — collapsible flag. Defaults to `true`
+    //     (Build 98 fix-up: was `false`, but Alan reported the
+    //     section was undiscoverable behind a tiny chevron toggle).
+    //     The auto-expand effect below preserves the open state on
+    //     panel open. Users who want to collapse it for vertical
+    //     room can click the toggle; their preference is local to
+    //     the open session (next picker open re-expands).
+    //   • `thresholdWarningInput` / `thresholdCriticalInput` — the
+    //     raw text content of the number inputs. Stored as strings
+    //     so the user can clear an input back to empty (== "no
+    //     warning band") and we can validate without `NaN` flicker.
+    //   • `thresholdDirection` — the segmented-control selection.
+    //     Defaults to the tile's static direction; the segment whose
+    //     value matches the currently-applied (or default) direction
+    //     is highlighted.
+    //
+    // All four pieces of state reset on panel open / selected-entry
+    // change in the same `useEffect` blocks that already handle
+    // valueField and labelOverride, so the picker behaves the same
+    // way for thresholds as for those fields.
+    const [thresholdsOpen, setThresholdsOpen] = useState(true);
+    const [thresholdWarningInput, setThresholdWarningInput] = useState('');
+    const [thresholdCriticalInput, setThresholdCriticalInput] = useState('');
+    const [thresholdDirection, setThresholdDirection] =
+        useState<MetricThresholds['direction']>('higher_is_better');
     const searchInputRef = useRef<HTMLInputElement | null>(null);
     const tagSelectRef = useRef<HTMLDivElement | null>(null);
     const tagInputRef = useRef<HTMLInputElement | null>(null);
@@ -497,7 +592,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                 // not a dispatch-filtered slice — that way a binding
                 // pointed at another app's stanza still resolves and
                 // the "Currently bound" banner can render once the
-                // user widens the Dispatch facet.
+                // user widens the App facet.
                 const cacheRecognisesBinding =
                     !expectedKey ||
                     sorted.some((entry) => entryMatchesKey(entry, expectedKey));
@@ -524,18 +619,22 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
 
     // Reset transient form state when the panel opens for a new tile.
     // Sub-category and tag selections start cleared every time so the
-    // user always sees the full slice of the chosen category. Dispatch
-    // context resets to the dashboard-pack default so each new picker
-    // open is scoped to vetted searches by default.
+    // user always sees the full slice of the chosen category. The App
+    // facet resets to the dashboard-pack default so each new picker
+    // open is scoped to vetted searches by default. Filters block
+    // collapses so the user lands on a clean result list.
     useEffect(() => {
         if (!open || !context) return;
         setQuery('');
         setSelectedCategory(ALL_CATEGORIES);
         setSelectedSubCategory(ALL_SUB_CATEGORIES);
-        setSelectedDispatchContext(DEFAULT_DISPATCH_CONTEXT);
+        setSelectedApp(DEFAULT_APP_SCOPE);
         setActiveTags(new Set());
         setTagFilter('');
         setTagDropdownOpen(false);
+        setFiltersOpen(false);
+        setBoundDismissed(false);
+        setDescOpen(false);
         setShowSpl(false);
         // Highlight the row whose `search_name` matches the tile's
         // currently-bound saved search (if it's in the catalogue).
@@ -543,6 +642,31 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         setSelectedId(initial);
         setValueField(context.currentValueField ?? '');
         setLabelOverride(context.currentLabel ?? '');
+        // Pre-fill the THRESHOLDS form from the tile's *current*
+        // effective tuple (override merged onto default by openPicker),
+        // so re-opening the picker on a customised tile shows the
+        // customised values rather than the static defaults. Empty
+        // strings stay empty — they represent "no warning band" /
+        // "no critical band", which is a valid configuration for
+        // tiles that only flag one direction of trouble.
+        const cur = context.currentThresholds;
+        setThresholdWarningInput(
+            cur && cur.warning !== undefined ? String(cur.warning) : ''
+        );
+        setThresholdCriticalInput(
+            cur && cur.critical !== undefined ? String(cur.critical) : ''
+        );
+        setThresholdDirection(cur?.direction ?? 'higher_is_better');
+        // Build 98 fix-up: always expand the THRESHOLDS section on
+        // panel open. The previous behaviour ("collapse unless the
+        // user has already customised") buried the form behind a
+        // small chevron toggle that read identically to the "Show
+        // SPL" / "Description" toggles above it, and Alan reported
+        // not being able to find the threshold UI at all even
+        // though it was rendered. Defaulting to expanded makes the
+        // section immediately discoverable; users who want a more
+        // compact bottom panel can collapse it with one click.
+        setThresholdsOpen(true);
         const id = window.setTimeout(() => searchInputRef.current?.focus(), 30);
         return () => window.clearTimeout(id);
     }, [open, context]);
@@ -566,16 +690,32 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         setActiveTags(new Set());
     }, [selectedCategory]);
 
-    // When the dispatch context changes, reset the downstream facets.
-    // Picking a different app namespace surfaces a different category
-    // / sub-category / tag vocabulary, so carrying old selections over
+    // When the App facet changes, reset the downstream facets. Picking
+    // a different app namespace surfaces a different category /
+    // sub-category / tag vocabulary, so carrying old selections over
     // would silently filter the new slice down to nothing. Same idea
     // as the cascade above for category → sub-category.
     useEffect(() => {
         setSelectedCategory(ALL_CATEGORIES);
         setSelectedSubCategory(ALL_SUB_CATEGORIES);
         setActiveTags(new Set());
-    }, [selectedDispatchContext]);
+    }, [selectedApp]);
+
+    // Auto-expand the Filters block whenever an applied facet appears
+    // — guarantees the user can always see what's narrowing the result
+    // list, even if they applied a filter, scrolled, then collapsed
+    // the block from a previous open. Closing is left manual: once
+    // expanded, the user controls when to hide the block again.
+    useEffect(() => {
+        if (
+            selectedApp !== DEFAULT_APP_SCOPE ||
+            selectedCategory !== ALL_CATEGORIES ||
+            selectedSubCategory !== ALL_SUB_CATEGORIES ||
+            activeTags.size > 0
+        ) {
+            setFiltersOpen(true);
+        }
+    }, [selectedApp, selectedCategory, selectedSubCategory, activeTags]);
 
     // Different selection -> collapse SPL. The user explicitly opens
     // it for the entry they care about; carrying the open state across
@@ -624,14 +764,14 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     }, [open, tagDropdownOpen]);
 
     // Distinct, sorted category list — drives the Category dropdown.
-    // Scoped to the active dispatch context so picking a single app
-    // narrows the Category dropdown to that app's category vocabulary.
+    // Scoped to the active App facet so picking a single app narrows
+    // the Category dropdown to that app's category vocabulary.
     const categories = useMemo(() => {
         const set = new Set<string>();
         for (const e of catalogue) {
             if (
-                selectedDispatchContext !== ALL_DISPATCH_CONTEXTS &&
-                e.dispatchContext !== selectedDispatchContext
+                selectedApp !== ALL_APPS &&
+                e.dispatchContext !== selectedApp
             ) {
                 continue;
             }
@@ -640,7 +780,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         return Array.from(set).sort((a, b) =>
             a.localeCompare(b, undefined, { sensitivity: 'base' })
         );
-    }, [catalogue, selectedDispatchContext]);
+    }, [catalogue, selectedApp]);
 
     // Sub-categories scoped to the current category and dispatch
     // context. Empty array when no category is picked — that hides
@@ -650,8 +790,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         const set = new Set<string>();
         for (const e of catalogue) {
             if (
-                selectedDispatchContext !== ALL_DISPATCH_CONTEXTS &&
-                e.dispatchContext !== selectedDispatchContext
+                selectedApp !== ALL_APPS &&
+                e.dispatchContext !== selectedApp
             ) {
                 continue;
             }
@@ -661,12 +801,12 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         return Array.from(set).sort((a, b) =>
             a.localeCompare(b, undefined, { sensitivity: 'base' })
         );
-    }, [catalogue, selectedDispatchContext, selectedCategory]);
+    }, [catalogue, selectedApp, selectedCategory]);
 
-    // Distinct dispatch_context values present in the catalogue. Used
-    // to populate the Dispatch facet dropdown. Sorted alphabetically
-    // so the order is stable across loads.
-    const dispatchContexts = useMemo(() => {
+    // Distinct app namespaces (`dispatch_context` values) present in
+    // the catalogue. Drives the App facet dropdown. Sorted
+    // alphabetically so the order is stable across loads.
+    const apps = useMemo(() => {
         const set = new Set<string>();
         for (const e of catalogue) {
             if (e.dispatchContext) set.add(e.dispatchContext);
@@ -683,8 +823,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     const tagFacetEntries = useMemo(() => {
         return catalogue.filter((entry) => {
             if (
-                selectedDispatchContext !== ALL_DISPATCH_CONTEXTS &&
-                entry.dispatchContext !== selectedDispatchContext
+                selectedApp !== ALL_APPS &&
+                entry.dispatchContext !== selectedApp
             ) {
                 return false;
             }
@@ -704,7 +844,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
             }
             return matchesQuery(entry, query);
         });
-    }, [catalogue, query, selectedDispatchContext, selectedCategory, selectedSubCategory, activeTags]);
+    }, [catalogue, query, selectedApp, selectedCategory, selectedSubCategory, activeTags]);
 
     // Full tag counts for the narrowed slice. Sorted by frequency
     // desc, then alpha. Not capped — that happens in
@@ -745,8 +885,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     const filtered = useMemo(() => {
         return catalogue.filter((entry) => {
             if (
-                selectedDispatchContext !== ALL_DISPATCH_CONTEXTS &&
-                entry.dispatchContext !== selectedDispatchContext
+                selectedApp !== ALL_APPS &&
+                entry.dispatchContext !== selectedApp
             ) {
                 return false;
             }
@@ -768,7 +908,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
             }
             return matchesQuery(entry, query);
         });
-    }, [catalogue, query, selectedDispatchContext, selectedCategory, selectedSubCategory, activeTags]);
+    }, [catalogue, query, selectedApp, selectedCategory, selectedSubCategory, activeTags]);
 
     const selectedEntry = useMemo(
         () =>
@@ -890,14 +1030,101 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
 
     const fieldNameValid = valueField === '' || FIELD_NAME_PATTERN.test(valueField);
     const labelValid = labelOverride === '' || labelOverride.trim().length <= 80;
-    const canApply = Boolean(selectedEntry && fieldNameValid && labelValid);
 
-    const facetsActive =
-        selectedDispatchContext !== DEFAULT_DISPATCH_CONTEXT ||
-        selectedCategory !== ALL_CATEGORIES ||
-        selectedSubCategory !== ALL_SUB_CATEGORIES ||
-        activeTags.size > 0 ||
-        tagFilter.trim().length > 0;
+    // ---------- Threshold form derived state ----------
+    //
+    // `parseThresholdInput` accepts the raw text input and returns the
+    // canonical numeric value (or `undefined` when the input is empty
+    // or unparseable). Used for both validation feedback and the merge
+    // into the apply payload — so the same parser drives the visible
+    // "this isn't a number" hint and the persisted value, eliminating
+    // any chance of a UI/runtime drift.
+    const parseThresholdInput = (raw: string): number | undefined => {
+        const trimmed = raw.trim();
+        if (trimmed === '') return undefined;
+        const n = Number(trimmed);
+        return Number.isFinite(n) ? n : undefined;
+    };
+
+    const warningParsed = parseThresholdInput(thresholdWarningInput);
+    const criticalParsed = parseThresholdInput(thresholdCriticalInput);
+    const warningInputValid =
+        thresholdWarningInput.trim() === '' || warningParsed !== undefined;
+    const criticalInputValid =
+        thresholdCriticalInput.trim() === '' || criticalParsed !== undefined;
+
+    // Sanity-check the warning-vs-critical relationship for the chosen
+    // direction. Used for an inline yellow hint, not a hard gate —
+    // some operators intentionally invert the bands to disable a
+    // colour (e.g. set warning > critical on `higher_is_better` to
+    // suppress the warning band entirely).
+    const thresholdRelationshipWarning: string | null = (() => {
+        if (warningParsed === undefined || criticalParsed === undefined) return null;
+        if (thresholdDirection === 'higher_is_better' && criticalParsed >= warningParsed) {
+            return '"Higher is better" usually wants critical < warning.';
+        }
+        if (thresholdDirection === 'lower_is_better' && criticalParsed <= warningParsed) {
+            return '"Lower is better" usually wants critical > warning.';
+        }
+        return null;
+    })();
+
+    // Live preview of the resulting bands. Built from the same
+    // `deriveThresholdLines` the per-tile info popover uses, so what
+    // the picker shows here is exactly what the popover will render
+    // after Apply — no second source of truth that could drift.
+    //
+    // Intentionally NOT wrapped in useMemo: `deriveThresholdLines` is
+    // O(1) (returns at most 3 short objects, no DOM work, no I/O), so
+    // the memoization win is negligible while the cost — having to
+    // sit *above* the `if (!open || !context) return null` early
+    // return on line ~985 to satisfy the Rules of Hooks — is real.
+    // Calling it directly on every render avoids React error #310
+    // ("Rendered more hooks than during the previous render") that
+    // hit Build 97 when the picker was opened from a tile config
+    // gear, because before the panel opens the early return fires
+    // and the hook never registers, but after it opens the hook
+    // does — a different hook count between renders.
+    const previewLines: ReturnType<typeof deriveThresholdLines> =
+        warningParsed === undefined && criticalParsed === undefined
+            ? undefined
+            : deriveThresholdLines(
+                  {
+                      warning: warningParsed,
+                      critical: criticalParsed,
+                      direction: thresholdDirection,
+                  },
+                  context?.thresholdUnit
+              );
+
+    // "Has the user changed any threshold field away from default?"
+    // Drives the per-section "Reset to default" link visibility and
+    // the "(custom)" badge on the collapsed THRESHOLDS toggle.
+    const def = context?.defaultThresholds;
+    const thresholdsCustomised =
+        warningParsed !== def?.warning ||
+        criticalParsed !== def?.critical ||
+        thresholdDirection !== (def?.direction ?? 'higher_is_better');
+
+    const canApply = Boolean(
+        selectedEntry &&
+            fieldNameValid &&
+            labelValid &&
+            warningInputValid &&
+            criticalInputValid
+    );
+
+    // Count of *applied* facets (excluding the in-progress tag-filter
+    // typing buffer). Drives the "Filters (N active)" badge on the
+    // collapsed toggle and feeds `facetsActive` for the Clear-filters
+    // button visibility.
+    const activeFilterCount =
+        (selectedApp !== DEFAULT_APP_SCOPE ? 1 : 0) +
+        (selectedCategory !== ALL_CATEGORIES ? 1 : 0) +
+        (selectedSubCategory !== ALL_SUB_CATEGORIES ? 1 : 0) +
+        activeTags.size;
+
+    const facetsActive = activeFilterCount > 0 || tagFilter.trim().length > 0;
 
     const handleApply = () => {
         if (!selectedEntry || !canApply) return;
@@ -910,7 +1137,56 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         if (selectedDescriptionPlain) {
             payload.description = selectedDescriptionPlain.slice(0, 600);
         }
+        // Threshold deltas (Build 97). Only persist values that
+        // differ from the tile's static default — keeps the
+        // localStorage payload minimal, makes "Reset to default" a
+        // simple drop-the-field operation at runtime, and ensures
+        // that future changes to the shipped defaults flow through
+        // automatically for any field the user hasn't customised.
+        //
+        // Comparison rule: empty input matches `undefined` default,
+        // so leaving the field blank when the tile shipped without a
+        // warning band is correctly recognised as "unchanged" and
+        // omitted. Numeric comparisons are direct === since the
+        // parsed values are already finite numbers; a 95 user-typed
+        // value matches a 95 default exactly.
+        if (warningParsed !== def?.warning && warningParsed !== undefined) {
+            payload.thresholdWarning = warningParsed;
+        }
+        if (criticalParsed !== def?.critical && criticalParsed !== undefined) {
+            payload.thresholdCritical = criticalParsed;
+        }
+        const defaultDirection = def?.direction ?? 'higher_is_better';
+        if (thresholdDirection !== defaultDirection) {
+            payload.thresholdDirection = thresholdDirection;
+        }
+        // Edge case: the user *cleared* a default-set threshold
+        // (e.g. tile defaulted to warning=95, user blanked the input
+        // to mean "no warning band"). We can't represent "explicitly
+        // undefined" in the override map without a sentinel, so we
+        // store the deletion as a sentinel value the merge layer
+        // recognises. For now, clearing a defaulted threshold is a
+        // rare-enough case that we punt on it — the picker shows a
+        // hint when the user blanks an input that has a default, so
+        // they're aware the default will be re-applied on next merge.
+        // (See comment near the input field.)
         onApply(context.tileId, payload);
+    };
+
+    /**
+     * Reset just the THRESHOLDS form back to the tile's static
+     * defaults — pre-fills the inputs and the direction toggle so the
+     * user sees what will be applied. Doesn't touch search binding,
+     * value field, label, or description: scoped to thresholds only,
+     * matching the per-section affordance pattern. The user still has
+     * to hit Apply to commit the reset; if they Cancel afterwards,
+     * nothing is persisted.
+     */
+    const handleResetThresholds = () => {
+        const d = context?.defaultThresholds;
+        setThresholdWarningInput(d && d.warning !== undefined ? String(d.warning) : '');
+        setThresholdCriticalInput(d && d.critical !== undefined ? String(d.critical) : '');
+        setThresholdDirection(d?.direction ?? 'higher_is_better');
     };
 
     const handleResetThisTile = () => {
@@ -941,7 +1217,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     };
 
     const handleClearFacets = () => {
-        setSelectedDispatchContext(DEFAULT_DISPATCH_CONTEXT);
+        setSelectedApp(DEFAULT_APP_SCOPE);
         setSelectedCategory(ALL_CATEGORIES);
         setSelectedSubCategory(ALL_SUB_CATEGORIES);
         setActiveTags(new Set());
@@ -1003,110 +1279,152 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                         />
                     </label>
 
-                    {/* Dispatch-context facet — defaults to this app's
-                        namespace so the picker stays scoped to the
-                        dashboard pack. Switch to "All dispatch
-                        contexts" or another app's namespace to widen.
-                        Always renders so operators can see which scope
-                        they're browsing — even when only one context
-                        is present in the catalogue. */}
-                    <div className="flex items-center gap-2">
-                        <span
-                            className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex-shrink-0 w-16"
-                            title="Dispatch context (Splunk app namespace) the search is registered against"
+                    {/* Filters toggle — collapses the App / Category /
+                        Sub-cat / Tag block so the result list gets back
+                        ~140px of vertical real-estate at rest. The
+                        active-count badge plus the auto-expand effect
+                        upstream guarantee the user always knows when a
+                        non-default facet is in play. Clear-filters
+                        sits inline so dismissing applied filters
+                        doesn't require expanding the block first. */}
+                    <div className="flex items-center justify-between gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setFiltersOpen((o) => !o)}
+                            aria-expanded={filtersOpen}
+                            aria-controls="kpi-picker-filters"
+                            title={filtersOpen ? 'Hide filters' : 'Show filters (App, Category, Sub-cat, Tags)'}
+                            className="flex items-center gap-1.5 px-1.5 py-1 -ml-1.5 rounded text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
                         >
-                            Dispatch
-                        </span>
-                        <select
-                            value={selectedDispatchContext}
-                            onChange={(e) => setSelectedDispatchContext(e.target.value)}
-                            className="flex-1 px-2 py-1 text-[11px] rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
-                        >
-                            <option value={ALL_DISPATCH_CONTEXTS}>
-                                All dispatch contexts ({dispatchContexts.length})
-                            </option>
-                            {dispatchContexts.map((dc) => (
-                                <option key={dc} value={dc}>
-                                    {dc}
-                                </option>
-                            ))}
-                            {/* Keep the default visible even when the
-                                catalogue hasn't loaded yet (initial
-                                paint, error states) so the dropdown
-                                never collapses to "All" with the
-                                default value silently lost. */}
-                            {!dispatchContexts.includes(DEFAULT_DISPATCH_CONTEXT) && (
-                                <option value={DEFAULT_DISPATCH_CONTEXT}>
-                                    {DEFAULT_DISPATCH_CONTEXT}
-                                </option>
+                            {filtersOpen ? (
+                                <ChevronDown className="w-3 h-3" />
+                            ) : (
+                                <ChevronRight className="w-3 h-3" />
                             )}
-                        </select>
-                    </div>
-
-                    {categories.length > 1 && (
-                        <div className="flex items-center gap-2">
-                            <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex-shrink-0 w-16">
-                                Category
-                            </span>
-                            <select
-                                value={selectedCategory}
-                                onChange={(e) => setSelectedCategory(e.target.value)}
-                                className="flex-1 px-2 py-1 text-[11px] rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
-                            >
-                                <option value={ALL_CATEGORIES}>All categories</option>
-                                {categories.map((c) => (
-                                    <option key={c} value={c}>
-                                        {c}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    )}
-
-                    {/* Sub-category facet — only renders when a category
-                        is picked AND that category has multiple
-                        sub-categories. Otherwise the dropdown would be
-                        a one-option no-op. */}
-                    {selectedCategory !== ALL_CATEGORIES && subCategories.length > 0 && (
-                        <div className="flex items-center gap-2">
-                            <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex-shrink-0 w-16">
-                                Sub-cat
-                            </span>
-                            <select
-                                value={selectedSubCategory}
-                                onChange={(e) => setSelectedSubCategory(e.target.value)}
-                                className="flex-1 px-2 py-1 text-[11px] rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
-                            >
-                                <option value={ALL_SUB_CATEGORIES}>
-                                    All sub-categories ({subCategories.length})
-                                </option>
-                                {subCategories.map((s) => (
-                                    <option key={s} value={s}>
-                                        {s}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    )}
-
-                    {facetsActive && (
-                        <div className="flex justify-end">
+                            <span>Filters</span>
+                            {activeFilterCount > 0 && (
+                                <span
+                                    className="ml-1 px-1.5 py-px rounded-full bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300 text-[9px] tracking-normal normal-case font-semibold"
+                                    title={`${activeFilterCount} active filter${activeFilterCount === 1 ? '' : 's'}`}
+                                >
+                                    {activeFilterCount} active
+                                </span>
+                            )}
+                        </button>
+                        {facetsActive && (
                             <button
                                 type="button"
                                 onClick={handleClearFacets}
-                                title="Clear all facet filters"
+                                title="Reset every filter to its default"
                                 className="text-[9px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200"
                             >
                                 Clear filters
                             </button>
+                        )}
+                    </div>
+
+                    {filtersOpen && (
+                        <div id="kpi-picker-filters" className="space-y-2">
+                            {/* App facet — defaults to this app's
+                                namespace (read from the searchbase
+                                entry's `dispatch_context` field) so the
+                                picker stays scoped to the dashboard
+                                pack. Switch to "All apps" or another
+                                app's namespace to widen. Always
+                                renders so operators can see which
+                                scope they're browsing — even when only
+                                one app is present in the catalogue. */}
+                            <div className="flex items-center gap-2">
+                                <span
+                                    className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex-shrink-0 w-16"
+                                    title="Splunk app the search belongs to (the searchbase entry's dispatch_context)"
+                                >
+                                    App
+                                </span>
+                                <select
+                                    value={selectedApp}
+                                    onChange={(e) => setSelectedApp(e.target.value)}
+                                    className="flex-1 px-2 py-1 text-[11px] rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                                >
+                                    <option value={ALL_APPS}>
+                                        All apps ({apps.length})
+                                    </option>
+                                    {apps.map((app) => (
+                                        <option key={app} value={app}>
+                                            {app}
+                                        </option>
+                                    ))}
+                                    {/* Keep the default visible even
+                                        when the catalogue hasn't
+                                        loaded yet (initial paint,
+                                        error states) so the dropdown
+                                        never collapses to "All" with
+                                        the default value silently
+                                        lost. */}
+                                    {!apps.includes(DEFAULT_APP_SCOPE) && (
+                                        <option value={DEFAULT_APP_SCOPE}>
+                                            {DEFAULT_APP_SCOPE}
+                                        </option>
+                                    )}
+                                </select>
+                            </div>
+
+                            {categories.length > 1 && (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex-shrink-0 w-16">
+                                        Category
+                                    </span>
+                                    <select
+                                        value={selectedCategory}
+                                        onChange={(e) => setSelectedCategory(e.target.value)}
+                                        className="flex-1 px-2 py-1 text-[11px] rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                                    >
+                                        <option value={ALL_CATEGORIES}>All categories</option>
+                                        {categories.map((c) => (
+                                            <option key={c} value={c}>
+                                                {c}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {/* Sub-category facet — only renders when a
+                                category is picked AND that category has
+                                multiple sub-categories. Otherwise the
+                                dropdown would be a one-option no-op. */}
+                            {selectedCategory !== ALL_CATEGORIES && subCategories.length > 0 && (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex-shrink-0 w-16">
+                                        Sub-cat
+                                    </span>
+                                    <select
+                                        value={selectedSubCategory}
+                                        onChange={(e) => setSelectedSubCategory(e.target.value)}
+                                        className="flex-1 px-2 py-1 text-[11px] rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                                    >
+                                        <option value={ALL_SUB_CATEGORIES}>
+                                            All sub-categories ({subCategories.length})
+                                        </option>
+                                        {subCategories.map((s) => (
+                                            <option key={s} value={s}>
+                                                {s}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
                         </div>
                     )}
 
                     {/* Tag multi-select — compact token input. Click to
                         open the dropdown of available tags (top-N by
                         frequency, lifted when typing). Selected tags
-                        become AND-combined pills inside the field. */}
-                    {(allTagsWithCounts.length > 0 || activeTags.size > 0) && (
+                        become AND-combined pills inside the field.
+                        Lives under the same Filters toggle as the
+                        App/Category/Sub-cat block so collapsing the
+                        block fully reclaims its vertical real-estate. */}
+                    {filtersOpen && (allTagsWithCounts.length > 0 || activeTags.size > 0) && (
                         <div className="relative" ref={tagSelectRef}>
                             <div
                                 onClick={() => {
@@ -1240,31 +1558,51 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                     so the user can always see *which* search is wired
                     up right now and jump to it with one click. Hidden
                     when the bound search isn't in the catalogue (e.g.
-                    a non-searchbase saved search), or when the user
-                    has already filtered/selected their way to it. */}
-                {currentBoundEntry && (
-                    <div className="px-3 py-2 mx-2 mb-1 rounded-md border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 flex items-center gap-2 flex-shrink-0">
-                        <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-emerald-500 text-white text-[8px] font-black flex-shrink-0">
-                            ✓
-                        </span>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-[8px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-400 leading-none">
-                                Currently bound
-                            </p>
-                            <p
-                                className="text-[11px] font-bold text-slate-800 dark:text-slate-100 truncate"
-                                title={currentBoundEntry.searchName}
-                            >
-                                {currentBoundEntry.searchName}
-                            </p>
-                        </div>
+                    a non-searchbase saved search), when the user has
+                    already filtered/selected their way to it, or when
+                    the user dismissed the strip via the × on the
+                    right (Build 94 — once you've seen which search is
+                    bound, the strip is dead weight; let users reclaim
+                    that ~32px for the result list). */}
+                {currentBoundEntry && !boundDismissed && (
+                    // Single-row banner. The whole strip (minus the
+                    // dismiss × on the right) is the "Jump to"
+                    // affordance so the click target is generous and
+                    // the bound name stays visible. Built as a flex
+                    // row of two siblings instead of nested buttons
+                    // (nested <button> isn't valid HTML and Safari
+                    // refuses the click).
+                    <div className="mx-2 mb-1 px-2 py-1 rounded-md border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 flex items-center gap-2 flex-shrink-0">
                         <button
                             type="button"
                             onClick={jumpToCurrent}
-                            title="Scroll the list to the currently bound search and select it"
-                            className="px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest rounded text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border border-emerald-300 dark:border-emerald-800 transition-colors flex-shrink-0"
+                            title={`Scroll to "${currentBoundEntry.searchName}" and select it`}
+                            className="flex-1 min-w-0 flex items-center gap-2 text-left hover:opacity-80 focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded"
                         >
-                            Jump to
+                            <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-emerald-500 text-white text-[8px] font-black flex-shrink-0">
+                                ✓
+                            </span>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-400 flex-shrink-0">
+                                Bound:
+                            </span>
+                            <span
+                                className="flex-1 text-[11px] font-bold text-slate-800 dark:text-slate-100 truncate min-w-0"
+                                title={currentBoundEntry.searchName}
+                            >
+                                {currentBoundEntry.searchName}
+                            </span>
+                            <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-300 flex-shrink-0">
+                                Jump to
+                            </span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setBoundDismissed(true)}
+                            title="Dismiss this strip (gives the result list more room — reopens next time you open the picker)"
+                            aria-label="Dismiss currently-bound strip"
+                            className="p-0.5 rounded text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 flex-shrink-0 transition-colors focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                        >
+                            <X className="w-3 h-3" />
                         </button>
                     </div>
                 )}
@@ -1414,40 +1752,39 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                         })}
                 </div>
 
-                {/* Selection preview + form */}
-                <div className="border-t border-slate-200 dark:border-slate-800 flex-shrink-0 px-4 py-3 space-y-2.5 max-h-[42%] overflow-auto">
+                {/* Selection preview + form.
+                  *
+                  * `max-h-[34%]` (Build 96, was 42%) hard-caps the
+                  * bottom panel to 34% of the popover so the result
+                  * list always gets ≥66%. The internal `overflow-auto`
+                  * keeps every field reachable when the panel content
+                  * exceeds the cap (USE chips can wrap, the SPL preview
+                  * can be expanded), and the footer (Reset / Apply /
+                  * Cancel) lives in a separate sibling below this div
+                  * so primary actions stay anchored even when the
+                  * scroll region is shorter than its content. */}
+                <div className="border-t border-slate-200 dark:border-slate-800 flex-shrink-0 px-4 py-3 space-y-2.5 max-h-[34%] overflow-auto">
                     {selectedEntry ? (
                         <>
                             <div>
-                                <div className="flex items-center justify-between gap-2 mb-1">
-                                    <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                                        Search name
-                                    </p>
-                                    {/* Right-aligned viz hint + label.
-                                        Same icon vocabulary the row list uses, but
-                                        with a written label here so the user gets
-                                        an unambiguous "yes, this is what you'll
-                                        see when you Apply" confirmation. */}
-                                    <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                                        <VizIcon
-                                            splunkViz={selectedEntry.defaultViz}
-                                            size={12}
-                                            showTooltip={false}
-                                            className="text-sky-600 dark:text-sky-400"
-                                        />
-                                        {resolveVizMapping(selectedEntry.defaultViz).label}
-                                    </span>
-                                </div>
-                                <p
-                                    className="select-text cursor-text text-[12px] font-bold text-slate-800 dark:text-slate-100 break-words leading-snug"
-                                    title="Drag to select part of the search name for copying."
-                                >
-                                    {selectedEntry.searchName}
-                                </p>
-                            </div>
-
-                            {(selectedEntry.category || selectedEntry.tags.length > 0) && (
-                                <div className="flex flex-wrap items-center gap-1">
+                                {/* Build 96: chips moved inline with the
+                                    "Search name" header line. The
+                                    header was a near-empty ~16px row
+                                    (label + viz icon) and the chips
+                                    row was a 30–50px wraparound row
+                                    that ate vertical real-estate every
+                                    render. Folding them into a single
+                                    flex row reclaims ~30–50px without
+                                    hiding any info — the category /
+                                    sub-cat chip and individual tag
+                                    chips still render at the same
+                                    size, and the viz-type pill stays
+                                    right-anchored as the
+                                    "yes-this-is-what-Apply-renders"
+                                    confirmation. Long chip lists wrap
+                                    rather than overflow horizontally
+                                    so nothing is silently clipped. */}
+                                <div className="flex flex-wrap items-center gap-1.5 mb-1">
                                     {selectedEntry.category && (
                                         <span className="inline-flex items-center px-1.5 py-px rounded-sm text-[9px] font-black uppercase tracking-widest bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300">
                                             {selectedEntry.category}
@@ -1466,8 +1803,28 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             {t}
                                         </span>
                                     ))}
+                                    {/* Viz-type pill, right-anchored.
+                                        `ml-auto` pushes it past any
+                                        category/tag chips that
+                                        accumulate on the same wrap
+                                        line. */}
+                                    <span className="ml-auto inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                                        <VizIcon
+                                            splunkViz={selectedEntry.defaultViz}
+                                            size={12}
+                                            showTooltip={false}
+                                            className="text-sky-600 dark:text-sky-400"
+                                        />
+                                        {resolveVizMapping(selectedEntry.defaultViz).label}
+                                    </span>
                                 </div>
-                            )}
+                                <p
+                                    className="select-text cursor-text text-[12px] font-bold text-slate-800 dark:text-slate-100 break-words leading-snug"
+                                    title="Drag to select part of the search name for copying."
+                                >
+                                    {selectedEntry.searchName}
+                                </p>
+                            </div>
 
                             <div>
                                 {/* Header row: "Show SPL" toggle (collapsed by
@@ -1545,14 +1902,53 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     ))}
                             </div>
 
+                            {/* Description block — collapsed by
+                                default to keep the bottom preview
+                                panel compact (Build 94). Same toggle
+                                pattern as "Show SPL" above. The
+                                catalogue is vetted, so the typical
+                                flow is browse → pick → apply; users
+                                who want the long narrative can expand
+                                with one click. The toggle row is
+                                always rendered when description text
+                                is available so the affordance is
+                                discoverable. */}
                             {selectedDescriptionPlain && (
                                 <div>
-                                    <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => setDescOpen((p) => !p)}
+                                        aria-expanded={descOpen}
+                                        aria-controls="kpi-picker-description-block"
+                                        title={
+                                            descOpen
+                                                ? 'Hide the description'
+                                                : 'Show the search description'
+                                        }
+                                        className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
+                                    >
+                                        <ChevronRight
+                                            className={cn(
+                                                'w-2.5 h-2.5 transition-transform',
+                                                descOpen && 'rotate-90'
+                                            )}
+                                        />
                                         Description
-                                    </p>
-                                    <p className="text-[11px] text-slate-600 dark:text-slate-300 line-clamp-4">
-                                        {selectedDescriptionPlain}
-                                    </p>
+                                        {!descOpen && (
+                                            <span className="font-normal normal-case tracking-normal text-[10px] text-slate-400 dark:text-slate-500 truncate max-w-[260px] ml-1">
+                                                · {selectedDescriptionPlain.slice(0, 60)}
+                                                {selectedDescriptionPlain.length > 60 ? '…' : ''}
+                                            </span>
+                                        )}
+                                    </button>
+                                    {descOpen && (
+                                        <p
+                                            id="kpi-picker-description-block"
+                                            className="mt-1 text-[11px] text-slate-600 dark:text-slate-300 line-clamp-4"
+                                        >
+                                            {selectedDescriptionPlain}
+                                        </p>
+                                    )}
                                 </div>
                             )}
 
@@ -1644,6 +2040,302 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         className="w-full px-2 py-1 text-[11px] rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
                                     />
                                 </div>
+                            </div>
+
+                            {/* THRESHOLDS form.
+                              *
+                              * Build 97: introduced the form.
+                              * Build 98: visual surface + default-expand
+                              *   to fix discoverability — the form was
+                              *   here all along, but its toggle row was
+                              *   styled identically to the "Show SPL"
+                              *   and "Description" toggles immediately
+                              *   above and read as just another link.
+                              *   Wrapping in a panel-like surface with
+                              *   a Gauge icon and a slightly heftier
+                              *   heading makes it clear this is *the*
+                              *   per-tile customisation, not a minor
+                              *   sub-detail. Default-expand on every
+                              *   open so the user lands on the inputs.
+                              *
+                              * Behaviour: collapsible section that lets
+                              * the user override the tile's
+                              * `MetricThresholds` tuple at runtime. Uses
+                              * the same `MetricThresholds` shape and
+                              * `deriveThresholdLines` formatter the
+                              * per-tile info popover and `computeStatus`
+                              * runtime use, so what the picker previews
+                              * here is exactly what the popover and the
+                              * tile colour will show after Apply — there's
+                              * exactly one source of truth, no chance of
+                              * UI/runtime drift.
+                              *
+                              * Layout: heading row (Gauge icon + label +
+                              * custom-badge + collapse chevron + Reset
+                              * link), then a 3-row form when expanded
+                              * (direction segmented control, side-by-side
+                              * Warning + Critical number inputs, then the
+                              * live "Healthy / Warning / Critical"
+                              * preview). The "Reset to default" link
+                              * surfaces only when the user has changed
+                              * something away from the shipped default. */}
+                            <div className="rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-2.5">
+                                <div className="flex items-center justify-between gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setThresholdsOpen((p) => !p)}
+                                        aria-expanded={thresholdsOpen}
+                                        aria-controls="kpi-picker-thresholds-block"
+                                        title={
+                                            thresholdsOpen
+                                                ? 'Hide the thresholds form'
+                                                : 'Show the thresholds form (set custom warning / critical bands for this tile)'
+                                        }
+                                        className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 hover:text-sky-700 dark:hover:text-sky-300 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-0.5 py-0.5"
+                                    >
+                                        <Gauge className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
+                                        Thresholds
+                                        {thresholdsCustomised && (
+                                            <span
+                                                title="This tile has custom thresholds applied (different from the shipped defaults)"
+                                                className="ml-1 inline-flex items-center px-1 py-px rounded-sm bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 text-[8px] font-bold tracking-wide normal-case"
+                                            >
+                                                custom
+                                            </span>
+                                        )}
+                                        <ChevronRight
+                                            className={cn(
+                                                'w-3 h-3 ml-1 text-slate-400 dark:text-slate-500 transition-transform',
+                                                thresholdsOpen && 'rotate-90'
+                                            )}
+                                        />
+                                    </button>
+                                    {thresholdsOpen && thresholdsCustomised && (
+                                        <button
+                                            type="button"
+                                            onClick={handleResetThresholds}
+                                            title="Restore warning / critical / direction to the shipped defaults for this tile (still has to be applied)"
+                                            className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
+                                        >
+                                            <RotateCcw className="w-2.5 h-2.5" />
+                                            Reset to default
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Helper line — telegraphs what this
+                                    section actually does on a fresh
+                                    picker open before the user has
+                                    typed anything. Shown only when
+                                    expanded so the collapsed state
+                                    remains a single compact row. */}
+                                {thresholdsOpen && (
+                                    <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
+                                        Set the warning and critical bands
+                                        used to colour the headline value
+                                        and the status icon for this tile.
+                                        Leave a field blank to disable
+                                        that band.
+                                    </p>
+                                )}
+
+                                {thresholdsOpen && (
+                                    <div
+                                        id="kpi-picker-thresholds-block"
+                                        className="mt-2 space-y-2"
+                                    >
+                                        {/* Direction segmented control — two
+                                            mutually-exclusive buttons. The
+                                            small description under each
+                                            segment doubles as a teach-in
+                                            (operators sometimes forget which
+                                            way the bands work for inverted
+                                            metrics). */}
+                                        <div>
+                                            <label className="block text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
+                                                Direction
+                                            </label>
+                                            <div className="grid grid-cols-2 gap-1 p-0.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900">
+                                                {(
+                                                    [
+                                                        {
+                                                            v: 'higher_is_better' as const,
+                                                            label: 'Higher is better',
+                                                            hint: 'Healthy when value ≥ warning threshold',
+                                                        },
+                                                        {
+                                                            v: 'lower_is_better' as const,
+                                                            label: 'Lower is better',
+                                                            hint: 'Healthy when value ≤ warning threshold',
+                                                        },
+                                                    ]
+                                                ).map((opt) => {
+                                                    const active =
+                                                        thresholdDirection === opt.v;
+                                                    return (
+                                                        <button
+                                                            key={opt.v}
+                                                            type="button"
+                                                            onClick={() =>
+                                                                setThresholdDirection(opt.v)
+                                                            }
+                                                            title={opt.hint}
+                                                            className={cn(
+                                                                'px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                                                                active
+                                                                    ? 'bg-sky-500 text-white'
+                                                                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                                            )}
+                                                            aria-pressed={active}
+                                                        >
+                                                            {opt.label}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        {/* Warning + Critical inputs side by
+                                            side. Each shows the static
+                                            default in the helper line under
+                                            the input so the user can always
+                                            see what the tile shipped with. */}
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label className="block text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
+                                                    Warning
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    inputMode="decimal"
+                                                    step="any"
+                                                    value={thresholdWarningInput}
+                                                    onChange={(e) =>
+                                                        setThresholdWarningInput(
+                                                            e.target.value.slice(0, 32)
+                                                        )
+                                                    }
+                                                    placeholder={
+                                                        def?.warning !== undefined
+                                                            ? String(def.warning)
+                                                            : 'none'
+                                                    }
+                                                    title="Value at which the headline flips to the warning colour. Leave blank to disable the warning band."
+                                                    className={cn(
+                                                        'w-full px-2 py-1 text-[11px] rounded border focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100',
+                                                        warningInputValid
+                                                            ? 'border-slate-200 dark:border-slate-700'
+                                                            : 'border-red-400 dark:border-red-600'
+                                                    )}
+                                                />
+                                                <p className="mt-0.5 text-[9px] text-slate-400 dark:text-slate-500">
+                                                    {def?.warning !== undefined
+                                                        ? `default: ${formatThresholdNumber(def.warning, context.thresholdUnit)}`
+                                                        : 'no shipped default'}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
+                                                    Critical
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    inputMode="decimal"
+                                                    step="any"
+                                                    value={thresholdCriticalInput}
+                                                    onChange={(e) =>
+                                                        setThresholdCriticalInput(
+                                                            e.target.value.slice(0, 32)
+                                                        )
+                                                    }
+                                                    placeholder={
+                                                        def?.critical !== undefined
+                                                            ? String(def.critical)
+                                                            : 'none'
+                                                    }
+                                                    title="Value at which the headline flips to the critical colour. Leave blank to disable the critical band."
+                                                    className={cn(
+                                                        'w-full px-2 py-1 text-[11px] rounded border focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100',
+                                                        criticalInputValid
+                                                            ? 'border-slate-200 dark:border-slate-700'
+                                                            : 'border-red-400 dark:border-red-600'
+                                                    )}
+                                                />
+                                                <p className="mt-0.5 text-[9px] text-slate-400 dark:text-slate-500">
+                                                    {def?.critical !== undefined
+                                                        ? `default: ${formatThresholdNumber(def.critical, context.thresholdUnit)}`
+                                                        : 'no shipped default'}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Sanity-check hint — non-blocking.
+                                            Some operators intentionally
+                                            invert the bands to suppress a
+                                            colour, so we surface the issue
+                                            but don't gate Apply on it. */}
+                                        {thresholdRelationshipWarning && (
+                                            <p className="text-[10px] text-amber-600 dark:text-amber-400">
+                                                ⚠ {thresholdRelationshipWarning}
+                                            </p>
+                                        )}
+
+                                        {/* Live preview — same words and
+                                            ranges the per-tile info popover
+                                            will render after Apply, because
+                                            both call `deriveThresholdLines`
+                                            with the same `MetricThresholds`
+                                            tuple. */}
+                                        {previewLines && previewLines.length > 0 && (
+                                            <div className="rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-2 py-1.5">
+                                                <p className="text-[8px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
+                                                    Preview
+                                                </p>
+                                                <ul className="space-y-0.5">
+                                                    {previewLines.map((row) => (
+                                                        <li
+                                                            key={row.tone}
+                                                            className="flex items-center gap-2 text-[10px]"
+                                                        >
+                                                            <span
+                                                                className={cn(
+                                                                    'inline-block w-1.5 h-1.5 rounded-full flex-shrink-0',
+                                                                    row.tone === 'healthy' &&
+                                                                        'bg-emerald-500',
+                                                                    row.tone === 'warning' &&
+                                                                        'bg-amber-500',
+                                                                    row.tone === 'critical' &&
+                                                                        'bg-red-500'
+                                                                )}
+                                                            />
+                                                            <span className="font-bold text-slate-700 dark:text-slate-200">
+                                                                {row.label}
+                                                            </span>
+                                                            <span className="font-mono text-slate-500 dark:text-slate-400">
+                                                                {row.value}
+                                                            </span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+
+                                        {/* No-thresholds message — both
+                                            inputs blank with no shipped
+                                            defaults. The form is still usable
+                                            (user can establish thresholds
+                                            from scratch if they swap the
+                                            tile to a numeric search), but we
+                                            tell them what the runtime
+                                            behaviour will be. */}
+                                        {!previewLines && (
+                                            <p className="text-[10px] text-slate-500 dark:text-slate-400 italic">
+                                                No thresholds set — the headline will render in the
+                                                neutral colour with no status icon.
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </>
                     ) : (

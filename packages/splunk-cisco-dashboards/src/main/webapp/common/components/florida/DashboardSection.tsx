@@ -115,28 +115,90 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
     className,
     tileCount,
 }) => {
+    // Build 101 (2026-05-13): the drill-down link moved from a
+    // bottom footer row up onto the section title itself. On short
+    // viewports the footer was the first thing to get clipped — Alan
+    // showed a screenshot at ~600px viewport height where all three
+    // "OPEN ..." links were partially obscured and unreachable, even
+    // though the page already scrolled. Promoting the title to be
+    // the click target solves three problems at once:
+    //
+    //   1. The section header is the most stable, always-on-top piece
+    //      of section chrome — clipping it would imply the section
+    //      itself isn't visible.
+    //   2. ~36px of vertical chrome per section is reclaimed (3
+    //      sections = ~108px back) without changing tile sizing,
+    //      letting the chart canvas breathe at its previous floor
+    //      height.
+    //   3. One affordance to learn instead of two ("click the title
+    //      OR the OPEN link").
+    //
+    // The `linkText` prop is repurposed as the hover/title tooltip
+    // ("Open IT health (new tab)") so existing callers don't need
+    // to change their contract.
+    const titleNode = href ? (
+        <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`${linkText} (new tab)`}
+            // The whole title row is the hit target. We keep the
+            // `<h3>` semantic underneath via aria-label so screen
+            // readers still announce it as the section heading
+            // first, then read the link role as secondary.
+            className={cn(
+                'inline-flex items-center gap-1.5 text-[14px] font-black uppercase tracking-tight leading-none transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-sky-400 rounded-sm group/link',
+                'text-sky-950 hover:text-sky-700 dark:text-sky-100 dark:hover:text-sky-300'
+            )}
+        >
+            <h3 className="leading-none">{title}</h3>
+            {/* Affordance group: chevron nudges right on hover, an
+                ArrowUpRight fades in to telegraph "opens new tab".
+                Same animation language the old footer link used so
+                the visual vocabulary stays consistent across the
+                app — operators who learned the previous pattern
+                see the same hover behaviour, just on a different
+                element. */}
+            <ChevronRight
+                className="w-3.5 h-3.5 opacity-60 group-hover/link:opacity-100 group-hover/link:translate-x-0.5 transition-all"
+                aria-hidden="true"
+            />
+            <ArrowUpRight
+                className="w-3 h-3 -ml-1 opacity-0 -translate-y-0.5 translate-x-0.5 group-hover/link:opacity-100 group-hover/link:translate-y-0 group-hover/link:translate-x-0 transition-all"
+                aria-hidden="true"
+            />
+        </a>
+    ) : (
+        <h3 className="text-[14px] font-black text-sky-950 dark:text-sky-100 uppercase tracking-tight leading-none">
+            {title}
+        </h3>
+    );
+
     return (
         <div
-            // `min-h-[220px]` is the lower bound at which a row of
-            // tiles still renders the headline + chart at a legible
-            // size (~22px header + ~36px headline + 72px chart floor +
-            // tile margins + section chrome ≈ 220px). Below that the
-            // sparkline canvas degenerates to a wavy pixel line.
-            // Combined with `overflow-y-auto` on the metrics column
-            // wrapper in OverviewPage, the page degrades to vertical
-            // scroll instead of squishing — same model Splunk
-            // Dashboard Studio uses for fixed-height grid tiles.
+            // `min-h-[180px]` is the legibility floor for a row of
+            // tiles after the bottom drill-down footer was removed
+            // (was 220px when the footer existed; -36px footer chrome
+            // = -36px floor). Keeps the headline + sparkline canvas
+            // at sizes the design intends:
+            //   ~22px section header + ~4px gap +
+            //   ~36px tile headline + ~72px chart floor +
+            //   ~16px tile margins / section chrome ≈ 180px.
+            // Below this the sparkline degenerates to a wavy pixel
+            // line, so we cap there and let the page degrade to
+            // vertical scroll via the parent column's `overflow-y-auto`
+            // — same fixed-height-grid model Splunk Dashboard Studio
+            // uses, just with a tighter floor since this layout has
+            // less per-section chrome to amortise.
             className={cn(
-                'bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-2.5 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_20px_-10px_rgba(0,0,0,0.45)] relative overflow-hidden group flex flex-col flex-shrink-0 min-h-[220px]',
+                'bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-2.5 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_20px_-10px_rgba(0,0,0,0.45)] relative overflow-hidden group flex flex-col flex-shrink-0 min-h-[180px]',
                 className
             )}
         >
             <div className="absolute top-0 left-0 w-1.5 h-full bg-sky-100 dark:bg-sky-900/40 group-hover:bg-sky-600 dark:group-hover:bg-sky-500 transition-colors" />
 
             <div className="flex items-center justify-between mb-1.5">
-                <h3 className="text-[14px] font-black text-sky-950 dark:text-sky-100 uppercase tracking-tight leading-none">
-                    {title}
-                </h3>
+                {titleNode}
                 {tileCount && <TileCountPill {...tileCount} />}
             </div>
 
@@ -158,28 +220,6 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
               */}
             <div className="flex flex-wrap md:flex-nowrap gap-0 divide-x divide-slate-100 dark:divide-slate-800 flex-1 min-h-0">
                 {children}
-            </div>
-
-            <div className="mt-1.5 pt-1.5 border-t border-slate-50 dark:border-slate-800">
-                <a
-                    href={href ?? '#'}
-                    aria-disabled={!href}
-                    target={href ? '_blank' : undefined}
-                    rel={href ? 'noopener noreferrer' : undefined}
-                    onClick={(e) => {
-                        if (!href) e.preventDefault();
-                    }}
-                    className={cn(
-                        'inline-flex items-center text-[11px] font-black uppercase tracking-wider transition-colors group/link',
-                        href
-                            ? 'text-sky-600 hover:text-sky-700 dark:text-sky-300 dark:hover:text-sky-200 cursor-pointer'
-                            : 'text-slate-400 dark:text-slate-600 cursor-not-allowed'
-                    )}
-                >
-                    <ChevronRight className="w-3 h-3 mr-0.5 group-hover/link:translate-x-0.5 transition-transform" />
-                    {linkText}
-                    <ArrowUpRight className="w-3 h-3 ml-1 opacity-0 -translate-y-0.5 translate-x-0.5 group-hover/link:opacity-100 group-hover/link:translate-y-0 group-hover/link:translate-x-0 transition-all" />
-                </a>
             </div>
         </div>
     );

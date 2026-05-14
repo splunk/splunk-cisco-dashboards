@@ -495,7 +495,26 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                         previousLabel={previousLabel}
                         timestamps={sparkTimestamps}
                         timeRange={timeRange}
-                        formatValue={(n) => `${n.toLocaleString()}${unit}`}
+                        // Build 99: tooltip values follow the same
+                        // compact-vs-locale rule as the headline (see
+                        // `displayValue` above) — abbreviate to k/M/B/T
+                        // for raw counts where the headline already
+                        // does, but keep the full number for unit
+                        // domains where compaction makes no sense
+                        // (`%`, `ms`, `Mbps` — already short, and
+                        // `74Mbps` reads OK as `74Mbps` no matter
+                        // what). Without this, the headline showed
+                        // "74k" while the hover bubbles showed
+                        // "73,537.79" — visually disorienting and
+                        // they look like different metrics.
+                        formatValue={(n) =>
+                            abbreviateMajorValue &&
+                            unit !== '%' &&
+                            unit !== 'ms' &&
+                            unit !== 'Mbps'
+                                ? `${formatCompactNumber(n)}${unit}`
+                                : `${n.toLocaleString()}${unit}`
+                        }
                         title={sparkTitle}
                     />
                 </div>

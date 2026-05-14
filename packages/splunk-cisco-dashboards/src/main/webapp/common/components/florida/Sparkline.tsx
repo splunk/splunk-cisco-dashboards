@@ -393,7 +393,7 @@ const SparklineTooltip: React.FC<SparklineTooltipProps> = ({
             {point.previous !== null && Number.isFinite(point.previous) && (
                 <div className="flex items-center gap-1.5 mt-0.5">
                     <span
-                        className="inline-block w-2 h-px bg-slate-400 flex-shrink-0"
+                        className="inline-block w-2 h-px bg-slate-600 dark:bg-slate-300 flex-shrink-0"
                         aria-hidden="true"
                     />
                     <span className="text-slate-500 dark:text-slate-400 tabular-nums">
@@ -626,9 +626,9 @@ export const Sparkline: React.FC<SparklineProps> = ({
                     <Line
                         type="monotone"
                         dataKey="previous"
-                        stroke="#1f2937"
-                        strokeWidth={1.75}
-                        strokeDasharray="6 3"
+                        stroke="var(--baseline-stroke)"
+                        strokeWidth={2.25}
+                        strokeDasharray="8 4"
                         strokeOpacity={0.9}
                         dot={false}
                         isAnimationActive={false}
@@ -646,9 +646,9 @@ export const Sparkline: React.FC<SparklineProps> = ({
                     <Line
                         type="monotone"
                         dataKey="previous"
-                        stroke="#1f2937"
-                        strokeWidth={1.75}
-                        strokeDasharray="6 3"
+                        stroke="var(--baseline-stroke)"
+                        strokeWidth={2.25}
+                        strokeDasharray="8 4"
                         strokeOpacity={0.9}
                         dot={false}
                         isAnimationActive={false}
@@ -675,9 +675,9 @@ export const Sparkline: React.FC<SparklineProps> = ({
                 <Line
                     type="monotone"
                     dataKey="previous"
-                    stroke="#1f2937"
-                    strokeWidth={1.75}
-                    strokeDasharray="6 3"
+                    stroke="var(--baseline-stroke)"
+                    strokeWidth={2.25}
+                    strokeDasharray="8 4"
                     strokeOpacity={0.9}
                     dot={false}
                     isAnimationActive={false}
@@ -747,7 +747,31 @@ export const Sparkline: React.FC<SparklineProps> = ({
 
     return (
         <div {...interactiveProps}>
-            <div className="flex flex-col h-full w-full">
+            {/* Build 98 (2026-05-13): Theme-aware baseline / previous-period
+              * overlay stroke. Declared as a CSS custom property here and
+              * referenced via `stroke="var(--baseline-stroke)"` on the
+              * three `<Line dataKey="previous">` elements below. The
+              * Tailwind arbitrary-property syntax flips the value when
+              * any ancestor carries the `.dark` class (set on the page
+              * root by `pages/overview` from `useTheme()`), so the same
+              * Sparkline instance reads its own theme without prop
+              * plumbing or hook reordering — important because Sparkline
+              * has an `if (vizType === 'singlevalue') return null` early
+              * return at the top of the component which would otherwise
+              * make any added theme hook subject to React error #310.
+              *
+              * Colour choices:
+              *   • Light: slate-600 (#475569) — readable on white bg,
+              *     doesn't compete with axis text or status icons.
+              *   • Dark:  slate-300 (#cbd5e1) — readable on slate-950
+              *     bg, sits visually behind the primary tile colour.
+              *
+              * Stroke width bumped 1.75 → 2.25 and dash pattern
+              * lengthened 6/3 → 8/4 so the line doesn't read as a
+              * "row of pixels" at small chart heights — the previous
+              * style melted into the gridline noise on the dashboard
+              * landing page (Alan flagged on 2026-05-13). */}
+            <div className="flex flex-col h-full w-full [--baseline-stroke:#475569] dark:[--baseline-stroke:#cbd5e1]">
                 <div className="flex-1 min-h-0">
                     <ResponsiveContainer width="100%" height="100%">
                         {chartElement}

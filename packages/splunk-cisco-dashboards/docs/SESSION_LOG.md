@@ -7,6 +7,1196 @@
 
 ---
 
+## 2026-05-13 (Build 101) — Section title becomes the drill-down; reclaim ~108px on short viewports
+
+### Context
+
+Even after the responsive-scaling work in Build 95, Alan kept
+running into the same wall on shorter viewports: the bottom-of-section
+"OPEN IT HEALTH / OPEN SECURITY / OPEN BUILDING INTELLIGENCE"
+drill-down links were the first thing to get clipped. He sent a
+~600px-tall screenshot where all three were partly obscured —
+the page had already scrolled, and his usual click target was just
+gone. He suggested promoting the section title to be the link and
+removing the bottom row entirely. Strong yes from a layout
+perspective:
+
+1. **The title is the most stable piece of section chrome.** If
+   it gets clipped, the section itself isn't visible — there's
+   nothing to drill into anyway. Putting the click affordance
+   there means it's reachable whenever the section is.
+2. **Two affordances for one action is one too many.** Operators
+   were already learning "click the OPEN link" and now had to
+   re-learn it when it disappeared. Collapsing them onto a single
+   target (the title) is simpler.
+3. **The bottom footer carried ~36px of chrome per section.**
+   Across three sections that's ~108px of pure overhead on every
+   render — enough to push the second and third sections off
+   the visible viewport on a 600px-tall window.
+
+### Fix
+
+- **`DashboardSection.tsx`.** Title rendering became conditional:
+
+  - When `href` is provided, the title renders as an `<a>` that
+    opens the drill-down view in a new tab, with a `<h3>` nested
+    inside so screen readers still announce the section heading
+    first. The hover affordance reuses the same vocabulary the
+    old footer link had — a `ChevronRight` that nudges right on
+    hover, plus an `ArrowUpRight` that fades in to telegraph
+    "opens in new tab." Operators who learned the previous
+    pattern see the same icons and animation, just on a
+    different element.
+  - When `href` is omitted (defensive — currently always
+    provided), the title renders as a plain `<h3>` with no link
+    behaviour, identical to its pre-Build-101 appearance.
+
+  The `linkText` prop is repurposed as the hover/title tooltip
+  ("Open IT health (new tab)") so existing call sites keep
+  working without changing their contract.
+
+  The bottom footer block (the `<div className="mt-1.5 pt-1.5
+  border-t ...">` wrapper plus the `<a>` it held) was deleted
+  entirely. With it gone, `min-h-[220px]` was no longer the
+  legibility floor — the floor existed to accommodate the
+  footer's ~36px chrome. Dropped to `min-h-[180px]`, which still
+  guarantees:
+
+  ~22px section header + ~4px gap + ~36px tile headline +
+  ~72px chart floor + ~16px tile chrome ≈ 180px
+
+- **`pages/overview/index.tsx`.** The mirrored `min-h-[220px]`
+  on the section's `className` prop (which had to re-assert the
+  floor because `tailwind-merge` lets the prop class win over
+  the component's internal class) was lowered to
+  `min-h-[180px]`. The long-form comment block above it was
+  rewritten to explain why 220 → 180 — without that note a
+  future reviewer would see "180" and wonder whether someone
+  was just guessing at chart-canvas legibility. The comment
+  above the metrics column wrapper (which also referenced 220 →
+  660 for the three-section budget) was updated to 180 → 540 so
+  the math stays consistent across the file.
+
+### Verification
+
+- `yarn build` clean (8.5s, only the pre-existing webpack
+  size-limit warnings on `searchbase.conf` and the background
+  PNGs).
+- `ReadLints` clean on both touched files.
+- Visual smoke test: the section header now reads
+  "IT HEALTH ›" with the ChevronRight visible at 60% opacity.
+  Hovering the row turns the title sky-700 and slides the
+  chevron right while fading in the ArrowUpRight — same hover
+  language the old footer link used. Click opens
+  `/<locale>/app/splunk-cisco-dashboards/it_health_v1` in a new
+  tab. The bottom of the card is now a clean rounded edge, no
+  divider, no link.
+- Short-viewport math: at 600px viewport height (the case
+  Alan flagged), the metrics column previously asked for
+  ~660px of content (3 × 220 plus gaps) and went into
+  scrolling. It now asks for ~540px, which fits a 600px
+  viewport with margin to spare — meaning the third section's
+  drill-down (now its title) is reachable without scrolling.
+
+### What's next
+
+- **Continue the responsive polish thread.** Possible follow-ups
+  Alan mentioned in passing: shrinking section padding at very
+  short viewports, adding a "compact density" toggle on the
+  header, and revisiting the picker-panel real estate one more
+  time now that `MetricItem` carries less chrome.
+- **Pending from Build 98/99.** Dashboard-name + subtitle copy
+  pass and the threshold form's "advanced" unit-conversion
+  reveal are still parked.
+
+---
+
+## 2026-05-13 (Build 100) — Tooltip compaction, spotlight-pause fix, topology tag-search
+
+### Context
+
+Three issues from a single test session:
+
+1. **Sparkline tooltips were verbose.** The headline showed "74k"
+   while the hover bubbles showed "952,033.61" / "73,537.79" — the
+   two reads looked like different metrics.
+2. **Spotlight ring "broke" after clicking a site.** Alan reported
+   the red dashed alert ring around TLH stopped pulsing the moment
+   he clicked the marker, and didn't come back until a browser
+   refresh — only "and so on and so forth" with each subsequent
+   refresh.
+3. **No way to search for tags in the topology editor's
+   per-card "Change Search" browser.** The browser already
+   substring-matched tags in its free-text input, but it wasn't
+   discoverable, and the `+ filter by tag` chip dropdown couldn't
+   be filtered itself once it grew past ~12 tags.
+
+### Fixes
+
+- **#1 Tooltip abbreviation.** The `formatValue` prop passed from
+  `MetricItem.tsx` to `Sparkline` was hardcoded to
+  `n.toLocaleString() + unit`. Replaced with the same
+  compact-vs-locale rule the headline already uses:
+  abbreviate to `k/M/B/T` when `abbreviateMajorValue` is on AND
+  the unit isn't one of `%`, `ms`, `Mbps` (units that are already
+  short enough that compaction would be silly: `74Mbps` reads
+  fine as `74Mbps`). The function literal is shared visually with
+  the `displayValue` block above so the two sites stay locked
+  together — they're the same rule.
+
+- **#2 Spotlight-pause regression (P0 user-visible).**
+  `selectSite`/`selectLink` were unconditionally bumping
+  `pauseUntilRef.current = Date.now() + 25000` on every click,
+  *including* clicks that close the panel by toggling off. With
+  the spotlight tick interval at 11s, that meant:
+  - Click TLH → 25s pause starts, panel opens, alert ring hides.
+  - Close (X / Escape / outside-click / re-click) → pause clock
+    is still running, so the immediate `tick()` re-fire (from
+    the effect re-running on `resolvedSelected` change) returns
+    early, and every subsequent 11s tick does too until the
+    25s window expires.
+  - Re-clicking the same marker to close it bumped the pause
+    *again* — a fresh 25s clock started every time, making
+    recovery functionally indefinite for any operator who
+    interacts with the marker more than once.
+
+  The user-visible symptom: the alert ring stayed gone for ~25s
+  in the best case, indefinitely in the realistic case, until a
+  full page reload reset the pause clock.
+
+  Fix: pause only when *opening* a selection. Every dismiss path
+  (toggle-close re-click, X button, Escape, outside-click, the
+  background-click hook, opening the editor) now resets
+  `pauseUntilRef.current = 0`. A new `closeSelection` helper
+  threads that contract through `SelectionCard.onClose` and
+  `MapClickCapture.onBackgroundClick` so all dismiss paths share
+  the same handler. Also moved the ref mutations *outside* the
+  setState updater functions in `selectSite`/`selectLink` so
+  React strict-mode's double-invocation can't double-bump the
+  clock.
+
+- **#3 Topology editor tag search.**
+  The free-text input always substring-matched tag names (the
+  haystack included `entry.tags.join(' ')`), but the placeholder
+  said `Search 198 catalogue entries…` with no hint that tags
+  were searchable. Updated to
+  `Search 198 entries by name, category, or tag…` —
+  one-line copy fix that reveals the existing capability.
+
+  The `+ filter by tag` chip dropdown got a typeahead input on
+  open. Mirrors the KpiPickerPanel pattern: auto-focus on open,
+  type to narrow the chip list, Enter selects the first match,
+  Escape closes the picker. Backed by a separate
+  `tagsAvailableAll` memo (full ranked list) and a `tagsAvailable`
+  derived list (filtered by the typeahead, capped at 12 chips
+  for visual stability) so the typeahead doesn't fight the
+  frequency ranking.
+
+### Verification
+
+- `yarn build` clean.
+- Lints clean across the three touched files.
+- No new hooks below early returns; the `useEffect` for the new
+  tag-filter focus runs alongside existing hooks at the top of
+  `TopologySearchBrowser`.
+
+### What's next
+
+- Same deferred list (dashboard rename, subtitle copy).
+- The compaction rule lives in two places now (`MetricItem`'s
+  `displayValue` and the new `Sparkline.formatValue` literal).
+  Worth extracting to a shared helper if a third caller appears.
+
+---
+
+## 2026-05-13 (Build 99) — Threshold form discoverability fix-up
+
+### Context
+
+Alan opened Build 98, clicked **Configure tile**, and asked: *"I am
+not seeing where I can manage the Thresholds? did I miss something
+here? I thought you were working on building a UI for it."* — meaning
+the form was rendering, but it was so visually subordinate that he
+didn't see it.
+
+### Diagnosis
+
+Two compounding issues, both of my own making:
+
+1. **Default-collapsed.** `thresholdsOpen` initialised to `false`,
+   and the panel-open `useEffect` only set it to `true` when the
+   tile *already* had a custom override. So a first-time user (the
+   ~100% case the day after the feature shipped) never saw the
+   form expanded — only the tiny chevron toggle.
+
+2. **Visual weight.** The toggle row was styled with the exact
+   same Tailwind classes as the "Show SPL" and "Description"
+   chevron toggles immediately above it (`text-[9px] font-bold
+   uppercase tracking-widest text-slate-500`). Three near-identical
+   rows in a tight stack read as "more details, more details, more
+   details" — not "this is the per-tile customisation surface".
+
+### Fixes
+
+- **Default-expand.** `useState(true)` for `thresholdsOpen` and the
+  panel-open effect now unconditionally sets it to `true`. Users
+  who want the bottom panel compact can collapse the section with
+  one click, but they no longer have to *know* the form exists to
+  reach it.
+
+- **Surface promotion.** The whole section is now wrapped in a
+  rounded panel (`border bg-slate-50 dark:bg-slate-900/40 p-2.5`)
+  so it visually separates from the value-field / label-override
+  grid above. The heading row gets a real treatment:
+  - Sky-coloured `Gauge` icon (lucide) anchors the section.
+  - Heading bumped from `text-[9px]` to `text-[11px] font-black
+    uppercase tracking-wider` so it reads as a section header
+    rather than a chevron link.
+  - Chevron moved to the *right* of the label so the eye lands
+    on "THRESHOLDS" first; the chevron becomes the affordance,
+    not the focus.
+
+- **Helper copy.** A one-line description renders just below the
+  heading when expanded:
+  > Set the warning and critical bands used to colour the headline
+  > value and the status icon for this tile. Leave a field blank
+  > to disable that band.
+
+  Tells the user what the section does *before* they have to read
+  the field labels — important on a first encounter.
+
+### Verification
+
+- `yarn build` clean.
+- `ReadLints` clean on `KpiPickerPanel.tsx`.
+- No new hooks, no new conditional render paths — purely styling
+  + default-state changes, so the Build 98 crash fix is unaffected.
+
+### What's next
+
+- Same "deferred to next pass" list from Build 98 (dashboard
+  rename, subtitle, threshold unit-conversion polish).
+
+---
+
+## 2026-05-13 (Build 98) — Threshold-form crash fix + overview polish bundle
+
+### Context
+
+Alan opened the dashboard after Build 97 shipped, clicked **Configure
+tile**, and the page hard-crashed with **React error #310** ("Rendered
+more hooks than during the previous render") and a 404 on
+`services/configs/conf-limits/structured_data_service` — the latter is
+a Splunkd housekeeping fetch that's always been 404 for non-cluster
+hosts and is unrelated. The hook crash, however, was 100% on Build 97.
+He bundled four other items into the same patch:
+
+1. (Bug fix) Crash on Configure tile.
+2. (Regression) Topology editor's per-card "Change Search (Site/Link)"
+   browsers were showing **0 of 0** entries.
+3. (UX) Map link popup printed
+   `Tallahassee, Florida, US ↔ Orlando, Florida, US` directly above
+   `Auburndale (Logistics) to Tallahassee (State EOC)` — same link,
+   two contradictory location strings.
+4. (UX) Comparison/baseline overlay stroke was hard to see — Alan
+   chose **Option 4: theme-aware neutral, thicker line, longer dashes**
+   from the four candidates.
+5. (Threshold polish — deferred) Dashboard rename, subtitle copy:
+   left for a follow-up content pass since these are wording choices
+   Alan wants to read against the rendered UI.
+
+### Fixes
+
+- **#1 Crash (P0).** Build 97's `previewLines` lived inside a
+  `useMemo` that sat *below* the `if (!open || !context) return null`
+  early return on `KpiPickerPanel.tsx:985`. When the panel was
+  closed, the early return fired and the hook never ran; when it
+  opened, it did — different hook count between renders → React #310.
+  `deriveThresholdLines` is O(1) (≤3 short objects, no DOM, no I/O),
+  so the memoization win was negligible. Replaced the `useMemo` with
+  a plain ternary; left a long inline comment on why the hook was
+  intentionally not added back. Verified with grep that every
+  remaining hook in the picker (last `useMemo` line ~941, last
+  `useEffect` line ~974, last `useRef` line ~954) sits above the
+  early return.
+
+- **#2 Topology editor "0 of 0" regression.** Same root cause as the
+  KPI picker bug Build 91 fixed: `editorSearchOptions` in
+  `CustomerTopologyMap.tsx` was filtering on
+  `record.tags.includes('Cisco')`, but the `Cisco` tag was removed
+  from every `searchbase.conf` stanza during the FDEM/branding
+  cleanup. Replaced with
+  `record.dispatchContext === 'splunk-cisco-dashboards'` — a stable
+  scope key authored on every stanza in this app's
+  `default/searchbase.conf` (`dispatch_context_force = 1`) that the
+  FDEM scrub didn't touch. Same one-line fix, same diagnosis,
+  exactly the lesson learned from Build 91 we should have applied
+  proactively across every consumer of the catalogue.
+
+- **#3 TE-geo line dropped.** The contradictory
+  `sourceLocation ↔ targetLocation` row read from
+  `thousandeyes.source.agent.location` /
+  `thousandeyes.target.agent.location` straight off the test data.
+  TE registers each agent's geo at the metro level, so Auburndale's
+  agent `dema-te01-va` lives in TE as "Orlando, FL" (~50 mi away).
+  That row is technically correct from TE's perspective but reads
+  as a bug right above the customer-site-name row. Removed the row
+  entirely; the customer-site-name row remains as ground truth, the
+  agent-pair row above tells you *which* TE agents are doing the
+  measuring, and the existing "View in ThousandEyes" deep link is
+  one click away if you need the agent's TE-registered geo.
+
+- **#4 Overlay stroke (Option 4).** Bumped `Sparkline.tsx` baseline
+  stroke from `#1f2937` (slate-800, hardcoded — too dark on dark
+  theme, indistinguishable from chart gridlines on light theme) to
+  a CSS-variable-driven theme-aware pair:
+  - Light: `slate-600` (`#475569`) — readable on white bg.
+  - Dark:  `slate-300` (`#cbd5e1`) — readable on slate-950 bg.
+
+  Implementation chose Tailwind's arbitrary-property syntax
+  (`[--baseline-stroke:#475569] dark:[--baseline-stroke:#cbd5e1]`)
+  on the chart wrapper `<div>` over prop plumbing because the
+  `<Sparkline>` component has its own
+  `if (vizType === 'singlevalue') return null` early return at the
+  top — adding a `useTheme()` hook inside Sparkline would have
+  reproduced the same hook-ordering footgun this build is fixing.
+  CSS-only is the clean answer. Three `<Line dataKey="previous">`
+  callsites updated in lockstep (bar+line+area chart paths), all
+  reading `stroke="var(--baseline-stroke)"`.
+
+  Stroke weight 1.75 → 2.25, dash 6/3 → 8/4: the previous line
+  was reading as a row of pixels at small chart heights. The
+  tooltip swatch (`bg-slate-400`) was also re-themed to match
+  (`bg-slate-600 dark:bg-slate-300`) so the legend doesn't
+  contradict the chart.
+
+### Verification
+
+- `yarn build` → 0 errors, 2 expected size warnings (entrypoint and
+  chunk size; long-standing, tracked separately).
+- `ReadLints` clean across the four touched files.
+- Manual: panel open/close cycle no longer throws; topology editor
+  Site/Link search browsers populate; link popup shows one
+  location row; overlay line is visibly distinct from gridlines on
+  both themes.
+
+### What's next
+
+- Dashboard rename + subtitle copy pass (deferred from this build —
+  Alan wants to see options rendered in situ).
+- Threshold form polish: an "advanced" section reveal for the unit
+  conversion when `valueField` switches to a column on a different
+  scale (e.g. ms → percent) — currently the form persists the
+  user's literal numbers regardless, which is correct but could be
+  smarter.
+
+---
+
+## 2026-05-13 (Build 97) — User-editable thresholds via the KPI picker
+
+### Context
+
+Alan asked how thresholds are controlled — they're "really cool but
+appear hard-coded". Confirmed: each of the ~28 metric tiles has a
+TypeScript `MetricThresholds` literal in `pages/overview/index.tsx`,
+and the persisted `MetricOverride` shape carried only
+`savedSearch / label / valueField / description`. So thresholds were
+locked to whatever shipped, and worse: when the picker swapped
+`valueField` to a column on a totally different scale, the original
+threshold tuple still applied — the colour could lie.
+
+He greenlit "build what you think is best UX, think flexibility and
+ease of use." This build extends the override surface with three new
+fields, wires them through the runtime merge, and adds a collapsible
+THRESHOLDS form to the picker bottom panel.
+
+### Design choices
+
+- **Reuse the existing source of truth.** The form drives the same
+  `MetricThresholds` shape `computeStatus` and `deriveThresholdLines`
+  already consume, so the live preview in the picker is *literally*
+  what the per-tile info popover renders after Apply — there's still
+  exactly one source of truth for threshold colouring, no UI/runtime
+  drift possible.
+- **Only persist deltas.** The picker form omits any threshold field
+  that matches the tile's static default. Three benefits: localStorage
+  payload stays small, "Reset to default" reduces to "drop the field
+  from the override", and shipped-default changes flow through
+  automatically for fields the user hasn't customised.
+- **Independently optional.** `thresholdWarning`, `thresholdCritical`,
+  `thresholdDirection` are each independently optional. A partial
+  override (e.g. only `thresholdWarning`) keeps the other two anchored
+  to the shipped values — exactly what users want when they want to
+  "tweak the warning point but leave critical alone".
+- **Collapsed by default; auto-expand on customised tiles.** Fresh
+  picker open: the THRESHOLDS section is collapsed, bottom panel
+  stays compact. Re-opening the picker for a tile with custom
+  thresholds: the section auto-expands so the customisation is
+  immediately visible. Same pattern as `descOpen` / `showSpl` /
+  `filtersOpen`.
+- **Non-blocking sanity hint.** If the user inverts the bands
+  (e.g. critical ≥ warning on a `higher_is_better` tile) we surface
+  an inline yellow ⚠ hint but don't gate Apply on it — some operators
+  intentionally invert to suppress a colour band, and the storage
+  layer shouldn't second-guess that.
+
+### What changed
+
+#### 1. `usePersistedMetricOverrides.ts`
+
+Extended `MetricOverride` with three new optional fields, all
+documented in the module-level header:
+
+```ts
+thresholdWarning?: number;
+thresholdCritical?: number;
+thresholdDirection?: 'higher_is_better' | 'lower_is_better';
+```
+
+Sanitizer (`sanitizeOverride`) gained matching guards:
+
+- Numeric fields validated through a single `isFiniteThresholdNumber`
+  helper with bounds `[-1e9, 1e9]` (covers percentages, counts, and
+  rates without admitting `Infinity` or 1e30 nonsense). The
+  warning-vs-critical sanity check is intentionally *not* enforced
+  at the storage layer — that's a UI hint, not a hard constraint.
+- Direction validated against a `Set` of the two enum values.
+
+Storage version stays `v: 1` — the new fields are additive and the
+sanitizer drops anything malformed, so a user with a v1 store from
+before this build reads cleanly into the new shape.
+
+#### 2. `pages/overview/index.tsx`
+
+- Imported `MetricThresholds` from `useMetric`.
+- New helper `mergeThresholds(base, override)` — reads each override
+  field with `??` fallback to the static default. Returns the static
+  base unchanged when no override fields are set, so a non-thresholds
+  override (search-binding only) is a no-op for thresholds.
+- `applyOverride()` now passes `thresholds: mergeThresholds(cfg.thresholds, override)`.
+- `openPicker()` extended to accept `defaultThresholds` and `unit` in
+  the `current` parameter, and to populate the new
+  `KpiPickerContext.defaultThresholds` / `currentThresholds` /
+  `thresholdUnit` fields. It also calls `mergeThresholds` once to
+  produce the *current effective* tuple for the picker pre-fill.
+- Three call-sites (the metric grid card, KPI 0, KPI 1) updated to
+  pass `cfg.thresholds` and `cfg.unit`. KPI cards ship without numeric
+  thresholds; we pass `unit: undefined` for them so the form still
+  renders empty inputs the user can fill.
+
+#### 3. `KpiPickerPanel.tsx`
+
+- Imported `deriveThresholdLines`, `formatThresholdNumber`,
+  `MetricThresholds` from `useMetric`.
+- Extended `KpiPickerContext` with `defaultThresholds`,
+  `currentThresholds`, `thresholdUnit`. Each has a long-form comment
+  explaining what it's for.
+- New form state (4 pieces): `thresholdsOpen` (collapsible flag),
+  `thresholdWarningInput` / `thresholdCriticalInput` (raw text content
+  of the number inputs, stored as strings so blank == "no band"),
+  `thresholdDirection` (segmented-control selection).
+- Panel-open `useEffect` now pre-fills the four pieces of state from
+  `context.currentThresholds` and decides whether to auto-expand.
+- New derived helpers above `handleApply`:
+  - `parseThresholdInput(raw)` — single source of truth for parsing
+    a string input to either `number` or `undefined`. Drives both
+    validation feedback and the apply-payload merge so they can never
+    drift.
+  - `warningParsed` / `criticalParsed`, `*InputValid` flags.
+  - `thresholdRelationshipWarning` — non-blocking inverted-bands hint.
+  - `previewLines` — calls `deriveThresholdLines(...)` with the
+    current form state, so the picker preview matches the popover.
+  - `thresholdsCustomised` — drives the "(custom)" badge and the
+    per-section "Reset to default" link.
+- `handleApply` now appends only the threshold fields that *differ*
+  from the static default to the override payload. Clearing a
+  default-set threshold (rare) is documented as a deferred edge case
+  with a comment pointer.
+- New `handleResetThresholds` — restores the form (not the persisted
+  override) back to the static defaults; the user still has to hit
+  Apply to commit. Scoped to thresholds only.
+- New collapsible THRESHOLDS section in the bottom panel, between the
+  VALUE FIELD / LABEL OVERRIDE grid and the form footer:
+  - Toggle row: chevron + "Thresholds" + optional "custom" badge,
+    plus the per-section "Reset to default" link when customised.
+  - When expanded:
+    1. Direction segmented control (2 buttons, mutually exclusive,
+       hint-tooltips on each).
+    2. Warning + Critical number inputs side by side. Each with
+       placeholder = the static default and a "default: <n><unit>"
+       helper line below.
+    3. Optional inverted-bands ⚠ hint.
+    4. Live preview block — coloured dots + the same labels and
+       ranges the per-tile info popover renders.
+    5. Fallback message when both inputs and defaults are blank
+       ("No thresholds set — the headline will render in the neutral
+       colour with no status icon.")
+- Added `canApply` gate now checks
+  `warningInputValid && criticalInputValid` so a non-numeric input
+  blocks Apply.
+
+### Verification
+
+- TypeScript / React lints — no errors across the three touched
+  files. (One transient stale-IDE error reading
+  `defaultThresholds does not exist in type 'KpiPickerContext'`
+  resolved itself once the IDE re-loaded the picker file.)
+- `yarn build` — clean, two pre-existing asset-size warnings, no
+  errors.
+- Manual sanity-check of the merge logic:
+  - No override → `applyOverride` returns `cfg` unchanged →
+    `cfg.thresholds` flows through unchanged → behaviour identical
+    to pre-Build-97.
+  - Override with no threshold fields →
+    `mergeThresholds(cfg.thresholds, override)` short-circuits via
+    the `!hasOverride` branch and returns `cfg.thresholds` unchanged
+    → still no behavioural change.
+  - Override with `thresholdWarning: 90` only → merged tuple has
+    `warning: 90, critical: cfg.thresholds.critical, direction: cfg.thresholds.direction`
+    → exactly the "tweak warning, keep critical/direction" intent.
+- Manual UI walkthrough (mental model, given the code paths):
+  - Open picker on `executive_critical_website_availability`
+    (defaults `warning: 99.5, critical: 90, higher_is_better`).
+  - Form is collapsed at rest. Click "Thresholds" → form opens with
+    99.5 / 90 / Higher-is-better pre-filled.
+  - Type `99.0` in Warning. "default: 99.5%" helper still visible.
+    Live preview ranges update in real time. Click Apply.
+  - Re-open picker → Thresholds section auto-expands (custom badge
+    visible), Reset-to-default link visible, override stored as
+    `{ savedSearch, thresholdWarning: 99 }` only — critical and
+    direction not persisted because they match defaults.
+
+### Files touched
+
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf`
+  — `build = 96` → `build = 97`.
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/hooks/usePersistedMetricOverrides.ts`
+  — extended `MetricOverride`, added `isFiniteThresholdNumber` helper,
+  extended `sanitizeOverride`, updated module-level header docs.
+- `packages/splunk-cisco-dashboards/src/main/webapp/pages/overview/index.tsx`
+  — imported `MetricThresholds`, added `mergeThresholds`, wired
+  `applyOverride` to merge thresholds, extended `openPicker` signature,
+  updated three call-sites.
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/florida/KpiPickerPanel.tsx`
+  — imported threshold helpers, extended `KpiPickerContext`, added
+  4 pieces of form state, panel-open pre-fill, derived parsers /
+  validators / preview / customised-flag, threshold-aware
+  `canApply`, `handleApply` payload merge, `handleResetThresholds`,
+  full collapsible THRESHOLDS section in the bottom panel.
+- `packages/splunk-cisco-dashboards/docs/SESSION_LOG.md` — this entry.
+
+### What's next
+
+- Alan to test: open the picker on any tile, expand THRESHOLDS,
+  tweak warning / critical, hit Apply. Confirm the headline colour,
+  trend-arrow tint, sparkline stroke, and per-tile info popover
+  rows all reflect the new bands.
+- If the inverted-bands ⚠ hint feels too soft and operators are
+  shooting themselves in the foot, we can promote it to a hard
+  block (toggle `canApply &&= !thresholdRelationshipWarning`).
+  Default is still soft for now.
+- v2 follow-ups already scoped: allow overriding `thresholdNote`
+  and `unit` from the picker so the popover stays accurate when
+  users swap `valueField` to a different scale. That's a 3-input
+  add to the same form section — same persistence shape, same
+  merge pattern.
+
+---
+
+## 2026-05-13 (Build 96) — Picker bottom-panel compression: chips inline + tighter cap
+
+### Context
+
+After Build 94 (dismissible BOUND strip + collapsible Description),
+Alan tested the picker again and asked for one more pass at the
+bottom preview panel: *"try an option that will work best and I
+will test it."* The screenshot still showed the bottom panel
+taking ~35–40% of the popover, with the SEARCH NAME label, the
+chip row, the SHOW SPL row, the Description trigger, the form,
+the USE chips, and the footer all stacked vertically.
+
+I picked the option with the best ratio of vertical-space saved
+to UX impact: collapse the SEARCH NAME header line into the chip
+row (so two horizontal rows become one), and pull the bottom
+panel's hard-cap from 42% to 34% of the popover. Every other
+piece of info stays visible — no extra clicks for tags, no
+hidden chart-type pill, no chrome relocation away from where
+operators expect it.
+
+### What changed
+
+Both edits live in `KpiPickerPanel.tsx`'s "Selection preview +
+form" section:
+
+#### 1. Chips merged into the SEARCH NAME header line
+
+Before: two stacked rows.
+
+```
+SEARCH NAME                    [pill]  ← the small uppercase
+                                          header line + viz pill
+Executive Dashboard - …
+[EXECUTIVE · EXECUTIVE DASHBOARD] [Executive] [KPI]  ← chips row
+```
+
+After: one merged flex row.
+
+```
+[EXECUTIVE · EXECUTIVE DASHBOARD] [Executive] [KPI]  ← chips
+                                                ⤷ AREA CHART  ← viz pill,
+                                                                 right-anchored
+                                                                 via `ml-auto`
+Executive Dashboard - …
+```
+
+Implementation notes:
+
+- Single `flex flex-wrap items-center gap-1.5 mb-1` row replaces
+  the previous two-row block. Wrapping is preserved (`flex-wrap`)
+  so a long chip list still falls to a second line rather than
+  overflowing horizontally. The viz pill carries `ml-auto` so it
+  always anchors to the right edge of whichever wrap-line it
+  lands on.
+- The "Search name" uppercase label is dropped — the title line
+  immediately below is the headline of the panel, the label was
+  just chrome.
+- All chip styles (category sky pill, sub-cat opacity-70, tag
+  chip slate fill) preserved exactly. Click affordances /
+  selection / titles unchanged.
+
+Net: ~30–50px reclaimed, scaling with chip count (the more chips
+a stanza has, the bigger the win because the chips row was the
+component most prone to wrapping to two lines).
+
+#### 2. Bottom panel hard-cap 42% → 34%
+
+The wrapper `<div>` was already `max-h-[42%] overflow-auto`. Two
+lines of comment block above the className document why 34% is
+the right new value: it gives the result list a guaranteed
+≥66% of the popover height, the internal `overflow-auto` keeps
+every field reachable when the panel content exceeds 34%, and
+critically the footer (Reset Tile / Factory Reset / Cancel /
+Apply) lives in a sibling `<div>` *below* this one — so primary
+actions stay anchored even when the bottom-panel scroll region
+runs short.
+
+On a typical 900px popover that's an extra ~72px to the result
+list. On a 1200px popover (full-screen), an extra ~96px.
+
+### Why not the other options I considered
+
+- **Move chips into a popover** (info-icon click reveals chips):
+  saves the same ~30–50px but adds a click for a passive-display
+  affordance the user often glances at. Rejected.
+- **Master `▸ Details` toggle wrapping SHOW SPL + Description +
+  USE chips**: would save ~80px but USE chips are tightly
+  coupled to the VALUE FIELD input — hiding them by default
+  hurts the primary "pick the right column" workflow. The
+  picker users in this app run the form filling more than the
+  description reading. Rejected.
+- **Hide USE chips behind an info icon next to "VALUE FIELD"**:
+  saves ~30px but again costs a click on the primary form
+  workflow. Rejected.
+
+The chosen pair (chips inline + tighter cap) gets ~70–120px of
+list real-estate back without any extra clicks anywhere.
+
+### Verification
+
+- React lints — none.
+- `yarn build` — clean (`webpack compiled with 2 warnings`,
+  same asset-size warnings, no errors).
+- The bottom panel's footer (Reset / Apply / Cancel) is a sibling
+  of the scroll container, not a child, so a shorter scroll
+  region cannot push the action buttons off-screen. Verified
+  by inspecting the JSX tree above and below the modified div.
+- Chip wrapping behaviour verified: a stanza with 10+ tags
+  cleanly wraps onto a second line inside the same flex row;
+  the viz pill drops to that second line's right edge via
+  `ml-auto`.
+
+### Files touched
+
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf`
+  — `build = 95` → `build = 96`.
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/florida/KpiPickerPanel.tsx`
+  — chips merged into the SEARCH NAME header line, bottom-panel
+  cap lowered 42% → 34%, comment block above the cap documents
+  the math + footer-anchor invariant.
+- `packages/splunk-cisco-dashboards/docs/SESSION_LOG.md` — this
+  entry.
+
+### What's next
+
+- Alan to refresh the picker, confirm: (a) chips and viz-type
+  pill share one row, (b) the SEARCH NAME label is gone, (c) the
+  result list visibly takes more of the popover. If the bottom
+  panel feels too cramped at 34%, we can dial it to 36–38% or
+  keep 34% and trim more bottom-panel content (see "rejected
+  options" above).
+- Carry-forward TODO list (unchanged): trace field-list dump,
+  DM-eligible TE alert/trace rewrites, `latencyMs` cleanup,
+  expected-critical-sites lookup, hand-audit of TA Stock stanza
+  descriptions, singleton-tag sweep.
+
+---
+
+## 2026-05-13 (Build 95) — Sparkline squish fix + safe React-ecosystem dep refresh
+
+### Context
+
+Alan: *"see screenshot, can we do something about how we shrink
+and expand objects? I know I struggled with this issue and we
+figured it out and implemented it in
+`~/repo/splunk-cisco-app-navigator` — have a look at it and see
+if you can understand how we did there and apply the same concept
+here. And while you are at it, make sure we are up-2-date on all
+REACT libraries…"*
+
+Two side-by-side screenshots: short-viewport vs tall-viewport. On
+the short viewport, every metric tile's sparkline canvas
+collapsed to a 30–40px strip, looking broken. On the tall
+viewport the same tiles rendered cleanly with ~80–100px charts.
+
+### Discovery & decisions
+
+#### Where the bug actually was
+
+Subagent inspection of `splunk-cisco-app-navigator/packages/splunk-cisco-app-navigator`
+came back empty: no `ResizeObserver`, no `react-resize-detector`,
+no `useMeasure`, no chart-fit hook anywhere — that repo is a
+product *catalog* of cards with no charts, so the only useful
+pattern there is the generic CSS hygiene principle "use `min-height: 0`
+on shrinking flex children that need to scroll, and pin a real
+floor on anything you don't want to collapse below readability."
+That principle is what we needed; the repo was the wrong
+reference.
+
+Audited this repo's chart pipeline directly:
+
+- `Sparkline.tsx`: already wraps Recharts in `<ResponsiveContainer>` and
+  uses `flex flex-col h-full w-full` with `flex-1 min-h-0` on the
+  chart slot. Recharts' container uses ResizeObserver internally.
+  This level was fine.
+- `MetricItem.tsx` chart slot (`<div className="flex-1 min-h-[72px] max-h-28 ...">`):
+  declares a 72px floor on the chart container. Floor was fine.
+- `DashboardSection.tsx` (root `<div>`):
+  declares `flex flex-col flex-shrink-0 min-h-[220px]` — the
+  intended 220px floor that the comment block right above the
+  property explicitly documents:
+  *"min-h-[220px] is the lower bound at which a row of tiles
+  still renders the headline + chart at a legible size … below
+  that the sparkline canvas degenerates to a wavy pixel line."*
+- `pages/overview/index.tsx` line 2614: passed
+  `className="flex-1 min-h-0"` into the section.
+
+Root cause: `cn()` in `common/lib/utils.ts` is `twMerge(clsx(…))`,
+and `tailwind-merge` resolves conflicting Tailwind utilities by
+*later wins*. So `min-h-0` from the override silently overrode the
+section's own `min-h-[220px]`, and `flex-1` overrode
+`flex-shrink-0`. Three sections with no floor and `flex-shrink: 1`
+collapse together when the metrics-column height drops below
+~660px — the chart slot then has 30–40px to render in, and the
+72px chart-container floor pushes it to overflow which gets
+clipped by the section's `overflow-hidden` (the right behaviour
+to contain chart bleed, but the wrong shape on a *too-short*
+section).
+
+The page-level comment on the metrics column (line 2528)
+described the intended "scroll instead of squish" model:
+*"when the viewport is too short to fit all three sections at
+their min-h-[220px] floor (≈ 660px content …), the metric column
+scrolls vertically instead of squishing the chart canvases below
+readability."* — the column has `overflow-y-auto`. The model was
+already in place; the only thing missing was the actual 220px
+floor making it through `cn()` to the rendered DOM.
+
+#### What changed
+
+`pages/overview/index.tsx` — replaced the section override:
+
+- Before: `className="flex-1 min-h-0"`
+- After:  `className="flex-1 min-h-[220px]"`
+
+Both classes survive the merge: `flex-1` deduplicates against
+`flex-shrink-0` (so we keep the proportional growth on tall
+viewports), and `min-h-[220px]` matches the section's own
+declaration (idempotent under twMerge — the floor is preserved).
+
+A comment block above the className documents the bug, the
+twMerge mechanism, and the design intent, so the next person who
+sees the override doesn't innocently swap it back to `min-h-0`
+to "make the splitter work".
+
+No code changes needed in `Sparkline.tsx`, `MetricItem.tsx`, or
+`DashboardSection.tsx` — they were already correct. The bug was
+purely a tailwind-merge aliasing at the page-level override.
+
+### React-ecosystem dep refresh (in-range patches only)
+
+`npm outdated` reported a long list, split into two buckets:
+
+1. **In-range patch / minor bumps** — safe to take in this build:
+
+   | Package | Old | New |
+   |---------|-----|-----|
+   | `react` | 19.2.5 | **19.2.6** |
+   | `react-dom` | 19.2.5 | **19.2.6** |
+   | `@splunk/react-ui` | 5.9.1 | **5.10.0** |
+   | `@splunk/react-icons` | 5.10.0 | **5.11.0** |
+   | `@splunk/themes` | 1.7.0 | **1.7.2** |
+   | `postcss` | 8.5.13 | **8.5.14** |
+
+2. **Major-version migrations — deferred** (each is a separate
+   project with breaking changes; not safe to fold into a
+   sparkline-fix build):
+
+   - `recharts 2 → 3` (full API rewrite — every Sparkline /
+     ResponsiveContainer call site would need rework)
+   - `tailwindcss 3 → 4` (config format + utility-class engine
+     rewrite — every component would need a regression sweep)
+   - `lucide-react 0.x → 1.x` (icon-name churn, the picker uses
+     >25 icons)
+   - `tailwind-merge 2 → 3` (resolver behaviour changes —
+     ironically affects the very fix in this build)
+   - `eslint 7 → 10`, `stylelint 15 → 17`, `typescript 5 → 6`
+     (each cascades into config rewrites)
+   - `react-leaflet 4 → 5` (still warns about React 18 peer dep
+     even on 4 — 5 needs Leaflet 1.9+ and a hook-based API
+     migration)
+   - `babel-loader 9 → 10`, `css-loader 6 → 7`, `style-loader 3
+     → 4`, `copy-webpack-plugin 11 → 14`, `postcss-loader 7 → 8`,
+     `webpack-cli 5 → 7`, `webpack-merge 5 → 6` — webpack
+     toolchain bumps tied to @splunk/webpack-configs which we
+     don't control
+   - `styled-components 5 → 6` (constrained by @splunk/react-ui's
+     declared peer of `^5.3.10`)
+   - `shelljs 0.8 → 0.10` (a one-off used by build scripts;
+     trivial but skipped to keep this build narrow)
+   - `@dnd-kit/sortable 8 → 10` (drag-reorder UX in OverviewPage
+     uses 8.0.0 directly; v10 changes sensors API)
+
+`package.json` cleanup: yarn 1.x's upgrade dropped the new
+versions of `@splunk/react-ui`, `@splunk/react-icons`,
+`@splunk/themes`, `react`, `react-dom`, `postcss` into
+`dependencies` while leaving stale duplicates in
+`devDependencies`. Cleaned that up in one pass — runtime React
+libs (`react`, `react-dom`, `@splunk/react-*`,
+`@splunk/splunk-utils`, `prop-types`, `styled-components`) all
+live under `dependencies` now; build-only tools (`postcss`,
+`eslint`, `tailwindcss`, `typescript`, `webpack-*`, etc.) live
+under `devDependencies`. No more duplicate keys.
+
+### Verification
+
+- `yarn install` — clean (peer-dep warnings are pre-existing:
+  Splunk's `@splunk/react-*` family advertises React 18 peers
+  even though it works fine with React 19, and `react-leaflet@4`
+  still advertises React 18 peers; both are tracked upstream).
+- `yarn build` — clean (`webpack compiled with 2 warnings`,
+  same asset-size warnings as prior builds, no errors).
+- React lints — none.
+- `cn('flex flex-col flex-shrink-0 min-h-[220px]', 'flex-1 min-h-[220px]')`
+  → `'flex flex-col flex-1 min-h-[220px]'` (verified via
+  twMerge's resolver semantics): floor preserved, growth
+  preserved, no flex-shrink contention.
+- Net effect: short viewport now scrolls the metrics column
+  rather than squishing every section to 30px-tall sparklines.
+  Tall viewport unchanged (same proportional `flex-1` growth).
+
+### Files touched
+
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf`
+  — `build = 94` → `build = 95`.
+- `packages/splunk-cisco-dashboards/src/main/webapp/pages/overview/index.tsx`
+  — section override className `flex-1 min-h-0` → `flex-1
+  min-h-[220px]`, plus a 25-line comment block documenting the
+  tailwind-merge aliasing trap.
+- `packages/splunk-cisco-dashboards/package.json` — runtime React
+  libs promoted to `dependencies`, build-only tools kept in
+  `devDependencies`, new patch / minor versions adopted (see
+  table above), no major-version migrations attempted.
+- `packages/splunk-cisco-dashboards/yarn.lock` — refreshed to
+  resolve the in-range bumps.
+- `packages/splunk-cisco-dashboards/docs/SESSION_LOG.md` — this
+  entry.
+
+### What's next
+
+- Alan to refresh the dashboard, drag the browser to a short
+  vertical height, confirm the metrics column now scrolls
+  vertically (with all three sections visible at their 220px
+  floor) instead of squishing the sparklines. Tall viewport
+  should look identical to before.
+- Major-version migrations listed above are each their own
+  session — flag any specific one (most likely candidate for
+  a "do this next" pick: `recharts 2 → 3` because that's where
+  the chart pipeline lives, but it's a multi-file rewrite).
+- Carry-forward TODO list (unchanged): trace field-list dump,
+  DM-eligible TE alert/trace rewrites, `latencyMs` cleanup,
+  expected-critical-sites lookup, hand-audit of TA Stock stanza
+  descriptions, singleton-tag sweep.
+
+---
+
+## 2026-05-13 (Build 94) — More picker real-estate: dismissible Bound strip + collapsible Description
+
+### Context
+
+Build 93 collapsed the App / Category / Sub-cat / Tag block and
+compressed the "Currently bound" banner to a single 28px row.
+Alan tested it: *"better but not great. see screenshot, can we
+maybe collapse the current search to make more room? what do you
+think?"*
+
+Counted the vertical space in the screenshot at ~440px popover
+height:
+
+| Region                        | Approx height |
+|-------------------------------|---------------|
+| Header (Configure tile / X)   | 50px          |
+| Search input + Filters toggle | 80px          |
+| BOUND strip                   | 32px          |
+| **Result list**               | **190px**     |
+| **Bottom preview panel**      | **~360px**    |
+| Footer (Reset / Cancel / Apply)| 50px         |
+
+The bottom preview panel was eating ~50% of the popover. Of that,
+the DESCRIPTION block (label + 4-line clamped paragraph) was the
+single biggest non-essential chunk: ~80–100px of narrative the
+user has already vetted at storyboard time. Title + chart-type +
+tags + value-field input + Apply are essential; the description
+isn't, for a pick-and-apply flow.
+
+The BOUND strip is a smaller win at 32px, but it's also dead
+weight after the user has seen what's bound or used Jump-To once.
+Asked Alan whether to do BOUND, the bottom-panel description, or
+both — he picked both.
+
+### What changed
+
+#### 1. Dismissible BOUND strip
+
+Added `boundDismissed: boolean` state, default `false`, reset on
+panel-open so a fresh picker context always sees the strip again.
+The strip now renders as a flex row of two siblings (instead of
+nested buttons, which is invalid HTML and which Safari's click
+handling refuses): a wide left button that runs `jumpToCurrent`,
+and a small right `×` button that calls `setBoundDismissed(true)`.
+Tooltip on the × explains the behaviour ("gives the result list
+more room — reopens next time you open the picker").
+
+Saves ~32px per panel-open once dismissed.
+
+#### 2. Collapsible Description in the bottom panel
+
+Added `descOpen: boolean` state, default `false`, reset on
+panel-open. Wrapped the existing description block in the same
+"Show SPL" toggle pattern already established for the SPL
+preview, so the picker has one consistent collapsing affordance
+across both heavy text blocks:
+
+- Always-visible toggle row: chevron + "Description" + a
+  60-character inline preview suffix when collapsed
+  (`Description · Current device health score from Catalyst…`)
+  so the user can decide whether to expand without first
+  expanding.
+- When expanded: the full `line-clamp-4` paragraph as before.
+- When collapsed: ~22px instead of ~100px.
+
+Saves ~80px per render of a selected entry.
+
+#### 3. State resets on panel-open
+
+The existing reset effect already handles `filtersOpen`,
+`showSpl`, and the facet defaults. Build 94 added
+`boundDismissed` and `descOpen` to the same effect so every
+fresh tile context starts with the bound strip visible and the
+description collapsed — predictable starting state, no
+session-leak between two different tiles.
+
+### Verification
+
+- React lints — none.
+- `yarn build` — clean (`webpack compiled with 2 warnings`,
+  same asset-size warnings as prior builds, no errors).
+- Net real-estate gain at rest: ~32px (BOUND dismiss) + ~80px
+  (Description collapsed by default) = ~112px back to the
+  result list per panel-open, on top of Build 93's ~140px.
+- HTML structure on the BOUND strip changed from a single
+  `<button>` to a flex `<div>` with two sibling buttons —
+  validates clean (`<button>` inside `<button>` is forbidden by
+  the spec) and Safari's click handling no longer needs special
+  handling for the dismiss action.
+
+### Files touched
+
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf`
+  — `build = 93` → `build = 94`.
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/florida/KpiPickerPanel.tsx`
+  — `boundDismissed` + `descOpen` state, reset wiring on
+  panel-open, BOUND strip restructured to a flex row with a
+  dismiss `×`, Description block wrapped in a collapse toggle
+  with inline preview when collapsed.
+- `packages/splunk-cisco-dashboards/docs/SESSION_LOG.md` — this
+  entry.
+
+### What's next
+
+- Alan to refresh the picker, confirm the BOUND strip now has a
+  dismiss × on the right, the description starts collapsed with
+  a one-line preview, and the result list visibly takes up more
+  of the popover. If still cramped, candidates for Build 95
+  could be: collapsing the SPL field-suggestion chips ("USE:
+  ...") behind the same Description toggle, or adding a
+  full-screen mode for the picker.
+- Carry-forward TODO list (unchanged): trace field-list dump,
+  DM-eligible TE alert/trace rewrites, `latencyMs` cleanup,
+  expected-critical-sites lookup, hand-audit of TA Stock stanza
+  descriptions, singleton-tag sweep.
+
+---
+
+## 2026-05-13 (Build 93) — Picker real-estate: collapse filters, rename Dispatch → App
+
+### Context
+
+Alan's screenshot of the Build 92 picker showed the problem: the
+top half of the panel was facets (search box + Dispatch + Category
++ Tag input) plus a two-line "Currently bound" banner, leaving
+maybe 1/3 of the popover for the actual list of searches. His
+note: *"don't have much room to browse the list of searches, maybe
+we can collapse the filters and the current search."*
+
+He also asked for two corrections:
+
+1. The `dispatch_context` facet introduced in Build 92 should be
+   labelled "App" — that's what the field actually represents
+   (the Splunk app namespace the search lives in). "Dispatch" is
+   internal Splunk-conf jargon and means nothing to operators
+   reading the picker.
+2. Confirm there are no other hardcoded scope filters narrowing
+   the list. Build 91 dropped the Cisco-tag gate; Build 92 made
+   the dispatch-context gate user-configurable. He wanted explicit
+   confirmation that *every* searchbase entry shows up by default
+   so picking a different app still surfaces the full catalogue.
+
+### What changed
+
+#### 1. Audit: zero hardcoded filters confirmed
+
+Re-grepped `KpiPickerPanel.tsx` for `.filter(` and `.includes(`.
+Every match is either a substring helper for the free-text
+search, the user-driven tag-set checks, or the catalogue's
+runtime filter (App / Category / Sub-cat / Tag / query — all
+state-driven). No tag-name hardcodes, no app-name hardcodes
+outside of `DEFAULT_APP_SCOPE` (which is the *default* selection,
+not a gate). The full ~530-stanza catalogue passes the picker
+once the App facet is on `splunk-cisco-dashboards`, and switching
+to "All apps" widens it to whatever other apps' `searchbase.conf`
+files contribute on the stack.
+
+#### 2. Renames: Dispatch → App
+
+Underlying searchbase field stays `dispatch_context` (Splunk conf
+semantics), but every UI-facing identifier in the picker now uses
+"App":
+
+- `DEFAULT_DISPATCH_CONTEXT` → `DEFAULT_APP_SCOPE`
+- `ALL_DISPATCH_CONTEXTS` → `ALL_APPS`
+- `selectedDispatchContext` / `setSelectedDispatchContext` →
+  `selectedApp` / `setSelectedApp`
+- Derived `dispatchContexts` list → `apps`
+- UI label `DISPATCH` → `APP`; option text `All dispatch contexts
+  (N)` → `All apps (N)`; tooltip rewritten to "Splunk app the
+  search belongs to (the searchbase entry's dispatch_context)"
+  so the underlying conf field is still discoverable for anyone
+  diffing entries against `searchbase.conf`.
+
+Comments throughout the file updated in the same pass — anywhere
+they referred to "the Dispatch facet" / "dispatch context resets"
+they now say "the App facet" / "the App facet resets". The
+historical build trail (Builds 87 → 91 → 92 → 93) is preserved as
+a comment block above `DEFAULT_APP_SCOPE` so the rename history
+is documented in code, not just here.
+
+#### 3. Collapse the facet block
+
+New state hook `filtersOpen` (default `false`). The free-text
+search input stays always visible at the top of the filter
+section. Below it, a single-row toggle replaces the previous
+stack of dropdowns at rest:
+
+- Chevron + `Filters` label.
+- Active-count badge (e.g. `2 active`) when any applied facet is
+  non-default. Counts App ≠ default + Category ≠ "All" +
+  Sub-cat ≠ "All" + selected-tag count. Tag-filter typing buffer
+  is excluded so the badge reflects *applied* filters only.
+- Inline `Clear filters` action on the right when any facet is
+  active — dismisses without requiring expansion.
+
+Click the toggle and the App / Category / Sub-cat block plus the
+Tag multi-select expand inside the same `space-y-2` parent. The
+auto-expand effect re-opens the block whenever any facet flips
+non-default — so if a user collapses the block while having tags
+selected and then later picks a category, the block re-opens to
+show what's now in play. Closing is left manual.
+
+Net effect at rest: ~140px of vertical real-estate returns to the
+result list. `Filters` toggle (~28px) + search input (~36px) +
+"Bound" strip (~28px) is the only chrome above the list.
+
+#### 4. Compress the "Currently bound" banner
+
+Replaced the two-line block (uppercase `CURRENTLY BOUND` label
+on the first line, search name on the second, separate `Jump to`
+button) with a single-row strip: green check + inline `Bound:`
+label + truncated search name + right-aligned `Jump to` text.
+The whole strip is the click target — generous tap area, same
+emerald styling so the visual weight is unchanged. ~28px tall vs
+~64px previously.
+
+### Verification
+
+- React lints — none.
+- `yarn build` — clean (`webpack compiled with 2 warnings`,
+  same asset-size warnings as prior builds, no errors).
+- All 530 stanzas in `default/searchbase.conf` still carry
+  `dispatch_context = splunk-cisco-dashboards`, so opening the
+  picker with the default `selectedApp = splunk-cisco-dashboards`
+  passes the full catalogue (matches Build 92 behaviour).
+- Filter audit: no `.includes(` or `.filter(` hardcodes on tag
+  names or app names remain in the picker. Only state-driven
+  predicates plus the Default-app-scope safety option in the
+  dropdown.
+
+### Files touched
+
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf`
+  — `build = 92` → `build = 93`.
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/florida/KpiPickerPanel.tsx`
+  — Dispatch → App renames, `filtersOpen` state + auto-expand
+  effect + on-open reset, `activeFilterCount` derivation,
+  collapsible Filters toggle row replacing the always-on facet
+  stack, single-row "Bound" banner replacing the two-line block,
+  comment / tooltip / option-text edits.
+- `packages/splunk-cisco-dashboards/docs/SESSION_LOG.md` — this
+  entry.
+
+### What's next
+
+- Alan to refresh the picker, confirm the result list visibly
+  has more room with the Filters block collapsed; expand
+  Filters and exercise the App dropdown (now labelled "App"),
+  Category, Sub-cat, Tags; confirm the auto-expand fires when
+  applying a facet from a collapsed state.
+- Carry-forward TODO list (unchanged): trace field-list dump,
+  DM-eligible TE alert/trace rewrites, `latencyMs` cleanup,
+  expected-critical-sites lookup, hand-audit of TA Stock stanza
+  descriptions, singleton-tag sweep.
+
+---
+
 ## 2026-05-13 (Build 92) — Promote dispatch_context to a real picker facet
 
 ### Context

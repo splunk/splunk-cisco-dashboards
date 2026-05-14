@@ -3019,26 +3019,55 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         setTilePresetId(next.id);
     };
 
+    // Build 99 fix: the spotlight-pause logic was previously
+    // bumping `pauseUntilRef` on EVERY click, including ones that
+    // *close* the selection panel (toggling off via re-click).
+    // Combined with the 11s spotlight tick interval, that meant
+    // closing the panel left the alert-ring spotlight invisible
+    // for up to 25 seconds — long enough that Alan reported the
+    // ring as "broken until I refresh the browser". Re-clicking
+    // the same marker to dismiss made it worse: a *fresh* 25s
+    // pause clock started every time.
+    //
+    // Correct semantics: pause the spotlight while the user is
+    // actively engaged with a selection (so the spotlight doesn't
+    // pull their eye away to a different site mid-read), and
+    // resume immediately the moment they dismiss. The
+    // `closeSelection` helper below threads that contract through
+    // every dismiss path (X button, Escape, click-outside,
+    // background click, re-click toggle, opening the editor).
+    const closeSelection = useCallback(() => {
+        pauseUntilRef.current = 0;
+        setSelected(null);
+    }, []);
+
     const selectSite = (site: TopologySite) => {
-        pauseUntilRef.current = Date.now() + spotlightPauseMs;
-        setSelected((current) =>
-            current?.kind === 'site' && current.site.id === site.id
-                ? null
-                : { kind: 'site', site }
-        );
+        // Mutate the pause ref *outside* the setState updater because
+        // strict-mode dev builds invoke updater functions twice for
+        // detection — and a ref mutation inside the updater would
+        // double-bump the pause clock. `selected` is read here (not
+        // via the updater) so we capture the closed-over value at the
+        // event boundary.
+        const isClose =
+            selected?.kind === 'site' && selected.site.id === site.id;
+        pauseUntilRef.current = isClose ? 0 : Date.now() + spotlightPauseMs;
+        setSelected(isClose ? null : { kind: 'site', site });
     };
 
     const selectLink = (link: TopologyLink) => {
-        pauseUntilRef.current = Date.now() + spotlightPauseMs;
-        setSelected((current) =>
-            current?.kind === 'link' && current.link.id === link.id
-                ? null
-                : { kind: 'link', link }
-        );
+        const isClose =
+            selected?.kind === 'link' && selected.link.id === link.id;
+        pauseUntilRef.current = isClose ? 0 : Date.now() + spotlightPauseMs;
+        setSelected(isClose ? null : { kind: 'link', link });
     };
 
     const openEditor = () => {
-        pauseUntilRef.current = Date.now() + spotlightPauseMs;
+        // Opening the editor closes any open selection card; that's
+        // a dismiss, so resume spotlight immediately rather than
+        // pausing. The editor itself doesn't render the spotlight
+        // ring (it has its own UI focus), so there's no need to
+        // suppress the cycle while the editor is open.
+        pauseUntilRef.current = 0;
         setSelected(null);
         setDraftTopology(cloneTopology(storedTopology));
         setIsEditorOpen(true);
@@ -3133,7 +3162,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 <MapClickCapture
                     enabled={isEditorOpen && Boolean(pickSiteId)}
                     onPick={applyMapPick}
-                    onBackgroundClick={() => setSelected(null)}
+                    onBackgroundClick={closeSelection}
                 />
                 <TileLayer key={tileUrl} attribution="" url={tileUrl} />
                 <ZoomControl position="bottomright" />
@@ -3211,7 +3240,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 selectedSearchName={selectedSearchName}
                 selectedSpl={selectedSpl}
                 siteEnrichmentByShortName={siteEnrichmentByShortName}
-                onClose={() => setSelected(null)}
+                onClose={closeSelection}
                 onOpenInSearch={onOpenInSearch ? openSelectedInSearch : undefined}
             />
 
@@ -3406,11 +3435,32 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
     const [query, setQuery] = useState('');
     const [activeTags, setActiveTags] = useState<Set<string>>(() => new Set());
     const [tagPickerOpen, setTagPickerOpen] = useState(false);
+    // Build 99: typeahead filter for the tag picker dropdown. Mirrors
+    // the KpiPickerPanel pattern — operators with a vocabulary in
+    // mind ("show me ThousandEyes tags") shouldn't have to scroll
+    // through 12 chips, they should type to narrow.
+    const [tagFilter, setTagFilter] = useState('');
+    const tagFilterInputRef = useRef<HTMLInputElement | null>(null);
     const [customDraft, setCustomDraft] = useState(currentSearchName);
 
     useEffect(() => {
         setCustomDraft(currentSearchName);
     }, [currentSearchName]);
+
+    // Auto-focus the tag-filter input when the picker opens so the
+    // operator can start typing immediately. Reset the filter on
+    // close so re-opening starts clean.
+    useEffect(() => {
+        if (tagPickerOpen) {
+            const id = window.setTimeout(
+                () => tagFilterInputRef.current?.focus(),
+                30
+            );
+            return () => window.clearTimeout(id);
+        }
+        setTagFilter('');
+        return undefined;
+    }, [tagPickerOpen]);
 
     const queryLower = query.trim().toLowerCase();
     const filtered = useMemo(() => {
@@ -3451,7 +3501,11 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
         });
     }, [filtered, currentSearchName, preferredTags]);
 
-    const tagsAvailable = useMemo(() => {
+    // All tags present in the filtered slice, ranked by frequency.
+    // Used for the chip picker AND the typeahead match-count badge.
+    // Build 99: split out from the displayed list so the typeahead
+    // can filter without changing the underlying frequency ranking.
+    const tagsAvailableAll = useMemo(() => {
         const counts = new Map<string, number>();
         for (const entry of filtered) {
             for (const tag of entry.tags) {
@@ -3460,9 +3514,18 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
         }
         return Array.from(counts.entries())
             .filter(([tag]) => !activeTags.has(tag) && tag !== 'Cisco')
-            .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-            .slice(0, TOPOLOGY_TAG_CHIP_LIMIT);
+            .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
     }, [filtered, activeTags]);
+
+    const tagFilterLower = tagFilter.trim().toLowerCase();
+    const tagsAvailable = useMemo(() => {
+        const list = tagFilterLower
+            ? tagsAvailableAll.filter(([tag]) =>
+                  tag.toLowerCase().includes(tagFilterLower)
+              )
+            : tagsAvailableAll;
+        return list.slice(0, TOPOLOGY_TAG_CHIP_LIMIT);
+    }, [tagsAvailableAll, tagFilterLower]);
 
     return (
         <div
@@ -3503,7 +3566,17 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                     type="text"
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
-                    placeholder={`Search ${catalogue.length} catalogue entries…`}
+                    // Build 99: placeholder explicitly names the
+                    // fields the input matches against. The
+                    // underlying filter has always searched name +
+                    // category + sub-category + tags, but Alan
+                    // didn't realise tags were in the haystack ("we
+                    // also need the ability to search for tags").
+                    // Spelling it out tells the operator that
+                    // typing "topology" or "thousandeyes" works
+                    // without having to first open the chip
+                    // picker.
+                    placeholder={`Search ${catalogue.length} entries by name, category, or tag…`}
                     className={cn(
                         'w-full rounded-md border-2 px-2 py-1.5 pl-7 pr-7 text-[11px] outline-none transition-colors focus:ring-2 focus:ring-sky-400',
                         isDark
@@ -3528,7 +3601,76 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                 )}
             </div>
 
-            {(activeTags.size > 0 || tagsAvailable.length > 0) && (
+            {(activeTags.size > 0 || tagsAvailableAll.length > 0) && (
+                <div className="space-y-1.5">
+                    {/* Build 99: typeahead input revealed when the
+                      * tag picker is open. The chip-only list scaled
+                      * fine for the ~12-tag baseline but became
+                      * unscalable as the catalogue grew (now 30+
+                      * unique tags); operators with a tag name in
+                      * mind ("ThousandEyes", "Topology_Site") had to
+                      * scan a long chip wrap to find it. Auto-
+                      * focuses on open, Enter selects the first
+                      * match, Escape closes the picker. Same UX
+                      * contract as KpiPickerPanel's tag dropdown so
+                      * the two feel like the same affordance. */}
+                    {tagPickerOpen && tagsAvailableAll.length > 0 && (
+                        <div className="relative">
+                            <Search
+                                className={cn(
+                                    'absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none',
+                                    isDark ? 'text-slate-500' : 'text-slate-400'
+                                )}
+                            />
+                            <input
+                                ref={tagFilterInputRef}
+                                type="text"
+                                value={tagFilter}
+                                onChange={(event) =>
+                                    setTagFilter(event.target.value)
+                                }
+                                onKeyDown={(event) => {
+                                    if (event.key === 'Escape') {
+                                        event.preventDefault();
+                                        setTagPickerOpen(false);
+                                    } else if (event.key === 'Enter') {
+                                        event.preventDefault();
+                                        if (tagsAvailable.length > 0) {
+                                            const [tag] = tagsAvailable[0];
+                                            setActiveTags((prev) =>
+                                                new Set(prev).add(tag)
+                                            );
+                                            setTagPickerOpen(false);
+                                        }
+                                    }
+                                }}
+                                placeholder={`Filter ${tagsAvailableAll.length} tag${
+                                    tagsAvailableAll.length === 1 ? '' : 's'
+                                }… (Enter applies first match)`}
+                                className={cn(
+                                    'w-full rounded border px-2 py-1 pl-6 pr-6 text-[10px] outline-none transition-colors focus:ring-1 focus:ring-sky-400',
+                                    isDark
+                                        ? 'bg-slate-950 border-slate-700 text-slate-200 placeholder:text-slate-600'
+                                        : 'bg-white border-slate-300 text-slate-700 placeholder:text-slate-400'
+                                )}
+                            />
+                            {tagFilter && (
+                                <button
+                                    type="button"
+                                    onClick={() => setTagFilter('')}
+                                    className={cn(
+                                        'absolute right-1 top-1/2 -translate-y-1/2 rounded p-0.5 transition-colors',
+                                        isDark
+                                            ? 'text-slate-500 hover:text-slate-300'
+                                            : 'text-slate-400 hover:text-slate-600'
+                                    )}
+                                    title="Clear tag filter"
+                                >
+                                    <X className="w-2.5 h-2.5" />
+                                </button>
+                            )}
+                        </div>
+                    )}
                 <div className="flex flex-wrap items-center gap-1">
                     {Array.from(activeTags).map((tag) => (
                         <button
@@ -3617,6 +3759,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                             close tags
                         </button>
                     )}
+                </div>
                 </div>
             )}
 
@@ -4242,17 +4385,30 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
     const [jsonText, setJsonText] = useState('');
     const [jsonError, setJsonError] = useState<string | null>(null);
 
-    // The editor's per-card pickers browse the FULL Cisco-tagged
+    // The editor's per-card pickers browse the full dashboard-pack
     // catalogue, identical to the in-popup `TopologySearchBrowser`.
     // Tag-narrowing (Topology_Site / Topology_Link) is a *sort
     // hint*, not a filter — those entries float to the top of the
-    // list, but every Cisco stanza is reachable via search. This
-    // matches the KpiPickerPanel browsing model so editing a tile
-    // and editing a topology element feel like the same operation.
+    // list, but every dashboard-pack stanza is reachable via search.
+    // This matches the KpiPickerPanel browsing model so editing a
+    // tile and editing a topology element feel like the same
+    // operation.
+    //
+    // Build 98 (2026-05-13): scope changed from `tags.includes('Cisco')`
+    // to `dispatchContext === 'splunk-cisco-dashboards'`. The `Cisco`
+    // tag was removed from every stanza during the FDEM/branding
+    // cleanup in Build 91, so the old filter started returning
+    // nothing — the topology editor's site / link change-search
+    // browsers showed "0 of 0" entries (Alan caught this on
+    // 2026-05-13). Same root-cause and same one-line fix as the KPI
+    // picker hit in Build 91; the `dispatch_context` field is
+    // authored on every stanza in this app's `default/searchbase.conf`
+    // (with `dispatch_context_force = 1`) so it's a stable scope key
+    // that the FDEM scrub didn't touch.
     const editorSearchOptions = useMemo(() => {
         if (!catalogueByName) return [] as SearchbaseRecord[];
         return Object.values(catalogueByName)
-            .filter((record) => record.tags.includes('Cisco'))
+            .filter((record) => record.dispatchContext === 'splunk-cisco-dashboards')
             .sort((a, b) =>
                 a.searchName.localeCompare(b.searchName, undefined, {
                     sensitivity: 'base',
@@ -5775,18 +5931,27 @@ const LinkDetails: React.FC<LinkDetailsProps> = ({ link, siteById, isDark }) => 
                         {link.targetAgents}
                     </p>
                 )}
-                {(link.sourceLocation || link.targetLocation) && (
-                    <p
-                        className={cn(
-                            'text-[9px] leading-relaxed',
-                            isDark ? 'text-slate-400' : 'text-slate-600'
-                        )}
-                    >
-                        {link.sourceLocation ?? '\u2014'}
-                        {' \u2194 '}
-                        {link.targetLocation ?? '\u2014'}
-                    </p>
-                )}
+                {/* Build 98 (2026-05-13): the `sourceLocation` /
+                    `targetLocation` row used to render here from
+                    `thousandeyes.source.agent.location` /
+                    `thousandeyes.target.agent.location` straight off
+                    the test data. That worked great when the TE
+                    agent's registered geo matched the customer's
+                    site name, but for Auburndale the agent
+                    `dema-te01-va` is registered to the Orlando
+                    metro area in TE (Auburndale is ~50 mi from
+                    Orlando, TE often aggregates), which read as
+                    "Tallahassee, FL ↔ Orlando, FL" right above
+                    "Auburndale (Logistics) to Tallahassee (State
+                    EOC)". Two adjacent lines that disagree on what
+                    the link is, which made it look like a bug.
+                    Dropping the TE-geo row removes the
+                    contradiction; the customer-site-name row
+                    immediately below stays as ground truth, the
+                    agent-pair row above tells you which TE agents
+                    are doing the measuring, and the "View in
+                    ThousandEyes" deep link is one click away if
+                    you need the agent's TE-registered geo. */}
                 <p className="text-[9px] text-slate-500 leading-relaxed">
                     {siteById[link.sourceSiteId]?.name ?? link.sourceSiteId} to{' '}
                     {siteById[link.targetSiteId]?.name ?? link.targetSiteId}

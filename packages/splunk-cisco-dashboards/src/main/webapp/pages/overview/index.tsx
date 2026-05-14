@@ -75,6 +75,7 @@ import {
     type SectionId,
     type TimeRange,
     type MetricStatus,
+    type MetricThresholds,
 } from '@/common/hooks/useMetric';
 import { useExportPage } from '@/common/hooks/useExportPage';
 import { useKeyboardShortcuts } from '@/common/hooks/useKeyboardShortcuts';
@@ -862,10 +863,9 @@ interface MetricCardProps {
  * Returns a cloned MetricConfig with user picker overrides merged in.
  *
  * Only overridable fields are touched (search binding, value
- * field, label, description). Everything else — thresholds, mock
- * fallback, section, colour — stays put so the threshold-driven
- * status logic and visual identity stay consistent with the static
- * config.
+ * field, label, description, thresholds). Everything else — mock
+ * fallback, section, colour — stays put so the visual identity
+ * stays consistent with the static config.
  *
  * `valueField` does NOT fall back to `cfg.valueField` when an override
  * is in play. When the user binds a different searchbase entry, the
@@ -875,7 +875,41 @@ interface MetricCardProps {
  * back to the static mock (the "headline didn't change after a picker
  * swap" bug). When `override.valueField` is undefined, `useMetric`
  * auto-detects from the live result rows.
+ *
+ * Thresholds (Build 97): each of `thresholdWarning` /
+ * `thresholdCritical` / `thresholdDirection` is independently
+ * optional. When set, the override field replaces the static
+ * default; when undefined, the static default carries through. This
+ * means a partial override (e.g. only `thresholdWarning`) keeps the
+ * other two threshold fields anchored to the shipped values, which
+ * is exactly what users want when they want to "tweak the warning
+ * point but leave critical alone". The merged `MetricThresholds`
+ * tuple is fed to `computeStatus` and `deriveThresholdLines` so the
+ * tile colour, the trend-arrow tint, the sparkline stroke, and the
+ * THRESHOLDS rows in the per-tile info popover all stay in lockstep
+ * — there's still exactly one source of truth.
  */
+const mergeThresholds = (
+    base: MetricThresholds | undefined,
+    override: MetricOverride
+): MetricThresholds | undefined => {
+    const hasOverride =
+        override.thresholdWarning !== undefined ||
+        override.thresholdCritical !== undefined ||
+        override.thresholdDirection !== undefined;
+    if (!hasOverride) return base;
+    return {
+        warning: override.thresholdWarning ?? base?.warning,
+        critical: override.thresholdCritical ?? base?.critical,
+        // Direction is required on the type even when warning/critical
+        // are both undefined. Fall back to `higher_is_better` if the
+        // tile shipped without thresholds at all so the override path
+        // produces a valid `MetricThresholds` shape rather than a
+        // partial that breaks `computeStatus`.
+        direction: override.thresholdDirection ?? base?.direction ?? 'higher_is_better',
+    };
+};
+
 const applyOverride = (cfg: MetricConfig, override?: MetricOverride): MetricConfig => {
     if (!override) return cfg;
     return {
@@ -885,6 +919,7 @@ const applyOverride = (cfg: MetricConfig, override?: MetricOverride): MetricConf
         valueField: override.valueField,
         label: override.label ?? cfg.label,
         description: override.description ?? cfg.description,
+        thresholds: mergeThresholds(cfg.thresholds, override),
         // Blank these when the user binds a different search. The
         // original tile's `subLabel` (e.g. "Catalyst compliance pass
         // rate") and `unit` (e.g. "%") have no business decorating a
@@ -1880,7 +1915,27 @@ const OverviewPage: React.FC = () => {
         (
             tileId: string,
             defaultLabel: string,
-            current?: { savedSearch?: string; valueField?: string }
+            current?: {
+                savedSearch?: string;
+                valueField?: string;
+                /**
+                 * Static (code-defined) threshold tuple for this tile.
+                 * The picker uses this to pre-fill the THRESHOLDS form
+                 * with the tile's factory baseline, so the user always
+                 * sees what they're modifying away from. Also drives
+                 * the per-field "Reset to default" affordance — fields
+                 * matching `defaultThresholds` are omitted from the
+                 * persisted override so the storage payload only
+                 * carries genuine deltas. Undefined for tiles that
+                 * shipped without numeric thresholds (e.g. KPI cards
+                 * with string headlines); the form still renders so
+                 * the user can establish thresholds if they swap the
+                 * tile to a numeric search.
+                 */
+                defaultThresholds?: MetricThresholds;
+                /** Static unit ('%', 'ms', etc.) for threshold preview formatting. */
+                unit?: string;
+            }
         ) => {
             const ov: MetricOverride | undefined = overrides[tileId];
             // CRITICAL: when an override exists, an undefined
@@ -1890,12 +1945,29 @@ const OverviewPage: React.FC = () => {
             // pre-filled the picker input with the original column
             // name and caused every subsequent Apply to clobber the
             // user's auto-detect intent.
+            //
+            // Threshold context (Build 97):
+            //   • `defaultThresholds` always reflects the *static*
+            //     code-defined tuple — the picker uses this for the
+            //     factory-default helper text and the per-field
+            //     Reset-to-default behaviour.
+            //   • `currentThresholds` reflects the current effective
+            //     tuple after merging any persisted override on top of
+            //     the default. The picker pre-fills its inputs from
+            //     this, so re-opening the picker on a customised tile
+            //     shows the customised values, not the defaults.
+            const merged: MetricThresholds | undefined = ov
+                ? mergeThresholds(current?.defaultThresholds, ov)
+                : current?.defaultThresholds;
             setPickerContext({
                 tileId,
                 defaultLabel,
                 currentSavedSearch: ov ? ov.savedSearch : current?.savedSearch,
                 currentValueField: ov ? ov.valueField : current?.valueField,
                 currentLabel: ov?.label,
+                defaultThresholds: current?.defaultThresholds,
+                currentThresholds: merged,
+                thresholdUnit: current?.unit,
                 usedSavedSearches,
             });
         },
@@ -2526,8 +2598,8 @@ const OverviewPage: React.FC = () => {
                         horizontally. */}
                     <div
                         // overflow-y-auto: when the viewport is too short
-                        // to fit all three sections at their min-h-[220px]
-                        // floor (≈ 660px content, plus ticker + header +
+                        // to fit all three sections at their min-h-[180px]
+                        // floor (≈ 540px content, plus ticker + header +
                         // gap), the metric column scrolls vertically
                         // instead of squishing the chart canvases below
                         // readability. The map column keeps its own
@@ -2611,7 +2683,46 @@ const OverviewPage: React.FC = () => {
                                     title={meta.title}
                                     linkText={meta.linkText}
                                     href={meta.href}
-                                    className="flex-1 min-h-0"
+                                    // `flex-1` distributes column height
+                                    // proportionally across the three
+                                    // sections when the viewport has the
+                                    // room, which matches what the design
+                                    // expects on a tall window.
+                                    //
+                                    // `min-h-[180px]` re-asserts
+                                    // DashboardSection's own
+                                    // floor — without it, `cn()` /
+                                    // `tailwind-merge` lets the prop's
+                                    // class win, so an earlier `min-h-0`
+                                    // here silently overrode the
+                                    // section's intended floor. That
+                                    // collapsed each section toward 0
+                                    // on short viewports and squished
+                                    // the sparkline canvas to a ~30px
+                                    // strip (Alan flagged on
+                                    // 2026-05-13 with before/after
+                                    // viewport-height screenshots).
+                                    //
+                                    // The floor was 220px in Build 95
+                                    // when each section also rendered a
+                                    // bottom drill-down footer (~36px
+                                    // chrome). Build 101 promoted that
+                                    // link into the section title and
+                                    // dropped the footer entirely,
+                                    // reclaiming ~36px per section
+                                    // (~108px across the three) and
+                                    // letting the floor relax to 180px
+                                    // while preserving the same chart
+                                    // legibility. With this floor,
+                                    // three sections demand ≥540px of
+                                    // column content (down from 660px);
+                                    // shorter viewports trigger the
+                                    // metrics column's
+                                    // `overflow-y-auto` instead — the
+                                    // same model Splunk Dashboard
+                                    // Studio uses for fixed-height
+                                    // grid tiles.
+                                    className="flex-1 min-h-[180px]"
                                     tileCount={{
                                         value: visibleCount,
                                         min: sectionTileBounds.minCount,
@@ -2658,6 +2769,8 @@ const OverviewPage: React.FC = () => {
                                                                 openPicker(cfg.id, cfg.label, {
                                                                     savedSearch: cfg.savedSearch,
                                                                     valueField: cfg.valueField,
+                                                                    defaultThresholds: cfg.thresholds,
+                                                                    unit: cfg.unit,
                                                                 })
                                                             }
                                                         />
@@ -2837,6 +2950,12 @@ const OverviewPage: React.FC = () => {
                                         openPicker(KPI_CONFIG[0].id, KPI_CONFIG[0].label, {
                                             savedSearch: KPI_CONFIG[0].savedSearch,
                                             valueField: KPI_CONFIG[0].valueField,
+                                            // KPI cards ship without numeric
+                                            // thresholds (string headlines), but
+                                            // the picker form still renders so
+                                            // the user can establish thresholds
+                                            // if they swap to a numeric search.
+                                            unit: undefined,
                                         })
                                     }
                                     isCustomized={Boolean(overrides[KPI_CONFIG[0].id])}
@@ -2858,6 +2977,7 @@ const OverviewPage: React.FC = () => {
                                         openPicker(KPI_CONFIG[1].id, KPI_CONFIG[1].label, {
                                             savedSearch: KPI_CONFIG[1].savedSearch,
                                             valueField: KPI_CONFIG[1].valueField,
+                                            unit: undefined,
                                         })
                                     }
                                     isCustomized={Boolean(overrides[KPI_CONFIG[1].id])}
