@@ -39,6 +39,7 @@ import {
     Globe,
     Layers,
     Link2,
+    Loader2,
     MapPin,
     MousePointer2,
     Pencil,
@@ -882,17 +883,39 @@ const escapeHtml = (value: string): string =>
         }
     });
 
-const formatNumber = (value?: number): string =>
-    value === undefined ? 'Awaiting' : value.toLocaleString();
+// Build 103 (2026-05-14): the popup formatters now take an optional
+// `loading` flag so the "no value yet" string can differentiate
+// in-flight data from genuinely-empty values. The TE A2A saved
+// search can take 20-40s on a cold cache (raw-event scan, 13+
+// stats aggregations) — during that window the popup previously
+// rendered identical strings to the "no integration at all" case
+// (`'Awaiting'`), which Alan read as a regression on 2026-05-14.
+// Using `'Loading…'` while `dataState === 'loading'` lets the
+// operator see "search in flight" vs "search returned no value"
+// without having to read the dataState debug field.
+const formatNumber = (value?: number, loading?: boolean): string =>
+    value === undefined ? (loading ? 'Loading…' : 'Awaiting') : value.toLocaleString();
 
-const formatPercent = (value?: number): string =>
-    value === undefined ? 'Awaiting' : `${value.toLocaleString()}%`;
+const formatPercent = (value?: number, loading?: boolean): string =>
+    value === undefined
+        ? loading
+            ? 'Loading…'
+            : 'Awaiting'
+        : `${value.toLocaleString()}%`;
 
-const formatLatency = (value?: number): string =>
-    value === undefined ? 'Awaiting' : `${value.toLocaleString()} ms`;
+const formatLatency = (value?: number, loading?: boolean): string =>
+    value === undefined
+        ? loading
+            ? 'Loading…'
+            : 'Awaiting'
+        : `${value.toLocaleString()} ms`;
 
-const formatMbps = (value?: number): string =>
-    value === undefined ? 'Awaiting' : `${value.toLocaleString()} Mbps`;
+const formatMbps = (value?: number, loading?: boolean): string =>
+    value === undefined
+        ? loading
+            ? 'Loading…'
+            : 'Awaiting'
+        : `${value.toLocaleString()} Mbps`;
 
 const SPL_COMMANDS = new Set([
     'append',
@@ -5638,22 +5661,28 @@ const SiteDetails: React.FC<SiteDetailsProps> = ({
             ? `${enrichment.lat.toFixed(5)}, ${enrichment.lon.toFixed(5)}`
             : null;
 
+    // Build 103 (2026-05-14): mirror the link-popup loading-state
+    // treatment for sites — when the per-site saved search is in
+    // flight the metric pills should read "Loading…" instead of
+    // "Awaiting" so operators can tell "search dispatched" from
+    // "no integration wired."
+    const isSiteLoading = site.dataState === 'loading';
     return (
         <>
             <div className="grid grid-cols-3 gap-2">
                 <MetricPill
                     label="Health"
-                    value={formatPercent(site.metrics.healthPct)}
+                    value={formatPercent(site.metrics.healthPct, isSiteLoading)}
                     isDark={isDark}
                 />
                 <MetricPill
                     label="Devices"
-                    value={formatNumber(site.metrics.activeDevices)}
+                    value={formatNumber(site.metrics.activeDevices, isSiteLoading)}
                     isDark={isDark}
                 />
                 <MetricPill
                     label="Alerts"
-                    value={formatNumber(site.metrics.alerts)}
+                    value={formatNumber(site.metrics.alerts, isSiteLoading)}
                     isDark={isDark}
                 />
             </div>
@@ -5762,18 +5791,33 @@ const SiteDetails: React.FC<SiteDetailsProps> = ({
                             ? 'Awaiting normalized site telemetry'
                             : 'Configured topology item')}
                 </p>
-                <p className="text-[9px] text-slate-500 leading-relaxed">
-                    {site.dataState === 'live'
-                        ? 'Live searchbase result'
-                        : site.dataState === 'loading'
-                        ? 'Loading searchbase result'
-                        : site.dataState === 'error'
-                        ? 'Searchbase result unavailable'
-                        : 'Configured value'}
-                    {site.lastUpdated ? ` - Updated ${site.lastUpdated}` : ''}
-                    {site.dataState === 'error' && site.dataError
-                        ? ` - ${site.dataError}`
-                        : ''}
+                {/* Build 103 (2026-05-14): inline spinner on the
+                    sub-line when in flight, so the loading state has
+                    a visual affordance not just textual. Mirrors the
+                    treatment in the link-popup TELEMETRY SOURCE
+                    block above. */}
+                <p className="flex items-center gap-1 text-[9px] text-slate-500 leading-relaxed">
+                    {site.dataState === 'loading' && (
+                        <Loader2
+                            className="w-2.5 h-2.5 animate-spin flex-shrink-0"
+                            aria-hidden="true"
+                        />
+                    )}
+                    <span>
+                        {site.dataState === 'live'
+                            ? 'Live searchbase result'
+                            : site.dataState === 'loading'
+                            ? 'Loading searchbase result'
+                            : site.dataState === 'error'
+                            ? 'Searchbase result unavailable'
+                            : 'Configured value'}
+                        {site.lastUpdated
+                            ? ` - Updated ${site.lastUpdated}`
+                            : ''}
+                        {site.dataState === 'error' && site.dataError
+                            ? ` - ${site.dataError}`
+                            : ''}
+                    </span>
                 </p>
             </div>
             {links.length > 0 && (
@@ -5852,52 +5896,60 @@ const LinkDetails: React.FC<LinkDetailsProps> = ({ link, siteById, isDark }) => 
     // — that way the operator sees which agents are *actually* being probed,
     // not just the test's marketing name.
     const showAgentPair = Boolean(link.sourceAgents && link.targetAgents);
+    // Build 103 (2026-05-14): pass `dataState === 'loading'` to every
+    // formatter so undefined values render as 'Loading…' instead of
+    // 'Awaiting' while the bound saved search is still in flight.
+    // Without this, the popup looks identical during a slow search
+    // (the TE A2A scan can take 20-40s on a cold cache) and the
+    // "no integration wired" case — Alan misread the in-flight
+    // state as a removal regression on 2026-05-14.
+    const isLoading = link.dataState === 'loading';
     return (
         <>
             <div className="grid grid-cols-2 gap-2">
                 <MetricPill
                     label="Capacity"
-                    value={formatMbps(link.capacityMbps)}
+                    value={formatMbps(link.capacityMbps, isLoading)}
                     isDark={isDark}
                 />
                 <MetricPill
                     label="Throughput"
-                    value={formatMbps(link.throughputMbps)}
+                    value={formatMbps(link.throughputMbps, isLoading)}
                     isDark={isDark}
                 />
                 <MetricPill
                     label="Peak Throughput"
-                    value={formatMbps(link.peakThroughputMbps)}
+                    value={formatMbps(link.peakThroughputMbps, isLoading)}
                     isDark={isDark}
                 />
                 <MetricPill
                     label="Utilization"
-                    value={formatPercent(link.utilizationPct)}
+                    value={formatPercent(link.utilizationPct, isLoading)}
                     isDark={isDark}
                 />
                 <MetricPill
                     label="Peak Utilization"
-                    value={formatPercent(link.peakUtilizationPct)}
+                    value={formatPercent(link.peakUtilizationPct, isLoading)}
                     isDark={isDark}
                 />
                 <MetricPill
                     label="Latency"
-                    value={formatLatency(link.latencyMs)}
+                    value={formatLatency(link.latencyMs, isLoading)}
                     isDark={isDark}
                 />
                 <MetricPill
                     label="Loss"
-                    value={formatPercent(link.lossPct)}
+                    value={formatPercent(link.lossPct, isLoading)}
                     isDark={isDark}
                 />
                 <MetricPill
                     label="Jitter"
-                    value={formatLatency(link.jitterMs)}
+                    value={formatLatency(link.jitterMs, isLoading)}
                     isDark={isDark}
                 />
                 <MetricPill
                     label="Endpoint Health"
-                    value={formatPercent(link.endpointHealthPct)}
+                    value={formatPercent(link.endpointHealthPct, isLoading)}
                     isDark={isDark}
                 />
             </div>
@@ -5911,14 +5963,58 @@ const LinkDetails: React.FC<LinkDetailsProps> = ({ link, siteById, isDark }) => 
                     <Code2 className="w-3 h-3" />
                     Telemetry Source
                 </div>
-                <p
-                    className={cn(
-                        'text-[10px] leading-relaxed',
-                        isDark ? 'text-slate-300' : 'text-slate-700'
-                    )}
-                >
-                    {link.telemetrySource}
-                </p>
+                {/* Build 103 (2026-05-14): visible loading affordance.
+                    During the saved-search round trip the link's
+                    `dataState` is `'loading'` for 20-40s on a cold
+                    cache (the TE A2A SPL scans raw events with
+                    13+ stats aggregations — see the
+                    `[overview_link_te_a2a_health]` stanza explanation
+                    for the perf trade-off). Pre-Build-103 the popup
+                    rendered the static OOB `telemetrySource` text
+                    ("Awaiting topology link telemetry") during that
+                    window, which is identical to the genuinely-not-
+                    wired case. Alan misread that as a regression on
+                    2026-05-14 ("you accidently removed the integration
+                    with ThousandEyes!"). The real fix has two halves:
+                    (1) make the in-flight state visually distinct from
+                    "no integration" via this spinner + descriptive
+                    copy, and (2) tighten the SPL's time scope in
+                    Build 103-B so the cold-cache window is shorter
+                    in the first place. */}
+                {link.dataState === 'loading' ? (
+                    <p
+                        className={cn(
+                            'flex items-center gap-1.5 text-[10px] leading-relaxed',
+                            isDark ? 'text-slate-400' : 'text-slate-500'
+                        )}
+                    >
+                        <Loader2
+                            className="w-3 h-3 animate-spin flex-shrink-0"
+                            aria-hidden="true"
+                        />
+                        <span>
+                            Querying ThousandEyes A2A test data&hellip;{' '}
+                            <span
+                                className={cn(
+                                    'italic',
+                                    isDark ? 'text-slate-500' : 'text-slate-400'
+                                )}
+                            >
+                                first run can take 20-40s while Splunk warms
+                                the cache
+                            </span>
+                        </span>
+                    </p>
+                ) : (
+                    <p
+                        className={cn(
+                            'text-[10px] leading-relaxed',
+                            isDark ? 'text-slate-300' : 'text-slate-700'
+                        )}
+                    >
+                        {link.telemetrySource}
+                    </p>
+                )}
                 {showAgentPair && (
                     <p
                         className={cn(
@@ -5931,27 +6027,52 @@ const LinkDetails: React.FC<LinkDetailsProps> = ({ link, siteById, isDark }) => 
                         {link.targetAgents}
                     </p>
                 )}
-                {/* Build 98 (2026-05-13): the `sourceLocation` /
-                    `targetLocation` row used to render here from
-                    `thousandeyes.source.agent.location` /
-                    `thousandeyes.target.agent.location` straight off
-                    the test data. That worked great when the TE
-                    agent's registered geo matched the customer's
-                    site name, but for Auburndale the agent
+                {/* Build 102 (2026-05-14): TE agent-location row
+                    restored. Build 98 dropped this entire row to
+                    resolve a customer-site mismatch ("why is it
+                    saying Orlando instead of Auburndale?"), but
+                    Alan flagged the removal as a regression on
+                    review — the row was the visible proof inside
+                    the popup that ThousandEyes A2A data is
+                    actually reaching the dashboard. Without it the
+                    TELEMETRY SOURCE block reads as "thinly wired"
+                    even when the integration is healthy.
+                    Compromise: bring the row back, but lead with
+                    "TE agents at:" so it reads unambiguously as
+                    the TE-registered agent geography rather than
+                    as a competing claim about the link's
+                    endpoints. The customer-site row immediately
+                    below ("Auburndale (Logistics) to Tallahassee
+                    (State EOC)") stays as ground truth on what
+                    the link actually represents. The Orlando-vs-
+                    Auburndale mismatch is now clearly attributable
+                    to TE agent registration (the AUB-side agent
                     `dema-te01-va` is registered to the Orlando
-                    metro area in TE (Auburndale is ~50 mi from
-                    Orlando, TE often aggregates), which read as
-                    "Tallahassee, FL ↔ Orlando, FL" right above
-                    "Auburndale (Logistics) to Tallahassee (State
-                    EOC)". Two adjacent lines that disagree on what
-                    the link is, which made it look like a bug.
-                    Dropping the TE-geo row removes the
-                    contradiction; the customer-site-name row
-                    immediately below stays as ground truth, the
-                    agent-pair row above tells you which TE agents
-                    are doing the measuring, and the "View in
-                    ThousandEyes" deep link is one click away if
-                    you need the agent's TE-registered geo. */}
+                    metro in TE because TE aggregates by metro), so
+                    operators see WHY the geo string reads
+                    "Orlando" rather than wondering if the dashboard
+                    is broken. */}
+                {(link.sourceLocation || link.targetLocation) && (
+                    <p
+                        className={cn(
+                            'text-[9px] leading-relaxed',
+                            isDark ? 'text-slate-400' : 'text-slate-600'
+                        )}
+                        title="The TE-registered geographic location of each measuring agent (which can differ from the customer site name when TE aggregates agents by metro). The customer site name is shown on the row below."
+                    >
+                        <span
+                            className={cn(
+                                'font-semibold',
+                                isDark ? 'text-slate-500' : 'text-slate-500'
+                            )}
+                        >
+                            TE agents at:
+                        </span>{' '}
+                        {link.sourceLocation ?? '\u2014'}
+                        {' \u2194 '}
+                        {link.targetLocation ?? '\u2014'}
+                    </p>
+                )}
                 <p className="text-[9px] text-slate-500 leading-relaxed">
                     {siteById[link.sourceSiteId]?.name ?? link.sourceSiteId} to{' '}
                     {siteById[link.targetSiteId]?.name ?? link.targetSiteId}

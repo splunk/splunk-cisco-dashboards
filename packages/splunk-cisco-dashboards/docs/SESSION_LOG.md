@@ -7,6 +7,223 @@
 
 ---
 
+## 2026-05-14 (Build 103) — TE A2A loading-state visibility + 4-hour SPL scan cap
+
+### Context
+
+Right after Build 102 shipped, Alan opened the AUB↔TLH popup again and
+reported "I still don't see it on my dev instance and I ran yarn and
+bumped the cache, something is still wrong." Screenshot showed every
+metric pill reading **Awaiting** and the TELEMETRY SOURCE block
+reading **"Awaiting topology link telemetry"** — the static OOB
+default text — with **no** `Updated` timestamp and **no** error
+appended to the customer-site row. Read as: "the TE integration is
+gone again."
+
+Then a follow-up: "wait! it does show but it took a while for it to
+show, now I see it in the FDEM stack. Do you have any explanation
+for it?" The data eventually flowed in — confirming the search
+*was* dispatching, it just took 20-40 seconds to complete on a
+cold cache.
+
+### Root cause (perceived regression, not a real one)
+
+Three independent things lined up to make a slow search look like a
+removed integration:
+
+1. **The SPL is genuinely slow on a cold cache.** The
+   `[overview_link_te_a2a_health]` stanza scans raw events
+   (`` `index_thousandeyes` sourcetype="cisco:thousandeyes:metric"
+   "thousandeyes.test.type"="agent-to-agent" ``) over whatever time
+   range the dispatcher passed in (default `-24h`), then runs a stats
+   command with **13+ aggregations** (`avg×3 + values×2 + first×11 +
+   max×1`) grouped by `thousandeyes.test.id`. We deliberately moved
+   off the `Cisco_ThousandEyes.Test_Metrics` data model in Build 79
+   because the customer's `ta_cisco_thousandeyes` schema didn't
+   surface `loss`, `jitter`, or any `agent.geo.*` paths through the
+   metric-store wrapper — raw events were the only complete source of
+   truth, but they're an order of magnitude slower to scan.
+
+2. **The popup couldn't tell `'loading'` from `'static'`.** The link
+   popup rendered `link.telemetrySource` directly (`"Awaiting topology
+   link telemetry"` is the OOB default for a search-bound link) and
+   used `formatPercent(value)` / `formatLatency(value)` /
+   `formatMbps(value)` helpers that returned `'Awaiting'` for every
+   undefined value. Result: while the saved search was in flight, the
+   popup looked **identical** to the genuinely-not-wired case. There
+   was a `dataState === 'loading'` field on the link, but nothing
+   read it.
+
+3. **The cold-cache window is the worst time to first-impression a
+   demo.** Splunk's pre-ER acceleration kicks in after the first
+   successful run; for a fresh load (post-deploy, post-`yarn`,
+   post-cache-bump — exactly what Alan did) every search starts cold.
+
+### Fix (two halves, both shipped this build)
+
+- **A. React-side visible loading affordance.**
+  - `CustomerTopologyMap.tsx`. The four format helpers
+    (`formatNumber` / `formatPercent` / `formatLatency` /
+    `formatMbps`) now take an optional `loading?: boolean` second arg
+    and return `'Loading…'` when the value is undefined and
+    `loading === true`. Default unchanged: undefined value → `'Awaiting'`.
+  - In the link popup body (`<LinkDetails>`), every metric-pill
+    `formatXxx(...)` call now passes
+    `link.dataState === 'loading'` as the second arg. So a popup
+    opened while the search is still running renders **Loading…** in
+    each pill instead of **Awaiting**.
+  - The TELEMETRY SOURCE block now branches on `dataState`. When
+    `'loading'` it renders a `Loader2` spinner + the copy
+    *"Querying ThousandEyes A2A test data… first run can take 20-40s
+    while Splunk warms the cache"* in muted text. Once the search
+    returns, the branch falls through to the existing
+    `link.telemetrySource` paragraph (no behaviour change there).
+  - Same treatment applied to `<SiteDetails>` for parity: the three
+    site metric pills get the `loading` flag, and the existing
+    `'Loading searchbase result'` sub-line now shows a small inline
+    spinner. Sites are usually faster but the same pattern keeps
+    perception consistent across the popup family.
+
+- **B. SPL hard-cap to last 4 hours.**
+  - `searchbase.conf`. Bumped `[overview_link_te_a2a_health]` to
+    `version = 1.2.0`, added an inline `earliest=-4h@h` token
+    immediately after the existing `"thousandeyes.test.type"=
+    "agent-to-agent"` filter on the base search line. This is a hard
+    upper bound on the events scanned regardless of dispatcher range
+    — even if a future caller passes `earliestTime=-7d` the SPL stays
+    pinned to the last 4 hours.
+  - 4 hours is the right number for a synthetic A2A test with 1-2-min
+    sample cadence: ~120-240 samples per agent pair, plenty for a
+    statistically meaningful avg/loss/jitter verdict, and the
+    `max(_time) → lastSeen` field still tells operators how recent
+    the freshest sample was. The verdict is meant for "is this link
+    healthy *right now*", not historical analysis — historical lives
+    in TE itself, where the `View in ThousandEyes` deep link opens
+    the test's Path Visualization view with its own 24h window.
+  - Cold-cache run target: ~8s (down from 20-40s observed in Alan's
+    deploy window). A2A test volume varies stack-to-stack so the
+    actual number will differ; the loading-state UX from half A
+    handles whatever residual latency remains.
+  - Counterpart `[overview_link_auburndale_tallahassee_health]`
+    (the multi-source umbrella that prefers SD-WAN, falls back to
+    TE, and finally to Catalyst Center) was **not** time-capped this
+    build — it's a different SPL shape and SD-WAN customers may
+    legitimately want a wider window for capacity/utilization
+    averaging. Revisit if the umbrella ever exhibits the same slow
+    behaviour.
+
+### Build chrome
+
+- `app.conf`. `build = 102 → 103`.
+- `searchbase.conf` `[overview_link_te_a2a_health]`. Added a v1.2.0
+  paragraph at the top of the `explanation` field documenting the
+  inline-`earliest` decision so the picker preview shows the perf
+  history. Existing v1.1.x story (data-model → raw-events switch)
+  preserved underneath as historical context.
+
+### Verification
+
+- `yarn run build`: clean.
+- `ReadLints CustomerTopologyMap.tsx`: clean.
+- Manual: `Loader2` is already used elsewhere in the lucide import set
+  on this file (we checked the import block before adding); no
+  duplicate-import warnings.
+
+### Notes for next session
+
+- If the customer's TE org has very high A2A volume, even 4 hours of
+  raw events may be slow. The next perf lever is summary indexing or
+  reverting to `tstats` against an *enriched* `Test_Metrics` model
+  once the customer ships a TA build that exposes loss/jitter/geo
+  through the data model wrapper. Both are heavier engineering
+  tasks; the loading-state UX from this build buys us the time to
+  evaluate them properly.
+- Sites are still using the bulk-topology dispatcher path which has
+  its own slow-load surface; the spinner addition partially covers it
+  but the underlying SPL there could use a similar cap. Open
+  follow-up.
+
+---
+
+## 2026-05-14 (Build 102) — Restore TE agent-location row in link popup (revert Build 98 over-correction)
+
+### Context
+
+Alan reviewed the build 100/101 state of the AUB↔TLH link popup and
+flagged the missing TE agent-location row as a regression: "you
+accidentally removed the integration with ThousandEyes!" He sent a
+screenshot of the prior look — the TELEMETRY SOURCE block contained,
+in this order:
+
+  1. `ThousandEyes A2A: demt-te01-va -> dema-te01-va`  (text source)
+  2. `Measured by demt-te01-va ↔ dema-te01-va`         (agent pair)
+  3. `Tallahassee, Florida, US ↔ Orlando, Florida, US` (TE agent geo)
+  4. `Auburndale (Logistics) to Tallahassee (State EOC) - Updated …`
+  5. `View in ThousandEyes` button
+
+Build 98 (2026-05-13) dropped row 3 to resolve a complaint that
+"Orlando, Florida, US" appeared right above "Auburndale (Logistics)
+to Tallahassee (State EOC)" — two adjacent lines that looked like
+they disagreed on what the link is. The fix was correct as a UX
+nit, wrong as an engineering call: row 3 was the visible proof
+that the popup is consuming `thousandeyes.source.agent.location` /
+`thousandeyes.target.agent.location` straight off the A2A test
+data. Without it, the TELEMETRY SOURCE block reads as thinly
+wired even when the data layer is healthy.
+
+### Fix
+
+- **`CustomerTopologyMap.tsx`.** Restored the
+  `(link.sourceLocation || link.targetLocation)` conditional row
+  and the `<p>` it renders. To keep the original Orlando-vs-
+  Auburndale concern from re-emerging, the row now leads with a
+  `TE agents at:` label (semi-bold, slate-500) so the geography
+  reads unambiguously as "where the TE-registered agents are"
+  rather than as a competing claim about the link's endpoints.
+  Also added a `title` attribute spelling out the same in long
+  form for hover (operators who want the explanation but don't
+  want to read the whole popup).
+
+  The TE-registered geo + customer-site rows are now stacked in
+  this order:
+
+  ```
+  TE agents at: Tallahassee, Florida, US ↔ Orlando, Florida, US
+  Auburndale (Logistics) to Tallahassee (State EOC) - Updated …
+  ```
+
+  The first row is "TE telemetry pedigree" (where the data came
+  from), the second is "what the link represents" (customer
+  ground truth). Operators reading top-to-bottom see the agent
+  identity (`Measured by …`), the agent geo (`TE agents at: …`),
+  then the customer site identity (`Auburndale (Logistics) to
+  Tallahassee (State EOC)`) — three distinct rows that no longer
+  contradict because each is now scoped to a different concept.
+
+- The Build 98 long comment block that justified the deletion was
+  replaced with a Build 102 comment explaining the restoration
+  and the reason for the new prefix. The git history retains the
+  original justification so the trade-off is reviewable.
+
+### Verification
+
+- `yarn build` clean (9.3s, only the standing webpack size-limit
+  warnings on `searchbase.conf` and the background PNGs).
+- `ReadLints` clean on the touched file.
+- Visual smoke test: the link popup now matches Alan's reference
+  screenshot, with the added `TE agents at:` prefix on the geo
+  row to disambiguate it from the customer-site row immediately
+  below.
+
+### What's next
+
+- **Pending from earlier builds.** Dashboard-name + subtitle copy
+  pass and the threshold form's "advanced" unit-conversion reveal
+  are still parked. Section-padding compaction at very short
+  viewports remains an open follow-up from Build 101.
+
+---
+
 ## 2026-05-13 (Build 101) — Section title becomes the drill-down; reclaim ~108px on short viewports
 
 ### Context
