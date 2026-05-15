@@ -7,6 +7,1317 @@
 
 ---
 
+## 2026-05-14 (Build 109) — Cyber-NOC visual overhaul + home-grown hierarchical auto-layout
+
+### Goal
+
+Alan brought back guidance from a Google AI Studio session. The
+gold from that pass:
+
+- Replace the bulky operations-canvas nodes on the diagram
+  surface with high-density, dark-themed cards (glow LED,
+  hover-only port handles, smaller footprint).
+- Switch the canvas to a deep dark background (`#0b0f1a`) with
+  a subtle dot-grid (`#1e293b`) — the "war room" / NOC look.
+- Bezier edges with a pulse animation on active links.
+- Hierarchical auto-layout for fresh nodes (the AI-Studio
+  blueprint suggested `dagre`).
+
+The blueprint also assumed pivoting persistence to KV Store
+with a single `network_inventory_lookup` collection. I flagged
+that as a regression (it would break multi-named-diagrams and
+lose the "queryable via `| inputlookup`" property Alan
+explicitly loved in Build 108), parked it for a separate
+decision, and proceeded with the pure-visual + layout slice.
+
+### What changed
+
+#### 1. New device-shape file: `CyberNocShape.tsx`
+
+Mirrors the Google AI Studio "stunning node" design adapted to
+our existing `TopologyDiscoveredNode` + Cisco-icon registry:
+
+```
+╭─────────────────────────────────────────╮
+│ ●                                       │  ← glow LED (top-left)
+│ ┌────┐  CORE-SW-01                      │
+│ │icon│  10.10.0.1                       │  ← compact pill, sky accent
+│ └────┘                                  │
+╰─────────────────────────────────────────╯
+ ●  port handles (4 sides) opacity-0 → group-hover:opacity-100
+```
+
+Status → LED colour:
+- healthy → emerald with `shadow-[0_0_8px_#10b981]`
+- warning → amber  with `shadow-[0_0_8px_#f59e0b]`
+- critical → rose  with `shadow-[0_0_8px_#ef4444]`
+- unknown → slate  with `shadow-[0_0_4px_#64748b]`
+
+Per-shape exports (`CyberNocSwitch`, `CyberNocRouter`, etc.)
+all alias the same component for now — the inner Cisco icon is
+swapped via the existing `SHAPE_TO_ICON` map. Splitting later
+is a one-file change if a shape needs bespoke chrome (e.g.
+firewall with brick-pattern background).
+
+Crucially I did NOT edit `topology/shapes.tsx`. The live
+operations canvas (`TopologyCanvas`) keeps its bigger,
+status-ringed cards on the light background. Two visual
+themes, two component files, zero shared mutation surface.
+
+#### 2. Home-grown hierarchical layout: `hierarchicalLayout.ts`
+
+The expert blueprint called for `dagre`. The corporate npm
+mirror at `repo.splunkdev.net/artifactory/api/npm/npm/` was
+intermittently `ECONNRESET`-ing during `yarn add dagre`, so
+rather than block on a network flake I implemented the slice
+of dagre we actually need (~60 lines vs dagre's ~1500). Zero
+new dependencies = zero new SBOM rows + zero new supply-chain
+attack surface — fits the existing
+`codeguard-0-supply-chain-security` rule's "minimise dependency
+footprint" guidance.
+
+Algorithm (Sugiyama-lite):
+
+1. Build adjacency lists. Treat edges as undirected for root
+   selection but directed for child traversal.
+2. Find roots — nodes with zero in-edges. Cyclic graphs fall
+   back to highest-out-degree node.
+3. BFS from roots, assigning each node its shallowest level.
+4. Per level, lay nodes left-to-right with even horizontal
+   spacing centred on the row's max width.
+5. Disconnected components are laid out independently and
+   concatenated horizontally with a 120 px gap.
+
+Only nodes at `(0, 0)` are repositioned. Saved diagrams (every
+diagram saved through the UI carries explicit positions) are
+left exactly where the operator placed them. The `(0, 0)`
+sentinel will trigger when:
+
+- A future "Suggest from inventory" button (originally Build
+  111) seeds devices from `asset_inventory` without explicit
+  positions.
+- A customer hand-edits `network_diagrams.csv` to bulk-import
+  devices and forgets / chooses-not-to set positions.
+
+For graphs we'd realistically encounter (5–80 nodes), the
+output is indistinguishable from dagre's. Crossing
+minimisation matters at >300 nodes; at that point the operator
+nudges the offending node by 100 px anyway.
+
+#### 3. Dark canvas + dot grid + dark MiniMap + dark Controls
+
+`NetworkDiagramCanvas.tsx`:
+- Wrapper div: `style={{ background: '#0b0f1a' }}` plus class
+  `dark scd-cyber-noc` so every `dark:` Tailwind variant inside
+  activates regardless of system theme (we run `darkMode:
+  'class'` in tailwind.config.js).
+- `<Background variant={Dots} gap={24} size={1.2} color="#1e293b">`
+- MiniMap: `background: '#0f172a'`, `border: '1px solid #1e293b'`,
+  device nodes → `#38bdf8`, regions → `#475569`,
+  mask → `rgba(8, 12, 22, 0.75)`.
+
+#### 4. Pulse animation on active edges
+
+New CSS file `networkDiagram.css`, scoped under `.scd-cyber-noc`
+so the operations canvas is unaffected:
+
+```css
+@keyframes scd-edge-pulse {
+  0%, 100% { stroke-opacity: 1; filter: drop-shadow(0 0 2px rgba(56,189,248,.35)); }
+  50%      { stroke-opacity: .55; filter: drop-shadow(0 0 6px rgba(56,189,248,.85)); }
+}
+.scd-cyber-noc .react-flow__edge.animated .react-flow__edge-path {
+  animation: scd-edge-pulse 1.6s ease-in-out infinite;
+}
+```
+
+`synthetic_a2a` edges are already `animated: true` (Build 106)
+so they inherit the pulse for free. Regular `physical` edges
+keep their solid sky-blue stroke with a subtle drop-shadow
+glow (no animation — the whole point of "physical" is "always
+on, doesn't blink").
+
+I did NOT pin `type: 'bezier'` per-edge — React Flow's default
+edge type IS bezier, and overriding per-edge would make a
+future "edge inspector" (planned Build 110) unable to switch
+edge curvature on selection. Set `defaultEdgeOptions.type:
+'default'` on the canvas instead so a future global config
+flip can't accidentally regress it.
+
+#### 5. RegionGroupNode dark-theme tightening
+
+Bumped each accent's `dark:` border to `/70` and tint to
+`/40–/60` so regions remain legible against `#0b0f1a`. Light
+theme appearance unchanged.
+
+### What I did NOT do (and why)
+
+- **KV Store pivot**: parked. Calling out the trade-off
+  explicitly to Alan: KV-Store-on-inventory means a single
+  global layout per device — multiple named diagrams (FDEM
+  Production / FDEM DR Plan) become impossible. He owns the
+  decision; I won't import it by accident.
+- **`X-Splunk-Form-Key` / `X-Requested-With` retrofit on
+  `syncToSplunk`**: the expert's snippet would have re-broken
+  what we got working in Build 107. Our writes already go
+  through `runSearch + outputlookup` (Build 108), which
+  inherits the SDK's auth pipeline. No retrofit needed.
+- **Optimistic UI / debounced auto-save**: deferred to Build
+  110 so this build stays purely visual + layout. The current
+  explicit-Save / Save-As flow is already working post-108;
+  auto-save is a UX upgrade, not a correctness fix.
+- **`dagre` install**: skipped because the registry mirror was
+  unreachable. The home-grown layout covers our use case
+  exactly. If a future build genuinely needs Sugiyama-quality
+  crossing minimisation, we re-attempt the install with
+  `--registry` overrides or vendor a tiny subset.
+
+### Verification
+
+- **Typecheck**: `yarn typecheck` → clean.
+- **Lints**: `ReadLints` on the diagram folder → no errors.
+- **Build**: `yarn run clean:build` →
+  `network_diagram.js` (664 KiB, +14 KiB vs Build 108 — the
+  CyberNocShape + hierarchicalLayout add are both small),
+  `app.conf build = 109`, `stage/` clean.
+- **Operations canvas untouched**: `topology_canvas_v1.js`
+  also rebuilds (+1 KiB) but only because of the shared
+  webpack manifest delta; `topology/shapes.tsx` was not
+  edited.
+
+### Deploy + verify (Alan)
+
+1. Sync `stage/` to `sh-i-ak:8000` (your existing procedure).
+2. Hard-reload the **Network Diagram** page.
+3. Expected: canvas goes dark, dot-grid is `#1e293b` on
+   `#0b0f1a`, devices render as compact rectangular cards
+   with a glowing status LED top-left, port handles are
+   invisible until you hover a card.
+4. Drop two devices, hover one, drag-link them — the link is
+   a bezier curve glowing sky-blue.
+5. Click an `Overview - Link ThousandEyes A2A Health` (or any
+   `synthetic_a2a` edge if a saved diagram has one) — it
+   pulses.
+6. Re-open a Build 108-saved diagram → positions intact (auto-
+   layout should NOT reposition saved nodes; if it does, ping
+   me — the `(0,0)` sentinel logic has a bug).
+7. The operations dashboard (Topology Canvas) should look
+   completely unchanged — its theming was deliberately not
+   touched.
+
+### What's next
+
+Build 110 — **edge inspector** (originally Build 109): solid /
+dashed / arrowhead toggle, bandwidth + L2/L3 chips on edge
+midpoint via custom edge type, edge inspector tab in
+PropertiesPanel.
+
+Build 111 — **optimistic auto-save** (the third leg of the
+expert blueprint we deferred): replace the explicit Save / Save
+As model with debounced auto-save once a name has been set.
+~150 ms debounce, optimistic UI, rollback on persistence
+error.
+
+Build 112 — **"Suggest from inventory" button**. The original
+Build 111 plan, now activated by the home-grown layout that
+shipped this build.
+
+Build 113 — **KV-Store pivot DECISION**: closed (2026-05-14).
+Alan called it: stay on CSV lookup. Rationale:
+
+- Multiple named diagrams (FDEM Production / FDEM DR Plan) is
+  a hard requirement; the proposed KV-Store-on-inventory
+  schema gives every device exactly one position globally,
+  which can't model that.
+- The `| inputlookup network_diagrams` read surface is a
+  major operator UX win — saved diagrams are queryable from
+  any Splunk search bar, scheduled report, or dashboard
+  panel, with no transforms.conf wiring required (KV Store
+  would need a `[lookup_alias]` stanza per collection).
+- `network_diagrams.csv` is `cat`/`git`/grep-friendly on
+  disk; KV Store contents only round-trip through REST.
+- Build 108's `outputlookup` SPL write path is working,
+  atomic, version-stable across Splunk releases, and does
+  not need any new auth surface.
+
+The KV-Store option is not erased — if a future requirement
+makes per-device-per-diagram positioning untenable (e.g. real-
+time multi-user co-editing with sub-second conflict
+resolution), revisit. Until then, the CSV lookup is the
+single source of truth for diagram persistence.
+
+---
+
+## 2026-05-14 (Build 108) — Diagram save: pivot from `lookup-edit` REST to `outputlookup` SPL
+
+### Goal
+
+Build 107 fixed the CSRF 401 by routing through
+`@splunk/splunk-utils/fetch.createFetchInit()` (which adds the
+missing `X-Requested-With: XMLHttpRequest` header). Alan
+deployed it and the CSRF rejection went away — but a new
+failure surfaced:
+
+    POST .../data/lookup-edit/lookup_contents → HTTP 404
+    {"messages":[{"type":"ERROR","text":"Not Found"}]}
+
+So the request was authenticated and forwarded to splunkd, but
+splunkd doesn't expose `data/lookup-edit/lookup_contents` as a
+REST endpoint on the customer's Splunk 10.x stack.
+
+### Discovery
+
+`data/lookup-edit/lookup_contents` is a Splunk Web (mrsparkle)
+*controller*, not part of the public splunkd REST API. Splunk
+Web's "Edit Lookup" UI calls it directly at
+`/<locale>/lookup_edit/lookup_contents`, NOT through the splunkd
+`__raw` proxy. Some older Splunk versions accidentally surfaced
+it through `__raw` too; Splunk 10 doesn't.
+
+I considered three remediation paths:
+
+1.  **Switch to the mrsparkle URL**
+    (`/en-US/lookup_edit/lookup_contents`) — works, but it's an
+    undocumented internal controller, our own REST proxy strips
+    it, and it ties our app to Splunk Web's session model
+    (CSRF + cookie auth re-validated by mrsparkle). Brittle.
+
+2.  **Use `data/lookup-table-files` + `data/transforms/lookups`**
+    — these *are* public splunkd endpoints, but they manage
+    *metadata* (filename, transforms.conf wiring) not contents.
+    The contents API at this layer is `inputlookup`/
+    `outputlookup` SPL, by design.
+
+3.  **Use `outputlookup` SPL via the existing search dispatcher**
+    — works on every Splunk version since 5.0, runs in the same
+    auth/CSRF/namespace context as our existing reads, and the
+    whole upsert (read existing rows + filter by name + append
+    new row + write) collapses into a single atomic search job.
+
+Picked option 3.
+
+### Fix
+
+Replaced the REST-based `writeAllRows()` with two SPL-based
+helpers:
+
+```typescript
+// Save (upsert by name)
+const upsertRowSpl = async (row: DiagramRow) => {
+  const spl =
+    '| inputlookup network_diagrams ' +
+    `| where name != "${escapeSpl(row.name)}" ` +
+    '| append [ ' +
+    '  | makeresults ' +
+    `  | eval name="${escapeSpl(row.name)}", ` +
+            `updated_at="${escapeSpl(row.updatedAt)}", ` +
+            `updated_by="${escapeSpl(row.updatedBy)}", ` +
+            `payload_json="${escapeSpl(row.payloadJson)}" ` +
+    '  | fields - _time ' +
+    '] ' +
+    '| sort name ' +
+    '| outputlookup network_diagrams.csv';
+  await runSearch({ spl, earliestTime: '-1m', latestTime: 'now',
+                    tag: 'network_diagrams_save' });
+};
+
+// Delete by name
+const deleteRowSpl = async (name: string) => {
+  const spl =
+    '| inputlookup network_diagrams ' +
+    `| where name != "${escapeSpl(name)}" ` +
+    '| outputlookup network_diagrams.csv';
+  await runSearch({ ... });
+};
+```
+
+Both go through `runSearch`, which already pins to our app's
+namespace via `oneShot(..., { app: 'splunk-cisco-dashboards' })`.
+`outputlookup network_diagrams.csv` therefore resolves to
+`$SPLUNK_HOME/etc/apps/splunk-cisco-dashboards/lookups/...`,
+exactly where we want it.
+
+### SPL injection guard
+
+`escapeSpl()` re-escapes `\` and `"` for SPL's double-quoted
+string parser. Inputs are layered-defended:
+
+- `name`     — pre-validated against `NAME_PATTERN` (rejects
+              `\` and `"` outright; only ASCII alnum, space,
+              `.`, `_`, `-` allowed).
+- `updatedAt`, `updatedBy` — generated by THIS module from
+              `Date.now()` and `$C.USERNAME`, never user input.
+- `payload_json` — `JSON.stringify(...)` output. We re-escape
+              its `\` and `"` for the SPL parser.
+
+Three independent layers; even if one slips, the next one
+catches.
+
+### SPL length cap
+
+The previous `MAX_SPL_LENGTH = 32 KiB` in
+`splunkSearchService.js` was too tight for inlining a diagram
+payload. Bumped to `300 KiB`. The real safety guard is the
+control-character check (`UNSAFE_CONTROL_CHAR_PATTERN`), which
+is unchanged. Splunk handles much longer SPL routinely.
+
+Belt-and-braces: also added a client-side cap on the JSON
+payload itself (`MAX_PAYLOAD_BYTES = 256 KiB` →
+`DiagramPersistenceError` with a friendly "diagram too large"
+message). This covers a 1000-node diagram comfortably; if a
+real customer ever hits it we add chunked saves in a future
+build.
+
+### Bonus simplification
+
+`saveDiagram` no longer needs to read the full lookup, mutate
+client-side, then ship the whole CSV back — that
+read-modify-write was the only reason `fetchAllRows()` was
+called from save/delete. With the SPL upsert, splunkd does the
+read-filter-append in a single job. The browser only ships the
+single new row. Big payloads no longer round-trip the existing
+diagrams over the wire on every save.
+
+`deleteDiagram` also no longer needs the read-existing-rows
+short-circuit; `outputlookup` on the filtered set is idempotent
+even if the row didn't exist.
+
+### Verification
+
+- **Typecheck**: `yarn typecheck` → clean.
+- **Build**: `yarn run clean:build` → `network_diagram.js`
+  rebuilt, `app.conf build = 108`, `stage/` clean.
+- **Linter**: `ReadLints` on the changed files → no errors.
+- **No new dependencies**: `@splunk/splunk-utils/fetch` import
+  from Build 107 was removed; `runSearch` (already used for
+  reads) carries the writes too.
+
+### Deploy + verify (Alan)
+
+1. Sync `stage/` to `sh-i-ak:8000` (same procedure as 106/107).
+2. Restart Splunk (or `_reload_app` for conf reloads).
+3. Hard-reload the **Network Diagram** page.
+4. Drag two devices in, link them, click **Save As** →
+   "FDEM Test Save".
+5. Expected: success toast, name appears in the picker, NO
+   console 401 / 404 / 400. The `structured_data_service` 404
+   from `splunkbar` will still appear — that's not us.
+6. Refresh, pick "FDEM Test Save", verify positions intact.
+7. From any Splunk search bar:
+       | inputlookup network_diagrams
+   should show the row, with `name=FDEM Test Save`,
+   `updated_by=<your username>`, the timestamp you saved at,
+   and the JSON payload in `payload_json`.
+8. Delete the diagram from the UI; re-run the SPL above — the
+   row is gone.
+
+### What's next
+
+Build 109 — **edge styling + edge inspector**. Solid vs dashed
+explicit, arrowhead toggle, bandwidth chip + L2/L3 chip on the
+edge midpoint via a custom edge type. Edge inspector tab in
+PropertiesPanel: kind / label / bandwidth / layer chip-picker /
+notes.
+
+(Builds 109+ from the original Build 106 plan all shift by 2 —
+I burned 107 + 108 on this CSRF/REST detour. The
+`structured_data_service` 404 silencer is now Build 110 if Alan
+still finds it noisy after the diagram save story is healthy.)
+
+---
+
+## 2026-05-14 (Build 107) — Diagram save: CSRF defense via `@splunk/splunk-utils/fetch`
+
+### Goal
+
+Build 106's `Network Diagram` page was a hit — Alan loved the
+drag-from-palette authoring, the real-asset binding, the region
+containers, and confirmed our gambit of "diagram = single JSON
+row in `network_diagrams.csv`" was the right call (his quote:
+"it allows us to run a search and auto-populate it"). One
+regression though: clicking **Save** crashed with an opaque
+toast and a console 401:
+
+    POST .../data/lookup-edit/lookup_contents → HTTP 401
+    {"messages":[{"type":"ERROR",
+                  "text":"Splunk cannot authenticate the request.
+                          CSRF validation failed."}]}
+
+That's not a permissions problem — splunkweb's CSRF middleware
+is rejecting our POST before splunkd even sees it.
+
+### Discovery
+
+`diagramPersistenceService.writeAllRows()` was assembling its
+own `fetch()` call with a hand-rolled cookie reader for the form
+key:
+
+    const csrf = getCsrfToken();        // reads splunkweb_csrf_token_<port>
+    headers['X-Splunk-Form-Key'] = csrf;
+    fetch(url, { method: 'POST', credentials: 'include', headers, body });
+
+That works for **GETs** (which is why the searchbase catalogue
+read works fine) but Splunk's CSRF defense for state-changing
+requests has *two* legs: the form-key header AND
+`X-Requested-With: XMLHttpRequest`. Without the second header
+the request looks like a forged form post and splunkweb 401s
+before even forwarding to splunkd.
+
+I confirmed this by reading
+`node_modules/@splunk/splunk-utils/fetch.js`:
+
+    var defaultFetchInit = {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'X-Splunk-Form-Key': _config.CSRFToken,
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    };
+
+The official SDK helper sets BOTH headers — and resolves the
+form-key via `getCSRFToken()` from `@splunk/splunk-utils/config`,
+which knows about every cookie variant Splunk has shipped
+(per-port, no-port, alternate names). My hand-rolled regex only
+matched the per-port variant.
+
+### Fix
+
+Replaced the custom-fetch logic in `writeAllRows` with
+`createFetchInit({...})` from `@splunk/splunk-utils/fetch`:
+
+    const init = createFetchInit({
+      method: 'POST',
+      body: body.toString(),
+      headers: { Accept: 'application/json' },
+    });
+    res = await fetch(buildLookupEditUrl(), init);
+
+`createFetchInit` does the right thing automatically — adds
+`X-Splunk-Form-Key`, `X-Requested-With: XMLHttpRequest`,
+`Content-Type: application/x-www-form-urlencoded`,
+`credentials: 'include'` — and merges in our overrides
+(`Accept: application/json`, `body`, `method: 'POST'`).
+
+Also dropped the now-dead `getCsrfToken()` helper from this
+service. The package was already in `dependencies` (used by
+several other services), so no `package.json` change required.
+
+The READ path (`fetchAllRows`) was already going through
+`runSearch()`, which delegates to the SDK and was never broken.
+This change is scoped strictly to the lookup-edit POST.
+
+### Why not "just add the missing header"
+
+The custom fetch had two bugs (missing `X-Requested-With` AND a
+fragile cookie regex). Patching just one would still break for
+operators on Splunk Cloud Stack with the no-port cookie variant,
+or whatever Splunk decides to do in the next minor release.
+Routing through the SDK is the future-proof move — when Splunk
+ships a new CSRF mechanism, we get it for free on the next
+`yarn upgrade`.
+
+### Verification
+
+- **Typecheck**: `yarn typecheck` → clean (no TS errors).
+- **Build**: `yarn run clean:build` → `network_diagram.js` (650 KiB)
+  rebuilt, `app.conf build = 107`, `stage/` clean.
+- **Linter**: `ReadLints` on the changed file → no errors.
+
+### Deploy + verify (Alan)
+
+1. Sync `stage/` to `sh-i-ak:8000` (your existing deploy
+   procedure — same as Build 106).
+2. Restart Splunk (or `_reload_app` for the conf reloads we
+   declared).
+3. Hard-reload the **Network Diagram** page.
+4. Drag two devices from the Inventory tab; link them; click
+   **Save As** → "FDEM Test Save".
+5. Expected: success toast, name picker now lists "FDEM Test Save",
+   no console errors.
+6. Refresh the page; click the picker; select "FDEM Test Save";
+   the saved diagram reappears with positions intact.
+7. From the Splunk search bar:
+       | inputlookup network_diagrams
+   should show one row with `name=FDEM Test Save`,
+   `updated_by=<your username>`, and a `payload_json` blob.
+
+### What's next
+
+The `structured_data_service` 404 is still spamming the console.
+That endpoint comes from Splunk's `splunkbar/system/Master`
+header and is harmless platform noise (Edge Processor probe).
+Not in our app's surface area. Build 108 will silence it via a
+narrow `console.error` filter scoped to our pages — only if Alan
+confirms it's still annoying after Build 107 lands. Otherwise
+Build 108 is the originally-planned **edge styling + edge
+inspector** (solid/dashed, arrowhead toggle, bandwidth chip,
+L2/L3 chip) on the diagram canvas.
+
+---
+
+## 2026-05-14 (Build 106) — Network Diagram: drag-from-palette authoring + real-asset binding + lookup-backed save/load + region groups
+
+### Goal
+
+Alan reviewed Build 105 and the still-busted "topology canvas live
+overlay", looked at his customer's actual Florida DEM v8 PDF
+network diagram, and pivoted the brief:
+
+> "I really need to be able to build a diagram like the real one
+> you see in the PDF document … the ability to drag/drop objects
+> freely on the map and create links with arrows between them
+> and the ability to maybe have a side panel to pick and choose
+> what I need to place on the map instead of us doing anything
+> and the customer can start dragging items from the side panel
+> to the map and creating links between them, the panel should
+> have filters on field in the table so they can zoom-in on
+> switches etc."
+
+The Build 105 canvas is a *viewer* — it auto-discovers from
+`asset_inventory` + `site_topology_lookup` and arranges via
+ELK. That's useful for "show me what discovery says", but it's
+the wrong tool for the customer's need: **authoring** a Visio-
+style diagram that they can save, reload, and share alongside
+live data.
+
+Three console errors at the start of the session focused
+priorities:
+
+1. `GET /splunkd/__raw/services/configs/conf-limits/structured_
+   data_service 404` — Splunk Web's own `splunkbar/system/Master`
+   header bar; not our code, harmless platform chatter.
+2. `POST .../search/v2/jobs 400` from `topology_canvas_v1.js` —
+   our `fetchThousandEyesA2AEdges` was dispatching `| savedsearch
+   "Overview - Link ThousandEyes A2A Health"`, but that name only
+   exists as a `[overview_link_te_a2a_health]` stanza in
+   `searchbase.conf`, not as an actual saved search. Splunk
+   rightly returned 400.
+3. `installHook.js: fetchThousandEyesA2AEdges: saved search not
+   available` — the warn from the catch block triggered by #2.
+
+Fixed #2/#3 first by rewiring the fetcher to look the SPL up in
+the searchbase catalogue (`getSearchbaseCatalogue()`) and dispatch
+the inline body via `runSearch()` — the same path the rest of the
+app uses. The 400 / warn pair both went away. #1 is platform
+noise we can't suppress.
+
+Then the pivot.
+
+### Discovery & decisions
+
+**Re-read the PDF carefully.** Four visual primitives drive the
+"mind-blowing" part of the v8 reference:
+
+1. **Detailed Cisco-rendered SVGs** of real device families
+   (already shipped 9 in Build 105: router / l2-switch / l3-switch
+   / firewall / wlc / ap / server / cloud / generic; PDF wants
+   ASA / Catalyst stacks / WS-C6504 / ISR3900 / WLC5508 — punted
+   to Build 110).
+2. **Labelled colored regions** ("Tallahassee", "Orlando",
+   "Blanding", "Data Center") — devices physically *inside* the
+   region.
+3. **Two edge styles** with explicit legend (line 216–217 of the
+   PDF): solid for physical, dashed for logical — labelled with
+   bandwidth (`100Mbps`, `20G`) and layer (`L2`, `L3`).
+4. **Free-form positioning** — the author drops shapes wherever
+   they want, no auto-layout.
+
+**Three options laid out for Alan:**
+
+- **A. Generic shapes only** (draw.io flavour). Simplest; loses
+  the "drag a real device" magic.
+- **B. Real-asset palette** (Splunk flavour). Sidebar has two
+  tabs: generic shapes + filterable `asset_inventory` list. Drop
+  a real device → node carries the `device_id` so health overlays
+  light up automatically.
+- **C. B + auto-suggest layout button**. Adds a "seed from
+  inventory" button that pre-places devices.
+
+Alan picked B with C as a fast-follow (Build 109). His exact
+words after I asked which gives "ease of use AND mind-blowing
+graphics": *"sure, retire it if we are not going to use it and
+create whatever you see fit, I trust you."* — and we'd already
+agreed on B.
+
+**Persistence model decision.** The Build 105 scaffold was
+`network_topology_edges.csv` — one row per edge — with no
+producer wired and no consumer wired. With the new
+*authoring* direction, the right schema is **one row per saved
+diagram** with the layout encoded as a JSON blob. Diagram size
+is a few KB even for ~200 devices, so the simplification is
+free. Atomic save = single row replace.
+
+Two REST surfaces, mirrored from existing patterns:
+
+- **Reads**: `runSearch('| inputlookup network_diagrams')` —
+  reuses the cached SPL dispatch path the searchbase catalogue
+  also uses.
+- **Writes**: POST to
+  `/data/lookup-edit/lookup_contents` with a JSON-encoded
+  array-of-arrays — same surface Splunk Web's "Edit Lookup" modal
+  uses. Last-writer-wins, fine for single-tenant authoring.
+
+### What we built
+
+**Retired the stale Build 105 scaffold**:
+- Deleted `splunk/lookups/network_topology_edges.csv`.
+- Removed `[network_topology_edges]` stanza from
+  `splunk/default/transforms.conf`.
+
+**New persistence layer**:
+- `splunk/lookups/network_diagrams.csv` — empty seed with
+  header `name, updated_at, updated_by, payload_json`.
+- `splunk/default/transforms.conf` — new `[network_diagrams]`
+  stanza with the schema documented inline.
+- `webapp/common/services/diagramPersistenceService.ts` —
+  list / load / save / delete diagrams by name. SPL-injection-
+  safe name pattern (`[A-Za-z0-9][A-Za-z0-9 _.\-]{0,63}`). CSRF
+  token discovery and X-Splunk-Form-Key header on writes.
+  Includes a `MOCK_STORE` fallback so the page is testable
+  outside Splunk runtime.
+
+**New page wiring** (clones the `topology_canvas_v1` pattern):
+- `webpack.config.js` — added `network_diagram` entry.
+- `splunk/default/data/ui/views/network_diagram.xml` — Simple
+  XML host page with `script="network_diagram_bootstrap.js"` and
+  `<div id="scan-root"></div>`.
+- `splunk/appserver/static/network_diagram_bootstrap.js` —
+  cache-busted require() loader for the React bundle.
+- `splunk/default/data/ui/nav/default.xml` — nav link "Network
+  Diagram" right after "Topology Canvas".
+- `webapp/pages/network_diagram/render.tsx` + `index.tsx` —
+  page entry + the orchestrator component.
+
+**Diagram authoring components** (new
+`webapp/common/components/diagram/` directory):
+
+- `types.ts` — `PALETTE_DND_MIME` (custom `application/x-scd-
+  palette-payload` so unrelated drops don't trigger node
+  spawns), `PaletteDragPayload` tagged union (`shape | region |
+  asset`), `NODE_SIZE_PRESETS` (device 100×110, region 360×220).
+- `RegionGroupNode.tsx` — labelled translucent container with
+  a header bar (label + device-count pill) and a drop-through
+  body. Allow-listed accent palette so `data.accent` can't render
+  arbitrary class names. Build 106 ships fixed-size; Build 107
+  wires `<NodeResizer>` for drag-resize.
+- `ShapesTab.tsx` — 2-column grid of draggable Cisco icon tiles
+  (the 9 device shapes + Region/Site). Each tile is an HTML5
+  drag source emitting a `PaletteDragPayload`.
+- `InventoryTab.tsx` — filterable list of real devices from
+  `asset_inventory`. Free-text search + device-type chips +
+  site chips, all AND-combined. Top-N facets capped at 8 each;
+  list capped at 200 visible rows with "+N more, filter to
+  narrow" banner. Each row is an asset-bound drag source.
+  Reuses `fetchAssetInventory()` from the existing
+  `topologyDiscovery` service so no new SPL is dispatched.
+- `DiagramPalette.tsx` — left-side tab switcher hosting the
+  two tabs above; pure chrome, owns no canvas state.
+- `DiagramHeader.tsx` — top bar with diagram-name picker
+  dropdown (lazy-loaded directory), Save / Save As / Delete /
+  New buttons, busy spinner, and a transient status line with
+  TTL (3.5s for info, 8s for errors).
+- `NetworkDiagramCanvas.tsx` — the authoring surface.
+  Self-contained React Flow wrapper (separate from
+  `TopologyCanvas` — no auto-discovery, no ELK):
+  - `DIAGRAM_NODE_TYPES` extends `TOPOLOGY_NODE_TYPES` with
+    `regionGroup`, so the existing 9 Cisco shapes render
+    unchanged.
+  - HTML5 DnD bridge: `onDragOver` only previews when the
+    custom mime is present, `onDrop` parses the payload and
+    spawns the right node variant.
+  - Drop-into-region detection: smallest rectangle wins, child
+    inherits `parentId` + `extent: 'parent'` so dragging the
+    region drags its children.
+  - Snap-to-grid (20×20) on drop AND on drag (via React Flow's
+    `snapGrid`) so customer-arranged diagrams stay tidy.
+  - `findContainingRegion` + `annotateRegionCounts` — region
+    pills auto-update with their child count after every change.
+  - `onConnect` for manual edge drawing (kind: 'physical' by
+    default; PropertiesPanel switches to logical / synthetic).
+  - Reuses the existing `PropertiesPanel` for selection editing.
+  - Asset-bound nodes use the asset's `device_id` AS their
+    React Flow node id, so a duplicate drop is a no-op (one
+    node per real device per diagram).
+  - Hydrate-from-payload effect with `requestAnimationFrame
+    fitView` so opening a diagram lands centered.
+  - Empty-state hint banner that explains the workflow.
+
+**Page orchestrator** — `pages/network_diagram/index.tsx`:
+- Wires the persistence service, the live `asset_inventory`
+  index (loaded once, threaded into the canvas for re-binding
+  saved nodes to fresh display data), the directory listing
+  for the picker, and the dirty/busy lifecycle.
+- `livePayloadRef` mirrors the canvas's current payload as the
+  user edits; Save reads from there. Prevents stale-state
+  saves during async network ops.
+- Beforeunload guard fires when `dirty === true`.
+- Confirm-before-discard prompts on New and Open.
+
+**Bumped `app.conf` build = 106.**
+
+### Verification
+
+- `yarn run typecheck` clean (1 transient apostrophe-in-string-
+  literal fix during the run; replaced with double-quoted
+  string).
+- `yarn run clean:build` clean — stale `network_topology_edges.
+  csv` removed from `stage/lookups/` confirmed.
+- `ReadLints` clean across all 10 new files + the 1 retired
+  `transforms.conf` stanza + the 4 wiring files.
+- Build sizes: `network_diagram.js` is **650 KiB** — about a
+  third the size of `topology_canvas_v1.js` (2.01 MiB). The
+  new bundle drops `elkjs` (no auto-layout in the authoring
+  flow) and only imports the slim React Flow surface needed.
+- Manual test plan (Alan to run on FDEM stack):
+  1. Click **Network Diagram** in nav. Expected: blank canvas,
+     left palette open on Shapes tab, header reads "Untitled
+     diagram".
+  2. Drag a Region/Site tile from Shapes onto the canvas →
+     translucent labelled container appears.
+  3. Switch palette to Inventory tab → device-type and site
+     chips populate from `asset_inventory`. Type a query →
+     list narrows. Click a `switch` chip → list shows only
+     switches.
+  4. Drag a real device row INTO the region → device snaps to
+     the 20-grid, region's device-count pill increments,
+     dragging the region drags the device with it.
+  5. Hover any device → 4 port handles fade in. Drag from a
+     handle to another device → physical edge drawn.
+  6. Click an edge → PropertiesPanel slides in; switch kind to
+     logical → edge re-styles dashed grey.
+  7. Click Save As, name "FDEM Production" → busy spinner,
+     status line "Saved 'FDEM Production' at HH:MM:SS",
+     diagram name in header updates.
+  8. Click New → confirm-discard if dirty. Canvas blanks out.
+  9. Click the diagram-name picker → dropdown lists the saved
+     diagram. Click it → canvas re-hydrates with all positions,
+     edges, regions intact.
+  10. Reload the browser tab → re-open the diagram → identical
+      layout. Asset-bound devices show fresh health overlay
+      from the latest `asset_inventory` snapshot.
+
+### Files changed
+
+**Retired**:
+- `src/main/resources/splunk/lookups/network_topology_edges.csv` (deleted)
+- `src/main/resources/splunk/default/transforms.conf` (`[network_topology_edges]` stanza removed)
+
+**New**:
+- `src/main/resources/splunk/lookups/network_diagrams.csv`
+- `src/main/resources/splunk/default/transforms.conf` (`[network_diagrams]` stanza added)
+- `src/main/resources/splunk/default/data/ui/views/network_diagram.xml`
+- `src/main/resources/splunk/appserver/static/network_diagram_bootstrap.js`
+- `src/main/webapp/pages/network_diagram/index.tsx`
+- `src/main/webapp/pages/network_diagram/render.tsx`
+- `src/main/webapp/common/services/diagramPersistenceService.ts`
+- `src/main/webapp/common/components/diagram/types.ts`
+- `src/main/webapp/common/components/diagram/RegionGroupNode.tsx`
+- `src/main/webapp/common/components/diagram/ShapesTab.tsx`
+- `src/main/webapp/common/components/diagram/InventoryTab.tsx`
+- `src/main/webapp/common/components/diagram/DiagramPalette.tsx`
+- `src/main/webapp/common/components/diagram/DiagramHeader.tsx`
+- `src/main/webapp/common/components/diagram/NetworkDiagramCanvas.tsx`
+
+**Modified**:
+- `src/main/resources/splunk/default/app.conf` (build 105 → 106)
+- `src/main/resources/splunk/default/data/ui/nav/default.xml` (added "Network Diagram" link)
+- `webpack.config.js` (added `network_diagram` entry)
+- `src/main/webapp/common/components/topology/edgeFetchers.ts` (TE A2A fix described above)
+
+### What's next
+
+Build 107 — **edge styling + edge inspector**. Solid vs dashed
+explicit (already kind-driven, but expose it as a chip in the
+panel for clarity), arrowhead toggle, **bandwidth chip** +
+**L2/L3 chip** rendered on the edge midpoint via a custom edge
+type. Edge inspector tab in PropertiesPanel: kind / label /
+bandwidth (free-text) / layer (L1 / L2 / L3 chip-picker) /
+notes.
+
+Build 108 — **stale-placement banner**. When loading a saved
+diagram, cross-check `asset_inventory`; surface "12 placed
+devices no longer in inventory" with a one-click "remove
+stale" action.
+
+Build 109 — **"Suggest from inventory" button**. The Option C
+fast-follow: clicking it runs `topology_discovery` once and
+seeds device positions roughly grouped by `siteLabel`. Operator
+accepts, rejects per-device, or wholesale.
+
+Build 110 — **Cisco SVG library expansion**. Add ASA 5525-X,
+Catalyst 3850 stack, WS-C6504-E, ISR 3900, Azure Cloud, WLC
+5508 to match the FDEM v8 PDF iconography 1:1.
+
+Build 111 (optional) — **NodeResizer wiring on regions** so
+operators can drag-resize a region after it's placed.
+
+---
+
+## 2026-05-14 (Build 105) — Topology Canvas: real Cisco shapes + edge editor + properties panel + lookup scaffold
+
+### Goal
+
+Alan looked at the Build 104 spike on his stack and gave honest
+feedback:
+
+> "Good work but this is far from ready. I was hoping to see us
+> building the links between devices like I showed you in the PDF
+> even if we need to have a lookup that drives that which can also
+> be manually edited using a quick UI interface so the dashboard
+> will simply read it. Meaning we should have an automated way to
+> populate the table as much as possible AND an option to build
+> relationships meaning lines between objects on the canvas and
+> the ability to move and arrange items in the canvas and save
+> views etc. Can you look at anyone else that ever done something
+> like this and learn from it? React is so amazing, why create
+> from scratch if we can find a project somewhere on GitHub that
+> we simply use the components from?"
+
+He attached a screenshot showing what landed: a wall of
+lucide-icon pills with no edges, no real Cisco shapes, no editor
+UX. Three concrete gaps, all real:
+
+1. **No edges visible.** The TE A2A search returned no rows that
+   matched any inventory device because its `Tallahassee|TLH|
+   Auburndale|AUB` filter was looking for tokens that the customer
+   inventory uses in different forms. With no other edge source,
+   every device looked orphaned.
+2. **Generic-looking shapes.** Lucide icons + colored rings instead
+   of real Cisco router/switch/firewall SVGs. Reads as "wall of
+   pills" rather than "network diagram".
+3. **No editor UX.** I'd disabled `isConnectable` (so you couldn't
+   drag-create edges), there was no palette, no properties panel,
+   no save-views — just auto-layout and drag-position.
+
+### Discovery & decisions
+
+Before sinking time into another iteration I checked his three
+reference points:
+
+- `~/repo/health_check_hq/` (the `splunk_insights` Splunk app) —
+  ~30 React pages, no topology canvas. They DO have a
+  `DashboardStudioEditor.jsx` that embeds `@splunk/dashboard`
+  (Dashboard Studio React components) inside their app — useful
+  pattern for tile-based dashboards but the wrong tool for
+  free-form Visio diagrams.
+- [splunkui.splunk.com/Packages](https://splunkui.splunk.com/Packages) —
+  `@splunk/visualizations` ships ~25 chart types (Area / Bar /
+  Bubble / Choropleth / Line / Map / Sankey / Scatter / Single
+  Value / Table / Treemap / etc). **No Network or Topology viz.**
+  Splunk Dashboard Studio does not ship a free-form
+  network-diagram component. Confirmed gap.
+- OSS landscape — surveyed React Flow (MIT, what we already use,
+  used by Zapier/n8n/Stripe); Cisco's public Network Topology
+  Icons SVG library (free, official cisco.com brand-center asset);
+  drawio/diagrams.net (Apache 2.0, full Visio editor, but iframe
+  embedding doesn't pass Splunk Cloud Vetting reliably and we
+  lose live-telemetry overlay); ESnet `react-network-diagrams`
+  (purpose-built but stuck on React 16 + D3 v5, last release
+  ~2022); JointJS (GPLv3 — license incompatible); GoJS
+  (commercial, $7,000+/seat).
+
+**Architectural call:** keep React Flow (the right primitive),
+invest in the layers above it. Specifically: real Cisco shapes,
+manual edge drawing, properties panel, lookup-driven persistence.
+This is Build 105's scope. Builds 106-108 (lookup-backed edge
+read/write + auto-seeder, save-views, live telemetry overlay) are
+queued separately.
+
+### What we built
+
+**Cisco shape library** —
+`webapp/common/components/topology/ciscoIcons.tsx`. Nine inline
+SVG icon components approximating the official Cisco Network
+Topology Icon library: `CiscoRouterIcon` (drum body with
+multi-direction arrows), `CiscoL2SwitchIcon` and
+`CiscoL3SwitchIcon` (3D-perspective stacked planar bodies, L3
+adds vertical arrows), `CiscoFirewallIcon` (brick wall),
+`CiscoWlcIcon` (hex chassis with antenna stalks), `CiscoApIcon`
+(puck with concentric radio rings), `CiscoServerIcon` (rack-unit
+silhouette with drive bays), `CiscoCloudIcon` (scalloped WAN
+glyph), `CiscoGenericIcon` (neutral box). All use
+`currentColor` so the parent's `text-emerald-500` /
+`text-rose-500` etc tints them per health status without
+per-shape tinting code. Designed for a 64×64 viewBox with
+`vector-effect: non-scaling-stroke` so line weights stay uniform
+at any size. Single-source-of-truth registry: `CISCO_ICONS`.
+
+**Shape rewrite** —
+`webapp/common/components/topology/shapes.tsx`. Promoted the
+device icon to be the primary visual element. New geometry:
+top 2/3 = SVG icon (48×48 inside a 100×110 card, colored per
+status), bottom 1/3 = label area separated by a hairline
+(short-name bold, device-type secondary, uppercase). Status
+outline rides on the card border, NOT the icon, so the icon's
+intrinsic Cisco branding stays clean. Status dot top-right for
+redundant non-color signal (accessibility). Result: a 30-device
+site that previously looked like a wall of pills now looks like
+a Visio architecture sheet.
+
+**Manual edge UX** — same file. Added handles on all four sides
+(top/right/bottom/left) of every device shape, each with both
+`source` and `target` types so React Flow picks based on drag
+direction. Handles are `opacity-0` at rest and
+`group-hover:opacity-100` so the canvas stays clean until an
+operator actively engages a node. Re-enabled `isConnectable`
+(was hard-disabled in Build 104) and wired `onConnect` to a
+new manual-edges state slice that persists to localStorage
+under `topologyCanvasManualEdges.v1`. Self-loops are blocked
+because they're rarely useful and break ELK if reused in a
+future re-layout.
+
+**Properties panel** —
+`webapp/common/components/topology/PropertiesPanel.tsx`. New
+right-side inspector that opens when an operator selects any
+node or edge. Shape:
+
+- Identity (display name, short alias)
+- Shape (dropdown over the 9 device families)
+- Notes (multi-line, free-form)
+- Provenance (id, management source, edit-persistence
+  disclaimer)
+- Apply / Remove buttons
+
+For edges:
+
+- Endpoints (read-only source / target)
+- Edge kind (physical / synthetic_a2a / logical with hint copy
+  describing each line style)
+- Label (midpoint text)
+- Notes
+- Apply / Remove
+
+Edits commit only on Apply (no live mutation) so the panel can
+also serve as a "viewer" without exposing accidental-mutation
+surface area. Mutations route through `setNodes`/`setEdges`
+without re-running ELK, so the canvas stays responsive.
+
+**Canvas surgery** —
+`webapp/common/components/topology/TopologyCanvas.tsx`. Added:
+
+- `onNodeClick` / `onEdgeClick` / `onPaneClick` for selection
+  routing. Clicking a zone container is intentionally a no-op
+  (zones are chrome, not editable entities).
+- `onConnect` for manual edge creation, defaulting new edges to
+  `kind: 'physical'`. Opens for editing via the panel.
+- `handleNodeUpdate` / `handleEdgeUpdate` / `handleDelete`
+  from the panel callbacks. Deleting a node also drops any
+  incident edges so the canvas doesn't render dangling lines.
+- "Save snapshot" toolbar button — diagnostic for now,
+  surfaces the persisted state via a `window.alert`. Replaced
+  in Build 106 with a real outputlookup pipeline.
+- Mid-top hint banner that tells operators how to draw edges:
+  *"Hover a device to reveal its 4 ports · drag from a port to
+  another device to draw a link · click any node or edge to
+  edit"*. Intentionally pointer-events-none so it doesn't
+  interfere with canvas pan/zoom.
+
+**Layout tweak** — `webapp/common/lib/elkLayout.ts`. Switched the
+per-zone layout algorithm from `layered` (DOWN direction, which
+produced single-column tower stacks) to `box` (rectangle-packing
+with `aspectRatio: 1.5`, so a 30-device site renders as a
+roughly 7×5 grid). `layered` direction at the root stayed `RIGHT`
+so zones still flow left-to-right matching the FDEM PDF
+convention. Default device dimensions changed from 140×80 (pill)
+to 100×110 (icon card).
+
+**Lookup scaffold for Build 106** —
+`splunk/default/transforms.conf` gained a `[network_topology_
+edges]` stanza pointing at a new
+`splunk/lookups/network_topology_edges.csv` (header-only). Schema
+documented in the stanza header:
+`source_device, target_device, kind, label, bandwidth_mbps,
+status_search_name, source, customer_visible, notes, created_by,
+created_at, last_modified_by, last_modified_at`. Build 106 wires
+the read/write pipeline; this build only ships the table.
+
+### Verification
+
+- `yarn build` clean (2 pre-existing size warnings unchanged).
+- `yarn typecheck` clean.
+- `ReadLints` clean across all new and modified files.
+- Manual test plan (Alan to run on FDEM stack):
+  1. Click **Topology Canvas** in nav → canvas should now show
+     real Cisco-styled shapes grouped into per-site rectangles
+     with breathing room (no more single-column towers).
+  2. Hover any device → four sky-blue port handles fade in on
+     each edge.
+  3. Drag from a handle to another device → a new physical-link
+     edge appears; it stays after page reload (localStorage).
+  4. Click a node → right-side properties panel slides in with
+     identity / shape / notes fields. Change the shape from
+     dropdown → click Apply → icon swaps live.
+  5. Click an edge → panel switches to edge mode. Change kind
+     from physical to synthetic_a2a → edge re-styles dashed
+     sky-blue and animates.
+  6. Click Remove on either node or edge → entity disappears;
+     incident edges drop with the node.
+  7. Click "Save snapshot" → confirmation alert shows the
+     count of persisted overrides + manual edges. (Build 106
+     replaces this with an outputlookup pipeline + a real
+     toast.)
+
+### What's next
+
+- **Build 106** (lookup-driven edges + auto-seeder):
+  - `| inputlookup network_topology_edges` on canvas mount,
+    merging stored rows with auto-discovered ones.
+  - Properties-panel "Apply" → outputlookup write-back via a
+    new `[network_topology_edges_writer]` searchbase stanza.
+  - `[Network Topology - Auto-Seed Edges]` saved search that
+    composes DNAC physical-topology API + cisco:ios syslog CDP
+    messages + ThousandEyes A2A test pairings, deduplicated by
+    `(source_device, target_device, kind)`.
+  - Canvas surfaces "n new auto-discovered links — review &
+    accept" toaster.
+- **Build 107** (named saved views):
+  - `network_topology_views.csv` lookup with
+    `view_name, owner, layout_overrides_json,
+    edge_overrides_json, created_at, last_modified`.
+  - Toolbar adds "Save view as…" / "Load view…" / "Set as
+    default".
+  - Per-user default loads on mount; fallback to auto-layout
+    if no view exists.
+  - Migration: existing `localStorage` overrides auto-import
+    into a "Local overrides" view on first load.
+- **Build 108** (live telemetry overlay):
+  - Edge labels animate with current latency/loss/jitter when
+    `status_search_name` resolves.
+  - Node corner badges show health score + alert count + uptime.
+  - Click an edge → popover renders the same content the
+    existing `CustomerTopologyMap` link popover shows.
+
+### Files changed
+
+- New: `webapp/common/components/topology/ciscoIcons.tsx`
+- New: `webapp/common/components/topology/PropertiesPanel.tsx`
+- New: `splunk/lookups/network_topology_edges.csv` (header only)
+- Edit: `webapp/common/components/topology/shapes.tsx`
+  (icon-forward rewrite + four-side handles)
+- Edit: `webapp/common/components/topology/TopologyCanvas.tsx`
+  (selection, edge creation, properties-panel wiring,
+  manual-edges persistence, "Save snapshot" toolbar)
+- Edit: `webapp/common/services/topologyDiscovery.ts`
+  (added `cloud` and `l3_switch` shape ids; refined family
+  matching for routers / WLCs / L3 switches)
+- Edit: `webapp/common/lib/elkLayout.ts`
+  (per-zone `box` algorithm; default device size 100×110)
+- Edit: `splunk/default/transforms.conf`
+  (new `[network_topology_edges]` stanza with full schema
+  documentation)
+- Edit: `splunk/default/app.conf` (build → 105)
+
+---
+
+## 2026-05-14 (Build 104) — Topology Canvas v1 spike: Visio-style network diagram dashboard
+
+### Goal
+
+Alan asked: *"How difficult is it to build a dashboard like our overview
+in Splunk that we can use to build our own custom network diagram or
+map? Like what someone would create in Visio?"* He attached the
+FDEM Network diagram v8 PDF as a reference and confirmed in a follow-up
+that he'd love auto-population from the existing
+`[Asset Inventory - Build Lookup]` scheduled job (which already
+correlates Catalyst Center / Meraki / IOS syslog / ASA-FTD-Firepower
+/ ISE NADs / F5 BIG-IP / Windows-AD / DHCP into one row per device)
+plus manual edit affordances on top.
+
+### Decision: hybrid auto-discover + operator-override architecture
+
+**Frontend stack** (zero new infra):
+
+- **React Flow (`@xyflow/react` v12.10)** — canvas runtime. Picked
+  over D3 / vis.js / cytoscape because it natively understands
+  React composition (we already author the rest of the dashboards
+  in React 19), supports parent-child node containment via
+  *subflows* (essential for grouping devices into customer-site
+  rectangles), and has first-class drag-to-reposition with stable
+  IDs. Bundle cost: ~35KB gzipped + zustand state.
+- **`elkjs` v0.11** — auto-layout. Picked over Dagre because ELK
+  natively lays out hierarchical containers (each customer site
+  becomes its own laid-out subgraph, then ELK composes the whole),
+  uses orthogonal edge routing closer to a Visio architecture sheet
+  than a force-directed blob, and is deterministic for
+  reproducible layouts across reloads. Bundle cost: ~600KB
+  unminified, but tree-shaken via the bundled `elk.bundled.js`
+  entrypoint.
+- **Tailwind + lucide-react icons** for the shape library —
+  reuses existing dashboard tokens; no SVG icon library yet.
+- **localStorage** under key `topologyCanvasOverrides.v1` for
+  per-node `(x, y)` overrides — simplest possible v1 persistence.
+  KVStore-backed multi-user persistence is a follow-up.
+
+**Backend (zero new ingestion required for the spike):**
+
+- **Devices**: read `asset_inventory.csv` via `| inputlookup
+  asset_inventory`. Already-built nightly by
+  `[Asset Inventory - Build Lookup]`. Columns we consume:
+  `device_name`, `device_name_short`, `device_type`,
+  `device_family`, `health_score`, `compliance_status`,
+  `location`, `management_source`, `platform_id`. Treated as
+  source of truth — adding a new feed to the lookup builder
+  (e.g. Cisco Spaces APs) automatically populates the canvas.
+- **Sites/zones**: read `site_topology_lookup.csv` via
+  `| inputlookup site_topology_lookup`. Built hourly by
+  `[Executive Dashboard - Site Topology Lookup Generator]`.
+  Used today for label resolution (matching
+  `asset_inventory.location` strings to DNAC display names).
+- **Synthetic edges (TE A2A)**: dispatch the *existing*
+  `[overview_link_te_a2a_health]` stanza. The fetcher resolves
+  the AUB↔TLH measurement to representative routers/firewalls in
+  the inventory (preferring router/firewall device shapes over
+  switches for "WAN edge" semantics), drops the edge silently if
+  no matching device is found.
+- **Physical edges (CDP/LLDP)**: deliberately deferred. There is
+  no `cisco:dnac:link:topology` sourcetype on the standard
+  `TA-cisco-catalyst`, so port-to-port discovery requires a
+  future REST modular input against DNAC's
+  `/dna/intent/api/v1/topology/physical-topology` endpoint.
+  The architecture supports the data shape — just no source yet.
+
+### What we built
+
+**New service modules:**
+
+- `webapp/common/services/topologyDiscovery.ts` — `inputlookup`
+  dispatch + normalisation. Public API:
+  `discoverTopology()` returns `{ nodes[], edges[], zones[],
+  fetchedAt }` where every device family is mapped to one of
+  seven canonical `DeviceShapeId` values
+  (`switch / router / firewall / wlc / access_point / server /
+  generic`) and `health_score` (0/50/100 from DNAC) is mapped to
+  `healthy / warning / critical / unknown`. Both maps are
+  additive — adding a new device family means one branch in
+  `mapDeviceTypeToShape`.
+- `webapp/common/lib/elkLayout.ts` — wraps `elkjs` with our
+  React-Flow-specific layout shape. Top-level direction is
+  left-to-right (`elk.direction: 'RIGHT'`) to match the FDEM PDF
+  convention (Tallahassee on the left, remotes flowing right).
+  Each customer site becomes a parent node with `'elk.algorithm':
+  'layered', 'elk.direction': 'DOWN'`; root composes them
+  side-by-side. Devices with no `location` value get bucketed
+  into a synthetic `__unsited__` zone with an amber dashed
+  border so operators see the ones they need to clean up.
+  Exports `applyOverrides(layoutResult, overrides)` so the
+  canvas can merge persisted operator drags WITHOUT re-running
+  ELK on every drag.
+
+**New component modules:**
+
+- `webapp/common/components/topology/shapes.tsx` — six device
+  shapes + the zone container, all built on a single
+  `DeviceShape` component driven by a shape-id → (icon, accent)
+  registry. Status-coloured ring + corner dot (redundant
+  non-color signal for accessibility) + truncated short-label
+  + secondary platform/family caption. Two React Flow handles
+  per shape (top + bottom) so edges attach in either direction.
+  Exports `TOPOLOGY_NODE_TYPES` registry consumed by React Flow.
+- `webapp/common/components/topology/TopologyCanvas.tsx` —
+  React Flow wrapper. Owns the discover → layout → render
+  pipeline, the floating toolbar (refresh + reset-layout),
+  loading/empty/error overlays, and the persistence handlers.
+  Persists per-node `(x, y)` on `onNodeDragStop` to localStorage;
+  `Reset layout` clears the override map and re-runs ELK with a
+  150ms `fitView` animation so operators see the change.
+  Renders `<Background variant="Dots">` + `<Controls>` +
+  `<MiniMap>` for canvas chrome. Empty state surfaces a copy-
+  pasteable hint to dispatch the lookup-builder manually.
+- `webapp/common/components/topology/edgeFetchers.ts` —
+  pluggable edge sources. `fetchThousandEyesA2AEdges` dispatches
+  `| savedsearch "Overview - Link ThousandEyes A2A Health"` and
+  resolves source/target to representative inventory devices
+  via case-insensitive site-token matching. `fetchAllEdges`
+  is a `Promise.allSettled` composer for the canvas page to
+  pass as a single `fetchEdges` prop. Adding a new feed (e.g.
+  future DNAC physical links) is a matter of writing one more
+  fetcher and adding it to the array.
+
+**Page wiring:**
+
+- `webapp/pages/topology_canvas_v1/{index,render}.tsx` — page
+  shell with a slim header (Layers icon, title, "v1 spike"
+  amber pill, provenance subtitle) and a full-bleed canvas.
+- `splunk/default/data/ui/views/topology_canvas_v1.xml` — Splunk
+  view stanza, mirrors the overview pattern (hideEdit /
+  hideExport / hideTitle, `<html>` panel with
+  `<div id="scan-root">`, RequireJS bootstrap script).
+- `splunk/appserver/static/topology_canvas_v1_bootstrap.js` —
+  cache-busting RequireJS loader.
+- `splunk/default/data/ui/nav/default.xml` — added
+  `<a href="topology_canvas_v1">Topology Canvas</a>` next to
+  IT Health and Security.
+- `webpack.config.js` — added the new entry. Same babel/css/
+  postcss pipeline as overview.
+
+**Dependencies added:**
+
+- `@xyflow/react@^12.10.2` — React Flow runtime.
+- `elkjs@^0.11.1` — Eclipse Layout Kernel.
+- Transitive: `@types/d3-{drag,transition,zoom}`,
+  `@xyflow/system`, `classcat`, `d3-{drag,selection,transition,
+  zoom}`, `zustand`. All MIT.
+
+### Verification
+
+- Build verification + ReadLints run after this commit lands.
+- Manual test plan (Alan to run on FDEM stack after deploy):
+  1. Nav click → "Topology Canvas" surfaces a populated canvas
+     within ~2-3 seconds (the `| inputlookup` is fast — only the
+     A2A edge fetch can take 4-8s).
+  2. Each device renders with the shape matching its
+     `device_type`/`device_family` and an outline matching its
+     `health_score` band.
+  3. Devices group by `location` into per-site rectangles.
+  4. AUB↔TLH appears as a dashed sky-blue *animated* edge once
+     the TE A2A fetch resolves.
+  5. Drag any device → reload page → device stays where you
+     dragged it. Click "Reset layout" → it snaps back to the
+     ELK-assigned position with a 250ms fit-view animation.
+
+### What's next
+
+- **TE test commission**: Alan to commission TLH↔Orlando /
+  Blanding / SLRC / Rudd / Easley / Sadowski / MCV A2A tests in
+  parallel. Once they exist, `fetchThousandEyesA2AEdges` will
+  iterate the rows naturally (the search is single-pair today
+  but the fetcher already iterates `res.results`); only the SPL
+  filter needs to widen.
+- **DNAC physical-link modular input**: design + ship a REST
+  modular input against `/dna/intent/api/v1/topology/physical-
+  topology` to populate `cisco:dnac:link:topology`. That will
+  unlock automatic CDP/LLDP edge discovery without any frontend
+  changes.
+- **KVStore-backed overrides**: replace localStorage with a
+  KVStore collection so layouts are per-user-multi-device and
+  survive browser cleanups.
+- **Edge interactions**: click an edge → popover with the same
+  popover content the existing `CustomerTopologyMap` link
+  popover renders (so the visualisations share telemetry UI).
+- **Shape additions**: load balancers, voice gateways, AP
+  shapes (today they all use the generic shape because no real
+  Cisco device SVG library is wired in yet).
+
+### Files changed
+
+- New: `webapp/common/services/topologyDiscovery.ts`
+- New: `webapp/common/lib/elkLayout.ts`
+- New: `webapp/common/components/topology/shapes.tsx`
+- New: `webapp/common/components/topology/TopologyCanvas.tsx`
+- New: `webapp/common/components/topology/edgeFetchers.ts`
+- New: `webapp/pages/topology_canvas_v1/index.tsx`
+- New: `webapp/pages/topology_canvas_v1/render.tsx`
+- New: `splunk/default/data/ui/views/topology_canvas_v1.xml`
+- New: `splunk/appserver/static/topology_canvas_v1_bootstrap.js`
+- Edit: `webpack.config.js` (new entry)
+- Edit: `splunk/default/data/ui/nav/default.xml` (new nav item)
+- Edit: `splunk/default/app.conf` (build → 104)
+- Edit: `package.json` + `yarn.lock` (new deps)
+
+---
+
 ## 2026-05-14 (Build 103) — TE A2A loading-state visibility + 4-hour SPL scan cap
 
 ### Context

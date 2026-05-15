@@ -1,0 +1,105 @@
+/**
+ * networkDiagram.css — diagram-canvas-only style overrides for
+ * the Cyber-NOC theme (Build 109).
+ *
+ * Why CSS instead of Tailwind: React Flow ships its own built-in
+ * elements (controls, minimap, edge paths, attribution shadows)
+ * that we can't easily reach with utility classes. We scope all
+ * overrides under `.scd-cyber-noc` so the operations canvas
+ * (which uses the same React Flow library) is unaffected.
+ *
+ * Pulse animation: animated edges already get
+ * `react-flow__edge-path-animated` from React Flow, but the
+ * default keyframes are a simple stroke-dashoffset shimmer. We
+ * upgrade it with a stroke-opacity pulse so active links read
+ * as "carrying live traffic" at a glance, even when the operator
+ * is zoomed out and dashes are too small to see.
+ */
+
+/* Edge defaults inside the diagram canvas. The Cyber-NOC theme
+ * is dark, so the lighter operations-canvas defaults read as
+ * faint gray on near-black. Brighter base color keeps lines
+ * visible without looking aggressive. */
+.scd-cyber-noc .react-flow__edge-path {
+    stroke: #38bdf8;
+    stroke-width: 1.5;
+    /* Subtle outer glow on every edge — reads as "active link"
+     * in a NOC. Box-shadow doesn't apply to SVG paths; we use
+     * the SVG `filter: drop-shadow` instead. */
+    filter: drop-shadow(0 0 2px rgba(56, 189, 248, 0.35));
+}
+
+/* Reconnect handles + edge midpoint dots — invisible until
+ * hovered. The default React Flow blue clashes with our sky-400
+ * palette. */
+.scd-cyber-noc .react-flow__edge .react-flow__edge-interaction {
+    stroke: transparent;
+}
+
+/* Pulse animation on `animated` edges. React Flow draws
+ * animated edges with a moving dash pattern; we layer a 1.5s
+ * opacity pulse on top so the line literally throbs. */
+@keyframes scd-edge-pulse {
+    0%,
+    100% {
+        stroke-opacity: 1;
+        filter: drop-shadow(0 0 2px rgba(56, 189, 248, 0.35));
+    }
+    50% {
+        stroke-opacity: 0.55;
+        filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.85));
+    }
+}
+
+.scd-cyber-noc .react-flow__edge.animated .react-flow__edge-path {
+    animation: scd-edge-pulse 1.6s ease-in-out infinite;
+}
+
+/* Selected edge — sky-300 outline, slightly thicker. */
+.scd-cyber-noc .react-flow__edge.selected .react-flow__edge-path {
+    stroke: #7dd3fc;
+    stroke-width: 2.25;
+    filter: drop-shadow(0 0 4px rgba(125, 211, 252, 0.7));
+}
+
+/* React Flow Controls (zoom in/out/fit/lock buttons) — dark
+ * theme. The default white buttons disappear into the canvas
+ * when we recolor it. */
+.scd-cyber-noc .react-flow__controls {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.scd-cyber-noc .react-flow__controls-button {
+    background: #0f172a;
+    border-bottom: 1px solid #1e293b;
+    color: #cbd5e1;
+    fill: #cbd5e1;
+}
+
+.scd-cyber-noc .react-flow__controls-button:hover {
+    background: #1e293b;
+    color: #38bdf8;
+    fill: #38bdf8;
+}
+
+.scd-cyber-noc .react-flow__controls-button:last-child {
+    border-bottom: none;
+}
+
+/* Attribution badge — already hidden by `proOptions.hideAttribution`,
+ * but if a future React Flow upgrade reintroduces it the badge
+ * should still match the dark theme. */
+.scd-cyber-noc .react-flow__attribution {
+    background: rgba(15, 23, 42, 0.6);
+    color: #475569;
+}
+
+/* Selection box (the marquee operators draw to lasso-select) —
+ * sky tint with a glowing outline. */
+.scd-cyber-noc .react-flow__selection {
+    background: rgba(56, 189, 248, 0.08);
+    border: 1px dashed rgba(56, 189, 248, 0.6);
+}

@@ -30,7 +30,16 @@ import { oneShot, addLeadingSearchCommand } from '@splunk/splunk-utils/search';
 // comments, etc.), so we reject only control characters that cannot be
 // part of a valid search body.
 const UNSAFE_CONTROL_CHAR_PATTERN = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
-const MAX_SPL_LENGTH = 32768;
+// SPL length cap. The previous 32 KiB ceiling was conservative
+// dashboard-defaults — fine for "search index=cisco | stats..."
+// queries but too tight for the diagram-persistence pipeline,
+// which inlines the full diagram payload (up to 256 KiB) into
+// an `outputlookup` job so the browser doesn't have to ship the
+// CSV body. 300 KiB leaves headroom for the surrounding
+// `inputlookup ... | where ... | append [...]` skeleton plus
+// any future fields. The real safety guard is the
+// control-character check above, not the length cap.
+const MAX_SPL_LENGTH = 300 * 1024;
 
 // Splunk app the dispatcher should resolve saved searches in. Mutable
 // only via setSearchAppContext to keep the invariant that all dispatches
