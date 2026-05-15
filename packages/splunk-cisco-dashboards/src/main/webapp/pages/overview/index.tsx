@@ -3552,8 +3552,8 @@ const KpiCard: React.FC<KpiCardProps> = ({
                 <button
                     type="button"
                     onClick={onOpenInSearch}
-                    title="Open in Splunk Search"
-                    aria-label={`Open ${label} in Splunk Search`}
+                    title="Open in Search"
+                    aria-label={`Open ${label} in Search`}
                     className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400 flex-shrink-0"
                 >
                     <ExternalLink className="w-3 h-3 stroke-[2.5px]" />

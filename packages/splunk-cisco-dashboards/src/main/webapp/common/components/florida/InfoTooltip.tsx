@@ -327,6 +327,27 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
 
     return (
         <span
+            // Two data-attributes for the SortableMetricCard
+            // suppression hand-shake:
+            //
+            //  - `data-tile-control="true"` (always) marks this
+            //    span as an in-tile interactive control, so the
+            //    parent's drag handle hides on hover regardless
+            //    of whether the popover has opened yet (the
+            //    open-state has a 0-frame delay between
+            //    mouseenter and the React state commit; this
+            //    attribute closes that micro-flicker window).
+            //
+            //  - `data-info-open="true"` (only while open) keeps
+            //    the handle suppressed even after the cursor
+            //    moves OFF the icon and INTO the popover body,
+            //    where `:hover` no longer matches the icon.
+            //
+            // Both selectors live in `SortableMetricCard.tsx`.
+            // Removing this hand-shake brings the stray-icon
+            // bug back (Alan flagged it in the 2026-05-14 review).
+            data-tile-control="true"
+            data-info-open={isOpen ? 'true' : undefined}
             className={cn(
                 'relative inline-flex focus-within:outline-none',
                 className

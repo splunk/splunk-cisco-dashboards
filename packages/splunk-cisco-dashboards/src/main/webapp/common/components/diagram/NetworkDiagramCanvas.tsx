@@ -61,8 +61,8 @@ import {
     type XYPosition,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import './networkDiagram.css';
 import { cn } from '@/common/lib/utils';
+import { TOPOLOGY_NODE_TYPES } from '@/common/components/topology/shapes';
 import {
     PropertiesPanel,
     type Selection,
@@ -81,41 +81,37 @@ import {
     type SavedDiagramGroup,
 } from '@/common/services/diagramPersistenceService';
 import { RegionGroupNode } from './RegionGroupNode';
-import { DIAGRAM_DEVICE_NODE_TYPES } from './CyberNocShape';
 import { applyHierarchicalLayout } from './hierarchicalLayout';
 import { PALETTE_DND_MIME, NODE_SIZE_PRESETS, type PaletteDragPayload } from './types';
 
 const REGION_NODE_TYPE = 'regionGroup';
 
-/** Compose the React Flow node-types map. The diagram canvas
- *  uses the Cyber-NOC themed device shapes (see
- *  `CyberNocShape.tsx`) — distinct from the live operations
- *  canvas which keeps the lighter, status-ringed cards. The
- *  region-group renderer is shared. */
+/** Compose the React Flow node-types map. Build 110 reverted the
+ *  diagram canvas back to the same light-themed device shapes the
+ *  operations canvas (`TopologyCanvas`) uses (see
+ *  `topology/shapes.tsx`) — Alan reviewed the Build 109 Cyber-NOC
+ *  dark theme and asked to revert to the lighter look from Build
+ *  106 ("exactly what I want!!!"). The dark CyberNocShape +
+ *  scoped CSS file are kept on disk as a future opt-in but are
+ *  no longer wired into the canvas. */
 const DIAGRAM_NODE_TYPES = {
-    ...DIAGRAM_DEVICE_NODE_TYPES,
+    ...TOPOLOGY_NODE_TYPES,
     [REGION_NODE_TYPE]: RegionGroupNode,
 };
 
-/** Edge style by kind. The dark Cyber-NOC theme calls for
- *  brighter, more saturated colours than the operations canvas
- *  — physical edges glow sky-blue, synthetic A2A shimmers
- *  amber, logical (overlay) edges fade to slate.
- *
- *  We deliberately do NOT set `type: 'bezier'` per-edge — React
- *  Flow's default edge type IS bezier, and overriding it
- *  per-edge breaks the operator's ability to switch edge types
- *  later through the inspector. */
+/** Edge style by kind. Light-theme palette (Build 110 revert):
+ *  physical edges in slate-blue, synthetic A2A in sky-blue
+ *  dashed, logical (overlay) edges in lighter dashed slate. */
 const edgeStyleForKind = (
     kind: SavedDiagramEdge['kind']
 ): React.CSSProperties => {
     if (kind === 'synthetic_a2a') {
-        return { stroke: '#f59e0b', strokeWidth: 1.75, strokeDasharray: '6 4' };
+        return { stroke: '#0ea5e9', strokeWidth: 1.5, strokeDasharray: '6 4' };
     }
     if (kind === 'logical') {
         return { stroke: '#94a3b8', strokeWidth: 1.25, strokeDasharray: '2 4' };
     }
-    return { stroke: '#38bdf8', strokeWidth: 1.75 };
+    return { stroke: '#64748b', strokeWidth: 1.5 };
 };
 
 /** Build a synthetic `TopologyDiscoveredNode` for the device-
@@ -772,18 +768,10 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
         <div
             ref={wrapperRef}
             className={cn(
-                // The `dark` class force-activates every `dark:` Tailwind
-                // variant inside the canvas regardless of the document
-                // theme — the diagram canvas is always Cyber-NOC dark
-                // even when the rest of the app is in light mode.
-                // `scd-cyber-noc` is the scope class our CSS uses to
-                // theme React Flow's built-in elements (controls,
-                // edges, minimap).
-                'dark scd-cyber-noc relative w-full h-full rounded-xl overflow-hidden',
-                'border border-slate-800',
+                'relative w-full h-full rounded-xl border bg-white dark:bg-slate-900 overflow-hidden',
+                'border-slate-200 dark:border-slate-800',
                 className
             )}
-            style={{ background: '#0b0f1a' }}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
         >
@@ -808,32 +796,17 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                 selectNodesOnDrag={false}
                 snapToGrid
                 snapGrid={[20, 20]}
-                defaultEdgeOptions={{
-                    // Smooth Bezier is the React Flow default, but we
-                    // pin it explicitly so a future global config
-                    // change can't accidentally flip new diagrams to
-                    // straight lines.
-                    type: 'default',
-                }}
             >
-                <Background
-                    variant={BackgroundVariant.Dots}
-                    gap={24}
-                    size={1.2}
-                    color="#1e293b"
-                />
+                <Background variant={BackgroundVariant.Dots} gap={24} size={1} />
                 <Controls position="bottom-left" />
                 <MiniMap
                     position="bottom-right"
                     pannable
                     zoomable
-                    style={{ background: '#0f172a', border: '1px solid #1e293b' }}
-                    maskColor="rgba(8, 12, 22, 0.75)"
                     nodeStrokeWidth={2}
-                    nodeStrokeColor="#0f172a"
                     nodeColor={(n) => {
-                        if (n.type === REGION_NODE_TYPE) return '#475569';
-                        return '#38bdf8';
+                        if (n.type === REGION_NODE_TYPE) return '#cbd5e1';
+                        return '#0ea5e9';
                     }}
                 />
             </ReactFlow>
@@ -841,16 +814,15 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
             {/* Hint banner: tells operators what to do on a blank canvas */}
             {isEmpty && (
                 <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
-                    <div className="px-4 py-3 rounded-xl bg-slate-950/80 backdrop-blur-sm border border-dashed border-slate-700 text-center max-w-md shadow-[0_0_30px_rgba(56,189,248,0.08)]">
-                        <p className="text-sm font-semibold text-slate-100">
+                    <div className="px-4 py-3 rounded-xl bg-white/85 dark:bg-slate-900/85 backdrop-blur-sm border border-dashed border-slate-300 dark:border-slate-700 text-center max-w-md">
+                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
                             Drop devices, shapes, or regions onto the canvas
                         </p>
-                        <p className="mt-1 text-xs text-slate-400">
-                            Use the <span className="font-medium text-slate-200">Shapes</span>{' '}
-                            tab on the left for generic Cisco icons and Regions, or the{' '}
-                            <span className="font-medium text-slate-200">Inventory</span> tab
-                            to drag real devices from{' '}
-                            <code className="font-mono text-sky-300">asset_inventory</code>.
+                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                            Use the <span className="font-medium">Shapes</span> tab on the left
+                            for generic Cisco icons and Regions, or the{' '}
+                            <span className="font-medium">Inventory</span> tab to drag real
+                            devices from <code className="font-mono">asset_inventory</code>.
                             Hover any device to reveal port handles and drag to draw a link.
                         </p>
                     </div>
@@ -858,7 +830,7 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
             )}
 
             {!isEmpty && (
-                <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 px-3 py-1 rounded-full text-[10px] font-medium bg-slate-900/80 text-slate-200 border border-slate-700 shadow-sm pointer-events-none backdrop-blur-sm">
+                <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 px-3 py-1 rounded-full text-[10px] font-medium bg-slate-900/80 dark:bg-slate-100/90 text-slate-100 dark:text-slate-900 shadow-sm pointer-events-none">
                     Drag devices in from the left · hover a device to reveal ports · drag
                     between ports to link · click any node or edge to edit
                 </div>

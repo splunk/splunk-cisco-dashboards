@@ -314,8 +314,13 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                             <button
                                 type="button"
                                 onClick={onOpenInSearch}
-                                title={sparkTitle ?? 'Open in Splunk Search'}
-                                aria-label={`Open ${label} in Splunk Search`}
+                                title="Open in Search"
+                                aria-label={`Open ${label} in Search`}
+                                // `data-tile-control` suppresses the
+                                // SortableMetricCard drag handle while
+                                // this button is hovered (see
+                                // SortableMetricCard.tsx for the rule).
+                                data-tile-control="true"
                                 className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
                             >
                                 <ExternalLink className="w-3 h-3 stroke-[2.5px]" />
@@ -331,6 +336,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                                         : `Configure ${label}`
                                 }
                                 aria-label={`Configure ${label} tile`}
+                                data-tile-control="true"
                                 className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400 relative"
                             >
                                 <Settings2 className="w-3 h-3 stroke-[2.5px]" />
@@ -476,14 +482,25 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                 //
                 // mt-3/pt-2 keeps the headline-to-chart gap tight
                 // without wasting pixels at full size.
-                <div className="flex-1 min-h-[72px] max-h-28 mt-2 pt-1 opacity-80 hover:opacity-100 transition-opacity overflow-hidden">
+                <div
+                    // Sparkline canvas is marked
+                    // `data-tile-control="true"` so the
+                    // SortableMetricCard drag handle hides while
+                    // the user hovers the chart to read the
+                    // Recharts tooltip. Without this, the handle
+                    // floats over the "Hover for date and value"
+                    // bubble (Alan flagged in the 2026-05-14
+                    // review).
+                    data-tile-control="true"
+                    className="flex-1 min-h-[72px] max-h-28 mt-2 pt-1 opacity-80 hover:opacity-100 transition-opacity overflow-hidden"
+                >
                     {/* Sparkline is intentionally NOT wired to the
                         drilldown click. The ExternalLink icon next to
-                        the tile label is the explicit "open in Splunk
-                        Search" affordance — duplicating that on the
-                        chart canvas was a stray click target that
-                        kept yanking users out of the dashboard when
-                        they were just trying to read the trend. The
+                        the tile label is the explicit "Open in Search"
+                        affordance — duplicating that on the chart
+                        canvas was a stray click target that kept
+                        yanking users out of the dashboard when they
+                        were just trying to read the trend. The
                         Recharts hover tooltip remains; only the
                         clickable wrapper is gone. */}
                     <Sparkline

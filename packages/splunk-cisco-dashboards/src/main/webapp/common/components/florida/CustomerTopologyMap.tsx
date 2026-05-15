@@ -4241,9 +4241,9 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
                                 {selectedSpl && onOpenInSearch ? (
                                     <button
                                         type="button"
-                                        aria-label="Open this query in Splunk Search"
+                                        aria-label="Open this query in Search"
                                         onClick={onOpenInSearch}
-                                        title="Open this query in Splunk Search"
+                                        title="Open this query in Search"
                                         className={cn(
                                             'transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-500',
                                             isDark
@@ -4280,7 +4280,7 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
                                         <button
                                             type="button"
                                             onClick={onOpenInSearch}
-                                            title="Click to run this SPL in Splunk Search"
+                                            title="Click to run this SPL in Search"
                                             className={cn(
                                                 'block w-full text-left rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400',
                                                 isDark
@@ -4343,7 +4343,7 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
                                 )}
                             >
                                 <ExternalLink className="w-3 h-3" />
-                                Open in Splunk Search
+                                Open in Search
                         </button>
                     </div>
                 </motion.div>
@@ -4935,7 +4935,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                         disabled={!boundSearch}
                                                         title={
                                                             boundSearch
-                                                                ? `Open this search in Splunk Search to test it`
+                                                                ? `Open this search in Search to test it`
                                                                 : 'Pick a search first to enable testing'
                                                         }
                                                         className={cn(
@@ -5329,7 +5329,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                         disabled={!boundSearch}
                                                         title={
                                                             boundSearch
-                                                                ? 'Open this search in Splunk Search to test it'
+                                                                ? 'Open this search in Search to test it'
                                                                 : 'Pick a search first to enable testing'
                                                         }
                                                         className={cn(

@@ -265,8 +265,9 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                             <button
                                 type="button"
                                 onClick={onOpenInSearch}
-                                title="Open in Splunk Search"
-                                aria-label={`Open ${label} in Splunk Search`}
+                                title="Open in Search"
+                                aria-label={`Open ${label} in Search`}
+                                data-tile-control="true"
                                 className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
                             >
                                 <ExternalLink className="w-3 h-3 stroke-[2.5px]" />
@@ -282,6 +283,7 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                                         : `Configure ${label}`
                                 }
                                 aria-label={`Configure ${label} tile`}
+                                data-tile-control="true"
                                 className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400 relative"
                             >
                                 <Settings2 className="w-3 h-3 stroke-[2.5px]" />
@@ -320,8 +322,14 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                         need the visual breathing room a sparkline
                         peak-label needs. overflow-hidden contains
                         any content beyond the slot at the local
-                        boundary. */}
-                    <div className="flex-1 min-h-[72px] max-h-28 mt-1 pt-0.5 overflow-hidden flex flex-col gap-1">
+                        boundary. `data-tile-control` so hovering
+                        over a bar (to read its title tooltip)
+                        suppresses the SortableMetricCard drag
+                        handle just like the sparkline canvas does. */}
+                    <div
+                        data-tile-control="true"
+                        className="flex-1 min-h-[72px] max-h-28 mt-1 pt-0.5 overflow-hidden flex flex-col gap-1"
+                    >
                         {visibleEntries.map((entry) => {
                             const widthPct =
                                 aggregated.max > 0

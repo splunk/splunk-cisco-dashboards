@@ -7,6 +7,207 @@
 
 ---
 
+## 2026-05-14 (Build 110) — Light-theme revert, Lucide icon swap, retry-resilient persistence
+
+### Goal
+
+Alan reviewed Build 109 (Cyber-NOC dark theme + cyber-shape
+nodes) end-to-end and gave three pieces of feedback:
+
+1. *"I think I regret the dark mode, let's stick with light mode
+   for now like we had before but leave all the new work in
+   place, I like it."* — revert the visual theme of the Network
+   Diagram canvas back to the Build-106 light look that he loved
+   ("oh my lord!! amazing, amazing amazing"), but keep every
+   functional improvement (palette, drag-and-drop, region
+   groups, auto-layout, lookup-backed save/load).
+
+2. *"I also need the device icons to be much better than this."*
+   The hand-drawn Cisco-style SVGs from Build 105 (drum router,
+   brick firewall, scalloped cloud) weren't pulling their
+   weight. Honest assessment: text-prompted SVG art is exactly
+   the place where LLM-driven coding falls down — re-drawing
+   dozens of glyphs to "Cisco brand-center quality" inside an
+   editor session was always going to disappoint.
+
+3. *"We have a problem sometimes occurs: Couldn't load diagrams
+   directory: Failed to create one shot search job."* — the
+   `runSearch` SDK helper occasionally rejects with
+   `Failed to create one shot search job` (transient
+   dispatcher hiccup or in-flight CSRF rotation). The error
+   bubbles straight to the operator-facing toast and makes the
+   page look broken even though one retry usually succeeds.
+
+There was also the recurring `services/configs/conf-limits/
+structured_data_service 404` log line. That one is platform
+noise from `splunkbar/system/Master` (Splunk's own header bar
+probing for an Edge Processor config that doesn't exist on
+every install). Documented again as platform-noise, not
+actionable from our code.
+
+### What changed
+
+#### 1. Network Diagram canvas reverted to light theme
+
+`NetworkDiagramCanvas.tsx`:
+
+- Dropped `import './networkDiagram.css'` (the scoped
+  Cyber-NOC override sheet).
+- Dropped `import { DIAGRAM_DEVICE_NODE_TYPES } from
+  './CyberNocShape'`. Restored
+  `import { TOPOLOGY_NODE_TYPES } from
+  '@/common/components/topology/shapes'` — same shapes the
+  operations canvas uses, light card chrome, status ring,
+  status dot.
+- Wrapper `className` no longer carries `dark scd-cyber-noc`
+  and the inline `style={{ background: '#0b0f1a' }}` is gone.
+  Restored `bg-white dark:bg-slate-900` + slate borders so the
+  canvas inherits whatever theme the rest of the app is in.
+- `Background` dots: dropped the explicit `color="#1e293b"`
+  override; uses React Flow's default light-canvas grey.
+- `MiniMap`: removed the dark inline styles. Region nodes
+  render `#cbd5e1` (slate-300), device nodes render `#0ea5e9`
+  (sky-500) — same colour family as the live canvas minimap.
+- `edgeStyleForKind` colours: physical edges back to slate
+  (`#64748b`), synthetic A2A in sky-blue dashed (`#0ea5e9`),
+  logical in light slate dashed.
+- Empty-state banner and "drag devices in from the left" hint
+  banner: restored to the previous `bg-white/85 dark:bg-
+  slate-900/85` glass look so they read on a light canvas.
+
+`CyberNocShape.tsx`, `networkDiagram.css`, and
+`hierarchicalLayout.ts` all stay on disk — the layout helper
+is still wired in (it's theme-agnostic and useful regardless of
+visual style). The dark shape + scoped CSS are dormant; if
+Alan ever wants a "dark mode toggle" we can flip the
+`DIAGRAM_NODE_TYPES` map and re-import the CSS in one commit.
+
+#### 2. Hand-drawn Cisco SVGs replaced by Lucide-React glyphs
+
+`ciscoIcons.tsx` rewritten end-to-end. The exported registry
+keeps the same shape ids (`router`, `switch`, `l3_switch`,
+`firewall`, `wlc`, `access_point`, `server`, `cloud`,
+`generic`) so call sites in `shapes.tsx` and
+`CyberNocShape.tsx` need zero changes.
+
+Each device shape now renders as a Lucide glyph inside a
+tinted, ringed rounded-square badge:
+
+| Shape         | Lucide glyph | Accent colour |
+|---------------|--------------|---------------|
+| router        | `Router`     | amber         |
+| l3_switch     | `Network`    | indigo        |
+| switch (L2)   | `Network`    | sky           |
+| firewall      | `Shield`     | rose          |
+| wlc           | `RadioTower` | violet        |
+| access_point  | `Wifi`       | fuchsia       |
+| server        | `Server`     | emerald       |
+| cloud         | `Cloud`      | slate         |
+| generic       | `Box`        | slate         |
+
+Why Lucide:
+
+- Already a dependency (used by `RegionGroupNode`,
+  `DiagramHeader`, `ShapesTab`, `InventoryTab`).
+- ISC-licensed, professionally designed, consistent
+  stroke-weight family — far better baseline than my hand-art.
+- Zero new bundle weight: tree-shaking pulls in only the nine
+  glyphs we actually reference.
+
+Why NOT official Cisco brand-center SVGs:
+
+- The Cisco Network Topology Icon Library is published under
+  brand-use terms that don't permit redistribution in
+  third-party products. If a customer ever requires "official
+  Cisco iconography" that's a licensing conversation + a
+  one-file swap-in here.
+
+The badge frames the icon visually — instead of a thin SVG
+floating in the card's icon area, you now get a substantial
+colour-coded badge that reads at a glance as "this is a
+router" / "this is a firewall". Status indication stays on the
+card chrome (ring around the card border + status dot
+top-right), so device-class iconography and health status
+compose as two clean visual layers.
+
+`status.accent` is still passed to the icon by `shapes.tsx`
+(the existing call is `<Icon className={cn('w-12 h-12',
+status.accent)} />`); the badge wrapper accepts the size half
+and silently ignores the colour half. Marginal dead classes,
+but correctness preserved without touching `shapes.tsx`.
+
+#### 3. Retry-with-backoff for transient `oneShot` failures
+
+`diagramPersistenceService.ts` gained two helpers:
+
+- `withRetry(fn, maxAttempts = 3)`: re-executes the
+  promise-returning `fn` up to two more times on rejection,
+  with 250 ms / 750 ms backoff. Worst-case added latency before
+  the final error: ~1 s.
+- `friendlyMessage(err, verb)`: translates the SDK rejection
+  vocabulary into operator-readable text. `Failed to create
+  one shot search job` becomes "the search dispatcher rejected
+  the request. Splunk may be busy or your session token may
+  have expired — reload the page and try again. If it
+  persists, check that you have read/write access to the
+  network_diagrams lookup." Plus dedicated branches for CSRF /
+  401 / 403 surface messages.
+
+All three SPL-dispatching call sites (`fetchAllRows` for list,
+`upsertRowSpl` for save, `deleteRowSpl` for delete) now wrap
+the `runSearch` call in `withRetry` and route any final
+rejection through `friendlyMessage`. The retry is oblivious to
+the failure mode — we don't try to classify "transient" vs
+"permanent". The only safety question is idempotency, and our
+`outputlookup`-based writes already overwrite the whole
+filtered set each time, so a redundant retry can't corrupt the
+lookup.
+
+### Files changed
+
+- `src/main/webapp/common/components/diagram/NetworkDiagramCanvas.tsx`
+  — node-types map, wrapper styling, `MiniMap` colours,
+  `edgeStyleForKind`, hint banners.
+- `src/main/webapp/common/components/topology/ciscoIcons.tsx`
+  — full rewrite to Lucide-backed badged icons.
+- `src/main/webapp/common/services/diagramPersistenceService.ts`
+  — `withRetry`, `friendlyMessage`, three call sites updated.
+- `src/main/resources/splunk/default/app.conf` — `build = 110`.
+- `docs/SESSION_LOG.md` — this entry.
+
+### Verification
+
+- `yarn typecheck` ✓ clean (had to switch one return-type
+  annotation from `JSX.Element` to `React.ReactElement` for
+  React 19's tighter JSX namespace handling).
+- `yarn build` ✓ clean. Only pre-existing asset-size warnings.
+  `network_diagram.js` is 653 KiB, no regression vs Build 109.
+- ReadLints on all four touched files: 0 issues.
+- `eslint` is broken cluster-wide because of a pre-existing
+  `eslint-config-airbnb` dependency hole — unchanged from Build
+  109, separate cleanup task.
+
+### What's next (Build 111+)
+
+1. **Edge styling + edge inspector** (still queued from Build
+   110 as originally planned): explicit solid vs dashed,
+   arrowhead toggle, bandwidth chip + L2/L3 chip rendered on
+   the edge midpoint via a custom edge type. Edge inspector
+   tab in `PropertiesPanel`: kind / label / bandwidth
+   (free-text) / layer (L1 / L2 / L3 chip-picker) / notes.
+2. **Optimistic auto-save** — replace the explicit Save / Save
+   As model with a debounced auto-save once a name has been
+   set.
+3. **"Suggest from inventory" button** — runs
+   `topology_discovery` once and seeds device positions
+   roughly grouped by `siteLabel`.
+4. **Decision: keep `CyberNocShape.tsx` as a future "dark mode
+   toggle"** or delete it. Right now it's dormant code paying
+   no bundle cost (tree-shaken). Defer the cleanup until we
+   know whether dark mode is requested again.
+
+---
+
 ## 2026-05-14 (Build 109) — Cyber-NOC visual overhaul + home-grown hierarchical auto-layout
 
 ### Goal

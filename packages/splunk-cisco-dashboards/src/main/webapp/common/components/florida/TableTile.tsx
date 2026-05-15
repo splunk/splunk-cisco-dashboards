@@ -225,8 +225,9 @@ export const TableTile: React.FC<TableTileProps> = ({
                             <button
                                 type="button"
                                 onClick={onOpenInSearch}
-                                title="Open in Splunk Search"
-                                aria-label={`Open ${label} in Splunk Search`}
+                                title="Open in Search"
+                                aria-label={`Open ${label} in Search`}
+                                data-tile-control="true"
                                 className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
                             >
                                 <ExternalLink className="w-3 h-3 stroke-[2.5px]" />
@@ -242,6 +243,7 @@ export const TableTile: React.FC<TableTileProps> = ({
                                         : `Configure ${label}`
                                 }
                                 aria-label={`Configure ${label} tile`}
+                                data-tile-control="true"
                                 className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400 relative"
                             >
                                 <Settings2 className="w-3 h-3 stroke-[2.5px]" />
@@ -268,6 +270,12 @@ export const TableTile: React.FC<TableTileProps> = ({
             ) : (
                 <div className="flex flex-col">
                     <div
+                        // `data-tile-control` so the table body
+                        // suppresses the SortableMetricCard drag
+                        // handle while the user is reading rows
+                        // (hovering rows is content-reading
+                        // intent, not drag intent).
+                        data-tile-control="true"
                         className="overflow-y-auto overflow-x-auto rounded border border-slate-200/60 dark:border-slate-700/60"
                         style={{ maxHeight: `${bodyHeightPx}px` }}
                     >

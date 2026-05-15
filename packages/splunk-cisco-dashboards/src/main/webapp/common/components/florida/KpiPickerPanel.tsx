@@ -1865,7 +1865,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             onClick={() =>
                                                 onTestInSearch(selectedEntry.search)
                                             }
-                                            title="Run this exact SPL in Splunk Search & Reporting (new tab)"
+                                            title="Run this exact SPL in Search (new tab)"
                                             className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest text-sky-600 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-900/30 border border-sky-200 dark:border-sky-800 transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400"
                                         >
                                             <Play className="w-2.5 h-2.5" />
@@ -1883,7 +1883,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             onClick={() =>
                                                 onTestInSearch(selectedEntry.search)
                                             }
-                                            title="Click to run this SPL in Splunk Search & Reporting"
+                                            title="Click to run this SPL in Search"
                                             className="mt-1 block w-full rounded-lg border border-slate-200 bg-slate-50 p-2 text-left transition-colors hover:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-sky-500"
                                         >
                                             <pre className="m-0 max-h-[20rem] overflow-auto rounded-md border border-slate-200 bg-white px-3 py-3 text-[12px] leading-6 whitespace-pre-wrap break-words text-slate-900 ring-1 ring-black/5 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:ring-white/5">

@@ -126,6 +126,37 @@ export const SortableMetricCard: React.FC<SortableMetricCardProps> = ({
                     isDragging
                         ? 'opacity-100'
                         : 'opacity-0 group-hover/sortable:opacity-100 focus:opacity-100',
+                    // Suppress the drag handle when the user is
+                    // clearly NOT trying to drag — i.e. they're
+                    // hovering an in-tile control (info icon,
+                    // open-in-search, configure, sparkline,
+                    // table body, etc.) or reading an open info
+                    // popover. Two complementary selectors:
+                    //
+                    //  - `data-tile-control:hover` — the cursor
+                    //    is currently over an interactive
+                    //    overlay element. Marked components
+                    //    (InfoTooltip wrapper, the action
+                    //    buttons, sparkline / table / bar
+                    //    visualisations) carry the attribute
+                    //    so this rule engages naturally on
+                    //    hover.
+                    //
+                    //  - `data-info-open="true"` — the info
+                    //    popover is open. Keeps the handle
+                    //    suppressed even after the cursor moves
+                    //    INTO the popover body, where
+                    //    `:hover` no longer matches the (i)
+                    //    icon.
+                    //
+                    // `!opacity-0` is needed to win the cascade
+                    // against the `group-hover` and `focus`
+                    // overrides above. The popover itself is
+                    // portaled out of this subtree, so a future
+                    // refactor that wraps the tile body in
+                    // another container won't break the match.
+                    'group-has-[[data-tile-control="true"]:hover]/sortable:!opacity-0',
+                    'group-has-[[data-info-open="true"]]/sortable:!opacity-0',
                     'hover:text-sky-600 dark:hover:text-sky-400',
                     'focus:outline-none focus-visible:ring-1 focus-visible:ring-sky-400'
                 )}

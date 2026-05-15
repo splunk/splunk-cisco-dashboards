@@ -215,6 +215,84 @@ const optionalString = (raw: unknown): string => {
 };
 
 /**
+ * Retry a promise-returning operation with exponential backoff.
+ * Used to absorb transient `oneShot` rejections from the Splunk
+ * search dispatcher (most commonly: the SDK occasionally fails
+ * to start a search job with `Failed to create one shot search
+ * job` when the server is briefly busy or a session/CSRF token
+ * is mid-rotation). One quick retry is usually enough.
+ *
+ * Backoff: 250 ms after attempt 1, 750 ms after attempt 2.
+ * Total worst-case latency before final rejection: ~1 s, which
+ * is well under the operator's "I clicked save and the toast
+ * appeared" threshold.
+ *
+ * The retry is OBLIVIOUS to the failure mode — we don't try to
+ * classify "transient" vs "permanent". For reads (list, load)
+ * that's fine: a permanent failure costs us 750 ms of extra
+ * latency before the error toast. For writes (save, delete) we
+ * accept the same trade-off; the writes are idempotent at the
+ * SPL level (`outputlookup` overwrites the whole filtered set
+ * each time) so a redundant retry can't corrupt the lookup.
+ */
+/**
+ * Translate the SDK / `runSearch` error vocabulary into a
+ * sentence operators can act on. The default rejection from
+ * `oneShot` is `Failed to create one shot search job` which
+ * sounds catastrophic but typically just means a transient
+ * dispatcher hiccup or expired session token.
+ *
+ * `verb` is the operator-facing action we were trying to do —
+ * e.g. "save the diagram", "load the saved diagrams". The
+ * resulting message reads like "Couldn't <verb>: <cause>.
+ * Please retry; if it persists, check session and lookup
+ * permissions." which is more useful than echoing the raw SDK
+ * string.
+ */
+const friendlyMessage = (err: unknown, verb: string): string => {
+    const raw = err instanceof Error ? err.message : String(err ?? '');
+    if (/one[- ]?shot/i.test(raw) || /search job/i.test(raw)) {
+        return (
+            `Couldn't ${verb}: the search dispatcher rejected the request. ` +
+            'Splunk may be busy or your session token may have expired — ' +
+            'reload the page and try again. If it persists, check that ' +
+            'you have read/write access to the network_diagrams lookup.'
+        );
+    }
+    if (/csrf/i.test(raw) || /403/.test(raw) || /401/.test(raw)) {
+        return (
+            `Couldn't ${verb}: authentication or CSRF check failed. ` +
+            'Reload the page to refresh your session.'
+        );
+    }
+    if (raw && raw.length > 0) {
+        return `Couldn't ${verb}: ${raw}`;
+    }
+    return `Couldn't ${verb}. Please retry.`;
+};
+
+const withRetry = async <T>(
+    fn: () => Promise<T>,
+    maxAttempts = 3
+): Promise<T> => {
+    let lastErr: unknown;
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        try {
+            return await fn();
+        } catch (err) {
+            lastErr = err;
+            if (attempt < maxAttempts - 1) {
+                const delayMs = 250 * (attempt === 0 ? 1 : 3);
+                await new Promise<void>((resolve) => {
+                    setTimeout(resolve, delayMs);
+                });
+            }
+        }
+    }
+    throw lastErr;
+};
+
+/**
  * Escape a JS string so it is safe to embed inside SPL
  * double-quoted literals. SPL recognises two escape sequences in
  * "..." strings: `\\` for a literal backslash and `\"` for a
@@ -252,15 +330,17 @@ const fetchAllRows = async (): Promise<DiagramRow[]> => {
     // appear in the picker (and thus can't crash the UI parser).
     let res;
     try {
-        res = await runSearch({
-            spl: '| inputlookup network_diagrams | fields name updated_at updated_by payload_json',
-            earliestTime: '-1m',
-            latestTime: 'now',
-            tag: 'network_diagrams_list',
-        });
+        res = await withRetry(() =>
+            runSearch({
+                spl: '| inputlookup network_diagrams | fields name updated_at updated_by payload_json',
+                earliestTime: '-1m',
+                latestTime: 'now',
+                tag: 'network_diagrams_list',
+            })
+        );
     } catch (err) {
         throw new DiagramPersistenceError(
-            err instanceof Error ? err.message : 'Lookup read failed'
+            friendlyMessage(err, 'load the saved diagrams')
         );
     }
     const rows = Array.isArray(res?.results) ? res.results : [];
@@ -317,15 +397,17 @@ const upsertRowSpl = async (row: DiagramRow): Promise<void> => {
         '| sort name ' +
         '| outputlookup network_diagrams.csv';
     try {
-        await runSearch({
-            spl,
-            earliestTime: '-1m',
-            latestTime: 'now',
-            tag: 'network_diagrams_save',
-        });
+        await withRetry(() =>
+            runSearch({
+                spl,
+                earliestTime: '-1m',
+                latestTime: 'now',
+                tag: 'network_diagrams_save',
+            })
+        );
     } catch (err) {
         throw new DiagramPersistenceError(
-            err instanceof Error ? err.message : 'Lookup write failed'
+            friendlyMessage(err, 'save the diagram')
         );
     }
 };
@@ -345,15 +427,17 @@ const deleteRowSpl = async (name: string): Promise<void> => {
         `| where name != "${safeName}" ` +
         '| outputlookup network_diagrams.csv';
     try {
-        await runSearch({
-            spl,
-            earliestTime: '-1m',
-            latestTime: 'now',
-            tag: 'network_diagrams_delete',
-        });
+        await withRetry(() =>
+            runSearch({
+                spl,
+                earliestTime: '-1m',
+                latestTime: 'now',
+                tag: 'network_diagrams_delete',
+            })
+        );
     } catch (err) {
         throw new DiagramPersistenceError(
-            err instanceof Error ? err.message : 'Lookup write failed'
+            friendlyMessage(err, 'delete the diagram')
         );
     }
 };
