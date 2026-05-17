@@ -7,6 +7,70 @@
 
 ---
 
+## How to revert to the last known-good Network Diagram canvas
+
+The Network Diagram authoring canvas was rolled back to **Build 1173 /
+115.23** on 2026-05-17 after a 12-build streak (115.24-115.36, builds
+1174-1185) progressively broke connection drawing, region drag, and
+scrolling. Every one of those 12 builds was reversed via transcript
+replay; the result is captured in commit `f712a1a` and the annotated
+git tag `stable-build1173`.
+
+### When to revert
+
+Revert if a future change breaks any of these (all working at the
+tagged commit):
+
+  * Drawing a connection between two device handles
+  * Dropping a device from the palette onto an empty canvas
+  * Wheel/trackpad scroll panning the canvas (Cmd/Ctrl+scroll zooms)
+  * PNG/PDF export with a clean white background
+  * The 12 OOB seed diagrams loading via the dropdown picker
+
+### Revert commands
+
+```bash
+cd /Users/akhamis/repo/splunk-cisco-dashboards
+git reset --hard stable-build1173
+yarn workspace @splunk/splunk-cisco-dashboards run package:app
+/opt/splunk/bin/splunk install app \
+  /Users/akhamis/repo/splunk-cisco-dashboards/dist/splunk-cisco-dashboards-1.0.10.tar.gz \
+  -update 1 -auth admin:changeme
+/opt/splunk/bin/splunk _internal call \
+  /services/server/control/restart -auth admin:changeme
+```
+
+After Splunk finishes restarting, hard-refresh the dashboard in the
+browser (`Cmd+Shift+R`); the canvas top-right pill should read
+**Build 1173**.
+
+### What is NOT fixed at this tag
+
+  * **Region drag-snap bug.** Dragging a device into a Region/Site
+    container can make it snap erratically out during the drag, and
+    the region's device count can desync. This is the bug operator
+    flagged at 4:17 PM on 2026-05-16 and what the rollback was done
+    to clear ground for. Investigate with a real browser-driving
+    agent (Playwright MCP) before writing any fix; the previous 12
+    attempts patched blind from screenshots and made it worse.
+
+### Dev environment quick-reference
+
+  * **Splunk Web (browser):** `http://sh-i-ak:8000`
+  * **Splunk login:** `admin` / `changeme`
+  * **Splunk REST (mgmt):** `https://localhost:8089` (CLI default)
+  * **App path on this machine:**
+    `/opt/splunk/etc/apps/splunk-cisco-dashboards/`
+  * **Network Diagram page:**
+    Splunk Web → app picker → "Splunk Cisco Dashboards" →
+    "Network Diagram" in the nav, **OR** direct URL:
+    `http://sh-i-ak:8000/en-US/app/splunk-cisco-dashboards/network_diagram`
+  * **Playwright MCP** is configured in `.cursor/mcp.json`. Storage
+    state is persisted at `.cursor/playwright-state.json` (gitignored)
+    so the first login carries over to subsequent sessions.
+
+---
+
 ## 2026-05-16 (Build 115.23) — Clean white canvas in Present mode + PNG/PDF export
 
 ### Goal
