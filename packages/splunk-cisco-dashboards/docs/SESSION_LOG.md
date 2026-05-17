@@ -7,6 +7,117 @@
 
 ---
 
+## 2026-05-17 (Build 1177) — Card-rectangle Region membership + Splunk platform icons
+
+### Goal
+
+Fix the remaining Region/Site flakiness reported by the operator:
+
+> sometimes it works and attaches the object to the region but most
+> of the time it does not
+
+The specific failing screenshot showed a Switch visibly inside the
+Region while the badge still read `2 devices`.
+
+Also add Splunk-specific architecture icons inspired by Splunk
+Validated Architecture component categories without copying the docs
+artwork.
+
+### Root Cause
+
+Builds 1174-1176 still mixed two different definitions of "inside a
+region":
+
+```text
+fresh palette drop / some drags: card center or visible containment
+existing-node drag stop:        mouse cursor / grab point
+```
+
+That made the result depend on where the operator grabbed the card.
+The browser trace captured the mismatch directly:
+
+```json
+{
+  "cursorRegion": "g_flaky",
+  "centerRegion": null,
+  "overlapRegions": []
+}
+```
+
+The old code would parent the node because the cursor was inside the
+Region even though the card body was outside. The inverse was the
+operator's screenshot: the card could look inside while the grab point
+resolved outside, so `parentId` stayed empty and the badge stayed at
+`2 devices`.
+
+### Fix
+
+Changed Region membership to use the released card rectangle as the
+single source of truth:
+
+```text
+card center inside a region -> parent to that region
+else >=50% card overlap     -> parent to that region
+else                        -> unparent
+```
+
+`handleNodeDrag`, `handleNodeDragStop`, and reconciliation now share
+`findRegionForRect(...)`, so the live hover preview, the released
+parent, the badge count, and region-drag child movement all agree.
+No `extent: 'parent'`, wheel, pan, page-bound, or clipping code was
+added.
+
+The icon work added Splunk platform shape ids and local
+`@splunk/react-icons` glyphs for Search Head, Search Head Cluster,
+Indexer, Indexer Cluster, Heavy/Universal Forwarder, Cluster Manager,
+SHC Deployer, License Manager, Monitoring Console, Deployment Server,
+Data Collection, Edge Processor, and SC4S. Legacy saved Splunk nodes
+that were generic `server` / `database` / `cloud` shapes now upgrade
+visually when their saved vendor/model/label identifies the Splunk
+role.
+
+### Verification
+
+Build/install:
+
+```bash
+yarn workspace @splunk/splunk-cisco-dashboards run typecheck
+yarn workspace @splunk/splunk-cisco-dashboards run package:app
+/opt/splunk/bin/splunk install app dist/splunk-cisco-dashboards-1.0.10.tar.gz -update 1 -auth admin:changeme
+/opt/splunk/bin/splunk _internal call /services/server/control/restart -method POST -auth admin:changeme
+```
+
+Browser artifacts:
+
+  * `flaky-switch-build1177/regression.json` — count changed
+    `2 -> 3 -> 2`, and the cursor-edge/card-outside case stayed
+    unparented.
+  * `preset-before-region-build1177/regression.json` — device created
+    before the region moved into the new region and counted as
+    `1 device`.
+  * `region-palette-build1177/trace.json` — new palette device dropped
+    into an existing region counted as `1 device`.
+  * `container-matrix-build1177/regression.json` — region drag moved
+    all parented devices; dragging one device out changed count to
+    `2 devices`; dragging it back restored `3 devices`; final region
+    drag moved all three devices.
+  * `empty-drop-build1177/regression.json` — empty-canvas palette drop
+    still creates one gateway.
+  * `network-regress-build1177/regression.json` — wheel scroll still
+    pans and connection drawing still creates `edgeCount: 1`.
+  * `oob-load-build1177/regression.json` — "Splunk Cloud Deployment
+    Architecture" loads with `nodeCount: 20`, `edgeCount: 13`, and
+    Splunk role shapes such as `splunk_indexer`.
+  * `export-smoke-build1177/regression.json` — PNG and PDF exports
+    still download.
+
+### What's next
+
+Use `stable-build1177` as the Network Diagram rollback point after
+tagging. A GIF is still useful for future edge cases, but the current
+card-rectangle mismatch is now reproduced, fixed, and covered by the
+browser matrix.
+
 ## 2026-05-17 (Build 1176) — Region membership reconciliation
 
 ### Goal

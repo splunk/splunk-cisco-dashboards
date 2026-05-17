@@ -498,6 +498,20 @@ export const MobilePhoneShape = DeviceShape;
 export const PrinterShape = DeviceShape;
 export const CameraShape = DeviceShape;
 export const IotSensorShape = DeviceShape;
+export const SplunkSearchHeadShape = DeviceShape;
+export const SplunkSearchHeadClusterShape = DeviceShape;
+export const SplunkIndexerShape = DeviceShape;
+export const SplunkIndexerClusterShape = DeviceShape;
+export const SplunkHeavyForwarderShape = DeviceShape;
+export const SplunkUniversalForwarderShape = DeviceShape;
+export const SplunkClusterManagerShape = DeviceShape;
+export const SplunkDeployerShape = DeviceShape;
+export const SplunkLicenseManagerShape = DeviceShape;
+export const SplunkMonitoringConsoleShape = DeviceShape;
+export const SplunkDeploymentServerShape = DeviceShape;
+export const SplunkDataCollectionShape = DeviceShape;
+export const SplunkEdgeProcessorShape = DeviceShape;
+export const SplunkSc4sShape = DeviceShape;
 export const BranchOfficeShape = DeviceShape;
 export const DatacenterShape = DeviceShape;
 
@@ -570,6 +584,21 @@ export const TOPOLOGY_NODE_TYPES = {
     'device:cloud': CloudShape,
     'device:internet': InternetShape,
     'device:users': UsersShape,
+    // Splunk platform
+    'device:splunk_search_head': SplunkSearchHeadShape,
+    'device:splunk_search_head_cluster': SplunkSearchHeadClusterShape,
+    'device:splunk_indexer': SplunkIndexerShape,
+    'device:splunk_indexer_cluster': SplunkIndexerClusterShape,
+    'device:splunk_heavy_forwarder': SplunkHeavyForwarderShape,
+    'device:splunk_universal_forwarder': SplunkUniversalForwarderShape,
+    'device:splunk_cluster_manager': SplunkClusterManagerShape,
+    'device:splunk_deployer': SplunkDeployerShape,
+    'device:splunk_license_manager': SplunkLicenseManagerShape,
+    'device:splunk_monitoring_console': SplunkMonitoringConsoleShape,
+    'device:splunk_deployment_server': SplunkDeploymentServerShape,
+    'device:splunk_data_collection': SplunkDataCollectionShape,
+    'device:splunk_edge_processor': SplunkEdgeProcessorShape,
+    'device:splunk_sc4s': SplunkSc4sShape,
     // Places
     'device:branch_office': BranchOfficeShape,
     'device:datacenter': DatacenterShape,

@@ -123,6 +123,21 @@ export type DeviceShapeId =
     | 'cloud'
     // Build 115.2 — "users" archetype for human populations.
     | 'users'
+    // --- Splunk platform ---
+    | 'splunk_search_head'
+    | 'splunk_search_head_cluster'
+    | 'splunk_indexer'
+    | 'splunk_indexer_cluster'
+    | 'splunk_heavy_forwarder'
+    | 'splunk_universal_forwarder'
+    | 'splunk_cluster_manager'
+    | 'splunk_deployer'
+    | 'splunk_license_manager'
+    | 'splunk_monitoring_console'
+    | 'splunk_deployment_server'
+    | 'splunk_data_collection'
+    | 'splunk_edge_processor'
+    | 'splunk_sc4s'
     // --- Places ---
     | 'branch_office' // Build 115.5
     | 'datacenter' // Build 115.5
@@ -515,10 +530,8 @@ const mapSplunkRoleToShape = (
     const r = (rolesCsv ?? '').toLowerCase();
     const n = (name ?? '').toLowerCase();
 
-    // Indexer family → database glyph. The Cloud branch of the
-    // discovery search emits `indexer` directly; the Enterprise
-    // branch emits `indexer` as primary_role when role list
-    // contains `indexer` / `search_peer` / `cluster_slave`.
+    // Build 1177 — Splunk roles now use Splunk-specific glyphs
+    // instead of generic server/database cards.
     if (
         p === 'indexer' ||
         n.startsWith('idx-') ||
@@ -526,17 +539,23 @@ const mapSplunkRoleToShape = (
         r.includes('cluster_slave') ||
         r.includes('search_peer')
     ) {
-        return 'database';
+        return 'splunk_indexer';
     }
-    // IDM (Inputs Data Manager) is a Cloud-only collection-tier
-    // service; cloud glyph reads more naturally than `server`.
-    if (p === 'idm' || n.startsWith('idm-')) return 'cloud';
-    // Everything else in a Splunk topology is a server-class
-    // host: search heads (sh, shc, es, itsi, es-shc, itsi-shc),
-    // cluster managers (cm), deployment servers (ds), license
-    // managers (lm), heavy / universal forwarders (hf, uf).
-    // Server is the closest icon we have to a Splunk role; if a
-    // future build adds a "compute node" glyph we can reroute.
+    if (p === 'search_head_cluster' || r.includes('shc_captain')) {
+        return 'splunk_search_head_cluster';
+    }
+    if (p === 'search_head' || p === 'cluster_search_head' || n.startsWith('sh-')) {
+        return 'splunk_search_head';
+    }
+    if (p === 'cluster_manager') return 'splunk_cluster_manager';
+    if (p === 'deployment_server') return 'splunk_deployment_server';
+    if (p === 'license_manager') return 'splunk_license_manager';
+    if (p === 'monitoring_console') return 'splunk_monitoring_console';
+    if (p === 'heavy_forwarder' || n.startsWith('hf-')) return 'splunk_heavy_forwarder';
+    if (p === 'universal_forwarder' || n.startsWith('uf-')) {
+        return 'splunk_universal_forwarder';
+    }
+    if (p === 'idm' || n.startsWith('idm-')) return 'splunk_data_collection';
     return 'server';
 };
 

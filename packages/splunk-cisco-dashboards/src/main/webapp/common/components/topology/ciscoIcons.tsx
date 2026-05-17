@@ -24,10 +24,12 @@
  *   • Active upstream — fixes ship monthly, vs. the static
  *     Cisco Visio stencil pack.
  *
- * Why we DID NOT use @splunk/react-icons:
- *   • The Splunk icon set is heavily UI-chrome biased (toolbar
- *     glyphs, action icons). It does not include network device
- *     metaphors like Router, Database, RadioTower, Wifi, etc.
+ * Why we use BOTH lucide-react and @splunk/react-icons:
+ *   • Lucide remains the best fit for generic Cisco / network
+ *     metaphors like Router, RadioTower, Wifi, and Firewall.
+ *   • Build 1177 adds Splunk-platform shapes using Splunk's own
+ *     React icon package for Search Head, Indexer, Forwarder,
+ *     License Manager, Monitoring Console, and related roles.
  *
  * Why we DID NOT keep the Cisco stencil silhouettes:
  *   • Visual mismatch with the rest of the diagram chrome (rounded
@@ -46,6 +48,17 @@
  */
 
 import React from 'react';
+import SplunkCloudNodes from '@splunk/react-icons/CloudNodesInside';
+import SplunkForwarderHeavy from '@splunk/react-icons/ForwarderHeavy';
+import SplunkForwarderUniversal from '@splunk/react-icons/ForwarderUniversal';
+import SplunkIndexes from '@splunk/react-icons/Indexes';
+import SplunkLicense from '@splunk/react-icons/ServerLicense';
+import SplunkMagnifierText from '@splunk/react-icons/MagnifierText';
+import SplunkMonitorChart from '@splunk/react-icons/MonitorChartColumn';
+import SplunkRobotAgent from '@splunk/react-icons/RobotAgent';
+import SplunkServers from '@splunk/react-icons/Servers';
+import SplunkServersWrench from '@splunk/react-icons/ServersWrench';
+import SplunkSingleIndex from '@splunk/react-icons/SingleIndex';
 import {
     Router,
     Network,
@@ -166,6 +179,34 @@ const wrap = (
     return Wrapped;
 };
 
+type SplunkIconComponent = React.ComponentType<{
+    className?: string;
+    height?: number | string;
+    width?: number | string;
+    variant?: 'default' | 'outlined' | 'filled';
+    role?: string;
+    'aria-label'?: string;
+}>;
+
+const wrapSplunk = (
+    Icon: SplunkIconComponent,
+    defaultColor: string,
+    fallbackLabel: string
+): React.FC<IconProps> => {
+    const Wrapped: React.FC<IconProps> = ({ className, title }) => (
+        <Icon
+            className={cn(defaultColor, className)}
+            width="100%"
+            height="100%"
+            variant="outlined"
+            aria-label={title ?? fallbackLabel}
+            role="img"
+        />
+    );
+    Wrapped.displayName = `DeviceIcon(${fallbackLabel})`;
+    return Wrapped;
+};
+
 // --- Device class → icon component mapping --------------------------
 
 // Core network
@@ -237,6 +278,78 @@ export const CiscoInternetIcon = wrap(Globe2, COLOR.SKY);
 export const CiscoIpPhoneIcon = wrap(Phone, COLOR.SLATE);
 export const CiscoUsersIcon = wrap(Users, COLOR.PINK);
 export const CiscoGenericIcon = wrap(Box, COLOR.SLATE);
+
+// Splunk platform
+export const SplunkSearchHeadIcon = wrapSplunk(
+    SplunkMagnifierText,
+    COLOR.EMERALD,
+    'Splunk Search Head'
+);
+export const SplunkSearchHeadClusterIcon = wrapSplunk(
+    SplunkCloudNodes,
+    COLOR.EMERALD,
+    'Splunk Search Head Cluster'
+);
+export const SplunkIndexerIcon = wrapSplunk(
+    SplunkSingleIndex,
+    COLOR.CYAN,
+    'Splunk Indexer'
+);
+export const SplunkIndexerClusterIcon = wrapSplunk(
+    SplunkIndexes,
+    COLOR.CYAN,
+    'Splunk Indexer Cluster'
+);
+export const SplunkHeavyForwarderIcon = wrapSplunk(
+    SplunkForwarderHeavy,
+    COLOR.TEAL,
+    'Splunk Heavy Forwarder'
+);
+export const SplunkUniversalForwarderIcon = wrapSplunk(
+    SplunkForwarderUniversal,
+    COLOR.TEAL,
+    'Splunk Universal Forwarder'
+);
+export const SplunkClusterManagerIcon = wrapSplunk(
+    SplunkServersWrench,
+    COLOR.VIOLET,
+    'Splunk Cluster Manager'
+);
+export const SplunkDeployerIcon = wrapSplunk(
+    SplunkServersWrench,
+    COLOR.PURPLE,
+    'Splunk Deployer'
+);
+export const SplunkLicenseManagerIcon = wrapSplunk(
+    SplunkLicense,
+    COLOR.AMBER,
+    'Splunk License Manager'
+);
+export const SplunkMonitoringConsoleIcon = wrapSplunk(
+    SplunkMonitorChart,
+    COLOR.SKY,
+    'Splunk Monitoring Console'
+);
+export const SplunkDeploymentServerIcon = wrapSplunk(
+    SplunkServers,
+    COLOR.BLUE,
+    'Splunk Deployment Server'
+);
+export const SplunkDataCollectionIcon = wrapSplunk(
+    SplunkRobotAgent,
+    COLOR.ROSE,
+    'Splunk Data Collection'
+);
+export const SplunkEdgeProcessorIcon = wrapSplunk(
+    SplunkCloudNodes,
+    COLOR.INDIGO,
+    'Splunk Edge Processor'
+);
+export const SplunkSc4sIcon = wrapSplunk(
+    SplunkRobotAgent,
+    COLOR.FUCHSIA,
+    'Splunk Connect for Syslog'
+);
 
 // =================================================================
 // Build 115.5 — 24 new shapes. Each is grouped by section to match
@@ -351,6 +464,22 @@ export const CISCO_ICONS = {
     // Build 115.2 — "users" archetype. Most common operator ask
     // from the OOB Splunk Cloud review.
     users: CiscoUsersIcon,
+
+    // Splunk platform
+    splunk_search_head: SplunkSearchHeadIcon,
+    splunk_search_head_cluster: SplunkSearchHeadClusterIcon,
+    splunk_indexer: SplunkIndexerIcon,
+    splunk_indexer_cluster: SplunkIndexerClusterIcon,
+    splunk_heavy_forwarder: SplunkHeavyForwarderIcon,
+    splunk_universal_forwarder: SplunkUniversalForwarderIcon,
+    splunk_cluster_manager: SplunkClusterManagerIcon,
+    splunk_deployer: SplunkDeployerIcon,
+    splunk_license_manager: SplunkLicenseManagerIcon,
+    splunk_monitoring_console: SplunkMonitoringConsoleIcon,
+    splunk_deployment_server: SplunkDeploymentServerIcon,
+    splunk_data_collection: SplunkDataCollectionIcon,
+    splunk_edge_processor: SplunkEdgeProcessorIcon,
+    splunk_sc4s: SplunkSc4sIcon,
 
     // Places
     branch_office: CiscoBranchOfficeIcon,

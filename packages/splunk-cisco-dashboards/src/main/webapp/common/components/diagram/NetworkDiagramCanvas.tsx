@@ -428,6 +428,42 @@ const resolveEffectiveStatus = (
     return assetStatus;
 };
 
+const resolveLegacySplunkShape = (
+    saved: SavedDiagramNode,
+    fallback: DeviceShapeId
+): DeviceShapeId => {
+    if (fallback.startsWith('splunk_')) return fallback;
+    if (!['server', 'database', 'cloud', 'generic'].includes(fallback)) return fallback;
+    const vendor = (saved.vendor ?? '').toLowerCase();
+    const text = [saved.label, saved.shortLabel, saved.model, saved.type]
+        .filter((v): v is string => typeof v === 'string')
+        .join(' ')
+        .toLowerCase();
+    if (vendor !== 'splunk' && !text.includes('splunk')) return fallback;
+    if (text.includes('search head cluster') || text.includes('shc')) {
+        return 'splunk_search_head_cluster';
+    }
+    if (text.includes('search head')) return 'splunk_search_head';
+    if (text.includes('indexer')) return 'splunk_indexer';
+    if (text.includes('cluster manager')) return 'splunk_cluster_manager';
+    if (text.includes('deployment server')) return 'splunk_deployment_server';
+    if (text.includes('deployer')) return 'splunk_deployer';
+    if (text.includes('license manager')) return 'splunk_license_manager';
+    if (text.includes('monitoring console')) return 'splunk_monitoring_console';
+    if (text.includes('heavy forwarder') || text.includes('hwf')) {
+        return 'splunk_heavy_forwarder';
+    }
+    if (text.includes('universal forwarder') || /\bufs?\b/.test(text)) {
+        return 'splunk_universal_forwarder';
+    }
+    if (text.includes('edge processor')) return 'splunk_edge_processor';
+    if (text.includes('connect for syslog') || text.includes('sc4s')) return 'splunk_sc4s';
+    if (text.includes('data collection') || text.includes('idm')) {
+        return 'splunk_data_collection';
+    }
+    return fallback;
+};
+
 /** Convert a `SavedDiagramNode` (persisted shape) into a
  *  React Flow `Node`. Live `assetIndex` lets us re-bind the
  *  display data to the freshest `asset_inventory` row when
@@ -503,7 +539,8 @@ const savedNodeToRF = (
             zIndex: 0,
         };
     }
-    const shape = (saved.type.replace('device:', '') as DeviceShapeId) || 'generic';
+    const savedShape = (saved.type.replace('device:', '') as DeviceShapeId) || 'generic';
+    const shape = resolveLegacySplunkShape(saved, savedShape);
     const live = saved.assetId ? assetIndex?.get(saved.assetId) : undefined;
     const label = live?.label ?? saved.label ?? saved.id;
     const shortLabel = live?.shortLabel ?? saved.shortLabel ?? saved.id;
@@ -528,7 +565,7 @@ const savedNodeToRF = (
     );
     return {
         id: saved.id,
-        type: saved.type,
+        type: `device:${shape}`,
         position: { x: saved.x, y: saved.y },
         parentId: saved.parentId,
         // Build 115.16 — see `handleNodeDragStop` for why
@@ -829,40 +866,9 @@ const rfToSaved = (
     };
 };
 
-/** Resolve which (if any) region-group node a given shape rect
- *  visually belongs to. Uses the shape's CENTRE-in-region as the
- *  hit-test (a single point-in-rect check). Returns the smallest
- *  matching region so nested regions resolve to the most
- *  specific container.
- *
- *  Build 115.18 — reverted from the 115.17 "≥50% rectangle
- *  overlap" rule, which was the right idea but had the wrong
- *  threshold for real-world drops. With centre-on-cursor
- *  placement (115.17) the SHAPE'S CENTRE lands at the cursor;
- *  combined with the 20px snap-to-grid the centre can drift up
- *  to 10px from the cursor before lock. A 50%-overlap rule then
- *  rejected any drop where the operator aimed near the corner
- *  of a region, because the centred 100×110 card overflowed by
- *  enough for area to fall under 50% — the operator dropped
- *  six shapes "into the region" but only one cleared the bar
- *  and got parented (the rest floated unparented; the region
- *  count read 1/6 and dragging the region only carried the
- *  parented one along, hence the "lost the ability to move the
- *  region together with its devices" report).
- *
- *  Centre-in-region restores the pre-115.17 mental model: drop
- *  with cursor inside the region → parented, drop with cursor
- *  outside → not parented. Combined with the live drag preview
- *  (which highlights this exact region as you hover), the rule
- *  now matches what the operator sees in real time. The
- *  function still takes a `shapeRect` so existing callers don't
- *  have to change shape — we just compute the centre from it.
- *
- *  Trade-off: a card dragged so its body is plainly inside the
- *  region but whose centre is 5px past the edge will not parent.
- *  We accept this — those drops are rare in practice and the
- *  operator has clear feedback (the region won't have lit up
- *  during the drag), so the failure mode is honest. */
+/** Find the smallest region containing a flow-space point. The
+ *  "smallest wins" tie-break keeps future nested regions from
+ *  accidentally parenting to the outer container. */
 const findRegionForPoint = (nodes: RFNode[], point: XYPosition): RFNode | null => {
     let best: RFNode | null = null;
     let bestArea = Infinity;
@@ -888,15 +894,64 @@ const findRegionForPoint = (nodes: RFNode[], point: XYPosition): RFNode | null =
     return best;
 };
 
+/** Resolve which (if any) region-group node a card rectangle
+ *  visually belongs to.
+ *
+ *  Build 1177 — centre-in-region is still the primary rule, which
+ *  preserves the forgiving palette-drop behaviour near region
+ *  corners. If the center is outside, a card can still belong when
+ *  at least half of its body overlaps a region. That covers normal
+ *  existing-node drags where the user grabbed an edge of the card:
+ *  the card can plainly look inside the region while the cursor
+ *  itself is just outside. */
 const findRegionForRect = (
     nodes: RFNode[],
     shapeRect: { x: number; y: number; width: number; height: number }
 ): RFNode | null => {
     if (shapeRect.width <= 0 || shapeRect.height <= 0) return null;
-    return findRegionForPoint(nodes, {
+    const centerRegion = findRegionForPoint(nodes, {
         x: shapeRect.x + shapeRect.width / 2,
         y: shapeRect.y + shapeRect.height / 2,
     });
+    if (centerRegion) return centerRegion;
+
+    let best: RFNode | null = null;
+    let bestRatio = 0;
+    const shapeArea = shapeRect.width * shapeRect.height;
+    for (const n of nodes) {
+        if (n.type !== REGION_NODE_TYPE) continue;
+        const width = typeof n.style?.width === 'number' ? (n.style.width as number) : 0;
+        const height =
+            typeof n.style?.height === 'number' ? (n.style.height as number) : 0;
+        if (width <= 0 || height <= 0) continue;
+        const overlapRatio =
+            getRectOverlapArea(shapeRect, {
+                x: n.position.x,
+                y: n.position.y,
+                width,
+                height,
+            }) / shapeArea;
+        if (overlapRatio > bestRatio) {
+            best = n;
+            bestRatio = overlapRatio;
+        }
+    }
+    return bestRatio >= 0.5 ? best : null;
+};
+
+const getRectOverlapArea = (
+    a: { x: number; y: number; width: number; height: number },
+    b: { x: number; y: number; width: number; height: number }
+): number => {
+    const width = Math.max(
+        0,
+        Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)
+    );
+    const height = Math.max(
+        0,
+        Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y)
+    );
+    return width * height;
 };
 
 /** Recompute every region's `data.deviceCount` from current
@@ -990,11 +1045,12 @@ const reconcileRegionMembership = (nodes: RFNode[]): RFNode[] => {
         if (!canBelongToRegion(node)) return node;
         const world = getNodeWorldPosition(nodes, node);
         const size = getNodeSize(node);
-        const center = {
-            x: world.x + size.width / 2,
-            y: world.y + size.height / 2,
-        };
-        const region = findRegionForPoint(nodes, center);
+        const region = findRegionForRect(nodes, {
+            x: world.x,
+            y: world.y,
+            width: size.width,
+            height: size.height,
+        });
         const targetParentId = region?.id;
         if ((node.parentId ?? undefined) === targetParentId) return node;
         changed = true;
@@ -1547,8 +1603,8 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
         setNodes((current) => applyDropHover(current, null));
     }, [applyDropHover, setNodes]);
 
-    /** Build 115: auto-parent a device to a region when its
-     *  drag-stop center lands inside the region's rectangle, and
+    /** Build 115: auto-parent a device to a region when its final
+     *  drag-stop card rectangle belongs inside the region, and
      *  un-parent when it lands outside. Without this, an existing
      *  device dragged INTO a region would visually overlap but
      *  the region's `deviceCount` would stay at zero (only fresh
@@ -1597,9 +1653,17 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
      *  isn't required for the parent-drag-children behaviour).
      *  RegionGroupNode renders with `overflow: visible` so
      *  children at local positions outside the parent's
-     *  rectangle render visibly outside (no DOM clipping). */
+     *  rectangle render visibly outside (no DOM clipping).
+     *
+     *  Build 1177 — use the released CARD RECTANGLE for region
+     *  membership, not the release cursor. The cursor/grab point
+     *  made membership feel random: a card could look inside but
+     *  stay unparented if the grab point was outside, and the
+     *  reverse could happen at an edge. The shared `findRegionForRect`
+     *  rule attaches when the card center is inside a region, or
+     *  when at least half of the card overlaps it. */
     const handleNodeDragStop = useCallback(
-        (event: React.MouseEvent, node: RFNode) => {
+        (_event: React.MouseEvent, node: RFNode) => {
             // Don't re-parent the region itself, the title node,
             // or anything else that isn't a device. (Title node
             // and region behave fine without parenting.)
@@ -1627,19 +1691,16 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                     }
                     return { x, y };
                 };
-                const world = getWorldPosition(node);
-                // Build 1174 — existing-node drags resolve the
-                // target region from the cursor/grab point. The
-                // previous center-of-card test felt flaky when
-                // operators grabbed a card off-center: the pointer
-                // could be inside the region while the card center
-                // still sat outside, leaving the count unchanged.
-                const cursor = reactFlow.screenToFlowPosition({
-                    x: event.clientX,
-                    y: event.clientY,
+                const currentNode = current.find((n) => n.id === node.id) ?? node;
+                const world = getWorldPosition(currentNode);
+                const size = getNodeSize(currentNode);
+                const containingRegion = findRegionForRect(current, {
+                    x: world.x,
+                    y: world.y,
+                    width: size.width,
+                    height: size.height,
                 });
-                const containingRegion = findRegionForPoint(current, cursor);
-                const currentParentId = node.parentId ?? null;
+                const currentParentId = currentNode.parentId ?? null;
                 const targetParentId = containingRegion?.id ?? null;
                 if (currentParentId === targetParentId) {
                     // No parent change. The position deltas were
@@ -1653,9 +1714,11 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                     // mid-flight even though no parent change
                     // resulted).
                     const cleared = applyDropHover(current, null);
-                    if (cleared !== current) {
-                        commitHistory(cleared, edges);
-                        return cleared;
+                    const annotated = annotateRegionCounts(cleared);
+                    if (annotated !== current) {
+                        emitChange(annotated, edges);
+                        commitHistory(annotated, edges);
+                        return annotated;
                     }
                     commitHistory(current, edges);
                     return current;
@@ -2072,12 +2135,12 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
     /** Build 115.17 — same drop-hover preview as
      *  `handleDragOver`, but for the case where the operator is
      *  dragging an EXISTING node around the canvas (no HTML5
-     *  DnD). Computes the candidate region from the cursor/grab
-     *  point, matching `handleNodeDragStop`, so the highlight is
-     *  a faithful preview of "what happens if I release right
-     *  now". */
+     *  DnD). Build 1177 computes the candidate region from the
+     *  dragged card rectangle, matching `handleNodeDragStop`, so
+     *  the highlight is a faithful preview of "what happens if I
+     *  release right now". */
     const handleNodeDrag = useCallback(
-        (event: React.MouseEvent, node: RFNode) => {
+        (_event: React.MouseEvent, node: RFNode) => {
             if (
                 node.type === REGION_NODE_TYPE ||
                 node.type === DIAGRAM_TITLE_NODE_TYPE
@@ -2085,15 +2148,19 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                 return;
             }
             setNodes((current) => {
-                const cursor = reactFlow.screenToFlowPosition({
-                    x: event.clientX,
-                    y: event.clientY,
+                const currentNode = current.find((n) => n.id === node.id) ?? node;
+                const world = getNodeWorldPosition(current, currentNode);
+                const size = getNodeSize(currentNode);
+                const region = findRegionForRect(current, {
+                    x: world.x,
+                    y: world.y,
+                    width: size.width,
+                    height: size.height,
                 });
-                const region = findRegionForPoint(current, cursor);
                 return applyDropHover(current, region?.id ?? null);
             });
         },
-        [setNodes, applyDropHover, reactFlow]
+        [setNodes, applyDropHover]
     );
 
     const handleNodeClick = useCallback((_e: React.MouseEvent, node: RFNode) => {

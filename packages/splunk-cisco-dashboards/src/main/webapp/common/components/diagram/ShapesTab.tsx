@@ -47,6 +47,7 @@ type ShapeCategory =
     | 'storage'
     | 'enduser'
     | 'edge'
+    | 'splunk'
     | 'places'
     | 'layout';
 
@@ -110,6 +111,21 @@ const SHAPE_TILES: ShapeTileSpec[] = [
     // Build 115.2 — users / human population glyph (remote workers,
     // SOC analysts, end-user pools).
     { id: 'users', label: 'Users', description: 'Remote users, SOC analysts, end-user populations', category: 'edge' },
+    // Splunk platform
+    { id: 'splunk_search_head', label: 'Search Head', description: 'Splunk search head', category: 'splunk' },
+    { id: 'splunk_search_head_cluster', label: 'SH Cluster', description: 'Splunk search head cluster', category: 'splunk' },
+    { id: 'splunk_indexer', label: 'Indexer', description: 'Splunk indexer', category: 'splunk' },
+    { id: 'splunk_indexer_cluster', label: 'Indexer Cluster', description: 'Splunk indexer cluster', category: 'splunk' },
+    { id: 'splunk_heavy_forwarder', label: 'Heavy Forwarder', description: 'Splunk heavy forwarder', category: 'splunk' },
+    { id: 'splunk_universal_forwarder', label: 'Universal Forwarder', description: 'Splunk universal forwarder', category: 'splunk' },
+    { id: 'splunk_cluster_manager', label: 'Cluster Manager', description: 'Splunk cluster manager', category: 'splunk' },
+    { id: 'splunk_deployer', label: 'SHC Deployer', description: 'Search head cluster deployer', category: 'splunk' },
+    { id: 'splunk_license_manager', label: 'License Manager', description: 'Splunk license manager', category: 'splunk' },
+    { id: 'splunk_monitoring_console', label: 'Monitoring Console', description: 'Splunk monitoring console', category: 'splunk' },
+    { id: 'splunk_deployment_server', label: 'Deployment Server', description: 'Splunk deployment server', category: 'splunk' },
+    { id: 'splunk_data_collection', label: 'Data Collection', description: 'Splunk data collection node', category: 'splunk' },
+    { id: 'splunk_edge_processor', label: 'Edge Processor', description: 'Splunk Edge Processor', category: 'splunk' },
+    { id: 'splunk_sc4s', label: 'SC4S', description: 'Splunk Connect for Syslog', category: 'splunk' },
     // Places
     { id: 'branch_office', label: 'Branch Office', description: 'Remote / branch site', category: 'places' },
     { id: 'datacenter', label: 'Data Center', description: 'On-prem / co-located data centre', category: 'places' },
@@ -128,6 +144,7 @@ const CATEGORY_LABELS: Record<ShapeCategory, string> = {
     storage: 'Storage',
     enduser: 'End-User & IoT',
     edge: 'Edge & Cloud',
+    splunk: 'Splunk Architecture',
     places: 'Places',
     layout: 'Layout',
 };
@@ -156,6 +173,20 @@ const SHAPE_DEFAULT_LABEL_OVERRIDES: Partial<Record<DeviceShapeId, string>> = {
     branch_office: 'Branch Office',
     datacenter: 'Data Center',
     siem: 'SIEM',
+    splunk_search_head: 'Search Head',
+    splunk_search_head_cluster: 'Search Head Cluster',
+    splunk_indexer: 'Indexer',
+    splunk_indexer_cluster: 'Indexer Cluster',
+    splunk_heavy_forwarder: 'Heavy Forwarder',
+    splunk_universal_forwarder: 'Universal Forwarder',
+    splunk_cluster_manager: 'Cluster Manager',
+    splunk_deployer: 'SHC Deployer',
+    splunk_license_manager: 'License Manager',
+    splunk_monitoring_console: 'Monitoring Console',
+    splunk_deployment_server: 'Deployment Server',
+    splunk_data_collection: 'Data Collection',
+    splunk_edge_processor: 'Edge Processor',
+    splunk_sc4s: 'SC4S',
 };
 
 const tilePayload = (
@@ -259,6 +290,7 @@ export const ShapesTab: React.FC = () => {
         'storage',
         'enduser',
         'edge',
+        'splunk',
         'places',
         'layout',
     ];
