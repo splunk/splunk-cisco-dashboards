@@ -1,7 +1,62 @@
+const fs = require('fs');
 const path = require('path');
+const webpack = require('webpack');
 const { merge: webpackMerge } = require('webpack-merge');
 const baseConfig = require('@splunk/webpack-configs').default;
 const CopyPlugin = require('copy-webpack-plugin');
+
+/**
+ * Build 115.21 — read the canonical `build = NNNN` and
+ * `version = X.Y.Z` lines out of `default/app.conf` at webpack
+ * compile time and inject them as `process.env.APP_BUILD` and
+ * `process.env.APP_VERSION` for the React bundles to read.
+ *
+ * Why we read both from app.conf (not package.json):
+ *   • app.conf IS the canonical Splunk-app metadata — it's
+ *     what splunkd reports for the app version in
+ *     `/services/apps/local/...` and what the Splunk Web Apps
+ *     page displays. Pulling the same value into our UI badge
+ *     keeps every surface that quotes a version in agreement.
+ *   • package.json's `version` field belongs to the npm
+ *     workspace ("0.1.0" today) and intentionally isn't kept
+ *     in lock-step with the Splunk app version. Reading it
+ *     for UI display would falsely advertise "v0.1.0" while
+ *     splunkd reports "v1.0.10" — the kind of inconsistency
+ *     that turns a support ticket into a 20-minute "wait,
+ *     which version are you actually on?" detour.
+ *
+ * Why compile-time injection (not a runtime fetch):
+ *   • The displayed value MATCHES the JS bytes that printed
+ *     it. A runtime fetch would describe the SERVER's
+ *     app.conf today, which can differ from the bundle the
+ *     browser is executing if a cache mismatch exists. The
+ *     whole point of surfacing the build tag is to detect
+ *     exactly that mismatch (see Build 115.20 follow-up).
+ *
+ * Build 115.22 — fallbacks remain ('unknown' / '0.0.0') for
+ * the unreachable case where app.conf is malformed; both keys
+ * are required, so a missing match is a hard developer bug,
+ * but a sane fallback beats a webpack crash.
+ */
+const readAppConfField = (key) => {
+    try {
+        const appConf = fs.readFileSync(
+            path.join(__dirname, 'src/main/resources/splunk/default/app.conf'),
+            'utf8'
+        );
+        // Anchor on a [stanza] header and a `key =` LHS so we
+        // only match keys at column 0 — avoids false positives
+        // on keys that happen to appear in comments or
+        // explanation = blocks.
+        const re = new RegExp(`^\\s*${key}\\s*=\\s*(\\S.*?)\\s*$`, 'm');
+        const m = appConf.match(re);
+        return m ? m[1] : null;
+    } catch (_e) {
+        return null;
+    }
+};
+const APP_BUILD = readAppConfField('build') || 'unknown';
+const APP_VERSION = readAppConfField('version') || '0.0.0';
 
 /**
  * Multi-entry config: each Splunk dashboard ("view") has its own React
@@ -90,6 +145,10 @@ const commonConfig = webpackMerge(baseConfig, {
                     },
                 },
             ],
+        }),
+        new webpack.DefinePlugin({
+            'process.env.APP_BUILD': JSON.stringify(APP_BUILD),
+            'process.env.APP_VERSION': JSON.stringify(APP_VERSION),
         }),
     ],
 });

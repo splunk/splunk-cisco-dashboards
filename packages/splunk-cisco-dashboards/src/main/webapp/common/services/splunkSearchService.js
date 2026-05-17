@@ -196,6 +196,12 @@ export const __resetFailedSplCache = () => FAILED_SPL_CACHE.clear();
  * @param {string} [params.earliestTime] - Splunk earliest time modifier.
  * @param {string} [params.latestTime] - Splunk latest time modifier.
  * @param {string} [params.tag] - Logical tag used by the mock backend to map to fixture data.
+ * @param {number} [params.count] - Maximum result rows. Defaults to 1000 for
+ *   regular dashboard tiles (the Splunk Web cap is also 1000 by default).
+ *   Pass a larger value for metadata-style searches that need the full
+ *   population — e.g. `| metadata type=hosts` on a stack with thousands of
+ *   reporting hosts. Pass 0 to disable the cap (Splunk semantics: count=0 →
+ *   "return all results"); the server-side `max_count` setting still applies.
  * @returns {Promise<{results: Array<Object>}>}
  */
 export const runSearch = async ({
@@ -203,6 +209,7 @@ export const runSearch = async ({
  earliestTime = '-24h',
  latestTime = 'now',
  tag,
+ count = 1000,
 } = {}) => {
  assertSafeSpl(spl);
 
@@ -249,7 +256,7 @@ export const runSearch = async ({
  earliest_time: earliestTime,
  latest_time: latestTime,
  output_mode: 'json',
- count: 1000,
+ count,
  },
  { app: CURRENT_APP_CONTEXT }
  );

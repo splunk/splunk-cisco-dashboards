@@ -61,6 +61,21 @@ export type PaletteDragPayload =
           shortLabel: string;
           /** Optional site label for tooltip context. */
           siteLabel?: string;
+      }
+    | {
+          /** Build 115.1 — free-placement annotation. Spawns a
+           *  TextBoxNode at the drop point with default styling.
+           *  The operator can re-style via the inspector after
+           *  drop (font size, colour, optional card background /
+           *  border, alignment). Distinct from the singleton
+           *  `diagramTitle` node — multiple textboxes coexist
+           *  per diagram (used for protocol-gateway labels,
+           *  callouts, port-number boxes, etc.). */
+          variant: 'textbox';
+          /** Default text shown when the textbox is first dropped.
+           *  Empty string is OK — the node renders a placeholder
+           *  hint until the operator types something. */
+          defaultText: string;
       };
 
 /** Size presets used by the canvas when spawning a new node

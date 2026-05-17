@@ -16,9 +16,15 @@
  *
  * Behavioural model:
  *   • The node is registered with `type: 'regionGroup'` in the
- *     React Flow node-types map. Other nodes (devices) can be
- *     made children by setting `parentId` and `extent: 'parent'`,
- *     so dragging the region drags every device inside.
+ *     React Flow node-types map. Other nodes (devices) become
+ *     children by setting `parentId` to this region's id, and
+ *     dragging the region drags every device inside (React Flow
+ *     honours `parentId` alone for that). Build 115.16 — the
+ *     children deliberately do NOT receive `extent: 'parent'`;
+ *     see the long-form comment on `handleNodeDragStop` in
+ *     `NetworkDiagramCanvas.tsx` for the operator-visible
+ *     "shape moves outside / behaves erratically on drop"
+ *     regression that motivated dropping the constraint.
  *   • The header is the only "draggable handle" for the region —
  *     the body lets pointer events pass through so dropping a
  *     palette item INTO a region works as expected. The
@@ -42,6 +48,7 @@
 
 import React from 'react';
 import { Layers } from 'lucide-react';
+import { NodeResizer } from '@xyflow/react';
 import { cn } from '@/common/lib/utils';
 
 export interface RegionGroupNodeData {
@@ -55,7 +62,24 @@ export interface RegionGroupNodeData {
     /** Optional Tailwind colour fragment (e.g. `sky-500`,
      *  `emerald-500`). Defaults to `slate-500` when undefined. */
     accent?: string;
+    /** Build 115.17 — set to `true` by the canvas while a
+     *  palette drop or node drag is currently HOVERING this
+     *  region (i.e. releasing the cursor right now would
+     *  parent the dragged shape to this region). Drives a
+     *  thicker, brighter border so the operator sees the drop
+     *  target light up before they let go. Cleared on
+     *  drop / drag-stop / drag-leave. Never persisted (the
+     *  payload serializer strips it). */
+    dropHovering?: boolean;
 }
+
+/** Build 115 — minimum sizes for the resizer. We don't want
+ *  someone to accidentally collapse a region to a 4px square,
+ *  so we cap at "still useful as a labelled container". The
+ *  values here cover the ~270×130 minimum that keeps the header
+ *  bar legible plus a single device-shape body underneath. */
+const REGION_MIN_WIDTH = 200;
+const REGION_MIN_HEIGHT = 120;
 
 const accentClasses = (
     accent: string | undefined
@@ -117,16 +141,43 @@ export const RegionGroupNode: React.FC<{
     selected?: boolean;
 }> = ({ data, selected }) => {
     const a = accentClasses(data.accent);
+    const isHovered = data.dropHovering === true;
     return (
         <div
             className={cn(
-                'rounded-xl border-2 border-dashed transition-shadow',
+                'rounded-xl border-2 border-dashed transition-all',
                 a.border,
                 a.tint,
-                selected && 'shadow-lg outline outline-2 outline-sky-500/70 outline-offset-2'
+                selected &&
+                    'shadow-lg outline outline-2 outline-sky-500/70 outline-offset-2',
+                // Build 115.17 — drop-target preview. When a drag
+                // (palette or existing-shape) is currently
+                // hovering this region, swap the dashed border
+                // for a solid brighter outline and tint the
+                // interior more strongly. Cheaper than a
+                // separate highlight overlay and survives the
+                // dark-mode swap.
+                isHovered &&
+                    'border-solid !border-sky-500 ring-2 ring-sky-400/60 dark:ring-sky-300/40 bg-sky-50/80 dark:bg-sky-950/60 shadow-lg shadow-sky-500/20'
             )}
             style={{ width: '100%', height: '100%' }}
         >
+            {/* Build 115 — `<NodeResizer>` from React Flow
+             *  registers eight drag handles (4 corners + 4 sides)
+             *  whenever the region is selected. The resize is
+             *  emitted as a `dimensions` `NodeChange` which the
+             *  canvas's `onNodesChange` handler already applies +
+             *  recomputes counts for. We only show the resizer
+             *  for selected regions to keep the unselected card
+             *  visually quiet (two extra dashed corners on every
+             *  region would compete with the device cards). */}
+            <NodeResizer
+                isVisible={selected === true}
+                minWidth={REGION_MIN_WIDTH}
+                minHeight={REGION_MIN_HEIGHT}
+                lineClassName="!border-sky-500/50"
+                handleClassName="!bg-sky-500 !border-white !w-2.5 !h-2.5"
+            />
             <div
                 className={cn(
                     'flex items-center justify-between gap-2 px-3 py-1.5 rounded-t-[10px]',

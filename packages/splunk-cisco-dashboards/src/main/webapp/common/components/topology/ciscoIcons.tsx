@@ -1,230 +1,361 @@
 /**
- * Device icons — Build 110 rewrite.
+ * Device icons — Build 115.2 modernisation.
  *
- * Build 105 introduced a hand-drawn Cisco-style SVG library
- * (drum-shaped router, brick firewall, scalloped cloud, etc.).
- * The visual quality wasn't there — Alan reviewed Build 109 and
- * said "the device icons need to be much better than this."
- * Honest answer: synthesising polished SVG art from text prompts
- * is exactly where LLM-driven coding falls down. Re-drawing
- * dozens of glyphs by hand to "Cisco brand-center quality"
- * inside an editor session was always going to disappoint.
+ * History:
+ *   • Builds 110/111 used Lucide glyphs inside a tinted-glass badge.
+ *   • Builds 112/115 ported the Cisco Visio stencil silhouettes as
+ *     hand-drawn inline SVGs. Operator pushed back: the silhouettes
+ *     were technically accurate but read as dated next to the rest of
+ *     the modern flat-card UI ("not happy with our icons … did lucide
+ *     have anything to offer?").
+ *   • Build 115.2 (this file) returns to lucide-react as the icon
+ *     source of truth, but applies the lessons from the v0.dev
+ *     polish work: each icon ships with a per-class default colour,
+ *     a slightly thicker stroke for visual presence at small sizes,
+ *     and a stable `text-N` class so callers retain caller-side
+ *     colour overrides via `tailwind-merge`.
  *
- * The pragmatic fix: use a vetted, professionally-designed icon
- * library instead of hand-art. We already depend on
- * `lucide-react` (it ships with React Flow's docs and is used by
- * `RegionGroupNode`, `DiagramHeader`, the palette tabs, etc.),
- * so this is a zero-new-dependency upgrade.
+ * Why lucide-react (vs another modernisation path):
+ *   • Already a project dependency — no new package, no licence dance.
+ *   • Tree-shakable — only the icons referenced below land in the
+ *     diagram bundle.
+ *   • Stroke-based, 24×24, optical-grid-aligned. Renders cleanly at
+ *     16, 24, 32, 36, 40px without sub-pixel blur.
+ *   • Active upstream — fixes ship monthly, vs. the static
+ *     Cisco Visio stencil pack.
  *
- * Design language:
- *   - Each device shape gets a rounded square "icon badge" that
- *     fills the icon area of the host card. The badge uses a
- *     soft per-device-class accent tint (e.g. amber for routing,
- *     rose for security, sky for switching, emerald for compute).
- *   - The Lucide glyph itself sits inside the badge at ~60% size,
- *     drawn in the badge's accent foreground colour.
- *   - The status outline / status dot stays on the host card, NOT
- *     the icon — we keep status visualisation separate from
- *     device-class iconography so the two layers compose cleanly.
+ * Why we DID NOT use @splunk/react-icons:
+ *   • The Splunk icon set is heavily UI-chrome biased (toolbar
+ *     glyphs, action icons). It does not include network device
+ *     metaphors like Router, Database, RadioTower, Wifi, etc.
  *
- * Compatibility:
- *   - The exported `CISCO_ICONS` registry keeps the same shape id
- *     keys (`router`, `switch`, `l3_switch`, `firewall`, `wlc`,
- *     `access_point`, `server`, `cloud`, `generic`) so call sites
- *     in `shapes.tsx` and `CyberNocShape.tsx` need no change.
- *   - Each icon component still accepts `className` (for size +
- *     forwarded color classes) and `title` (for accessibility).
+ * Why we DID NOT keep the Cisco stencil silhouettes:
+ *   • Visual mismatch with the rest of the diagram chrome (rounded
+ *     cards, soft shadows, lucide elsewhere in the toolbar).
+ *   • Per-icon weight inconsistency — some stencils were dense,
+ *     others were spindly, so the canvas read as "ten different
+ *     authors drew these icons over twenty years" (because they did).
  *
- * Why we DON'T import official Cisco brand-center SVGs:
- *   The Cisco Network Topology Icon Library is published at
- *   cisco.com/c/en/us/about/brand-center/network-topology-icons.html
- *   under brand-use terms that don't permit redistribution in
- *   third-party products. Lucide (ISC license) and Heroicons
- *   (MIT) are the cleanest open alternatives. If the customer
- *   ever requires "official Cisco iconography", that's a
- *   licensing conversation + a one-file swap-in here.
+ * Export contract preserved:
+ *   `CISCO_ICONS` is still a record keyed by `DeviceShapeId`, and the
+ *   value is still a React component that takes `{ className?, title? }`.
+ *   Every existing call site (shapes.tsx, ShapesTab.tsx,
+ *   InventoryTab.tsx, CyberNocShape.tsx, PropertiesPanel.tsx) keeps
+ *   working unchanged. The filename is also kept (despite no longer
+ *   being literal Cisco artwork) to avoid churning those imports.
  */
 
 import React from 'react';
 import {
     Router,
     Network,
+    Boxes,
+    Layers,
     Shield,
+    KeyRound,
+    Radar,
     RadioTower,
     Wifi,
     Server,
+    Database,
+    HardDrive,
+    Phone,
     Cloud,
+    Globe2,
     Box,
+    Users,
+    // Build 115.5 — new shape additions. Each was picked from
+    // lucide-react's icon set on the criterion "is this read at
+    // 36–40px without a caption?". Ones that didn't pass that
+    // bar (e.g. Iot, which reads as a generic chip at small
+    // sizes) get a custom SVG below the lucide section.
+    Cable, // hub — multi-port concentrator
+    Waypoints, // gateway / SD-WAN edge — branch path icon
+    SquareArrowRight, // proxy — request relay
+    ShieldAlert, // waf — shield with alert tick
+    Globe, // dns_server — DNS lookups touch the world
+    Settings2, // dhcp_server — config knob
+    MonitorSmartphone, // web_server — UI presence
+    Code2, // app_server — code-running server
+    Container, // container — stylised crate
+    Cpu, // vm — hypervisor / VM
+    Server as MainframeServer, // mainframe — heavier server (also used for siem)
+    HardDriveDownload, // backup — store-then-restore
+    Laptop, // laptop
+    Smartphone, // mobile_phone
+    Printer, // printer
+    Camera, // camera
+    Activity, // iot_sensor — telemetry pulse
+    LineChart, // siem — analytics-on-events glyph
+    BadgeCheck, // ca / cert authority — verified badge
+    Lock, // bastion — gatekeeper
+    Building2, // branch_office
+    Warehouse, // datacenter
     type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/common/lib/utils';
 
 interface IconProps {
-    /** Tailwind size + color utility (forwarded by callers).
-     *  Status colours (e.g. `text-emerald-500` for healthy)
-     *  flow through to the badge ring tint via currentColor.
-     *  Width/height utilities (`w-12 h-12`) drive the badge size. */
+    /** Tailwind size + optional colour override. Status callers can
+     *  pass e.g. `text-rose-500` to recolour the icon for a critical
+     *  alert; without a `text-*` class the per-class default below
+     *  takes over via tailwind-merge. Width/height utilities
+     *  (`w-9 h-9`) drive the icon size. */
     className?: string;
     title?: string;
 }
 
-/** Per-device-class accent palette. Each shape gets a semantic
- *  colour: rose for security, amber for routing, sky for L2
- *  switching, indigo for L3, violet for wireless control,
- *  fuchsia for wireless edge, emerald for compute, slate for
- *  abstract / unknown. Tailwind class fragments only — no
- *  arbitrary values, so a typo can't render an injected class. */
-interface AccentPalette {
-    /** Soft tinted background of the badge. */
-    badgeBg: string;
-    /** Crisp 1.5px border ring around the badge. */
-    badgeRing: string;
-    /** Glyph colour. Status overrides this through className
-     *  (e.g. `text-rose-500` on a critical device dims the
-     *  badge accent and signals health concurrently). */
-    glyphFg: string;
-}
-
-const ACCENTS: Record<string, AccentPalette> = {
-    rose: {
-        badgeBg: 'bg-rose-50 dark:bg-rose-950/40',
-        badgeRing: 'ring-rose-200/60 dark:ring-rose-800/60',
-        glyphFg: 'text-rose-600 dark:text-rose-400',
-    },
-    amber: {
-        badgeBg: 'bg-amber-50 dark:bg-amber-950/40',
-        badgeRing: 'ring-amber-200/60 dark:ring-amber-800/60',
-        glyphFg: 'text-amber-600 dark:text-amber-400',
-    },
-    sky: {
-        badgeBg: 'bg-sky-50 dark:bg-sky-950/40',
-        badgeRing: 'ring-sky-200/60 dark:ring-sky-800/60',
-        glyphFg: 'text-sky-600 dark:text-sky-400',
-    },
-    indigo: {
-        badgeBg: 'bg-indigo-50 dark:bg-indigo-950/40',
-        badgeRing: 'ring-indigo-200/60 dark:ring-indigo-800/60',
-        glyphFg: 'text-indigo-600 dark:text-indigo-400',
-    },
-    violet: {
-        badgeBg: 'bg-violet-50 dark:bg-violet-950/40',
-        badgeRing: 'ring-violet-200/60 dark:ring-violet-800/60',
-        glyphFg: 'text-violet-600 dark:text-violet-400',
-    },
-    fuchsia: {
-        badgeBg: 'bg-fuchsia-50 dark:bg-fuchsia-950/40',
-        badgeRing: 'ring-fuchsia-200/60 dark:ring-fuchsia-800/60',
-        glyphFg: 'text-fuchsia-600 dark:text-fuchsia-400',
-    },
-    emerald: {
-        badgeBg: 'bg-emerald-50 dark:bg-emerald-950/40',
-        badgeRing: 'ring-emerald-200/60 dark:ring-emerald-800/60',
-        glyphFg: 'text-emerald-600 dark:text-emerald-400',
-    },
-    slate: {
-        badgeBg: 'bg-slate-100 dark:bg-slate-800/60',
-        badgeRing: 'ring-slate-200/70 dark:ring-slate-700/60',
-        glyphFg: 'text-slate-600 dark:text-slate-300',
-    },
-};
+// Build 115.2 — per-device-class default colours. Picked so each
+// device class is visually distinct at-a-glance even when the
+// silhouettes look similar (e.g. switch vs L3 switch). Status
+// (healthy / warning / critical) is signalled separately via the
+// host card's border ring + status LED, NOT by recolouring the icon
+// — operators would lose the ability to tell a "healthy router"
+// apart from a "healthy switch" at a glance otherwise.
+const COLOR = {
+    AMBER: 'text-amber-600 dark:text-amber-400',
+    SKY: 'text-sky-600 dark:text-sky-400',
+    INDIGO: 'text-indigo-600 dark:text-indigo-400',
+    BLUE: 'text-blue-600 dark:text-blue-400',
+    ROSE: 'text-rose-600 dark:text-rose-400',
+    VIOLET: 'text-violet-600 dark:text-violet-400',
+    FUCHSIA: 'text-fuchsia-600 dark:text-fuchsia-400',
+    EMERALD: 'text-emerald-600 dark:text-emerald-400',
+    TEAL: 'text-teal-600 dark:text-teal-400',
+    CYAN: 'text-cyan-600 dark:text-cyan-400',
+    PURPLE: 'text-purple-600 dark:text-purple-400',
+    RED: 'text-red-600 dark:text-red-400',
+    LIME: 'text-lime-600 dark:text-lime-400',
+    SLATE: 'text-slate-500 dark:text-slate-400',
+    PINK: 'text-pink-600 dark:text-pink-400',
+} as const;
 
 /**
- * Render a Lucide glyph inside a tinted, ringed rounded-square
- * badge. The badge fills the parent's `className` size box; the
- * glyph scales to ~58% of the box for visual breathing room.
+ * Wrap a `LucideIcon` so it (a) carries a per-class default colour,
+ * (b) renders at a slightly thicker stroke (1.75) for visual
+ * presence at the 36–40px sizes the diagram canvas uses, and
+ * (c) accepts caller `className` overrides through `tailwind-merge`.
  *
- * The badge itself is the visual frame for the icon — the host
- * card (in `shapes.tsx`) supplies its own card chrome around
- * this badge, so the layers compose: card → status ring →
- * badge → glyph.
+ * Stroke-width 1.75 is a deliberate compromise: the lucide default
+ * (2) reads slightly heavy when an icon shares card real estate
+ * with text labels; 1.5 gets spindly at 32px. 1.75 is the sweet
+ * spot for our card sizes.
  */
-const renderBadged = (
-    Glyph: LucideIcon,
-    accent: AccentPalette,
-    { className, title }: IconProps
-): React.ReactElement => (
-    <div
-        className={cn(
-            'flex items-center justify-center rounded-md ring-1',
-            accent.badgeBg,
-            accent.badgeRing,
-            // Forward whatever sizing the caller asked for
-            // (e.g. `w-12 h-12`). The Lucide glyph uses 58% of
-            // the box via the inner element below.
-            className
-        )}
-        title={title}
-        aria-label={title}
+const wrap = (
+    Icon: LucideIcon,
+    defaultColor: string
+): React.FC<IconProps> => {
+    const Wrapped: React.FC<IconProps> = ({ className, title }) => (
+        <Icon
+            className={cn(defaultColor, className)}
+            strokeWidth={1.75}
+            // `aria-label` and `<title>` together make these icons
+            // accessible to screen readers without forcing every
+            // call site to pass titles. The wrapper falls back to a
+            // generic "device icon" for legacy callers.
+            aria-label={title ?? 'Device icon'}
+            role="img"
+        >
+            {title ? <title>{title}</title> : null}
+        </Icon>
+    );
+    // Friendly displayName helps when debugging React Flow nodes in
+    // the React DevTools tree (otherwise every icon shows as
+    // "Wrapped").
+    Wrapped.displayName = `DeviceIcon(${Icon.displayName ?? Icon.name})`;
+    return Wrapped;
+};
+
+// --- Device class → icon component mapping --------------------------
+
+// Core network
+export const CiscoRouterIcon = wrap(Router, COLOR.AMBER);
+export const CiscoL2SwitchIcon = wrap(Network, COLOR.SKY);
+export const CiscoL3SwitchIcon = wrap(Boxes, COLOR.INDIGO);
+export const CiscoStackIcon = wrap(Layers, COLOR.BLUE);
+export const CiscoWlcIcon = wrap(RadioTower, COLOR.VIOLET);
+export const CiscoApIcon = wrap(Wifi, COLOR.FUCHSIA);
+
+// Build 115.5 — Load balancer icon: AWS/F5-style "stacked
+// rectangles with fanning arrows". Operator feedback: the
+// previous Scale (justice) glyph read as "legal", not network.
+// Lucide doesn't ship anything that conveys "single ingress
+// fans out to multiple backends" cleanly at 36px, so this is a
+// custom SVG drawn to match the visual conventions used by AWS
+// (ELB), F5, and Cisco diagrams. Stroke-only so it inherits the
+// `text-*` colour the same way the lucide-wrapped icons do.
+const LoadBalancerSVG: React.FC<IconProps> = ({ className, title }) => (
+    <svg
+        viewBox="0 0 24 24"
+        className={cn(COLOR.TEAL, className)}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.75}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-label={title ?? 'Load balancer'}
         role="img"
     >
-        <Glyph
-            className={cn('w-[58%] h-[58%]', accent.glyphFg)}
-            strokeWidth={1.75}
-            aria-hidden
-        />
-    </div>
+        {title ? <title>{title}</title> : null}
+        {/* Single ingress at the top — represents the VIP. */}
+        <rect x="9" y="2" width="6" height="4" rx="0.75" />
+        {/* Fanning trunk + branches: down then split to three
+            backend ports below. */}
+        <path d="M12 6v3" />
+        <path d="M12 9 L4.5 14" />
+        <path d="M12 9 L12 14" />
+        <path d="M12 9 L19.5 14" />
+        {/* Three backend rectangles. The middle one is a beat
+            taller so the silhouette reads as load-balanced
+            distribution rather than a fixed 3-way switch. */}
+        <rect x="2" y="14" width="5" height="7" rx="0.75" />
+        <rect x="9.5" y="14" width="5" height="8" rx="0.75" />
+        <rect x="17" y="14" width="5" height="7" rx="0.75" />
+        {/* Tiny indicator dot inside each backend so the
+            rectangles read as servers, not blank boxes. */}
+        <circle cx="4.5" cy="17.5" r="0.6" fill="currentColor" />
+        <circle cx="12" cy="17.5" r="0.6" fill="currentColor" />
+        <circle cx="19.5" cy="17.5" r="0.6" fill="currentColor" />
+    </svg>
 );
+LoadBalancerSVG.displayName = 'DeviceIcon(LoadBalancer)';
+export const CiscoLoadBalancerIcon = LoadBalancerSVG;
 
-/** Cisco router — Lucide `Router` (rectangular box with two
- *  radio waves on top, the canonical "router" glyph). Amber
- *  accent matches the routing-protocol colour convention. */
-export const CiscoRouterIcon: React.FC<IconProps> = (props) =>
-    renderBadged(Router, ACCENTS.amber, props);
+// Security
+export const CiscoFirewallIcon = wrap(Shield, COLOR.ROSE);
+export const CiscoVpnIcon = wrap(KeyRound, COLOR.PURPLE);
+export const CiscoIdsIpsIcon = wrap(Radar, COLOR.RED);
 
-/** L3 switch — Lucide `Network` (three nodes connected in a
- *  triangle, evoking layer-3 routing decisions). Indigo accent. */
-export const CiscoL3SwitchIcon: React.FC<IconProps> = (props) =>
-    renderBadged(Network, ACCENTS.indigo, props);
+// Servers & data
+export const CiscoServerIcon = wrap(Server, COLOR.EMERALD);
+export const CiscoDatabaseIcon = wrap(Database, COLOR.CYAN);
+export const CiscoStorageIcon = wrap(HardDrive, COLOR.LIME);
 
-/** L2 switch — Lucide `Network` with the sky accent so it
- *  visually distinguishes from L3. Same glyph, different colour
- *  is intentional: the layer-2 / layer-3 distinction is more
- *  about colour-coded operational meaning than icon shape. */
-export const CiscoL2SwitchIcon: React.FC<IconProps> = (props) =>
-    renderBadged(Network, ACCENTS.sky, props);
+// Edge / cloud / endpoints
+export const CiscoCloudIcon = wrap(Cloud, COLOR.SLATE);
+export const CiscoInternetIcon = wrap(Globe2, COLOR.SKY);
+export const CiscoIpPhoneIcon = wrap(Phone, COLOR.SLATE);
+export const CiscoUsersIcon = wrap(Users, COLOR.PINK);
+export const CiscoGenericIcon = wrap(Box, COLOR.SLATE);
 
-/** Firewall — Lucide `Shield`. Rose accent (the universal
- *  "security" colour in our palette). */
-export const CiscoFirewallIcon: React.FC<IconProps> = (props) =>
-    renderBadged(Shield, ACCENTS.rose, props);
+// =================================================================
+// Build 115.5 — 24 new shapes. Each is grouped by section to match
+// the palette layout in ShapesTab.tsx:
+//   • Core network  : hub, gateway, proxy
+//   • Security      : waf, ca, bastion, siem
+//   • Infrastructure: dns_server, dhcp_server, web_server,
+//                     app_server, container, vm, mainframe, nas,
+//                     san, backup
+//   • End-user / IoT: laptop, mobile_phone, printer, camera,
+//                     iot_sensor
+//   • Places        : branch_office, datacenter
+// Colour palette extends the per-class default scheme — adjacent
+// shapes use distinct hues so an operator scanning the canvas can
+// tell them apart at a glance even without reading captions.
+// =================================================================
 
-/** Wireless LAN Controller — Lucide `RadioTower` (a tower with
- *  outgoing radio waves), violet accent. */
-export const CiscoWlcIcon: React.FC<IconProps> = (props) =>
-    renderBadged(RadioTower, ACCENTS.violet, props);
+// Core network additions
+export const CiscoHubIcon = wrap(Cable, COLOR.AMBER);
+export const CiscoGatewayIcon = wrap(Waypoints, COLOR.SKY);
+export const CiscoProxyIcon = wrap(SquareArrowRight, COLOR.INDIGO);
 
-/** Access Point — Lucide `Wifi` (concentric arcs), fuchsia
- *  accent so APs cluster visually with WLCs but stay
- *  distinguishable. */
-export const CiscoApIcon: React.FC<IconProps> = (props) =>
-    renderBadged(Wifi, ACCENTS.fuchsia, props);
+// Security additions
+export const CiscoWafIcon = wrap(ShieldAlert, COLOR.ROSE);
+export const CiscoCaIcon = wrap(BadgeCheck, COLOR.PURPLE);
+export const CiscoBastionIcon = wrap(Lock, COLOR.RED);
+export const CiscoSiemIcon = wrap(LineChart, COLOR.VIOLET);
 
-/** Server — Lucide `Server` (rack-unit silhouette with status
- *  LEDs on the front), emerald accent (compute / capacity). */
-export const CiscoServerIcon: React.FC<IconProps> = (props) =>
-    renderBadged(Server, ACCENTS.emerald, props);
+// Infrastructure additions
+export const CiscoDnsServerIcon = wrap(Globe, COLOR.SKY);
+export const CiscoDhcpServerIcon = wrap(Settings2, COLOR.AMBER);
+export const CiscoWebServerIcon = wrap(MonitorSmartphone, COLOR.EMERALD);
+export const CiscoAppServerIcon = wrap(Code2, COLOR.TEAL);
+export const CiscoContainerIcon = wrap(Container, COLOR.BLUE);
+export const CiscoVmIcon = wrap(Cpu, COLOR.PURPLE);
+export const CiscoMainframeIcon = wrap(MainframeServer, COLOR.SLATE);
+export const CiscoNasIcon = wrap(HardDrive, COLOR.LIME);
+// `san` and `nas` both want hard-drive iconography but need to
+// read distinctly. We tint them differently and rely on the
+// caption + colour to disambiguate at small sizes.
+export const CiscoSanIcon = wrap(HardDrive, COLOR.CYAN);
+export const CiscoBackupIcon = wrap(HardDriveDownload, COLOR.PINK);
 
-/** Cloud / WAN — Lucide `Cloud`, slate accent. */
-export const CiscoCloudIcon: React.FC<IconProps> = (props) =>
-    renderBadged(Cloud, ACCENTS.slate, props);
+// End-user / IoT additions
+export const CiscoLaptopIcon = wrap(Laptop, COLOR.SLATE);
+export const CiscoMobilePhoneIcon = wrap(Smartphone, COLOR.PINK);
+export const CiscoPrinterIcon = wrap(Printer, COLOR.SLATE);
+export const CiscoCameraIcon = wrap(Camera, COLOR.RED);
+export const CiscoIotSensorIcon = wrap(Activity, COLOR.LIME);
 
-/** Generic / unclassified — Lucide `Box` (a 3-D outlined box),
- *  slate accent. */
-export const CiscoGenericIcon: React.FC<IconProps> = (props) =>
-    renderBadged(Box, ACCENTS.slate, props);
+// Places additions
+export const CiscoBranchOfficeIcon = wrap(Building2, COLOR.INDIGO);
+export const CiscoDatacenterIcon = wrap(Warehouse, COLOR.SLATE);
 
-/** Public registry: shape id → icon component. Same surface as
- *  pre-Build-110 so call sites in `shapes.tsx` and
- *  `CyberNocShape.tsx` need no change. */
+/** Registry — keys are `DeviceShapeId` values. Order matters for
+ *  human-friendly diffing only; consumers index by id.
+ *
+ *  Build 115.5 — registry expanded from 18 → 42 entries (the 18
+ *  pre-existing shapes + 24 new shape additions). The grouping
+ *  comments are advisory; consumers (palette / inspector) read
+ *  by id, not by section. */
 export const CISCO_ICONS = {
+    // Core network
     router: CiscoRouterIcon,
     switch: CiscoL2SwitchIcon,
     l3_switch: CiscoL3SwitchIcon,
-    firewall: CiscoFirewallIcon,
+    stack: CiscoStackIcon,
+    hub: CiscoHubIcon,
+    gateway: CiscoGatewayIcon,
+    proxy: CiscoProxyIcon,
     wlc: CiscoWlcIcon,
     access_point: CiscoApIcon,
+    load_balancer: CiscoLoadBalancerIcon,
+
+    // Security
+    firewall: CiscoFirewallIcon,
+    waf: CiscoWafIcon,
+    vpn_concentrator: CiscoVpnIcon,
+    ids_ips: CiscoIdsIpsIcon,
+    siem: CiscoSiemIcon,
+    ca: CiscoCaIcon,
+    bastion: CiscoBastionIcon,
+
+    // Servers & infrastructure
     server: CiscoServerIcon,
+    web_server: CiscoWebServerIcon,
+    app_server: CiscoAppServerIcon,
+    dns_server: CiscoDnsServerIcon,
+    dhcp_server: CiscoDhcpServerIcon,
+    mainframe: CiscoMainframeIcon,
+    container: CiscoContainerIcon,
+    vm: CiscoVmIcon,
+    database: CiscoDatabaseIcon,
+
+    // Storage
+    storage: CiscoStorageIcon,
+    nas: CiscoNasIcon,
+    san: CiscoSanIcon,
+    backup: CiscoBackupIcon,
+
+    // End-user / IoT
+    laptop: CiscoLaptopIcon,
+    mobile_phone: CiscoMobilePhoneIcon,
+    ip_phone: CiscoIpPhoneIcon,
+    printer: CiscoPrinterIcon,
+    camera: CiscoCameraIcon,
+    iot_sensor: CiscoIotSensorIcon,
+
+    // Edge / cloud
     cloud: CiscoCloudIcon,
+    internet: CiscoInternetIcon,
+    // Build 115.2 — "users" archetype. Most common operator ask
+    // from the OOB Splunk Cloud review.
+    users: CiscoUsersIcon,
+
+    // Places
+    branch_office: CiscoBranchOfficeIcon,
+    datacenter: CiscoDatacenterIcon,
+
     generic: CiscoGenericIcon,
 } as const;
 

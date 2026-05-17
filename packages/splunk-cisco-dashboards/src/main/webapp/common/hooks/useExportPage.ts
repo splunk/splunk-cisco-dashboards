@@ -49,8 +49,24 @@ export const useExportPage = ({
                     import('html2canvas'),
                     import('jspdf'),
                 ]);
+                /* Build 115.23 — wait one rAF after `setExporting(true)`
+                 * so the consumer's tree has actually re-rendered with
+                 * `exporting=true` BEFORE html2canvas reads the DOM.
+                 * Otherwise the dynamic-import await above is fast
+                 * enough on warm caches that we'd rasterise the
+                 * pre-update layout (dot grid still showing, etc.).
+                 * One frame is enough — React commits + the browser
+                 * paints in the same frame for a single state flip. */
+                await new Promise<void>((resolve) => {
+                    requestAnimationFrame(() => resolve());
+                });
                 const canvas = await html2canvas(node, {
-                    backgroundColor: '#f8fafc',
+                    /* Build 115.23 — pure white instead of the prior
+                     * `#f8fafc` (slate-50). Exports are shareable
+                     * artefacts and the off-white tint read as
+                     * "dirty" against the surrounding white of slide
+                     * decks / PDFs / docs. */
+                    backgroundColor: '#ffffff',
                     scale: window.devicePixelRatio > 1 ? 2 : 1.5,
                     useCORS: true,
                     logging: false,

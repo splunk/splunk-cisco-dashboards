@@ -33,26 +33,134 @@ import { CISCO_ICONS } from '@/common/components/topology/ciscoIcons';
 import type { DeviceShapeId } from '@/common/services/topologyDiscovery';
 import { PALETTE_DND_MIME, type PaletteDragPayload } from './types';
 
+// Build 115.5 — palette is split into named sections so the 42
+// shapes don't dump as one long alphabetised list. The category
+// labels double as section headings in the UI; spec order =
+// render order. Sections expanded from 5 → 7 to fit the new
+// shape additions (containerised compute, end-user / IoT, and
+// physical "places" got their own headers because lumping them
+// into the existing sections made the palette read like noise).
+type ShapeCategory =
+    | 'core'
+    | 'security'
+    | 'infrastructure'
+    | 'storage'
+    | 'enduser'
+    | 'edge'
+    | 'places'
+    | 'layout';
+
 interface ShapeTileSpec {
-    id: DeviceShapeId | 'region';
+    /** Tile identity. `region` and `textbox` are layout primitives
+     *  (containers and free-placement annotations) rather than
+     *  network device shapes; they don't have entries in
+     *  `CISCO_ICONS` and the tile renderer paints a custom glyph
+     *  for each. */
+    id: DeviceShapeId | 'region' | 'textbox';
     label: string;
     description: string;
+    category: ShapeCategory;
 }
 
 const SHAPE_TILES: ShapeTileSpec[] = [
-    { id: 'router', label: 'Router', description: 'WAN edge / aggregation router' },
-    { id: 'switch', label: 'L2 Switch', description: 'Access / distribution switch' },
-    { id: 'l3_switch', label: 'L3 Switch', description: 'Core / distribution L3 switch' },
-    { id: 'firewall', label: 'Firewall', description: 'Perimeter / DC firewall (ASA / FTD)' },
-    { id: 'wlc', label: 'WLC', description: 'Wireless LAN Controller' },
-    { id: 'access_point', label: 'Access Point', description: 'Wireless access point' },
-    { id: 'server', label: 'Server', description: 'Application / endpoint host' },
-    { id: 'cloud', label: 'Cloud / WAN', description: 'Internet, Azure / AWS, MPLS, ISP' },
-    { id: 'generic', label: 'Generic', description: 'Anything not in the icon set' },
-    { id: 'region', label: 'Region / Site', description: 'Labelled container — group devices' },
+    // Core network
+    { id: 'router', label: 'Router', description: 'WAN edge / aggregation router', category: 'core' },
+    { id: 'switch', label: 'L2 Switch', description: 'Access / distribution switch', category: 'core' },
+    { id: 'l3_switch', label: 'L3 Switch', description: 'Core / distribution L3 switch', category: 'core' },
+    { id: 'stack', label: 'Switch Stack', description: 'Catalyst stack of access switches', category: 'core' },
+    { id: 'hub', label: 'Hub', description: 'Multi-port concentrator / patch panel', category: 'core' },
+    { id: 'gateway', label: 'Gateway', description: 'SD-WAN / edge gateway', category: 'core' },
+    { id: 'proxy', label: 'Proxy', description: 'Forward / reverse proxy', category: 'core' },
+    { id: 'wlc', label: 'WLC', description: 'Wireless LAN Controller', category: 'core' },
+    { id: 'access_point', label: 'Access Point', description: 'Wireless access point', category: 'core' },
+    { id: 'load_balancer', label: 'Load Balancer', description: 'F5 BIG-IP / NetScaler / AWS ELB / Avi ADC', category: 'core' },
+    // Security
+    { id: 'firewall', label: 'Firewall', description: 'Perimeter / DC firewall (ASA / FTD)', category: 'security' },
+    { id: 'waf', label: 'WAF', description: 'Web application firewall', category: 'security' },
+    { id: 'vpn_concentrator', label: 'VPN', description: 'VPN concentrator / AnyConnect headend', category: 'security' },
+    { id: 'ids_ips', label: 'IDS / IPS', description: 'Intrusion sensor / Stealthwatch', category: 'security' },
+    { id: 'siem', label: 'SIEM', description: 'SIEM / SOC analytics', category: 'security' },
+    { id: 'ca', label: 'CA', description: 'Certificate authority', category: 'security' },
+    { id: 'bastion', label: 'Bastion', description: 'Bastion / jump host', category: 'security' },
+    // Servers & infrastructure
+    { id: 'server', label: 'Server', description: 'Generic application / endpoint host', category: 'infrastructure' },
+    { id: 'web_server', label: 'Web Server', description: 'HTTP / web tier', category: 'infrastructure' },
+    { id: 'app_server', label: 'App Server', description: 'Application tier', category: 'infrastructure' },
+    { id: 'dns_server', label: 'DNS', description: 'DNS resolver / authoritative', category: 'infrastructure' },
+    { id: 'dhcp_server', label: 'DHCP', description: 'DHCP server', category: 'infrastructure' },
+    { id: 'mainframe', label: 'Mainframe', description: 'Mainframe / midrange host', category: 'infrastructure' },
+    { id: 'container', label: 'Container', description: 'Docker container / Kubernetes pod', category: 'infrastructure' },
+    { id: 'vm', label: 'VM', description: 'Virtual machine / hypervisor', category: 'infrastructure' },
+    { id: 'database', label: 'Database', description: 'Relational / NoSQL datastore', category: 'infrastructure' },
+    // Storage
+    { id: 'storage', label: 'Storage', description: 'Generic disk array', category: 'storage' },
+    { id: 'nas', label: 'NAS', description: 'Network-attached storage', category: 'storage' },
+    { id: 'san', label: 'SAN', description: 'Storage area network', category: 'storage' },
+    { id: 'backup', label: 'Backup', description: 'Backup / archive target', category: 'storage' },
+    // End-user / IoT
+    { id: 'laptop', label: 'Laptop', description: 'Workstation / laptop endpoint', category: 'enduser' },
+    { id: 'mobile_phone', label: 'Mobile', description: 'Mobile phone / tablet', category: 'enduser' },
+    { id: 'ip_phone', label: 'IP Phone', description: 'CUCM-registered IP phone / VoIP endpoint', category: 'enduser' },
+    { id: 'printer', label: 'Printer', description: 'Network printer / MFP', category: 'enduser' },
+    { id: 'camera', label: 'Camera', description: 'IP camera / surveillance', category: 'enduser' },
+    { id: 'iot_sensor', label: 'IoT Sensor', description: 'IoT telemetry sensor', category: 'enduser' },
+    // Edge & cloud
+    { id: 'cloud', label: 'Cloud / WAN', description: 'MPLS, private cloud, abstract WAN', category: 'edge' },
+    { id: 'internet', label: 'Internet', description: 'Public Internet boundary', category: 'edge' },
+    // Build 115.2 — users / human population glyph (remote workers,
+    // SOC analysts, end-user pools).
+    { id: 'users', label: 'Users', description: 'Remote users, SOC analysts, end-user populations', category: 'edge' },
+    // Places
+    { id: 'branch_office', label: 'Branch Office', description: 'Remote / branch site', category: 'places' },
+    { id: 'datacenter', label: 'Data Center', description: 'On-prem / co-located data centre', category: 'places' },
+    // Layout
+    { id: 'region', label: 'Region / Site', description: 'Labelled container — group devices', category: 'layout' },
+    // Build 115.1 — free-placement annotation. Drops a small text
+    // node anywhere on the canvas with default styling.
+    { id: 'textbox', label: 'Text Box', description: 'Caption, port label, or freeform annotation', category: 'layout' },
+    { id: 'generic', label: 'Generic', description: 'Anything not in the icon set', category: 'layout' },
 ];
 
-const tilePayload = (id: DeviceShapeId | 'region'): PaletteDragPayload => {
+const CATEGORY_LABELS: Record<ShapeCategory, string> = {
+    core: 'Core Network',
+    security: 'Security',
+    infrastructure: 'Servers & Infrastructure',
+    storage: 'Storage',
+    enduser: 'End-User & IoT',
+    edge: 'Edge & Cloud',
+    places: 'Places',
+    layout: 'Layout',
+};
+
+// Build 115 — friendly default labels so a freshly-dropped shape
+// reads naturally on the canvas instead of "Vpn Concentrator" or
+// "Ids Ips" (the literal id-with-spaces transform). Keep entries
+// here only when the auto-generated label would look ugly.
+const SHAPE_DEFAULT_LABEL_OVERRIDES: Partial<Record<DeviceShapeId, string>> = {
+    l3_switch: 'L3 Switch',
+    vpn_concentrator: 'VPN',
+    ids_ips: 'IDS/IPS',
+    ip_phone: 'IP Phone',
+    load_balancer: 'Load Balancer',
+    // Build 115.5 additions
+    waf: 'WAF',
+    ca: 'CA',
+    web_server: 'Web Server',
+    app_server: 'App Server',
+    dns_server: 'DNS Server',
+    dhcp_server: 'DHCP Server',
+    nas: 'NAS',
+    san: 'SAN',
+    iot_sensor: 'IoT Sensor',
+    mobile_phone: 'Mobile Phone',
+    branch_office: 'Branch Office',
+    datacenter: 'Data Center',
+    siem: 'SIEM',
+};
+
+const tilePayload = (
+    id: DeviceShapeId | 'region' | 'textbox'
+): PaletteDragPayload => {
     if (id === 'region') {
         return {
             variant: 'region',
@@ -61,18 +169,29 @@ const tilePayload = (id: DeviceShapeId | 'region'): PaletteDragPayload => {
             defaultHeight: 220,
         };
     }
+    if (id === 'textbox') {
+        // Empty default text — the textbox renders a "Click to edit
+        // text" placeholder until the operator types something via
+        // the inspector. Avoids "New text" appearing in finished
+        // diagrams when the operator forgets to edit.
+        return { variant: 'textbox', defaultText: '' };
+    }
+    const override = SHAPE_DEFAULT_LABEL_OVERRIDES[id];
     return {
         variant: 'shape',
         shape: id,
         defaultLabel:
-            id === 'l3_switch'
-                ? 'L3 Switch'
-                : id.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase()),
+            override ??
+            id.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase()),
     };
 };
 
 const ShapeTile: React.FC<ShapeTileSpec> = ({ id, label, description }) => {
-    const Icon = id === 'region' ? null : CISCO_ICONS[id];
+    // `region` and `textbox` are not in `CISCO_ICONS` — they paint
+    // their own custom glyph below (a dashed rect for region, an
+    // "T" for textbox). Everything else looks up the Cisco SVG.
+    const Icon =
+        id === 'region' || id === 'textbox' ? null : CISCO_ICONS[id];
     const handleDragStart = (e: React.DragEvent<HTMLDivElement>): void => {
         const payload = tilePayload(id);
         e.dataTransfer.setData(PALETTE_DND_MIME, JSON.stringify(payload));
@@ -104,6 +223,13 @@ const ShapeTile: React.FC<ShapeTileSpec> = ({ id, label, description }) => {
             <div className="w-10 h-10 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:text-sky-600 dark:group-hover:text-sky-400">
                 {Icon ? (
                     <Icon className="w-9 h-9" />
+                ) : id === 'textbox' ? (
+                    // A typographic "T" reads as "text" at a glance,
+                    // matching the affordance of design-tool text
+                    // tools (Figma, Sketch, Visio).
+                    <div className="w-9 h-7 rounded border border-slate-300 dark:border-slate-600 flex items-center justify-center text-[14px] font-serif font-semibold text-slate-500 dark:text-slate-400">
+                        T
+                    </div>
                 ) : (
                     <div className="w-9 h-7 rounded border-2 border-dashed border-slate-400 dark:border-slate-500 flex items-center justify-center text-[8px] uppercase tracking-wider text-slate-400 dark:text-slate-500">
                         Region
@@ -117,19 +243,56 @@ const ShapeTile: React.FC<ShapeTileSpec> = ({ id, label, description }) => {
     );
 };
 
-export const ShapesTab: React.FC = () => (
-    <div className="flex flex-col gap-3 p-3">
-        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
-            Drag any shape onto the canvas. Use{' '}
-            <span className="font-medium text-slate-700 dark:text-slate-200">
-                Region / Site
-            </span>{' '}
-            to draw a labelled container, then drop devices inside it.
-        </p>
-        <div className="grid grid-cols-2 gap-2">
-            {SHAPE_TILES.map((s) => (
-                <ShapeTile key={s.id} {...s} />
-            ))}
+export const ShapesTab: React.FC = () => {
+    // Build 115 — group tiles by category so the 18-shape palette
+    // stays scannable. We compute groups inline rather than
+    // pre-bucketing because the spec order in `SHAPE_TILES` is
+    // the canonical render order — moving things around in code
+    // moves them in the UI without a second source of truth.
+    // Build 115.5 — section render order. Matches the
+    // `ShapeCategory` union order and the section list documented
+    // in `CATEGORY_LABELS`.
+    const ordered: ShapeCategory[] = [
+        'core',
+        'security',
+        'infrastructure',
+        'storage',
+        'enduser',
+        'edge',
+        'places',
+        'layout',
+    ];
+    const grouped = new Map<ShapeCategory, ShapeTileSpec[]>();
+    for (const tile of SHAPE_TILES) {
+        const bucket = grouped.get(tile.category) ?? [];
+        bucket.push(tile);
+        grouped.set(tile.category, bucket);
+    }
+    return (
+        <div className="flex flex-col gap-3 p-3">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
+                Drag any shape onto the canvas. Use{' '}
+                <span className="font-medium text-slate-700 dark:text-slate-200">
+                    Region / Site
+                </span>{' '}
+                to draw a labelled container, then drop devices inside it.
+            </p>
+            {ordered.map((cat) => {
+                const tiles = grouped.get(cat);
+                if (!tiles || tiles.length === 0) return null;
+                return (
+                    <div key={cat} className="flex flex-col gap-1.5">
+                        <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-0.5">
+                            {CATEGORY_LABELS[cat]}
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            {tiles.map((s) => (
+                                <ShapeTile key={s.id} {...s} />
+                            ))}
+                        </div>
+                    </div>
+                );
+            })}
         </div>
-    </div>
-);
+    );
+};

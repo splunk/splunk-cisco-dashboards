@@ -69,7 +69,14 @@ export const DiagramPalette: React.FC<{ className?: string }> = ({ className }) 
                     );
                 })}
             </div>
-            <div className="flex-1 min-h-0 overflow-hidden">
+            {/* Build 115.7 — switched from `overflow-hidden` to
+             *  `overflow-y-auto` so the Shapes catalogue (now 42
+             *  shapes across 7+ sections) can actually scroll on
+             *  short viewports. Previously anything below
+             *  Servers & Infrastructure was clipped because the
+             *  wrapper hid the overflow and `ShapesTab` itself
+             *  had no scroll viewport of its own. */}
+            <div className="flex-1 min-h-0 overflow-y-auto">
                 {active === 'shapes' ? <ShapesTab /> : <InventoryTab />}
             </div>
         </div>

@@ -88,21 +88,74 @@ const STATUS_LED: Record<
  *  registry — shapes are an inventory concept, themes are
  *  presentation. */
 const SHAPE_TO_ICON: Record<DeviceShapeId, keyof typeof CISCO_ICONS> = {
+    // Core network
     switch: 'switch',
     l3_switch: 'l3_switch',
+    stack: 'stack',
     router: 'router',
-    firewall: 'firewall',
+    // Build 115.5 — new core-network archetypes.
+    hub: 'hub',
+    gateway: 'gateway',
+    proxy: 'proxy',
     wlc: 'wlc',
     access_point: 'access_point',
+    load_balancer: 'load_balancer',
+    // Security
+    firewall: 'firewall',
+    waf: 'waf',
+    vpn_concentrator: 'vpn_concentrator',
+    ids_ips: 'ids_ips',
+    siem: 'siem',
+    ca: 'ca',
+    bastion: 'bastion',
+    // Servers & infrastructure
     server: 'server',
+    web_server: 'web_server',
+    app_server: 'app_server',
+    dns_server: 'dns_server',
+    dhcp_server: 'dhcp_server',
+    mainframe: 'mainframe',
+    container: 'container',
+    vm: 'vm',
+    database: 'database',
+    // Storage
+    storage: 'storage',
+    nas: 'nas',
+    san: 'san',
+    backup: 'backup',
+    // End-user / IoT
+    laptop: 'laptop',
+    mobile_phone: 'mobile_phone',
+    ip_phone: 'ip_phone',
+    printer: 'printer',
+    camera: 'camera',
+    iot_sensor: 'iot_sensor',
+    // Edge / cloud
     cloud: 'cloud',
+    internet: 'internet',
+    users: 'users',
+    // Places
+    branch_office: 'branch_office',
+    datacenter: 'datacenter',
     generic: 'generic',
 };
 
 /** All four sides expose BOTH source and target handles so the
  *  operator can drag in either direction. They share an id-prefix
  *  per side so a future "port assignment" editor can persist
- *  which side an edge attached to. */
+ *  which side an edge attached to.
+ *
+ *  Build 115.5 — the SOURCE handle MUST render after the target
+ *  handle so it sits on top of the target in DOM z-order. When
+ *  both handles are stacked at the same `Position` (e.g. top
+ *  centre), React Flow's pointer pickup chooses the topmost
+ *  handle. Render-order target-first makes the source handle the
+ *  one the operator picks up, which means the connection's
+ *  `source` is the node where the drag STARTED — matching the
+ *  operator's mental model ("I drew an arrow from A to B; the
+ *  arrow points to B"). The previous (source-first) order
+ *  made the arrow point in the OPPOSITE direction of the
+ *  drag for any drag that started on the AP / lower-card side. */
 const NodeHandles: React.FC = () => {
     const sides: Array<{ pos: Position; id: string }> = [
         { pos: Position.Top, id: 'top' },
@@ -115,20 +168,20 @@ const NodeHandles: React.FC = () => {
             {sides.map((s) => (
                 <React.Fragment key={s.id}>
                     <Handle
-                        type="source"
-                        position={s.pos}
-                        id={`${s.id}-source`}
-                        className={cn(
-                            '!w-2 !h-2 !bg-sky-400 !border-none',
-                            'opacity-0 group-hover:opacity-100 transition-opacity'
-                        )}
-                    />
-                    <Handle
                         type="target"
                         position={s.pos}
                         id={`${s.id}-target`}
                         className={cn(
                             '!w-2 !h-2 !bg-sky-300 !border-none',
+                            'opacity-0 group-hover:opacity-100 transition-opacity'
+                        )}
+                    />
+                    <Handle
+                        type="source"
+                        position={s.pos}
+                        id={`${s.id}-source`}
+                        className={cn(
+                            '!w-2 !h-2 !bg-sky-400 !border-none',
                             'opacity-0 group-hover:opacity-100 transition-opacity'
                         )}
                     />

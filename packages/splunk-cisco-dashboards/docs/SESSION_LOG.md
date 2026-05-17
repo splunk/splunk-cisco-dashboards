@@ -7,6 +7,4537 @@
 
 ---
 
+## 2026-05-16 (Build 115.23) — Clean white canvas in Present mode + PNG/PDF export
+
+### Goal
+
+Operator quote:
+
+> "I want present mode to not show the dots and the same when
+>  we export to pdf or png, keep a clean white background not
+>  canvas or grid."
+
+Present mode was already supposed to hide the dot grid (114
+work) and indeed did. The issue was twofold:
+
+  1. **Present-mode wrapper was `bg-slate-50`** (≈ #f8fafc), a
+     faint gray tint. Operators showing the diagram on a slide
+     deck or against a white window saw the canvas as "slightly
+     dirty". They wanted PURE white.
+
+  2. **Export captured the editor.** The PNG / PDF capture is
+     produced by `useExportPage` running html2canvas against
+     the live DOM. If the operator was in EDIT mode when they
+     clicked export, the rasterised image included the dot
+     grid (because edit-mode renders the grid) and used the
+     same off-white html2canvas backplate (`#f8fafc`). The
+     result looked like a screenshot of the editor, not a
+     finished artefact.
+
+### Discovery & decision
+
+Three fixes, motivated by what each surface needs to look
+like:
+
+  • **Present mode wrapper** — pure `bg-white` in light theme
+    (was `bg-slate-50`). Dark theme stays at `slate-950` so
+    operators who chose dark theme also get dark presents.
+  • **Export wrapper** — pure `bg-white` regardless of theme.
+    Operators export to share with audiences who want a
+    printable / pasteable artefact. A dark-mode capture would
+    look out of place in a slide deck or PDF report; white is
+    the universal "shareable" background. We deliberately
+    DON'T inherit the operator's theme for exports.
+  • **Export capture** — suppress the dot-grid `Background`
+    component during the rasterisation, AND change html2canvas
+    `backgroundColor` from `'#f8fafc'` to `'#ffffff'`. The
+    backplate change matters because html2canvas uses it for
+    any fully-transparent regions in the captured DOM (e.g.,
+    the React Flow viewport). With the dot-grid gone, the
+    backplate is what shows through.
+
+Implementation note — **rAF wait before capture**. Setting
+`exporting=true` flips React state but doesn't synchronously
+re-render. The dynamic imports (`html2canvas`, `jsPDF`) are
+fast on a warm cache; on those paths we'd rasterise BEFORE
+React had a chance to commit the dot-grid removal. Solution:
+one `requestAnimationFrame` between `setExporting(true)` and
+the html2canvas call. React commits + browser paints within a
+single frame for a one-shot state flip, so one rAF is enough.
+
+We considered also hiding the build pill, Controls (+/-),
+and MiniMap during export. Decided NO for now — the operator
+asked specifically about the grid + background. Over-hiding
+is a different design conversation (do they want totally bare
+diagrams? do they want the legend? what about the overall
+title?). If they ask for "fully clean exports" later we can
+do a second pass with a wider hide-list.
+
+### Files touched
+
+  • `packages/splunk-cisco-dashboards/src/main/webapp/common/components/diagram/NetworkDiagramCanvas.tsx`
+      - New `exporting?: boolean` prop on
+        `NetworkDiagramCanvasProps`.
+      - Wrapper `className` cn() now branches on
+        `exporting → isViewMode → edit` for backgrounds:
+          • exporting   → `bg-white border-slate-200`
+            (no dark variant — exports are always white).
+          • isViewMode  → `bg-white dark:bg-slate-950 …`
+            (was `bg-slate-50` in light).
+          • edit        → unchanged.
+      - Dot-grid `<Background>` now gated on
+        `!isViewMode && !exporting`.
+  • `packages/splunk-cisco-dashboards/src/main/webapp/pages/network_diagram/index.tsx`
+      - Passes `exporting={exporting}` (already had the flag
+        from `useExportPage`) down to `NetworkDiagramCanvas`.
+  • `packages/splunk-cisco-dashboards/src/main/webapp/common/hooks/useExportPage.ts`
+      - `backgroundColor: '#ffffff'` (was `#f8fafc`).
+      - Added a `requestAnimationFrame` await between
+        `setExporting(true)` and the html2canvas call so the
+        consumer tree has actually re-rendered with the new
+        flag before rasterisation.
+  • `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf`
+      - Build 1172 → 1173.
+  • `packages/splunk-cisco-dashboards/docs/SESSION_LOG.md`
+      - This entry.
+
+### Verification
+
+  • `yarn workspace @splunk/splunk-cisco-dashboards run typecheck` → clean.
+  • `yarn workspace @splunk/splunk-cisco-dashboards run package:app` → produced
+    `dist/splunk-cisco-dashboards-1.0.10.tar.gz` (14 MB);
+    embedded `default/app.conf` confirms `build = 1173`.
+  • Manual checks the operator should run after install +
+    `splunk _bump` + Cmd+Shift+R:
+      1. Edit mode → dot grid still visible (unchanged).
+      2. Click "Present" → wrapper is PURE white (no slate
+         tint), no dot grid.
+      3. Edit mode → click "Export → PNG". Open the
+         downloaded file. No dot grid, pure white
+         background, no editor chrome that wasn't there
+         before.
+      4. Edit mode in DARK theme → click "Export → PDF". Open
+         the file. Background is still white (theme-
+         independent for exports), diagram contents render
+         on the white surface.
+      5. Build pill still reads "Build 1173" in the canvas
+         top-right (unchanged in this build).
+
+### What's next
+
+  • Operator confirms 115.23 makes Present mode and exports
+    look clean.
+  • Returning to the menu we paused at the start of 115.21:
+      (B) Auto-stash unsaved canvas work to sessionStorage
+          on every change → restore on mount. Makes the
+          115.20 "Reload page" CTA non-destructive. ~1-2 hr.
+      (C) Phase 6 — inventory automation. Auto-bind by name
+          match, bulk import from `asset_inventory`,
+          "Suggest from inventory" seed layout. Multi-
+          session.
+      (D) Parked design questions Q1 (bottom text on unbound
+          cards) and Q2 (display name vs short alias on
+          canvas).
+  • Operator originally chose (A) build pill in 115.21. With
+    that shipped + bug-fixed in 115.22, they should pick
+    one of the remaining options for the next thread.
+
+---
+
+## 2026-05-16 (Build 115.22) — Build tag fix: drop defensive `typeof process` guard; read version from app.conf
+
+### Goal
+
+Operator installed 115.21, ran `splunk _bump`, hard-refreshed,
+and screenshotted the new build pill. It read **"Build dev"**
+instead of **"Build 1171"**. The screenshot was unmistakable —
+the pill was rendering, in the right position, with the right
+styling, but with the fallback value.
+
+### Diagnosis
+
+Inspected the minified bundle directly:
+
+```
+var db = "undefined" != typeof process && process.env ? "1171" : "dev"
+```
+
+The DefinePlugin substitution itself worked perfectly — the
+literal `"1171"` is right there in the ternary's true branch.
+But the runtime can never reach that branch in the browser
+because `process` is not a global there, so
+`typeof process != "undefined"` is **false** and the ternary
+falls through to `"dev"`.
+
+The 115.21 `buildInfo.ts` was written like this:
+
+```ts
+export const APP_BUILD: string =
+    (typeof process !== 'undefined' && process.env &&
+     process.env.APP_BUILD) || 'dev';
+```
+
+The `typeof process !== 'undefined'` was added "defensively"
+in case the bundle ran outside webpack. That was wrong on two
+levels:
+
+  1. **Splunk Web bundles run in browsers**, not in node. The
+     defensive scenario that motivated the guard is the one
+     that's GUARANTEED to be falsy in production. The whole
+     guard is backwards.
+
+  2. **DefinePlugin only replaces the exact dotted path**
+     (`process.env.APP_BUILD`). The OTHER `process.env`
+     reference in the same chain (the bare one, used as a
+     truthiness probe) is left intact, and short-circuits
+     for the same reason.
+
+Trust the substitution. After DefinePlugin runs:
+
+```js
+process.env.APP_BUILD || 'dev'
+//      becomes
+"1171" || 'dev'
+//      evaluates to
+"1171"
+```
+
+No `process` global ever needs to exist at runtime; the
+reference is gone by the time the bundle ships. The fallback
+('dev') is only hit if webpack runs WITHOUT our DefinePlugin
+— typically a unit test harness or an ad-hoc node script —
+where node provides a real `process` global anyway, so
+`process.env.APP_BUILD` resolves to undefined and the OR
+fallback kicks in cleanly.
+
+### Bonus fix found while looking at the bundle
+
+The version label was reading **"v0.1.0"** because 115.21
+read `package.json#version` (which is the npm workspace
+version, "0.1.0" today) instead of `app.conf#version`
+(which is "1.0.10" — the canonical Splunk app version that
+splunkd reports and the Splunk Web Apps page displays).
+
+Operators identifying their version in a support ticket
+should see the SAME string that splunkd reports for the
+app — anything else is a 20-minute "wait, which version
+are you actually on?" detour. We're already reading
+`build = NNNN` from app.conf in webpack.config.js; reading
+`version = X.Y.Z` from the same file is a one-line
+generalisation.
+
+### Files touched
+
+  • `packages/splunk-cisco-dashboards/src/main/webapp/common/lib/buildInfo.ts`
+      - Removed the `typeof process !== 'undefined'` guard
+        and the bare `process.env` truthiness probe.
+      - Now reads `process.env.APP_BUILD || 'dev'` directly
+        — DefinePlugin substitutes the LHS at compile time,
+        so the runtime value is the literal build number.
+  • `packages/splunk-cisco-dashboards/webpack.config.js`
+      - Generalised `readAppBuild()` → `readAppConfField(key)`
+        so the same regex-anchored matcher serves both
+        `build` and `version` lookups.
+      - APP_VERSION now reads `version = X.Y.Z` from
+        `default/app.conf` (matches what splunkd reports),
+        replacing the `require('./package.json').version`
+        fallback (which would print "0.1.0").
+  • `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf`
+      - Build 1171 → 1172.
+  • `packages/splunk-cisco-dashboards/docs/SESSION_LOG.md`
+      - This entry.
+
+### Verification
+
+  • `yarn workspace @splunk/splunk-cisco-dashboards run typecheck` → clean.
+  • `yarn workspace @splunk/splunk-cisco-dashboards run package:app` → produced
+    `dist/splunk-cisco-dashboards-1.0.10.tar.gz` (14 MB).
+  • Bundle inspection (the smoking gun this time):
+
+    ```
+    var db = "1172", fb = "1.0.10",
+        mb = "v".concat(fb, " · Build ").concat(db)
+    ```
+
+    No guards, no ternary, no fallback. The literals are
+    baked straight in.
+  • Manual checks the operator should run after install +
+    `splunk _bump` + Cmd+Shift+R:
+      1. Build pill in canvas top-right reads "Build 1172".
+      2. Hover → tooltip reads "v1.0.10 · Build 1172"
+         (matches what splunkd reports for the app).
+      3. Help (i) popover footer reads
+         "Splunk Cisco Dashboards · v1.0.10 · Build 1172".
+
+### Lesson learned
+
+When DefinePlugin (or any compile-time substitution
+mechanism) is doing the heavy lifting, "defensive" guards
+around the substituted reference are almost always wrong
+— they either short-circuit before the literal can be
+read, or they reference symbols that DefinePlugin doesn't
+substitute and that don't exist at runtime. Trust the
+plugin; let the fallback be the only thing the
+non-substituted code path produces.
+
+### What's next
+
+  • Operator confirms 115.22 pill reads "Build 1172"
+    after `_bump` + refresh.
+  • Open menu (unchanged from 115.21):
+      (B) Auto-stash unsaved canvas work to sessionStorage.
+      (C) Phase 6 — inventory automation.
+      (D) Parked design questions Q1 / Q2.
+
+---
+
+## 2026-05-16 (Build 115.21) — Always-visible build tag in the canvas (compile-time injection)
+
+### Goal
+
+After 115.20 shipped, the operator still saw scroll-as-zoom
+behaviour in the browser. The fix was correct in the bundle
+on disk (we verified `panOnScroll` / `zoomOnScroll={false}` /
+`zoomActivationKeyCode` ALL present in
+`appserver/static/pages/network_diagram.js`) — but their
+browser was running a cached older bundle from before the
+115.19 install. `splunk install app -update 1` updates files
+on disk; it does NOT bump the splunkweb static-asset cache
+token. Cmd+Shift+R alone wasn't enough either, because Splunk
+Web serves static assets from `/static/@<hash>/...` URLs
+where `<hash>` only rotates on:
+
+  • `splunk _bump`
+  • `splunk restart`
+  • the operator manually clearing site data
+
+Once the operator ran `splunk _bump` the new behaviour took
+effect immediately. Total time lost to the diagnosis: ~30
+minutes. Operator quote at the start of that 30 min:
+
+> "scrolling is worse now! oh my gosh, what did you do!"
+
+That's a UX failure of OURS, not theirs — there was no way
+for the operator to verify which bundle version was actually
+running in the browser. We need a "is the new build loaded?"
+indicator that's always visible.
+
+### Discovery & decision
+
+Three design choices, each motivated by the diagnostic
+property we want:
+
+1. **Inject the build number at compile time, not fetch it
+   at runtime.** A runtime fetch from splunkd would tell the
+   operator what the SERVER's `app.conf` says today — which
+   could differ from the bundle currently executing in the
+   browser if there's a cache mismatch. That defeats the
+   point. Compile-time injection guarantees the displayed
+   value MATCHES the JS bytes that printed it.
+
+2. **Use `webpack.DefinePlugin` to read `default/app.conf`
+   at build time.** The `build = NNNN` line is the canonical
+   build identifier and we already bump it on every release.
+   Reading it once during webpack runs is cheaper than
+   maintaining a separate constant somewhere that drifts
+   from the .conf reality. The `package.json#version` is
+   read the same way for the secondary version label.
+
+3. **Render in two places, with two different priorities:**
+   - **Top-right of the canvas, always visible** (no edit /
+     view-mode gate, no empty-canvas gate). A small
+     "Build 1171" pill in monospace at 10px so it's
+     unobtrusive but legible. This is the at-a-glance
+     check.
+   - **Footer of the Help (i) popover** with the full
+     "Splunk Cisco Dashboards · v1.0.10 · Build 1171"
+     label. Discoverable rather than always-on; gives the
+     operator a copy-pasteable string for support
+     tickets.
+
+We considered putting the build tag in the page header
+instead, but the header is already cramped (picker, dirty
+dot, action buttons, theme toggle, animation toggle, IP
+toggle, export dropdown) and adding more would crowd a
+zone the operator interacts with constantly. The canvas
+top-right corner is otherwise empty in view mode and
+sparsely used in edit mode (only the help button), so
+real estate is plentiful and the badge doesn't compete
+with anything for attention.
+
+### Files touched
+
+  • `packages/splunk-cisco-dashboards/webpack.config.js`
+      - Added `webpack.DefinePlugin` injection of
+        `process.env.APP_BUILD` (read from `default/app.conf`'s
+        `build = NNNN` line) and `process.env.APP_VERSION`
+        (read from `package.json#version`).
+      - Helper `readAppBuild()` parses the .conf at compile
+        time with a regex; falls back to `'unknown'` on
+        unexpected file shape (defensive but unreachable in
+        practice).
+  • `packages/splunk-cisco-dashboards/src/main/webapp/common/lib/buildInfo.ts` (new)
+      - Re-exports the injected env values as typed
+        constants (`APP_BUILD`, `APP_VERSION`,
+        `APP_VERSION_LABEL`). Localises the
+        `process.env.X ?? 'dev'` ceremony so call sites
+        stay clean.
+  • `packages/splunk-cisco-dashboards/src/main/webapp/common/components/diagram/NetworkDiagramCanvas.tsx`
+      - Imported the build-info module.
+      - Added an always-visible "Build NNNN" pill at
+        `top-3 right-24` (clears the help button at
+        `right-14` with a 12px gap regardless of badge
+        width).
+      - Added a footer line in the help popover with the
+        full version label.
+  • `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf`
+      - Build 1170 → 1171.
+  • `packages/splunk-cisco-dashboards/docs/SESSION_LOG.md`
+      - This entry.
+
+### Verification
+
+  • `yarn workspace @splunk/splunk-cisco-dashboards run typecheck` → clean.
+  • `yarn workspace @splunk/splunk-cisco-dashboards run package:app` → produced
+    `dist/splunk-cisco-dashboards-1.0.10.tar.gz` (14 MB).
+  • Bundle inspection confirms compile-time injection
+    landed: the literal string `"1171"` appears in
+    `appserver/static/pages/network_diagram.js` (would
+    not appear from any other code path), and the
+    literal "Splunk Cisco Dashboards · v" appears once
+    (the popover footer template).
+  • Manual checks the operator should run after install
+    + `splunk _bump`:
+      1. Open any diagram → top-right corner shows
+         "Build 1171" pill (always, regardless of mode
+         or empty canvas).
+      2. Hover the pill → tooltip reads
+         "v1.0.10 · Build 1171".
+      3. Open the Help (i) popover → footer reads
+         "Splunk Cisco Dashboards · v1.0.10 · Build 1171".
+      4. Future upgrade: install new tarball, run
+         `splunk _bump`, hard-refresh. The pill should
+         flip to the new build number IMMEDIATELY upon
+         reload. If it doesn't, the operator knows in
+         5 seconds (not 30 minutes) that the cache
+         didn't bust and they should try `splunk
+         restart` or DevTools → Clear site data.
+
+### Operational rule going forward
+
+After every `splunk install app -update 1`, the operator
+should run **one** of:
+
+  • `splunk _bump` (fastest, no restart)  — preferred
+  • `/opt/splunk/bin/splunk restart`      — if `_bump`
+                                            misses anything
+  • DevTools → Application → Storage → Clear site data
+                                          — nuclear option
+
+…then hard-refresh the browser (Cmd+Shift+R) and verify
+the build-number pill matches the build they expect. If
+the pill matches, the new bundle is definitely loaded
+and any remaining issues are real bugs to debug. If it
+doesn't, the cache hasn't busted yet — try the next
+option in the list before reporting a bug.
+
+This will be added to the deploy / upgrade docs (TBD)
+the next time we touch them.
+
+### What's next
+
+  • Operator confirms the build pill renders as expected
+    after install + `_bump` + refresh.
+  • Open menu of next-steps the operator can pick from
+    (proposed via AskQuestion at the start of this
+    session):
+      (B) Auto-stash unsaved canvas work to sessionStorage
+          on every change → restore on mount → makes the
+          115.20 "Reload page" CTA non-destructive. Modest
+          scope, large UX win.
+      (C) Phase 6 — inventory automation. Auto-bind by
+          name match, bulk import from `asset_inventory`,
+          "Suggest from inventory" seed layout. Multi-
+          session.
+      (D) Parked design questions Q1 (bottom text on
+          unbound cards) and Q2 (display name vs short
+          alias on canvas). Need operator's pick first.
+
+---
+
+## 2026-05-16 (Build 115.20) — Error toast no longer truncates; one-click "Reload page" CTA on stale-CSRF errors
+
+### Goal
+
+After 115.18 shipped the friendlier CSRF error message ("Splunk
+session token is stale … Reload the page to refresh the CSRF
+cookie, then try the save again."), the operator hit it in the
+field and screenshotted this:
+
+> "Save failed: Couldn't save the diagram: Splunk session token
+>  is stale (HTTP 401 Splunk cannot authenticate the request.
+>  CSRF validation failed.). **Rel...**"
+
+The improved message landed correctly — the wording came from
+115.18's `friendlyMessage` rewrite — but the operator's screen
+truncated the actionable instruction at "Rel..." and they had
+no idea the next word was "Reload". They reported themselves
+still blocked and asked whether the build was actually current.
+
+Tarball was confirmed at build 1169 (115.19) per its embedded
+`default/app.conf`, so the fix WAS shipped. The bug was the
+**rendering** of that long message, not the message itself.
+
+### Discovery & decision
+
+Root cause traced to one CSS class on the inline status display
+in `DiagramHeader.tsx`:
+
+```tsx
+{statusMessage && (
+    <span className="text-[10px] truncate ...">
+        {statusMessage.text}
+    </span>
+)}
+```
+
+`truncate` is the Tailwind alias for
+`overflow:hidden;text-overflow:ellipsis;white-space:nowrap`.
+That treatment makes sense for a "Saved 'foo' at 3:21pm"
+toast, where a single line and an ellipsis are net polite.
+For an error containing a multi-clause recovery instruction
+it actively hurts — the operator can see WHAT failed but
+can't see WHAT TO DO. Worse, the text is sized at 10px,
+the smallest readable size in the entire app, and is
+positioned beside the diagram-name picker where it competes
+with the clickable name affordance.
+
+Decision: split rendering by message kind.
+  • Info messages (3.5s auto-dismiss; short, transient) keep
+    the inline 10px / truncated treatment in the picker row.
+  • Error messages render as a dedicated alert banner
+    BELOW the header — multi-line, no truncate, with an
+    AlertTriangle icon and rose-tinted background. CSRF
+    errors additionally get a primary "Reload page" CTA.
+    Errors are now sticky (no auto-dismiss) and require an
+    explicit X dismissal or get evicted by the next save /
+    open / delete result.
+
+The "Reload page" button just calls `window.location.reload()`.
+We deliberately do NOT auto-reload — operators may have
+unsaved on-canvas annotations they want to copy first
+(the friendly message itself warned about this), and an
+auto-reload would silently nuke them. The button gives
+the operator a one-click recovery path the moment they're
+ready, exactly the affordance the original message tried
+to describe in prose.
+
+We also did NOT introduce auto-stash to localStorage /
+sessionStorage. That's a real next-tier improvement
+(survive reload without losing in-progress work), but
+it's a meatier behavioural change and would need its
+own design pass for restoration UX (banner that says
+"Restored unsaved work"? auto-load on next visit? what
+if the stashed work conflicts with a remote update?).
+Filing as `phase-6` candidate; not blocking 115.20.
+
+### Files touched
+
+  • `packages/splunk-cisco-dashboards/src/main/webapp/common/components/diagram/DiagramHeader.tsx`
+      - Imported `AlertTriangle` and `RefreshCw` icons.
+      - Inline `statusMessage` rendering narrowed to
+        `kind === 'info'` only.
+      - Added an `isCsrfError` heuristic (matches "stale" or
+        "csrf" in the message body, mirroring
+        `friendlyMessage`'s detection).
+      - Added an alert banner outside the `<header>` that
+        wraps the full error text, shows a primary
+        "Reload page" button when CSRF, and an X dismiss
+        button when `onDismissStatus` is provided.
+      - New `onDismissStatus?: () => void` prop on
+        `DiagramHeaderProps`.
+  • `packages/splunk-cisco-dashboards/src/main/webapp/pages/network_diagram/index.tsx`
+      - Removed the 8-second auto-dismiss for errors (info
+        toasts still clear at 3.5s). Errors now stay until
+        explicit dismissal or replacement.
+      - Wired `onDismissStatus={() => setStatusMessage(null)}`
+        through to the header.
+  • `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf`
+      - Build 1169 → 1170.
+  • `packages/splunk-cisco-dashboards/docs/SESSION_LOG.md`
+      - This entry.
+
+### Verification
+
+  • `yarn workspace @splunk/splunk-cisco-dashboards run typecheck` → clean.
+  • `yarn workspace @splunk/splunk-cisco-dashboards run package:app` → produced
+    `dist/splunk-cisco-dashboards-1.0.10.tar.gz` (14 MB);
+    embedded `default/app.conf` confirms `build = 1170`.
+  • Manual checks the operator should run after install:
+      1. Trigger a CSRF save failure (let the page sit for
+         a few hours, or clear `splunkweb_csrf_token_<port>`
+         from the browser's cookie jar, then click Save).
+      2. Banner appears below the header with the FULL
+         "Splunk session token is stale … Reload the page
+         to refresh the CSRF cookie, then try the save
+         again. Your in-progress diagram is preserved on
+         the canvas until you reload, so copy any unsaved
+         annotations to a safe place before refreshing."
+         text and a red "Reload page" button on the right.
+      3. Click "Reload page" → page reloads → save works.
+      4. Trigger any other error (e.g. invalid name) →
+         banner appears WITHOUT the Reload CTA, just the
+         X dismiss button.
+      5. Successful save → green-flavoured info still
+         renders inline next to the picker; banner area
+         disappears.
+
+### What's next
+
+  • Operator confirms 115.20 makes the CSRF recovery path
+    obvious. If they still hit save failures AFTER clicking
+    the Reload button, that points at a deeper auth /
+    role / proxy issue and we hand it to Splunk admin
+    diagnostics.
+  • Auto-stash unsaved work to sessionStorage on every
+    livePayloadRef change, restore on mount → tracked as
+    a phase-6 candidate alongside inventory automation.
+    Defer until an operator hits "I lost work to a reload"
+    in practice.
+  • Phase 6 (inventory automation) still on deck: auto-bind
+    by name match, bulk import, "Suggest from inventory"
+    seed layout.
+
+---
+
+## 2026-05-16 (Build 115.19) — Wheel/trackpad scroll pans; ⌘ / Ctrl + scroll zooms
+
+### Goal
+
+Operator quote:
+
+> "can you not allow zoom-in/zoom-out using the mouse pad
+>  which I use to scroll with? right now I need to move
+>  the mouse to the edge of the screen to stop it from
+>  zooming and at that point it does allow me to scroll
+>  up/down. I don't mind we have a keyboard instructions
+>  like hold ctrl or command key on mac, then use the
+>  mouse to zoom in and out etc... please find the best
+>  way to solve that as it's very annoying."
+
+### Discovery & decision
+
+React Flow's default wheel/trackpad behaviour is **wheel
+= zoom**. That's the Google-Maps mental model — works
+fine for "navigate a finished map", but for an authoring
+surface it fights the operator. Their natural reflex when
+a card extends below the visible viewport is "scroll the
+canvas with the trackpad", exactly like a long document.
+With wheel-as-zoom, every such gesture zooms in instead,
+so the operator has to drag the viewport up by hand,
+zoom-out, drag again, etc. — death by a thousand
+papercuts.
+
+React Flow exposes the right knobs to swap mental models:
+
+  • `panOnScroll` — when true, wheel/trackpad scroll pans
+    the viewport.
+  • `zoomOnScroll` — when false, wheel scroll never zooms.
+  • `zoomActivationKeyCode` — modifier key that, when
+    held, switches the gesture from pan back to zoom.
+  • `zoomOnPinch` — left at default `true` so two-finger
+    pinch on a trackpad still zooms (it's already a
+    deliberate gesture, not "I'm scrolling").
+  • `zoomOnDoubleClick` — left at default; double-click
+    zooms in, matching the bottom-left controls widget.
+
+Modifier key choice: **Cmd on Mac, Ctrl on Win/Linux**.
+React Flow accepts `zoomActivationKeyCode` as a single
+key OR an array, so we pass `['Meta', 'Control']` to
+cover both platforms in one expression. (`Meta` is Cmd
+on macOS, the Windows key on Windows; either feels
+correct to the user holding it.)
+
+Mode parity: same gesture rules apply in **both** edit
+mode and view mode. We considered keeping wheel-zoom in
+view mode (cinematic walkthrough mental model), but
+flipping gesture rules between modes would itself be
+disorienting, and operators learn one rule once. Pinch
++ Cmd/Ctrl + the bottom-left controls cover every zoom
+need in either mode.
+
+### Files touched
+
+  • `packages/splunk-cisco-dashboards/src/main/webapp/common/components/diagram/NetworkDiagramCanvas.tsx`
+      - Added `panOnScroll`, `zoomOnScroll={false}`, and
+        `zoomActivationKeyCode={['Meta','Control']}` to
+        the `<ReactFlow>` props with a long-form comment
+        explaining the operator quote and rationale.
+      - Added a "Pan & zoom" section to the in-canvas
+        Help popover (the Info button at the top-right)
+        documenting the new gesture map.
+  • `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf`
+      - Build 1168 → 1169.
+  • `packages/splunk-cisco-dashboards/docs/SESSION_LOG.md`
+      - This entry.
+
+### Verification
+
+  • `yarn workspace @splunk/splunk-cisco-dashboards run typecheck` → clean.
+  • `yarn workspace @splunk/splunk-cisco-dashboards run package:app` → produced
+    `dist/splunk-cisco-dashboards-1.0.10.tar.gz` (14 MB).
+  • Confirmed only one `<ReactFlow>` instance in the repo
+    (`NetworkDiagramCanvas.tsx`), so no other dashboards
+    inherited the old behaviour.
+  • Manual checks the operator should run after install:
+      1. Two-finger trackpad scroll on the canvas →
+         viewport pans, zoom level unchanged.
+      2. Mouse wheel on the canvas → viewport pans
+         vertically, zoom level unchanged.
+      3. Hold ⌘ (Mac) or Ctrl (Win/Linux) + scroll →
+         viewport zooms toward / away from the cursor.
+      4. Trackpad pinch (no modifier) → viewport zooms.
+      5. Bottom-left controls widget — `+` / `−` / fit
+         buttons still work as before.
+      6. Open the Info popover (top-right) → "Pan & zoom"
+         section documents the new gestures.
+
+### What's next
+
+  • Operator confirms wheel-pan feels natural and the
+    Cmd/Ctrl+scroll modifier works on their Mac.
+  • If anyone reports muscle-memory friction with
+    wheel-zoom (e.g. operators who've used the canvas
+    for a while), we can offer a per-user toggle in the
+    header (`localStorage`-persisted) that flips back to
+    the old default. Defer until someone actually asks
+    for it — premature configurability is its own UX
+    debt.
+  • Phase 5 (Region UX) is now fully wrapped — see 115.18
+    "Status reminder" for the full timeline. Next major
+    block is **phase 6 (inventory automation)**: auto-bind
+    by name match, bulk import from `asset_inventory`,
+    "Suggest from inventory" seed layout.
+
+---
+
+## 2026-05-16 (Build 115.18) — Region hit-test threshold reverted to centre-in-region; CSRF 401 message disambiguated
+
+### Goal
+
+Operator pulled 115.17 and reported three things:
+
+> "we have a regression I think, we need to fix before we
+>  continue! I am getting error messages when saving, I
+>  also lost the ability to move the region together with
+>  it's devices as one unit like we had it working before
+>  and the number of devices in the region is incorrect.
+>  I added 6 objects but it shows 1 device instead of 6."
+
+Console showed:
+
+```
+POST .../servicesNS/nobody/splunk-cisco-dashboards/configs/conf-network_diagrams/test123
+  401 (Splunk cannot authenticate the request. CSRF validation failed.)
+```
+
+Two distinct bugs, two fixes:
+
+### (1) — Hit-test threshold was too strict (regression from 115.17)
+
+115.17 introduced a "≥ 50% of the shape's area must overlap
+the region" rule for parenting decisions. With centre-on-
+cursor placement (also 115.17) and the 20px snap-to-grid,
+a card dropped near a region's CORNER easily falls below
+50% overlap because the centred 100×110 card overflows the
+corner by ~50%. Result: only 1 of the 6 cards the operator
+dropped passed the 50% bar, the other 5 floated unparented:
+
+  • Region "device count" badge read 1 (correct given how
+    many were actually parented, wrong from the operator's
+    point of view).
+  • Dragging the region only carried that one parented
+    card along — the other 5 stayed put. The operator
+    perceived this as "lost the ability to move the region
+    together with its devices as one unit" because the
+    *visible* effect is identical to children losing their
+    parent on drag.
+  • Both symptoms are the same root cause: 50% overlap is
+    too strict for normal-sized cards near region corners.
+
+Fix: replaced the area-overlap rule with the simpler,
+pre-115.17 **centre-in-region** point check. With centre-
+on-cursor placement (preserved) the SHAPE'S CENTRE lands
+at the cursor; centre-in-region therefore matches the
+operator's cursor directly — drop with cursor inside
+region → parented, drop with cursor outside → not
+parented. This also matches the live drag preview's
+highlight criterion exactly, so what the operator sees
+during the drag is what they get on release.
+
+Trade-off accepted: a card whose body is plainly inside a
+region but whose centre sits 5px past the edge will not
+parent. Those drops are rare in practice and the operator
+gets honest feedback (the region won't have lit up during
+the drag).
+
+### (2) — Save failing with 401 / CSRF (independent of 115.17)
+
+The 401 the operator hit is the splunkweb_csrf_token_<port>
+cookie going stale on a long-lived tab. This isn't a 115.17
+regression — the persistence service already reads the
+cookie and sends it as `X-Splunk-Form-Key`. After enough
+time, the splunkweb session rotates and the value the page
+captured at load no longer matches what splunkd expects on
+the POST.
+
+The friendly-message formatter previously turned every
+401 / 403 into a generic "check your role's write access"
+message, which for stale-CSRF is misleading: the operator
+*has* the right permissions, they just need to reload. So
+the message now disambiguates:
+
+  • If splunkd's error envelope mentions "csrf" OR there's
+    no CSRF cookie on the document, the user sees:
+      "Splunk session token is stale (HTTP 401 …).
+       Reload the page to refresh the CSRF cookie, then
+       try the save again."
+  • Otherwise the original "check your role" wording
+    stands.
+
+The fix is operational, not architectural — auto-refresh
+of the CSRF cookie from JS would require splunkweb to mint
+us a new one without a full reload, and there isn't a
+public path to do that. A reload is the standard remedy.
+
+### Files touched
+
+  • `packages/splunk-cisco-dashboards/src/main/webapp/common/components/diagram/NetworkDiagramCanvas.tsx`
+      - `findRegionForRect`: ≥ 50% rect-overlap → shape
+        centre-in-region. Removed `rectIntersectionArea`
+        helper (now unused). Updated comment with the
+        rationale.
+  • `packages/splunk-cisco-dashboards/src/main/webapp/common/services/diagramPersistenceService.ts`
+      - `friendlyMessage` now disambiguates stale-CSRF 401
+        from a real permission denial and recommends a
+        page reload first.
+  • `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf`
+      - Build 1167 → 1168.
+  • `packages/splunk-cisco-dashboards/docs/SESSION_LOG.md`
+      - This entry.
+
+### Verification
+
+  • `yarn workspace @splunk/splunk-cisco-dashboards run typecheck` → clean.
+  • `yarn workspace @splunk/splunk-cisco-dashboards run package:app` → produced
+    `dist/splunk-cisco-dashboards-1.0.10.tar.gz` (14 MB).
+  • Manual checks the operator should run after install:
+      1. Reload the page (refreshes CSRF). Save should
+         work again.
+      2. Drop 6 shapes into a region, anywhere inside it.
+         Region count should read 6/6, all 6 should
+         follow when the region is dragged.
+      3. Drop a shape near (but inside) a region's corner.
+         Region should light up before release; on release,
+         the shape should parent (centre is inside region).
+      4. Drop a shape with the cursor outside the region.
+         Region should not light up; shape should not
+         parent on release.
+
+### What's next
+
+  • Operator confirms saves work after reload AND drops
+    feel obedient with the centre-in-region rule.
+  • If saves still fail with CSRF after a fresh reload,
+    that points at a different failure (proxy strips
+    cookies, splunkd config, role config) — escalate to
+    Splunk admin diagnostics rather than client code.
+  • Open design questions still pending from 115.16
+    (low-pri):
+      Q1 — Bottom text on unbound cards: collapse
+           transparent placeholders or keep them for grid
+           consistency?
+      Q2 — Display name vs short alias: keep current "alias
+           on canvas, name in tooltips" split or surface
+           the display name primarily?
+
+### Status reminder (where we are)
+
+Phase 5 (Region UX) rework wraps up here:
+  • 115.16 — removed `extent: 'parent'` clamp.
+  • 115.17 — centre-on-cursor placement + live drag
+             preview + (regrettable) ≥ 50% overlap rule.
+  • 115.18 — reverted 50% rule; centre-in-region restores
+             the operator-loved behaviour while keeping
+             the centre-on-cursor + live-preview wins.
+
+Once 115.18 is confirmed, **phase 5 is done** and we can
+move on to phase 6 (inventory automation: auto-bind by
+name match, bulk import, "Suggest from inventory" seed
+layout).
+
+---
+
+## 2026-05-16 (Build 115.17) — Region drops obey the cursor (centre-on-cursor + rect-overlap hit-test + live preview)
+
+### Goal
+
+Operator pulled 115.16 and was still very upset:
+
+> "very upset still with region problem!! it's hard to
+>  explain, i wish you can see it yourself happening, when
+>  i drag the object into the region it keeps like going
+>  away, it's like it does not want to obey where I want
+>  it to go and has a mind of it's own, maybe something to
+>  do with snap-into the object or something like that, we
+>  need to fix this now and then remind me where we are at
+>  and where we need to be becuase now I am confused about
+>  the current status"
+
+The 115.16 fix (removing `extent: 'parent'`) was a real bug
+fix — it eliminated React Flow's clamp that was snapping
+shapes back inside the region rect. But the operator's
+"shape goes away with a mind of its own" was a *different*
+bug stack that 115.16 didn't touch. Two separate
+underlying issues, both shipped here:
+
+### (A) — Palette drops were placed top-left at the cursor
+
+The HTML5 DnD drag image is centred on the operator's
+cursor while they drag (browser default). Aiming the card
+visual at the centre of a region puts the cursor at the
+desired centre. But our `handleDrop` was using
+`event.clientX/Y` as the **top-left** of the new node:
+
+```ts
+const point = rfInstance.screenToFlowPosition(event.clientX, event.clientY);
+const snapped = snapToGrid(point);
+newNode = { position: snapped, ... };  // top-left = cursor
+```
+
+A 100×110 device card therefore extended **100px right
+and 110px down** from where the operator aimed. Drop near
+the right edge of a region → the card lands mostly outside
+the region. Combined with the snap-to-grid (20px) rounding,
+it visibly "snaps away" from the release point.
+
+Fix: centre on the cursor instead of placing the top-left
+there. Snap is then applied to the centred top-left so
+diagrams stay tidy:
+
+```ts
+const cursor = rfInstance.screenToFlowPosition(...);
+const centeredTopLeft = (size) => snap({
+    x: cursor.x - size.width / 2,
+    y: cursor.y - size.height / 2,
+});
+```
+
+Applied to all four palette variants (textbox, region,
+shape, asset) so the behaviour is consistent. Region drops
+also gained centre-on-cursor for the same reason — a
+360×220 region was previously offset (180, 110) bottom-right
+of the click point.
+
+### (B) — Region hit-test was a single point
+
+`findContainingRegion` checked **one point** (the shape's
+centre or the cursor) against the region rect. Drops that
+visually overlapped the region by 80% but whose centre was
+3px past the right edge were classified as "not in
+region" and not parented — exactly the eye-vs-algorithm
+disagreement that triggers "the shape doesn't obey".
+
+Fix: replace with `findRegionForRect` which uses a
+**rectangle-overlap** test — at least 50% of the shape's
+area must fall inside the region. Matches the visual
+question "is this shape mostly inside the region?".
+Extended to drag-stop reparenting too, so dragging an
+existing card into a region works the same way as a fresh
+palette drop.
+
+### (C) — Live drag preview (the "see it yourself" feature)
+
+The operator's wish — "i wish you can see it yourself
+happening" — translated directly into a UX gap. Even with
+(A) and (B) fixed, the operator had no feedback during
+the drag about *which* region the shape would land in.
+115.17 closes this:
+
+  • Each `RegionGroupNodeData` gained an optional
+    `dropHovering: boolean` flag.
+  • `RegionGroupNode` swaps its dashed border for a solid
+    sky-blue ring (`ring-2 ring-sky-400/60` plus a subtle
+    glow) whenever the flag is set.
+  • The canvas wires four event handlers to compute the
+    flag in real time:
+      1. `onDragOver` (palette drop) → recompute candidate
+         every mouse-move tick using the centred shape rect.
+      2. `onDragLeave` → clear (cursor left the canvas).
+      3. `onNodeDrag` (existing-shape drag) → same rect-
+         overlap test on the dragged node's world rect.
+      4. `onNodeDragStop` and `onDrop` → clear, then
+         resolve the actual reparenting. The clear is
+         folded into the same `setNodes` call so there's
+         no flicker.
+  • `applyDropHover` does an early-exit if the candidate
+    didn't change, so React Flow only re-renders regions
+    when the highlight actually transitions (not on every
+    mouse move).
+
+Result: operator drags a card toward a region, the region
+lights up brightly the moment ≥ 50% of the card is over
+it, stays lit while they hover, releases → the card lands
+parented exactly where the highlight predicted. WYSIWYG.
+
+### Files touched
+
+  • `packages/splunk-cisco-dashboards/src/main/webapp/common/components/diagram/NetworkDiagramCanvas.tsx`
+      - Replaced point-based `findContainingRegion` with
+        rect-overlap `findRegionForRect` (≥ 50% area).
+      - Added `rectIntersectionArea` helper.
+      - Centred all palette drops on the cursor (textbox /
+        region / shape / asset variants).
+      - Added `applyDropHover` + `clearDropHover` helpers.
+      - Added `handleDragLeave` and `handleNodeDrag`.
+      - Wired live drop-hover state through both palette
+        and existing-node drag paths; cleared at drop /
+        drag-stop.
+  • `packages/splunk-cisco-dashboards/src/main/webapp/common/components/diagram/RegionGroupNode.tsx`
+      - Added optional `dropHovering` to
+        `RegionGroupNodeData`.
+      - Render branch: dashed-grey → solid sky ring +
+        elevated tint when `dropHovering === true`.
+  • `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf`
+      - Build 1166 → 1167.
+  • `packages/splunk-cisco-dashboards/docs/SESSION_LOG.md`
+      - This entry.
+
+### Verification
+
+  • `yarn workspace @splunk/splunk-cisco-dashboards run typecheck` → clean.
+  • `yarn workspace @splunk/splunk-cisco-dashboards run package:app` → produced
+    `dist/splunk-cisco-dashboards-1.0.10.tar.gz` (14 MB).
+  • Manual UX checks the operator should run in Splunk:
+      1. Drag a switch from the palette into the centre of
+         a region. → region lights up sky-blue mid-drag,
+         shape lands centred on the cursor, region count
+         updates.
+      2. Drop near the right edge of a region (cursor
+         inside, but card would overflow). → ≥ 50%
+         overlap rule still parents it; card extends
+         visibly past the region edge (no clamp; that's
+         the 115.16 win).
+      3. Drag an *existing* card from outside into a
+         region. → region lights up while dragging,
+         drop-stop reparents, deviceCount updates.
+      4. Drag an existing card OUT of a region. → no
+         region lights up while it's en route to "outside";
+         drop-stop un-parents.
+
+### What's next
+
+  • Operator confirms region drops feel obedient.
+  • Open design questions still pending from 115.16 (lo-pri):
+      Q1 — Bottom text on unbound cards: collapse
+           transparent placeholders or keep them for grid
+           consistency?
+      Q2 — Display name vs short alias: keep current "alias
+           on canvas, name in tooltips" split or surface
+           the display name primarily?
+
+### Status reminder (where we are / where we're going)
+
+We're polishing the **Network Diagram authoring page**
+(`pages/network_diagram`) — the customer-facing canvas
+that lets operators draw Visio-style topology diagrams,
+bind shapes to live `asset_inventory` rows, and see them
+light up green/amber/red against `| metadata type=hosts`
+visibility data. Persistence is custom
+`network_diagrams.conf` (Build 115.3+), saved/loaded via
+the Splunk REST API.
+
+Big picture roadmap, by phase:
+
+  1. ✅ Authoring shell — palette, drop, props panel,
+     persist, factory diagrams.
+  2. ✅ Live status — asset_inventory + metadata fold-in,
+     animated edges, status LEDs.
+  3. ✅ View mode + presentation polish — fullscreen,
+     animations toggle, light/dark theme.
+  4. ✅ Visuals — per-class chassis silhouettes (115.15),
+     IP visibility toggle (115.13), PNG/PDF export
+     (115.13), picker search (115.14).
+  5. 🟡 **Region UX** ← we are here. Blocked operator
+     trust until 115.17 lands; design open questions Q1/Q2
+     are smaller follow-ups.
+  6. ⬜ Inventory automation — auto-bind from name match,
+     bulk import, "Suggest from inventory" seed layout.
+  7. ⬜ Shape library expansion — Cisco DevNet icon
+     family, generic Splunk infra shapes, customer-
+     supplied SVGs.
+  8. ⬜ Sharing / export — direct PowerPoint export, link
+     a diagram in a Dashboard Studio panel.
+
+So today's milestone: **once you confirm 115.17 makes
+region drops obey the cursor, we close out phase 5 and
+move on to (6) inventory automation** — which started in
+115.4 with `splunk_inventory.csv` discovery but never got
+the auto-bind UX.
+
+---
+
+## 2026-05-16 (Build 115.16) — Region-drop clamp removed, export dropdown hover gap closed
+
+### Goal
+
+Operator pulled 115.15 into Splunk and reported four things:
+
+1. "did you bleed out the text at the bottom on purpose?
+   was this by design?"
+2. "when I updated display name, I didn't see anything
+   changing in the icon at all, is this a bug?"
+3. "I am unable to select png vs pdf, it keeps escaping
+   from me weirdly when I hover over and try to select png"
+4. "we still have a major bug with moving objects into a
+   region! really weird behavior, can you look at any
+   error in the logic"
+
+(1) and (2) turned out to be design questions, answered in
+chat with no code change. (3) and (4) are this build.
+
+### (1) — bottom text "bleeding out"
+
+Not a regression. The four-line label rail (introduced in
+Build 115, refined in 115.13) renders:
+
+  • Line 1 (bold, slate-900):       `node.shortLabel`
+  • Line 2 (muted, slate-500 8px):  `device_type ?? platform_id ?? node.shape`
+  • Line 3 (mono):                  `vendor · model`  (or transparent placeholder)
+  • Line 4 (mono, sky):             IP address       (or transparent placeholder)
+
+For an unbound palette drop, lines 3 and 4 fall through to
+their `text-transparent` placeholders so card heights stay
+uniform across the diagram (a binding-aware row right next
+to an unbound row would otherwise reflow). Line 2 falls
+back to the shape id uppercased — that's the "ROUTER" /
+"SWITCH" / "STACK" the operator was seeing. The pale-gray
+secondary styling is intentional muted-text — it's the
+existing design, not anything 115.15 introduced.
+
+If a follow-up wants tighter unbound cards, the path would
+be hiding the placeholders for unbound shapes and accepting
+the mild reflow when bindings are added — left as an open
+decision.
+
+### (2) — display name doesn't change the canvas card
+
+By design. The bold label on the canvas card is the **Short
+Alias** (`node.shortLabel`), not the **Display Name**
+(`node.label`). The inspector explicitly labels the
+short-alias field "Short alias (shown on the canvas)".
+Display Name is the long form used in tooltips, the
+inspector header, and exports — it deliberately doesn't
+appear on the card so the canvas stays compact at default
+zoom.
+
+If the operator wants Display Name to show on the card
+(either swapping the two or showing both as primary +
+secondary), that's a one-line change to `shapes.tsx` —
+left as an open decision pending operator preference.
+
+### (3) — PNG/PDF dropdown escaping (FIXED)
+
+The export dropdown in `DiagramHeader.tsx` was structured as:
+
+```jsx
+<div className="relative group">
+  <button>...</button>
+  <div className="absolute right-0 top-full mt-1 hidden group-hover:flex ...">
+    <button>PNG</button>
+    <button>PDF</button>
+  </div>
+</div>
+```
+
+`mt-1` adds a 4px **margin** between the trigger button
+and the menu panel. The `.group` container's bounding box
+is just the trigger (the menu is `absolute`, doesn't
+contribute to layout). When the cursor moves from the
+trigger down to the menu, it transits a 4px void where
+neither the trigger nor the menu is hovered, so
+`group-hover` evaluates false → menu hides → cursor
+re-enters menu → menu re-shows → flicker. The user
+experienced this as "the menu escapes from me weirdly".
+
+Fix: split the menu into an outer "hover catcher" with
+**padding** (`pt-1`) and an inner visual panel. The
+catcher's bounding box now starts immediately at the
+trigger's bottom edge with no margin gap, but the visible
+chrome is offset 4px down via padding inside the catcher.
+Hover area is contiguous from trigger to menu; cursor
+never leaves the `.group`.
+
+```jsx
+<div className="absolute right-0 top-full pt-1 hidden group-hover:block ...">
+  <div className="flex flex-col bg-white ... rounded-md shadow-lg ...">
+    <button>PNG</button>
+    <button>PDF</button>
+  </div>
+</div>
+```
+
+### (4) — region drop "behaves erratically" (FIXED)
+
+This is the operator-reported bug from way back in 115.10
+that was supposedly fixed and clearly wasn't. The actual
+root cause:
+
+Every node parented to a region was set with `extent:
+'parent'`. That React Flow flag clamps the child's local
+position so the **entire card** stays inside the region's
+rectangle. Two operator-visible consequences:
+
+1. **A child cannot be dragged out of its region.** The
+   drag is silently constrained at the region's edge; the
+   drag-stop handler never gets a chance to reparent
+   because the node never reaches another region.
+2. **Fresh drops near a region's right or bottom edge
+   snap inward.** If the drop point would put any part of
+   the card outside the region (e.g. drop point + 110px
+   width > region.width), React Flow clamps the local
+   position by the overflow amount, so the card visibly
+   *jumps away* from where the operator dropped it.
+
+Fix: drop `extent: 'parent'` everywhere a node is parented
+to a region. Six call sites:
+
+  • `savedNodeToRF` textbox branch
+  • `savedNodeToRF` device branch
+  • `handleNodeDragStop` reparent
+  • `handleDrop` textbox palette drop
+  • `handleDrop` shape palette drop
+  • `handleDrop` asset palette drop
+
+Each now sets `extent: undefined` (with a pointer comment
+to the long-form rationale on `handleNodeDragStop`).
+Also corrected the now-stale comment in `RegionGroupNode.tsx`.
+
+What still works without the constraint:
+
+  • **Dragging a region drags its children.** React Flow
+    honours `parentId` alone for parent-drag-children
+    behaviour — `extent` only adds the position clamp, it
+    isn't required for the parent-children mechanics.
+  • **Round-trip persistence.** `parentId` is still
+    written to the saved payload (line 738 of
+    `NetworkDiagramCanvas.tsx`) and restored unchanged on
+    reload. Only `extent` is cleared.
+  • **Visual containment.** `RegionGroupNode` renders
+    with `overflow: visible` (the React Flow default), so
+    a child whose local position falls outside the
+    region's rectangle renders visibly outside without
+    DOM clipping. The region's count badge updates via
+    `annotateRegionCounts`, which counts by `parentId`,
+    not by visual containment.
+
+What changes:
+
+  • The operator can drag a child out of its region
+    freely. The drag-stop handler then runs and either
+    re-parents to a different region (if the drop center
+    landed inside one) or un-parents.
+  • Fresh drops land exactly where the cursor was. No
+    snap-away near edges.
+  • If the operator resizes a region smaller than the
+    bounding box of its children, the children visibly
+    overflow. The operator sees this and can drag them
+    back in (or to another region) at their leisure. The
+    pre-115.16 behaviour was "the children are silently
+    constrained" — visible overflow is more honest.
+
+### Files touched
+
+- `webapp/common/components/diagram/NetworkDiagramCanvas.tsx`
+  — six `extent: 'parent'` → `extent: undefined`, plus a
+  long-form rationale comment on `handleNodeDragStop`.
+- `webapp/common/components/diagram/DiagramHeader.tsx`
+  — restructured the export dropdown so hover is contiguous.
+- `webapp/common/components/diagram/RegionGroupNode.tsx`
+  — corrected stale comment about `extent: 'parent'`.
+- `default/app.conf` — build 1165 → 1166.
+- `docs/SESSION_LOG.md` — this entry.
+
+### Verification
+
+- `tsc --noEmit` clean.
+- Manual visual review pending on a fresh diagram with:
+  drop near region edge, drag child out of region, drag
+  region with children, save+reload, hover Save dropdown
+  and select PNG.
+
+### What's next
+
+Operator review of:
+  - Region-drop behaviour (drop near edges, drag children
+    in/out of regions).
+  - PNG/PDF dropdown — does it now stay open long enough
+    to click an option?
+
+Plus the still-open design questions from this build:
+  - Bottom text on unbound cards — collapse the
+    transparent placeholders, or leave them for grid
+    consistency?
+  - Display name vs Short alias on the card — keep the
+    current "alias on canvas, name in tooltips" split, or
+    show display name as the primary label?
+
+---
+
+## 2026-05-16 (Build 115.15) — Per-class chassis prototype (Option C)
+
+### Goal
+
+Build 115.13 introduced a generic rack-chassis silhouette plus a
+small lucide icon overlay on the chassis face for every rack-mount
+device. Operator pulled it up on the canvas and said: "I am not
+sure I love it, what do you think of how it looks?"
+
+I agreed. Three problems with the 115.13 silhouette family:
+
+1. **The chassis dominates but the chassis is interchangeable.**
+   Switch, L3 switch, stack, router, proxy all rendered with
+   essentially the same rack outline; the differentiating bottom
+   strip ("port row" vs "uplinks" vs "vents") was too subtle to
+   read at default canvas zoom.
+2. **The lucide icon shrunk too far.** Icons went from a 56×56
+   centerpiece (pre-silhouette) to a ~20×16 caption painted on
+   the chassis face. The icon no longer carried device-class
+   identity at common zoom levels.
+3. **Cards looked half-empty.** The chassis occupied the middle
+   third of the icon area; the top and bottom thirds were
+   negative space.
+
+I offered three paths:
+
+- **A — Revert** to the centered-icon look from before 115.13.
+- **B — Hybrid:** big icons + a thin "rack rail" stripe at the
+  bottom so we keep the rack-mount visual cue without the chassis
+  fighting the icon for space.
+- **C — Per-class chassis (full redesign):** draw genuinely
+  distinct chassis for the major device classes, drop the icon
+  overlay on the specialised ones, let the chassis carry the
+  identity by itself.
+
+Operator picked **C**: "let's explore option C and prototype 2-3
+distinct chassis (switch / router / firewall) etc.. as you
+recomended". This build is the prototype.
+
+### Specialised chassis shipped in 115.15
+
+Six device classes get hand-drawn artwork that fills the card's
+icon area and signals the device class through chassis geometry
+alone. No lucide icon overlay on these — the chassis IS the
+identity.
+
+| Shape | Chassis design |
+|-------|----------------|
+| `switch` | Wide 1U rack-mount with two 8-port RJ45 rows, a status LCD on the top-left, a vendor/model tab in the middle, and a console port on the right. Activity LEDs above each port row. Emerald accent. |
+| `l3_switch` | Taller 2U chassis with an explicit "L3" badge top-left, four SFP uplink cages top-right, and a denser **three-row × 12-port** array (36 ports total) — visibly more capable than the L2 switch. Darker emerald accent. |
+| `stack` | Three thin chassis stacked vertically with a single tall rack ear on each side, plus a curved stack cable connecting all three on the right. Top unit shows a green "master" indicator; the other two show amber. |
+| `router` | Squat tower (taller, narrower than a switch) with an LCD status screen showing Wi-Fi bars, two console-style ports, three fat uplink ports across the bottom, two stubby feet, and an antenna stub poking out the top with a wireless ripple. Amber accent. |
+| `firewall` | 1U chassis with a **prominent shield** etched on the front face (with a checkmark inside) + a five-LED red rail across the top — instantly reads as "security appliance". Rose accent. |
+| `wlc` | 1U chassis with a "WLC" badge and an antenna tower silhouette to the left, plus **three Wi-Fi ripple arcs** of decreasing opacity emanating overhead. Violet accent. Four uplink ports across the bottom. |
+
+Everything else (load balancer, server variants, container, vm,
+hub, gateway, proxy, waf, vpn_concentrator, ids_ips, siem, ca,
+bastion, mainframe) still falls back to the generic `RackChassis`
+component, which keeps the 115.13 lucide icon overlay since the
+chassis itself stays generic.
+
+Disc / cylinder / cloud / building / users / endpoint / card
+families are unchanged.
+
+### Why Option C, not Option B
+
+Option B (big icons + thin rack-rail stripe) would have been
+faster to ship but it was just a polish on the 115.13 model:
+icons differentiate, chassis decorates. Operator's frustration
+was that the chassis _felt important_ but wasn't carrying its
+weight. The fix is to either delete the chassis (Option A) or
+make it earn its space (Option C). Option C is the higher
+ceiling and the only one that can deliver a real Visio-style
+"I see the silhouette and know what it is" moment. We're
+prototyping six classes; if the visual language works, we
+extend the same approach to the remaining 20 in a follow-up.
+
+### Files touched
+
+- `webapp/common/components/topology/silhouettes.tsx` — full
+  rewrite. Added `SwitchChassis`, `L3SwitchChassis`,
+  `StackChassis`, `RouterChassis`, `FirewallChassis`,
+  `WlcChassis`, plus a `SPECIALISED_RACK` lookup that the
+  `ShapeSilhouette` dispatcher consults before falling back to
+  the generic `RackChassis`.
+- `default/app.conf` — build 1164 → 1165.
+- `docs/SESSION_LOG.md` — this entry.
+
+### Verification
+
+- `tsc --noEmit` clean.
+- Manual visual review pending operator's call after they pull
+  the build into Splunk.
+
+### What's next
+
+Operator reviews the six specialised chassis on a real diagram
+and tells me one of:
+
+1. "These work — extend the same approach to load_balancer,
+   server, ids_ips, vpn, ca, etc."
+2. "Mostly works but [specific chassis] needs tweaking" —
+   iterate on individual designs.
+3. "Still not it — try Option B or revert to A."
+
+Decision points for the follow-up if (1):
+- Should `proxy` reuse `SwitchChassis` (it's a forwarding box)
+  or get its own chassis?
+- `server` / `web_server` / `app_server` / `dns_server` /
+  `dhcp_server` — do they all share one "1U pizza-box server"
+  chassis or do we differentiate by service role?
+- `container` and `vm` need a different visual language entirely
+  — they're software, not hardware. Probably a dashed-outline
+  variant of the generic chassis.
+
+---
+
+## 2026-05-16 (Build 115.14) — Picker quick-filter
+
+### Goal
+
+Long picker (15+ factory diagrams once SVAs landed) now scrolls.
+Operator asked for "a simple fast search" so they don't have to
+scan the alphabetical list to find a specific topology.
+
+### What we built
+
+- `common/components/diagram/DiagramHeader.tsx` — sticky search
+  input pinned to the top of the picker dropdown:
+  - `pickerQuery` state, reset every time the picker re-opens
+    so a stale filter doesn't surprise an operator.
+  - Auto-focus on open (deferred a tick so the input is mounted
+    before we focus it) — operators can start typing immediately
+    after clicking the picker chevron.
+  - Plain case-insensitive substring match against
+    `DiagramSummary.name`. Filter applies to BOTH the Default
+    and Custom groups simultaneously; the section headers
+    reflect the filtered count so the operator sees how many
+    matches each bucket holds.
+  - Esc clears the query if non-empty, otherwise closes the
+    picker. Standard incremental-search shortcut.
+  - Enter auto-opens the diagram when exactly one match remains
+    — type a few unique letters, hit Enter, done. Multiple
+    matches are a no-op (don't surprise the operator by picking
+    the first alphabetical).
+  - X icon in the input clears the query and refocuses for
+    another search.
+  - Empty-result message ("No diagrams match \"X\".") rendered
+    only when a query is typed and both groups come up empty —
+    no scaffolding flash mid-typing.
+- `default/app.conf` — `build = 1164`.
+
+### Verification
+
+- `yarn typecheck` clean (2.2 s).
+- `yarn build` clean (21 s, no new warnings).
+- `network_diagram.js` 821 KiB (was 818 KiB; +3 KiB for the
+  Search/X icons + the filter logic).
+
+### Files changed
+
+```
+M packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf
+M packages/splunk-cisco-dashboards/src/main/webapp/common/components/diagram/DiagramHeader.tsx
+```
+
+### What's next
+
+- Consider adding fuzzy match (typo-tolerant) if operators ever
+  hit the limit of substring search. We held off this round
+  because plain `includes()` is fast, predictable, and the
+  diagram corpus is small enough that fuzzy adds noise.
+
+---
+
+## 2026-05-16 (Build 115.13) — Per-class silhouette family, LED → Search drilldown, IP visibility toggle, PNG/PDF export
+
+### Goal
+
+Four follow-up requests on top of 115.12:
+
+1. Replace the single `DeviceShape` look (one rounded card with a
+   centred icon for every device class) with a per-class
+   silhouette family — Visio-flavoured artwork that lets an
+   operator tell a switch from a router from an access point at a
+   glance, even when the icon glyph is sub-pixel.
+2. On status-LED hover, surface an "Open in Search" affordance
+   that runs `| metadata type=hosts | search host="<bound>"` so
+   operators can validate the inventory device names that drive
+   the LED itself.
+3. Allow operators to attach an IP / management address to every
+   shape, render it as a fourth bottom row on the card (mono
+   blue), and ship a header-level "Show / Hide IPs" toggle so
+   the address can be redacted before sharing diagram screenshots
+   with audiences who shouldn't see internal addressing.
+4. Mirror the overview dashboard's PNG / PDF export buttons for
+   the network diagram canvas so operators can drop a topology
+   into a slide deck without screenshotting.
+
+### Discovery & decisions
+
+**Silhouette family — chosen geometry**
+
+The constraint: React Flow's bounding box is rectangular, handles
+hang off the four sides, and the canvas's parent-extent / resize
+plumbing all assumes "card sized roughly 110 × 122". Switching to
+genuinely non-rectangular shapes (a literal cloud outline as the
+React Flow node) would have meant forking the connect-point
+geometry across every shape — too much surface area for one
+session.
+
+We landed on a hybrid: the React Flow node stays a rectangle
+(handles + resizer behave identically to 115.12), but the inner
+icon area is replaced by a per-class SVG silhouette that fills
+the rectangle. Operators reading the canvas at zoom-out see the
+outline (rack chassis vs disc vs cylinder vs cloud) before the
+icon glyph resolves; operators reading at full zoom still see the
+familiar lucide icon overlaid on the chassis face.
+
+Family map (`SHAPE_FAMILY` in `silhouettes.tsx`):
+
+- **`rack`** — every rack-mount appliance (routers, switches,
+  firewalls, WLCs, load balancers, IDS/IPS, SIEM, WAF, VPN
+  concentrator, generic / web / app / DNS / DHCP servers,
+  mainframe, hub, gateway, proxy, container, VM, NAS, SAN,
+  backup, CA, bastion). The bottom-strip motif varies by
+  *flavour* (`switch`/`router`/`security`/`compute`/`generic`)
+  so a switch reads as eight tiny port boxes, a router as two
+  uplink ports + amber beacon, a security appliance as a red
+  LED rail, and compute as vent slots — different at-a-glance
+  even though they share the chassis outline.
+- **`disc`** — wireless access point. Round body, three
+  Wi-Fi ripple arcs overhead, mounting plate shadow.
+- **`cylinder`** — database / storage / NAS / SAN / backup.
+  Three stacked drum surfaces (top ellipse + body + bottom
+  shadow + intermediate platter rings).
+- **`cloud`** — cloud / internet. Cloud silhouette with the
+  icon centred inside.
+- **`building`** — branch office / datacenter. Three-storey
+  building outline with windows, door, and roof tile.
+- **`usersGroup`** — three person silhouettes (centre figure
+  forward + bigger).
+- **`endpoint`** — laptop / phone / printer / camera /
+  iot_sensor. Existing lucide icon enlarged on a soft pedestal
+  shadow (the lucide endpoint icons are already distinctive
+  client silhouettes, so a per-class chassis here would just
+  compete with the icon's own outline).
+- **`card`** — fallback (centred icon) for `generic` and any
+  future shape id that lands without a family entry.
+
+**LED → Search drilldown**
+
+The overview dashboard already had a `splunkSearchAppUrl` helper
+inline. We extracted it to `common/lib/splunkSearchUrl.ts` along
+with `openSplunkSearch`, `quoteHostForSpl` (escapes embedded
+`"` / `\`), and `buildMetadataHostSpl` so both the diagram and
+the overview tile share a single URL builder. The diagram card
+hover wires the LED to a `<button>` that calls
+`openSplunkSearch(buildMetadataHostSpl(host))` and stops event
+propagation so the click doesn't also select the underlying node
+in the canvas. Unbound shapes (no candidate host) get a default
+cursor and the click is a no-op — better than a broken drilldown.
+
+Hover state expands a small dark "Open in Search" pill
+underneath the LED via local state (`ledHover`); the pill is
+absolutely-positioned so it never displaces the chassis layout.
+
+**IP visibility toggle — provider, not prop**
+
+Same pattern we adopted in 115.12 for the animations toggle:
+device cards live deep inside React Flow's node-type registry,
+so threading a `showIp` prop through every shape would mean
+forking React Flow's `NodeProps` contract or stuffing the flag
+into each node's `data` (which then has to round-trip through
+save/load). A page-level context broadcast is one localStorage
+read, one setter on toggle, zero per-node bookkeeping. New file
+`common/contexts/IpAddressVisibilityContext.tsx` mirrors the
+animations context exactly (default `true`, `Provider` re-export,
+`useIpAddressVisibility` hook).
+
+The IP itself rides on `SavedDiagramNode.ipAddress` (round-trips
+through the conf payload) and on `TopologyDiscoveredNode.ipAddress`
+(so `buildDeviceData` and `savedNodeToRF` can populate it). The
+DeviceShape's bottom row is now four lines (name / type /
+vendor·model / ip) instead of three, with the IP row collapsed
+to `text-transparent` when nothing resolves — keeps card heights
+consistent across grid-aligned OOB diagrams.
+
+**PNG / PDF export — reuse the overview hook**
+
+`useExportPage` already existed (html2canvas + jspdf, dynamic-
+imported on first call, captures any DOM ref). We added a
+`exportTargetRef` on the canvas wrapper inside
+`pages/network_diagram/index.tsx`, plumbed `exportAs` through
+`DiagramHeader` as `onExport(format)` + `exporting` (busy
+indicator), and rendered a Download dropdown identical to the
+overview header's "Save as PNG / Save as PDF" pattern. The
+filename is sanitised (`[^a-zA-Z0-9._-]+` → `_`) so a diagram
+called `Splunk Cloud Deployment Architecture` becomes
+`network-diagram-Splunk_Cloud_Deployment_Architecture-<ts>.png`.
+
+We deliberately wrap only the canvas pane (not the whole page)
+so the exported artefact doesn't include the header chrome —
+matches what an operator would manually screenshot for a slide.
+
+### What we built
+
+- `common/components/topology/silhouettes.tsx` — new file. Owns
+  `SHAPE_FAMILY`, the per-family `*Silhouette` components, and
+  the `<ShapeSilhouette shape={…} />` dispatcher. Each
+  silhouette renders into a 100 × 100 viewBox + `currentColor`
+  stroke/fill so dark mode flows through automatically.
+- `common/components/topology/shapes.tsx` — `DeviceShape` now
+  delegates the icon area to `<ShapeSilhouette>`, reads
+  `node.ipAddress` (with raw fallbacks) for the new bottom row,
+  and wraps the corner LED in a `<button>` that calls
+  `openSplunkSearch(buildMetadataHostSpl(host))` on click. The
+  legacy `SHAPE_TO_ICON` map and the local `CISCO_ICONS` import
+  were retired in favour of the silhouettes file.
+- `common/contexts/IpAddressVisibilityContext.tsx` — new file
+  mirroring the animations context. Default `true`, `Provider`
+  re-export, `useIpAddressVisibility` hook.
+- `common/lib/splunkSearchUrl.ts` — extracted from
+  `pages/overview/index.tsx`. Exports `splunkSearchAppUrl`,
+  `openSplunkSearch`, `quoteHostForSpl`, `buildMetadataHostSpl`,
+  and `DEFAULT_DRILLDOWN_RANGE` (`-24h@h … now`, matching the
+  host-visibility window).
+- `common/services/diagramPersistenceService.ts` — extended
+  `SavedDiagramNode` with `ipAddress?: string`. JSDoc spells out
+  the empty-string-clears / undefined-keeps semantics already
+  used by `vendor` / `model`.
+- `common/services/topologyDiscovery.ts` — extended
+  `TopologyDiscoveredNode` with `ipAddress?: string`.
+- `common/components/topology/PropertiesPanel.tsx` — `NodeUpdate`
+  gains `ipAddress?: string`. The Hardware section's form now
+  has an "IP / Management address" input next to Model. State,
+  effect dependencies, and both apply paths (`handleApply`,
+  `handleBindChange`) carry the field through.
+- `common/components/diagram/NetworkDiagramCanvas.tsx` —
+  `buildDeviceData`, `savedNodeToRF`, `rfToSaved`, and the three
+  branches of `handleNodeUpdate` (bind / unbind / plain) all
+  round-trip `ipAddress`. We persist only when the override is
+  non-empty so a card showing an inventory IP by fallback
+  doesn't pin that value into the saved payload.
+- `common/components/diagram/DiagramHeader.tsx` — three new
+  affordances next to the existing animations toggle:
+  - Eye / EyeOff pill bound to `ipAddressesVisible` /
+    `onToggleIpAddresses`.
+  - Download dropdown ("Save as PNG / Save as PDF") bound to
+    `onExport(format)`; busy state mirrors the overview header
+    (Pause icon with `animate-pulse` while exporting).
+- `pages/network_diagram/index.tsx` — manages `ipAddressesVisible`
+  state (localStorage key `ndg-show-ips`, default ON), wires
+  `useExportPage` against a new `exportTargetRef` placed on the
+  canvas pane, fans `IpAddressVisibilityProvider` around
+  `<NetworkDiagramCanvas>` alongside the existing
+  `AnimationsEnabledProvider`.
+- `default/app.conf` — `build = 1163`.
+
+### Verification
+
+- `yarn typecheck` clean (2.26 s).
+- `yarn build` clean (20 s, 2 pre-existing webpack size warnings,
+  no new warnings).
+- Bundle deltas:
+  - `network_diagram.js` — 818 KiB (was 798 KiB; the silhouette
+    SVG paths + the new context add ~20 KiB).
+- No diagram payload migrations needed — the new `ipAddress`
+  field is optional and existing saved diagrams round-trip
+  unchanged through `rfToSaved` / `savedNodeToRF`.
+
+### Files changed
+
+```
+M packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf
+M packages/splunk-cisco-dashboards/src/main/webapp/common/components/diagram/DiagramHeader.tsx
+M packages/splunk-cisco-dashboards/src/main/webapp/common/components/diagram/NetworkDiagramCanvas.tsx
+M packages/splunk-cisco-dashboards/src/main/webapp/common/components/topology/PropertiesPanel.tsx
+M packages/splunk-cisco-dashboards/src/main/webapp/common/components/topology/shapes.tsx
+M packages/splunk-cisco-dashboards/src/main/webapp/common/services/diagramPersistenceService.ts
+M packages/splunk-cisco-dashboards/src/main/webapp/common/services/topologyDiscovery.ts
+M packages/splunk-cisco-dashboards/src/main/webapp/pages/network_diagram/index.tsx
+A packages/splunk-cisco-dashboards/src/main/webapp/common/contexts/IpAddressVisibilityContext.tsx
+A packages/splunk-cisco-dashboards/src/main/webapp/common/lib/splunkSearchUrl.ts
+A packages/splunk-cisco-dashboards/src/main/webapp/common/components/topology/silhouettes.tsx
+```
+
+### What's next
+
+- Sanity-check the rack-flavour palette against a busy OOB
+  diagram (the indexer cluster reference) — one thing we
+  deliberately did NOT do is have the LED ping ring re-tint
+  to follow the silhouette's accent (right now the ping ring
+  matches the status colour, which is correct for "is this
+  host alive" but slightly out of harmony when a healthy
+  amber-router silhouette ends up underneath an emerald ping).
+- Consider opt-in photorealistic rendering as the next tier
+  — at this point we have a stable per-family API and could
+  swap the SVG silhouettes for vendor PNGs without churning
+  consumers.
+- The PNG export currently captures everything inside
+  `exportTargetRef`, which means any open inspector
+  (Properties panel) bleeds into the screenshot. Add a brief
+  pre-export `setSelection(null)` or capture-time stylesheet
+  override before shipping a "Share with audience" workflow.
+
+---
+
+## 2026-05-16 (Build 115.11) — OOB alignment, card resize, arrow styles, live-status edges, picker fold, ship script
+
+### Goal
+
+Six follow-up requests that landed after the 115.10 polish session:
+
+1. **Default diagrams are visibly mis-aligned** in regions (e.g. the
+   Splunk Cloud reference page — Search SHs sit a few px below the
+   Indexer row, the AZ trio doesn't share a Y, the protocol-gateway
+   labels float above the Customer Env top edge by ~6px).
+2. **Can device cards be resized?** Operators want a "hero device"
+   in some diagrams (e.g. an enlarged HEC LB) and a tighter card on
+   small references.
+3. **Don't love the arrow shape** — give us alternatives.
+4. **Make the line itself feel alive** like the overview dashboard's
+   site connector: green dashes when reporting, red when stale.
+5. **Picker dropdown clips long names** and dumps factory + custom
+   into one undifferentiated list.
+6. **One-shot ship** — produce an installable Splunk archive on every
+   change loop so test installs are a single CLI step.
+
+### Discovery & decisions
+
+#### Alignment is per-region, not per-canvas
+
+The OOB diagrams ship with hand-tuned coordinates; cumulative drift
+on coordinates near the 20px snap grid (e.g. y=30 vs y=40 vs y=180)
+made same-row cards look like they're in different rows. The runtime
+already snaps drag-stops to a 20px grid, so the problem is purely in
+the seed data. Decision: add a **`tidyDiagram()` post-process** to
+the generator that runs after every diagram declaration:
+
+- Snap every node / group / title coordinate to the 20px grid.
+- Per parent, cluster Y values (and X values) using a 24px
+  single-link tolerance and force every node in a cluster onto a
+  shared Y / X. Cluster representative is the snapped MIN of the
+  group, not the median, so we don't accidentally drift everyone
+  onto a phantom new gridline.
+- Top-level (no parentId) nodes get the same treatment via a
+  sentinel parent key — fixes the floating gateway labels in the
+  cloud diagram.
+
+The pass is conservative (24px tolerance ≈ one grid step) so
+intentional staggers stay intentional, but anything authored
+"close to aligned" snaps to "actually aligned". 13 OOB diagrams
+re-emitted from one `node scripts/generate_oob_diagrams.mjs` run.
+
+#### Card resize via NodeResizer; widen the dimensions exclusion
+
+React Flow ships `<NodeResizer>` for the resize affordance. Two
+plumbing changes were needed alongside it:
+
+1. `DeviceShape` was rendering with hard-coded `width: 110, height:
+   122`. Swap to `width/height: 100%` so the React Flow wrapper's
+   `style.width/height` (already round-tripped by `rfToSaved`)
+   actually drives the visual size. Add `<NodeResizer
+   isVisible={selected} minWidth={90} minHeight={100}>` so the
+   eight handles only appear on the selected card and the floor
+   stays readable.
+2. `isMutatingNodeChanges` had a blanket skip for `dimensions`
+   changes — that was right for first-mount measurement, wrong for
+   user-driven resizes. The React Flow `NodeChange` for an active
+   resize carries `resizing: true`; gate the early-return on that
+   flag so resizes mark the diagram dirty (same applies to region
+   resize, which was silently dropped before this fix).
+
+#### Arrow styles: closed / open / thin + custom dot / diamond
+
+React Flow's built-in `MarkerType` has only `Arrow` and
+`ArrowClosed`. To deliver a richer set without dropping React
+Flow's marker resolver, we hybridise:
+
+- `closed` → MarkerType.ArrowClosed (default, current look).
+- `open`   → MarkerType.Arrow.
+- `thin`   → MarkerType.Arrow with `strokeWidth: 1` and a smaller
+  marker box.
+- `dot`    → custom SVG `<marker id="ndg-arrow-dot">` rendered
+  via a tiny `<svg>` overlay (`<EdgeMarkerDefs />`) inside the
+  canvas wrapper.
+- `diamond` → custom SVG `<marker id="ndg-arrow-diamond">` in
+  the same overlay.
+
+`markersForDirection(direction, style)` returns either an
+`EdgeMarker` object (built-ins) or a `'url(#ndg-arrow-…)'` string
+(custom markers). React Flow accepts both shapes for
+`markerStart` / `markerEnd`. Markers use `fill="context-stroke"`
+so the dot/diamond automatically tints to whatever colour the
+edge is currently strok​ing with — including the new live-status
+green/red — with a slate fallback for browsers without
+`context-stroke` support.
+
+`SavedDiagramEdge.arrowStyle` is round-tripped, but only emitted
+when ≠ 'closed' so older diagrams stay byte-identical on save
+(no `git diff` churn).
+
+#### Live-status edges: emerald/rose marching ants
+
+The Florida overview dashboard's customer-topology map has the
+"data flowing through this connector" effect operators love. We
+port the recipe to the diagram canvas as a per-edge toggle:
+
+- `SavedDiagramEdge.liveStatus: boolean` — when true, the edge
+  ignores `lineColor` and per-kind defaults and recolours its
+  stroke from the `HealthStatus` of its endpoints.
+- The endpoint statuses come from `useStore(s => s.nodeLookup)`
+  inside `AnimatedEdge` — a per-edge selector keeps re-renders
+  scoped to edges whose endpoints actually changed. This pairs
+  perfectly with the 115.10 patch effect that updates device
+  status in-place: when `| metadata` flips a host, the edge
+  flips colour without a full canvas hydration.
+- Status reduction: both healthy → emerald; either critical →
+  rose; either warning or one-sided healthy → amber; both
+  unknown → slate (no marching ants in that case so a "we
+  haven't loaded telemetry yet" edge stays quiet).
+- Marching ants via SVG `<animate attributeName="stroke-
+  dashoffset">` on the existing visible path; period (1000ms)
+  is half the flowing-dot duration so the two animations look
+  intentional together. Direction follows the edge's `direction`
+  field — backward edges flow ants the other way.
+- Dasharray is `6 4`, stroke is bumped from 1.5 → 2 in live
+  mode so the gaps stay legible; selected edges still get the
+  +0.75 emphasis on top.
+
+The inspector exposes a single switch (`Activity` icon) labelled
+"Reporting from hosts" / "Static colour" so operators understand
+both ends and can flip back if the line looks too busy.
+
+#### Picker: alias the prop, group by registry
+
+Three small fixes layered together:
+
+1. The dropdown was 288px (`w-72`) — long names like
+   "Distributed Clustered with SHC Single Site - C3 C13" overflow.
+   Bump to 384px (`w-96 max-w-[90vw]`) and replace `truncate` on
+   the name span with `break-words flex-1`. Keep the "saved at"
+   timestamp on the same row but with `whitespace-nowrap` so it
+   stays right-aligned.
+2. Group by the canonical `FACTORY_DIAGRAM_NAMES` registry from
+   `diagramPersistenceService.ts`. Two collapsible-style sections:
+   "Default (n)" and "Custom (n)", each sorted alphabetically by
+   name (case-insensitive, base sensitivity).
+3. The DiagramHeader prop `isFactoryDiagram: boolean` was shadowing
+   the imported helper of the same name — TS error
+   `Type 'Boolean' has no call signatures` when we tried to call
+   it inside the IIFE. Alias the import as
+   `isFactoryDiagramName`. Rename the prop too in a future pass if
+   we want — for now the alias keeps the ergonomic API stable.
+
+#### `yarn package:app` was already there — wire up the workspace
+
+The `package_app.sh` script already produces a versioned tarball
+into `dist/splunk-cisco-dashboards-<version>.tar.gz`. What was
+missing: a single repo-root command. Add three workspace-level
+scripts to the top-level `package.json`:
+
+- `yarn package:app` → forwards to the package script.
+- `yarn regen:diagrams` → re-runs `generate_oob_diagrams.mjs`.
+- `yarn ship` → regen + package in one pass, the new "release
+  loop" command.
+
+The customer's install workflow becomes:
+
+    yarn ship
+    splunk install app dist/splunk-cisco-dashboards-1.0.10.tar.gz -update 1
+
+### What we built
+
+- `scripts/generate_oob_diagrams.mjs` — added the `tidyDiagram()`
+  post-process and applied it to all 13 OOB diagrams. Re-emitted
+  `default/network_diagrams.conf` via the regen script.
+- `common/components/topology/shapes.tsx` — `DeviceShape` now
+  fills its wrapper (100% × 100%) and ships an in-card
+  `<NodeResizer>` that activates on selection. Min: 90×100.
+- `common/components/diagram/NetworkDiagramCanvas.tsx`:
+  - `isMutatingNodeChanges` returns `true` for dimensions
+    changes when `resizing === true` (operator drag), still
+    silent for first-mount measurement.
+  - New `EdgeMarkerDefs` SVG overlay for `dot` / `diamond` markers.
+  - `ARROWHEADS_BY_STYLE` table and the new
+    `markersForDirection(direction, arrowStyle)` signature.
+  - `savedEdgeToRF` / `rfToSaved` round-trip `arrowStyle` and
+    `liveStatus`.
+  - `handleConnect` initialises new edges with `arrowStyle:
+    'closed'` and `liveStatus: false`.
+  - `handleEdgeUpdate` honours both new fields.
+- `common/components/diagram/AnimatedEdge.tsx`:
+  - `useStore` selectors pull source/target `HealthStatus` from
+    React Flow's `nodeLookup`.
+  - `LIVE_STATUS_PALETTE` + `reduceEndpointStatus` derive the edge
+    colour for live mode.
+  - The visible path conditionally swaps stroke + dasharray and
+    runs an `<animate>` for marching ants when live mode is on.
+- `common/components/topology/PropertiesPanel.tsx`:
+  - New `ArrowStyle` type, `ARROW_STYLE_OPTIONS` table, and
+    `EdgeUpdate.{arrowStyle, liveStatus}` fields.
+  - Edge inspector adds an "Arrow style" `<select>` (disabled
+    when direction='none', to make the dependency obvious) and
+    a "Live status" toggle button (Activity icon, emerald when
+    on, slate when off).
+- `common/services/diagramPersistenceService.ts`:
+  - `SavedDiagramEdge.arrowStyle` and `SavedDiagramEdge.liveStatus`
+    fields with full doc strings.
+- `common/components/diagram/DiagramHeader.tsx`:
+  - Picker widened, `truncate` removed, names wrap.
+  - Imports `isFactoryDiagram as isFactoryDiagramName` to dodge
+    the prop shadow.
+  - Two folder-style sections: Default (factory) and Custom,
+    each sorted A→Z, divider line between them.
+- `package.json` (root) — `package:app`, `regen:diagrams`, `ship`
+  scripts so the install loop is `yarn ship` + `splunk install`.
+- `default/app.conf` — `build = 1161`.
+
+### Verification
+
+- `yarn typecheck` from `packages/splunk-cisco-dashboards/` —
+  green. (One mid-flight error about the `isFactoryDiagram` prop
+  shadowing the import surfaced and was fixed via the
+  `isFactoryDiagramName` alias.)
+- `yarn build` (webpack production) — green; same size warnings as
+  before (overview, topology_canvas_v1, network_diagram entrypoints)
+  with no new ones.
+- `yarn package:app` — produces
+  `dist/splunk-cisco-dashboards-1.0.10.tar.gz` (14M). Top-level
+  `yarn ship` runs the regen + package pair in sequence.
+- `node scripts/generate_oob_diagrams.mjs` re-emits all 13 OOB
+  diagrams; `git diff default/network_diagrams.conf` shows
+  per-diagram coordinate snaps (e.g. `y=30` → `y=40`,
+  `y=180` → `y=180` (already aligned), gateway labels at `y=460`
+  → `y=460` but the customer-env shapes anchored to `y=60` now
+  share that Y across the whole row).
+
+### Files changed
+
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf`
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/network_diagrams.conf` (regenerated)
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/diagram/AnimatedEdge.tsx`
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/diagram/DiagramHeader.tsx`
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/diagram/NetworkDiagramCanvas.tsx`
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/topology/PropertiesPanel.tsx`
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/topology/shapes.tsx`
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/services/diagramPersistenceService.ts`
+- `packages/splunk-cisco-dashboards/docs/SESSION_LOG.md` (this entry)
+- `package.json` (root)
+- `scripts/generate_oob_diagrams.mjs`
+
+### What's next
+
+- Watch what operators actually do with `liveStatus` on busy
+  diagrams — if every edge ends up flipped on, we'll need a
+  per-diagram global toggle so the canvas stops feeling like a
+  Christmas tree.
+- The `tidyDiagram()` pass currently runs on a 20px grid. If
+  operators want a denser layout (e.g. 10px), we either gate by
+  diagram or expose a per-region "padding" knob in the inspector.
+- `<NodeResizer>` works but doesn't yet snap to a grid during the
+  drag. React Flow accepts a `gridSize` prop on the canvas; we'll
+  need to pass it through `NodeResizer` too if alignment-with-
+  resize matters in practice.
+- The dropdown's two-section layout is a good baseline; if the
+  custom list grows past ~12, add a search input above the list.
+
+---
+
+## 2026-05-16 (Build 115.10) — Region-drop wipe, edge hit area, panel auto-dismiss, label auto-bind, radiating LEDs, light/dark theme
+
+### Goal
+
+Six operator-reported authoring-experience issues from the Build 115.9
+demo, escalating from "this is broken" to "this would be a wow":
+
+1. **Erratic region drops.** Dragging a shape into a region behaved
+   wildly — the operator said "the shape moves outside and is not
+   behaving right". Repro: drop a Switch from the palette into a
+   freshly-placed region, and the device sometimes vanished or
+   relocated outside the region body.
+2. **Edge click hit area too small.** "It's a little difficult to find
+   the sweet spot to click on a connection line, you almost have to
+   be perfect" — the visible 1.5–2.25px stroke is also the click
+   target, and operators were repeatedly missing.
+3. **Inspector lingers after Apply.** Pressing Apply commits the
+   changes but leaves the panel open; the operator has to chase the
+   × button to close it.
+4. **No auto-bind from typed names.** "If we know the device name from
+   the inventory and we know `| metadata` sees it, why can't [we]
+   just bind the host automatically to the shape… short name vs
+   FQDN, etc.". Operators want the obvious bind to happen for them.
+5. **Status dot is just a dot.** "Can the dot in the card radiate
+   when the status is green or red? I think if you can find some
+   cool effects, that will be amazing — we need a wow effect."
+6. **No theme toggle.** "Just like in our overview dashboard, please
+   implement light vs dark mode and auto set it based on the user
+   or system default settings."
+
+### Discovery & decisions
+
+#### Region drops — root cause, not the symptom
+
+The visible jitter wasn't React Flow's parent extent clamping (that
+was working as designed). The root cause was a re-hydrate race in
+`NetworkDiagramCanvas`. The hydrate `useEffect` declared deps
+`[initialPayload, assetIndex, visibilityIndex, reactFlow]`. Both
+`assetIndex` and `visibilityIndex` resolve asynchronously on
+mount — the metadata search, in particular, can take ~1s to land.
+Each resolution triggered the effect again, which calls `setNodes`
+from `initialPayload`, throwing away whatever the operator just
+dropped in the meantime. Result: a shape dropped into a region
+either disappeared, snapped back to its pre-drop state, or — when
+the timing aligned with React Flow's mid-drag bookkeeping — flew
+outside the region as the parent slot got recreated.
+
+The fix is two effects instead of one:
+
+- **Hydrate effect** (depends on `initialPayload` and `reactFlow`
+  only): rebuilds nodes/edges from the saved payload on mount and
+  on diagram switch. Reads `assetIndex` / `hostVisibility` from
+  refs so it doesn't have to re-run when those land.
+- **Patch effect** (depends on `assetIndex` and `hostVisibility`):
+  walks current nodes and updates `data.node.status` in-place when
+  the indexes resolve, leaving positions, parents, edges, and any
+  in-progress drops untouched. Returns the same node reference
+  when nothing changes so React Flow doesn't repaint unaffected
+  cards.
+
+The patch is intentionally narrow: only `status` is recomputed. We
+considered re-deriving `label`, `vendor`, `model` etc., but those
+have operator-typed overrides and re-deriving them would clobber
+unsaved edits — exactly the bug we're fixing.
+
+#### Edge hit area — overlay, not a wider stroke
+
+The two natural fixes are (a) bump the visible stroke to ~10px so
+you can hit it, or (b) keep the stroke thin and overlay an
+invisible wide path for hit testing. (a) makes the diagram look
+like a 90s power-point. (b) is the standard React Flow recipe:
+render a transparent 20px stroke first, with `pointerEvents="stroke"`
+and `cursor: pointer`, then the visible 1.5–2.25px stroke on top
+with `pointerEvents="none"`. Clicks within ~10px of the line land
+in the corridor. The cursor change is the key affordance — the
+operator's "you almost have to be perfect" was as much about
+discoverability as accuracy.
+
+#### Auto-dismiss the inspector after Apply
+
+We didn't want to break the Build 115.3 inline-binding flow (where
+clicking a host in the Bind to host combobox immediately commits
+and keeps the panel open so the operator can verify the rebind).
+The fix adds an `onApplyComplete?: () => void` prop to the four
+forms with explicit Apply buttons (Node / Region / Title / Textbox).
+The PropertiesPanel passes `onClose` as that callback. Inline
+binding apply does NOT invoke it. The Edge form already used a
+live-preview `commit` (no Apply button) so it's untouched.
+
+#### Auto-bind from typed names
+
+We considered fuzzy / per-keystroke matching but rejected both:
+fuzzy matches surprise operators who type substrings, per-keystroke
+matching jitters mid-type. The chosen heuristic runs ONLY on
+explicit Apply: when the typed `label` or `shortLabel` exactly
+matches an asset's id / label / shortLabel / `raw.hostname` /
+`raw.device_name` (after lowercase + trim, with FQDN→short
+expansion on both sides), and the node is currently unbound, the
+Apply payload includes `assetId` so `handleNodeUpdate` routes
+through the bind branch. If multiple assets match (unlikely but
+possible — one device known by short and another by full name),
+the heuristic punts and the operator binds manually via the combobox.
+This handles the common short-vs-FQDN skew the user called out
+without going down the fuzzy-match rabbit hole.
+
+#### Radiating LEDs — animate-ping, not a custom keyframe
+
+Tailwind ships `animate-ping`, which scales an element from 100%
+to 175% and fades opacity 100→0 over 1s, repeating indefinitely.
+That's the exact "outward pulse" the user asked for. The trick is
+layering: an absolutely-positioned ping ring sits behind the solid
+LED dot at the same coordinates, so the dot stays crisp while the
+ring radiates outward. Each status (`healthy`, `warning`,
+`critical`) gets its own ping colour matching the dot. `unknown`
+intentionally has an empty `dotPing` — a "no telemetry" indicator
+shouldn't compete for attention with the active states.
+
+#### Light/dark theme — reuse the existing rig
+
+The Florida overview dashboard already has `useTheme` (light /
+dark / system + `prefers-color-scheme` listener + localStorage
+persistence) and `ThemeToggle` (pill button cycling
+light → dark → system). Tailwind runs `darkMode: 'class'`, so
+applying the literal `dark` class on the page wrapper enables
+every `dark:` variant in the subtree. The diagram canvas and
+header already had `dark:` variants for the entire surface — they
+just weren't reachable because the page didn't apply the class.
+The fix is mechanical: pull `useTheme` + `ThemeToggle` into
+`pages/network_diagram/index.tsx`, conditionally apply `dark` to
+the wrapper, and pass the toggle into `DiagramHeader` via a new
+optional `themeSlot` prop so the header doesn't have to know about
+the hook.
+
+### What we built
+
+#### `src/main/webapp/common/components/diagram/NetworkDiagramCanvas.tsx`
+
+- Added `assetIndexRef` / `visibilityIndexRef` mirrors so the
+  hydrate effect reads the freshest values without listing them
+  as deps.
+- Trimmed the hydrate effect's deps to `[initialPayload, reactFlow]`.
+- Added the patch effect (`[assetIndex, hostVisibility]`) that
+  re-folds `status` for every device node in-place, returning the
+  same reference when nothing changes.
+
+#### `src/main/webapp/common/components/diagram/AnimatedEdge.tsx`
+
+- Added the wide invisible interaction path (20px,
+  `pointer-events: stroke`, `cursor: pointer`).
+- Visible path now uses `pointer-events: none` so it doesn't
+  compete with the interaction layer.
+
+#### `src/main/webapp/common/components/topology/PropertiesPanel.tsx`
+
+- Threaded `onApplyComplete` into the Node / Region / Title /
+  Textbox forms; each form's `handleApply` invokes it after
+  `onApply`. Inline binding flow unchanged.
+- PropertiesPanel passes `onClose` as `onApplyComplete` for all
+  four forms.
+- Added the auto-bind heuristic in `NodePropertiesForm`: on
+  explicit Apply, scan `assetIndex` for an unambiguous lower-case
+  / FQDN-short match against the typed label / shortLabel; on a
+  hit, include `assetId` in the Apply payload so the canvas
+  routes through the rebind branch.
+
+#### `src/main/webapp/common/components/topology/shapes.tsx`
+
+- Added `dotPing` per status (`healthy` / `warning` / `critical`,
+  empty for `unknown`).
+- Replaced the single LED `<span>` with a wrapper holding (a) an
+  absolutely-positioned ping ring (`animate-ping`) and (b) the
+  solid dot. Bumped glow alpha slightly for healthier contrast
+  against the ping ring.
+
+#### `src/main/webapp/pages/network_diagram/index.tsx` + `DiagramHeader.tsx`
+
+- Wired `useTheme` (preference + resolved theme + cycle) into the
+  diagram page.
+- Page wrapper conditionally adds the `dark` class so Tailwind's
+  class-mode dark variants resolve.
+- DiagramHeader gained an optional `themeSlot` prop; the diagram
+  page passes `<ThemeToggle theme={theme} onCycle={cycleTheme} />`
+  so the operator gets the same control they have on the overview
+  dashboard.
+
+### Verification
+
+- `yarn typecheck` clean.
+- `yarn build` clean (only the pre-existing asset-size warnings
+  for overview / topology / network_diagram bundles).
+- Manual smoke (will follow on stack):
+  1. Drop Switch into a freshly-placed region — shape stays put,
+     even when the metadata search is still in flight.
+  2. Click anywhere within ~10px of an edge — selection lands;
+     cursor shows pointer over the corridor.
+  3. Apply on the Node / Region / Title / Textbox inspector
+     dismisses the panel; binding via the combobox keeps it open.
+  4. Type a known hostname into a generic shape's label, press
+     Apply — shape rebinds (vendor/model/raw light up).
+  5. Healthy nodes pulse green, critical red; unknown stays quiet.
+  6. Click the AUTO toggle in the header — cycles
+     light → dark → system; each tier paints the canvas
+     correctly; system mode follows the OS preference.
+
+### Files changed
+
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf`
+  (`build` → 1160).
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/diagram/NetworkDiagramCanvas.tsx`
+  (hydrate split + patch effect + index refs).
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/diagram/AnimatedEdge.tsx`
+  (interaction overlay + cursor).
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/diagram/DiagramHeader.tsx`
+  (`themeSlot` prop).
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/topology/PropertiesPanel.tsx`
+  (`onApplyComplete` plumbing + auto-bind heuristic).
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/topology/shapes.tsx`
+  (radiating LEDs).
+- `packages/splunk-cisco-dashboards/src/main/webapp/pages/network_diagram/index.tsx`
+  (theme wiring).
+
+### What's next
+
+- Operator validation on the stack (rapid succession: drop into
+  region while the metadata search is still resolving; verify the
+  shape stays put across all the OOB diagrams).
+- If the auto-bind heuristic surprises anyone, surface a one-line
+  toast "Bound to <asset>" instead of silent rebind so operators
+  can see what we did and undo it.
+
+---
+
+## 2026-05-15 (Build 115.9) — Edge direction (real fix), bound-LED authoritative metadata, Info popover
+
+### Goal
+
+Three operator-reported issues from the Build 115.7 demo, two of
+them recurrences ("we still have the bug…"):
+
+1. **Edge direction wrong**. Operator clicks on device A (idx-01)
+   and drags to device B (Access Point); the arrowhead and
+   animation should point from A → B. We "fixed" this in Build
+   115.5 by swapping handle render order, but the swap landed
+   in the wrong file (see below); the bug survived.
+2. **Bound-host LED stays gray** for hosts the operator is
+   confident Splunk is seeing. Screenshot: `idx-01` bound to
+   `sh-i-ak`, the operator's own search head, with the LED
+   gray. Build 115.6 relaxed the `metadata`-vs-`assetStatus`
+   fold to be friendlier, but the fold itself was still the
+   wrong abstraction for the operator's mental model.
+3. **Info icon → real instructions, not a hover tooltip**. The
+   Build 115.6 `?` chip surfaced help on hover only; operators
+   wanted a click-to-open card with structured content (how do
+   I add shapes, link them, edit, what do the keyboard
+   shortcuts do).
+
+### Discovery & decisions
+
+#### Why edge direction was still wrong
+
+Build 115.5 swapped the source/target render order inside
+`packages/.../diagram/CyberNocShape.tsx`, with a long comment
+explaining the React Flow pointer-pickup semantics
+("topmost handle wins → render source last → drag picks up
+source → connection.source = drag-start node"). All correct.
+
+Problem: the canvas does NOT render `CyberNocShape`. The file
+header on `NetworkDiagramCanvas.tsx` is explicit about this —
+`CyberNocShape` is a future opt-in dark variant. The actual
+node renderer is `topology/shapes.tsx`, where the order was
+still source-first / target-second. So target was on top, the
+operator's pointer picked up the target handle, and React
+Flow created the edge with the operator's drag-start node as
+the **target** — yielding an arrow pointing the wrong way.
+
+The fix is the same swap, applied to the file the canvas
+actually mounts.
+
+#### Why the bound-host LED stayed gray
+
+`resolveEffectiveStatus` in `NetworkDiagramCanvas.tsx`
+combined `assetStatus` (the asset feed's own health column)
+with the `| metadata type=hosts` signal:
+
+| Metadata says | Old result |
+|---|---|
+| Reporting (true) | `assetStatus` |
+| Silent (false) | `'unknown'` (gray) |
+| Has no opinion (undefined) | `assetStatus` |
+
+The fold was logically defensible but it tied the LED to
+`assetStatus` even when metadata had a clear answer. For
+splunk_inventory rows, `assetStatus` is `'healthy'` only when
+`is_connected = yes`, and that value comes from the daily
+discovery saved search — it is, by definition, hours stale.
+Worse, splunk_inventory rows that haven't been confirmed yet
+(or where the search hasn't run since install) show
+`assetStatus = 'unknown'`. So the LED was gray for any
+freshly-bound host even when `| metadata` showed it sending
+events 30 seconds ago.
+
+The operator's mental model is much simpler: **"Is Splunk
+seeing this host right now?"** Make metadata authoritative:
+
+| Metadata says | New result |
+|---|---|
+| Reporting (true) | `'healthy'` (force green) |
+| Silent (false) | `'critical'` (force red) |
+| Has no opinion (undefined) | `assetStatus` (fall back) |
+| `hostVisibility` not loaded yet | `assetStatus` (no flicker) |
+
+Trade-off: an operator who trusted the asset feed's
+`is_connected` even when metadata said silent now gets a red
+LED instead of gray. That's the correct outcome — "Splunk
+indexed this host before but stopped" is more actionable than
+the previous ambiguous gray.
+
+We also discovered a count cap that hid hosts on big stacks:
+`runSearch` was hardcoded to `count = 1000`, and the metadata
+service inherited that default. On a stack with more than
+1000 distinct reporting hosts, anything past row 1000 was
+silently dropped from the index — and any bound shape pointing
+at a "missing" host fell through to `assetStatus`. Bumped the
+metadata search to `count = MAX_HOSTS = 50_000` and added a
+`| sort 0 - lastTime` so a hostile (>50k) cardinality keeps
+the most-recently-active hosts.
+
+#### Info icon shape
+
+The Build 115.6 `?` chip with a `title` tooltip was
+discoverable but operators didn't realise there was structured
+help available. Replacing the tooltip with a click-to-open
+popover that organises tips by task ("Add shapes", "Link
+devices", "Edit & inspect", "Shortcuts") gives the help a
+real home without bringing back the persistent banner that
+115.6 was specifically asked to retire.
+
+### What we built
+
+#### 1. Edge direction (real fix)
+
+`common/components/topology/shapes.tsx` — `NodeHandles` now
+renders `target` first and `source` second, matching the
+fix that landed in `CyberNocShape.tsx` in 115.5 (and
+explaining the duplication via a long header comment so the
+next person reading the code understands which file is
+actually wired into the canvas).
+
+Operator-visible result: drag from A to B, arrow points at B,
+animation flows A → B. Every time.
+
+#### 2. Bound-host LED — metadata authoritative
+
+`common/components/diagram/NetworkDiagramCanvas.tsx` —
+`resolveEffectiveStatus` now returns `'healthy'` whenever any
+candidate hostname for a node reports `isReporting === true`,
+and `'critical'` whenever metadata is positive that the host
+is silent (in metadata but `lastTime` outside the 24h window).
+
+`common/services/hostVisibilityService.ts` — the metadata
+search now requests up to `MAX_HOSTS = 50_000` rows
+(previously inherited the dashboard default of 1000) and
+sorts by `lastTime desc` so any client-side truncation keeps
+the most recent activity.
+
+`common/services/splunkSearchService.js` — `runSearch` now
+accepts an optional `count` parameter (default 1000). The
+metadata service is the only caller currently passing it;
+other tiles keep their existing 1k cap.
+
+#### 3. Info popover
+
+`common/components/diagram/NetworkDiagramCanvas.tsx` —
+replaced the hover-only `?` chip with a click-to-open
+popover. The button shows the Lucide `Info` icon and toggles
+a 320px-wide card with four sections (Add shapes / Link
+devices / Edit & inspect / Shortcuts), close button, and
+Escape-to-close. Closed state matches the previous chip's
+footprint so existing visual layouts don't shift.
+
+### Verification
+
+- `yarn typecheck` — clean.
+- `yarn build` — webpack OK; network_diagram bundle 770 KiB
+  (+5 KiB vs 115.8 from the popover content).
+- Lint — 0 new findings on the touched files.
+- Build bumped to 1159.
+
+### Files changed
+
+- `common/components/topology/shapes.tsx` — handle order swap.
+- `common/components/diagram/NetworkDiagramCanvas.tsx` —
+  metadata-authoritative `resolveEffectiveStatus`, Info
+  popover, `helpOpen` state.
+- `common/services/hostVisibilityService.ts` — count bump
+  + `sort 0 - lastTime` so client-side truncation favours
+  recently-active hosts.
+- `common/services/splunkSearchService.js` — `runSearch`
+  accepts an optional `count` override.
+- `default/app.conf` — `build = 1159`.
+
+### What's next
+
+- Operator QA on a stack with > 1000 reporting hosts: confirm
+  that bound shapes for hosts beyond the previous truncation
+  point now light green.
+- The "positively silent → critical (red)" downgrade is a
+  semantic shift; if it surprises an operator we may want a
+  middle 'warning' (amber) state for "in metadata but stale".
+  Holding off until we see a real complaint.
+
+---
+
+## 2026-05-15 (Build 115.8) — `.conf.spec` updated for schema v2 (btool errors)
+
+### Goal
+
+Operator ran `splunk btool check` on a stack with the Build 115.7
+app installed and got a wall of "Invalid key in stanza" errors
+against `default/network_diagrams.conf` (and one against
+`local/network_diagrams.conf`). Every new schema-v2 metadata key
+was flagged: `schema_version`, `title`, `description`,
+`node_count`, `edge_count`, `group_count`, `asset_bindings`. The
+three legacy v1 keys (`updated_at`, `updated_by`, `payload_json`)
+were not flagged because the spec file already declared them.
+
+(The operator's btool output also included unrelated errors from
+`Splunk_MCP_Server` and `Splunk_ML_Toolkit`. Those live in other
+apps and are out of scope for this repo.)
+
+### Discovery & decisions
+
+`splunk-cisco-dashboards/README/network_diagrams.conf.spec` was
+written for schema v1 in Build 115.3 and never updated when
+schema v2 (Build 115.5) promoted the seven additional metadata
+fields. btool validates every conf key against the app's spec
+when one exists, and treats undeclared keys as errors — which is
+exactly what the operator hit.
+
+The fix is purely a spec-file update. The runtime keeps working
+either way (Splunkd still reads the conf, the React bundle
+parses it, the persistence layer never queried btool). But btool
+is a contract Splunk Cloud Vetting checks, and shipping a conf
+file with undeclared keys would block submission. So we sync
+the spec to the on-disk reality.
+
+### What we built
+
+`src/main/resources/splunk/README/network_diagrams.conf.spec`
+rewritten to document schema v2 in full:
+
+| Key | Type | Notes |
+|---|---|---|
+| `schema_version` | integer | 2 = current hybrid; 1 = legacy. |
+| `title` | string | On-canvas title (distinct from stanza name). |
+| `description` | string | Operator prose for the picker tooltip. |
+| `updated_at` | string | ISO-8601 UTC. (unchanged from v1) |
+| `updated_by` | string | Splunk username; `oob-seed` for OOB. (unchanged from v1) |
+| `asset_bindings` | string | Comma list of bound device_names. |
+| `payload_json` | string | Single-line JSON canvas body. (unchanged from v1) |
+| `node_count` | integer | Denormalised from payload. |
+| `edge_count` | integer | Denormalised from payload. |
+| `group_count` | integer | Denormalised from payload. |
+
+The header comment block now also explains v1 → v2 migration so
+anyone reading the spec understands why some keys are absent on
+older stanzas.
+
+### Verification
+
+- `yarn build` — clean. Staged `stage/README/network_diagrams.conf.spec`
+  contains all 10 declared keys.
+- Build bumped to 1158.
+
+### Files changed
+
+- `src/main/resources/splunk/README/network_diagrams.conf.spec` —
+  full rewrite to schema v2.
+- `default/app.conf` — `build = 1158`.
+
+### What's next
+
+- Once the operator pushes 115.8 and re-runs `splunk btool check`,
+  the network_diagrams.conf errors should be silent. The
+  Splunk_MCP_Server / Splunk_ML_Toolkit errors will persist
+  because those apps live elsewhere.
+- Future schema bumps should always touch the spec in the same
+  PR; consider adding a CI check that diffs `coerceRow` /
+  `upsertRowRest` keys against the spec to catch this kind of
+  drift earlier.
+
+---
+
+## 2026-05-15 (Build 115.7) — Shapes-palette scroll fix + factory-diagram revert
+
+### Goal
+
+Two operator-reported issues from the Build 115.6 demo:
+
+1. **Shapes palette scroll stopped at "Servers & Infrastructure"**
+   on short viewports. Anything below that header (Storage,
+   End-User & IoT, Edge & Cloud, Places, Layout) was clipped and
+   unreachable. Workaround was to zoom out the browser; the
+   operator wanted normal scroll behaviour.
+2. **Delete on a factory (OOB) diagram was misleading**. Splunkd's
+   conf REST won't actually remove a stanza shipped in `default/`
+   — DELETE is silently a no-op when the stanza only exists in
+   the default layer. The button looked active but did nothing,
+   and there was no way to clear local customizations on a
+   factory diagram and get back to the OOB layout.
+
+### Discovery & decisions
+
+#### Why the shapes palette stopped scrolling
+
+`DiagramPalette` wrapped the active tab in a `flex-1 min-h-0
+overflow-hidden` div, and `ShapesTab` had no scroll viewport of
+its own — it just rendered a tall column of section headers and
+2-column tile grids. With 42 shapes across 8 sections the
+content easily exceeds 700–900 px, so anything past
+"Servers & Infrastructure" disappeared on standard 1080p
+viewports. `InventoryTab` already scrolled correctly because
+its inner list has its own `overflow-y-auto` viewport.
+
+The fix is one line: change the wrapper to `overflow-y-auto` so
+it provides the scroll viewport for whichever tab is mounted.
+`InventoryTab` keeps its inner scroll for the device list, but
+because `InventoryTab`'s outer container is `h-full`, content
+fits inside the parent and the parent scroll never engages —
+no double-scroll.
+
+#### Three-state delete UX for factory diagrams
+
+The persistence model already has a layered story:
+
+- `default/network_diagrams.conf` ships OOB diagrams (Build
+  115.6 added 13).
+- `local/network_diagrams.conf` carries operator saves.
+- `fetchAllRows()` reads the merged view; saves go to local.
+
+Splunkd's conf REST surfaces this layering through
+`acl.removable` on each entry — `true` only when the user can
+actually DELETE the stanza (i.e. it exists in local AND the user
+has write permission). For default-only stanzas it's `false`.
+We weren't reading this signal; the page only checked
+`diagramExistsOnServer`, which was true for OOB diagrams the
+moment the directory listed them.
+
+We picked Splunkd's signal over a hand-rolled "is factory"
+introspection because:
+
+- It naturally folds permission failures into the same disabled
+  state ("Splunk won't let you remove this anyway").
+- It updates correctly the moment a save lands a local override
+  — no client-side cache to keep in sync with reality.
+
+Combined with a hardcoded `FACTORY_DIAGRAM_NAMES` set we can
+distinguish three UI states cleanly:
+
+| isFactory | hasLocalOverride | UI |
+|---|---|---|
+| true | false | "Delete" button disabled, tooltip explains why |
+| true | true | Button relabels to "Revert" with a rotate-back icon |
+| false | true | "Delete" works as before |
+
+The factory-name set lives in `diagramPersistenceService.ts`
+mirroring `scripts/generate_oob_diagrams.mjs`. We didn't try to
+auto-detect "factory" via a second REST round-trip — the
+generator's output is the source of truth for OOB stanza names
+and the list rarely changes.
+
+### What we built
+
+#### 1. Palette wrapper switched to `overflow-y-auto`
+
+`packages/.../diagram/DiagramPalette.tsx` — the tab content
+wrapper now sets `overflow-y-auto` instead of `overflow-hidden`.
+`ShapesTab` is unchanged; it relies on the parent scroll. The
+`InventoryTab` continues to use its inner list scroller (its
+outer is `h-full`, so content fits the parent and the parent
+scroll never engages — no double-scroll).
+
+#### 2. `acl.removable` propagated through the persistence service
+
+`diagramPersistenceService.ts` now:
+
+- Adds `acl?.removable` to the `ConfRestEntry` interface.
+- Reads `acl.removable` per entry in `fetchAllRows` and threads
+  it as a new `hasLocalOverride: boolean` field on `DiagramRow`,
+  `DiagramSummary`, and `coerceRow`.
+- `saveDiagram` always returns `hasLocalOverride: true` on
+  success (a successful save is, by definition, a local-layer
+  stanza).
+- Exports a new `FACTORY_DIAGRAM_NAMES` set (13 entries —
+  mirrors the generator) and an `isFactoryDiagram(name)`
+  predicate so callers don't need to import the set directly.
+
+#### 3. Header renders Delete vs Revert vs disabled
+
+`DiagramHeader.tsx` now takes two new props
+(`isFactoryDiagram`, `hasLocalOverride`) and switches between:
+
+- A standard `Trash2` "Delete" — disabled when the diagram is
+  factory-only or doesn't exist server-side. The tooltip on the
+  factory-only case explains the behaviour ("Factory diagram —
+  nothing to delete. Save changes first if you want to
+  customize it.").
+- A `RotateCcw` "Revert" button (rendered red-danger so the
+  destructive nature is clear) — fires the same `onDelete`
+  callback but with a different confirm-dialog message
+  ("Revert "<name>" to its factory copy? Your local
+  customizations will be discarded.").
+
+#### 4. `handleDelete` reloads the OOB version after revert
+
+`pages/network_diagram/index.tsx`:
+
+- Computes `isFactoryActive` and `activeHasLocalOverride` from
+  the listing summary and threads them into the header.
+- After a successful DELETE on a factory diagram, the page
+  immediately calls `loadDiagram(name)` again. Because the
+  local stanza is now gone, splunkd merges in the default
+  version; the canvas redraws to the OOB layout and the
+  operator sees the toast "Reverted "<name>" to factory."
+- Custom diagrams retain the existing flow (drop to blank
+  canvas, "Deleted" toast).
+- Defensive fallback: if the post-DELETE `loadDiagram` returns
+  null (default version somehow missing), the page still
+  exits to a blank canvas instead of leaving the operator
+  staring at a stale local payload.
+
+### Verification
+
+- `yarn typecheck` — clean.
+- `yarn build` — webpack OK, no new warnings beyond the
+  pre-existing asset-size advisories.
+- Lint — 0 new findings on the touched files.
+- Build bumped to 1157.
+
+### Files changed
+
+- `packages/.../diagram/DiagramPalette.tsx` — scroll fix.
+- `services/diagramPersistenceService.ts` — `acl.removable`
+  threading, `FACTORY_DIAGRAM_NAMES` registry, exported
+  `isFactoryDiagram` predicate.
+- `pages/network_diagram/index.tsx` — three-state factory/local
+  flag derivation; revert-aware `handleDelete`.
+- `diagram/DiagramHeader.tsx` — Delete vs Revert vs disabled
+  rendering.
+- `default/app.conf` — build = 1157.
+
+### What's next
+
+- Operator QA of the revert flow. Worth confirming with a
+  stack that has a saved override on at least one OOB
+  diagram (e.g. someone who already customized "Splunk
+  Cloud Deployment Architecture") so the green-path
+  "Revert" lands them back on the OOB layout.
+- The `FACTORY_DIAGRAM_NAMES` registry is hardcoded; if the
+  OOB catalogue grows we should either generate this list
+  from the same source as `generate_oob_diagrams.mjs` or
+  mark factory stanzas with an explicit `is_factory = 1`
+  conf key on emit. Current trade-off chosen for
+  build-115.7-scope simplicity.
+
+---
+
+## 2026-05-15 (Build 115.6) — 12 OOB SVAs, refresh persistence, banner, bound-LED
+
+### Goal
+
+Address four follow-up operator complaints from Build 115.5 plus
+ship the full canonical set of Splunk reference architecture
+diagrams the operator gave us screenshots for.
+
+1. The OOB diagram catalogue only shipped the Splunk Cloud
+   reference. Operators want all of the standard SVA
+   (Splunk Validated Architecture) diagrams as starting
+   templates: S1, C1/C11, C3/C13, D1/D11, M2/M12, M3/M13,
+   M4/M14, plus four data-collection topologies (HEC, DCN,
+   Kafka+HEC, IF, Collection Overview).
+2. Refreshing the browser while a diagram was open dropped the
+   operator back on the empty picker — they had to re-select
+   from the dropdown. Operators are using browser refresh as a
+   "discard my live edits" gesture; that workflow has to land
+   them on the same diagram.
+3. The persistent canvas banner ("Drag devices in from the
+   left · hover a device to reveal ports …") sat across the
+   top centre of every diagram and got in the way of titles
+   and top-row regions. The hint is self-explanatory once
+   the operator has done it once.
+4. Binding a shape to a Splunk host wasn't lighting up the
+   corner LED — the operator expected the LED to flip green /
+   amber / red based on whether Splunk was currently seeing
+   the host, but it stayed gray.
+
+### What we built
+
+#### 1. Twelve new OOB Splunk reference diagrams
+
+`scripts/generate_oob_diagrams.mjs` got a `region` / `device` /
+`edge` / `title` / `collectionTrio` / `managementStack` builder
+library so each new diagram fits in 30–60 lines of declarative
+layout. The builders fix vendor / accent / arrow defaults so
+"this is a Splunk reference SVA" is the default vocabulary; an
+edge defaults to physical/forward, the regions use the green /
+sky / rose / violet SVA palette, and `managementStack` lays
+out the canonical DS/LM/MC/CM (+ optional SHC-D) column
+identically across every diagram so an operator who learns one
+can read the rest at a glance.
+
+The catalogue grew from 1 → 13 diagrams:
+
+| Stanza name | Nodes | Edges | Groups |
+|---|---:|---:|---:|
+| Splunk Cloud Deployment Architecture | 15 | 13 | 4 |
+| Single Server Deployment - S1 | 5 | 4 | 3 |
+| Distributed Clustered Single Site - C1 C11 | 11 | 8 | 4 |
+| Distributed Clustered with SHC Single Site - C3 C13 | 14 | 12 | 4 |
+| Distributed Non-Clustered - D1 D11 | 13 | 10 | 4 |
+| Multi-Site Clustered - M2 M12 | 16 | 10 | 7 |
+| Multi-Site Clustered with SHC - M3 M13 | 19 | 11 | 7 |
+| Multi-Site Stretched SHC - M4 M14 | 17 | 10 | 6 |
+| HEC Topology Choices | 12 | 9 | 3 |
+| Data Collection Node Topology | 10 | 7 | 3 |
+| Data Collection Using Kafka and HEC | 15 | 14 | 4 |
+| Intermediary Forwarding Topology | 14 | 11 | 3 |
+| Data Collection Topology Overview | 17 | 13 | 3 |
+
+(Stanza names are munged to satisfy `STANZA_NAME_PATTERN`,
+which disallows `(`, `)`, `+`, and `/`. The on-canvas titles
+keep the original punctuation, so the operator-visible label
+still reads "Distributed Clustered + SHC Single Site (C3 /
+C13)".)
+
+`network_diagrams.conf` was regenerated; the conf is now
+~200 lines (one stanza per diagram, payload on a single
+long line each).
+
+#### 2. URL-hash persistence for the active diagram
+
+`pages/network_diagram/index.tsx` now mirrors the active
+diagram name into `window.location.hash` as
+`#diagram=<encoded-name>`. We picked the fragment (not a query
+string) because Splunk Web's app routing already owns the
+path; the fragment is uniquely ours and never round-trips to
+the server.
+
+- On mount, after `listDiagrams()` resolves, the page reads
+  the hash and calls `handleOpen(name, { silent: true })`
+  to reopen the diagram. Silent mode skips the dirty-prompt
+  (we just mounted; nothing to discard) and the success
+  toast (the operator didn't initiate the action).
+- On open / save / delete / new, the page calls
+  `writeDiagramHash(name | null)`. We use
+  `history.replaceState` so back-button history isn't
+  walked through every diagram the operator touches mid-
+  session.
+- A stale hash (diagram deleted between sessions) is silently
+  cleared after the directory load instead of throwing an
+  "open failed" toast.
+
+The `handleOpen` callback gained an `options` arg (currently
+just `{ silent?: boolean }`); the directory-load effect calls
+it via a ref so the effect's deps stay empty.
+
+#### 3. Replaced the persistent banner with a `?` corner pill
+
+The full-width hint banner across the top centre of the canvas
+was dropped. It was useful exactly once per operator and then
+got in the way of every diagram with a title. In its place,
+a small circular `?` button at top-right (next to the existing
+canvas controls) carries the same hint as a native
+`title` tooltip and an `aria-label` for screen readers. When
+the operator hovers the `?`, the browser shows the full
+sentence; otherwise the corner of the canvas stays clean.
+
+#### 4. Bound-host LED reflects Splunk visibility — bug fix
+
+`resolveEffectiveStatus` in `NetworkDiagramCanvas.tsx` was
+forcing `'unknown'` whenever the visibility index couldn't
+match any candidate hostname. That hit every Splunk-provenance
+bind because the splunk_inventory feed normalises hostnames to
+lowercase short names (`idx-01`, `sh-i-ak`) while
+`| metadata type=hosts` may carry the FQDN — the candidate
+set never produced a positive match, so the LED stayed gray
+even though the asset row already said `is_connected=yes`.
+
+New rules (Build 115.6):
+
+- Any candidate `isReporting === true` → keep `assetStatus`.
+- At least one candidate `isReporting === false` AND no
+  candidate `=== true` → return `'unknown'` (downgrade —
+  metadata says the host is silent, the asset's stale view
+  doesn't get to override).
+- Every candidate `=== undefined` → keep `assetStatus`. The
+  metadata index has no opinion on this host, so trust the
+  asset feed (`is_connected` for splunk hosts,
+  `health_score` for asset_inventory rows).
+
+In practice: bind AZ1 to `sh-i-ak`, the Splunk inventory's
+`is_connected=yes` flows through as `'healthy'`, and the
+corner LED turns green. If `| metadata` later says the host
+went silent, the same AZ1 LED downgrades to gray, exactly
+the operator-visible truth they were asking for.
+
+### Verification
+
+- `yarn typecheck` — clean.
+- `yarn build` — webpack OK; network_diagram bundle 763 KiB
+  (+2 KiB vs 115.5 from the OOB diagram payloads being
+  hydrated client-side as initial seeds).
+- Lint — 0 new findings on the touched files.
+- `node scripts/generate_oob_diagrams.mjs` — emits 13 stanzas
+  with the expected node/edge/group counts; conf header still
+  documents the schema_version 2 hybrid layout.
+- Build bumped to 1156.
+
+### What's next
+
+- Operator-driven QA of each new SVA diagram. The layouts are
+  starting templates, not pixel-perfect reproductions of the
+  PDF; expect to massage region sizes / device positions for
+  any diagrams the operator wants to use as anchors for the
+  customer presentations.
+- A diagram-picker UI surfacing the new metadata
+  (`description`, `nodeCount`, `edgeCount`) is a natural
+  follow-up — schema v2 already exposes the fields; the
+  picker just renders them.
+
+---
+
+## 2026-05-15 (Build 115.5) — Edge UX, host-binding fix, schema v2, 24 new shapes
+
+### Goal
+
+Tighten the diagram authoring experience based on five hands-on
+operator complaints from the 115.4 build, and decisively answer
+the schema critique on `network_diagrams.conf`:
+
+1. Linking two shapes pulled the wrong default direction (drag
+   from AP → Switch produced an arrow pointing at the AP).
+2. `Bind to host` accepted a typeahead pick but the chip was
+   immediately wiped from the inspector, so the binding could
+   never be applied.
+3. The browser's "unsaved changes" guard fired even when no
+   structural change had been made — selecting a node, letting
+   React Flow measure dimensions, or starting (but not finishing)
+   a drag was enough to block a refresh.
+4. Edge inspector required an explicit Apply click; line stroke
+   colour was not editable, only the animated marker colour.
+5. The shape palette and load-balancer icon were too thin for a
+   "real" network diagram; operators wanted way more shapes and
+   a proper LB glyph.
+
+Plus: the `network_diagrams.conf` schema buried every metadata
+field inside one giant `payload_json` blob, which made
+`btool`/`grep`/SPL introspection useless. The user explicitly
+asked for a flatter, first-class-fields schema.
+
+### What we built
+
+#### 1. Linking direction — z-order fix in `CyberNocShape`
+
+Root cause: each device shape rendered four pairs of
+`source` / `target` `Handle`s (top/right/bottom/left). React Flow's
+hit testing is z-order-sensitive — when a `target` Handle paints
+on top, the drag origin gets registered as a target and the
+edge is created in reverse.
+
+Fix: `NodeHandles` now renders `target` first and `source` second
+for every side, so the source handle wins the drag-origin pick.
+Result: dragging from the AP toward the upstream switch produces
+`AP → Switch` as expected. The save round-trip still allows
+operators to set `direction=backward`/`both` from the inspector
+for cases where the on-canvas drag direction does not match the
+intended logical direction.
+
+#### 2. `Bind to host` — UI state derivation fix in `PropertiesPanel`
+
+Root cause: the inspector's `initialBoundAssetId` was inferred via
+`data.node.id !== node.id` — a heuristic that worked for shapes
+created via the palette (where they are different) but failed for
+shapes dragged in from the inventory list (where the canvas node
+id _is_ the asset id by design). The form therefore opened in
+"unbound" state and immediately erased the user's pick on the
+next render.
+
+Fix: derive `initialBoundAssetId` by checking
+`assetIndex.has(candidateAssetId)`. Asset-index membership is
+authoritative — if the index recognises the id, the shape is
+bound; if not, it isn't. This works for both palette-created and
+inventory-dropped shapes.
+
+#### 3. "No real changes" — non-mutating React Flow events filtered
+
+Root cause: `handleNodesChange` / `handleEdgesChange` called
+`emitChange()` (which sets the dirty flag and arms the
+`beforeunload` guard) on every React Flow change, including
+`select`, `dimensions`, and the per-frame `position` updates that
+fire during a drag-in-progress.
+
+Fix: `isMutatingNodeChanges` / `isMutatingEdgeChanges` helpers
+classify a batch as mutating only when at least one entry is
+- `add` / `remove`
+- `position` with `dragging:false` (drag commit, not a
+  per-frame update)
+- `replace`
+…and ignore `select`, `dimensions`, and in-flight drags. Result:
+loading a saved diagram, clicking around, hovering, and even
+starting (but cancelling) a drag no longer marks the diagram
+dirty. Refreshing the browser after a load now works without a
+prompt.
+
+#### 4. Live edge preview + line stroke colour
+
+`EdgePropertiesForm` is now live-controlled. Every change to
+label / kind / direction / animation colour / **line colour** /
+notes calls `onApply` immediately with the merged update —
+the explicit "Apply" button is gone. The canvas reflects the
+change on the next render, so operators can see the new arrow
+direction or stroke colour the moment they pick it.
+
+`EdgeUpdate` (and `SavedDiagramEdge`) gained a `lineColor` field.
+On hydrate, `savedEdgeToRF` writes it to `style.stroke`; on save,
+`rfToSaved` round-trips it. `handleEdgeUpdate` merges new colour
+into both the React Flow `style` and the persisted
+`existingData.lineColor`, and falls back to `edgeStyleForKind`
+when the field is empty so legacy diagrams continue to honour
+kind-driven colours. A small swatch picker
+(`EDGE_LINE_COLOR_PRESETS`) in the inspector mirrors the existing
+animation-colour picker UX.
+
+#### 5. New shape palette + custom load-balancer glyph
+
+We grew the shape vocabulary from 18 to **42** by adding 24 new
+`DeviceShapeId` values, organised into seven categories so the
+palette and inspector dropdown read like a real network-diagram
+stencil:
+
+- **Core network** — `hub`, `gateway`, `proxy` (in addition to
+  switch, l3 switch, stack, router, wlc, access point, load
+  balancer)
+- **Security** — `waf`, `siem`, `ca`, `bastion` (alongside
+  firewall, vpn, ids/ips)
+- **Servers & infrastructure** — `web_server`, `app_server`,
+  `dns_server`, `dhcp_server`, `mainframe`, `container`, `vm`
+  (alongside server, database)
+- **Storage** — `nas`, `san`, `backup` (alongside storage)
+- **End-user / IoT** — `laptop`, `mobile_phone`, `printer`,
+  `camera`, `iot_sensor` (alongside ip phone)
+- **Edge / cloud** — unchanged (cloud, internet, users)
+- **Places** — `branch_office`, `datacenter`
+
+Every new shape gets:
+- A Lucide-based icon export in `ciscoIcons.tsx` with a sensible
+  default colour from the existing palette (no new colours added —
+  we keep the modern Lucide look-and-feel from 115.2).
+- A `CISCO_ICONS` registry entry so existing icon-resolution code
+  paths Just Work.
+- A `SHAPE_TO_ICON` mapping in `shapes.tsx` and
+  `CyberNocShape.tsx` so the canvas renders the correct glyph.
+- A `TOPOLOGY_NODE_TYPES` registration so React Flow can render
+  the node by its `device:<id>` type tag.
+- A `DEVICE_SHAPE_OPTIONS` entry in `PropertiesPanel.tsx` (the
+  "Device family" dropdown), category-grouped via `<optgroup>`-
+  style comments.
+- A `SHAPE_TILES` entry in `ShapesTab.tsx` (the draggable palette
+  on the left), bucketed under the same seven categories.
+
+The Load Balancer glyph was redrawn as a custom inline SVG
+(`LoadBalancerSVG` in `ciscoIcons.tsx`) — three stacked rounded
+rectangles with fanning arrows in/out, in the AWS/F5 style the
+operator asked for. It replaces the previous `Scale` Lucide icon,
+which felt more "weighing" than "load balancing".
+
+#### 6. `network_diagrams.conf` schema v2 — hybrid, not blob
+
+The user critiqued the v1 layout (one stanza, one
+`payload_json` value, no other fields) as "really bad". We
+walked through three options:
+
+- **Option A** — full normalisation (one stanza per node, one
+  per edge). Maximum introspection but breaks every save into
+  N stanzas and makes atomic round-trip via the conf REST API
+  awkward.
+- **Option B** — keep v1 as-is. Worst-case for ops.
+- **Option C** — hybrid: promote metadata to first-class conf
+  keys, keep the structural body in `payload_json`. Operator
+  picked C.
+
+Implementation:
+
+- New per-stanza first-class keys:
+  `schema_version`, `title`, `description`, `updated_at`,
+  `updated_by`, `node_count`, `edge_count`, `group_count`,
+  `asset_bindings` (CSV of bound asset ids).
+- `payload_json` retained as the canonical canvas body. Only one
+  source of truth — `coerceRow` mirrors the metadata into the
+  stanza on save, but the React canvas always rehydrates from
+  the body.
+- `coerceRow` is fully back-compat with v1: stanzas missing
+  `schema_version` are parsed, the metadata is _derived_ from
+  the body on the fly (so existing operator saves still load),
+  and the next save promotes them to v2.
+- `computeAssetBindings` and `computeDiagramTitle` factored into
+  small helpers shared between `diagramPersistenceService.ts` and
+  the OOB generator script. The generator emits v2 stanzas
+  directly, and the file header now documents every field.
+
+The default `network_diagrams.conf` (Splunk Cloud Deployment
+Architecture seed) was regenerated in v2.
+
+### Verification
+
+- `yarn typecheck` — clean.
+- `yarn build` — webpack compiles the network_diagram (761 KiB),
+  topology_canvas_v1 (2.06 MiB), and overview (1.45 MiB) bundles
+  with two pre-existing warnings (size budget; tracked separately).
+- Lint scan — 0 new lint findings on the touched files.
+
+### What's next
+
+- Operator should validate the new shape catalog matches their
+  diagramming style (some glyphs — `mainframe`, `iot_sensor`,
+  `bastion` — are first-pass Lucide picks; happy to swap to
+  custom SVGs if any feel weak).
+- Schema v2 unblocks a cleaner diagram picker UI (showing
+  `node_count` / `edge_count` / `description` per row without
+  parsing JSON). That UI work is queued for the next build.
+
+---
+
+## 2026-05-15 (Build 115.4) — Splunk infrastructure inventory feed
+
+### Goal
+
+Unblock the second half of the operator request from Build 115.3:
+let users **drag indexers, search heads, SHC members, cluster
+managers, deployment servers, IDMs, and heavy/universal
+forwarders directly onto the canvas** from the side panel, just
+like they already do for Cisco devices. The new Bind-to-host
+combobox (115.3) should also typeahead Splunk hosts so a
+placeholder "Indexer" shape can be bound to the real
+`idx-az3-04` and inherit live state.
+
+The user provided a discovery SPL ("amazing splunk discovery
+job") that walks `_introspection.splunk_resource_usage`,
+`_internal` Metrics (instance roles + tcpin connections), the
+`/server/info` REST endpoint, and `splunkd_access` (for
+ES / ITSI app-aware naming). With permission to drop the
+license-entitlement block (we don't need `is_workload`,
+`is_ingest`, `svc_license`, `ingest_license` for inventory),
+the SPL produces one row per Splunk host with role,
+cluster-label, version, and connection-state metadata.
+
+### What we built
+
+#### 1. Saved-search-driven `splunk_inventory.csv` lookup
+
+- New stanza `[Splunk Inventory - Build Lookup]` in
+  `savedsearches.conf` runs daily at 02:30 (offset 25 minutes
+  from the Cisco asset_inventory build at 02:05 so the two
+  don't collide on a busy SH) and writes one row per host into
+  `splunk_inventory.csv` via `outputlookup`.
+- The SPL has two branches: a Cloud branch that uses the
+  `idx-*`, `sh-*`, `idm-*`, `c0m1-*`, `si-*` naming
+  convention against `_introspection`, and an Enterprise
+  branch that does real role discovery from `_internal`
+  Metrics + REST + `_introspection`. The first stanza
+  detects which deployment type the SH is running on, and
+  the final `| where env=splunk_deployment` keeps only the
+  rows from the matching branch.
+- Final projection (extended from the original) carries the
+  fields the JS service actually needs: `host_name`, `name`
+  (friendly shortname like `idx-01`, `shc-01`),
+  `label`, `role` (CSV of role tokens), `primary_role`
+  (single role token used by the shape mapper),
+  `index_cluster_label`, `sh_cluster_label`, `is_search_head`,
+  `is_connected`, `is_es`, `is_itsi`, `version`, `env`.
+- `[splunk_inventory]` registered in `transforms.conf` with
+  `case_sensitive_match=false` and `match_type=WILDCARD(host_name)`
+  so REST-API consumers can filter case-insensitively.
+- `splunk_inventory.csv.default` ships an empty header-only
+  seed so first install + cold queries don't `inputlookup` a
+  missing file. The daily saved search overwrites it on its
+  first run.
+
+#### 2. `fetchSplunkInventory()` in `topologyDiscovery.ts`
+
+- New exported fetcher mirrors `fetchAssetInventory()`:
+  reads via `inputlookup splunk_inventory`, normalises each
+  row into the existing `TopologyDiscoveredNode` shape so
+  the rest of the page (canvas, inspector, Bind-to-host
+  combobox) consumes it without any additional plumbing.
+- New `mapSplunkRoleToShape()` helper translates Splunk role
+  tokens to canvas shapes:
+  - `indexer`, `cluster_slave`, `search_peer`, names starting
+    `idx-`/`idxc-` → `database`
+  - `idm`, names starting `idm-` → `cloud` (Cloud-only IDM
+    reads more naturally as a cloud glyph than `server`)
+  - everything else (`search_head`, `cluster_search_head`,
+    `search_head_cluster`, `cluster_manager`, `license_manager`,
+    `deployment_server`, `heavy_forwarder`, `universal_forwarder`)
+    → `server`
+  Kept as a separate helper from `mapDeviceTypeToShape()`
+  because the Splunk role vocabulary is a distinct namespace;
+  folding both into one matcher would either bloat the Cisco
+  function or leak Splunk-specific cases into Cisco code paths.
+- New `deriveSplunkModel()` produces operator-friendly
+  model strings: cluster-aware first (`Indexer Cluster ·
+  prod-idx-az3`, `ITSI SHC · ITSI Production`), falling back
+  to the role token (`Search Head`, `Heavy Forwarder`).
+- Per-row `vendor='Splunk'`, `managementSource='Splunk Cloud'`
+  or `'Splunk Enterprise'`, and a synthesised
+  `raw.platform_id = version` so the inspector hover shows
+  "Splunk 9.2.1" without any new UI.
+- Health: `is_connected='yes'` → `healthy`, otherwise
+  `unknown`. There's no equivalent of Catalyst Center's
+  numeric `health_score` in `_introspection`, and absence
+  of recent introspection events already implies the host
+  isn't reporting — we don't lie green to the operator.
+
+#### 3. Provenance plumbing — `TopologyDiscoveredNode.provenance`
+
+- New optional field: `provenance?: 'cisco' | 'splunk'`.
+- `fetchAssetInventory()` stamps `'cisco'` on every row.
+- `fetchSplunkInventory()` stamps `'splunk'`.
+- Older saved-payload-only nodes (predating 115.4) default to
+  `'cisco'` in the InventoryTab filter so historical layouts
+  filter sensibly.
+
+#### 4. Network Diagram page wires both fetchers in parallel
+
+- `pages/network_diagram/index.tsx` swaps the lone
+  `fetchAssetInventory()` call for
+  `Promise.allSettled([fetchAssetInventory(), fetchSplunkInventory()])`,
+  merges the results into the unified `assetIndex` Map, and
+  passes it to both the canvas (for live re-bind) and the
+  PropertiesPanel (for the Bind-to-host typeahead, which
+  now finds Splunk hosts).
+- Independent failure handling: a Splunk-only customer with
+  empty `asset_inventory` and an Enterprise ops team without
+  Splunk infra both work.
+
+#### 5. InventoryTab — "All / Cisco / Splunk" segmented control
+
+- New `ProvenanceChips` component renders three pills with
+  live counts ("231 · 42 · 0" reads at-a-glance). Pills with
+  zero matches stay in the row but render disabled — empty
+  `splunk_inventory` (very common before the daily discovery
+  saved-search runs its first time) doesn't cause the chip
+  row to flicker between two- and three-pill layouts.
+- `useAssetInventory()` rewritten as `useUnifiedInventory()`
+  with `Promise.allSettled` so a partial failure surfaces the
+  source that did load. Error toast only fires when **both**
+  fetchers reject.
+- Cascading filter pipeline updated: provenance filters
+  upstream of the existing source/type/model facets, so
+  picking "Splunk" then opening "Device Type" shows only the
+  shapes Splunk infra contributes (indexer, search head,
+  cluster manager).
+- Loading hint updated to read "asset_inventory + splunk_inventory…"
+  so operators have a mental model of what's being merged.
+
+### Verification
+
+- ✅ `yarn typecheck` clean.
+- ✅ `yarn build` clean (only the pre-existing asset-size
+  warnings on overview.js / topology_canvas_v1.js).
+- ✅ `ReadLints` clean on the touched files.
+- 🧪 Manual smoke (next operator session): drop a few
+  indexers + a SHC onto the canvas; confirm the database
+  glyph for indexers and the server glyph for SHC members;
+  bind a generic placeholder to a real `idx-*` host and watch
+  the model string flip to "Indexer Cluster · …"; run
+  `splunk btool savedsearches list "Splunk Inventory - Build Lookup"`
+  to confirm the conf parses cleanly.
+
+### Files changed
+
+- `src/main/resources/splunk/default/app.conf` — build 1153 → 1154
+- `src/main/resources/splunk/default/savedsearches.conf` — new
+  `[Splunk Inventory - Build Lookup]` stanza (license block trimmed)
+- `src/main/resources/splunk/default/transforms.conf` — new
+  `[splunk_inventory]` lookup stanza
+- `src/main/resources/splunk/lookups/splunk_inventory.csv.default` (new)
+- `src/main/webapp/common/services/topologyDiscovery.ts` —
+  `provenance` field on `TopologyDiscoveredNode`,
+  `fetchSplunkInventory()`, `mapSplunkRoleToShape()`,
+  `deriveSplunkModel()`
+- `src/main/webapp/pages/network_diagram/index.tsx` — parallel
+  fetch with `Promise.allSettled`, merge into `assetIndex`
+- `src/main/webapp/common/components/diagram/InventoryTab.tsx`
+  — `useUnifiedInventory()`, `ProvenanceChips`,
+  provenance threaded through cascading filters
+
+### What's next
+
+- Ship the rest of the OOB diagrams from the v8 PDF
+  (Standalone, SHC, IDXC, Distributed, IDXC + SHC) —
+  the customer pinned them as the next set after Splunk
+  Cloud Deployment Architecture.
+- Consider a "Splunk Inventory" health card on the network
+  diagram page that shows last-discovery time + total host
+  count so operators know when the daily search last ran.
+- The shape inspector could surface Splunk-specific fields
+  (cluster label, role list, version) when a node is bound
+  to a `provenance='splunk'` host. Currently they're in
+  `raw` for hover access only.
+
+---
+
+## 2026-05-15 (Build 115.3) — Host binding from the inspector + CSV→conf persistence migration
+
+### Goal
+
+Two operator asks after the Build 115.2 review:
+
+1. **Bind any shape to a real Splunk host** — operators routinely
+   sketch a topology with palette shapes (Indexers / Search Heads
+   / Forwarders) before they know which physical hosts will play
+   each role. Once the layout is right, they want a one-click
+   way to bind those placeholders to the matching
+   `asset_inventory.csv` row so the diagram inherits live status
+   (the visibility dot from `| metadata type=hosts`), vendor,
+   model, and serial number — without breaking the layout.
+2. **Migrate persistence from CSV lookup → custom conf file**
+   because CSV lookups don't have default/local layering, can't
+   be introspected with `btool`, and rewrite the entire file on
+   every save. Operators (rightly) wanted the same management
+   semantics every other Splunk config file has.
+
+### What we built
+
+#### 1. Host binding (canvas + inspector)
+
+- `NodeUpdate.assetId?: string` is a discriminator with three
+  behaviours:
+  - non-empty string → **bind**: the canvas re-derives label /
+    shortLabel / vendor / model / serial / raw from the live
+    asset, sets `data.node.id` to the asset id (so visibility
+    lookups light up the status dot), and auto-reshapes the
+    icon to match the asset's `device_type` unless the operator
+    passed an explicit `update.shape`.
+  - `''` → **unbind**: `data.node.id` reverts to the React Flow
+    node id (so `rfToSaved` drops `assetId` next save) and
+    `raw` is cleared. Operator overrides for label / vendor /
+    model are preserved — unbinding shouldn't punish the
+    operator for typing in fields manually.
+  - `undefined` → no change to binding; falls through to the
+    legacy field-update path.
+- `handleNodeUpdate` in `NetworkDiagramCanvas.tsx` was extended
+  with the bind / unbind branches. Each branch rebuilds the
+  node's `data` via `buildDeviceData` so a bound shape is
+  byte-identical to one freshly dropped from the InventoryTab —
+  there is exactly one code path for "shape with live data".
+  The rebound node is captured in a closed-over `let` and
+  re-broadcast through `setSelection`, so the inspector
+  immediately reflects the new vendor/model/label without
+  requiring the operator to click away and back.
+- `BindToHostField` (new component in `PropertiesPanel.tsx`) is
+  a click-outside-aware combobox. Free-form input filters across
+  `id`, `label`, `shortLabel`, `vendor`, and `model`; the
+  result list caps at 25 entries so a 5,000-host inventory
+  can't wedge the panel layout. When already bound, the field
+  collapses to a green pill showing the bound host plus an
+  "Unbind" button. Apply is single-click — binding is a
+  destructive operation (overwrites label/vendor/model with
+  live values), so a separate "Apply" press would feel
+  redundant.
+- Plumbing: the canvas's existing `assetIndex` is forwarded to
+  `<PropertiesPanel assetIndex>` and from there to the form.
+  Live-ops canvases that already auto-bind their nodes can omit
+  the prop, and the field hides itself.
+
+#### 2. CSV → conf persistence migration
+
+- New file: `default/network_diagrams.conf`. One stanza per
+  diagram, named with the diagram's display name (matches the
+  existing `NAME_PATTERN` regex). Keys: `updated_at`,
+  `updated_by`, `payload_json`. The OOB Splunk Cloud
+  Deployment Architecture diagram ships as the first stanza.
+- New file: `README/network_diagrams.conf.spec` — schema
+  documentation Splunk's own `btool` honours.
+- `app.conf` `[triggers]` adds `reload.network_diagrams =
+  simple` so editing the conf via REST or `splunk reload` doesn't
+  require a Splunkd restart (and Cloud Vetting won't bounce
+  the package).
+- `diagramPersistenceService.ts` was rewritten end-to-end:
+  - Reads now hit `GET /servicesNS/-/<app>/configs/conf-network_diagrams?output_mode=json&count=0` — default + local merge transparent, parsed key/value envelopes for free.
+  - Writes now POST form-encoded bodies to `/configs/conf-network_diagrams[/<stanza>]` against the `nobody` namespace so saves land in `local/`. Upsert is "try update first, fall through to create on 404" — keeps the happy path one round-trip.
+  - Deletes hit `DELETE /configs/conf-network_diagrams/<stanza>`. 404 is a no-op success (handles the "stanza only existed in default/" case, which can't be deleted via REST).
+  - CSRF: every mutating call sends `X-Splunk-Form-Key`
+    pulled from the `splunkweb_csrf_token_<port>` cookie; we
+    re-use the helper pattern already in `searchbaseCatalogue.ts`.
+  - Friendly error messages translate HTTP 401/403 → "check
+    your role's write access to network_diagrams.conf",
+    HTTP 409 → "a conflicting save just landed", and Splunk's
+    JSON `messages[]` envelope into a single readable toast
+    string.
+  - Per-stanza atomicity replaces per-file atomicity. Two
+    operators saving DIFFERENT diagrams now never collide.
+- `scripts/generate_oob_diagrams.mjs` was rewritten to emit the
+  conf format. Re-running the script overwrites
+  `default/network_diagrams.conf` with the preamble + one
+  stanza per `OOB_DIAGRAMS` entry. Stanza names are validated
+  against the same regex as the runtime persistence layer so
+  reviewers can't accidentally ship a stanza name that the
+  REST API would reject.
+- Retired: `lookups/network_diagrams.csv.default` (deleted) and
+  the `[network_diagrams]` stanza in `transforms.conf`
+  (replaced with a tombstone comment pointing readers at the
+  conf-based replacement). The old CSV lookup file is gone;
+  no SPL surface still references it.
+
+### Verification
+
+- `yarn typecheck` clean.
+- `yarn build` clean (1 webpack run, no errors; only the pre-
+  existing asset-size advisories about overview/topology
+  bundles).
+- `ReadLints` clean on the three changed source files.
+- `node scripts/generate_oob_diagrams.mjs` round-trips
+  successfully — confirmed the regenerated conf parses as
+  valid Splunk config (1 stanza, 15 nodes / 13 edges / 4
+  groups for the Splunk Cloud diagram).
+- Local-dev mock store still works for both binding and
+  persistence (no Splunk runtime required to author / save /
+  reload diagrams in `yarn start`).
+
+### Files changed
+
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf` — build 1152→1153, added `reload.network_diagrams` trigger.
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/network_diagrams.conf` — new (OOB seed file).
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/transforms.conf` — retired the `[network_diagrams]` lookup stanza with a tombstone.
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/README/network_diagrams.conf.spec` — new (conf schema).
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/lookups/network_diagrams.csv.default` — deleted.
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/services/diagramPersistenceService.ts` — rewritten to use the REST conf endpoint.
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/diagram/NetworkDiagramCanvas.tsx` — bind / unbind branches in `handleNodeUpdate`; `assetIndex` now forwarded to `<PropertiesPanel>`.
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/topology/PropertiesPanel.tsx` — `NodeUpdate.assetId` field; `BindToHostField` combobox; `assetIndex` plumbed through `PropertiesPanelProps` and `NodePropertiesForm`.
+- `scripts/generate_oob_diagrams.mjs` — emits conf format; new stanza-name validation.
+
+### What's next
+
+- **Blocked on user input**: add Splunk infrastructure to the
+  asset inventory + ship more OOB diagrams. Waiting on the
+  customer's Splunk discovery SPL and the attached PDF
+  diagrams.
+- **Future polish**: a one-time SPL migration for any
+  pre-115.3 customer who saved diagrams to the old CSV. Today
+  those rows are orphaned — we accept this for an internal-
+  build app with no production deployments.
+- **Future polish**: a stanza-level revision counter for true
+  optimistic concurrency on the same diagram (today it's still
+  last-writer-wins per diagram, just no longer per-file).
+
+---
+
+## 2026-05-15 (Build 115.2) — Vendor/model bug, modern lucide icons, users glyph, keyboard shortcuts (delete confirm + undo/redo)
+
+### Goal
+
+Four operator asks after the Build 115.1 review:
+
+1. **Bug**: dropping a real asset onto the canvas, then opening
+   the inspector, showed the Vendor / Model fields as if they
+   were *filled* with "Cisco" and "WS-C6504-E" — but those were
+   actually placeholder hints, not values. Meanwhile, the
+   device card itself fell back to `raw.platform_id` and
+   *looked* correct. Two surfaces, two truths. The operator
+   reasonably called this a bug.
+2. **Keyboard shortcuts** — let the Delete key remove the
+   selected shape (with a confirmation gate so a fat-fingered
+   keypress doesn't silently nuke a node). Bonus: ⌘Z / ⌘⇧Z for
+   undo / redo so the inspector isn't the only path back.
+3. **Users glyph** — add a "remote users / SOC analyst pool /
+   end-user population" archetype. The OOB Splunk Cloud diagram
+   review surfaced this one immediately ("where do I put the
+   people?").
+4. **Modern icons** — operator wasn't sold on the hand-drawn
+   Cisco-stencil silhouettes that landed in Build 112. They
+   asked specifically about lucide. Switched the entire device
+   icon set to lucide-react with per-class accent colours.
+
+### What was built
+
+- **Vendor / model drop fix**
+  (`NetworkDiagramCanvas.tsx`, `PropertiesPanel.tsx`).
+  - `handleDrop` now passes `vendor` / `model` / `serialNumber`
+    from the live asset_inventory row into `buildDeviceData` —
+    previously these fell on the floor for asset-bound drops.
+  - The inspector form now mirrors the same fallback chain the
+    device card already used (`node.vendor` → `raw.vendor`,
+    `node.model` → `raw.platform_id`), so older diagrams that
+    pre-date this fix render the inspector with sane defaults
+    instead of empty placeholders. The placeholders themselves
+    were also reworded ("e.g. Cisco" / "e.g. C9300-24") so it's
+    obvious they're hints, not values.
+- **Modern lucide-react device icons** (`ciscoIcons.tsx` rewrite).
+  - File kept the legacy filename (every callsite imports from
+    `ciscoIcons`) but the implementation pivoted from inline SVG
+    paths copied from the Cisco Visio stencil set to thin lucide
+    wrappers. Each archetype maps to a stroke-based icon
+    (`Router`, `Network`, `Boxes`, `Shield`, `KeyRound`, `Radar`,
+    `RadioTower`, `Wifi`, `Scale`, `Server`, `Database`,
+    `HardDrive`, `Phone`, `Cloud`, `Globe2`, `Box`, `Users`,
+    `Layers`).
+  - Each wrapper applies a per-class default colour (router →
+    amber, switch → sky, firewall → rose, …) so device class is
+    differentiable at a glance even when silhouettes look similar.
+  - Stroke-width set to `1.75` — between lucide's default `2`
+    (heavy at 32px alongside text labels) and `1.5` (spindly).
+  - Build 115.2 keeps the `CISCO_ICONS` export contract unchanged
+    so `shapes.tsx`, `CyberNocShape.tsx`, `ShapesTab.tsx`,
+    `InventoryTab.tsx`, and the inspector dropdown all kept
+    working without churning their imports.
+- **`users` archetype** (new shape id throughout the type system).
+  - `DeviceShapeId` extended with `'users'`.
+  - `mapDeviceTypeToShape` recognises `users` / `enduser` patterns
+    in case a customer feed tags identity-broker records or VDI
+    pools with one of those device types.
+  - `SHAPE_TO_ICON` registry in `shapes.tsx` and
+    `CyberNocShape.tsx` extended; new `UsersShape` device exported
+    and registered under `'device:users'` in
+    `TOPOLOGY_NODE_TYPES`.
+  - Palette tile added in `ShapesTab.tsx` under "Edge & cloud"
+    with the description "Remote users, SOC analysts, end-user
+    populations".
+  - Inspector device-family dropdown gains a "Users" option so
+    operators can re-shape an existing node into a users glyph.
+- **Keyboard shortcuts + delete confirmation + undo/redo**
+  (`NetworkDiagramCanvas.tsx`).
+  - `Delete` / `Backspace` opens a confirmation modal listing the
+    items scheduled for deletion (single, multi-selection via
+    React Flow lasso, or the inspector-selected item). `Enter`
+    confirms; `Esc` cancels. The modal lists each target's
+    short-alias / "src → dst" so the operator sees exactly what
+    will disappear before clicking Delete. Items > 6 collapse to
+    a count summary to keep the modal compact.
+  - `Esc` clears the inspector selection when no modal is open.
+  - `⌘Z` / `Ctrl+Z` undoes; `⌘⇧Z` / `Ctrl+Y` redoes. A bottom-
+    centre toolbar (rendered only when there's history to
+    traverse) surfaces the same actions as buttons with the
+    keyboard binding shown in the tooltip.
+  - History is a bounded ring (`HISTORY_CAP = 50`) of saved
+    payloads, managed by a `useReducer`. Snapshots are committed
+    at *logical* boundaries (drop, connect, reconnect, drag-stop,
+    apply*, delete) — never on intermediate node-position deltas
+    during a drag, since rolling back to mid-drag positions
+    would feel jittery rather than useful.
+  - `replaySnapshot` rehydrates an entire saved payload through
+    the same code path that loads diagrams from the lookup
+    (`savedGroupToRF` / `savedNodeToRF` / `savedEdgeToRF` /
+    `savedTitleToRF`). An `isReplayingRef` guard prevents the
+    follow-up `setNodes` / `setEdges` from looping back into
+    `commitHistory` and polluting the undo stack with the very
+    state we just restored.
+  - Opening a different diagram dispatches `{ type: 'reset' }`
+    so undo can't cross diagram boundaries.
+
+### Verification
+
+- `yarn typecheck` — clean.
+- `yarn build` — clean (existing asset-size warnings unchanged).
+- Manual: dropped a Catalyst 9300-24 from the inventory tab,
+  clicked it; inspector Vendor/Model now read "Cisco" / "C9300-24"
+  (both populated, both real values).
+- Manual: dragged five shapes onto the canvas, lasso-selected
+  three, hit Delete; modal listed all three by short-alias and
+  required Enter / click to confirm. Esc dismissed cleanly.
+- Manual: dragged a node, hit ⌘Z; node returned to its prior
+  position. ⌘⇧Z restored the moved position. Repeated through
+  ten distinct edits; history walked back through all of them.
+- Manual: ⌘Z across diagram switch was confirmed not to leak
+  state from the previously-opened diagram.
+
+### Files changed
+
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/diagram/NetworkDiagramCanvas.tsx`
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/topology/PropertiesPanel.tsx`
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/topology/ciscoIcons.tsx`
+  (full rewrite — same export contract, lucide-based body)
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/topology/shapes.tsx`
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/diagram/CyberNocShape.tsx`
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/components/diagram/ShapesTab.tsx`
+- `packages/splunk-cisco-dashboards/src/main/webapp/common/services/topologyDiscovery.ts`
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf` — `build = 1152`
+
+### What's next
+
+- Operator review of the lucide icon set in production. If the
+  switch-vs-L3-switch pair still reads ambiguously at a glance
+  we'll either nudge the L3 colour further (currently indigo vs
+  switch's sky) or layer a tiny "L3" badge in the icon corner.
+- Multi-select drag (the lasso already groups for delete, but
+  drag-after-lasso still moves only the active node). Worth
+  evaluating once the operator sees how often they reach for it.
+- Snap-to-grid toggle in the toolbar — Build 115's region
+  resizing already snaps to 5px; extending the same to free-
+  placed nodes would make manual layout cleaner without taking
+  away the freeform option.
+
+---
+
+## 2026-05-15 (Build 115.1) — Edge handle persistence fix, text boxes, OOB Splunk Cloud diagram
+
+### Goal
+
+Three operator follow-ups after demoing Build 115:
+
+1. **Bug**: arrow connection points snapped back to the top-centre
+   handle of the source/target node every time the diagram was
+   reloaded, even though the operator had explicitly drawn the
+   wire on a side handle.
+2. **Text-box shape** — like the title node, but free-placement
+   (multiple per diagram, anywhere on the canvas) for callouts,
+   port labels, and gateway boxes.
+3. **OOB diagram**: ship the Splunk Cloud Deployment Architecture
+   from the FDEM v8 reference PDF as a seeded row in
+   `network_diagrams.csv`, so a fresh install demonstrates the
+   diagram canvas with a recognisable, useful topology out of
+   the box.
+
+### What was built
+
+- **Edge handle persistence** (`diagramPersistenceService.ts`,
+  `NetworkDiagramCanvas.tsx`). Added optional `sourceHandle` /
+  `targetHandle` to `SavedDiagramEdge`. `rfToSaved` now captures
+  both ids when the operator's drawn wire originates from a
+  specific handle; `savedEdgeToRF` restores them on load. Legacy
+  payloads (no handle ids) keep working — React Flow falls back
+  to the default top-centre anchor automatically.
+- **TextBoxNode** (`TextBoxNode.tsx`). New React Flow node type
+  registered as `textBox`. Renders a transparent caption by
+  default (placeholder hint when empty) but supports an optional
+  card surface (background fill + border) for "labelled box"
+  visuals. No port handles — annotations don't accept connectors.
+- **Inspector form** (`PropertiesPanel.tsx`). New
+  `TextBoxPropertiesForm` component with fields for text, font
+  size (10–48px), colour (preset palette + custom hex), bold /
+  italic toggles, alignment (left / center / right), and card
+  surface (transparent / white / Slate / Amber / Emerald / Sky /
+  Rose, plus border presets none / light / medium / dashed / bold).
+- **Palette tile** (`ShapesTab.tsx`). "Text Box" tile under the
+  Layout category, with a typographic "T" glyph as the
+  affordance — matches Figma / Sketch / Visio.
+- **Drop handler** (`NetworkDiagramCanvas.tsx`). New `textbox`
+  branch in `handleDrop` that spawns a TextBoxNode at the drop
+  point, honouring region auto-parenting (so a label dropped
+  inside a region moves with it on subsequent drags).
+- **Region count fix** (`annotateRegionCounts`). Excludes
+  textboxes (and the title) from the device-count tally so a
+  region with 3 indexers + 2 callout labels still reads
+  `3 devices`.
+- **OOB Splunk Cloud diagram** (`scripts/generate_oob_diagrams.mjs`,
+  `network_diagrams.csv.default`). Authored as a JS module that
+  serialises to CSV with proper RFC-4180 escaping; re-runnable.
+  The diagram lays out 4 regions (Search Tier / Indexing Tier /
+  Collection Tier Cloud / Customer Environment), 12 device shapes
+  (search heads, 3 AZ indexers, HEC LB, Inputs Data Manager,
+  hybrid SH, UFs / Network / Other inputs, Deployment Server),
+  3 protocol-gateway textboxes (REST 8089, HTTP/S 443, Forwarder
+  9997 TLS), and 13 directional edges with explicit handle ids
+  for engineered routing.
+
+### Verification
+
+- `yarn typecheck` ✓ (clean)
+- Lint sweep on every touched file ✓ (no errors)
+- Generator output sanity-check: `15 nodes, 13 edges, 4 groups`
+  matches the design spec; CSV row escapes correctly (double-up
+  quotes around the JSON blob).
+
+### What's next
+
+- Visual QA on the OOB diagram in a live Splunk instance —
+  expected: regions land at the spec coordinates with their
+  accent colours, gateway textboxes sit between the cloud and
+  customer rows, edges leave nodes from the side handles
+  (right / left / top / bottom) drawn in the seed.
+- If we want a second OOB diagram (e.g. the FDEM v8 full
+  network), extend `OOB_DIAGRAMS` in
+  `scripts/generate_oob_diagrams.mjs` and re-run.
+
+---
+
+## 2026-05-15 (Build 115) — Hardware metadata, shape library expansion, region polish
+
+### Goal
+
+Five follow-ups landed at once after the operator reviewed Build 114 in
+the diagram canvas:
+
+1. **Vendor + model on the device card** — the cards have unused
+   real estate at the bottom; surface `Cisco · WS-C6504-E`-style
+   hardware lines so engineers can read a diagram without
+   click-throughs to the inspector.
+2. **Eight new shape types** — what a network engineer actually
+   draws beyond the original nine: switch stacks, load balancers,
+   VPN concentrators, IDS/IPS sensors, databases, storage arrays,
+   IP phones, and a dedicated Internet cloud.
+3. **Regions that actually contain devices** — the screenshot
+   showed a region with `0 devices` even though a switch was
+   visually inside it. Devices need to auto-parent on drag-stop,
+   the device count needs to keep up, and regions need accent
+   colours + resize handles.
+4. **Cautious approach to sizing** — operator was wary of "going
+   too crazy" on resize. Settled on: regions get a `<NodeResizer>`
+   (essential to fit content), devices stay at their current
+   intrinsic size for now.
+5. **Catalyst Center-aware filtering** — replace the simple type
+   chips in the inventory panel with three cascading dropdowns
+   (Management Source → Device Type → Model) that mirror the
+   `asset_inventory_v1` dashboard's filter UX. Selecting
+   "Catalyst Center" as a source narrows the type and model
+   options to just what Catalyst Center contributes.
+
+### What we built
+
+#### A. Vendor + model on every device card
+
+`TopologyDiscoveredNode` now carries `vendor`, `model`, and
+`serialNumber`. `fetchAssetInventory` derives `vendor` from
+`management_source` (Catalyst Center → Cisco, F5 → F5,
+Meraki → Cisco Meraki, etc. — see `deriveVendor()` in
+`topologyDiscovery.ts`) and reads `model` from `platform_id`
+(falling back to `device_series` when missing).
+
+`SavedDiagramNode` gained optional `vendor` and `model`
+fields so per-node manual overrides survive a save/load
+cycle. The override always wins over the live
+asset_inventory value — operators who hand-type
+`Cisco / N9K-C9300X-48Y4C` keep that value across reloads
+even after the upstream lookup updates.
+
+`DeviceShape` now renders three label rows (name / type /
+vendor·model) instead of two. Card height bumped from 110 →
+122px to keep the type row from feeling crowded; width
+moved 100 → 110px to give the new line a comfortable
+truncation budget. The vendor·model row collapses to a
+non-breaking space when both fields are empty so card
+heights stay aligned across rows.
+
+#### B. Eight new Cisco-style stencil icons
+
+Added to `ciscoIcons.tsx` and registered everywhere
+(`SHAPE_TO_ICON`, `TOPOLOGY_NODE_TYPES`, `CyberNocShape`,
+`mapDeviceTypeToShape`, palette tiles, inspector dropdown):
+
+| Shape | Color | Distinguishing detail |
+|---|---|---|
+| `stack` | teal | 3 stacked switch bodies + stack ring |
+| `load_balancer` | cyan | Wide chassis + opposing flow arrows |
+| `vpn_concentrator` | purple | Chassis + padlock overlay |
+| `ids_ips` | red | Shield + tick mark |
+| `database` | emerald | 3-cylinder stack (stroked) |
+| `storage` | lime | Disk-array silhouette w/ status LEDs |
+| `ip_phone` | sky | Desk phone + handset |
+| `internet` | blue | Cloud silhouette + globe meridians |
+
+`mapDeviceTypeToShape` learned new branches so the new
+shapes auto-resolve from `asset_inventory.device_type`
+strings ("Load Balancer", "Stack", "Sensor",
+"IDS"/"IPS", etc.). Most-specific match first so a
+"Catalyst 9300 stack" lands on `stack`, not on `switch`.
+
+The `ShapesTab` palette now groups its 18 tiles into five
+categories — Core Network / Security / Servers & Data /
+Edge & Cloud / Layout — so the longer list stays
+scannable. Spec order in `SHAPE_TILES` is the canonical
+render order; no second source of truth.
+
+`SHAPE_DEFAULT_LABEL_OVERRIDES` cleans up auto-generated
+labels for the new shapes so a freshly-dropped tile reads
+"VPN" / "IDS/IPS" / "Load Balancer" instead of
+"Vpn Concentrator" / "Ids Ips" / "Load Balancer".
+
+#### C. Region auto-parenting + resize + accent picker
+
+Three changes work together to fix the "0 devices" gripe:
+
+1. **Auto-parent on drag-stop**: new `handleNodeDragStop`
+   callback walks any existing parent chain to derive the
+   dragged device's world position, then runs the same
+   `findContainingRegion` check the drop handler uses. If
+   the result differs from the node's current parent, the
+   node is re-anchored (with the local position
+   recomputed relative to the new parent) and
+   `annotateRegionCounts` re-runs.
+2. **NodeResizer on selected regions**: imported React
+   Flow's `<NodeResizer>` into `RegionGroupNode` and gated
+   it on `selected === true` so unselected regions stay
+   visually quiet. Min size enforced at 200×120 so an
+   accidental drag can't shrink the region below
+   "labelled container that fits a single device card".
+3. **Region inspector form**: new `RegionPropertiesForm`
+   in `PropertiesPanel.tsx` with a Name field and a 7-tile
+   accent picker (Default / Sky / Emerald / Amber / Rose
+   / Violet / Slate — the existing allow-list). Routed
+   through a new `onRegionUpdate` prop carrying a
+   discriminated `RegionUpdate` payload, mirroring the
+   Build 113 `TitleUpdate` pattern.
+
+The `accent` field already lived on
+`SavedDiagramGroup`/`RegionGroupNodeData` — Build 115
+just adds the UI to pick it.
+
+#### D. Cascading inventory filters
+
+`InventoryTab.tsx` rewritten around three multi-select
+dropdowns: Management Source → Device Type → Model. Each
+dropdown's option list is recomputed from the rows that
+survive the previous filter, so picking
+"Catalyst Center" as the source filters Device Type to
+just the families CC contributes (no
+`Windows/AD` workstations cluttering the list when you're
+hunting for a specific switch model).
+
+When an upstream filter changes, downstream selections
+that no longer reference reachable values are silently
+dropped (avoids "I picked X then Y disappeared but my
+selection is still active and the result is empty"
+confusion).
+
+The "Catalyst Center" pill the operator asked for is the
+top entry in the Management Source dropdown — same
+provenance string the asset_inventory builder writes, so
+zero new sourcetypes / no new searches required. Model
+and serial are auto-populated on the card from the
+asset_inventory row whenever a Catalyst Center-managed
+device is dragged onto the canvas.
+
+Search box now matches `model` and `serial_number` too.
+
+#### E. Vendor/model fields in node inspector
+
+Two new `Field`s in `NodePropertiesForm` (Vendor / Model)
+under a "Hardware" section. Empty-string clears an
+override (lets the live asset_inventory value flow
+through again); non-empty pins the override across
+saves. Serial number renders as read-only metadata
+beneath, since it's hardware fact, not editorial.
+
+### Files changed
+
+* `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf`
+  — `build = 115`.
+* `packages/splunk-cisco-dashboards/src/main/webapp/common/services/topologyDiscovery.ts`
+  — `DeviceShapeId` extended with 8 new variants;
+  `TopologyDiscoveredNode` gained `vendor`/`model`/
+  `serialNumber`; new `deriveVendor()`; `mapDeviceTypeToShape`
+  picks up new branches; `fetchAssetInventory` plumbs the new
+  fields.
+* `packages/splunk-cisco-dashboards/src/main/webapp/common/services/diagramPersistenceService.ts`
+  — `SavedDiagramNode` gained optional `vendor`/`model`.
+* `packages/splunk-cisco-dashboards/src/main/webapp/common/components/topology/ciscoIcons.tsx`
+  — 8 new icon components + 6 new colour constants + extended
+  `CISCO_ICONS` registry.
+* `packages/splunk-cisco-dashboards/src/main/webapp/common/components/topology/shapes.tsx`
+  — `SHAPE_TO_ICON` and `TOPOLOGY_NODE_TYPES` extended; 8 new
+  `*Shape` exports (all `= DeviceShape`); card label rewritten
+  to three rows; intrinsic size 100×110 → 110×122.
+* `packages/splunk-cisco-dashboards/src/main/webapp/common/components/topology/PropertiesPanel.tsx`
+  — `NodeUpdate` extended with `vendor`/`model`; new
+  `RegionUpdate` discriminator; new `RegionPropertiesForm`;
+  device dropdown shows all 17 shapes;
+  `REGION_ACCENT_OPTIONS` swatch palette; new `Hardware`
+  section in `NodePropertiesForm`.
+* `packages/splunk-cisco-dashboards/src/main/webapp/common/components/diagram/NetworkDiagramCanvas.tsx`
+  — `buildDeviceData` accepts `vendor`/`model`/
+  `serialNumber`; `savedNodeToRF` and `rfToSaved` plumb
+  vendor/model; new `handleNodeDragStop` for region
+  re-parenting; new `handleRegionUpdate`; `onRegionUpdate`
+  + `onNodeDragStop` wired into ReactFlow.
+* `packages/splunk-cisco-dashboards/src/main/webapp/common/components/diagram/RegionGroupNode.tsx`
+  — `<NodeResizer>` rendered when selected, capped at
+  200×120 minimum.
+* `packages/splunk-cisco-dashboards/src/main/webapp/common/components/diagram/InventoryTab.tsx`
+  — Rewritten around three cascading multi-select
+  dropdowns; new `FilterDropdown` component; cascade
+  reconciliation drops orphaned selections.
+* `packages/splunk-cisco-dashboards/src/main/webapp/common/components/diagram/ShapesTab.tsx`
+  — Tiles grouped into five categories; 8 new tiles;
+  `SHAPE_DEFAULT_LABEL_OVERRIDES` for friendlier auto
+  labels.
+* `packages/splunk-cisco-dashboards/src/main/webapp/common/components/diagram/CyberNocShape.tsx`
+  — `SHAPE_TO_ICON` extended for completeness (the dark
+  ops canvas now renders the new shapes too).
+
+### Verification
+
+* `yarn workspace @splunk/splunk-cisco-dashboards typecheck`
+  → clean (one pre-existing TS error in `CyberNocShape.tsx`
+  fixed in passing because the registry needs to stay
+  exhaustive).
+* IDE-level lints across all touched files → 0 errors.
+* `yarn lint` blocked by a pre-existing missing
+  `eslint-config-airbnb` dependency in `node_modules` —
+  unrelated to this build.
+
+### What's next
+
+* Operator may want to refine which `management_source`
+  values map to which vendor (e.g. third-party AD-imported
+  devices that aren't actually Cisco). The current
+  `deriveVendor()` allow-list is conservative; widening it
+  is one branch.
+* Region resize doesn't yet auto-grow when devices are
+  dropped along the bottom edge — future polish.
+* Cascading filter dropdowns are click-only; keyboard
+  navigation through option lists is open follow-up if
+  the operator wants it.
+
+---
+
+## 2026-05-15 (Build 114) — Flowing-dot edges, host visibility, view-mode polish
+
+### Goal
+
+Five follow-ups from the operator after Build 113 landed:
+
+1. **SPL example for seeding diagrams.** "Write me an example
+   search that automatically creates a diagram by injecting the
+   `payload_json` into `network_diagrams.csv`." — they want a
+   copy-pasteable SPL recipe.
+2. **Hide the canvas grid in present mode.** "When in present
+   mode, do we need the canvas dots?" — the dot grid was reading
+   as "editor surface" during a walkthrough.
+3. **Drag connector endpoints onto specific port handles.** "I
+   would like to move the line to the two dots facing each
+   other." — RF supports this via `edgesReconnectable` but
+   Build 113 didn't wire `onReconnect` so the data update was
+   dropped.
+4. **Animation overhaul.** "Allow us to alter the colour of the
+   animation. Use what you created in the overview dashboard
+   that shows a moving dot. Allow direction of the moving dots
+   based on how the arrow is pointed." — i.e. replace RF's dash
+   cycle with a coloured flowing dot whose direction tracks the
+   arrowhead.
+5. **Inventory cleanup + Splunk visibility per device.** Drop
+   the long site-chip row; add a lightweight `| metadata
+   type=hosts` indicator that folds "is Splunk seeing events
+   from this device?" into each device's status dot.
+
+### What we built
+
+#### 1. SPL example — `inject-diagram-spl.md` + JSDoc
+
+Documented a copy-pasteable upsert pipeline that builds a payload
+JSON and writes it to `network_diagrams.csv`. The recipe follows
+the same upsert pattern the persistence service uses internally
+(`inputlookup … | where name != "X" | append [makeresults | eval
+… ] | sort name | outputlookup network_diagrams.csv`), so admins
+can audit-trail the seeded diagram alongside operator-saved ones.
+
+A reference example builds an auto-topology directly from
+`asset_inventory.csv` — operators get a working diagram seeded
+from their actual fleet without touching the React UI.
+
+#### 2. Hide grid in view mode — `NetworkDiagramCanvas.tsx`
+
+Gated the `<Background variant="dots">` render on `!isViewMode`.
+Edit mode keeps the dot grid as a visual snap reference; view
+mode renders against a clean canvas so the diagram reads as
+"finished artefact" instead of "editor surface".
+
+#### 3. Edge endpoint reconnect — `NetworkDiagramCanvas.tsx`
+
+Wired `onReconnect={handleReconnect}` using the
+`reconnectEdge` utility from `@xyflow/react`. Operators can now
+drag either end of an existing edge to a different node OR a
+different port handle on the same node — exactly what the
+"two dots facing each other" feedback asked for. The change
+goes through `setEdges` + `emitChange` so it's persisted with
+the next save.
+
+#### 4. Flowing-dot animation — `AnimatedEdge.tsx` (NEW)
+
+New custom edge type `'animated'` (registered as the canvas's
+default) that renders the path itself plus an SVG `<circle>`
+animated along the path with `<animateMotion mpath>`. Mirrors
+the SMIL recipe used by the Florida overview dashboard's
+customer-topology map.
+
+Direction semantics:
+
+| `data.direction` | Visual                                                  |
+| ---------------- | ------------------------------------------------------- |
+| `none`           | Plain line, no dot. Existing legacy edges preserved.    |
+| `forward`        | One dot moves source → target.                          |
+| `backward`       | One dot moves target → source.                          |
+| `both`           | Two dots, opposite directions, half-cycle phase offset. |
+
+Per-edge colour via `data.animationColor` (hex). Inspector
+ships a 6-swatch palette + an "Auto" reset that falls back to a
+per-kind default (sky for synthetic, slate for physical /
+logical). Persisted in `payload_json` so colour round-trips.
+
+Schema change:
+- `SavedDiagramEdge.animationColor?: string` (new, optional).
+- `EdgeUpdate.animationColor?: string` (panel→canvas update channel).
+
+The animation is implicit when `direction !== 'none'` — operators
+don't have to flip a separate animation toggle. This matched the
+"default ON for any directional edge" choice from the design
+prompt.
+
+#### 5. Inventory cleanup — `InventoryTab.tsx`
+
+Removed the site-chip row entirely. Customer site labels (e.g.
+`Global/USA/Plano-TX/HQ Tower/1st Floor`) routinely wrapped
+across multiple lines and crowded out the actual device list.
+The type-chip row stays (AP, Switch, Firewall, WLC, Router,
+Gateway, Server) and the search box still matches `siteLabel`,
+so site filtering remains available — just no chip clutter.
+
+`facetCounts(siteFacets)` and the `siteFilter` Set were both
+deleted; tests that hit `matches(asset, query, typeFilter,
+siteFilter)` had their fourth arg dropped.
+
+#### 6. Host visibility — `hostVisibilityService.ts` (NEW)
+
+New service that runs `| metadata type=hosts | fields host,
+lastTime, totalCount`. Returns a `HostVisibilityIndex` with
+`get(host)` and `isReporting(host)` methods. 24h is the cutoff
+for "reporting" vs "silent"; hosts not in metadata at all
+return `undefined` (treated as unknown).
+
+`fetchHostVisibility()` resolves to `EMPTY_HOST_VISIBILITY_INDEX`
+on failure (never rejects) so a metadata search outage can't
+prevent the diagram from rendering — every dot just falls
+through to gray, which is the right "Splunk visibility is
+unavailable" signal.
+
+The page (`pages/network_diagram/index.tsx`) fetches the index
+in parallel with `asset_inventory` and threads it into the
+canvas as `hostVisibility`. The canvas's `savedNodeToRF` and
+the drop handler both run candidate hostnames through
+`resolveEffectiveStatus()`:
+
+- Reporting → keep whatever asset_inventory said.
+- Silent or unknown → force `'unknown'` (gray dot).
+
+Candidate hostnames tried per asset: `asset.label`,
+`asset.shortLabel`, `asset.id`, `raw.hostname`,
+`raw.device_name`. Case-insensitive match in the index handles
+the common `dc-pla-01` ↔ `DC-PLA-01` mismatch between
+asset_inventory and Splunk's indexed host field.
+
+#### 7. `app.conf` — bumped to Build 114
+
+### Verification
+
+- `ReadLints` clean across `AnimatedEdge.tsx`,
+  `NetworkDiagramCanvas.tsx`, `PropertiesPanel.tsx`,
+  `InventoryTab.tsx`, `hostVisibilityService.ts`,
+  `pages/network_diagram/index.tsx`.
+- Backwards-compatibility: payloads saved before Build 114
+  hydrate cleanly. Legacy edges with no `direction` default to
+  `'none'` (no animation, plain line) and no `animationColor`
+  (`AnimatedEdge` falls back to per-kind palette). Legacy
+  diagrams open in Build 114 and re-save without losing data.
+- `synthetic_a2a` legacy edges no longer auto-animate via RF's
+  dash cycle — they render as plain dashed lines with the same
+  sky-blue stroke. Operators who want them animated can flip
+  `direction` to forward/backward in the inspector. Documented
+  as a deliberate visual change in the migration note.
+
+### Files changed
+
+```
+M packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf            (build 113 → 114)
+M packages/splunk-cisco-dashboards/src/main/webapp/common/services/diagramPersistenceService.ts  (animationColor on edge schema)
+A packages/splunk-cisco-dashboards/src/main/webapp/common/services/hostVisibilityService.ts      (new)
+A packages/splunk-cisco-dashboards/src/main/webapp/common/components/diagram/AnimatedEdge.tsx    (new)
+M packages/splunk-cisco-dashboards/src/main/webapp/common/components/diagram/NetworkDiagramCanvas.tsx (edgeTypes, onReconnect, no-grid view, host visibility merge)
+M packages/splunk-cisco-dashboards/src/main/webapp/common/components/diagram/InventoryTab.tsx    (drop site chips)
+M packages/splunk-cisco-dashboards/src/main/webapp/common/components/topology/PropertiesPanel.tsx (animation colour picker, EdgeUpdate.animationColor)
+M packages/splunk-cisco-dashboards/src/main/webapp/pages/network_diagram/index.tsx              (fetchHostVisibility wiring)
+A packages/splunk-cisco-dashboards/docs/inject-diagram-spl.md                                    (new — SPL recipes)
+M packages/splunk-cisco-dashboards/docs/SESSION_LOG.md                                           (this entry)
+```
+
+### What's next
+
+- Test with a customer environment that has both `asset_inventory`
+  and `metadata` populated, confirm the silent-host gray-dot fold
+  reads correctly across mixed-case hostnames.
+- Consider a small "Splunk visibility unavailable" banner in
+  the canvas when `hostVisibility?.size === 0` — distinguishes
+  "every device is silent" (likely real) from "metadata search
+  failed" (an operator surface bug).
+- Cisco Spaces integration was raised but deferred — a future
+  build can add a "Pick from Cisco Spaces" tab next to Shapes
+  and Inventory if the customer asks for it again.
+
+---
+
+## 2026-05-15 (Build 113) — View/Edit modes, edge directionality, on-canvas diagram title
+
+### Goal
+
+Three customer-facing capabilities asked for in one breath after the
+Build 112 icon port landed:
+
+1. **Edit vs View mode.** "Our network diagram is always in canvas
+   mode, is it possible to have an edit mode where we can move objects
+   and link them together with lines, and when in this view we see a
+   fantastic full-screen diagram?" — i.e. a presentation mode that
+   feels like the diagram is the artefact, not the editor.
+2. **Edge arrowheads.** "Allow the UI attached for editing each
+   object for lines to have arrows like maybe bi-directional or
+   uni-directional." Today every edge is a passive line, which makes
+   it ambiguous which direction a relationship runs.
+3. **Diagram title.** "We need to title the diagram as well — a text
+   box with some basic font changes like size, color, etc." Distinct
+   from the diagram *name* (used for the lookup row); this is the
+   headline you read *on the diagram itself*, like the title block in
+   a Visio drawing.
+
+All three needed to land together because they share the same
+moments in the workflow ("I'm done editing → I want to title it and
+present it") and exercise the same surfaces (header, canvas,
+inspector). Splitting across builds would have left the page in
+half-states.
+
+### What changed
+
+#### 1. Schema additions — backwards-compatible
+
+`SavedDiagramEdge` gains a `direction?: 'none' | 'forward' |
+'backward' | 'both'`. Older saved diagrams (no `direction` field)
+keep rendering as plain lines (`'none'` is the implicit default), so
+no migration is needed and existing diagrams round-trip unchanged.
+
+`SavedDiagramPayload` gains an optional `title?: SavedDiagramTitle`
+field carrying `text`, `x`, `y`, `fontSize`, `color`, `bold`,
+`italic`. The validator (`validatePayload`) gracefully ignores
+malformed title blobs — anything other than a string `text` plus
+finite numeric `x` / `y` / `fontSize` falls through to "no title"
+rather than crashing the canvas.
+
+Both fields are passed through `validatePayload` and the
+`rfToSaved` / `savedNodeToRF` round-trip, so opening a Build 112
+diagram in Build 113 and re-saving keeps every existing edge / node
+intact and just adds the new fields where the operator opted into
+them.
+
+#### 2. New `DiagramTitleNode.tsx` — borderless on-canvas headline
+
+The title is implemented as a regular React Flow node type
+(`'diagramTitle'`) so it inherits drag, select, and zoom behaviour
+for free, but the renderer is intentionally chrome-less: no border,
+no card surface, no port handles. Selection state adds a thin sky-
+tinted outline (1px transparent at rest, 2px sky-400/70 when
+selected) so the operator can confirm they grabbed the right
+element when clicking through nearby device cards.
+
+Empty titles render the placeholder "Click to edit title" in slate-
+400 — a self-discovered hint that the inspector exposes the editable
+fields, with no on-screen tutorial required.
+
+#### 3. `NetworkDiagramCanvas.tsx` — markers, mode gating, title hydration
+
+The canvas registers the new `diagramTitle` node type alongside the
+existing device shapes and `regionGroup`. On hydrate, the optional
+`payload.title` materialises into a single high-z-index node at the
+saved coordinates; on serialise, the title node is split off into
+`payload.title` instead of being written into `payload.nodes` (kept
+the schema clean — titles aren't network elements).
+
+Edge marker direction is derived from `edge.data.direction` on
+load via a small `markersForDirection()` helper that maps
+`forward`/`backward`/`both` to the right combination of
+React Flow's `markerStart` / `markerEnd` slots, all using
+`MarkerType.ArrowClosed` so the arrowhead matches the Visio
+aesthetic the customer's reference diagrams ship with. Newly-drawn
+connections (`handleConnect`) default to `direction: 'forward'`
+because that's the most common intent in network diagrams — but
+the operator can flip to none / backward / both via the inspector.
+
+A new `mode: 'edit' | 'view'` prop gates every editor affordance:
+
+| Affordance              | Edit mode | View mode |
+|-------------------------|-----------|-----------|
+| `nodesDraggable`        | yes       | no        |
+| `nodesConnectable`      | yes       | no        |
+| `edgesReconnectable`    | yes       | no        |
+| `elementsSelectable`    | yes       | no        |
+| `snapToGrid`            | yes       | no        |
+| Drop handlers           | wired     | unwired   |
+| Port handles visible    | hover     | hidden    |
+| `PropertiesPanel`       | rendered  | hidden    |
+| Hint banner             | shown     | hidden    |
+| `Controls.showInteractive` | yes    | no        |
+
+Port handles are suppressed in view mode via a `data-view-mode`
+attribute on the canvas wrapper plus a Tailwind arbitrary
+selector `[&[data-view-mode]_.react-flow__handle]:!opacity-0` —
+no separate CSS file or global override required. Pan and zoom
+still work in view mode so the operator can navigate the diagram;
+everything that *changes* it is locked.
+
+A new imperative handle (`NetworkDiagramCanvasHandle`) exposes
+`addOrSelectTitle()` so the parent header's Title button can ask
+the canvas to insert (or focus) the title without the page having
+to thread title state through props. The method is idempotent —
+clicking the button when a title already exists pans + zooms to
+it and selects it; clicking when none exists drops one near the
+top of the current viewport and auto-selects so the inspector
+opens with focus on the text field.
+
+#### 4. `PropertiesPanel.tsx` — direction segmented control + title inspector
+
+The edge form now has a four-way segmented control for arrowhead
+direction (Lucide `Minus`, `ArrowRight`, `ArrowLeft`,
+`ArrowLeftRight`) styled like a tab bar. Active segment lifts onto
+a white surface with a sky border + sky-600 text; the rest stay
+muted. A short hint line ("Plain line" / "Arrowhead at target" /
+…) below the control reinforces what each option does.
+
+A new `TitlePropertiesForm` handles selection of the title node:
+
+* Headline: `<textarea>` (multi-line because operators sometimes
+  want a tagline under the main title).
+* Font size: range slider 12 – 96 px with the live value shown in
+  the field label ("Font size — 28px") so the operator gets
+  immediate feedback while dragging.
+* Style: bold + italic toggle buttons that show pressed state via
+  sky tint.
+* Colour: a 6-swatch preset palette (slate / sky / emerald / amber
+  / rose / violet) for one-click selection plus a free-form hex
+  input for "I want this specific brand purple".
+
+The form's `Apply` button emits a discriminated `TitleUpdate`
+through a new `onTitleUpdate` prop on `PropertiesPanel` — kept
+separate from `onNodeUpdate` so the diagram canvas's mutation
+pathways stay narrow and explicit. The prop is optional, so the
+live ops `TopologyCanvas` (which never produces title nodes) can
+omit it without breaking type-checking.
+
+Also fixed a pre-existing stale message in the edge inspector that
+told the operator "Edge persistence to network_topology_edges.csv
+ships in Build 106. For now edits live only in this browser
+session." — this hasn't been true since Build 106 actually shipped
+the lookup-backed persistence (under `network_diagrams.csv`, not
+`network_topology_edges.csv`). Replaced with "Persists with the
+diagram to network_diagrams.csv on Save."
+
+#### 5. `DiagramHeader.tsx` — Title button, Present button, slim view-mode
+
+Two new affordances in edit mode:
+
+* **Title** (Lucide `Type` icon). Label morphs between "Add title"
+  and "Edit title" based on whether the active payload already has
+  a title. Clicks call `onAddOrSelectTitle` → canvas's
+  `addOrSelectTitle()` handle.
+* **Present** (Lucide `Maximize2` icon). Switches the page to
+  view mode and triggers browser fullscreen via the parent.
+
+A thin vertical divider sits between the file/title cluster and
+the Present button so the latter reads as a separate "mode switch"
+affordance instead of just another file action.
+
+In view mode the entire button cluster collapses down to a single
+**Exit view (Esc)** button (Lucide `Pencil` icon, accent tint)
+because every other button is an editing affordance that wouldn't
+make sense in presentation. The status message and diagram name
+stay visible so context is preserved during the demo.
+
+#### 6. `pages/network_diagram/index.tsx` — mode state + fullscreen plumbing
+
+The page owns `mode: 'edit' | 'view'` and a `pageWrapperRef` it
+hands to `requestFullscreen()` when entering view mode. Fullscreen
+is best-effort: if the browser refuses the request (iOS Safari,
+permission denied, etc.) we still flip to view mode so the read-
+only experience works regardless.
+
+A `fullscreenchange` event listener auto-flips back to edit mode
+when fullscreen is lost — pressing Esc, an OS gesture, another tab
+stealing focus all dump the user out of fullscreen, and we treat
+all of those as an implicit "exit view" so the UI never gets stuck
+in presentation without a way out.
+
+The `DiagramPalette` is hidden entirely in view mode (the whole
+point is to present the diagram, not its drag sources), and the
+canvas's outer padding is dropped so the diagram fills edge-to-
+edge. The canvas wrapper also drops its rounded corners + border
+in view mode so the picture extends seamlessly to the screen
+edges — true cinematic feel.
+
+A small `hasTitle` derived flag tracks whether the active payload
+has a title, refreshed both on `handleCanvasChange` (live edits)
+and a `useEffect` keyed on `activePayload` (post-load). Drives the
+Title-button label in the header.
+
+#### 7. `app.conf` — bumped to Build 113.
+
+### Verification
+
+* Linter clean across every touched file (`PropertiesPanel.tsx`,
+  `NetworkDiagramCanvas.tsx`, `DiagramTitleNode.tsx`,
+  `DiagramHeader.tsx`, `pages/network_diagram/index.tsx`,
+  `diagramPersistenceService.ts`).
+* Backwards compat verified by reading: `validatePayload` ignores
+  unknown / malformed title blobs (returns `title: undefined`)
+  and `direction` is optional on `SavedDiagramEdge`, with
+  `savedEdgeToRF` defaulting to `'none'` when the field is
+  absent. Pre-Build-113 saved diagrams render unchanged.
+* The optional `onTitleUpdate` on `PropertiesPanelProps` keeps
+  `TopologyCanvas` (the live ops canvas) compiling without a no-
+  op handler — only the diagram canvas, which actually produces
+  title nodes, supplies it.
+
+### What's next
+
+Polish opportunities the customer hasn't asked for yet but that
+would round out the diagram surface:
+
+* Persist a `mode` preference per browser (localStorage) so a
+  saved diagram opened later remembers it was last viewed in
+  presentation mode.
+* "Auto-fit on view-mode entry" — currently `fitView` runs on
+  hydrate; running it again when entering view mode would frame
+  the diagram more deliberately for presentation.
+* Dim non-essential controls (Controls/MiniMap fade out after a
+  few seconds of mouse-idle) for a fully cinematic view-mode
+  feel.
+* Edge midpoint label rendering (bandwidth chip + L2/L3 chip via a
+  custom edge type) — still on the queue from Build 110.
+* Region-group / palette-tile visual polish to match the Build
+  111 layered-shadow / glowing-dot recipe.
+
+---
+
+## 2026-05-14 (Build 112) — Cisco-stencil icon library port from splunk-cisco-app-navigator
+
+### Goal
+
+After Build 111 shipped (v0-inspired layered shadows, tinted-glass icon
+badges, glowing status dots), Alan reviewed and pushed back on one
+specific layer: the icons themselves. His feedback was direct — "in
+terms of icons, I am not loving them, are you sure we don't have any
+icons in the splunk react packages? Look at `~/repo/splunk-cisco-app-
+navigator/`, I was able to create amazing icons there, can you do the
+same."
+
+That sister project's "products" page (`splunk-cisco-app-navigator`)
+ships a curated catalogue of ~97 hand-picked Cisco SVGs sourced from
+the published Cisco topology stencil set (the Microsoft Visio Cisco
+icon pack). These are the silhouettes network engineers have been
+seeing in real Visio diagrams for twenty years, so they read at a
+glance — much higher iconographic recognition than any Lucide /
+Heroicons abstraction.
+
+The right call: port the device-relevant subset of those SVGs into
+this app and retire the Lucide-glyph-in-tinted-badge approach. Build
+111's badge wrapper made the icons look "designed", but Build 112's
+inline Cisco silhouettes make them look *correct*.
+
+### What changed
+
+#### 1. New `ciscoIcons.tsx` — inline Cisco-stencil React components
+
+Each of the 9 device-class icons is now a self-contained `<svg>`
+React component with `viewBox="0 0 80 80"` and `fill="currentColor"`.
+The path data was lifted directly from the navigator's static
+`/icons/cisco_*.svg` files (router, switch, nexus_switch, wifi,
+cloud_networking, rack_server, endpoint, firewall) and sanitised:
+
+- Office-Theme `class="MsftOfcThm_Background1_Fill_v2"` and the
+  hardcoded `fill="#0D274D"` attributes on `firewall.svg` were
+  stripped — `fill="currentColor"` on the root `<svg>` propagates to
+  every child.
+- The `<defs><style>.cls-1{fill:#07182d;}</style></defs>` block on
+  `cisco_rack_server.svg` was stripped for the same reason.
+- The Cloud / WAN class has no dedicated stencil in the Cisco pack,
+  so I hand-tuned a single-path solid cloud silhouette in matching
+  filled-no-stroke aesthetic — three arcs and a baseline.
+
+| Shape id     | Source SVG                  | Default colour |
+|--------------|-----------------------------|----------------|
+| router       | cisco_router.svg            | amber-600      |
+| switch       | cisco_switch.svg            | sky-600        |
+| l3_switch    | cisco_nexus_switch.svg      | indigo-600     |
+| firewall     | firewall.svg (sanitised)    | rose-600       |
+| wlc          | cisco_wifi.svg              | violet-600     |
+| access_point | cisco_cloud_networking.svg  | fuchsia-600    |
+| server       | cisco_rack_server.svg (san.)| emerald-600    |
+| cloud        | hand-tuned cloud silhouette | slate-500      |
+| generic      | endpoint.svg                | slate-500      |
+
+#### 2. Dropped the badge wrapper
+
+Build 110/111's `renderBadged` helper wrapped each Lucide glyph in a
+tinted-glass rounded-square badge. With proper Cisco silhouettes the
+badge becomes redundant — the silhouette **is** the icon. The new
+`baseIcon` helper just returns a bare `<svg>` with `fill=
+"currentColor"`, no wrapping `<div>`, no background tint, no ring.
+
+This matches exactly the navigator's product-card pattern — the icon
+sits on the card surface as a coloured silhouette, not inside a tile-
+within-a-tile.
+
+#### 3. Per-class default colour, not per-status colour
+
+Build 111 set the Lucide glyph colour from `status.accent`
+(`text-emerald-600` for healthy, `text-rose-600` for critical, etc.).
+That conflated two orthogonal axes — a "healthy router" looked
+identical to a "healthy switch" because they shared the emerald
+accent.
+
+Build 112 separates the layers:
+
+- **Device class** is encoded by **icon colour** (router=amber,
+  switch=sky, firewall=rose, etc.) — baked in as the default in each
+  icon component.
+- **Status** is encoded by **card chrome** — the border ring colour
+  (`status.ring`) and the glowing corner LED dot (`status.dot` +
+  `status.dotGlow` from Build 111).
+
+Operators now read the diagram in two passes: silhouette + colour
+tells you *what* it is (router vs switch vs firewall), the corner
+dot + ring tells you *how it's doing*. Same information density,
+half the visual confusion.
+
+#### 4. `cn()` + tailwind-merge gives callers an opt-in override
+
+The icon's default colour is the **first** className passed to
+`cn()`, the caller's className is the **second**. `tailwind-merge`
+dedupes conflicting `text-*` classes by keeping the later one, so
+callers that pass an explicit colour (e.g. `text-rose-500` for a
+status-driven recolour, `text-sky-400` in `CyberNocShape.tsx`) still
+win. Backward-compatible.
+
+#### 5. Sized up + colourised consumers
+
+- `shapes.tsx` (operations + diagram canvases): icon bumped from
+  `w-12 h-12` (48px) to `w-14 h-14` (56px) since it's now the only
+  visual occupant of the top 70% of the card. Dropped the
+  `status.accent` className override so the per-class colour shows.
+- `InventoryTab.tsx`: dropped the `text-slate-500 dark:text-slate-
+  400` greyscale override on inventory rows. The list now reads as a
+  colourful column where colour is the fastest at-a-glance device-
+  class signal — same UX as the navigator's products list.
+- `ShapesTab.tsx` / `CyberNocShape.tsx`: untouched. Their existing
+  className inputs (`w-9 h-9` for palette tiles, `text-sky-400` for
+  the dark-theme NOC variant) still flow through cleanly.
+
+### What did NOT change
+
+- React Flow handles, edge wiring, auto-layout, asset binding,
+  status pipeline, persistence — all untouched. This is purely a
+  visual layer change.
+- `CISCO_ICONS` registry surface — same shape ids, same component
+  signatures. Drop-in replacement.
+- `STATUS_PRESETS` in `shapes.tsx` — its `accent` field is now dead
+  weight (no longer applied to the icon) but I left it in place as
+  it's harmless and removing it would invite a TypeScript ripple.
+  Cleanup candidate for Build 113+.
+- `ciscoIcons.tsx`'s old `ACCENTS` palette and `renderBadged`
+  helper — gone, fully replaced by the new `baseIcon` + per-class
+  default-colour pattern.
+
+### Files changed
+
+- `src/main/webapp/common/components/topology/ciscoIcons.tsx` —
+  full rewrite. Inline Cisco-stencil SVG React components with
+  `currentColor` fill and per-class default colour.
+- `src/main/webapp/common/components/topology/shapes.tsx` — drop
+  `status.accent` from icon className, bump size to `w-14 h-14`.
+- `src/main/webapp/common/components/diagram/InventoryTab.tsx` —
+  drop `text-slate-*` override on inventory row icon.
+- `src/main/resources/splunk/default/app.conf` — `build = 112`.
+- `docs/SESSION_LOG.md` — this entry.
+
+### Verification
+
+`ReadLints` clean across all changed files. `*/` inside a JSDoc
+comment block (the file's first attempt had `w-*/h-*` in prose) was
+caught and fixed — `w-N`/`h-N` instead, no more accidental comment
+terminators. Per Alan's standing instruction, no `yarn typecheck` or
+`yarn build` run on his behalf.
+
+### Honest read on the icon swap
+
+This is the second time the navigator project has been the right
+answer to a "where do we get good X?" question (the first was
+`asset_inventory.csv` shape, way back in Build 102). It's worth
+treating that repo as the de-facto design system for this customer:
+icons, colour conventions, and naming all transfer cleanly because
+both apps target the same operator audience.
+
+The Cisco-stencil icons trade some abstract elegance (a Lucide
+`Shield` is a more "designed" mark than the literal Cisco firewall
+brick-wall silhouette) for concrete recognition. For this audience
+(network engineers reading SOC dashboards), recognition wins.
+
+### What's next
+
+Carrying forward from Build 110/111's queue:
+
+1. **Edge styling + edge inspector** (queued since Build 110). Solid
+   vs dashed, arrowhead toggle, bandwidth chip + L2/L3 chip on edge
+   midpoint via custom edge type. Edge inspector tab in
+   `PropertiesPanel`.
+2. **Optimistic auto-save** — replace explicit Save / Save As with a
+   debounced auto-save once a name has been set.
+3. **"Suggest from inventory" button** — runs `topology_discovery`
+   once and seeds device positions roughly grouped by `siteLabel`.
+4. **Region-group + palette tile polish** — apply the Build 111
+   layered-shadow / glowing-dot recipe to `RegionGroupNode.tsx` and
+   the Shapes / Inventory tab cards so the polish is consistent
+   across the whole diagram surface.
+5. **(NEW) Audit the navigator for additional shared assets** —
+   that repo also has 97 product/category icons, a persona presets
+   palette, and category-colour conventions. If any of those map to
+   our future Build 113+ work (e.g. a "device class" filter chip in
+   the inventory tab), prefer porting over inventing.
+
+---
+
+## 2026-05-14 (Build 111) — v0-inspired visual polish on device cards
+
+### Goal
+
+After Build 110 shipped (Lucide-React icons, light theme restored, retry
+resilience, drag-handle hover hygiene), Alan went on a side quest with
+**v0.dev** (Vercel's React + Tailwind generator) and brought back a
+"DeviceCard" reference component. The handoff was concrete: a
+`statusConfig` object, a layered box-shadow recipe, a tinted icon
+badge with an inset ring, and a glowing status indicator dot.
+
+The right call was NOT to adopt v0's component wholesale — it had no
+React Flow handles, no `unknown` status, no asset binding, no auto-
+layout integration, hardcoded fixed dimensions, and the `"use client"`
+Next.js directive — but the *visual recipe* in there was meaningfully
+better than what I shipped in Build 110, in exactly the places where
+LLM-driven coding tends to underdeliver: depth, glow, and the
+"tinted glass" surface treatment.
+
+So Build 111 ports the v0 recipe into our existing shape pipeline
+without touching any of the React Flow / asset-binding / auto-layout
+plumbing. The diff is roughly forty lines of Tailwind utility classes
+plus comments.
+
+### What changed
+
+#### 1. Layered shadow on the device card
+
+`shapes.tsx`'s `DeviceShape` previously used the chunky single
+`shadow-sm transition-all hover:shadow-md`. Build 111 replaces that
+with the v0 layered recipe:
+
+```
+shadow-[0_1px_3px_rgba(0,0,0,0.08),0_4px_12px_rgba(0,0,0,0.04)]
+dark:shadow-[0_1px_3px_rgba(0,0,0,0.4),0_4px_12px_rgba(0,0,0,0.3)]
+hover:shadow-[0_2px_8px_rgba(0,0,0,0.1),0_8px_24px_rgba(0,0,0,0.06)]
+dark:hover:shadow-[0_2px_8px_rgba(0,0,0,0.5),0_8px_24px_rgba(0,0,0,0.35)]
+```
+
+Two stacked shadows — a tight contact shadow + a softer ambient one —
+deliver the "premium floating card" feel that flat single shadows
+cannot. Hover bumps both layers simultaneously for a subtle lift.
+Dark-mode variants run higher alpha because shadows need to read
+against a near-black canvas.
+
+The status ring was simultaneously softened from `ring-2` to `ring-1`.
+The chunky ring + offset combo from Build 105 competed visually with
+the new layered shadows; a 1px coloured ring still carries the
+status signal at a glance but lets the shadow do the depth work
+uncontested.
+
+#### 2. Glowing status dot
+
+`STATUS_PRESETS` gained a `dotGlow` field per status:
+
+| Status   | Glow recipe                                          |
+|----------|------------------------------------------------------|
+| healthy  | `shadow-[0_0_8px_2px_rgba(16,185,129,0.4)]`          |
+| warning  | `shadow-[0_0_8px_2px_rgba(245,158,11,0.4)]`          |
+| critical | `shadow-[0_0_8px_2px_rgba(244,63,94,0.5)]`           |
+| unknown  | _(empty — no glow for "no telemetry" nodes)_         |
+
+The dot itself was bumped from `w-2 h-2` (8px) to `w-2.5 h-2.5`
+(10px) so the glow has somewhere to spread without making the dot
+look pinpricked. Critical gets slightly more alpha (0.5 vs 0.4) so
+the red indicator stays the loudest at-a-glance signal.
+
+#### 3. Tinted-glass icon badge
+
+`ciscoIcons.tsx` `ACCENTS` palette switched from flat `bg-*-50` fills
+to `bg-*-500/15` (translucent tint of the accent hue itself), and the
+ring went from outer `ring-*-200/60` to inset `ring-*-500/20` plus a
+new `ring-inset` modifier on the badge wrapper.
+
+Same hue at three different opacities — 15% bg, 20% ring, full text —
+gives each badge a more cohesive, premium feel without expanding the
+colour vocabulary. The inset ring sits inside the badge edge instead
+of outside, which softens the boundary and reads as a glassy,
+slightly recessed surface.
+
+Per-class palette (rose / amber / sky / indigo / violet / fuchsia /
+emerald / slate) all moved to the same recipe in lockstep, so
+consistency is structural rather than per-shape.
+
+### What did NOT change
+
+- React Flow handles, edge wiring, auto-layout, asset binding,
+  status-mapping pipeline — all untouched.
+- The `CISCO_ICONS` registry surface — same shape ids, same component
+  signatures. The visual upgrade flows through to both the operations
+  canvas (`TopologyCanvas`) and the diagram canvas
+  (`NetworkDiagramCanvas`) automatically.
+- `CyberNocShape.tsx` and `networkDiagram.css` — still dormant for
+  the future opt-in dark mode.
+- Card dimensions (100x110 px) — unchanged; React Flow layout
+  constraints still apply.
+
+### Files changed
+
+- `src/main/webapp/common/components/topology/shapes.tsx` — layered
+  shadow + ring softening + `dotGlow` integration.
+- `src/main/webapp/common/components/topology/ciscoIcons.tsx` — new
+  ACCENTS palette + `ring-inset` on the badge wrapper.
+- `src/main/resources/splunk/default/app.conf` — `build = 111`.
+- `docs/SESSION_LOG.md` — this entry.
+
+### Verification
+
+Pre-commit checks: `ReadLints` clean across all four files. No
+typecheck or build run this round per Alan's request to handle
+yarn locally.
+
+### Honest opinion on the v0 -> me handoff workflow
+
+This is exactly the division of labour I argued for in the Build 110
+"alternative LLM" recommendation:
+
+- **v0 invented the visual recipe** in a sandbox: layered shadows,
+  tinted-glass badges, dot glows. These are signature techniques that
+  pure-coding LLMs (me) don't reach for unprompted.
+- **I integrated the recipe into the real type system + React Flow
+  plumbing**: extended `STATUS_PRESETS`, ported the values into our
+  existing `DeviceShape` without breaking any of the asset-binding,
+  handle, or layout invariants.
+
+Ratio of useful v0 output to integration cost was roughly 1:1 — about
+30 minutes total here, but the visual lift is conspicuous on the
+canvas. Recommend repeating this pattern for Build 112+ if Alan wants
+similar polish elsewhere (palette tabs, properties panel, region
+group node).
+
+### What's next
+
+Carrying forward from Build 110's queue, plus one new candidate:
+
+1. **Edge styling + edge inspector** (still queued from Build 110).
+   Solid vs dashed, arrowhead toggle, bandwidth chip + L2/L3 chip
+   on edge midpoint via custom edge type. Edge inspector tab in
+   `PropertiesPanel`.
+2. **Optimistic auto-save** — replace explicit Save / Save As with a
+   debounced auto-save once a name has been set.
+3. **"Suggest from inventory" button** — runs `topology_discovery`
+   once and seeds device positions roughly grouped by `siteLabel`.
+4. **(NEW) Apply the v0 recipe to the region-group node**
+   (`RegionGroupNode.tsx`) and the palette tab cards (Shapes /
+   Inventory) so the polish is consistent across the whole diagram
+   surface, not just devices. ~20 mins each.
+
+---
+
 ## 2026-05-14 (Build 110) — Light-theme revert, Lucide icon swap, retry-resilient persistence
 
 ### Goal

@@ -30,25 +30,55 @@
  *     side; React Flow picks based on drag direction.
  */
 
-import React from 'react';
-import { Handle, Position } from '@xyflow/react';
+import React, { useState } from 'react';
+import { Handle, NodeResizer, Position } from '@xyflow/react';
+import { ExternalLink } from 'lucide-react';
 import { cn } from '@/common/lib/utils';
 import type {
     HealthStatus,
     TopologyDiscoveredNode,
     DeviceShapeId,
 } from '@/common/services/topologyDiscovery';
-import { CISCO_ICONS } from './ciscoIcons';
+import { ShapeSilhouette } from './silhouettes';
+import { useIpAddressVisibility } from '@/common/contexts/IpAddressVisibilityContext';
+import {
+    buildMetadataHostSpl,
+    openSplunkSearch,
+} from '@/common/lib/splunkSearchUrl';
 
 interface ShapeData {
+    /** The full discovered/synthetic node payload, including any
+     *  Build 115.13 IP override (`node.ipAddress`). Routed
+     *  through `buildDeviceData` so the React Flow data layer and
+     *  the saved payload (`SavedDiagramNode.ipAddress`) stay in
+     *  sync via a single field name. */
     node: TopologyDiscoveredNode;
 }
 
+/**
+ * Build 111: added `dotGlow` per status — a coloured drop-shadow
+ * around the status dot so it reads as a glowing LED rather than a
+ * flat circle. Ported from the v0 reference component; the recipe is
+ * `shadow-[0_0_<radius>_<spread>_rgba(<r>,<g>,<b>,<alpha>)]` with a
+ * fairly tight 8px radius and 2px spread so the glow looks like a
+ * physical indicator, not a bloom. Critical gets slightly more alpha
+ * (0.5 vs 0.4) so the red dot stays the strongest at-a-glance signal.
+ * `unknown` gets no glow — a quiet slate dot for "no telemetry"
+ * shouldn't compete for attention with healthy / warning / critical.
+ */
 const STATUS_PRESETS: Record<
     HealthStatus,
     {
         ring: string;
         dot: string;
+        dotGlow: string;
+        /** Build 115.10 — radiating ping ring colour. Renders as
+         *  a second absolutely-positioned circle on top of the
+         *  solid dot, animated with `animate-ping` for the outward
+         *  pulse. Empty string disables the ping (used for the
+         *  quiet `unknown` state — a "no telemetry" dot shouldn't
+         *  call attention to itself). */
+        dotPing: string;
         accent: string;
         label: string;
     }
@@ -56,50 +86,71 @@ const STATUS_PRESETS: Record<
     healthy: {
         ring: 'ring-emerald-500/60 border-emerald-500/30',
         dot: 'bg-emerald-500',
+        dotGlow: 'shadow-[0_0_8px_2px_rgba(16,185,129,0.5)]',
+        dotPing: 'bg-emerald-400/80',
         accent: 'text-emerald-600 dark:text-emerald-400',
         label: 'Healthy',
     },
     warning: {
         ring: 'ring-amber-500/70 border-amber-500/40',
         dot: 'bg-amber-500',
+        dotGlow: 'shadow-[0_0_8px_2px_rgba(245,158,11,0.5)]',
+        dotPing: 'bg-amber-400/70',
         accent: 'text-amber-600 dark:text-amber-400',
         label: 'Warning',
     },
     critical: {
         ring: 'ring-rose-500/80 border-rose-500/50',
         dot: 'bg-rose-500',
+        dotGlow: 'shadow-[0_0_8px_2px_rgba(244,63,94,0.6)]',
+        dotPing: 'bg-rose-500/80',
         accent: 'text-rose-600 dark:text-rose-400',
         label: 'Critical',
     },
     unknown: {
         ring: 'ring-slate-400/40 border-slate-300/60 dark:border-slate-700/60',
         dot: 'bg-slate-400',
+        dotGlow: '',
+        dotPing: '',
         accent: 'text-slate-500 dark:text-slate-400',
         label: 'No telemetry',
     },
 };
 
-/** Map shape ids to icons. Single source of truth so adding a new
- *  shape (e.g. a future `load_balancer`) means one new entry here
- *  + one new SVG in `ciscoIcons.tsx` + one new branch in
- *  `mapDeviceTypeToShape`. */
-const SHAPE_TO_ICON: Record<DeviceShapeId, keyof typeof CISCO_ICONS> = {
-    switch: 'switch',
-    l3_switch: 'l3_switch',
-    router: 'router',
-    firewall: 'firewall',
-    wlc: 'wlc',
-    access_point: 'access_point',
-    server: 'server',
-    cloud: 'cloud',
-    generic: 'generic',
-};
+/** Build 115.13 — the per-`DeviceShapeId` → lucide icon map that
+ *  used to live here moved into `silhouettes.tsx` (which owns the
+ *  full silhouette family rendering, including the icon overlay
+ *  on each chassis face). DeviceShape now delegates the entire
+ *  icon area to `<ShapeSilhouette shape={...} />`; the legacy
+ *  `SHAPE_TO_ICON` constant was removed once no callers
+ *  remained. If a future palette UI needs the inverse mapping
+ *  (e.g. "give me the lucide icon for this shape"),
+ *  `CISCO_ICONS[shape]` from `ciscoIcons.tsx` is the canonical
+ *  source — the keys are 1:1 with `DeviceShapeId`. */
 
 /** Connection handles on all four sides. Each side gets BOTH a
  *  `source` and `target` handle so React Flow can attach edges in
  *  either direction. They share an id-prefix per side so the
  *  properties panel can record "left port" vs "right port" later
- *  if we want directional edge routing. */
+ *  if we want directional edge routing.
+ *
+ *  Build 115.9 — render order is target FIRST, source SECOND. When
+ *  two handles share a Position, React Flow's pointer pickup
+ *  selects the topmost handle (the one rendered LAST in DOM
+ *  order). With source rendered last, a drag that starts on a
+ *  node's edge picks up the SOURCE handle, which makes the new
+ *  edge's `source = the node where the drag began` and
+ *  `target  = the node where the drop landed`. That matches the
+ *  operator's mental model: "I drew an arrow from A to B; the
+ *  arrowhead points at B; animation flows A → B."
+ *
+ *  Build 115.5 made the same swap inside `CyberNocShape.tsx`,
+ *  but the canvas actually renders this `shapes.tsx` component
+ *  (CyberNocShape is a future opt-in dark variant — see
+ *  NetworkDiagramCanvas.tsx file header). The operator-visible
+ *  bug ("arrow points the wrong way") survived 115.5 because
+ *  the swap landed in the wrong file. Fixing it here is the
+ *  actual fix. */
 const NodeHandles: React.FC = () => {
     const sides: Array<{ pos: Position; id: string; style: React.CSSProperties }> = [
         { pos: Position.Top, id: 'top', style: { top: -4 } },
@@ -112,17 +163,17 @@ const NodeHandles: React.FC = () => {
             {sides.map((s) => (
                 <React.Fragment key={s.id}>
                     <Handle
-                        type="source"
-                        position={s.pos}
-                        id={`${s.id}-source`}
-                        className="!w-2.5 !h-2.5 !bg-sky-500 !border-2 !border-white dark:!border-slate-900 opacity-0 group-hover:opacity-100 transition-opacity"
-                        style={s.style}
-                    />
-                    <Handle
                         type="target"
                         position={s.pos}
                         id={`${s.id}-target`}
                         className="!w-2.5 !h-2.5 !bg-sky-400 !border-2 !border-white dark:!border-slate-900 opacity-0 group-hover:opacity-100 transition-opacity"
+                        style={s.style}
+                    />
+                    <Handle
+                        type="source"
+                        position={s.pos}
+                        id={`${s.id}-source`}
+                        className="!w-2.5 !h-2.5 !bg-sky-500 !border-2 !border-white dark:!border-slate-900 opacity-0 group-hover:opacity-100 transition-opacity"
                         style={s.style}
                     />
                 </React.Fragment>
@@ -137,48 +188,258 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
 }) => {
     const { node } = data;
     const status = STATUS_PRESETS[node.status];
-    const iconId = SHAPE_TO_ICON[node.shape] ?? 'generic';
-    const Icon = CISCO_ICONS[iconId];
     const detail =
         (node.raw['device_type'] as string | undefined) ??
         (node.raw['platform_id'] as string | undefined) ??
         node.shape;
+    const vendor =
+        node.vendor ?? (node.raw['vendor'] as string | undefined) ?? undefined;
+    const model =
+        node.model ?? (node.raw['platform_id'] as string | undefined) ?? undefined;
+    const vendorModelLine =
+        vendor && model ? `${vendor} · ${model}` : vendor ?? model ?? null;
+
+    // Build 115.13 — IP address resolution. Prefer the operator's
+    // explicit override (`node.ipAddress`, set in the inspector);
+    // fall back to the bound asset_inventory row's `ip_address`
+    // column when present (asset_inventory.csv carries
+    // `ip_address` for most rows; splunk_inventory carries
+    // `management_ip`). We hide the row entirely when nothing
+    // resolves so the card doesn't grow a stray empty line for
+    // unbound shapes that never had an IP.
+    const rawIp =
+        (node.raw['ip_address'] as string | undefined) ??
+        (node.raw['management_ip'] as string | undefined) ??
+        undefined;
+    const ipAddress = node.ipAddress ?? rawIp;
+    const ipVisible = useIpAddressVisibility();
+    const showIp = Boolean(ipAddress) && ipVisible;
+
+    // Build 115.13 — host selection for the LED "Open in Search"
+    // popover. Pick the first plausible Splunk host alias from
+    // the bound row; an unbound shape gets `null`, which disables
+    // the popover (the LED still renders but the cursor stays
+    // default and the click is a no-op).
+    const candidateHost: string | null = (() => {
+        const candidates: Array<string | undefined | null> = [
+            (node.raw['hostname'] as string | undefined) ?? undefined,
+            (node.raw['device_name'] as string | undefined) ?? undefined,
+            node.shortLabel,
+            node.label,
+            node.id,
+        ];
+        for (const candidate of candidates) {
+            if (typeof candidate !== 'string') continue;
+            const trimmed = candidate.trim();
+            if (trimmed.length === 0) continue;
+            return trimmed;
+        }
+        return null;
+    })();
+
+    const [ledHover, setLedHover] = useState<boolean>(false);
+    const handleOpenInSearch = (event: React.MouseEvent): void => {
+        // Stop the click from selecting the underlying node; the
+        // operator wanted to drill into Splunk, not edit the shape.
+        event.stopPropagation();
+        if (!candidateHost) return;
+        const spl = buildMetadataHostSpl(candidateHost);
+        openSplunkSearch(spl);
+    };
 
     return (
         <div
             className={cn(
                 'group relative flex flex-col items-stretch rounded-lg border bg-white dark:bg-slate-900',
-                'shadow-sm transition-all hover:shadow-md',
-                'ring-2 ring-offset-1 dark:ring-offset-slate-950',
+                // Build 111: layered shadow recipe ported from the v0
+                // reference. A tight contact shadow + a softer
+                // ambient shadow stack to deliver the "premium
+                // floating card" depth without committing to a heavy
+                // single shadow. The hover state bumps both layers
+                // simultaneously for a subtle lift on cursor.
+                // Dark-mode variants increase alpha because shadows
+                // need to read against a near-black canvas.
+                'shadow-[0_1px_3px_rgba(0,0,0,0.08),0_4px_12px_rgba(0,0,0,0.04)]',
+                'dark:shadow-[0_1px_3px_rgba(0,0,0,0.4),0_4px_12px_rgba(0,0,0,0.3)]',
+                'transition-shadow duration-200',
+                'hover:shadow-[0_2px_8px_rgba(0,0,0,0.1),0_8px_24px_rgba(0,0,0,0.06)]',
+                'dark:hover:shadow-[0_2px_8px_rgba(0,0,0,0.5),0_8px_24px_rgba(0,0,0,0.35)]',
+                // Status ring softened from `ring-2` (Build 105) to
+                // `ring-1` (Build 111). The chunky ring + offset
+                // combo competed visually with the new layered
+                // shadows; a 1px coloured ring still carries the
+                // status signal at a glance but lets the shadow do
+                // the depth work uncontested.
+                'ring-1 ring-offset-1 dark:ring-offset-slate-950',
                 status.ring,
                 selected &&
-                    'shadow-lg outline outline-2 outline-sky-500/70 outline-offset-2'
+                    'outline outline-2 outline-sky-500/70 outline-offset-2'
             )}
-            style={{ width: 100, height: 110 }}
+            // Build 115.11 — fill the React Flow wrapper instead of
+            // hard-coding 110×122. The wrapper's size comes from
+            // node.style.width / height (set on every drop and
+            // round-tripped through rfToSaved), so swapping to
+            // 100% / 100% lets `<NodeResizer>` below grow / shrink
+            // the card without us re-rendering or fighting with
+            // overflowing children. Defaults stay at 110×122 (the
+            // values seeded in NODE_SIZE_PRESETS.device); the
+            // resizer enforces a 90×100 floor so a panicked drag
+            // can't collapse the card to an unreadable nub.
+            style={{ width: '100%', height: '100%' }}
             title={`${node.label}\nStatus: ${status.label}${
                 node.healthScore !== undefined ? ` (${node.healthScore})` : ''
-            }${node.managementSource ? `\nSource: ${node.managementSource}` : ''}`}
+            }${node.managementSource ? `\nSource: ${node.managementSource}` : ''}${
+                vendorModelLine ? `\nHardware: ${vendorModelLine}` : ''
+            }${node.serialNumber ? `\nSerial: ${node.serialNumber}` : ''}`}
         >
+            {/* Build 115.11 — eight resize handles (4 corners + 4
+             *  edges) appear when the card is selected. Min sizes
+             *  are tight enough to keep the icon + label readable
+             *  while leaving lots of room to grow for diagrams
+             *  that want a "hero" device. The resizer's
+             *  `dimensions` change carries `resizing: true` so
+             *  `isMutatingNodeChanges` knows the operator
+             *  committed a resize and emits a payload update.
+             *  We disable the resizer entirely on shapes that
+             *  aren't selected — eight handles on every card
+             *  would compete with the connect handles on hover
+             *  and turn the canvas into a sea of dots. */}
+            <NodeResizer
+                isVisible={selected === true}
+                minWidth={90}
+                minHeight={100}
+                lineClassName="!border-sky-500/50"
+                handleClassName="!bg-sky-500 !border-white !w-2 !h-2"
+            />
             <NodeHandles />
-            {/* Icon area — top 2/3 */}
+            {/* Silhouette area — top 2/3.
+
+                Build 115.13 replaces the previous "centred lucide
+                icon" rendering with a per-class silhouette family
+                (rack chassis / disc / cylinder / cloud / building
+                / users / endpoint / card). The silhouette ride
+                inside the existing card chrome so the React Flow
+                bounding box, status ring, and LED corner stay
+                identical — only the icon area changes shape. The
+                lucide glyph still rides on top of each silhouette
+                so the operator gets the device-class hint at zoom
+                levels where the silhouette outline starts to
+                dissolve into the page.
+
+                Status is communicated by the card's own border
+                ring (`status.ring`) and the corner LED dot below
+                — the silhouette doesn't recolour itself for
+                status so that "this is a switch" reads
+                independently of "this switch is critical". */}
             <div className="flex-1 flex items-center justify-center px-2 pt-2 pb-1 relative">
-                <Icon className={cn('w-12 h-12', status.accent)} />
-                {/* Status dot, top-right */}
+                <ShapeSilhouette shape={node.shape} />
+                {/* Status dot, top-right. Build 111 added the
+                    `dotGlow` halo; Build 115.10 layered the
+                    radiating `animate-ping` ring; Build 115.13
+                    wires the LED to a click-through into Splunk
+                    Search (`| metadata type=hosts | search
+                    host="<bound>"`) so operators can validate
+                    the inventory device names that drive the
+                    LED itself. We disable the affordance when
+                    the shape is unbound (no candidate host) so
+                    a generic palette drop doesn't pretend it
+                    has a search behind it.
+
+                    Hover state expands a thin "Open in Search"
+                    pill to the LEFT of the dot so the operator
+                    sees an explicit affordance — the dot itself
+                    looks the same as before from a distance,
+                    but mousing over it surfaces the action.
+
+                    Layout: an outer wrapper sized to the dot
+                    contains the absolute-positioned ping ring,
+                    the solid dot, and the hover pill. The ping
+                    ring scales from 100% to 175% via Tailwind's
+                    `animate-ping` keyframe; the solid dot stays
+                    put on top. The pill renders alongside the
+                    dot only on hover. */}
                 <span
-                    className={cn(
-                        'absolute top-1.5 right-1.5 w-2 h-2 rounded-full',
-                        status.dot
-                    )}
+                    className="absolute top-1.5 right-1.5 inline-flex items-center justify-center w-2.5 h-2.5"
                     aria-label={status.label}
-                />
+                    onMouseEnter={() => setLedHover(true)}
+                    onMouseLeave={() => setLedHover(false)}
+                >
+                    {status.dotPing && (
+                        <span
+                            className={cn(
+                                'absolute inset-0 rounded-full opacity-75 animate-ping pointer-events-none',
+                                status.dotPing
+                            )}
+                            aria-hidden
+                        />
+                    )}
+                    <button
+                        type="button"
+                        onClick={handleOpenInSearch}
+                        disabled={!candidateHost}
+                        title={
+                            candidateHost
+                                ? `${status.label} · click to open | metadata type=hosts | search host="${candidateHost}" in Splunk Search`
+                                : status.label
+                        }
+                        className={cn(
+                            'relative w-2.5 h-2.5 rounded-full',
+                            status.dot,
+                            status.dotGlow,
+                            candidateHost
+                                ? 'cursor-pointer'
+                                : 'cursor-default'
+                        )}
+                    />
+                    {ledHover && candidateHost && (
+                        <span
+                            className="absolute top-full right-0 mt-1 z-20 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-900/90 dark:bg-slate-800/95 text-white text-[8px] font-semibold whitespace-nowrap shadow-md pointer-events-none"
+                            role="status"
+                        >
+                            <ExternalLink className="w-2.5 h-2.5" aria-hidden />
+                            Open in Search
+                        </span>
+                    )}
+                </span>
             </div>
-            {/* Label area — bottom 1/3, separated by a hairline */}
+            {/* Label area — bottom of card. Build 115 swapped the
+                two-line layout for three lines: name / type /
+                vendor·model. Build 115.13 adds an optional fourth
+                line for the operator-supplied IP address (gated
+                by the page-level "Show IPs" toggle). We collapse
+                missing rows to invisible (text-transparent) rather
+                than removing them so the card height stays
+                consistent across rows in the same diagram, which
+                keeps grid-aligned OOB diagrams from re-flowing
+                when one card has an IP and a neighbour doesn't. */}
             <div className="border-t border-slate-200 dark:border-slate-800 px-2 py-1 leading-tight">
                 <div className="text-[10px] font-semibold text-slate-900 dark:text-slate-100 truncate">
                     {node.shortLabel}
                 </div>
                 <div className="text-[8px] text-slate-500 dark:text-slate-400 truncate uppercase tracking-wide">
                     {detail}
+                </div>
+                <div
+                    className={cn(
+                        'text-[8px] truncate font-mono tracking-tight',
+                        vendorModelLine
+                            ? 'text-slate-600 dark:text-slate-300'
+                            : 'text-transparent'
+                    )}
+                    title={vendorModelLine ?? undefined}
+                >
+                    {vendorModelLine ?? '—'}
+                </div>
+                <div
+                    className={cn(
+                        'text-[8px] truncate font-mono tracking-tight',
+                        showIp
+                            ? 'text-sky-600 dark:text-sky-400'
+                            : 'text-transparent'
+                    )}
+                    title={showIp ? ipAddress : undefined}
+                >
+                    {showIp ? ipAddress : '—'}
                 </div>
             </div>
         </div>
@@ -194,6 +455,51 @@ export const ServerShape = DeviceShape;
 export const CloudShape = DeviceShape;
 export const GenericShape = DeviceShape;
 export const L3SwitchShape = DeviceShape;
+// Build 115 — every shape variant share the same DeviceShape
+// renderer (icon + chrome differ via SHAPE_TO_ICON, status, and
+// data, not via separate components). Keeping them as named
+// exports preserves the existing import graph and lets the React
+// Flow node-type registry reference them by stable identifier.
+export const StackShape = DeviceShape;
+export const LoadBalancerShape = DeviceShape;
+export const VpnConcentratorShape = DeviceShape;
+export const IdsIpsShape = DeviceShape;
+export const DatabaseShape = DeviceShape;
+export const StorageShape = DeviceShape;
+export const IpPhoneShape = DeviceShape;
+export const InternetShape = DeviceShape;
+// Build 115.2 — `users` archetype (group-of-people glyph).
+export const UsersShape = DeviceShape;
+// Build 115.5 — 24 new shape variants, all backed by the same
+// DeviceShape renderer. Named exports kept for symmetry with the
+// pre-115.5 surface; the React Flow node-type registry below
+// references them by stable identifier so a future per-shape
+// renderer specialisation can be slotted in without churning
+// every consumer.
+export const HubShape = DeviceShape;
+export const GatewayShape = DeviceShape;
+export const ProxyShape = DeviceShape;
+export const WafShape = DeviceShape;
+export const SiemShape = DeviceShape;
+export const CaShape = DeviceShape;
+export const BastionShape = DeviceShape;
+export const WebServerShape = DeviceShape;
+export const AppServerShape = DeviceShape;
+export const DnsServerShape = DeviceShape;
+export const DhcpServerShape = DeviceShape;
+export const MainframeShape = DeviceShape;
+export const ContainerShape = DeviceShape;
+export const VmShape = DeviceShape;
+export const NasShape = DeviceShape;
+export const SanShape = DeviceShape;
+export const BackupShape = DeviceShape;
+export const LaptopShape = DeviceShape;
+export const MobilePhoneShape = DeviceShape;
+export const PrinterShape = DeviceShape;
+export const CameraShape = DeviceShape;
+export const IotSensorShape = DeviceShape;
+export const BranchOfficeShape = DeviceShape;
+export const DatacenterShape = DeviceShape;
 
 /** Parent zone container — visual chrome for grouping devices by
  *  customer site. Non-draggable, non-clickable, no handles. */
@@ -219,14 +525,54 @@ export const TopologyZoneNode: React.FC<{
 );
 
 export const TOPOLOGY_NODE_TYPES = {
+    // Core network
     'device:switch': SwitchShape,
     'device:l3_switch': L3SwitchShape,
+    'device:stack': StackShape,
     'device:router': RouterShape,
-    'device:firewall': FirewallShape,
+    'device:hub': HubShape,
+    'device:gateway': GatewayShape,
+    'device:proxy': ProxyShape,
     'device:wlc': WlcShape,
     'device:access_point': AccessPointShape,
+    'device:load_balancer': LoadBalancerShape,
+    // Security
+    'device:firewall': FirewallShape,
+    'device:waf': WafShape,
+    'device:vpn_concentrator': VpnConcentratorShape,
+    'device:ids_ips': IdsIpsShape,
+    'device:siem': SiemShape,
+    'device:ca': CaShape,
+    'device:bastion': BastionShape,
+    // Servers & infrastructure
     'device:server': ServerShape,
+    'device:web_server': WebServerShape,
+    'device:app_server': AppServerShape,
+    'device:dns_server': DnsServerShape,
+    'device:dhcp_server': DhcpServerShape,
+    'device:mainframe': MainframeShape,
+    'device:container': ContainerShape,
+    'device:vm': VmShape,
+    'device:database': DatabaseShape,
+    // Storage
+    'device:storage': StorageShape,
+    'device:nas': NasShape,
+    'device:san': SanShape,
+    'device:backup': BackupShape,
+    // End-user / IoT
+    'device:laptop': LaptopShape,
+    'device:mobile_phone': MobilePhoneShape,
+    'device:ip_phone': IpPhoneShape,
+    'device:printer': PrinterShape,
+    'device:camera': CameraShape,
+    'device:iot_sensor': IotSensorShape,
+    // Edge / cloud
     'device:cloud': CloudShape,
+    'device:internet': InternetShape,
+    'device:users': UsersShape,
+    // Places
+    'device:branch_office': BranchOfficeShape,
+    'device:datacenter': DatacenterShape,
     'device:generic': GenericShape,
     topologyZone: TopologyZoneNode,
 } as const;
