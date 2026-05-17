@@ -7,6 +7,106 @@
 
 ---
 
+## 2026-05-17 (Build 1176) — Region membership reconciliation
+
+### Goal
+
+Fix the remaining Region/Site container bugs:
+
+  * objects visibly inside a region not always moving with the
+    region,
+  * count badges not matching what is visibly inside,
+  * inconsistent behavior depending on whether devices existed
+    before or after the region.
+
+### Root Cause
+
+Build 1175 fixed React Flow's parent-before-child ordering, but the
+container model was still event-specific. Device drags and palette
+drops updated `parentId`; region creation, region movement, region
+resize, diagram load, and undo/redo replay did not reconcile visible
+containment back into `parentId`.
+
+That allowed diagrams like this:
+
+```text
+region visually contains: Mobile, Switch, Internet
+parented children:        Mobile, Internet
+badge:                    2 devices
+dragging region moves:    Mobile, Internet only
+```
+
+The screenshot from the operator matched this exactly: three cards
+inside the region, but the badge read `2 devices`.
+
+### Fix
+
+Added one shared `reconcileRegionMembership(nodes)` pass in
+`NetworkDiagramCanvas.tsx`.
+
+The invariant is now:
+
+```text
+For every region membership checkpoint:
+  node center inside region  -> node.parentId = region.id
+  node center outside region -> node.parentId = undefined
+  parent changes preserve the node's world position
+  parent nodes are ordered before child nodes
+```
+
+Checkpoints:
+
+  * diagram hydrate/load,
+  * undo/redo replay,
+  * dropping a new region,
+  * completed region drag,
+  * completed region resize.
+
+Device drag/drop still keeps the Build 1174 cursor-based drop intent;
+the reconciliation pass is deliberately not run on every mousemove, so
+it does not reintroduce the old drag jitter.
+
+### Verification
+
+Browser artifacts:
+
+  * `container-matrix-build1176/regression.json`:
+    * initial visually-contained devices load as `3 devices`,
+    * first region drag moved Mobile, Switch, and Internet,
+    * dragging Mobile out changed the badge to `2 devices`,
+    * moving the region over Mobile adopted it again and restored
+      `3 devices`,
+    * final region drag moved all three devices.
+  * `preset-before-region-build1176/regression.json` — old device
+    first, region added later, drag old device into region: still
+    stays inside and counts as `1 device`.
+  * `region-palette-build1176/trace.json` — new palette device dropped
+    into existing region counts as `1 device`.
+  * `empty-drop-build1176/regression.json` — empty-canvas palette drop
+    still creates one gateway.
+  * `network-regress-build1176/regression.json` — wheel pan still
+    changes viewport translate, and connection drawing produces
+    `edgeCount: 1`.
+  * `oob-load-build1176/regression.json` — "Splunk Cloud Deployment
+    Architecture" still loads with `nodeCount: 20`, `edgeCount: 13`.
+  * `export-smoke-build1176/downloads/` — PNG and PDF export files
+    were created.
+
+Build/install verification:
+
+```bash
+yarn workspace @splunk/splunk-cisco-dashboards run typecheck
+yarn workspace @splunk/splunk-cisco-dashboards run package:app
+/opt/splunk/bin/splunk install app dist/splunk-cisco-dashboards-1.0.10.tar.gz -update 1 -auth admin:changeme
+/opt/splunk/bin/splunk _internal call /services/server/control/restart -method POST -auth admin:changeme
+```
+
+### What's next
+
+Use `stable-build1176` as the Network Diagram rollback point. Region
+membership is now reconciled from visible containment instead of being
+dependent on one specific gesture path.
+
 ## 2026-05-17 (Build 1175) — Fix preset-device Region snap + move build badge out of canvas
 
 ### Goal

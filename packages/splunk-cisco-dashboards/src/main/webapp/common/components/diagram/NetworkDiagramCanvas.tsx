@@ -941,6 +941,78 @@ const ensureParentBeforeChild = (
     return ordered;
 };
 
+const getNodeWorldPosition = (nodes: RFNode[], node: RFNode): XYPosition => {
+    let x = node.position.x;
+    let y = node.position.y;
+    let parentId: string | undefined = node.parentId;
+    let hops = 0;
+    while (parentId && hops < 8) {
+        const parent = nodes.find((p) => p.id === parentId);
+        if (!parent) break;
+        x += parent.position.x;
+        y += parent.position.y;
+        parentId = parent.parentId;
+        hops += 1;
+    }
+    return { x, y };
+};
+
+const getNodeSize = (node: RFNode): { width: number; height: number } => {
+    const width =
+        typeof node.style?.width === 'number'
+            ? (node.style.width as number)
+            : node.type === TEXT_BOX_NODE_TYPE
+            ? 120
+            : NODE_SIZE_PRESETS.device.width;
+    const height =
+        typeof node.style?.height === 'number'
+            ? (node.style.height as number)
+            : node.type === TEXT_BOX_NODE_TYPE
+            ? 40
+            : NODE_SIZE_PRESETS.device.height;
+    return { width, height };
+};
+
+const canBelongToRegion = (node: RFNode): boolean =>
+    node.type !== REGION_NODE_TYPE && node.type !== DIAGRAM_TITLE_NODE_TYPE;
+
+const orderParentsBeforeChildren = (nodes: RFNode[]): RFNode[] => {
+    let ordered = nodes;
+    for (const node of nodes) {
+        ordered = ensureParentBeforeChild(ordered, node.id, node.parentId);
+    }
+    return ordered;
+};
+
+const reconcileRegionMembership = (nodes: RFNode[]): RFNode[] => {
+    let changed = false;
+    const reconciled = nodes.map((node) => {
+        if (!canBelongToRegion(node)) return node;
+        const world = getNodeWorldPosition(nodes, node);
+        const size = getNodeSize(node);
+        const center = {
+            x: world.x + size.width / 2,
+            y: world.y + size.height / 2,
+        };
+        const region = findRegionForPoint(nodes, center);
+        const targetParentId = region?.id;
+        if ((node.parentId ?? undefined) === targetParentId) return node;
+        changed = true;
+        return {
+            ...node,
+            position: region
+                ? {
+                      x: world.x - region.position.x,
+                      y: world.y - region.position.y,
+                  }
+                : world,
+            parentId: targetParentId,
+            extent: undefined,
+        };
+    });
+    return changed ? orderParentsBeforeChildren(reconciled) : nodes;
+};
+
 /** Build 113: edit/view mode. Edit (default) is the full authoring
  *  experience — drag, connect, drop devices, edit properties.
  *  View is read-only / cinematic — no port handles, no dragging,
@@ -1178,7 +1250,7 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
             { nodes: merged, edges: rfEdges },
             { onlyZeroPositions: true }
         );
-        setNodes(annotateRegionCounts([...laidOut, ...titleNodes]));
+        setNodes(annotateRegionCounts(reconcileRegionMembership([...laidOut, ...titleNodes])));
         setEdges(rfEdges);
         // Build 115.2 — anchor history at the loaded payload. Undo
         // can no longer cross diagram boundaries; the first commit
@@ -1358,7 +1430,29 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
         (changes: NodeChange[]) => {
             const mutates = isMutatingNodeChanges(changes);
             setNodes((current) => {
-                const next = annotateRegionCounts(applyNodeChanges(changes, current));
+                const shouldReconcileRegions = changes.some((change) => {
+                    if (
+                        change.type !== 'position' &&
+                        change.type !== 'dimensions'
+                    ) {
+                        return false;
+                    }
+                    if (change.type === 'position' && change.dragging === true) {
+                        return false;
+                    }
+                    if (
+                        (change as NodeChange & { resizing?: boolean }).resizing ===
+                        true
+                    ) {
+                        return false;
+                    }
+                    return current.find((n) => n.id === change.id)?.type === REGION_NODE_TYPE;
+                });
+                const applied = applyNodeChanges(changes, current);
+                const reconciled = shouldReconcileRegions
+                    ? reconcileRegionMembership(applied)
+                    : applied;
+                const next = annotateRegionCounts(reconciled);
                 if (mutates) emitChange(next, edges);
                 return next;
             });
@@ -1891,10 +1985,12 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                 // this, the highlighted region would stay lit
                 // until the next dragOver / leave because no
                 // dragLeave fires after a successful drop.
-                const cleared = applyDropHover(
-                    [...current, newNode],
-                    null
-                );
+                const withNewNode = [...current, newNode];
+                const withMembership =
+                    payload.variant === 'region'
+                        ? reconcileRegionMembership(withNewNode)
+                        : withNewNode;
+                const cleared = applyDropHover(withMembership, null);
                 const next = annotateRegionCounts(cleared);
                 emitChange(next, edges);
                 commitHistory(next, edges);
@@ -2685,7 +2781,15 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                     ? [savedTitleToRF(payload.title)]
                     : [];
                 const rfEdges = payload.edges.map(savedEdgeToRF);
-                setNodes(annotateRegionCounts([...groupNodes, ...deviceNodes, ...titleNodes]));
+                setNodes(
+                    annotateRegionCounts(
+                        reconcileRegionMembership([
+                            ...groupNodes,
+                            ...deviceNodes,
+                            ...titleNodes,
+                        ])
+                    )
+                );
                 setEdges(rfEdges);
                 setSelection(null);
                 onChangeRef.current(payload);
