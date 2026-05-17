@@ -7,6 +7,92 @@
 
 ---
 
+## 2026-05-17 (Build 1178) — Region finalization safety net + live inspector counts
+
+### Goal
+
+Address the operator's follow-up GIF/screenshots showing Region/Site
+still feeling flaky:
+
+  * devices could appear inside a Region while not always moving with
+    the Region later,
+  * the right Region properties panel could still say
+    `Devices in this region: 0` after the badge had changed,
+  * palette drops and existing-node drags needed the same final
+    membership safety net.
+
+### Root Cause
+
+The Build 1177 rectangle hit-test was correct, but the finalization
+paths were still too narrow. The browser trace showed a device drag
+only became a child after the explicit `handleNodeDragStop` path:
+
+```json
+{"id":"shape_switch","currentParentId":null,"targetParentId":"g_flaky"}
+{"id":"shape_switch","parentId":"g_flaky","position":{"x":760,"y":190}}
+```
+
+If a final React Flow position change or palette drop landed outside
+that exact path, a visually placed node could remain unparented until
+another operation reconciled it. The GIF also exposed a separate UI
+state bug: Region badges were recomputed from `nodes`, but the
+properties panel held the stale selected node object from the moment
+the Region was clicked.
+
+### Fix
+
+Small safety-net changes only:
+
+  * sync the selected node from the current `nodes` array so the
+    Region properties panel count follows the badge,
+  * run Region membership reconciliation on final position/dimension
+    changes for devices as well as Regions,
+  * run the same reconciliation after every palette drop, not only
+    after dropping a new Region.
+
+No `extent`, wheel, pan, page-bound, or clipping changes were added.
+
+### Verification
+
+Build/install:
+
+```bash
+yarn workspace @splunk/splunk-cisco-dashboards run typecheck
+yarn workspace @splunk/splunk-cisco-dashboards run package:app
+/opt/splunk/bin/splunk install app dist/splunk-cisco-dashboards-1.0.10.tar.gz -update 1 -auth admin:changeme
+/opt/splunk/bin/splunk _internal call /services/server/control/restart -method POST -auth admin:changeme
+```
+
+Pre-fix trace captured to `/tmp/region-drag-trace.log`.
+
+Browser artifacts:
+
+  * `gif-flow-build1178` — empty-canvas Region flow showed the
+    Region badge and properties panel both at `3 devices`; dragging
+    the Region moved every parented device in that flow.
+  * `flaky-switch-build1178/regression.json` — existing Switch moved
+    into the Region (`2 -> 3`), out (`3 -> 2`), and stayed out when
+    released outside.
+  * `preset-before-region-build1178/regression.json` — a device that
+    existed before adding the Region was reconciled into it and
+    counted as `1 device`.
+  * `container-matrix-build1178/regression.json` — Region drag moved
+    all three children; moving one out dropped the count to `2`;
+    moving it back restored `3`; final Region drag moved all three.
+  * `empty-drop-build1178/regression.json` — empty-canvas device drop
+    still creates one gateway.
+  * `network-regress-build1178/regression.json` — wheel scroll still
+    pans and connection drawing still creates `edgeCount: 1`.
+  * `oob-load-build1178/regression.json` — "Splunk Cloud Deployment
+    Architecture" loads with `nodeCount: 20`, `edgeCount: 13`.
+  * `export-smoke-build1178/regression.json` — PNG and PDF exports
+    still download.
+
+### What's next
+
+Use `stable-build1178` as the Network Diagram rollback point after
+tagging.
+
 ## 2026-05-17 (Build 1177) — Card-rectangle Region membership + Splunk platform icons
 
 ### Goal

@@ -1240,6 +1240,15 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
     assetIndexRef.current = assetIndex;
     visibilityIndexRef.current = hostVisibility ?? null;
 
+    useEffect(() => {
+        setSelection((prev) => {
+            if (prev?.kind !== 'node') return prev;
+            const latest = nodes.find((n) => n.id === prev.node.id);
+            if (!latest) return null;
+            return latest === prev.node ? prev : { kind: 'node', node: latest };
+        });
+    }, [nodes]);
+
     // --- Build 115.2: undo/redo + delete confirmation state -------
     //
     // History is committed at "logical" boundaries (drop, connect,
@@ -1502,7 +1511,12 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                     ) {
                         return false;
                     }
-                    return current.find((n) => n.id === change.id)?.type === REGION_NODE_TYPE;
+                    const node = current.find((n) => n.id === change.id);
+                    return Boolean(
+                        node &&
+                            (node.type === REGION_NODE_TYPE ||
+                                canBelongToRegion(node))
+                    );
                 });
                 const applied = applyNodeChanges(changes, current);
                 const reconciled = shouldReconcileRegions
@@ -2049,10 +2063,7 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                 // until the next dragOver / leave because no
                 // dragLeave fires after a successful drop.
                 const withNewNode = [...current, newNode];
-                const withMembership =
-                    payload.variant === 'region'
-                        ? reconcileRegionMembership(withNewNode)
-                        : withNewNode;
+                const withMembership = reconcileRegionMembership(withNewNode);
                 const cleared = applyDropHover(withMembership, null);
                 const next = annotateRegionCounts(cleared);
                 emitChange(next, edges);
