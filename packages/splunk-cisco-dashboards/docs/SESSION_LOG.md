@@ -7,6 +7,109 @@
 
 ---
 
+## 2026-05-17 (Build 1175) — Fix preset-device Region snap + move build badge out of canvas
+
+### Goal
+
+Fix the remaining Region/Site misbehavior the operator reported after
+Build 1174:
+
+> Shapes that were preset before adding the region are misbehaving,
+> but new ones added after the region drag/drop just fine.
+
+Also move the build number out of the drawing canvas.
+
+### Missed Case
+
+Build 1174 verified devices dropped into an existing region and
+off-center grabs into an existing region. It did not verify this
+sequence:
+
+1. A device already exists on the canvas.
+2. A Region/Site is added afterwards.
+3. The older device is dragged into that newer region.
+
+That sequence reproduced the snap-back exactly.
+
+### Trace
+
+Build 1174, failing case:
+
+```text
+old_gateway_into_new_region:released
+nodes: [shape_gateway, region_...]
+shape_gateway transform: translate(120px, 60px)
+shape_gateway rect.y: -127
+region text: NEW REGION\n1 device
+```
+
+The count updated, but the card jumped out of view because React Flow
+rendered the child's local coordinates as if they were global.
+
+React Flow's local source explains why: `adoptUserNodes` walks the
+`nodes` array in order, and `updateChildNode` requires the parent to
+already be in `nodeLookup`. If a gateway existed before a region, the
+array stayed `[gateway, region]`; reparenting made the gateway a child
+before React Flow had seen the parent.
+
+New devices did not fail because palette drops append the new child
+after the existing region, producing `[region, newDevice]`.
+
+### Fix
+
+`NetworkDiagramCanvas.tsx` now keeps the target parent before the child
+when an existing node changes `parentId`:
+
+```text
+[oldDevice, newRegion] + reparent(oldDevice -> newRegion)
+→ [newRegion, oldDevice]
+```
+
+The position math from Build 1174 stays the same; the fix is the
+missing React Flow ordering invariant.
+
+The build badge moved from the canvas overlay into `DiagramHeader.tsx`
+next to the active diagram name. The canvas no longer renders a build
+label, including in the help popover footer.
+
+### Verification
+
+Browser artifacts were saved under `.cursor/playwright-output/`:
+
+  * `preset-before-region-build1175/trace.json` — reproduced the
+    operator's exact sequence and confirmed the final node order is
+    `[region, gateway]`, the gateway remains at
+    `translate(120px, 220px)`, and the region reads `1 device`.
+  * `preset-before-region-build1175/old_gateway_into_new_region_released.png`
+    — visual confirmation that the older gateway stays inside the
+    newer region and Build 1175 appears in the header, outside the
+    canvas.
+  * `region-palette-build1175/trace.json` — a newly added gateway
+    dropped into an existing region still counts as `1 device`.
+  * `empty-drop-build1175/regression.json` — palette drop on an empty
+    canvas produced `nodeCount: 1`, `gatewayCount: 1`.
+  * `network-regress-build1175/regression.json` — wheel scroll still
+    pans, and connection drawing still produced `edgeCount: 1`.
+  * `oob-load-build1175/regression.json` — "Splunk Cloud Deployment
+    Architecture" loaded with `nodeCount: 20`, `edgeCount: 13`.
+  * `export-smoke-build1175/downloads/` — PNG and PDF exports were
+    created from the Build 1175 canvas.
+
+Build/install verification:
+
+```bash
+yarn workspace @splunk/splunk-cisco-dashboards run typecheck
+yarn workspace @splunk/splunk-cisco-dashboards run package:app
+/opt/splunk/bin/splunk install app dist/splunk-cisco-dashboards-1.0.10.tar.gz -update 1 -auth admin:changeme
+/opt/splunk/bin/splunk _internal call /services/server/control/restart -method POST -auth admin:changeme
+```
+
+### What's next
+
+Use `stable-build1175` as the rollback point for Network Diagram
+region placement. It supersedes Build 1174, which fixed cursor
+hit-testing but missed the parent-before-child node-order invariant.
+
 ## 2026-05-17 (Build 1174) — Region drag-snap root cause + surgical fix
 
 ### Goal

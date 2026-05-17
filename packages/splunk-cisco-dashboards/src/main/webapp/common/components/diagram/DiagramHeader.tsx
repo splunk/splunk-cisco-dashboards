@@ -59,6 +59,7 @@ import {
     isFactoryDiagram as isFactoryDiagramName,
     type DiagramSummary,
 } from '@/common/services/diagramPersistenceService';
+import { APP_BUILD, APP_VERSION_LABEL } from '@/common/lib/buildInfo';
 
 interface DiagramHeaderProps {
     /** Friendly name of the active diagram. `null` while a brand
@@ -348,6 +349,19 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                             )}
                             <ChevronDown className="w-3 h-3 opacity-60" aria-hidden />
                         </button>
+                        <span
+                            className={cn(
+                                'hidden sm:inline-flex items-center h-5 px-1.5 rounded',
+                                'border border-slate-200 dark:border-slate-700',
+                                'bg-slate-50 dark:bg-slate-800',
+                                'font-mono text-[10px] text-slate-500 dark:text-slate-400',
+                                'select-none flex-shrink-0'
+                            )}
+                            title={APP_VERSION_LABEL}
+                            aria-label={APP_VERSION_LABEL}
+                        >
+                            Build {APP_BUILD}
+                        </span>
                         {/* Build 115.20 — only INFO toasts render
                          *  inline next to the picker.
                          *

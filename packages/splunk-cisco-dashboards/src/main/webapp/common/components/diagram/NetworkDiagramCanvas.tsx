@@ -81,11 +81,6 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { cn } from '@/common/lib/utils';
-import {
-    APP_BUILD,
-    APP_VERSION,
-    APP_VERSION_LABEL,
-} from '@/common/lib/buildInfo';
 import { TOPOLOGY_NODE_TYPES } from '@/common/components/topology/shapes';
 import {
     PropertiesPanel,
@@ -928,6 +923,24 @@ const annotateRegionCounts = (nodes: RFNode[]): RFNode[] => {
     });
 };
 
+const ensureParentBeforeChild = (
+    nodes: RFNode[],
+    childId: string,
+    parentId?: string
+): RFNode[] => {
+    if (!parentId) return nodes;
+    const childIndex = nodes.findIndex((n) => n.id === childId);
+    const parentIndex = nodes.findIndex((n) => n.id === parentId);
+    if (childIndex < 0 || parentIndex < 0 || parentIndex < childIndex) {
+        return nodes;
+    }
+    const ordered = [...nodes];
+    const [child] = ordered.splice(childIndex, 1);
+    const nextParentIndex = ordered.findIndex((n) => n.id === parentId);
+    ordered.splice(nextParentIndex + 1, 0, child);
+    return ordered;
+};
+
 /** Build 113: edit/view mode. Edit (default) is the full authoring
  *  experience — drag, connect, drop devices, edit properties.
  *  View is read-only / cinematic — no port handles, no dragging,
@@ -1570,9 +1583,21 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                         extent: undefined,
                     };
                 });
+                // Build 1175 — React Flow resolves parented
+                // children in node-array order. If a device existed
+                // before the region was added, reparenting left the
+                // order as [child, parent], so React Flow rendered
+                // the child's local coordinates as global for one
+                // pass: the visible "snap out" bug. Keep the target
+                // parent before the child whenever parentId changes.
+                const ordered = ensureParentBeforeChild(
+                    next,
+                    node.id,
+                    containingRegion?.id
+                );
                 // Build 115.17 — clear drop-hover preview now
                 // that we've committed the parent change.
-                const cleared = applyDropHover(next, null);
+                const cleared = applyDropHover(ordered, null);
                 const annotated = annotateRegionCounts(cleared);
                 emitChange(annotated, edges);
                 commitHistory(annotated, edges);
@@ -2967,52 +2992,6 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                 </div>
             )}
 
-            {/* Build 115.21 — always-visible build tag.
-             *
-             *  Positioned at the top-right of the canvas (left of
-             *  where the help button sits) so the operator can
-             *  always read the bundle's build number at a glance,
-             *  regardless of edit / view mode or whether the
-             *  canvas is empty. The number is BAKED IN at compile
-             *  time (see `webpack.config.js` DefinePlugin), so
-             *  what's printed here is guaranteed to describe the
-             *  JS bytes currently executing in the browser — not
-             *  whatever the server's app.conf says today. This is
-             *  the diagnostic property that resolves "did the
-             *  upgrade load, or am I still on a cached bundle?"
-             *  questions in 5 seconds instead of 30 minutes (see
-             *  Build 115.20 follow-up where exactly that ate a
-             *  session's worth of debugging).
-             *
-             *  Tooltip carries the full version label so a hover
-             *  also surfaces the package version, in case the
-             *  operator needs to file a support ticket. Click is
-             *  intentionally a no-op — this is an indicator, not
-             *  an interactive control. */}
-            <div
-                /* `right-24` keeps the badge clear of the Help (i)
-                 * button at `right-14`, even when the help popover
-                 * is open. The help button's container is absolute
-                 * with `right-14` and is `w-7` wide, so its left
-                 * edge sits ~84px from the right of the canvas;
-                 * `right-24` (96px) gives an 8-12px breathing gap
-                 * regardless of badge width. */
-                className="absolute top-3 right-24 z-10 select-none pointer-events-auto"
-                title={APP_VERSION_LABEL}
-                aria-label={APP_VERSION_LABEL}
-            >
-                <span
-                    className={cn(
-                        'inline-flex items-center px-1.5 py-0.5 rounded',
-                        'font-mono text-[10px] tracking-tight',
-                        'bg-slate-900/60 dark:bg-slate-100/80',
-                        'text-slate-100 dark:text-slate-900'
-                    )}
-                >
-                    Build {APP_BUILD}
-                </span>
-            </div>
-
             {/* Build 115.9 — replaced the Build 115.6 hover-only `?`
              *  chip with a click-to-open Info popover. Operators
              *  wanted a structured "what can I do here" card rather
@@ -3131,14 +3110,6 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                                     <kbd className="font-mono px-1 rounded border border-slate-300 dark:border-slate-700">Esc</kbd>{' '}
                                     close popover / exit Present mode.
                                 </div>
-                            </div>
-                            {/* Build 115.21 — full version footer.
-                             *  Mirrors the top-right build pill so
-                             *  the operator can copy the exact
-                             *  version string into a support
-                             *  ticket without hunting for it. */}
-                            <div className="px-3 py-1.5 border-t border-slate-200 dark:border-slate-700 text-[10px] font-mono text-slate-400 dark:text-slate-500">
-                                Splunk Cisco Dashboards · v{APP_VERSION} · Build {APP_BUILD}
                             </div>
                         </div>
                     )}
