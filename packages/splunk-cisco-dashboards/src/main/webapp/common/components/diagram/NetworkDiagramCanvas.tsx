@@ -868,13 +868,7 @@ const rfToSaved = (
  *  We accept this — those drops are rare in practice and the
  *  operator has clear feedback (the region won't have lit up
  *  during the drag), so the failure mode is honest. */
-const findRegionForRect = (
-    nodes: RFNode[],
-    shapeRect: { x: number; y: number; width: number; height: number }
-): RFNode | null => {
-    if (shapeRect.width <= 0 || shapeRect.height <= 0) return null;
-    const cx = shapeRect.x + shapeRect.width / 2;
-    const cy = shapeRect.y + shapeRect.height / 2;
+const findRegionForPoint = (nodes: RFNode[], point: XYPosition): RFNode | null => {
     let best: RFNode | null = null;
     let bestArea = Infinity;
     for (const n of nodes) {
@@ -887,7 +881,9 @@ const findRegionForRect = (
         const y0 = n.position.y;
         const x1 = x0 + w;
         const y1 = y0 + h;
-        if (cx < x0 || cx > x1 || cy < y0 || cy > y1) continue;
+        if (point.x < x0 || point.x > x1 || point.y < y0 || point.y > y1) {
+            continue;
+        }
         const regionArea = w * h;
         if (regionArea < bestArea) {
             best = n;
@@ -895,6 +891,17 @@ const findRegionForRect = (
         }
     }
     return best;
+};
+
+const findRegionForRect = (
+    nodes: RFNode[],
+    shapeRect: { x: number; y: number; width: number; height: number }
+): RFNode | null => {
+    if (shapeRect.width <= 0 || shapeRect.height <= 0) return null;
+    return findRegionForPoint(nodes, {
+        x: shapeRect.x + shapeRect.width / 2,
+        y: shapeRect.y + shapeRect.height / 2,
+    });
 };
 
 /** Recompute every region's `data.deviceCount` from current
@@ -1485,7 +1492,7 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
      *  children at local positions outside the parent's
      *  rectangle render visibly outside (no DOM clipping). */
     const handleNodeDragStop = useCallback(
-        (_e: React.MouseEvent, node: RFNode) => {
+        (event: React.MouseEvent, node: RFNode) => {
             // Don't re-parent the region itself, the title node,
             // or anything else that isn't a device. (Title node
             // and region behave fine without parenting.)
@@ -1514,26 +1521,17 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                     return { x, y };
                 };
                 const world = getWorldPosition(node);
-                const w =
-                    typeof node.style?.width === 'number'
-                        ? (node.style.width as number)
-                        : NODE_SIZE_PRESETS.device.width;
-                const h =
-                    typeof node.style?.height === 'number'
-                        ? (node.style.height as number)
-                        : NODE_SIZE_PRESETS.device.height;
-                // Build 115.17 — rect-overlap hit-test (see
-                // `findRegionForRect`). Replaces the prior
-                // center-only point test; matches the visual
-                // question "is this card mostly inside the
-                // region?".
-                const shapeRect = {
-                    x: world.x,
-                    y: world.y,
-                    width: w,
-                    height: h,
-                };
-                const containingRegion = findRegionForRect(current, shapeRect);
+                // Build 1174 — existing-node drags resolve the
+                // target region from the cursor/grab point. The
+                // previous center-of-card test felt flaky when
+                // operators grabbed a card off-center: the pointer
+                // could be inside the region while the card center
+                // still sat outside, leaving the count unchanged.
+                const cursor = reactFlow.screenToFlowPosition({
+                    x: event.clientX,
+                    y: event.clientY,
+                });
+                const containingRegion = findRegionForPoint(current, cursor);
                 const currentParentId = node.parentId ?? null;
                 const targetParentId = containingRegion?.id ?? null;
                 if (currentParentId === targetParentId) {
@@ -1581,7 +1579,7 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                 return annotated;
             });
         },
-        [edges, emitChange, commitHistory, applyDropHover]
+        [edges, emitChange, commitHistory, applyDropHover, reactFlow]
     );
 
     const handleConnect = useCallback(
@@ -1953,13 +1951,12 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
     /** Build 115.17 — same drop-hover preview as
      *  `handleDragOver`, but for the case where the operator is
      *  dragging an EXISTING node around the canvas (no HTML5
-     *  DnD). Computes the candidate region from the dragged
-     *  node's current world rect (matching the rect-overlap test
-     *  that `handleNodeDragStop` will use to decide reparenting),
-     *  so the highlight is a faithful preview of "what happens
-     *  if I release right now". */
+     *  DnD). Computes the candidate region from the cursor/grab
+     *  point, matching `handleNodeDragStop`, so the highlight is
+     *  a faithful preview of "what happens if I release right
+     *  now". */
     const handleNodeDrag = useCallback(
-        (_e: React.MouseEvent, node: RFNode) => {
+        (event: React.MouseEvent, node: RFNode) => {
             if (
                 node.type === REGION_NODE_TYPE ||
                 node.type === DIAGRAM_TITLE_NODE_TYPE
@@ -1967,39 +1964,15 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                 return;
             }
             setNodes((current) => {
-                // Walk the parent chain to derive the world
-                // position (mirrors getWorldPosition in
-                // handleNodeDragStop).
-                let x = node.position.x;
-                let y = node.position.y;
-                let pid: string | undefined = node.parentId;
-                let hops = 0;
-                while (pid && hops < 8) {
-                    const parent = current.find((p) => p.id === pid);
-                    if (!parent) break;
-                    x += parent.position.x;
-                    y += parent.position.y;
-                    pid = parent.parentId;
-                    hops += 1;
-                }
-                const w =
-                    typeof node.style?.width === 'number'
-                        ? (node.style.width as number)
-                        : NODE_SIZE_PRESETS.device.width;
-                const h =
-                    typeof node.style?.height === 'number'
-                        ? (node.style.height as number)
-                        : NODE_SIZE_PRESETS.device.height;
-                const region = findRegionForRect(current, {
-                    x,
-                    y,
-                    width: w,
-                    height: h,
+                const cursor = reactFlow.screenToFlowPosition({
+                    x: event.clientX,
+                    y: event.clientY,
                 });
+                const region = findRegionForPoint(current, cursor);
                 return applyDropHover(current, region?.id ?? null);
             });
         },
-        [setNodes, applyDropHover]
+        [setNodes, applyDropHover, reactFlow]
     );
 
     const handleNodeClick = useCallback((_e: React.MouseEvent, node: RFNode) => {

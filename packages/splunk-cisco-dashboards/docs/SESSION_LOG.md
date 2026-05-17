@@ -7,6 +7,110 @@
 
 ---
 
+## 2026-05-17 (Build 1174) — Region drag-snap root cause + surgical fix
+
+### Goal
+
+Fix the operator-reported Region/Site placement bug without repeating
+the reverted 115.24-115.36 attempts:
+
+> "placing objects in [a region] is very flaky and buggy! the number
+>  of devices did not update. [...] if I try moving it inside the
+>  region, it snaps out speratically and erratically"
+
+Hard constraint for this session: investigate with a real browser
+before writing any fix.
+
+### Hypothesis
+
+The first suspect was a React Flow parent/extent fight during drag:
+`parentId` flipping between the region and `null`, with
+`extent: 'parent'` clamping against the wrong coordinate space.
+
+Reading React Flow's local source changed the expectation:
+`applyNodeChanges` applies `position` / `dragging` changes only, and
+does not assign `parentId`. Parent assignment is entirely our code in
+`handleNodeDragStop`; hover feedback is our `handleNodeDrag`.
+
+### Trace
+
+Instrumented `handleNodesChange` and `annotateRegionCounts`, then
+reproduced in Chromium with 200 ms screenshots and transform capture.
+The centered drag did not show a React Flow parent flip. While dragging
+into the region, the gateway stayed unparented until drop:
+
+```text
+handleNodesChange position {"id":"shape_gateway","dragging":true,
+"changePosition":{"x":200,"y":220},"currentParentId":null,
+"resolvedParentId":null,"currentExtent":null,"resolvedExtent":null}
+```
+
+The failing case was an off-center grab. The pointer was visibly inside
+the region, but the card center remained outside, so the old
+center/rect hit-test kept the node unparented and the count stayed at
+zero:
+
+```text
+annotateRegionCounts {"inputParents":[{"id":"shape_gateway",
+"type":"device:gateway","parentId":null}],"countEntries":[],
+"outputRegions":[{"id":"g_region","deviceCount":0}]}
+```
+
+That explains the "flaky" feel: the outcome depended on where the
+operator grabbed the card, not where they released the pointer.
+
+### Fix
+
+Small change in `NetworkDiagramCanvas.tsx`:
+
+  * Add `findRegionForPoint(nodes, point)`, preserving
+    "smallest containing region wins" for nested regions.
+  * Keep palette-drop behavior on the existing center-of-new-card
+    `findRegionForRect` path.
+  * Switch existing-node `handleNodeDrag` hover and
+    `handleNodeDragStop` commit to resolve the target region from the
+    cursor/grab point via `reactFlow.screenToFlowPosition(...)`.
+
+No wheel handling, page bounds, `nodeExtent`, panning, or
+`overflow-hidden` changes were made.
+
+### Verification
+
+Browser artifacts were saved under `.cursor/playwright-output/`:
+
+  * `region-edge-grab-build1173/trace.json` — the same off-center grab
+    now releases with region text `REGION\n1 device`.
+  * `region-drag-build1173/trace.json` — centered existing-node drag
+    still stays inside and counts correctly.
+  * `region-palette-build1173/trace.json` — palette device drop into
+    a region still counts correctly.
+  * `empty-drop-build1174/regression.json` — palette drop on an empty
+    canvas produced `nodeCount: 1`, `gatewayCount: 1`.
+  * `network-regress-build1174/regression.json` — wheel scroll changed
+    viewport translate while preserving scale, and connection drawing
+    produced `edgeCount: 1`.
+  * `oob-load-build1174/regression.json` — "Splunk Cloud Deployment
+    Architecture" loaded with `nodeCount: 20`, `edgeCount: 13`.
+  * `export-smoke-build1174/downloads/` — PNG and PDF exports were
+    created from the Build 1174 canvas.
+
+Build/install verification:
+
+```bash
+yarn workspace @splunk/splunk-cisco-dashboards run typecheck
+yarn workspace @splunk/splunk-cisco-dashboards run package:app
+/opt/splunk/bin/splunk install app dist/splunk-cisco-dashboards-1.0.10.tar.gz -update 1 -auth admin:changeme
+/opt/splunk/bin/splunk _internal call /services/server/control/restart -method POST -auth admin:changeme
+```
+
+The canvas build pill showed **Build 1174** after hard refresh.
+
+### What's next
+
+Treat `stable-build1174` as the surgical successor to
+`stable-build1173`: same rollback-safe canvas, plus the cursor-based
+Region/Site drag fix.
+
 ## How to revert to the last known-good Network Diagram canvas
 
 The Network Diagram authoring canvas was rolled back to **Build 1173 /
