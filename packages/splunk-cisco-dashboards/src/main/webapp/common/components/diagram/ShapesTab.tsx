@@ -27,7 +27,8 @@
  * "this is grabbable" is obvious without arrow cursors.
  */
 
-import React from 'react';
+import React, { useMemo, useState } from 'react';
+import { Search, X } from 'lucide-react';
 import { cn } from '@/common/lib/utils';
 import { CISCO_ICONS } from '@/common/components/topology/ciscoIcons';
 import type { DeviceShapeId } from '@/common/services/topologyDiscovery';
@@ -42,6 +43,7 @@ import { PALETTE_DND_MIME, type PaletteDragPayload } from './types';
 // into the existing sections made the palette read like noise).
 type ShapeCategory =
     | 'core'
+    | 'advanced'
     | 'security'
     | 'infrastructure'
     | 'storage'
@@ -75,8 +77,15 @@ const SHAPE_TILES: ShapeTileSpec[] = [
     { id: 'wlc', label: 'WLC', description: 'Wireless LAN Controller', category: 'core' },
     { id: 'access_point', label: 'Access Point', description: 'Wireless access point', category: 'core' },
     { id: 'load_balancer', label: 'Load Balancer', description: 'F5 BIG-IP / NetScaler / AWS ELB / Avi ADC', category: 'core' },
+    // Advanced / vendor-specific
+    { id: 'modular_chassis_switch', label: 'Modular Chassis', description: 'Catalyst 4500/6500 modular chassis switch', category: 'advanced' },
+    { id: 'nexus_aci_fabric', label: 'Nexus / ACI', description: 'Cisco Nexus / ACI fabric', category: 'advanced' },
+    { id: 'sdwan_controller', label: 'SD-WAN Controller', description: 'Cisco SD-WAN control plane / vManage', category: 'advanced' },
+    { id: 'f5_load_balancer', label: 'F5 Load Balancer', description: 'F5 BIG-IP / LTM / GTM load balancer', category: 'advanced' },
     // Security
     { id: 'firewall', label: 'Firewall', description: 'Perimeter / DC firewall (ASA / FTD)', category: 'security' },
+    { id: 'palo_alto_firewall', label: 'Palo Alto FW', description: 'Palo Alto Networks firewall', category: 'security' },
+    { id: 'fortinet_firewall', label: 'Fortinet FW', description: 'Fortinet FortiGate firewall', category: 'security' },
     { id: 'waf', label: 'WAF', description: 'Web application firewall', category: 'security' },
     { id: 'vpn_concentrator', label: 'VPN', description: 'VPN concentrator / AnyConnect headend', category: 'security' },
     { id: 'ids_ips', label: 'IDS / IPS', description: 'Intrusion sensor / Stealthwatch', category: 'security' },
@@ -139,6 +148,7 @@ const SHAPE_TILES: ShapeTileSpec[] = [
 
 const CATEGORY_LABELS: Record<ShapeCategory, string> = {
     core: 'Core Network',
+    advanced: 'Advanced Network',
     security: 'Security',
     infrastructure: 'Servers & Infrastructure',
     storage: 'Storage',
@@ -147,6 +157,67 @@ const CATEGORY_LABELS: Record<ShapeCategory, string> = {
     splunk: 'Splunk Architecture',
     places: 'Places',
     layout: 'Layout',
+};
+
+const SHAPE_SEARCH_ALIASES: Partial<
+    Record<ShapeTileSpec['id'], string[]>
+> = {
+    l3_switch: ['layer 3', 'core switch', 'routing switch'],
+    switch: ['l2', 'layer 2', 'access switch'],
+    stack: ['switch stack', 'stackwise'],
+    modular_chassis_switch: ['modular', 'chassis', '6500', '6504', '4500', '4507', 'supervisor', 'line card'],
+    nexus_aci_fabric: ['nexus', 'aci', 'apic', 'fabric', 'leaf spine', 'spine leaf'],
+    sdwan_controller: ['sdwan', 'sd-wan', 'vmanage', 'vsmart', 'vbond', 'controller'],
+    wlc: ['wireless controller', 'wireless lan controller'],
+    access_point: ['ap', 'wireless'],
+    load_balancer: ['lb', 'vip', 'elastic load balancer', 'hec endpoint'],
+    f5_load_balancer: ['f5', 'big-ip', 'bigip', 'ltm', 'gtm', 'vip', 'lb'],
+    vpn_concentrator: ['vpn', 'anyconnect'],
+    palo_alto_firewall: ['pa', 'palo', 'pan-os', 'panorama'],
+    fortinet_firewall: ['fortinet', 'fortigate', 'fortigate firewall', 'fg'],
+    ids_ips: ['ids', 'ips', 'intrusion'],
+    web_server: ['web', 'http', 'https'],
+    app_server: ['app', 'application'],
+    dns_server: ['dns'],
+    dhcp_server: ['dhcp'],
+    ip_phone: ['phone', 'voice', 'voip'],
+    iot_sensor: ['iot', 'sensor'],
+    branch_office: ['branch', 'office', 'site'],
+    datacenter: ['data center', 'dc'],
+    splunk_search_head: ['sh', 'search', 'hybrid search head'],
+    splunk_search_head_cluster: ['shc', 'search head cluster'],
+    splunk_indexer: ['idx', 'indexer'],
+    splunk_indexer_cluster: ['idxc', 'indexer cluster', 'index cluster'],
+    splunk_heavy_forwarder: ['hf', 'hwf', 'heavy'],
+    splunk_universal_forwarder: ['uf', 'forwarder'],
+    splunk_cluster_manager: ['cm', 'cluster master'],
+    splunk_deployer: ['shc-d', 'shcd', 'deployer'],
+    splunk_license_manager: ['lm', 'license'],
+    splunk_monitoring_console: ['mc', 'monitoring'],
+    splunk_deployment_server: ['ds', 'deployment', 'agent management'],
+    splunk_data_collection: ['dcn', 'idm', 'inputs data manager', 'collection'],
+    splunk_edge_processor: ['edge processor', 'ingest processor'],
+    splunk_sc4s: ['sc4s', 'connect for syslog', 'syslog'],
+    region: ['site', 'container', 'group'],
+    textbox: ['text', 'label', 'annotation', 'caption'],
+};
+
+const normalizeSearch = (value: string): string =>
+    value.trim().replace(/\s+/g, ' ').toLowerCase();
+
+const tileMatchesQuery = (tile: ShapeTileSpec, query: string): boolean => {
+    if (!query) return true;
+    const terms = query.split(' ');
+    const haystack = [
+        tile.id,
+        tile.label,
+        tile.description,
+        CATEGORY_LABELS[tile.category],
+        ...(SHAPE_SEARCH_ALIASES[tile.id] ?? []),
+    ]
+        .join(' ')
+        .toLowerCase();
+    return terms.every((term) => haystack.includes(term));
 };
 
 // Build 115 — friendly default labels so a freshly-dropped shape
@@ -159,6 +230,12 @@ const SHAPE_DEFAULT_LABEL_OVERRIDES: Partial<Record<DeviceShapeId, string>> = {
     ids_ips: 'IDS/IPS',
     ip_phone: 'IP Phone',
     load_balancer: 'Load Balancer',
+    f5_load_balancer: 'F5 Load Balancer',
+    modular_chassis_switch: 'Modular Chassis',
+    nexus_aci_fabric: 'Nexus / ACI Fabric',
+    sdwan_controller: 'SD-WAN Controller',
+    palo_alto_firewall: 'Palo Alto Firewall',
+    fortinet_firewall: 'Fortinet Firewall',
     // Build 115.5 additions
     waf: 'WAF',
     ca: 'CA',
@@ -275,6 +352,8 @@ const ShapeTile: React.FC<ShapeTileSpec> = ({ id, label, description }) => {
 };
 
 export const ShapesTab: React.FC = () => {
+    const [query, setQuery] = useState('');
+    const normalizedQuery = normalizeSearch(query);
     // Build 115 — group tiles by category so the 18-shape palette
     // stays scannable. We compute groups inline rather than
     // pre-bucketing because the spec order in `SHAPE_TILES` is
@@ -285,6 +364,7 @@ export const ShapesTab: React.FC = () => {
     // in `CATEGORY_LABELS`.
     const ordered: ShapeCategory[] = [
         'core',
+        'advanced',
         'security',
         'infrastructure',
         'storage',
@@ -294,21 +374,71 @@ export const ShapesTab: React.FC = () => {
         'places',
         'layout',
     ];
-    const grouped = new Map<ShapeCategory, ShapeTileSpec[]>();
-    for (const tile of SHAPE_TILES) {
-        const bucket = grouped.get(tile.category) ?? [];
-        bucket.push(tile);
-        grouped.set(tile.category, bucket);
-    }
+    const filteredTiles = useMemo(
+        () =>
+            SHAPE_TILES.filter((tile) =>
+                tileMatchesQuery(tile, normalizedQuery)
+            ),
+        [normalizedQuery]
+    );
+    const grouped = useMemo(() => {
+        const next = new Map<ShapeCategory, ShapeTileSpec[]>();
+        for (const tile of filteredTiles) {
+            const bucket = next.get(tile.category) ?? [];
+            bucket.push(tile);
+            next.set(tile.category, bucket);
+        }
+        return next;
+    }, [filteredTiles]);
+
     return (
         <div className="flex flex-col gap-3 p-3">
+            <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                <input
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    type="search"
+                    placeholder="Search shapes..."
+                    aria-label="Search shapes"
+                    className={cn(
+                        'h-8 w-full rounded-md border border-slate-200 bg-white pl-8 pr-8 text-xs text-slate-700 outline-none',
+                        'placeholder:text-slate-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-100',
+                        'dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:focus:ring-sky-950'
+                    )}
+                />
+                {query ? (
+                    <button
+                        type="button"
+                        onClick={() => setQuery('')}
+                        aria-label="Clear shape search"
+                        className="absolute right-1.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                    >
+                        <X className="h-3.5 w-3.5" />
+                    </button>
+                ) : null}
+            </div>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
-                Drag any shape onto the canvas. Use{' '}
-                <span className="font-medium text-slate-700 dark:text-slate-200">
-                    Region / Site
-                </span>{' '}
-                to draw a labelled container, then drop devices inside it.
+                {normalizedQuery ? (
+                    <>
+                        {filteredTiles.length}{' '}
+                        {filteredTiles.length === 1 ? 'shape' : 'shapes'} found
+                    </>
+                ) : (
+                    <>
+                        Drag any shape onto the canvas. Use{' '}
+                        <span className="font-medium text-slate-700 dark:text-slate-200">
+                            Region / Site
+                        </span>{' '}
+                        to draw a labelled container, then drop devices inside it.
+                    </>
+                )}
             </p>
+            {filteredTiles.length === 0 ? (
+                <div className="rounded-md border border-dashed border-slate-200 px-3 py-5 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                    No shapes match that search.
+                </div>
+            ) : null}
             {ordered.map((cat) => {
                 const tiles = grouped.get(cat);
                 if (!tiles || tiles.length === 0) return null;

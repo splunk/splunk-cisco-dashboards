@@ -16,6 +16,48 @@
  * is zoomed out and dashes are too small to see.
  */
 
+/*
+ * Network Diagram page shell.
+ *
+ * Splunk Simple XML wraps the React mount in a dashboard row/panel
+ * with generous top padding. That padding was fine for KPI panels,
+ * but the diagram editor wants the canvas as close to the app nav as
+ * possible. This CSS is imported only by the network_diagram entry.
+ */
+.dashboard-body {
+    padding-top: 8px !important;
+    padding-right: 12px !important;
+    padding-bottom: 0 !important;
+    padding-left: 12px !important;
+}
+
+.dashboard-row {
+    margin: 0 !important;
+}
+
+.dashboard-cell,
+.dashboard-panel {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.dashboard-panel .panel-body {
+    padding: 0 !important;
+}
+
+#scan-root {
+    min-height: calc(100vh - 104px);
+}
+
+#scan-root .scd-network-diagram-page {
+    height: calc(100vh - 104px);
+}
+
+#scan-root .scd-network-diagram-page:fullscreen,
+#scan-root .scd-network-diagram-page:-webkit-full-screen {
+    height: 100vh;
+}
+
 /* Edge defaults inside the diagram canvas. The Cyber-NOC theme
  * is dark, so the lighter operations-canvas defaults read as
  * faint gray on near-black. Brighter base color keeps lines

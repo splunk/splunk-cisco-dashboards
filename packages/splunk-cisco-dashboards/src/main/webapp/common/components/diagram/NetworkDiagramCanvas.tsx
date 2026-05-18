@@ -56,11 +56,15 @@ import {
     AlertTriangle,
     Info,
     X as XIcon,
+    ZoomIn,
+    ZoomOut,
+    House,
+    Maximize2,
+    HelpCircle,
 } from 'lucide-react';
 import {
     ReactFlow,
     ReactFlowProvider,
-    Controls,
     MiniMap,
     Background,
     BackgroundVariant,
@@ -70,6 +74,7 @@ import {
     applyEdgeChanges,
     reconnectEdge,
     useReactFlow,
+    useOnViewportChange,
     type Node as RFNode,
     type Edge as RFEdge,
     type Connection,
@@ -78,6 +83,7 @@ import {
     type ReactFlowInstance,
     type XYPosition,
     type EdgeMarker,
+    type Viewport,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { cn } from '@/common/lib/utils';
@@ -866,6 +872,9 @@ const rfToSaved = (
     };
 };
 
+const REGION_ATTACH_OVERLAP_RATIO = 0.18;
+const REGION_STICKY_OVERLAP_RATIO = 0.05;
+
 /** Find the smallest region containing a flow-space point. The
  *  "smallest wins" tie-break keeps future nested regions from
  *  accidentally parenting to the outer container. */
@@ -894,19 +903,42 @@ const findRegionForPoint = (nodes: RFNode[], point: XYPosition): RFNode | null =
     return best;
 };
 
+const getRegionRect = (
+    node: RFNode
+): { x: number; y: number; width: number; height: number } | null => {
+    if (node.type !== REGION_NODE_TYPE) return null;
+    const width =
+        typeof node.style?.width === 'number' ? (node.style.width as number) : 0;
+    const height =
+        typeof node.style?.height === 'number' ? (node.style.height as number) : 0;
+    if (width <= 0 || height <= 0) return null;
+    return { x: node.position.x, y: node.position.y, width, height };
+};
+
+const getRegionOverlapRatio = (
+    shapeRect: { x: number; y: number; width: number; height: number },
+    region: RFNode
+): number => {
+    const regionRect = getRegionRect(region);
+    if (!regionRect) return 0;
+    return (
+        getRectOverlapArea(shapeRect, regionRect) /
+        (shapeRect.width * shapeRect.height)
+    );
+};
+
 /** Resolve which (if any) region-group node a card rectangle
  *  visually belongs to.
  *
- *  Build 1177 — centre-in-region is still the primary rule, which
- *  preserves the forgiving palette-drop behaviour near region
- *  corners. If the center is outside, a card can still belong when
- *  at least half of its body overlaps a region. That covers normal
- *  existing-node drags where the user grabbed an edge of the card:
- *  the card can plainly look inside the region while the cursor
- *  itself is just outside. */
+ *  Build 1178 — region membership now uses forgiving overlap
+ *  with hysteresis instead of "centre or 50% overlap". Operators
+ *  can drop near a region edge and still get the obvious parent,
+ *  while already-parented children stay attached until they are
+ *  almost entirely outside the region. */
 const findRegionForRect = (
     nodes: RFNode[],
-    shapeRect: { x: number; y: number; width: number; height: number }
+    shapeRect: { x: number; y: number; width: number; height: number },
+    options?: { preferredRegionId?: string | null }
 ): RFNode | null => {
     if (shapeRect.width <= 0 || shapeRect.height <= 0) return null;
     const centerRegion = findRegionForPoint(nodes, {
@@ -915,28 +947,27 @@ const findRegionForRect = (
     });
     if (centerRegion) return centerRegion;
 
+    if (options?.preferredRegionId) {
+        const preferred = nodes.find((n) => n.id === options.preferredRegionId);
+        if (
+            preferred &&
+            getRegionOverlapRatio(shapeRect, preferred) >= REGION_STICKY_OVERLAP_RATIO
+        ) {
+            return preferred;
+        }
+    }
+
     let best: RFNode | null = null;
     let bestRatio = 0;
-    const shapeArea = shapeRect.width * shapeRect.height;
     for (const n of nodes) {
         if (n.type !== REGION_NODE_TYPE) continue;
-        const width = typeof n.style?.width === 'number' ? (n.style.width as number) : 0;
-        const height =
-            typeof n.style?.height === 'number' ? (n.style.height as number) : 0;
-        if (width <= 0 || height <= 0) continue;
-        const overlapRatio =
-            getRectOverlapArea(shapeRect, {
-                x: n.position.x,
-                y: n.position.y,
-                width,
-                height,
-            }) / shapeArea;
+        const overlapRatio = getRegionOverlapRatio(shapeRect, n);
         if (overlapRatio > bestRatio) {
             best = n;
             bestRatio = overlapRatio;
         }
     }
-    return bestRatio >= 0.5 ? best : null;
+    return bestRatio >= REGION_ATTACH_OVERLAP_RATIO ? best : null;
 };
 
 const getRectOverlapArea = (
@@ -1045,12 +1076,16 @@ const reconcileRegionMembership = (nodes: RFNode[]): RFNode[] => {
         if (!canBelongToRegion(node)) return node;
         const world = getNodeWorldPosition(nodes, node);
         const size = getNodeSize(node);
-        const region = findRegionForRect(nodes, {
-            x: world.x,
-            y: world.y,
-            width: size.width,
-            height: size.height,
-        });
+        const region = findRegionForRect(
+            nodes,
+            {
+                x: world.x,
+                y: world.y,
+                width: size.width,
+                height: size.height,
+            },
+            { preferredRegionId: node.parentId }
+        );
         const targetParentId = region?.id;
         if ((node.parentId ?? undefined) === targetParentId) return node;
         changed = true;
@@ -1321,13 +1356,15 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
         // can no longer cross diagram boundaries; the first commit
         // after this becomes the operator's first reversible step.
         dispatchHistory({ type: 'reset', snapshot: payload });
-        // Fit view shortly after hydrate so the operator lands on
-        // a centered, sized-to-fit canvas instead of starting at
-        // (0,0). Wrapped in rAF because the React Flow viewport
-        // is only available after the next layout pass.
+        // Reset to 100% shortly after hydrate. The floating
+        // viewport controls show the live zoom, so starting from a
+        // predictable 100% is less surprising than auto-fit landing
+        // at 90% or 73% depending on the diagram bounds. Operators
+        // can still hit the fit button when they want a full-view
+        // overview.
         window.requestAnimationFrame(() => {
             try {
-                reactFlow.fitView({ padding: 0.15, duration: 250 });
+                void reactFlow.setViewport({ x: 0, y: 0, zoom: 1 }, { duration: 0 });
             } catch {
                 // ignore — viewport not ready yet
             }
@@ -1674,8 +1711,8 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
      *  made membership feel random: a card could look inside but
      *  stay unparented if the grab point was outside, and the
      *  reverse could happen at an edge. The shared `findRegionForRect`
-     *  rule attaches when the card center is inside a region, or
-     *  when at least half of the card overlaps it. */
+     *  rule attaches on meaningful overlap and keeps an existing
+     *  parent until the card is clearly outside. */
     const handleNodeDragStop = useCallback(
         (_event: React.MouseEvent, node: RFNode) => {
             // Don't re-parent the region itself, the title node,
@@ -1708,12 +1745,16 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                 const currentNode = current.find((n) => n.id === node.id) ?? node;
                 const world = getWorldPosition(currentNode);
                 const size = getNodeSize(currentNode);
-                const containingRegion = findRegionForRect(current, {
-                    x: world.x,
-                    y: world.y,
-                    width: size.width,
-                    height: size.height,
-                });
+                const containingRegion = findRegionForRect(
+                    current,
+                    {
+                        x: world.x,
+                        y: world.y,
+                        width: size.width,
+                        height: size.height,
+                    },
+                    { preferredRegionId: currentNode.parentId }
+                );
                 const currentParentId = currentNode.parentId ?? null;
                 const targetParentId = containingRegion?.id ?? null;
                 if (currentParentId === targetParentId) {
@@ -2162,12 +2203,16 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                 const currentNode = current.find((n) => n.id === node.id) ?? node;
                 const world = getNodeWorldPosition(current, currentNode);
                 const size = getNodeSize(currentNode);
-                const region = findRegionForRect(current, {
-                    x: world.x,
-                    y: world.y,
-                    width: size.width,
-                    height: size.height,
-                });
+                const region = findRegionForRect(
+                    current,
+                    {
+                        x: world.x,
+                        y: world.y,
+                        width: size.width,
+                        height: size.height,
+                    },
+                    { preferredRegionId: currentNode.parentId }
+                );
                 return applyDropHover(current, region?.id ?? null);
             });
         },
@@ -3048,8 +3093,7 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                 onEdgeClick={handleEdgeClick}
                 onPaneClick={handlePaneClick}
                 onInit={setRfInstance}
-                fitView
-                fitViewOptions={{ padding: 0.15 }}
+                defaultViewport={{ x: 0, y: 0, zoom: 1 }}
                 proOptions={proOptions}
                 minZoom={0.2}
                 maxZoom={2.5}
@@ -3133,9 +3177,8 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                 {!isViewMode && !exporting && (
                     <Background variant={BackgroundVariant.Dots} gap={24} size={1} />
                 )}
-                <Controls position="bottom-left" showInteractive={!isViewMode} />
                 <MiniMap
-                    position="bottom-right"
+                    position="bottom-left"
                     pannable
                     zoomable
                     nodeStrokeWidth={2}
@@ -3152,6 +3195,12 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                     }}
                 />
             </ReactFlow>
+
+            <CanvasViewportControls
+                helpOpen={helpOpen}
+                onHelpToggle={() => setHelpOpen((v) => !v)}
+                onHelpClose={() => setHelpOpen(false)}
+            />
 
             {/* Hint banner: tells operators what to do on a blank canvas
              *  Build 113: only shown in edit mode — view mode is for
@@ -3171,130 +3220,6 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                             Hover any device to reveal port handles and drag to draw a link.
                         </p>
                     </div>
-                </div>
-            )}
-
-            {/* Build 115.9 — replaced the Build 115.6 hover-only `?`
-             *  chip with a click-to-open Info popover. Operators
-             *  wanted a structured "what can I do here" card rather
-             *  than a one-line tooltip; the popover groups
-             *  affordances by task (drag, link, edit, navigate)
-             *  and keeps a low-key footprint when closed. */}
-            {!isEmpty && !isViewMode && (
-                <div className="absolute top-3 right-14 z-10">
-                    <button
-                        type="button"
-                        aria-label="Open canvas instructions"
-                        aria-expanded={helpOpen}
-                        title="Canvas instructions"
-                        onClick={() => setHelpOpen((v) => !v)}
-                        className={cn(
-                            'w-7 h-7 rounded-full',
-                            'flex items-center justify-center',
-                            helpOpen
-                                ? 'bg-sky-500 text-white shadow'
-                                : 'bg-slate-900/70 dark:bg-slate-100/85 text-slate-100 dark:text-slate-900 hover:bg-slate-900/90 dark:hover:bg-slate-100/95',
-                            'transition-colors'
-                        )}
-                    >
-                        <Info className="w-3.5 h-3.5" aria-hidden />
-                    </button>
-                    {helpOpen && (
-                        <div
-                            role="dialog"
-                            aria-label="Canvas instructions"
-                            className={cn(
-                                'absolute right-0 top-9 w-80 rounded-lg shadow-xl',
-                                'bg-white dark:bg-slate-900',
-                                'border border-slate-200 dark:border-slate-700',
-                                'text-slate-700 dark:text-slate-200'
-                            )}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Escape') setHelpOpen(false);
-                            }}
-                        >
-                            <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-slate-700">
-                                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                                    <Info className="w-3.5 h-3.5" aria-hidden />
-                                    Canvas tips
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setHelpOpen(false)}
-                                    aria-label="Close instructions"
-                                    className="p-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"
-                                >
-                                    <XIcon className="w-3.5 h-3.5" aria-hidden />
-                                </button>
-                            </div>
-                            <div className="px-3 py-2 text-[11px] leading-relaxed space-y-2">
-                                <div>
-                                    <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5">
-                                        Add shapes
-                                    </div>
-                                    Drag any tile from the left{' '}
-                                    <span className="font-semibold">Shapes</span> palette
-                                    onto the canvas, or drag a row from{' '}
-                                    <span className="font-semibold">Inventory</span> to
-                                    drop a real <code className="font-mono px-1 rounded bg-slate-100 dark:bg-slate-800">asset_inventory</code>{' '}
-                                    device. Use <span className="font-semibold">Region / Site</span>{' '}
-                                    first to draw a labelled container, then drop devices
-                                    inside it.
-                                </div>
-                                <div>
-                                    <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5">
-                                        Link devices
-                                    </div>
-                                    Hover a device to reveal four port handles. Drag from
-                                    a port on device <span className="font-semibold">A</span>{' '}
-                                    to a port on device <span className="font-semibold">B</span>{' '}
-                                    — the arrow points at <span className="font-semibold">B</span>{' '}
-                                    and the animation flows{' '}
-                                    <span className="font-semibold">A → B</span>. Use the
-                                    inspector on the right to flip direction, change line
-                                    style, or color the line.
-                                </div>
-                                <div>
-                                    <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5">
-                                        Edit & inspect
-                                    </div>
-                                    Click any node, edge, region, or title to open its
-                                    inspector. Bind a shape to a real host to inherit
-                                    vendor / model and light the corner LED green when
-                                    Splunk has seen the host in the last 24 h
-                                    (<code className="font-mono px-1 rounded bg-slate-100 dark:bg-slate-800">| metadata type=hosts</code>).
-                                </div>
-                                <div>
-                                    <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5">
-                                        Pan &amp; zoom
-                                    </div>
-                                    Two-finger trackpad scroll (or mouse
-                                    wheel) <span className="font-semibold">pans</span>{' '}
-                                    the canvas in any direction. Hold{' '}
-                                    <kbd className="font-mono px-1 rounded border border-slate-300 dark:border-slate-700">⌘</kbd>{' '}
-                                    /{' '}
-                                    <kbd className="font-mono px-1 rounded border border-slate-300 dark:border-slate-700">Ctrl</kbd>{' '}
-                                    while scrolling to zoom. Trackpad
-                                    pinch zooms too. Drag empty canvas
-                                    to pan; the bottom-left controls
-                                    have +/- and fit-to-view buttons.
-                                </div>
-                                <div>
-                                    <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5">
-                                        Shortcuts
-                                    </div>
-                                    <kbd className="font-mono px-1 rounded border border-slate-300 dark:border-slate-700">Del</kbd>{' '}
-                                    delete selection ·{' '}
-                                    <kbd className="font-mono px-1 rounded border border-slate-300 dark:border-slate-700">⌘/Ctrl + Z</kbd>{' '}
-                                    undo ·{' '}
-                                    <kbd className="font-mono px-1 rounded border border-slate-300 dark:border-slate-700">⌘/Ctrl + ⇧ + Z</kbd>{' '}
-                                    redo ·{' '}
-                                    <kbd className="font-mono px-1 rounded border border-slate-300 dark:border-slate-700">Esc</kbd>{' '}
-                                    close popover / exit Present mode.
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </div>
             )}
 
@@ -3339,10 +3264,205 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
     );
 };
 
+// --- Canvas viewport controls --------------------------------------
+//
+// Replaces React Flow's small default Controls with the larger
+// diagram-tool control stack operators expect: zoom in, live zoom
+// percentage, zoom out, reset home, fit-to-view, and the help bubble.
+const CanvasViewportControls: React.FC<{
+    helpOpen: boolean;
+    onHelpToggle: () => void;
+    onHelpClose: () => void;
+}> = ({ helpOpen, onHelpToggle, onHelpClose }) => {
+    const reactFlow = useReactFlow();
+    const [zoomPct, setZoomPct] = useState<number>(100);
+
+    const updateZoom = useCallback((zoom: number): void => {
+        setZoomPct(Math.round(zoom * 100));
+    }, []);
+
+    useEffect(() => {
+        try {
+            updateZoom(reactFlow.getZoom());
+        } catch {
+            // React Flow may not have initialised the viewport yet.
+        }
+    }, [reactFlow, updateZoom]);
+
+    useOnViewportChange({
+        onChange: useCallback(
+            (viewport: Viewport) => {
+                updateZoom(viewport.zoom);
+            },
+            [updateZoom]
+        ),
+        onEnd: useCallback(
+            (viewport: Viewport) => {
+                updateZoom(viewport.zoom);
+            },
+            [updateZoom]
+        ),
+    });
+
+    const controls: Array<{
+        label: string;
+        title: string;
+        Icon: React.ComponentType<{ className?: string; 'aria-hidden'?: boolean }>;
+        onClick: () => void;
+    }> = [
+        {
+            label: 'Zoom in',
+            title: 'Zoom in',
+            Icon: ZoomIn,
+            onClick: () => void reactFlow.zoomIn({ duration: 160 }),
+        },
+        {
+            label: 'Zoom out',
+            title: 'Zoom out',
+            Icon: ZoomOut,
+            onClick: () => void reactFlow.zoomOut({ duration: 160 }),
+        },
+        {
+            label: 'Reset view',
+            title: 'Reset view to 100%',
+            Icon: House,
+            onClick: () =>
+                void reactFlow.setViewport({ x: 0, y: 0, zoom: 1 }, { duration: 220 }),
+        },
+        {
+            label: 'Fit diagram',
+            title: 'Fit diagram to view',
+            Icon: Maximize2,
+            onClick: () => void reactFlow.fitView({ padding: 0.18, duration: 220 }),
+        },
+    ];
+
+    return (
+        <div className="absolute right-5 bottom-5 z-20 pointer-events-none">
+            <div className="relative pointer-events-auto">
+                <div
+                    className={cn(
+                        'w-16 rounded-xl border border-slate-200 bg-white/95',
+                        'dark:bg-slate-900/95 dark:border-slate-700',
+                        'shadow-[0_12px_30px_rgba(15,23,42,0.14)] backdrop-blur',
+                        'py-2 flex flex-col items-center'
+                    )}
+                >
+                    <ViewportButton {...controls[0]} />
+                    <div className="my-1.5 h-px w-9 bg-slate-200 dark:bg-slate-700" />
+                    <div
+                        aria-label={`Zoom ${zoomPct}%`}
+                        className="h-8 flex items-center justify-center text-base font-semibold text-slate-700 dark:text-slate-200"
+                    >
+                        {zoomPct}%
+                    </div>
+                    <div className="my-1.5 h-px w-9 bg-slate-200 dark:bg-slate-700" />
+                    <ViewportButton {...controls[1]} />
+                    <div className="my-2 h-px w-9 bg-slate-200 dark:bg-slate-700" />
+                    <ViewportButton {...controls[2]} />
+                    <div className="my-2 h-px w-9 bg-slate-200 dark:bg-slate-700" />
+                    <ViewportButton {...controls[3]} />
+                </div>
+                <button
+                    type="button"
+                    aria-label="Canvas instructions"
+                    aria-expanded={helpOpen}
+                    title="Canvas instructions"
+                    onClick={onHelpToggle}
+                    className={cn(
+                        'absolute -right-3 -bottom-3 w-10 h-10 rounded-full',
+                        'flex items-center justify-center border border-slate-200',
+                        'bg-white text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.2)]',
+                        'dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100',
+                        'hover:text-sky-600 dark:hover:text-sky-300 transition-colors'
+                    )}
+                >
+                    <HelpCircle className="w-6 h-6" aria-hidden />
+                </button>
+                {helpOpen && (
+                    <CanvasHelpPopover onClose={onHelpClose} />
+                )}
+            </div>
+        </div>
+    );
+};
+
+const ViewportButton: React.FC<{
+    label: string;
+    title: string;
+    Icon: React.ComponentType<{ className?: string; 'aria-hidden'?: boolean }>;
+    onClick: () => void;
+}> = ({ label, title, Icon, onClick }) => (
+    <button
+        type="button"
+        aria-label={label}
+        title={title}
+        onClick={onClick}
+        className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-700 hover:bg-slate-100 hover:text-sky-600 dark:text-slate-200 dark:hover:bg-slate-800 dark:hover:text-sky-300 transition-colors"
+    >
+        <Icon className="w-5 h-5" aria-hidden />
+    </button>
+);
+
+const CanvasHelpPopover: React.FC<{ onClose: () => void }> = ({ onClose }) => (
+    <div
+        role="dialog"
+        aria-label="Canvas instructions"
+        className={cn(
+            'absolute right-[4.5rem] bottom-0 w-80 rounded-lg shadow-xl',
+            'bg-white dark:bg-slate-900',
+            'border border-slate-200 dark:border-slate-700',
+            'text-slate-700 dark:text-slate-200'
+        )}
+        onKeyDown={(e) => {
+            if (e.key === 'Escape') onClose();
+        }}
+    >
+        <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <Info className="w-3.5 h-3.5" aria-hidden />
+                Canvas tips
+            </div>
+            <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close instructions"
+                className="p-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"
+            >
+                <XIcon className="w-3.5 h-3.5" aria-hidden />
+            </button>
+        </div>
+        <div className="px-3 py-2 text-[11px] leading-relaxed space-y-2">
+            <div>
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5">
+                    Add shapes
+                </div>
+                Drag any tile from <span className="font-semibold">Shapes</span> or a
+                row from <span className="font-semibold">Inventory</span> onto the
+                canvas. Use <span className="font-semibold">Region / Site</span> first
+                to group devices.
+            </div>
+            <div>
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5">
+                    Pan &amp; zoom
+                </div>
+                Wheel or two-finger scroll pans. Hold Cmd / Ctrl while scrolling to
+                zoom, or use the control stack.
+            </div>
+            <div>
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5">
+                    Shortcuts
+                </div>
+                Del deletes selection, Cmd/Ctrl + Z undoes, Cmd/Ctrl + Shift + Z redoes,
+                and Esc closes dialogs or exits Present mode.
+            </div>
+        </div>
+    </div>
+);
+
 // --- Build 115.2 — Undo / Redo toolbar -----------------------------
 //
-// Sits at the bottom-left of the canvas, next to React Flow's own
-// Controls. Two minimal IconButtons, no labels, with tooltips
+// Sits at the bottom-center of the canvas. Two minimal IconButtons, no labels, with tooltips
 // showing the keyboard shortcut so operators discover the bindings
 // without us forcing a learning prompt.
 const UndoRedoControls: React.FC<{

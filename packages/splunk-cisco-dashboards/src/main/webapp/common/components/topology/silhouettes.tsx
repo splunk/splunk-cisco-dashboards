@@ -30,9 +30,10 @@
  *
  * Everything else still resolves through this file's family map
  * (`SHAPE_FAMILY`):
- *   • Other rack devices    → fall back to the generic
+ *   • Other physical network / security appliances
+ *                          → fall back to the generic
  *                             `RackChassis` (with icon overlay)
- *   • Disc / Cylinder /     → unchanged from 115.13
+ *   • Disc / Database       → unchanged from 115.13
  *     Cloud / Building /
  *     Users / Endpoint /
  *     Card fallback
@@ -63,27 +64,33 @@ export const SHAPE_FAMILY: Record<DeviceShapeId, SilhouetteFamily> = {
     proxy: 'rack',
     wlc: 'rack',
     access_point: 'disc',
-    load_balancer: 'rack',
+    load_balancer: 'card',
+    f5_load_balancer: 'card',
+    modular_chassis_switch: 'card',
+    nexus_aci_fabric: 'card',
+    sdwan_controller: 'card',
     firewall: 'rack',
+    palo_alto_firewall: 'card',
+    fortinet_firewall: 'card',
     waf: 'rack',
     vpn_concentrator: 'rack',
     ids_ips: 'rack',
     siem: 'rack',
     ca: 'rack',
     bastion: 'rack',
-    server: 'rack',
-    web_server: 'rack',
-    app_server: 'rack',
-    dns_server: 'rack',
-    dhcp_server: 'rack',
-    mainframe: 'rack',
-    container: 'rack',
-    vm: 'rack',
+    server: 'card',
+    web_server: 'card',
+    app_server: 'card',
+    dns_server: 'card',
+    dhcp_server: 'card',
+    mainframe: 'card',
+    container: 'card',
+    vm: 'card',
     database: 'cylinder',
-    storage: 'cylinder',
-    nas: 'cylinder',
-    san: 'cylinder',
-    backup: 'cylinder',
+    storage: 'card',
+    nas: 'card',
+    san: 'card',
+    backup: 'card',
     laptop: 'endpoint',
     mobile_phone: 'endpoint',
     ip_phone: 'endpoint',
@@ -93,20 +100,20 @@ export const SHAPE_FAMILY: Record<DeviceShapeId, SilhouetteFamily> = {
     cloud: 'cloud',
     internet: 'cloud',
     users: 'usersGroup',
-    splunk_search_head: 'rack',
-    splunk_search_head_cluster: 'rack',
-    splunk_indexer: 'cylinder',
-    splunk_indexer_cluster: 'cylinder',
-    splunk_heavy_forwarder: 'rack',
-    splunk_universal_forwarder: 'rack',
-    splunk_cluster_manager: 'rack',
-    splunk_deployer: 'rack',
-    splunk_license_manager: 'rack',
-    splunk_monitoring_console: 'rack',
-    splunk_deployment_server: 'rack',
-    splunk_data_collection: 'rack',
-    splunk_edge_processor: 'rack',
-    splunk_sc4s: 'rack',
+    splunk_search_head: 'card',
+    splunk_search_head_cluster: 'card',
+    splunk_indexer: 'card',
+    splunk_indexer_cluster: 'card',
+    splunk_heavy_forwarder: 'card',
+    splunk_universal_forwarder: 'card',
+    splunk_cluster_manager: 'card',
+    splunk_deployer: 'card',
+    splunk_license_manager: 'card',
+    splunk_monitoring_console: 'card',
+    splunk_deployment_server: 'card',
+    splunk_data_collection: 'card',
+    splunk_edge_processor: 'card',
+    splunk_sc4s: 'card',
     branch_office: 'building',
     datacenter: 'building',
     generic: 'card',
@@ -884,19 +891,17 @@ const WlcChassis: React.FC<SilhouetteProps> = ({ className }) => (
 
 // -----------------------------------------------------------------
 // Generic rack chassis — fallback for rack devices that don't
-//   have a specialised silhouette yet (load_balancer, server
-//   variants, container, vm, hub, gateway, proxy, waf,
-//   vpn_concentrator, ids_ips, siem, ca, bastion, mainframe).
+//   have a specialised silhouette yet (hub, gateway, proxy, waf,
+//   vpn_concentrator, ids_ips, siem, ca, bastion).
 //
 //   Keeps the lucide icon overlay because the chassis itself
 //   is generic — the operator needs the icon to tell device
 //   classes apart in the fallback case.
 // -----------------------------------------------------------------
-type RackFlavour = 'switch' | 'router' | 'security' | 'compute' | 'generic';
+type RackFlavour = 'switch' | 'router' | 'security' | 'generic';
 
 const RACK_FLAVOUR: Partial<Record<DeviceShapeId, RackFlavour>> = {
     hub: 'switch',
-    load_balancer: 'router',
     gateway: 'router',
     proxy: 'router',
     waf: 'security',
@@ -905,26 +910,6 @@ const RACK_FLAVOUR: Partial<Record<DeviceShapeId, RackFlavour>> = {
     siem: 'security',
     ca: 'security',
     bastion: 'security',
-    server: 'compute',
-    web_server: 'compute',
-    app_server: 'compute',
-    dns_server: 'compute',
-    dhcp_server: 'compute',
-    mainframe: 'compute',
-    container: 'compute',
-    vm: 'compute',
-    splunk_search_head: 'compute',
-    splunk_search_head_cluster: 'compute',
-    splunk_heavy_forwarder: 'compute',
-    splunk_universal_forwarder: 'compute',
-    splunk_cluster_manager: 'compute',
-    splunk_deployer: 'compute',
-    splunk_license_manager: 'compute',
-    splunk_monitoring_console: 'compute',
-    splunk_deployment_server: 'compute',
-    splunk_data_collection: 'compute',
-    splunk_edge_processor: 'compute',
-    splunk_sc4s: 'compute',
 };
 
 const RackChassis: React.FC<SilhouetteProps> = ({ shape, Icon, className }) => {
@@ -933,7 +918,6 @@ const RackChassis: React.FC<SilhouetteProps> = ({ shape, Icon, className }) => {
         switch: '#10b981',
         router: '#f59e0b',
         security: '#ef4444',
-        compute: '#3b82f6',
         generic: '#64748b',
     };
     const accent = accentByFlavour[flavour];

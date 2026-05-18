@@ -462,8 +462,14 @@ export const L3SwitchShape = DeviceShape;
 // Flow node-type registry reference them by stable identifier.
 export const StackShape = DeviceShape;
 export const LoadBalancerShape = DeviceShape;
+export const F5LoadBalancerShape = DeviceShape;
+export const ModularChassisSwitchShape = DeviceShape;
+export const NexusAciFabricShape = DeviceShape;
+export const SdwanControllerShape = DeviceShape;
 export const VpnConcentratorShape = DeviceShape;
 export const IdsIpsShape = DeviceShape;
+export const PaloAltoFirewallShape = DeviceShape;
+export const FortinetFirewallShape = DeviceShape;
 export const DatabaseShape = DeviceShape;
 export const StorageShape = DeviceShape;
 export const IpPhoneShape = DeviceShape;
@@ -550,8 +556,14 @@ export const TOPOLOGY_NODE_TYPES = {
     'device:wlc': WlcShape,
     'device:access_point': AccessPointShape,
     'device:load_balancer': LoadBalancerShape,
+    'device:f5_load_balancer': F5LoadBalancerShape,
+    'device:modular_chassis_switch': ModularChassisSwitchShape,
+    'device:nexus_aci_fabric': NexusAciFabricShape,
+    'device:sdwan_controller': SdwanControllerShape,
     // Security
     'device:firewall': FirewallShape,
+    'device:palo_alto_firewall': PaloAltoFirewallShape,
+    'device:fortinet_firewall': FortinetFirewallShape,
     'device:waf': WafShape,
     'device:vpn_concentrator': VpnConcentratorShape,
     'device:ids_ips': IdsIpsShape,

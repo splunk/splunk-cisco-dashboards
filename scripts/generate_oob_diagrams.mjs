@@ -185,7 +185,7 @@ const splunkCloudDeployment = {
             // --- Indexing Tier (3 AZs + HEC LB) ------------------------------
             {
                 id: 'idx_az1',
-                type: 'device:database',
+                type: 'device:splunk_indexer',
                 x: 105,
                 y: 30,
                 parentId: 'g_index_tier',
@@ -196,7 +196,7 @@ const splunkCloudDeployment = {
             },
             {
                 id: 'idx_az2',
-                type: 'device:database',
+                type: 'device:splunk_indexer',
                 x: 25,
                 y: 180,
                 parentId: 'g_index_tier',
@@ -207,7 +207,7 @@ const splunkCloudDeployment = {
             },
             {
                 id: 'idx_az3',
-                type: 'device:database',
+                type: 'device:splunk_indexer',
                 x: 185,
                 y: 180,
                 parentId: 'g_index_tier',
@@ -577,6 +577,62 @@ const device = (
     model,
 });
 
+/** OOB diagrams should use the same Splunk-specific palette shapes
+ *  operators get when they drag from the left rail. This keeps
+ *  seeded Splunk roles out of generic server/database silhouettes
+ *  while still leaving true databases as `device:database`. */
+const normalizeSplunkDeviceType = (node) => {
+    if (typeof node.type !== 'string' || !node.type.startsWith('device:')) {
+        return;
+    }
+    if (node.type.startsWith('device:splunk_')) {
+        return;
+    }
+
+    const text = [node.id, node.label, node.shortLabel, node.model]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+    if (text.includes('shc deployer') || text.includes('shc-d')) {
+        node.type = 'device:splunk_deployer';
+    } else if (text.includes('deployment server') || /\bds\b/.test(text)) {
+        node.type = 'device:splunk_deployment_server';
+    } else if (text.includes('license manager') || /\blm\b/.test(text)) {
+        node.type = 'device:splunk_license_manager';
+    } else if (text.includes('monitoring console') || /\bmc\b/.test(text)) {
+        node.type = 'device:splunk_monitoring_console';
+    } else if (text.includes('cluster manager') || /\bcm\b/.test(text)) {
+        node.type = 'device:splunk_cluster_manager';
+    } else if (text.includes('indexer')) {
+        node.type = 'device:splunk_indexer';
+    } else if (
+        text.includes('search head') ||
+        text.includes('shc member') ||
+        text.includes('shc captain') ||
+        /\bsh\d?\b/.test(text)
+    ) {
+        node.type = 'device:splunk_search_head';
+    } else if (
+        text.includes('heavy forwarder') ||
+        text.includes('intermediary forwarder') ||
+        /\bhwf\b/.test(text)
+    ) {
+        node.type = 'device:splunk_heavy_forwarder';
+    } else if (
+        text.includes('universal forwarder') ||
+        text.includes('endpoint uf') ||
+        text.includes('forwarders') ||
+        /\bufs?\b/.test(text)
+    ) {
+        node.type = 'device:splunk_universal_forwarder';
+    } else if (text.includes('data collection node')) {
+        node.type = 'device:splunk_data_collection';
+    } else if (text.includes('splunk connect for syslog') || text.includes('sc4s')) {
+        node.type = 'device:splunk_sc4s';
+    }
+};
+
 /** Edge builder. Defaults to `physical` + `forward` (most common in
  *  Splunk reference diagrams — collection traffic into the indexer
  *  cluster). Cluster replication (a2a / both) overrides via the
@@ -613,7 +669,7 @@ const title = (text, x = 40, y = -50, color = '#0369a1') => ({
 const collectionTrio = (parentId, baseX = 30, baseY = 60) => [
     device(
         'fwd',
-        'device:server',
+        'device:splunk_universal_forwarder',
         parentId,
         baseX,
         baseY,
@@ -650,7 +706,7 @@ const managementStack = (parentId, includeShcD = false, baseX = 30, baseY = 30) 
     const nodes = [
         device(
             'ds',
-            'device:server',
+            'device:splunk_deployment_server',
             parentId,
             baseX,
             baseY,
@@ -660,7 +716,7 @@ const managementStack = (parentId, includeShcD = false, baseX = 30, baseY = 30) 
         ),
         device(
             'lm',
-            'device:server',
+            'device:splunk_license_manager',
             parentId,
             baseX,
             baseY + 130,
@@ -670,7 +726,7 @@ const managementStack = (parentId, includeShcD = false, baseX = 30, baseY = 30) 
         ),
         device(
             'mc',
-            'device:server',
+            'device:splunk_monitoring_console',
             parentId,
             baseX,
             baseY + 260,
@@ -680,7 +736,7 @@ const managementStack = (parentId, includeShcD = false, baseX = 30, baseY = 30) 
         ),
         device(
             'cm',
-            'device:server',
+            'device:splunk_cluster_manager',
             parentId,
             baseX,
             baseY + 390,
@@ -693,7 +749,7 @@ const managementStack = (parentId, includeShcD = false, baseX = 30, baseY = 30) 
         nodes.push(
             device(
                 'shc_d',
-                'device:server',
+                'device:splunk_deployer',
                 parentId,
                 baseX,
                 baseY + 520,
@@ -704,6 +760,368 @@ const managementStack = (parentId, includeShcD = false, baseX = 30, baseY = 30) 
         );
     }
     return nodes;
+};
+
+const fdemDevice = (
+    id,
+    type,
+    parentId,
+    x,
+    y,
+    label,
+    shortLabel,
+    model,
+    vendor = 'FDEM'
+) => device(id, type, parentId, x, y, label, shortLabel, model, vendor);
+
+const shapeGallerySections = [
+    {
+        id: 'g_gallery_core',
+        label: 'Core Network',
+        accent: ACCENT.indexing,
+        shapes: [
+            ['router', 'Router'],
+            ['switch', 'L2 Switch'],
+            ['l3_switch', 'L3 Switch'],
+            ['stack', 'Switch Stack'],
+            ['hub', 'Hub'],
+            ['gateway', 'Gateway'],
+            ['proxy', 'Proxy'],
+            ['wlc', 'WLC'],
+            ['access_point', 'Access Point'],
+            ['load_balancer', 'Load Balancer'],
+        ],
+    },
+    {
+        id: 'g_gallery_advanced',
+        label: 'Advanced Network',
+        accent: 'indigo-500',
+        shapes: [
+            ['modular_chassis_switch', 'Modular Chassis'],
+            ['nexus_aci_fabric', 'Nexus / ACI Fabric'],
+            ['sdwan_controller', 'SD-WAN Controller'],
+            ['f5_load_balancer', 'F5 Load Balancer'],
+        ],
+    },
+    {
+        id: 'g_gallery_security',
+        label: 'Security',
+        accent: ACCENT.collection,
+        shapes: [
+            ['firewall', 'Firewall'],
+            ['palo_alto_firewall', 'Palo Alto Firewall'],
+            ['fortinet_firewall', 'Fortinet Firewall'],
+            ['waf', 'WAF'],
+            ['vpn_concentrator', 'VPN'],
+            ['ids_ips', 'IDS / IPS'],
+            ['siem', 'SIEM'],
+            ['ca', 'Certificate Authority'],
+            ['bastion', 'Bastion'],
+        ],
+    },
+    {
+        id: 'g_gallery_infra',
+        label: 'Servers & Infrastructure',
+        accent: ACCENT.search,
+        shapes: [
+            ['server', 'Server'],
+            ['web_server', 'Web Server'],
+            ['app_server', 'App Server'],
+            ['dns_server', 'DNS Server'],
+            ['dhcp_server', 'DHCP Server'],
+            ['mainframe', 'Mainframe'],
+            ['container', 'Container'],
+            ['vm', 'VM'],
+            ['database', 'Database'],
+        ],
+    },
+    {
+        id: 'g_gallery_storage',
+        label: 'Storage',
+        accent: 'amber-500',
+        shapes: [
+            ['storage', 'Storage'],
+            ['nas', 'NAS'],
+            ['san', 'SAN'],
+            ['backup', 'Backup'],
+        ],
+    },
+    {
+        id: 'g_gallery_enduser',
+        label: 'End-User & IoT',
+        accent: 'pink-500',
+        shapes: [
+            ['laptop', 'Laptop'],
+            ['mobile_phone', 'Mobile Phone'],
+            ['ip_phone', 'IP Phone'],
+            ['printer', 'Printer'],
+            ['camera', 'Camera'],
+            ['iot_sensor', 'IoT Sensor'],
+        ],
+    },
+    {
+        id: 'g_gallery_edge',
+        label: 'Edge & Cloud',
+        accent: ACCENT.customer,
+        shapes: [
+            ['cloud', 'Cloud / WAN'],
+            ['internet', 'Internet'],
+            ['users', 'Users'],
+        ],
+    },
+    {
+        id: 'g_gallery_splunk',
+        label: 'Splunk Architecture',
+        accent: ACCENT.management,
+        shapes: [
+            ['splunk_search_head', 'Search Head'],
+            ['splunk_search_head_cluster', 'SH Cluster'],
+            ['splunk_indexer', 'Indexer'],
+            ['splunk_indexer_cluster', 'Indexer Cluster'],
+            ['splunk_heavy_forwarder', 'Heavy Forwarder'],
+            ['splunk_universal_forwarder', 'Universal Forwarder'],
+            ['splunk_cluster_manager', 'Cluster Manager'],
+            ['splunk_deployer', 'SHC Deployer'],
+            ['splunk_license_manager', 'License Manager'],
+            ['splunk_monitoring_console', 'Monitoring Console'],
+            ['splunk_deployment_server', 'Deployment Server'],
+            ['splunk_data_collection', 'Data Collection'],
+            ['splunk_edge_processor', 'Edge Processor'],
+            ['splunk_sc4s', 'SC4S'],
+        ],
+    },
+    {
+        id: 'g_gallery_places',
+        label: 'Places & Layout',
+        accent: 'slate-500',
+        shapes: [
+            ['branch_office', 'Branch Office'],
+            ['datacenter', 'Data Center'],
+            ['generic', 'Generic'],
+        ],
+    },
+];
+
+const shapeGalleryShortLabel = (label) =>
+    label.length > 14 ? `${label.slice(0, 12)}...` : label;
+
+const buildShapeGalleryPayload = () => {
+    const groups = [];
+    const nodes = [];
+    const maxRowWidth = 1760;
+    const gapX = 40;
+    const gapY = 60;
+    const cellW = 150;
+    const cellH = 160;
+    const colsMax = 5;
+    let x = 20;
+    let y = 80;
+    let rowHeight = 0;
+
+    for (const section of shapeGallerySections) {
+        const cols = Math.min(colsMax, section.shapes.length);
+        const rows = Math.ceil(section.shapes.length / cols);
+        const width = Math.max(340, 80 + cols * cellW);
+        const height = 80 + rows * cellH;
+        if (x > 20 && x + width > maxRowWidth) {
+            x = 20;
+            y += rowHeight + gapY;
+            rowHeight = 0;
+        }
+
+        groups.push(
+            region(section.id, section.label, x, y, width, height, section.accent)
+        );
+
+        section.shapes.forEach(([shape, label], index) => {
+            const col = index % cols;
+            const row = Math.floor(index / cols);
+            nodes.push(
+                device(
+                    `gallery_${shape}`,
+                    `device:${shape}`,
+                    section.id,
+                    40 + col * cellW,
+                    60 + row * cellH,
+                    label,
+                    shapeGalleryShortLabel(label),
+                    shape,
+                    'Shape Gallery'
+                )
+            );
+        });
+
+        x += width + gapX;
+        rowHeight = Math.max(rowHeight, height);
+    }
+
+    nodes.push({
+        id: 'gallery_textbox',
+        type: 'textBox',
+        parentId: 'g_gallery_places',
+        x: 490,
+        y: 60,
+        textBox: {
+            text: 'Text Box',
+            fontSize: 16,
+            color: '#0f172a',
+            bold: true,
+            italic: false,
+            background: '#ffffff',
+            border: '1px solid #94a3b8',
+            align: 'center',
+        },
+    });
+
+    return {
+        version: 1,
+        title: title('Shape Gallery - All Shapes', 40, -50, '#075985'),
+        groups,
+        nodes,
+        edges: [],
+    };
+};
+
+const shapeGalleryDiagram = {
+    name: 'Shape Gallery - All Shapes',
+    description: 'Reference gallery showing every available Network Diagram shape.',
+    payload: buildShapeGalleryPayload(),
+};
+
+/** FDEM — translated from "Network diagram v8.pdf". The PDF is a
+ *  single flattened image, so this seed captures the operator-usable
+ *  topology: site regions, major routers / firewalls / switches,
+ *  wireless access, server zones, and the MyFloridaNet / Azure cloud
+ *  service boundaries. */
+const fdemNetworkDiagram = {
+    name: 'FDEM',
+    description: 'Florida Division of Emergency Management network reference diagram based on Network diagram v8.pdf.',
+    payload: {
+        version: 1,
+        title: title('FDEM Network Diagram', 40, -50, '#075985'),
+        groups: [
+            region('g_easley', 'Easley', 20, 80, 420, 720, ACCENT.siteA),
+            region('g_rudd', 'Rudd / Sadowski Campus', 480, 80, 920, 880, ACCENT.collection),
+            region('g_services', 'MyFloridaNet / Cloud Services', 1440, 170, 340, 680, ACCENT.customer),
+            region('g_slrc', 'SLRC', 1900, 80, 440, 620, ACCENT.indexing),
+            region('g_datacenter', 'Data Center', 1900, 840, 440, 620, ACCENT.management),
+        ],
+        nodes: [
+            // Easley
+            fdemDevice('easley_fw', 'device:firewall', 'g_easley', 40, 60, 'Easley Firewall ASA', 'ASA', 'ASA firewall', 'Cisco'),
+            fdemDevice('easley_public_router', 'device:router', 'g_easley', 240, 60, 'MFN Public Router', 'MFN Public', 'Public router', 'Cisco'),
+            fdemDevice('easley_core', 'device:l3_switch', 'g_easley', 140, 220, '3850 Core', '3850 Core', 'Core switch', 'Cisco'),
+            fdemDevice('easley_dist', 'device:stack', 'g_easley', 40, 380, '3750X Distribution', '3750X Dist', 'Distribution switch', 'Cisco'),
+            fdemDevice('easley_access', 'device:switch', 'g_easley', 240, 380, 'Access Room 210', 'Access', 'Access switch', 'Cisco'),
+            fdemDevice('easley_phone', 'device:ip_phone', 'g_easley', 40, 540, 'Easley Voice', 'Voice', 'IP phone', 'Cisco'),
+            fdemDevice('easley_users', 'device:users', 'g_easley', 240, 540, 'Easley Users', 'Users', 'Local users'),
+
+            // Rudd / Sadowski campus
+            fdemDevice('rudd_access_top', 'device:switch', 'g_rudd', 40, 60, 'Rudd Access', 'Access', 'Access switch', 'Cisco'),
+            fdemDevice('rudd_dc_edge_fw', 'device:firewall', 'g_rudd', 280, 60, 'DC Edge Firewall FPR', 'DC Edge FPR', 'Firepower firewall', 'Cisco'),
+            fdemDevice('rudd_mfn_common_router', 'device:router', 'g_rudd', 580, 60, 'MFN Common Services Router', 'MFN CS', 'Common-services router', 'Cisco'),
+            fdemDevice('rudd_core', 'device:l3_switch', 'g_rudd', 40, 220, '6880-X Core', '6880-X Core', 'Campus core', 'Cisco'),
+            fdemDevice('rudd_inet_fw', 'device:firewall', 'g_rudd', 280, 220, 'Internet Firewall FPR', 'Inet FPR', 'Internet firewall', 'Cisco'),
+            fdemDevice('rudd_guest_wlc', 'device:wlc', 'g_rudd', 580, 220, 'Wireless Controller for Guest Access', 'Guest WLC', 'Guest wireless controller', 'Cisco'),
+            fdemDevice('rudd_wlc', 'device:wlc', 'g_rudd', 40, 380, 'Wireless Controller', 'WLC', 'Campus wireless controller', 'Cisco'),
+            fdemDevice('rudd_dmz_switches', 'device:stack', 'g_rudd', 220, 380, 'External DMZ / Firewall Switches', 'DMZ Switches', 'DMZ switch stack', 'Cisco'),
+            fdemDevice('rudd_prod2_fw', 'device:firewall', 'g_rudd', 420, 380, 'Prod2 Firewalls', 'Prod2 FW', 'Production firewall pair', 'Cisco'),
+            fdemDevice('rudd_public_router', 'device:router', 'g_rudd', 620, 380, 'MFN Public Router', 'MFN Public', 'Public router', 'Cisco'),
+            fdemDevice('sadowski_access_top', 'device:switch', 'g_rudd', 40, 540, 'Sadowski Access', 'Sadowski', 'Access switch', 'Cisco'),
+            fdemDevice('rudd_prod1_fw', 'device:firewall', 'g_rudd', 300, 540, 'Prod1 Firewalls', 'Prod1 FW', 'Production firewall pair', 'Cisco'),
+            fdemDevice('rudd_cloud_connect', 'device:gateway', 'g_rudd', 500, 540, 'Azure ExpressRoute / Cloud Connect Router', 'Cloud Connect', 'Cloud connect router', 'Cisco'),
+            fdemDevice('rudd_private_router', 'device:router', 'g_rudd', 700, 540, 'MFN Private Router', 'MFN Private', 'Private router', 'Cisco'),
+            fdemDevice('sadowski_wlc', 'device:wlc', 'g_rudd', 40, 700, 'Sadowski Wireless Controller', 'Sadowski WLC', 'Wireless controller', 'Cisco'),
+            fdemDevice('rudd_web_email', 'device:web_server', 'g_rudd', 300, 700, 'Web Servers / Email', 'Web / Email', 'Server zone'),
+            fdemDevice('rudd_web_voice', 'device:web_server', 'g_rudd', 500, 700, 'Web Servers / Voice / VTC / VDI', 'Voice / VDI', 'Server zone'),
+
+            // Services / clouds
+            fdemDevice('cloud_common', 'device:cloud', 'g_services', 80, 60, 'MyFlorida Net Common Services (State Intranet and Internet outbound)', 'Common Services', 'State intranet / internet outbound', 'MyFloridaNet'),
+            fdemDevice('cloud_public', 'device:internet', 'g_services', 80, 220, 'MyFlorida Net Public VRF (Internet and inbound Web server access)', 'Public VRF', 'Internet / inbound web', 'MyFloridaNet'),
+            fdemDevice('cloud_azure', 'device:cloud', 'g_services', 80, 380, 'Azure Cloud Services', 'Azure', 'Cloud services', 'Azure'),
+            fdemDevice('cloud_private', 'device:cloud', 'g_services', 80, 540, 'MyFlorida Net Private VRF (FDEM Internal)', 'Private VRF', 'FDEM internal', 'MyFloridaNet'),
+
+            // SLRC
+            fdemDevice('slrc_cs_router', 'device:router', 'g_slrc', 40, 60, 'MFN CS Router', 'MFN CS', 'Common-services router', 'Cisco'),
+            fdemDevice('slrc_fw', 'device:firewall', 'g_slrc', 240, 60, 'SLRC Firewall ASA', 'SLRC ASA', 'ASA firewall', 'Cisco'),
+            fdemDevice('slrc_public_router', 'device:router', 'g_slrc', 40, 220, 'MFN Public Router', 'MFN Public', 'Public router', 'Cisco'),
+            fdemDevice('slrc_core', 'device:l3_switch', 'g_slrc', 240, 220, '4507 Core', '4507 Core', 'Core switch', 'Cisco'),
+            fdemDevice('slrc_private_router', 'device:router', 'g_slrc', 40, 380, 'MFN Private Router', 'MFN Private', 'Private router', 'Cisco'),
+            fdemDevice('slrc_access', 'device:switch', 'g_slrc', 240, 380, 'Access', 'Access', 'Access switch', 'Cisco'),
+            fdemDevice('slrc_wlc', 'device:wlc', 'g_slrc', 40, 540, 'Wireless Controller', 'WLC', 'Wireless controller', 'Cisco'),
+            fdemDevice('slrc_ap', 'device:access_point', 'g_slrc', 240, 540, 'Wireless Access', 'AP', 'Access point', 'Cisco'),
+
+            // Data Center
+            fdemDevice('dc_cs_router', 'device:router', 'g_datacenter', 40, 60, 'MFN CS Router', 'MFN CS', 'Common-services router', 'Cisco'),
+            fdemDevice('dc_blanding_fw', 'device:firewall', 'g_datacenter', 240, 60, 'Blanding Firewall ASA', 'Blanding ASA', 'ASA firewall', 'Cisco'),
+            fdemDevice('dc_public_router', 'device:router', 'g_datacenter', 40, 220, 'MFN Public Router', 'MFN Public', 'Public router', 'Cisco'),
+            fdemDevice('dc_public_fw', 'device:firewall', 'g_datacenter', 240, 220, 'Blanding Public Firewall ASA', 'Public ASA', 'Public firewall', 'Cisco'),
+            fdemDevice('dc_private_router', 'device:router', 'g_datacenter', 40, 380, 'MFN Private Router', 'MFN Private', 'Private router', 'Cisco'),
+            fdemDevice('dc_core', 'device:l3_switch', 'g_datacenter', 240, 380, '3750X Core', '3750X Core', 'Core switch', 'Cisco'),
+            fdemDevice('dc_access', 'device:switch', 'g_datacenter', 40, 540, 'Access', 'Access', 'Access switch', 'Cisco'),
+            fdemDevice('dc_firewall_switch', 'device:switch', 'g_datacenter', 240, 540, 'Firewall Switch', 'FW Switch', 'Firewall switch', 'Cisco'),
+            fdemDevice('dc_web_vdi_email', 'device:web_server', 'g_datacenter', 240, 700, 'Web Servers / VDI / Email', 'Web / VDI', 'Server zone'),
+        ],
+        edges: [
+            // Easley local fabric
+            edge('e_easley_fw_core', 'easley_fw', 'easley_core', H.BottomSrc, H.TopTgt, { label: 'L3' }),
+            edge('e_easley_router_core', 'easley_public_router', 'easley_core', H.BottomSrc, H.TopTgt, { label: '10G L2' }),
+            edge('e_easley_core_dist', 'easley_core', 'easley_dist', H.BottomSrc, H.TopTgt, { label: '2G L3' }),
+            edge('e_easley_core_access', 'easley_core', 'easley_access', H.BottomSrc, H.TopTgt, { label: '2G L2' }),
+            edge('e_easley_access_phone', 'easley_access', 'easley_phone', H.BottomSrc, H.TopTgt),
+            edge('e_easley_access_users', 'easley_access', 'easley_users', H.BottomSrc, H.TopTgt, { kind: 'logical' }),
+
+            // Rudd/Sadowski fabric
+            edge('e_rudd_access_core', 'rudd_access_top', 'rudd_core', H.BottomSrc, H.TopTgt, { label: '20G L3' }),
+            edge('e_rudd_core_dmz', 'rudd_core', 'rudd_dmz_switches', H.RightSrc, H.LeftTgt, { label: '20G L2' }),
+            edge('e_rudd_core_wlc', 'rudd_core', 'rudd_wlc', H.RightSrc, H.LeftTgt, { label: '20G L2' }),
+            edge('e_sadowski_access_core', 'sadowski_access_top', 'rudd_core', H.TopSrc, H.BottomTgt, { label: '20G L2' }),
+            edge('e_sadowski_wlc_access', 'sadowski_wlc', 'sadowski_access_top', H.TopSrc, H.BottomTgt),
+            edge('e_dmz_prod2', 'rudd_dmz_switches', 'rudd_prod2_fw', H.RightSrc, H.LeftTgt),
+            edge('e_prod2_public_router', 'rudd_prod2_fw', 'rudd_public_router', H.RightSrc, H.LeftTgt, { kind: 'logical' }),
+            edge('e_prod2_web_email', 'rudd_prod2_fw', 'rudd_web_email', H.BottomSrc, H.TopTgt),
+            edge('e_dmz_prod1', 'rudd_dmz_switches', 'rudd_prod1_fw', H.BottomSrc, H.TopTgt),
+            edge('e_prod1_private_router', 'rudd_prod1_fw', 'rudd_private_router', H.RightSrc, H.LeftTgt, { kind: 'logical' }),
+            edge('e_prod1_voice', 'rudd_prod1_fw', 'rudd_web_voice', H.BottomSrc, H.TopTgt),
+            edge('e_cloud_connect_dmz', 'rudd_cloud_connect', 'rudd_dmz_switches', H.LeftSrc, H.RightTgt),
+            edge('e_dc_edge_common_router', 'rudd_dc_edge_fw', 'rudd_mfn_common_router', H.RightSrc, H.LeftTgt, { label: '1G' }),
+            edge('e_inet_fw_guest_wlc', 'rudd_inet_fw', 'rudd_guest_wlc', H.RightSrc, H.LeftTgt),
+
+            // Service boundaries
+            edge('e_common_router_common_cloud', 'rudd_mfn_common_router', 'cloud_common', H.RightSrc, H.LeftTgt, { kind: 'logical', label: '500Mbps' }),
+            edge('e_public_router_public_cloud', 'rudd_public_router', 'cloud_public', H.RightSrc, H.LeftTgt, { kind: 'logical' }),
+            edge('e_cloud_connect_azure', 'rudd_cloud_connect', 'cloud_azure', H.RightSrc, H.LeftTgt, { kind: 'logical' }),
+            edge('e_private_router_private_cloud', 'rudd_private_router', 'cloud_private', H.RightSrc, H.LeftTgt, { kind: 'logical' }),
+
+            // Remote site uplinks
+            edge('e_easley_to_rudd', 'easley_core', 'rudd_core', H.RightSrc, H.LeftTgt, { label: 'Campus WAN' }),
+            edge('e_rudd_slrc_common', 'cloud_common', 'slrc_cs_router', H.RightSrc, H.LeftTgt, { kind: 'logical' }),
+            edge('e_rudd_slrc_public', 'cloud_public', 'slrc_public_router', H.RightSrc, H.LeftTgt, { kind: 'logical' }),
+            edge('e_rudd_slrc_private', 'cloud_private', 'slrc_private_router', H.RightSrc, H.LeftTgt, { kind: 'logical' }),
+            edge('e_rudd_dc_common', 'cloud_common', 'dc_cs_router', H.RightSrc, H.LeftTgt, { kind: 'logical' }),
+            edge('e_rudd_dc_public', 'cloud_public', 'dc_public_router', H.RightSrc, H.LeftTgt, { kind: 'logical' }),
+            edge('e_rudd_dc_private', 'cloud_private', 'dc_private_router', H.RightSrc, H.LeftTgt, { kind: 'logical' }),
+
+            // SLRC local fabric
+            edge('e_slrc_cs_fw', 'slrc_cs_router', 'slrc_fw', H.RightSrc, H.LeftTgt),
+            edge('e_slrc_fw_core', 'slrc_fw', 'slrc_core', H.BottomSrc, H.TopTgt, { label: 'L3' }),
+            edge('e_slrc_public_core', 'slrc_public_router', 'slrc_core', H.RightSrc, H.LeftTgt, { label: 'Private VLAN' }),
+            edge('e_slrc_private_core', 'slrc_private_router', 'slrc_core', H.RightSrc, H.LeftTgt, { label: 'L3' }),
+            edge('e_slrc_core_access', 'slrc_core', 'slrc_access', H.BottomSrc, H.TopTgt, { label: '1G L2' }),
+            edge('e_slrc_access_wlc', 'slrc_access', 'slrc_wlc', H.BottomSrc, H.TopTgt),
+            edge('e_slrc_wlc_ap', 'slrc_wlc', 'slrc_ap', H.RightSrc, H.LeftTgt, { kind: 'logical' }),
+
+            // Data Center local fabric
+            edge('e_dc_cs_blanding_fw', 'dc_cs_router', 'dc_blanding_fw', H.RightSrc, H.LeftTgt),
+            edge('e_dc_public_public_fw', 'dc_public_router', 'dc_public_fw', H.RightSrc, H.LeftTgt),
+            edge('e_dc_public_core', 'dc_public_router', 'dc_core', H.RightSrc, H.LeftTgt, { label: 'L3' }),
+            edge('e_dc_private_core', 'dc_private_router', 'dc_core', H.RightSrc, H.LeftTgt, { label: 'L3' }),
+            edge('e_dc_core_access', 'dc_core', 'dc_access', H.BottomSrc, H.TopTgt, { label: '1G L2' }),
+            edge('e_dc_core_fw_switch', 'dc_core', 'dc_firewall_switch', H.BottomSrc, H.TopTgt, { label: '2G L2' }),
+            edge('e_dc_public_fw_web', 'dc_public_fw', 'dc_web_vdi_email', H.BottomSrc, H.TopTgt),
+            edge('e_dc_fw_switch_web', 'dc_firewall_switch', 'dc_web_vdi_email', H.BottomSrc, H.TopTgt),
+        ],
+    },
 };
 
 // --- Diagram authors ------------------------------------------------
@@ -749,9 +1167,9 @@ const distributedClusteredC1 = {
         ],
         nodes: [
             device('sh', 'device:server', 'g_search', 60, 60, 'Search Head', 'SH', 'Search Head'),
-            device('idx1', 'device:database', 'g_index', 30, 60, 'Indexer 1', 'IDX1', 'Indexer'),
-            device('idx2', 'device:database', 'g_index', 140, 60, 'Indexer 2', 'IDX2', 'Indexer'),
-            device('idx3', 'device:database', 'g_index', 250, 60, 'Indexer 3', 'IDX3', 'Indexer'),
+            device('idx1', 'device:splunk_indexer', 'g_index', 30, 60, 'Indexer 1', 'IDX1', 'Indexer'),
+            device('idx2', 'device:splunk_indexer', 'g_index', 140, 60, 'Indexer 2', 'IDX2', 'Indexer'),
+            device('idx3', 'device:splunk_indexer', 'g_index', 250, 60, 'Indexer 3', 'IDX3', 'Indexer'),
             ...collectionTrio('g_coll', 30, 60),
             ...managementStack('g_mgmt', false),
         ],
@@ -784,9 +1202,9 @@ const distributedClusteredShcC3 = {
             device('sh1', 'device:server', 'g_search', 30, 60, 'SH (member)', 'SH1', 'SHC member'),
             device('sh2', 'device:server', 'g_search', 140, 60, 'SH (member)', 'SH2', 'SHC member'),
             device('sh3', 'device:server', 'g_search', 250, 60, 'SH (member)', 'SH3', 'SHC member'),
-            device('idx1', 'device:database', 'g_index', 30, 60, 'Indexer 1', 'IDX1', 'Indexer'),
-            device('idx2', 'device:database', 'g_index', 140, 60, 'Indexer 2', 'IDX2', 'Indexer'),
-            device('idx3', 'device:database', 'g_index', 250, 60, 'Indexer 3', 'IDX3', 'Indexer'),
+            device('idx1', 'device:splunk_indexer', 'g_index', 30, 60, 'Indexer 1', 'IDX1', 'Indexer'),
+            device('idx2', 'device:splunk_indexer', 'g_index', 140, 60, 'Indexer 2', 'IDX2', 'Indexer'),
+            device('idx3', 'device:splunk_indexer', 'g_index', 250, 60, 'Indexer 3', 'IDX3', 'Indexer'),
             ...collectionTrio('g_coll', 30, 60),
             ...managementStack('g_mgmt', true),
         ],
@@ -823,9 +1241,9 @@ const distributedNonClusteredD1 = {
         nodes: [
             device('sh1', 'device:server', 'g_search', 30, 60, 'Search Head', 'SH1', 'Standalone SH'),
             device('sh2', 'device:server', 'g_search', 200, 60, 'Search Head', 'SH2', 'Standalone SH'),
-            device('idx1', 'device:database', 'g_index', 30, 60, 'Indexer 1', 'IDX1', 'Standalone'),
-            device('idx2', 'device:database', 'g_index', 140, 60, 'Indexer 2', 'IDX2', 'Standalone'),
-            device('idx3', 'device:database', 'g_index', 250, 60, 'Indexer 3', 'IDX3', 'Standalone'),
+            device('idx1', 'device:splunk_indexer', 'g_index', 30, 60, 'Indexer 1', 'IDX1', 'Standalone'),
+            device('idx2', 'device:splunk_indexer', 'g_index', 140, 60, 'Indexer 2', 'IDX2', 'Standalone'),
+            device('idx3', 'device:splunk_indexer', 'g_index', 250, 60, 'Indexer 3', 'IDX3', 'Standalone'),
             ...collectionTrio('g_coll', 30, 60),
             ...managementStack('g_mgmt', true),
         ],
@@ -864,10 +1282,10 @@ const multiSiteClusteredM2 = {
             ...managementStack('g_mgmt', false),
             device('shA', 'device:server', 'g_siteA_search', 60, 50, 'Search Head A', 'SH-A', 'SH'),
             device('shN', 'device:server', 'g_siteN_search', 60, 50, 'Search Head N', 'SH-N', 'SH'),
-            device('idxA1', 'device:database', 'g_siteA_index', 30, 50, 'Indexer A1', 'A1', 'Indexer'),
-            device('idxA2', 'device:database', 'g_siteA_index', 110, 50, 'Indexer A2', 'A2', 'Indexer'),
-            device('idxN1', 'device:database', 'g_siteN_index', 30, 50, 'Indexer N1', 'N1', 'Indexer'),
-            device('idxN2', 'device:database', 'g_siteN_index', 110, 50, 'Indexer N2', 'N2', 'Indexer'),
+            device('idxA1', 'device:splunk_indexer', 'g_siteA_index', 30, 50, 'Indexer A1', 'A1', 'Indexer'),
+            device('idxA2', 'device:splunk_indexer', 'g_siteA_index', 110, 50, 'Indexer A2', 'A2', 'Indexer'),
+            device('idxN1', 'device:splunk_indexer', 'g_siteN_index', 30, 50, 'Indexer N1', 'N1', 'Indexer'),
+            device('idxN2', 'device:splunk_indexer', 'g_siteN_index', 110, 50, 'Indexer N2', 'N2', 'Indexer'),
             ...collectionTrio('g_coll', 30, 40),
             device('ds_dr', 'device:server', 'g_mgmt_dr', 30, 30, 'DS (DR)', 'DS', 'DS'),
             device('lm_dr', 'device:server', 'g_mgmt_dr', 30, 160, 'LM (DR)', 'LM', 'LM'),
@@ -910,10 +1328,10 @@ const multiSiteShcM3 = {
             device('shA2', 'device:server', 'g_siteA_search', 130, 50, 'SH (A2)', 'A-SH2', 'SHC member'),
             device('shN1', 'device:server', 'g_siteN_search', 30, 50, 'SH (N1)', 'N-SH1', 'SHC member'),
             device('shN2', 'device:server', 'g_siteN_search', 130, 50, 'SH (N2)', 'N-SH2', 'SHC member'),
-            device('idxA1', 'device:database', 'g_siteA_index', 30, 50, 'Indexer A1', 'A1', 'Indexer'),
-            device('idxA2', 'device:database', 'g_siteA_index', 130, 50, 'Indexer A2', 'A2', 'Indexer'),
-            device('idxN1', 'device:database', 'g_siteN_index', 30, 50, 'Indexer N1', 'N1', 'Indexer'),
-            device('idxN2', 'device:database', 'g_siteN_index', 130, 50, 'Indexer N2', 'N2', 'Indexer'),
+            device('idxA1', 'device:splunk_indexer', 'g_siteA_index', 30, 50, 'Indexer A1', 'A1', 'Indexer'),
+            device('idxA2', 'device:splunk_indexer', 'g_siteA_index', 130, 50, 'Indexer A2', 'A2', 'Indexer'),
+            device('idxN1', 'device:splunk_indexer', 'g_siteN_index', 30, 50, 'Indexer N1', 'N1', 'Indexer'),
+            device('idxN2', 'device:splunk_indexer', 'g_siteN_index', 130, 50, 'Indexer N2', 'N2', 'Indexer'),
             ...collectionTrio('g_coll', 30, 40),
             device('ds_dr', 'device:server', 'g_mgmt_dr', 30, 30, 'DS (DR)', 'DS', 'DS'),
             device('cm_dr', 'device:server', 'g_mgmt_dr', 30, 160, 'CM (DR)', 'CM', 'CM'),
@@ -955,10 +1373,10 @@ const multiSiteStretchedM4 = {
             device('shc1', 'device:server', 'g_search', 30, 50, 'SHC member (A)', 'SHC1', 'Stretched SHC'),
             device('shc2', 'device:server', 'g_search', 200, 50, 'SHC captain', 'SHC2', 'Stretched SHC'),
             device('shc3', 'device:server', 'g_search', 370, 50, 'SHC member (N)', 'SHC3', 'Stretched SHC'),
-            device('idxA1', 'device:database', 'g_siteA_index', 30, 50, 'Indexer A1', 'A1', 'Indexer'),
-            device('idxA2', 'device:database', 'g_siteA_index', 130, 50, 'Indexer A2', 'A2', 'Indexer'),
-            device('idxN1', 'device:database', 'g_siteN_index', 30, 50, 'Indexer N1', 'N1', 'Indexer'),
-            device('idxN2', 'device:database', 'g_siteN_index', 130, 50, 'Indexer N2', 'N2', 'Indexer'),
+            device('idxA1', 'device:splunk_indexer', 'g_siteA_index', 30, 50, 'Indexer A1', 'A1', 'Indexer'),
+            device('idxA2', 'device:splunk_indexer', 'g_siteA_index', 130, 50, 'Indexer A2', 'A2', 'Indexer'),
+            device('idxN1', 'device:splunk_indexer', 'g_siteN_index', 30, 50, 'Indexer N1', 'N1', 'Indexer'),
+            device('idxN2', 'device:splunk_indexer', 'g_siteN_index', 130, 50, 'Indexer N2', 'N2', 'Indexer'),
             ...collectionTrio('g_coll', 30, 40),
             device('ds_dr', 'device:server', 'g_mgmt_dr', 30, 30, 'DS (DR)', 'DS', 'DS'),
             device('cm_dr', 'device:server', 'g_mgmt_dr', 30, 160, 'CM (DR)', 'CM', 'CM'),
@@ -994,9 +1412,9 @@ const hecTopologyChoices = {
             device('ds', 'device:server', 'g_mgmt', 30, 30, 'Deployment Server', 'DS', 'DS'),
             device('lm', 'device:server', 'g_mgmt', 30, 160, 'License Manager', 'LM', 'LM'),
             device('cm', 'device:server', 'g_mgmt', 30, 290, 'Cluster Manager', 'CM', 'CM'),
-            device('idx1', 'device:database', 'g_index', 60, 40, 'Indexer 1', 'IDX1', 'Indexer'),
-            device('idx2', 'device:database', 'g_index', 180, 40, 'Indexer 2', 'IDX2', 'Indexer'),
-            device('idx3', 'device:database', 'g_index', 300, 40, 'Indexer 3', 'IDX3', 'Indexer'),
+            device('idx1', 'device:splunk_indexer', 'g_index', 60, 40, 'Indexer 1', 'IDX1', 'Indexer'),
+            device('idx2', 'device:splunk_indexer', 'g_index', 180, 40, 'Indexer 2', 'IDX2', 'Indexer'),
+            device('idx3', 'device:splunk_indexer', 'g_index', 300, 40, 'Indexer 3', 'IDX3', 'Indexer'),
             device('autolb', 'device:load_balancer', 'g_coll', 100, 30, 'AutoLB', 'AutoLB', 'Layer 4'),
             device('hec1', 'device:server', 'g_coll', 30, 160, 'HEC Listener (HWF)', 'HEC-HWF1', 'HWF'),
             device('hec2', 'device:server', 'g_coll', 130, 160, 'HEC Listener (HWF)', 'HEC-HWF2', 'HWF'),
@@ -1034,9 +1452,9 @@ const dataCollectionNode = {
             device('ds', 'device:server', 'g_mgmt', 30, 30, 'Deployment Server', 'DS', 'DS'),
             device('lm', 'device:server', 'g_mgmt', 30, 160, 'License Manager', 'LM', 'LM'),
             device('cm', 'device:server', 'g_mgmt', 30, 290, 'Cluster Manager', 'CM', 'CM'),
-            device('idx1', 'device:database', 'g_index', 60, 40, 'Indexer 1', 'IDX1', 'Indexer'),
-            device('idx2', 'device:database', 'g_index', 180, 40, 'Indexer 2', 'IDX2', 'Indexer'),
-            device('idx3', 'device:database', 'g_index', 300, 40, 'Indexer 3', 'IDX3', 'Indexer'),
+            device('idx1', 'device:splunk_indexer', 'g_index', 60, 40, 'Indexer 1', 'IDX1', 'Indexer'),
+            device('idx2', 'device:splunk_indexer', 'g_index', 180, 40, 'Indexer 2', 'IDX2', 'Indexer'),
+            device('idx3', 'device:splunk_indexer', 'g_index', 300, 40, 'Indexer 3', 'IDX3', 'Indexer'),
             device('autolb', 'device:load_balancer', 'g_coll', 80, 30, 'AutoLB', 'AutoLB', 'Layer 4'),
             device('dcn', 'device:server', 'g_coll', 70, 160, 'Data Collection Node (HWF)', 'DCN', 'HWF'),
             device('netlb', 'device:load_balancer', 'g_coll', 280, 160, 'Network LB', 'NetLB', 'Layer 7'),
@@ -1070,9 +1488,9 @@ const kafkaHecCollection = {
         nodes: [
             device('ds', 'device:server', 'g_mgmt', 30, 30, 'Deployment Server', 'DS', 'DS'),
             device('lm', 'device:server', 'g_mgmt', 30, 160, 'License Manager', 'LM', 'LM'),
-            device('idx1', 'device:database', 'g_index', 60, 40, 'Indexer 1', 'IDX1', 'Indexer'),
-            device('idx2', 'device:database', 'g_index', 200, 40, 'Indexer 2', 'IDX2', 'Indexer'),
-            device('idx3', 'device:database', 'g_index', 340, 40, 'Indexer 3', 'IDX3', 'Indexer'),
+            device('idx1', 'device:splunk_indexer', 'g_index', 60, 40, 'Indexer 1', 'IDX1', 'Indexer'),
+            device('idx2', 'device:splunk_indexer', 'g_index', 200, 40, 'Indexer 2', 'IDX2', 'Indexer'),
+            device('idx3', 'device:splunk_indexer', 'g_index', 340, 40, 'Indexer 3', 'IDX3', 'Indexer'),
             device('autolb', 'device:load_balancer', 'g_coll', 100, 30, 'AutoLB', 'AutoLB', 'Layer 4'),
             device('hec1', 'device:server', 'g_coll', 30, 160, 'HEC Listener (HWF)', 'HEC1', 'HWF'),
             device('hec2', 'device:server', 'g_coll', 140, 160, 'HEC Listener (HWF)', 'HEC2', 'HWF'),
@@ -1119,9 +1537,9 @@ const intermediaryForwarding = {
         nodes: [
             device('ds', 'device:server', 'g_mgmt', 30, 30, 'Deployment Server', 'DS', 'DS'),
             device('lm', 'device:server', 'g_mgmt', 30, 160, 'License Manager', 'LM', 'LM'),
-            device('idx1', 'device:database', 'g_index', 60, 40, 'Indexer 1', 'IDX1', 'Indexer'),
-            device('idx2', 'device:database', 'g_index', 180, 40, 'Indexer 2', 'IDX2', 'Indexer'),
-            device('idx3', 'device:database', 'g_index', 300, 40, 'Indexer 3', 'IDX3', 'Indexer'),
+            device('idx1', 'device:splunk_indexer', 'g_index', 60, 40, 'Indexer 1', 'IDX1', 'Indexer'),
+            device('idx2', 'device:splunk_indexer', 'g_index', 180, 40, 'Indexer 2', 'IDX2', 'Indexer'),
+            device('idx3', 'device:splunk_indexer', 'g_index', 300, 40, 'Indexer 3', 'IDX3', 'Indexer'),
             device('autolb_top', 'device:load_balancer', 'g_coll', 200, 30, 'AutoLB', 'AutoLB', 'Layer 4'),
             device('if1', 'device:server', 'g_coll', 130, 160, 'Intermediary Forwarder', 'IF1', 'UF / HF'),
             device('if2', 'device:server', 'g_coll', 290, 160, 'Intermediary Forwarder', 'IF2', 'UF / HF'),
@@ -1179,9 +1597,9 @@ const dataCollectionOverview = {
             device('ds', 'device:server', 'g_mgmt', 30, 30, 'Deployment Server', 'DS', 'DS'),
             device('lm', 'device:server', 'g_mgmt', 30, 160, 'License Manager', 'LM', 'LM'),
             device('cm', 'device:server', 'g_mgmt', 30, 290, 'Cluster Manager', 'CM', 'CM'),
-            device('idx1', 'device:database', 'g_index', 80, 40, 'Indexer 1', 'IDX1', 'Indexer'),
-            device('idx2', 'device:database', 'g_index', 240, 40, 'Indexer 2', 'IDX2', 'Indexer'),
-            device('idx3', 'device:database', 'g_index', 400, 40, 'Indexer 3', 'IDX3', 'Indexer'),
+            device('idx1', 'device:splunk_indexer', 'g_index', 80, 40, 'Indexer 1', 'IDX1', 'Indexer'),
+            device('idx2', 'device:splunk_indexer', 'g_index', 240, 40, 'Indexer 2', 'IDX2', 'Indexer'),
+            device('idx3', 'device:splunk_indexer', 'g_index', 400, 40, 'Indexer 3', 'IDX3', 'Indexer'),
             device('lb1', 'device:load_balancer', 'g_coll', 30, 30, 'AutoLB', 'LB1', 'Layer 4'),
             device('uf_endpts', 'device:server', 'g_coll', 30, 160, 'Endpoints with UF', 'UFs', 'UF'),
             device('lb2', 'device:load_balancer', 'g_coll', 150, 30, 'AutoLB', 'LB2', 'Layer 4'),
@@ -1216,6 +1634,8 @@ const dataCollectionOverview = {
 
 const OOB_DIAGRAMS = [
     splunkCloudDeployment,
+    fdemNetworkDiagram,
+    shapeGalleryDiagram,
     singleServerDeployment,
     distributedClusteredC1,
     distributedClusteredShcC3,
@@ -1364,8 +1784,348 @@ const tidyDiagram = (diagram) => {
     }
 };
 
-for (const diagram of OOB_DIAGRAMS) {
+/**
+ * Build 1180 — polish the generated OOB diagrams for the larger,
+ * more pictorial device cards. The original coordinates predated
+ * the current card chrome, so many regions had just enough room for
+ * the old icon-only glyphs and now feel crowded. This pass preserves
+ * each diagram's topology and relative tiers, but gives siblings a
+ * minimum gutter and grows / repositions regions so cards and labels
+ * are not fighting their containers.
+ */
+const DEVICE_CARD_WIDTH = 100;
+const DEVICE_CARD_HEIGHT = 110;
+const TEXTBOX_WIDTH = 140;
+const TEXTBOX_HEIGHT = 70;
+const REGION_PAD_X = 40;
+const REGION_PAD_TOP = 60;
+const REGION_PAD_BOTTOM = 50;
+const REGION_MIN_WIDTH = 260;
+const REGION_MIN_HEIGHT = 220;
+const DEVICE_GAP_X = 50;
+const DEVICE_GAP_Y = 50;
+const GROUP_GAP_X = 40;
+const GROUP_GAP_Y = 60;
+const ROOT_X = 20;
+const ROOT_Y = 40;
+
+const estimateNodeSize = (node) =>
+    node.type === 'textBox'
+        ? { width: TEXTBOX_WIDTH, height: TEXTBOX_HEIGHT }
+        : { width: DEVICE_CARD_WIDTH, height: DEVICE_CARD_HEIGHT };
+
+const groupChildrenByY = (children) => {
+    const sorted = [...children].sort((a, b) => {
+        const yDelta = (a.y ?? 0) - (b.y ?? 0);
+        if (Math.abs(yDelta) > ALIGN_TOLERANCE) return yDelta;
+        return (a.x ?? 0) - (b.x ?? 0);
+    });
+    const rows = [];
+    for (const child of sorted) {
+        const last = rows[rows.length - 1];
+        if (
+            last &&
+            Math.abs((child.y ?? 0) - last.referenceY) <= ALIGN_TOLERANCE
+        ) {
+            last.nodes.push(child);
+            last.referenceY = Math.min(last.referenceY, child.y ?? 0);
+        } else {
+            rows.push({ referenceY: child.y ?? 0, nodes: [child] });
+        }
+    }
+    return rows;
+};
+
+const minimumGroupWidthForLabel = (label = '') =>
+    Math.min(620, Math.max(REGION_MIN_WIDTH, label.length * 9 + 140));
+
+const spreadRegionContents = (diagram) => {
+    if (diagram.name === 'Splunk Cloud Deployment Architecture') {
+        return;
+    }
+
+    const nodes = diagram.payload?.nodes ?? [];
+    const groups = diagram.payload?.groups ?? [];
+    for (const group of groups) {
+        const children = nodes.filter((node) => node.parentId === group.id);
+        if (children.length === 0) {
+            group.width = Math.max(
+                group.width,
+                minimumGroupWidthForLabel(group.label)
+            );
+            group.height = Math.max(group.height, REGION_MIN_HEIGHT);
+            continue;
+        }
+
+        const rows = groupChildrenByY(children);
+        let nextRowY = REGION_PAD_TOP;
+        for (const row of rows) {
+            row.nodes.sort((a, b) => (a.x ?? 0) - (b.x ?? 0));
+            const rowY = Math.max(row.referenceY, nextRowY);
+            let nextX = REGION_PAD_X;
+            let rowHeight = DEVICE_CARD_HEIGHT;
+
+            for (const child of row.nodes) {
+                const size = estimateNodeSize(child);
+                child.x = Math.max(child.x ?? 0, nextX);
+                child.y = rowY;
+                nextX = child.x + size.width + DEVICE_GAP_X;
+                rowHeight = Math.max(rowHeight, size.height);
+            }
+
+            nextRowY = rowY + rowHeight + DEVICE_GAP_Y;
+        }
+
+        let contentRight = REGION_PAD_X + DEVICE_CARD_WIDTH;
+        let contentBottom = REGION_PAD_TOP + DEVICE_CARD_HEIGHT;
+        for (const child of children) {
+            const size = estimateNodeSize(child);
+            contentRight = Math.max(contentRight, (child.x ?? 0) + size.width);
+            contentBottom = Math.max(
+                contentBottom,
+                (child.y ?? 0) + size.height
+            );
+        }
+
+        group.width = Math.max(
+            group.width,
+            minimumGroupWidthForLabel(group.label),
+            contentRight + REGION_PAD_X
+        );
+        group.height = Math.max(
+            group.height,
+            REGION_MIN_HEIGHT,
+            contentBottom + REGION_PAD_BOTTOM
+        );
+    }
+};
+
+const groupMap = (diagram) =>
+    new Map((diagram.payload?.groups ?? []).map((group) => [group.id, group]));
+
+const right = (group) => group.x + group.width;
+const bottom = (group) => group.y + group.height;
+
+const placeStandardTierGroups = (groups) => {
+    const search = groups.get('g_search');
+    const index = groups.get('g_index');
+    const collection = groups.get('g_coll');
+    const management = groups.get('g_mgmt');
+    if (!search || !index || !collection || !management) return false;
+
+    search.x = ROOT_X;
+    search.y = ROOT_Y;
+    index.x = right(search) + GROUP_GAP_X;
+    index.y = ROOT_Y;
+
+    collection.x = ROOT_X;
+    collection.y = Math.max(bottom(search), bottom(index)) + GROUP_GAP_Y;
+    collection.width = Math.max(collection.width, right(index) - collection.x);
+
+    management.x = right(collection) + GROUP_GAP_X;
+    management.y = ROOT_Y;
+
+    return true;
+};
+
+const placeSingleServerGroups = (groups) => {
+    const searchIndex = groups.get('g_si');
+    const collection = groups.get('g_coll');
+    const management = groups.get('g_mgmt');
+    if (!searchIndex || !collection || !management) return false;
+
+    searchIndex.x = ROOT_X;
+    searchIndex.y = ROOT_Y;
+    collection.x = ROOT_X;
+    collection.y = bottom(searchIndex) + GROUP_GAP_Y;
+    collection.width = Math.max(collection.width, searchIndex.width);
+
+    management.x = right(collection) + GROUP_GAP_X;
+    management.y = ROOT_Y;
+
+    return true;
+};
+
+const placeIndexCollectionGroups = (groups) => {
+    const management = groups.get('g_mgmt');
+    const index = groups.get('g_index');
+    const collection = groups.get('g_coll');
+    if (!management || !index || !collection) return false;
+
+    management.x = ROOT_X;
+    management.y = ROOT_Y;
+    index.x = right(management) + GROUP_GAP_X;
+    index.y = ROOT_Y;
+
+    collection.x = index.x;
+    collection.y = bottom(index) + GROUP_GAP_Y;
+    collection.width = Math.max(collection.width, index.width);
+
+    const kafka = groups.get('g_kafka');
+    if (kafka) {
+        kafka.x = collection.x;
+        kafka.y = bottom(collection) + GROUP_GAP_Y;
+        kafka.width = Math.max(kafka.width, collection.width);
+    }
+
+    return true;
+};
+
+const placeMultiSiteGroups = (groups) => {
+    const management = groups.get('g_mgmt');
+    const siteASearch = groups.get('g_siteA_search');
+    const siteNSearch = groups.get('g_siteN_search');
+    const siteAIndex = groups.get('g_siteA_index');
+    const siteNIndex = groups.get('g_siteN_index');
+    const collection = groups.get('g_coll');
+    const managementDr = groups.get('g_mgmt_dr');
+
+    if (
+        !management ||
+        !siteASearch ||
+        !siteNSearch ||
+        !siteAIndex ||
+        !siteNIndex ||
+        !collection ||
+        !managementDr
+    ) {
+        return false;
+    }
+
+    management.x = ROOT_X;
+    management.y = ROOT_Y;
+    const siteAWidth = Math.max(siteASearch.width, siteAIndex.width);
+    const siteNWidth = Math.max(siteNSearch.width, siteNIndex.width);
+    siteASearch.width = siteAWidth;
+    siteAIndex.width = siteAWidth;
+    siteNSearch.width = siteNWidth;
+    siteNIndex.width = siteNWidth;
+
+    siteASearch.x = right(management) + GROUP_GAP_X;
+    siteASearch.y = ROOT_Y;
+    siteNSearch.x = right(siteASearch) + GROUP_GAP_X;
+    siteNSearch.y = ROOT_Y;
+
+    const indexY = Math.max(bottom(siteASearch), bottom(siteNSearch)) + GROUP_GAP_Y;
+    siteAIndex.x = siteASearch.x;
+    siteAIndex.y = indexY;
+    siteNIndex.x = siteNSearch.x;
+    siteNIndex.y = indexY;
+
+    collection.x = siteASearch.x;
+    collection.y = Math.max(bottom(siteAIndex), bottom(siteNIndex)) + GROUP_GAP_Y;
+    collection.width = Math.max(
+        collection.width,
+        Math.max(right(siteNSearch), right(siteNIndex)) - collection.x
+    );
+
+    managementDr.x = right(collection) + GROUP_GAP_X;
+    managementDr.y = ROOT_Y;
+    managementDr.height = Math.max(
+        managementDr.height,
+        bottom(collection) - managementDr.y
+    );
+    management.height = Math.max(management.height, bottom(collection) - management.y);
+
+    return true;
+};
+
+const placeStretchedSiteGroups = (groups) => {
+    const management = groups.get('g_mgmt');
+    const search = groups.get('g_search');
+    const siteAIndex = groups.get('g_siteA_index');
+    const siteNIndex = groups.get('g_siteN_index');
+    const collection = groups.get('g_coll');
+    const managementDr = groups.get('g_mgmt_dr');
+
+    if (
+        !management ||
+        !search ||
+        !siteAIndex ||
+        !siteNIndex ||
+        !collection ||
+        !managementDr
+    ) {
+        return false;
+    }
+
+    management.x = ROOT_X;
+    management.y = ROOT_Y;
+    search.x = right(management) + GROUP_GAP_X;
+    search.y = ROOT_Y;
+    search.width = Math.max(
+        search.width,
+        siteAIndex.width + GROUP_GAP_X + siteNIndex.width
+    );
+
+    siteAIndex.x = search.x;
+    siteAIndex.y = bottom(search) + GROUP_GAP_Y;
+    siteNIndex.x = right(siteAIndex) + GROUP_GAP_X;
+    siteNIndex.y = siteAIndex.y;
+
+    collection.x = search.x;
+    collection.y = Math.max(bottom(siteAIndex), bottom(siteNIndex)) + GROUP_GAP_Y;
+    collection.width = Math.max(
+        collection.width,
+        search.width,
+        right(siteNIndex) - collection.x
+    );
+
+    managementDr.x = right(collection) + GROUP_GAP_X;
+    managementDr.y = ROOT_Y;
+    managementDr.height = Math.max(
+        managementDr.height,
+        bottom(collection) - managementDr.y
+    );
+    management.height = Math.max(management.height, bottom(collection) - management.y);
+
+    return true;
+};
+
+const placeSplunkCloudGroups = (groups) => {
+    const search = groups.get('g_search_tier');
+    const index = groups.get('g_index_tier');
+    const collection = groups.get('g_collection_cloud');
+    const customer = groups.get('g_customer_env');
+    if (!search || !index || !collection || !customer) return false;
+
+    search.x = ROOT_X;
+    search.y = ROOT_Y;
+    index.x = right(search) + GROUP_GAP_X;
+    index.y = ROOT_Y;
+    collection.x = right(index) + GROUP_GAP_X;
+    collection.y = ROOT_Y;
+    customer.x = ROOT_X;
+    customer.y = Math.max(bottom(search), bottom(index), bottom(collection)) + 140;
+    customer.width = Math.max(customer.width, right(collection) - customer.x);
+
+    return true;
+};
+
+const placeGroups = (diagram) => {
+    const groups = groupMap(diagram);
+    if (groups.size === 0) return;
+
+    if (placeSplunkCloudGroups(groups)) return;
+    if (placeMultiSiteGroups(groups)) return;
+    if (placeStretchedSiteGroups(groups)) return;
+    if (placeStandardTierGroups(groups)) return;
+    if (placeSingleServerGroups(groups)) return;
+    placeIndexCollectionGroups(groups);
+};
+
+const polishOobDiagram = (diagram) => {
+    for (const node of diagram.payload?.nodes ?? []) {
+        normalizeSplunkDeviceType(node);
+    }
     tidyDiagram(diagram);
+    spreadRegionContents(diagram);
+    placeGroups(diagram);
+    tidyDiagram(diagram);
+};
+
+for (const diagram of OOB_DIAGRAMS) {
+    polishOobDiagram(diagram);
 }
 
 const now = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');

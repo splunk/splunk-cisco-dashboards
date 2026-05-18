@@ -88,8 +88,14 @@ export type DeviceShapeId =
     | 'wlc'
     | 'access_point'
     | 'load_balancer'
+    | 'f5_load_balancer'
+    | 'modular_chassis_switch'
+    | 'nexus_aci_fabric'
+    | 'sdwan_controller'
     // --- Security ---
     | 'firewall'
+    | 'palo_alto_firewall'
+    | 'fortinet_firewall'
     | 'waf' // Build 115.5 — web app firewall
     | 'vpn_concentrator'
     | 'ids_ips'
@@ -279,8 +285,33 @@ const mapDeviceTypeToShape = (
     // not on `switch`, even though "stack" appears in the family
     // string and "9300" matches L3-switch patterns.
     if (t === 'stack' || f.includes('stack')) return 'stack';
-    if (t === 'load balancer' || f.includes('big-ip') || f.includes('netscaler') || f.includes('a10') || f.includes('avi')) {
+    if (f.includes('big-ip') || f.includes('f5')) {
+        return 'f5_load_balancer';
+    }
+    if (t === 'load balancer' || f.includes('netscaler') || f.includes('a10') || f.includes('avi')) {
         return 'load_balancer';
+    }
+    if (
+        f.includes('catalyst 450') ||
+        f.includes('catalyst 650') ||
+        f.includes('ws-c450') ||
+        f.includes('ws-c650') ||
+        f.includes('4507') ||
+        f.includes('6504')
+    ) {
+        return 'modular_chassis_switch';
+    }
+    if (f.includes('nexus') || f.includes('aci') || f.includes('apic')) {
+        return 'nexus_aci_fabric';
+    }
+    if (
+        f.includes('sd-wan') ||
+        f.includes('sdwan') ||
+        f.includes('vmanage') ||
+        f.includes('vsmart') ||
+        f.includes('vbond')
+    ) {
+        return 'sdwan_controller';
     }
     if (t === 'vpn' || t === 'vpn concentrator' || f.includes('anyconnect') || f.includes('vpn')) {
         return 'vpn_concentrator';
@@ -326,10 +357,20 @@ const mapDeviceTypeToShape = (
     if (t === 'router' || f.includes('router') || /asr|isr|csr/.test(f)) return 'router';
     if (
         t === 'firewall' ||
+        f.includes('palo alto') ||
+        f.includes('pan-os') ||
+        f.includes('fortinet') ||
+        f.includes('fortigate') ||
         f.includes('asa') ||
         f.includes('ftd') ||
         f.includes('firepower')
     ) {
+        if (f.includes('palo alto') || f.includes('pan-os')) {
+            return 'palo_alto_firewall';
+        }
+        if (f.includes('fortinet') || f.includes('fortigate')) {
+            return 'fortinet_firewall';
+        }
         return 'firewall';
     }
     if (t === 'wlc' || f.includes('wireless controller') || /^c?9800/i.test(f)) return 'wlc';
