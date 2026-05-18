@@ -878,7 +878,7 @@
 		"ds_occupancy_trend": {
 			"name": "Occupancy Trend",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"SPACE_OCCUPANCY\" | bin _time | stats latest(spaceOccupancy.peoplePresence) as occupied by _time, spaceOccupancy.space.name | eval occupied=if(occupied==\"true\", 1, 0) | stats count as total_rooms, sum(occupied) as rooms_occupied by _time | eval rate=if(total_rooms>0, round(rooms_occupied/total_rooms*100, 2), 0)",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"SPACE_OCCUPANCY\" \"spaceOccupancy.space.type\"=ROOM | bin _time | stats max(spaceOccupancy.space.capacity) as capacity, max(spaceOccupancy.peakPeopleCount) as peakPeopleCount, latest(spaceOccupancy.peoplePresence) as peoplePresence by _time, spaceOccupancy.space.floorId, spaceOccupancy.space.name | eval occupied=if(peoplePresence==\"true\" OR peakPeopleCount>0, 1, 0) | stats dc(spaceOccupancy.space.name) as total_rooms, sum(occupied) as rooms_occupied by _time | eval score=if(total_rooms>0, round(rooms_occupied/total_rooms*100, 2), 0) | timechart fixedrange=false max(score) as rate",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"

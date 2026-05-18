@@ -225,7 +225,7 @@
 				"backgroundColor": "transparent",
 				"fontColor": "#2B2B2B",
 				"fontSize": "small",
-				"markdown": "## Metric Reference — Cisco Spaces Overview Tab\n\n---\n\n**Connected Devices** — Unique device MAC addresses tracked via DEVICE_LOCATION_UPDATE\n**Active Users** — Latest active user count from USER_PRESENCE events\n**Rooms Occupied** — Rooms with detected people presence from SPACE_OCCUPANCY events\n**Active SSIDs** — Distinct SSIDs with active client associations\n**Webex Devices** — Total Webex devices reporting via WEBEX_TELEMETRY\n\n---\n\n**Location Breakdown** — Campus → Building → Floor hierarchy with device counts\n**Device Presence Trend** — Device location update volume over time\n**SSID Client Trend** — Client count per SSID over time\n**Building Occupancy Trend** — Occupancy levels per building over time"
+				"markdown": "## Metric Reference — Cisco Spaces Overview Tab\n\n---\n\n**Connected Devices** — Unique device MAC addresses tracked via DEVICE_LOCATION_UPDATE\n**Active Users** — Portfolio-wide headcount from USER_PRESENCE `activeUsersCount.totalUsers` (max per bucket; do not sum floors)\n**Rooms Occupied** — Percent of ROOM-type spaces with people present (`dc` rooms, not `count` rows)\n**Active SSIDs** — Distinct SSIDs with active client associations\n**Webex Devices** — Total Webex devices reporting via WEBEX_TELEMETRY\n\n---\n\n**Location Breakdown** — Campus → Building → Floor hierarchy with device counts\n**Device Presence Trend** — Device location update volume over time\n**SSID Client Trend** — Client count per SSID over time\n**Building Occupancy Trend** — Occupancy levels per building over time"
 			},
 			"type": "splunk.markdown"
 		},
@@ -568,7 +568,7 @@
 				"annotation": "ds_annotation_occupancy_spike",
 				"primary": "ds_user_presence_trend"
 			},
-			"description": "User presence by city over time",
+			"description": "Concurrent users by city (DEVICE_COUNT floor roll-up; USER_PRESENCE totalUsers is portfolio-wide)",
 			"options": {
 				"annotationColor": [
 					"#D64550"
@@ -818,7 +818,7 @@
 		"ds_occupancy_trend": {
 			"name": "Rooms Occupied Trend",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"SPACE_OCCUPANCY\" | eval occupied=if('spaceOccupancy.peoplePresence'==\"true\", 1, 0) | timechart fixedrange=false avg(occupied) as pct | eval \"Rooms Occupied\"=round(pct*100, 2)",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"SPACE_OCCUPANCY\" \"spaceOccupancy.space.type\"=ROOM | bin _time | stats max(spaceOccupancy.space.capacity) as capacity, max(spaceOccupancy.peakPeopleCount) as peakPeopleCount, latest(spaceOccupancy.peoplePresence) as peoplePresence by _time, spaceOccupancy.space.floorId, spaceOccupancy.space.name | eval occupied=if(peoplePresence==\"true\" OR peakPeopleCount>0, 1, 0) | stats dc(spaceOccupancy.space.name) as total_rooms, sum(occupied) as rooms_occupied by _time | eval score=if(total_rooms>0, round(rooms_occupied/total_rooms*100, 2), 0) | timechart fixedrange=false max(score) as \"Rooms Occupied\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -881,7 +881,7 @@
 		"ds_user_presence_total": {
 			"name": "User Presence Total",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"USER_PRESENCE\" userPresence.location.inferredLocationTypes{}=FLOOR | eval active='userPresence.activeUsersCount.totalUsers', floor='userPresence.location.name' | bin _time | stats max(active) as active by _time, floor | timechart fixedrange=false sum(active) as \"Active Users\"",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"USER_PRESENCE\" | timechart fixedrange=false max(userPresence.activeUsersCount.totalUsers) as \"Active Users\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -892,7 +892,7 @@
 		"ds_user_presence_trend": {
 			"name": "Building Resilience - ds_user_presence_trend",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"USER_PRESENCE\" userPresence.location.inferredLocationTypes{}=FLOOR | eval active='userPresence.activeUsersCount.totalUsers', floor='userPresence.location.name', city='userPresence.location.parent.parent.name' | bin _time | stats max(active) as active by _time, floor, city | timechart fixedrange=false sum(active) by city",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR | eval users='deviceCounts.userCount', city='deviceCounts.location.parent.parent.name' | where isnotnull(city) | bin _time | stats max(users) as users by _time, floor, city | stats sum(users) as users by _time, city | timechart fixedrange=false sum(users) by city",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
