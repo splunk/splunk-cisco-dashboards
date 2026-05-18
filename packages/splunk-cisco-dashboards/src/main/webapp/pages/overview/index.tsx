@@ -912,6 +912,53 @@ const mergeThresholds = (
 
 const applyOverride = (cfg: MetricConfig, override?: MetricOverride): MetricConfig => {
     if (!override) return cfg;
+    // Detect "binding-swap" overrides vs. "tweak-only" overrides
+    // (Build 1188.1).
+    //
+    // Originally `applyOverride` assumed every override was a
+    // saved-search swap and aggressively blanked the original
+    // `subLabel` / `unit` / `spl` / mock-fallback so the prior
+    // tile's chrome wouldn't decorate a now-different headline.
+    // That assumption broke once Build 1174 introduced
+    // viz-only overrides (`vizOverride` and threshold tweaks
+    // without changing the binding): the picker was writing
+    // `savedSearch: <same as cfg.savedSearch>` because the
+    // payload always carries it, but `applyOverride` couldn't
+    // tell the difference and still nuked the original tile's
+    // mock-fallback. The chart promptly went blank for any
+    // tile whose searchbase entry returned 0 rows, because the
+    // mock series that had been painting the sparkline was
+    // suppressed (Alan flagged on 2026-05-18: "it works only
+    // with the viz type set in searchbase.conf, changing to
+    // anything is broken").
+    //
+    // Heuristic: when `override.savedSearch` matches the static
+    // `cfg.savedSearch`, the user explicitly kept the binding
+    // (or never changed it). In that case keep the original
+    // tile's chrome — don't drop `spl` (the static SPL is what
+    // the binding *means*), don't blank `subLabel`/`unit`, and
+    // don't suppress the mock fallback. Apply only the genuinely
+    // user-set fields (label / description / threshold / valueField
+    // / vizOverride). When the saved searches differ, fall through
+    // to the historical "binding swap" behaviour so a different
+    // search no longer carries the prior tile's identity.
+    const isBindingSwap = override.savedSearch !== cfg.savedSearch;
+    if (!isBindingSwap) {
+        return {
+            ...cfg,
+            // Apply user-set overrides only when they have a value.
+            // `valueField` is special: undefined here means "use
+            // auto-detect", which is a legitimate user choice on
+            // tweak-only overrides too, so we still set it through
+            // (the picker carries the static cfg's valueField when
+            // the user hasn't changed it, so this rarely actually
+            // changes anything in practice).
+            valueField: override.valueField ?? cfg.valueField,
+            label: override.label ?? cfg.label,
+            description: override.description ?? cfg.description,
+            thresholds: mergeThresholds(cfg.thresholds, override),
+        };
+    }
     return {
         ...cfg,
         savedSearch: override.savedSearch,
@@ -1042,6 +1089,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
             onConfigure={onConfigure}
             infoAnchor={infoAnchor}
             isCustomized={Boolean(override)}
+            vizOverride={override?.vizOverride}
         />
     );
 };
@@ -1059,6 +1107,16 @@ interface CommonLeafProps {
 
 interface MetricCardLeafProps extends CommonLeafProps {
     sbRecord: SearchbaseRecord | null;
+    /**
+     * User-picked viz override (Build 1174, extended in 1187). When
+     * set, takes precedence over `searchbase.conf`'s `default_viz`
+     * for the sparkline render path. `applyOverride()` does NOT
+     * bake this into `effective` because the override applies to
+     * the chart rendering, not the metric semantics — the same
+     * headline value, threshold, and SPL keep flowing through;
+     * only the viz primitive changes.
+     */
+    vizOverride?: 'area' | 'line' | 'column' | 'bar' | 'singlevalue';
 }
 
 /**
@@ -1077,18 +1135,30 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
     onConfigure,
     infoAnchor,
     isCustomized,
+    vizOverride,
 }) => {
     /**
-     * Tile viz variant. `searchbase.conf`'s `default_viz` is the source
-     * of truth when present; the static MetricConfig has no equivalent
-     * field today, so absence falls back to `area` (the prior default).
-     * User picker overrides intentionally inherit the new binding's
-     * viz hints — the override switches *which* search drives the tile,
-     * not how it's drawn, so the chart should track the new search.
+     * Tile viz variant. Resolution order (highest precedence first):
+     *   1. `vizOverride` — Build 1174 picker setting per tile, persisted
+     *      in localStorage via `usePersistedMetricOverrides`. Lets the
+     *      operator switch chart style (area / line / column /
+     *      singlevalue) without touching the searchbase or forking the
+     *      tile.
+     *   2. `searchbase.conf`'s `default_viz` — conf-level default.
+     *   3. Fallback to `area` (the prior project-wide default), handled
+     *      inside `sparklineVizTypeFromSplunkViz` for unknown / absent
+     *      ids.
+     *
+     * Cross-binding behaviour: when the picker switches the searchbase
+     * binding (a different `savedSearch`) WITHOUT setting `vizOverride`,
+     * the tile inherits the new binding's `default_viz`. With
+     * `vizOverride` set, the chart style is pinned regardless of which
+     * binding drives the data — the override is about *how* it's drawn,
+     * not what it's drawing.
      */
     const vizType = useMemo(
-        () => sparklineVizTypeFromSplunkViz(sbRecord?.defaultViz),
-        [sbRecord?.defaultViz]
+        () => vizOverride ?? sparklineVizTypeFromSplunkViz(sbRecord?.defaultViz),
+        [vizOverride, sbRecord?.defaultViz]
     );
 
     /**
@@ -1969,6 +2039,7 @@ const OverviewPage: React.FC = () => {
                 currentThresholds: merged,
                 thresholdUnit: current?.unit,
                 usedSavedSearches,
+                currentVizOverride: ov?.vizOverride,
             });
         },
         [overrides, usedSavedSearches]
@@ -2901,12 +2972,34 @@ const OverviewPage: React.FC = () => {
 
                             <div className="flex-1 min-h-0">
                                 {regionalView === 'map' ? (
+                                    /* Build 1190 — render the live map
+                                       during export instead of swapping
+                                       to TopologySiteTable. The Build
+                                       1186 substitute approach was
+                                       overcorrecting on the original
+                                       export complaint: the operator
+                                       wanted the *map with sites and
+                                       connectivity lines* in the export,
+                                       just without the broken-mid-frame
+                                       SMIL animation artifacts. The
+                                       SMIL pause in `useExportPage`
+                                       (still active) freezes the
+                                       stroke-dashoffset flow lines at a
+                                       clean keyframe; html2canvas
+                                       rasterises the underlying Leaflet
+                                       tiles + the static SVG paths
+                                       cleanly. The CSS animation freeze
+                                       in `tailwind.css` covers any
+                                       remaining keyframe-driven motion.
+                                       The previous `data-export-hide` /
+                                       `data-export-placeholder`
+                                       attributes have been removed; the
+                                       generic CSS rules that consume
+                                       them are kept in `tailwind.css`
+                                       so other components can opt in
+                                       to the same swap pattern in the
+                                       future. */
                                     <CustomerTopologyMap
-                                        // Bumping `topologyResetKey` forces a
-                                        // remount of the map after a "Factory
-                                        // reset", so its internal hook re-reads
-                                        // (now-empty) storage and falls back
-                                        // to the canonical CUSTOMER_TOPOLOGY.
                                         key={topologyResetKey}
                                         topology={CUSTOMER_TOPOLOGY}
                                         isDark={resolvedTheme === 'dark'}

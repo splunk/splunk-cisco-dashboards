@@ -23,7 +23,7 @@ import type { TimeRange } from '@/common/hooks/useMetric';
  * `splunk.column` respectively. `singlevalue` suppresses the spark
  * entirely (the headline value is the whole story).
  */
-export type SparklineVizType = 'area' | 'line' | 'column' | 'singlevalue';
+export type SparklineVizType = 'area' | 'line' | 'column' | 'bar' | 'singlevalue';
 
 /**
  * Mirrors Splunk Dashboard Studio v2's `dataValuesDisplay` option for
@@ -74,8 +74,19 @@ export const sparklineVizTypeFromSplunkViz = (
     if (typeof splunkViz !== 'string') return 'area';
     switch (splunkViz.trim().toLowerCase()) {
         case 'splunk.column':
-        case 'splunk.bar':
             return 'column';
+        // Build 1187: `splunk.bar` (Splunk's horizontal-bar viz id)
+        // now resolves to its own `bar` variant instead of the prior
+        // collapse to `column`. Sparkline.tsx renders this with
+        // recharts `layout="vertical"`, which is recharts'
+        // (counter-intuitive) name for a horizontal-bar layout —
+        // the bars grow rightwards along a numeric X axis with a
+        // categorical Y axis. Existing conf entries that use
+        // `splunk.bar` will start picking up horizontal rendering
+        // automatically; switch them to `splunk.column` if the
+        // tile relies on vertical bars.
+        case 'splunk.bar':
+            return 'bar';
         case 'splunk.line':
             return 'line';
         case 'splunk.singlevalue':
@@ -635,6 +646,125 @@ export const Sparkline: React.FC<SparklineProps> = ({
                     />
                 )}
                 {valueMarkers}
+            </ComposedChart>
+        );
+    } else if (vizType === 'bar') {
+        // Build 1187 — horizontal bars. `layout="vertical"` is
+        // recharts' (regrettably-named) prop that flips the chart
+        // axes: bars grow rightwards along a numeric X axis with a
+        // categorical Y axis (one slot per data point). Mirrors the
+        // column branch's ComposedChart + Bar + optional dashed
+        // baseline overlay so the same tile can switch between
+        // column and bar layouts via the picker without losing the
+        // baseline overlay or the peak/trough Cell highlighting.
+        //
+        // Axis setup is intentionally inline rather than a shared
+        // `hiddenAxesHorizontal` helper because horizontal-bar
+        // tiles are the only consumers and centralising them would
+        // hide the layout flip from the rest of the file. Both
+        // axes still carry `hide` so the tooltip/cursor scales are
+        // wired up but no axis chrome paints.
+        //
+        // `radius={[0, 2, 2, 0]}` rounds the right edge of each bar
+        // (matching the column branch's top-edge rounding). Peak
+        // and baseline overlays unchanged in spirit, but
+        // `valueMarkers` had to be rebuilt below — see comment.
+        //
+        // Build 1187.1 — value-marker swap fix. The shared
+        // `valueMarkers` array (used by area/line/column) places
+        // `<ReferenceDot x={index} y={value}>`, which is correct
+        // when the X axis is the index axis and the Y axis is the
+        // value axis. With `layout="vertical"` those axes are
+        // swapped: X becomes the value axis, Y becomes the
+        // category-index axis. Reusing the shared array fed
+        // `peakPoint.value` (e.g. 15000) into the *category* axis,
+        // which combined with `ifOverflow="extendDomain"` extended
+        // the category domain to include the value as a brand-new
+        // category — squashing the actual bars into a fraction of
+        // the canvas so they appeared empty after one render
+        // (Alan flagged on 2026-05-18: "showed bar graph for a
+        // second, then immediately blank"). The fix: rebuild the
+        // markers locally with `x` and `y` swapped so the dot
+        // anchors at the right edge of the appropriate bar without
+        // distorting either domain.
+        const barValueMarkers: React.ReactElement[] = [];
+        if (dataValuesDisplay !== 'off' && peakPoint) {
+            barValueMarkers.push(
+                <ReferenceDot
+                    key="peak-bar"
+                    x={peakPoint.value}
+                    y={peakPoint.index}
+                    isFront
+                    ifOverflow="extendDomain"
+                    shape={
+                        <ValueMarker
+                            value={peakPoint.value}
+                            color={color}
+                            formatValue={formatValue}
+                            position="top"
+                        />
+                    }
+                />
+            );
+            const wantsMin = dataValuesDisplay !== 'maxonly';
+            const distinctTrough =
+                troughPoint &&
+                (troughPoint.index !== peakPoint.index ||
+                    troughPoint.value !== peakPoint.value);
+            if (wantsMin && distinctTrough) {
+                const t = troughPoint as NonNullable<typeof troughPoint>;
+                barValueMarkers.push(
+                    <ReferenceDot
+                        key="trough-bar"
+                        x={t.value}
+                        y={t.index}
+                        isFront
+                        ifOverflow="extendDomain"
+                        shape={
+                            <ValueMarker
+                                value={t.value}
+                                color={color}
+                                formatValue={formatValue}
+                                position="bottom"
+                            />
+                        }
+                    />
+                );
+            }
+        }
+        chartElement = (
+            <ComposedChart data={chartData} layout="vertical" margin={chartMargin}>
+                <XAxis hide type="number" domain={['auto', 'auto']} />
+                <YAxis dataKey="index" type="category" hide />
+                {tooltipContent}
+                <Bar
+                    dataKey="value"
+                    fill={color}
+                    radius={[0, 2, 2, 0]}
+                    isAnimationActive={false}
+                >
+                    {peakPoint &&
+                        chartData.map((point) => (
+                            <Cell
+                                key={`cell-${point.index}`}
+                                fill={point.index === peakPoint.index ? color : color}
+                                fillOpacity={point.index === peakPoint.index ? 1 : 0.55}
+                            />
+                        ))}
+                </Bar>
+                {hasPrevious && (
+                    <Line
+                        type="monotone"
+                        dataKey="previous"
+                        stroke="var(--baseline-stroke)"
+                        strokeWidth={2.25}
+                        strokeDasharray="8 4"
+                        strokeOpacity={0.9}
+                        dot={false}
+                        isAnimationActive={false}
+                    />
+                )}
+                {barValueMarkers}
             </ComposedChart>
         );
     } else if (vizType === 'line') {

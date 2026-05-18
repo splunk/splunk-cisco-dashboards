@@ -7,6 +7,510 @@
 
 ---
 
+## 2026-05-18 (Build 1192) — Export: bake topology link <path>s into a solid static state so html2canvas can rasterise them
+
+### Goal
+
+Operator (continuing on Build 1190): *"still doign the weird stuff
+with the line, the line I think because it's animating is confusing
+the screenshot. anyway you can fix it? it's not going to ttable any
+more but back to my problem."*
+
+Build 1190 stopped the export from substituting the table for the
+map, so the PNG now carries the Florida outline with the TLH and
+AUB site markers in the correct positions. But the TLH↔AUB
+connectivity line either disappears entirely or rasterises as a few
+disjoint dash fragments hanging in space, while no packets ride the
+flow. That's the "weird stuff with the line" the operator is calling
+out.
+
+### Root Cause
+
+`pauseAnimations()` (Build 1174) freezes SMIL on the **live**
+document. html2canvas's rasteriser, however, works by deep-cloning
+the capture target into a sandbox iframe and re-parsing the cloned
+SVG. The cloned `<animate>` and `<animateMotion>` children re-trigger
+from t=0 in that fresh document, so what html2canvas paints depends
+on whatever frame the brand-new SMIL clock has reached when the
+rasteriser decides to flush — completely decoupled from the pause
+state of the live SVGs.
+
+That manifests two ways on the Florida topology overlay:
+
+  1. **Link `<path>` flow lines.** `TopologyLinkPath` injects an
+     `<animate attributeName="stroke-dashoffset" from="0" to="-24"
+     dur="1.6–8s" repeatCount="indefinite">` plus a `stroke-opacity`
+     breathe cycle on each link. With a 1.6 s dur, html2canvas's
+     iframe SMIL clock can land on a phase where most of the visible
+     bezier is in the gap of the dash pattern, so the rasterised
+     line looks like fragments or vanishes outright. The breathe
+     animation can also catch the path mid-fade at `0.325` opacity,
+     which against a tile-coloured map is hard to read at PNG scale.
+  2. **Packet `<circle>` riders.** The packets only acquire a real
+     screen position from the running `<animateMotion>`/`<mpath>`
+     pair. Without that motion having advanced (and we want it
+     paused so they don't smear), the cloned `<circle cx=0 cy=0>`
+     just sits at the SVG layer origin — visible in the rasterised
+     output as a stray cluster top-left of the map, or invisible
+     depending on how html2canvas frames the iframe.
+
+So the export looked "weird" not because animations were leaking
+through Build 1174's pause, but because the rasteriser's clone path
+ignores the pause entirely.
+
+### Fix
+
+Switch from "freeze SMIL on the live doc" to "remove SMIL from the
+capture target before html2canvas clones it." `useExportPage` now
+mutates the live DOM in-place right before invoking html2canvas, and
+reverses every change in `finally` (including on the error path) so
+the live map looks pixel-identical after the export:
+
+  * **Link paths** — every `path.customer-topology-link-shell`:
+      * Snapshot `stroke-dasharray`, `stroke-dashoffset`,
+        `stroke-opacity`, plus each `<animate
+        data-customer-topology-flow>` child (with its sibling
+        index so we can reattach in the same DOM order).
+      * Detach the `<animate>` children so the cloned tree has no
+        SMIL for html2canvas to mis-time.
+      * Force `stroke-dasharray=""` (solid line),
+        `stroke-dashoffset="0"`, `stroke-opacity="1"`. Solid + opaque
+        is what the operator wants in the rasterised artefact —
+        marching dashes are pure visual flourish that doesn't
+        survive a static screenshot anyway.
+  * **Packet groups** — every `g.customer-topology-packets-group`
+    is hidden with `display="none"` (snapshotting the original
+    attribute first), removing the stray-circle problem entirely.
+  * **Restore order in `finally`** runs *before* `unpauseAnimations`
+    on the SVG list, so the link paths get their `<animate>`
+    children put back as the first thing the live document sees,
+    then SMIL resumes against the original markup. If a single
+    path fails to restore, the next React re-render of
+    `TopologyLinkPath` will rebuild the `<animate>` elements from
+    scratch via its existing effect — even total restoration
+    failure self-heals on the next zoom/pan/state change.
+
+The `pauseAnimations()` pass is retained — it still does useful work
+on sparklines and any non-Leaflet SVG that doesn't need the heavier
+in-place freeze, since their static SVG attributes do round-trip
+through html2canvas correctly.
+
+### Files changed
+
+| File | Net effect |
+|---|---|
+| `packages/splunk-cisco-dashboards/src/main/webapp/common/hooks/useExportPage.ts` | Pre-html2canvas in-place freeze of `path.customer-topology-link-shell` (snapshot + remove `<animate>` + override dasharray/dashoffset/opacity) and `g.customer-topology-packets-group` (display=none); matching restore in `finally` ahead of `unpauseAnimations`. Header rewritten with the Build 1192 reasoning. |
+| `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf` | Already at `build = 1192` from an unrelated landed commit (`76118e9` searchbase SPL audit fixes); no further bump in this entry. |
+
+### Verification
+
+  * `yarn typecheck` and `yarn build` pending below.
+  * Manual smoke pending in Splunk Web after install + hard refresh:
+    1. With the Florida map visible (not in Table view) and at least
+       one site connectivity link drawn, click *Export → PNG*.
+    2. The PNG should show a clean solid line between TLH and AUB
+       (and between any other connected sites), no stray packet
+       dots, no fragmented dashes.
+    3. Immediately after the download fires, the live map should
+       look identical to before the export — marching dashes,
+       breathing opacity, and packet riders all restored.
+    4. Run *Export → PDF* to confirm the same path is taken there
+       (jsPDF receives the same canvas).
+
+### What's next
+
+If the static-bake still produces a visibly mis-positioned line
+(e.g. Leaflet's `<g transform>` not surviving the html2canvas
+clone), the next escalation is `leaflet-image` to render the map
+panel to an offscreen canvas BEFORE html2canvas walks the DOM, then
+composite that canvas back into the final export. Build 1190's
+"What's next" pre-staged that decision; Build 1192 is the
+intermediate step that should resolve the "weird line" complaint
+without taking on the new dependency.
+
+---
+
+## 2026-05-18 (Build 1190) — Export: keep the live map (don't substitute TopologySiteTable)
+
+### Goal
+
+Operator: *"exporting is doing something weird, it's switching to
+table and I don't want it to do that, I want to export the map with
+the sites and site connectivity line."*
+
+### Root Cause
+
+Build 1186 implemented the export-mode animation freeze and paired
+it with a heavier-handed substitute: hide `CustomerTopologyMap`
+behind `data-export-hide`, render `TopologySiteTable` in its place
+via `data-export-placeholder`. Reasoning at the time: html2canvas
+couldn't faithfully rasterise SVG SMIL flow lines or Leaflet's
+compositor transforms, so the export was carrying a mangled raster
+of broken animations (lines extending past panel bounds, etc.).
+
+The original complaint was *"the image export is not handling the
+animation well"*, not *"don't include the map in the export"*. The
+substitute over-corrected by removing the map entirely, so PNG/PDF
+exports started shipping a tabular site readout where the operator
+wanted a labelled state-of-Florida map with the live topology
+overlay frozen at a clean frame.
+
+### Fix
+
+Removed the `data-export-hide` / `data-export-placeholder` pairing
+on the map container. The live `CustomerTopologyMap` now renders
+straight through during export. The two existing animation-freeze
+mechanisms still do the work the substitute was hiding behind:
+
+  * `useExportPage` calls `pauseAnimations()` on every `<svg>`
+    under the export target, freezing the SMIL stroke-dashoffset
+    flow at whatever keyframe was current at capture time. The
+    bars / dots no longer rasterise mid-tween.
+  * `tailwind.css` global rule pauses all CSS keyframe animations
+    on every descendant of `<html data-exporting='true'>`, so any
+    Leaflet markers / status pulses freeze at their resting
+    keyframe rather than at a random in-flight position.
+
+The generic `[data-export-hide]` / `[data-export-placeholder]`
+CSS rules in `tailwind.css` are intentionally retained — the
+mechanism is sound, it just wasn't the right tool for the map.
+A future component that genuinely can't be rasterised (e.g. a
+WebGL canvas) can opt in by pairing the two attributes without
+adding new global plumbing.
+
+### Verification
+
+  * `yarn typecheck` — passes (2.6 s).
+  * `yarn build` — passes (22.7 s, only pre-existing warnings).
+  * Manual smoke pending in Splunk Web after install + hard refresh:
+    PNG/PDF should now carry the Florida map with the topology
+    overlay (SMIL frozen at a clean frame), no table substitute.
+
+### What's next
+
+If the frozen-frame export STILL shows lines extending past panel
+bounds or other Leaflet-rasterisation failures, the proper next
+step is `leaflet-image` (or `dom-to-image-more`) to render the map
+to an offscreen canvas BEFORE html2canvas walks the DOM, then
+composite that canvas back into the export. Out of scope unless
+the smoke test surfaces specific failures.
+
+---
+
+## 2026-05-18 (Build 1189) — Picker overrides: fix tile-blanking when only viz/threshold tweaks were intended
+
+### Goal
+
+Operator: *"it works only with the viz type set in searchbase.conf,
+changing to anything is broken!"* — every override the picker wrote
+made the tile go blank, even an Area→Area no-op, not just Bar.
+
+### Root Cause
+
+`applyOverride()` was written for the original picker scenario
+where every override is a saved-search swap. It blanket-applied
+three behaviours to **every** override:
+
+  1. `spl: undefined` — drops any hard-coded SPL on the static cfg.
+  2. `subLabel: ''` / `unit: ''` — clears the prior tile's chrome.
+  3. `suppressMockOnEmpty: true` — flips `useMetric` from
+     "fall back to the mock series when the search returns 0 rows"
+     to "emit NaN sentinel and render `—`".
+
+Build 1174 added viz-only overrides (`vizOverride`) and
+threshold-only overrides while keeping the picker's
+"every Apply writes `savedSearch`" semantics. So even when the
+operator only nudged the chart style, `applyOverride` saw an
+override and dutifully suppressed the mock fallback. For tiles
+whose underlying search returns 0 rows on this Splunk env (most
+of the security stanzas without live data), the sparkline was
+being painted entirely off the mock series — once the override
+turned mocks off, the chart had nothing left to draw and went
+blank. Picker → blank tile, regardless of which viz was chosen.
+
+### Fix
+
+`applyOverride()` now distinguishes binding-swap overrides from
+tweak-only overrides via a single check:
+
+```
+const isBindingSwap = override.savedSearch !== cfg.savedSearch;
+```
+
+When the override's saved search matches the static cfg's
+(operator kept the binding, only adjusted visuals), the function
+applies *only* the genuinely user-set fields — `label`,
+`description`, `thresholds`, `valueField` — and leaves `spl`,
+`subLabel`, `unit`, and the mock-on-empty fallback untouched.
+Cross-binding overrides take the historical aggressive-blanking
+path so a different search doesn't keep the prior tile's identity.
+
+The runtime viz override consumed by `MetricCardLeaf` already
+read `override?.vizOverride` directly (not `effective.vizOverride`),
+so the new branch needs no further plumbing — picking Bar /
+Column / Line / Area / Single in the picker now redraws the chart
+without disturbing the data path.
+
+### Verification
+
+  * `yarn typecheck` — passes (3.4 s).
+  * `yarn build` — passes (27.6 s, only pre-existing bundle-size
+    warnings).
+  * Manual smoke pending in Splunk Web after install + hard
+    refresh.
+
+### What's next
+
+Install Build 1189, hard-refresh the dashboard, switch *FW Blocked*
+and *Failed Auth* to Bar via the picker, and confirm:
+
+  * The chart redraws and stays visible (no blink-then-blank).
+  * The headline still shows the same number it did before the
+    override (mock fallback survives).
+  * Switching back to Default returns the conf-driven chart style.
+
+If the chart now renders for Bar but feels cramped, follow up on
+the bucket-thinning / canvas-height idea noted in Build 1187's
+"What's next".
+
+---
+
+## 2026-05-18 (Build 1188) — Bar viz: fix "blanks after one render" regression
+
+### Goal
+
+Operator picked Bar on *FW Blocked* and *Failed Auth*. Both tiles
+flashed bars for ~1 frame and then went blank
+(screenshot 2026-05-18 12:41 ET).
+
+### Root Cause
+
+Build 1187's `vizType === 'bar'` branch reused the shared
+`valueMarkers` array that drives peak/trough labels. The shared
+array was built for area / line / column with
+`<ReferenceDot x={peakPoint.index} y={peakPoint.value}>` — correct
+when the chart's X axis is the index axis and Y is the value axis.
+
+`layout="vertical"` swaps both axes:
+
+  * X is now the *value* axis (numeric).
+  * Y is now the *category-index* axis.
+
+Reusing the shared markers fed a 5-figure `peakPoint.value` (e.g.
+`15000`) into the category Y axis. Combined with the
+`ifOverflow="extendDomain"` prop on each marker, recharts dutifully
+extended the categorical Y domain to include `15000` as a brand-new
+category — squashing the genuine bars (indices 0…N) into a tiny
+fraction of the canvas height and rendering them as effectively
+zero-pixel rows. Initial mount drew before the marker forced the
+domain extension; the next reconcile applied the extended domain
+and the bars vanished.
+
+### Fix
+
+`Sparkline.tsx` — built a parallel `barValueMarkers` array inside
+the `bar` branch with `x` and `y` swapped
+(`x={peakPoint.value}`, `y={peakPoint.index}`), and use it in
+place of the shared array for that branch only. The other branches
+are untouched. Both axes' domains stay sensible, the bars hold
+their full canvas height, and the peak/trough labels still float
+above/below the right edge of the appropriate bar.
+
+### Verification
+
+  * `yarn typecheck` — passes (2.7 s).
+  * `yarn build` — passes (21.0 s, only the pre-existing bundle-size
+    warnings).
+  * Manual smoke check pending in Splunk Web after install.
+
+### What's next
+
+Same as Build 1187 — install + reload, pick Bar on *FW Blocked* and
+*Failed Auth*, confirm the bars stay visible and the peak/trough
+labels anchor near the right tip of each bar instead of floating
+off-canvas.
+
+---
+
+## 2026-05-18 (Build 1187) — Add horizontal-bar sparkline variant
+
+### Goal
+
+Operator liked the Build 1186 viz-override picker and asked for a
+horizontal-bar variant alongside the existing vertical Column.
+
+### Root Cause / Context
+
+`SparklineVizType` only carried four variants
+(`area | line | column | singlevalue`). Splunk's `splunk.bar` viz id
+collapsed to `column` because the sparkline canvas was small and we
+hadn't bothered to render true horizontal bars; that meant operators
+had no way to pick a horizontal-bar layout per tile.
+
+### Fix
+
+  * `Sparkline.tsx` — added `'bar'` to `SparklineVizType` and a
+    matching `vizType === 'bar'` branch using recharts'
+    `<ComposedChart layout="vertical">` (recharts' counter-intuitive
+    name for horizontal-bar layout). Numeric X axis + categorical Y
+    axis, `radius={[0, 2, 2, 0]}` to round the right edges of the
+    bars. Peak/trough Cell highlighting and the dashed baseline
+    overlay carry over from the column branch unchanged.
+    `sparklineVizTypeFromSplunkViz` now maps `splunk.bar` to `bar`
+    instead of `column` so existing conf entries pick up horizontal
+    rendering automatically.
+  * `usePersistedMetricOverrides.ts` — added `'bar'` to
+    `VALID_VIZ_OVERRIDES` and the `MetricOverride.vizOverride` type
+    union so the picker can persist the new choice.
+  * `pages/overview/index.tsx` — widened
+    `MetricCardLeafProps.vizOverride` to include `'bar'`.
+  * `KpiPickerPanel.tsx` — CHART STYLE radio group is now six-wide
+    (`grid-cols-6`); added a Bar button that pulls the
+    `splunk.bar` icon from `vizIcons`. `KpiPickerContext.currentVizOverride`
+    now derives directly from `MetricOverride['vizOverride']` so
+    future variants don't require a duplicate type widening.
+
+### Verification
+
+  * `yarn typecheck` — passes (2.5 s).
+  * `yarn build` — passes (22.2 s, only the pre-existing bundle-size
+    warnings).
+  * Manual smoke check pending in Splunk Web after install.
+
+### What's next
+
+  * Install the build, open the picker on *FW Blocked* and pick Bar
+    — confirm the bars render horizontally with the right-rounded
+    edges and the dashed baseline still overlays correctly.
+  * If horizontal bars feel cramped at the 100×110 sparkline canvas
+    (likely on tiles with >24 buckets), follow up with either a
+    bucket-thinning step in the data pipeline or a slightly taller
+    canvas variant just for `bar`. Out of scope for this build.
+
+---
+
+## 2026-05-18 (Build 1186) — Per-tile viz override + healthy-chart palette + animated-map export
+
+### Goal
+
+Operator surfaced four follow-ups against the Executive Briefing
+overview after the Build 1173 stabilisation:
+
+  1. **Q1 — viz override.** Several tiles ship with a default chart
+     style (`searchbase.conf`'s `default_viz`) that doesn't match
+     the operator's preference. They wanted a per-tile picker so a
+     `splunk.column` tile (e.g. *FW Blocked*) could be re-styled as
+     area / line / single value without forking the searchbase.
+  2. **Q2 — single-value tile reference.** Operator asked how the
+     *AP Health 99%* tile renders without a chart. No code work
+     needed; entirely driven by `default_viz = splunk.singlevalue`
+     in `searchbase.conf`.
+  3. **Q3 — healthy chart colour collision.** *FW Blocked* showed
+     a green check icon and a healthy headline (15k blocked, threshold
+     20k) yet the bar chart underneath rendered amber, identical to
+     the warning state. Made the chart look like it was alarming
+     when it wasn't.
+  4. **Q4 — animated map breaks PNG/PDF export.** The Florida
+     `CustomerTopologyMap` uses SVG SMIL flow lines and Leaflet's
+     compositor. `html2canvas` couldn't faithfully rasterise either,
+     producing exports with flow lines snapped to t=0 and links
+     extending past the panel bounds.
+
+### Root Cause
+
+  * Q1: no plumbing existed for a viz override. `MetricCardLeaf`
+    resolved viz exclusively from `sbRecord.defaultViz`, and the
+    `MetricOverride` shape persisted in localStorage had no
+    matching field for the picker to write to.
+  * Q3: `STATUS_VIZ_COLOR` only mapped `warning` and `critical`,
+    leaving `healthy` to fall through to the tile's brand `color`.
+    *FW Blocked*'s brand colour (`#f59e0b`) coincides exactly with
+    the warning palette, so a healthy *FW Blocked* tile rendered
+    indistinguishable from a warning *FW Blocked* tile in the
+    chart even though the headline icon was correctly green-checked.
+  * Q4: `useExportPage` ran html2canvas straight against the live
+    DOM with SMIL animations playing and Leaflet compositor active.
+    No mechanism existed to pause animations or substitute
+    un-rasterisable subtrees with static placeholders.
+
+### Fix
+
+**Q1 — viz override (storage → runtime → UI):**
+  * `usePersistedMetricOverrides.ts` — added `vizOverride` field
+    to `MetricOverride`, with allow-list sanitisation
+    (`area | line | column | singlevalue`) so a stale localStorage
+    payload can't smuggle in an unrecognised viz name.
+  * `pages/overview/index.tsx` — `MetricCardLeaf` now resolves
+    viz as `vizOverride ?? sparklineVizTypeFromSplunkViz(sbRecord.defaultViz)`,
+    keeping conf-default behaviour when the override is unset and
+    pinning the chart style across binding swaps when set.
+  * `KpiPickerPanel.tsx` — added a CHART STYLE radio group above
+    THRESHOLDS, mirroring the existing segmented-control pattern
+    (Default + Area + Line + Column + Single, with `VizIcon`
+    glyphs). "Reset to default" follows the same drop-the-field
+    semantic the threshold form already uses; persistence only
+    happens when the user picks something other than Default.
+
+**Q3 — healthy chart palette (5-line change):**
+  * `MetricItem.tsx` — added `healthy: '#0ea5e9'` (sky-500, mirrors
+    `text-sky-600` already used for the headline) to
+    `STATUS_VIZ_COLOR`. The chart now always tracks threshold
+    status, never the tile's brand colour, so a healthy *FW Blocked*
+    tile renders sky-blue bars / area instead of amber.
+
+**Q4 — export-mode animation freeze + map substitute:**
+  * `useExportPage.ts` — sets `<html data-exporting="true">` for
+    the duration of html2canvas's capture, pauses every
+    `<svg>.pauseAnimations()` under the target before rasterising,
+    and resumes / clears the flag in `finally` so a failed export
+    can never strand the page in exporting mode.
+  * `tailwind.css` — added the global swap rules driven by
+    `[data-exporting='true']`: hides any element tagged
+    `[data-export-hide]`, reveals its sibling
+    `[data-export-placeholder]`, and pauses CSS keyframe animations
+    on the entire subtree.
+  * `pages/overview/index.tsx` — wrapped the live
+    `CustomerTopologyMap` in a `data-export-hide` container with
+    a `data-export-placeholder` sibling that shows the
+    `TopologySiteTable` summary plus the caption *"Map rendered
+    live in dashboard"*. The export now carries the site readout
+    instead of a mangled raster.
+
+**Q2 — operator-driven, no code change.** The *AP Health 99%* tile
+renders without a chart because its searchbase entry sets
+`default_viz = splunk.singlevalue`. Same setting is now reachable
+per-tile via the Build 1186 picker; operators wanting to suppress
+charts ad-hoc can use the override instead of editing
+`searchbase.conf`.
+
+### Verification
+
+  * `yarn typecheck` — passes (2.1 s).
+  * `yarn build` — passes (20.6 s, only the pre-existing bundle-size
+    warnings).
+  * Manual smoke checks pending in Splunk Web after the next
+    `package:app` install.
+
+### What's next
+
+  * Install the build in Splunk and run the four scenarios:
+      * Open the picker on *FW Blocked*, switch CHART STYLE to
+        Area / Line / Single — confirm the tile redraws and the
+        choice survives a page reload.
+      * Confirm *FW Blocked* renders sky-blue bars when its
+        headline is green-checked.
+      * Trigger PNG + PDF export — confirm the map area shows the
+        site readout placeholder rather than the broken
+        animation rasters.
+      * Confirm *AP Health 99%* still renders headline-only.
+  * If the operator wants the picker exposed for *table* /
+    *bar-breakdown* tiles too, follow up with a separate session
+    — Build 1186 intentionally scopes the override to the
+    sparkline render path because table / bar-breakdown rely on a
+    different data hook (`useTableData`).
+
+---
+
 ## 2026-05-17 (Build 1178) — Region finalization safety net + live inspector counts
 
 ### Goal

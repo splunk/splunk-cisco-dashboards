@@ -37,6 +37,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+    BarChart3,
     ChevronDown,
     ChevronRight,
     ExternalLink,
@@ -207,6 +208,13 @@ export interface KpiPickerContext {
     thresholdUnit?: string;
     /** Saved-search names already bound to other tiles — for "in use" hints. */
     usedSavedSearches?: Set<string>;
+    /**
+     * Currently-applied viz override for this tile, if any (Build 1174;
+     * `bar` added in Build 1187). Pre-fills the CHART STYLE picker so
+     * re-opening the picker on a customised tile shows the active
+     * selection rather than always landing on "Default".
+     */
+    currentVizOverride?: MetricOverride['vizOverride'];
 }
 
 export interface KpiPickerPanelProps {
@@ -533,6 +541,19 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     const [thresholdCriticalInput, setThresholdCriticalInput] = useState('');
     const [thresholdDirection, setThresholdDirection] =
         useState<MetricThresholds['direction']>('higher_is_better');
+
+    /**
+     * Viz override picker state (Build 1174). `null` means "use the
+     * default", which the runtime resolves from `searchbase.conf`'s
+     * `default_viz`. Any other value pins the chart style for this
+     * tile regardless of which searchbase entry drives the data,
+     * including across binding swaps. The "Default" affordance maps
+     * back to clearing the override on Apply, matching the
+     * "Reset to default" pattern used elsewhere in the picker.
+     */
+    const [vizOverrideInput, setVizOverrideInput] = useState<
+        Exclude<MetricOverride['vizOverride'], undefined> | null
+    >(null);
     const searchInputRef = useRef<HTMLInputElement | null>(null);
     const tagSelectRef = useRef<HTMLDivElement | null>(null);
     const tagInputRef = useRef<HTMLInputElement | null>(null);
@@ -657,6 +678,12 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
             cur && cur.critical !== undefined ? String(cur.critical) : ''
         );
         setThresholdDirection(cur?.direction ?? 'higher_is_better');
+        // Build 1174: pre-fill the CHART STYLE picker from any
+        // currently-applied viz override so re-opening shows the
+        // active selection. `null` falls through to "Default" in
+        // the picker, which on Apply resolves to "no override
+        // persisted" — same pattern as the threshold reset path.
+        setVizOverrideInput(context.currentVizOverride ?? null);
         // Build 98 fix-up: always expand the THRESHOLDS section on
         // panel open. The previous behaviour ("collapse unless the
         // user has already customised") buried the form behind a
@@ -1159,6 +1186,14 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         const defaultDirection = def?.direction ?? 'higher_is_better';
         if (thresholdDirection !== defaultDirection) {
             payload.thresholdDirection = thresholdDirection;
+        }
+        // Viz override (Build 1174). Stored only when set — `null`
+        // means "use the conf default", which we represent at the
+        // storage layer by simply omitting the field. Same pattern
+        // as the threshold deltas above: only persist genuine
+        // user-set values, fall through to defaults at runtime.
+        if (vizOverrideInput) {
+            payload.vizOverride = vizOverrideInput;
         }
         // Edge case: the user *cleared* a default-set threshold
         // (e.g. tile defaulted to warning=95, user blanked the input
@@ -2039,6 +2074,122 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         placeholder={context.defaultLabel}
                                         className="w-full px-2 py-1 text-[11px] rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
                                     />
+                                </div>
+                            </div>
+
+                            {/* CHART STYLE form (Build 1174).
+                              *
+                              * Lets the operator override how the tile
+                              * renders WITHOUT changing which search
+                              * drives it. Useful when the conf default
+                              * (e.g. `splunk.column` for FW Blocked)
+                              * doesn't fit the operator's preference
+                              * (Alan asked for area on FW Blocked on
+                              * 2026-05-18). Also exposes the
+                              * `singlevalue` collapse-the-chart option
+                              * for tiles whose timechart adds clutter.
+                              *
+                              * Storage rule: persisted only when the
+                              * user picks something other than
+                              * "Default". Picking Default on Apply
+                              * silently drops the override field from
+                              * the stored payload — same as
+                              * "Reset to default" for thresholds. The
+                              * runtime `MetricCardLeaf` reads
+                              * `override.vizOverride` first and falls
+                              * back to `searchbase.conf`'s
+                              * `default_viz` so this picker can never
+                              * desync from what the tile actually
+                              * shows.
+                              *
+                              * Choices intentionally limited to the
+                              * four sparkline variants; switching to
+                              * a TABLE / BAR-BREAKDOWN viz changes
+                              * the data hook, not just the rendering,
+                              * so it must come through a different
+                              * `savedSearch` whose conf default
+                              * already names that viz. */}
+                            <div className="rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-2.5">
+                                <div className="flex items-center justify-between gap-2">
+                                    <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 px-0.5 py-0.5">
+                                        <BarChart3 className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
+                                        Chart style
+                                        {vizOverrideInput && (
+                                            <span
+                                                title="This tile has a custom chart style applied (different from the searchbase default)"
+                                                className="ml-1 inline-flex items-center px-1 py-px rounded-sm bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 text-[8px] font-bold tracking-wide normal-case"
+                                            >
+                                                custom
+                                            </span>
+                                        )}
+                                    </span>
+                                    {vizOverrideInput && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setVizOverrideInput(null)}
+                                            title="Restore the chart style to the searchbase default for this tile (still has to be applied)"
+                                            className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
+                                        >
+                                            <RotateCcw className="w-2.5 h-2.5" />
+                                            Reset to default
+                                        </button>
+                                    )}
+                                </div>
+                                <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
+                                    Override how this tile renders. {' '}
+                                    <span className="text-slate-400 dark:text-slate-500">
+                                        Default uses the searchbase{' '}
+                                        <code className="font-mono">default_viz</code>
+                                        {selectedEntry?.defaultViz ? (
+                                            <>
+                                                {' '}
+                                                ({resolveVizMapping(selectedEntry.defaultViz).label})
+                                            </>
+                                        ) : null}
+                                        .
+                                    </span>
+                                </p>
+                                <div className="mt-2 grid grid-cols-6 gap-1 p-0.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+                                    {(
+                                        [
+                                            { v: null, label: 'Default', splunkViz: undefined, hint: 'Use the searchbase default_viz' },
+                                            { v: 'area' as const, label: 'Area', splunkViz: 'splunk.area', hint: 'Filled area chart' },
+                                            { v: 'line' as const, label: 'Line', splunkViz: 'splunk.line', hint: 'Line chart' },
+                                            { v: 'column' as const, label: 'Column', splunkViz: 'splunk.column', hint: 'Vertical bars (each bar grows up; one per bucket)' },
+                                            // Build 1187 — horizontal bars, recharts `layout="vertical"`.
+                                            // Kept distinct from Column so operators can pick which
+                                            // axis the bars sit on without editing searchbase.conf.
+                                            { v: 'bar' as const, label: 'Bar', splunkViz: 'splunk.bar', hint: 'Horizontal bars (each bar grows right; one per bucket)' },
+                                            { v: 'singlevalue' as const, label: 'Single', splunkViz: 'splunk.singlevalue', hint: 'Headline only — no chart underneath' },
+                                        ]
+                                    ).map((opt) => {
+                                        const active = vizOverrideInput === opt.v;
+                                        return (
+                                            <button
+                                                key={opt.label}
+                                                type="button"
+                                                onClick={() => setVizOverrideInput(opt.v)}
+                                                title={opt.hint}
+                                                className={cn(
+                                                    'inline-flex items-center justify-center gap-1 px-1 py-1 text-[10px] font-bold uppercase tracking-wider rounded transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                                                    active
+                                                        ? 'bg-sky-500 text-white'
+                                                        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                                )}
+                                                aria-pressed={active}
+                                            >
+                                                {opt.splunkViz && (
+                                                    <VizIcon
+                                                        splunkViz={opt.splunkViz}
+                                                        size={11}
+                                                        showTooltip={false}
+                                                        className={active ? 'text-white' : undefined}
+                                                    />
+                                                )}
+                                                {opt.label}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
 

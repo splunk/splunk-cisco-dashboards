@@ -154,17 +154,35 @@ const STATUS_TREND_COLOR: Record<MetricStatus, string> = {
     unknown: 'text-slate-400 dark:text-slate-500',
 };
 
-// Sparkline stroke/fill palette for `warning` and `critical`. Healthy
-// and unknown intentionally fall through to the tile's brand `color`
-// prop so the resting-state visual identity per metric (Security Score
-// green, Network Health sky, etc.) is preserved when the tile is fine.
-// When the tile degrades, the sparkline turns amber/red along with the
-// headline and trend arrow so all three signals tell the same story
-// at a glance — Alan flagged the inverse case on 2026-05-11
-// (red "58%" headline, green sparkline). Hex values mirror the
-// Tailwind tokens used by the headline/text classes so the three
-// elements visibly match without a separate palette to govern.
+// Sparkline stroke/fill palette per status. ALL three statuses
+// resolve to a status-driven color so the chart and the headline
+// always tell the same story; `unknown` falls through to the tile's
+// brand `color` prop so we don't fabricate a status that the data
+// hasn't given us.
+//
+// Why `healthy` is mapped (Build 1174):
+//   The earlier design left `healthy` falling through to the tile's
+//   brand color so resting-state tiles kept their visual identity
+//   (Network Health sky, FW Blocked amber, …). That broke down when
+//   the brand color collided with a status color. FW Blocked's brand
+//   is `#f59e0b` — the same amber as the `warning` palette below —
+//   so a healthy FW Blocked tile rendered with amber bars and looked
+//   identical to a warning FW Blocked tile in the chart, even though
+//   the headline icon was correctly green-checked. Operator flagged
+//   on 2026-05-18 ("I changed the threshold to not alarm until we
+//   hit 20k blocks, the chart below is still orange"). Mapping
+//   healthy to a positive sky tone makes the chart palette tracked
+//   to the threshold status, never the brand, and keeps the three
+//   signals (headline number / trend arrow / chart) in sync. Brand
+//   color is still honoured upstream (singlevalue tile background,
+//   tile accent edge) so the resting-state identity isn't lost.
+//
+// Hex values mirror the Tailwind tokens used by the matching text
+// classes (`text-sky-600`, `text-amber-500`, `text-red-600`) so the
+// chart and the headline visibly match without a separate palette
+// to govern.
 const STATUS_VIZ_COLOR: Partial<Record<MetricStatus, string>> = {
+    healthy: '#0ea5e9',
     warning: '#f59e0b',
     critical: '#dc2626',
 };

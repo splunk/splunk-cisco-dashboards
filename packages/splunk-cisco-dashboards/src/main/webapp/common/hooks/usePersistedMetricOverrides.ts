@@ -22,6 +22,7 @@
  *         thresholdWarning?: number,   // optional override for threshold.warning
  *         thresholdCritical?: number,  // optional override for threshold.critical
  *         thresholdDirection?: 'higher_is_better' | 'lower_is_better',
+ *         vizOverride?: 'area'|'line'|'column'|'bar'|'singlevalue', // Builds 1174 / 1187
  *       }
  *     }
  *   }
@@ -73,6 +74,22 @@ const isFiniteThresholdNumber = (n: unknown): n is number =>
 
 const VALID_DIRECTIONS = new Set<string>(['higher_is_better', 'lower_is_better']);
 
+/**
+ * Allow-list of viz overrides accepted from the picker (Build 1174).
+ * Mirrors the runtime `SparklineVizType` union — kept as a literal
+ * Set here so a stale localStorage entry can't smuggle in an
+ * unrecognised viz name. New viz types must be added in three
+ * places at once: this set, the runtime SparklineVizType, and the
+ * picker UI's option list.
+ */
+const VALID_VIZ_OVERRIDES = new Set<string>([
+    'area',
+    'line',
+    'column',
+    'bar',
+    'singlevalue',
+]);
+
 export interface MetricOverride {
     /** searchbase search_name. The property name is kept for compatibility. */
     savedSearch: string;
@@ -105,6 +122,21 @@ export interface MetricOverride {
      * read correctly without having to fork the tile.
      */
     thresholdDirection?: 'higher_is_better' | 'lower_is_better';
+    /**
+     * Optional viz-type override for the tile's chart (Build 1174).
+     * Mirrors the runtime `SparklineVizType` so the picker can swap
+     * the rendering without forking the searchbase entry: an `area`
+     * tile can be re-styled as `line` / `column` / `bar` /
+     * `singlevalue` per user. `singlevalue` collapses the chart
+     * entirely and only shows the headline + threshold rows, useful
+     * for tiles whose timechart adds clutter rather than insight
+     * (Alan asked for this on 2026-05-18). `bar` (Build 1187) is the
+     * recharts-`layout="vertical"` horizontal-bar render path, kept
+     * separate from `column` so the two chart styles are reachable
+     * independently. When unset, the runtime falls back to
+     * `searchbase.conf`'s `default_viz` (current behaviour).
+     */
+    vizOverride?: 'area' | 'line' | 'column' | 'bar' | 'singlevalue';
 }
 
 export type MetricOverrideMap = Record<string, MetricOverride>;
@@ -146,6 +178,15 @@ const sanitizeOverride = (raw: unknown): MetricOverride | null => {
     }
     if (typeof o.thresholdDirection === 'string' && VALID_DIRECTIONS.has(o.thresholdDirection)) {
         out.thresholdDirection = o.thresholdDirection as MetricOverride['thresholdDirection'];
+    }
+    // Viz override (Build 1174). Same rules as threshold overrides:
+    // optional, only stored when the picker explicitly chose a viz
+    // distinct from the conf default. Anything outside the allow-
+    // list is silently dropped so a stale or hand-edited localStorage
+    // payload can't smuggle an unrecognised viz name into the
+    // runtime.
+    if (typeof o.vizOverride === 'string' && VALID_VIZ_OVERRIDES.has(o.vizOverride)) {
+        out.vizOverride = o.vizOverride as MetricOverride['vizOverride'];
     }
     return out;
 };

@@ -70,3 +70,40 @@
  * entrypoint. We keep this file Tailwind-only so it can be reused by
  * other React-mounted dashboards.
  */
+
+/*
+ * Build 1174 — export-mode swap rules.
+ *
+ * `useExportPage` toggles `<html data-exporting="true">` for the
+ * duration of an html2canvas capture. Components opt in by pairing
+ * a live element (`data-export-hide`) with a static substitute
+ * (`data-export-placeholder`); during export the live element
+ * disappears and the placeholder takes over in the same layout
+ * slot. Used today by the Florida CustomerTopologyMap (Leaflet
+ * compositor + SMIL flow lines that html2canvas can't rasterise).
+ *
+ * !important on the placeholder rule because the inline `hidden`
+ * Tailwind class on the placeholder beats the `flex` we want for
+ * export — we keep `hidden` as the resting state so the placeholder
+ * never reflows during normal use.
+ */
+html[data-exporting='true'] [data-export-hide] {
+    display: none !important;
+}
+html[data-exporting='true'] [data-export-placeholder] {
+    display: flex !important;
+}
+
+/*
+ * Build 1174 — best-effort CSS animation freeze during export. SMIL
+ * animations are paused programmatically by `useExportPage`; CSS
+ * keyframe animations (sparkline pulse, status badges) are stilled
+ * here so they don't get rasterised mid-frame. Restricted to
+ * `[data-exporting]` so it never affects the live dashboard.
+ */
+html[data-exporting='true'] *,
+html[data-exporting='true'] *::before,
+html[data-exporting='true'] *::after {
+    animation-play-state: paused !important;
+    transition: none !important;
+}
