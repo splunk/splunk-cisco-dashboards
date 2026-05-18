@@ -3177,30 +3177,35 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                 {!isViewMode && !exporting && (
                     <Background variant={BackgroundVariant.Dots} gap={24} size={1} />
                 )}
-                <MiniMap
-                    position="bottom-left"
-                    pannable
-                    zoomable
-                    nodeStrokeWidth={2}
-                    nodeColor={(n) => {
-                        if (n.type === REGION_NODE_TYPE) return '#cbd5e1';
-                        if (n.type === DIAGRAM_TITLE_NODE_TYPE) return 'transparent';
-                        // Build 115.1 — annotations don't read as
-                        // network elements on the minimap. Render
-                        // them transparent so the minimap still
-                        // communicates "where the devices are" at
-                        // a glance, not "where the labels are".
-                        if (n.type === TEXT_BOX_NODE_TYPE) return 'transparent';
-                        return '#0ea5e9';
-                    }}
-                />
+                {!exporting && (
+                    <MiniMap
+                        className="scd-export-exclude"
+                        position="bottom-left"
+                        pannable
+                        zoomable
+                        nodeStrokeWidth={2}
+                        nodeColor={(n) => {
+                            if (n.type === REGION_NODE_TYPE) return '#cbd5e1';
+                            if (n.type === DIAGRAM_TITLE_NODE_TYPE) return 'transparent';
+                            // Build 115.1 — annotations don't read as
+                            // network elements on the minimap. Render
+                            // them transparent so the minimap still
+                            // communicates "where the devices are" at
+                            // a glance, not "where the labels are".
+                            if (n.type === TEXT_BOX_NODE_TYPE) return 'transparent';
+                            return '#0ea5e9';
+                        }}
+                    />
+                )}
             </ReactFlow>
 
-            <CanvasViewportControls
-                helpOpen={helpOpen}
-                onHelpToggle={() => setHelpOpen((v) => !v)}
-                onHelpClose={() => setHelpOpen(false)}
-            />
+            {!exporting && (
+                <CanvasViewportControls
+                    helpOpen={helpOpen}
+                    onHelpToggle={() => setHelpOpen((v) => !v)}
+                    onHelpClose={() => setHelpOpen(false)}
+                />
+            )}
 
             {/* Hint banner: tells operators what to do on a blank canvas
              *  Build 113: only shown in edit mode — view mode is for
@@ -3338,7 +3343,10 @@ const CanvasViewportControls: React.FC<{
     ];
 
     return (
-        <div className="absolute right-5 bottom-5 z-20 pointer-events-none">
+        <div
+            className="absolute right-5 bottom-5 z-20 pointer-events-none"
+            data-export-exclude="true"
+        >
             <div className="relative pointer-events-auto">
                 <div
                     className={cn(

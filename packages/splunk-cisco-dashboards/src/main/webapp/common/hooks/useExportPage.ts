@@ -9,6 +9,13 @@
  * Why not @microsoft/playwright / a screenshot service? html2canvas is
  * fully client-side, so the export works in air-gapped Splunk
  * environments without a backend dependency.
+ *
+ * Build 1185 — export chrome guard. Some pages have editor UI inside
+ * the capture target (React Flow minimap, zoom controls, help bubble).
+ * Components can mark those affordances with `data-export-exclude`, and
+ * this hook also skips known React Flow panel/background classes so PNG
+ * / PDF output stays diagram-only even if the live editor chrome is
+ * visible on screen.
  */
 
 import { useCallback, useState } from 'react';
@@ -70,6 +77,7 @@ export const useExportPage = ({
                     scale: window.devicePixelRatio > 1 ? 2 : 1.5,
                     useCORS: true,
                     logging: false,
+                    ignoreElements: shouldIgnoreExportElement,
                 });
                 const stamp = new Date().toISOString().replace(/[:.]/g, '-');
                 const base = `${fileName}-${stamp}`;
@@ -116,6 +124,19 @@ export const useExportPage = ({
     );
 
     return { exporting, error, exportAs };
+};
+
+const EXPORT_EXCLUDE_SELECTOR = [
+    '[data-export-exclude="true"]',
+    '.scd-export-exclude',
+    '.react-flow__background',
+    '.react-flow__controls',
+    '.react-flow__minimap',
+    '.react-flow__panel',
+].join(', ');
+
+const shouldIgnoreExportElement = (element: Element): boolean => {
+    return element.closest(EXPORT_EXCLUDE_SELECTOR) !== null;
 };
 
 const triggerDownload = (dataUrl: string, fileName: string): void => {
