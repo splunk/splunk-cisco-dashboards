@@ -178,36 +178,41 @@ export const CiscoStackIcon = wrap(Layers, COLOR.BLUE);
 export const CiscoWlcIcon = wrap(RadioTower, COLOR.VIOLET);
 export const CiscoApIcon = wrap(Wifi, COLOR.FUCHSIA);
 
-// Build 1182 — SVA-style load balancer. The Splunk docs draw a
-// simple square service icon with inputs fanning into a backend
-// pool, not a physical rack appliance. Keep it stroke-based and
-// compact so the node card reads like a logical L7/VIP service.
+// Build 1201 — compact load-balancer glyph. Operators preferred the
+// simple square service icon style: an outlined box with a small
+// internal splitter mark. Keep it blue and restrained so it reads
+// clearly in the picker and does not compete with device-card chrome.
 const LoadBalancerSVG: React.FC<IconProps> = ({ className, title }) => (
     <svg
-        viewBox="0 0 24 24"
-        className={cn(COLOR.ROSE, className)}
+        viewBox="0 0 64 64"
+        className={cn(COLOR.BLUE, className)}
         fill="none"
         stroke="currentColor"
-        strokeWidth={1.75}
+        strokeWidth={3}
         strokeLinecap="round"
         strokeLinejoin="round"
         aria-label={title ?? 'Load balancer'}
         role="img"
     >
         {title ? <title>{title}</title> : null}
-        <circle cx={6} cy={4} r={1.2} fill="currentColor" stroke="none" />
-        <circle cx={12} cy={4} r={1.2} fill="currentColor" stroke="none" />
-        <circle cx={18} cy={4} r={1.2} fill="currentColor" stroke="none" />
-        <path d="M6 5.5 L9 9" />
-        <path d="M12 5.5 V8.6" />
-        <path d="M18 5.5 L15 9" />
-        <rect x={6.5} y={9} width={11} height={11} rx={1.4} />
-        <rect x={8.8} y={11.2} width={2.3} height={2.3} rx={0.2} fill="currentColor" stroke="none" opacity={0.75} />
-        <rect x={12.9} y={11.2} width={2.3} height={2.3} rx={0.2} fill="currentColor" stroke="none" opacity={0.75} />
-        <path d="M12 14.7 v2.8" />
-        <path d="M9.6 17.5 h4.8" />
-        <path d="M9.6 17.5 l-1.8 1.6" />
-        <path d="M14.4 17.5 l1.8 1.6" />
+        <rect
+            x={18}
+            y={12}
+            width={28}
+            height={28}
+            rx={2.5}
+            strokeWidth={2.6}
+        />
+        <rect x={24} y={19} width={4.5} height={4.5} rx={0.7} fill="currentColor" stroke="none" />
+        <rect x={30} y={19} width={4.5} height={4.5} rx={0.7} fill="currentColor" stroke="none" />
+        <rect x={36} y={19} width={4.5} height={4.5} rx={0.7} fill="currentColor" stroke="none" />
+        <path d="M26.25 23.5 V28.5" />
+        <path d="M32.25 23.5 V32" />
+        <path d="M38.25 23.5 V28.5" />
+        <path d="M26.25 28.5 C26.25 31.5 30.2 31.5 30.2 35" />
+        <path d="M38.25 28.5 C38.25 31.5 34.3 31.5 34.3 35" />
+        <path d="M32.25 32 V36" />
+        <path d="M29.8 35.4 H34.7" />
     </svg>
 );
 LoadBalancerSVG.displayName = 'DeviceIcon(LoadBalancer)';

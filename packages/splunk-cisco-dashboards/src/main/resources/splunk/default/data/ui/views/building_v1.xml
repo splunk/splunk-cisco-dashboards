@@ -1,11 +1,11 @@
 
 <dashboard version="2" theme="light">
  <label>Cisco Spaces - Building Intelligence</label>
- <description>Cisco Spaces device tracking, user presence, occupancy, and wireless intelligence</description>
+ <description>Cisco Spaces location and occupancy plus ISE-correlated wireless device trust — why Splunk when you already have Spaces</description>
  <definition><![CDATA[
 {
 	"title": "Cisco Spaces - Building Intelligence",
-	"description": "Cisco Spaces device tracking, user presence, occupancy, and wireless intelligence",
+	"description": "Cisco Spaces location and occupancy plus ISE-correlated wireless device trust",
 	"inputs": {
 		"input_global_trp": {
 			"options": {
@@ -19,14 +19,6 @@
 	"defaults": {
 		"dataSources": {
 			"ds.search": {
-				"options": {
-					"queryParameters": {
-						"earliest": "$global_time.earliest$",
-						"latest": "$global_time.latest$"
-					}
-				}
-			},
-			"ds.spl2": {
 				"options": {
 					"queryParameters": {
 						"earliest": "$global_time.earliest$",
@@ -53,7 +45,7 @@
 				"backgroundColor": "transparent",
 				"fontColor": "#2B2B2B",
 				"fontSize": "small",
-				"markdown": "# Building Resilience — Cisco Spaces\n\nReal-time **location analytics, occupancy, and collaboration intelligence** from Cisco Spaces and Webex devices. Use this dashboard to monitor building utilization, track device presence, and assess workspace efficiency.\n\n**Audience:** Facilities Management, Workplace Services, IT Operations\n**Primary Sources:** Cisco Spaces (Location, Occupancy, Presence), Webex Device Telemetry\n**Refresh:** All panels follow the global time picker; Spaces data refreshes every 5–15 minutes\n\n---\n\n## How to Navigate This Dashboard\n\n**Cisco Spaces Overview** — Building hierarchy, device presence counts, SSID activity, and historical trends.\n*Start here — confirm location services are operational and occupancy is within expected bounds.*\n\n**Collaboration & Occupancy** — Webex device inventory, people counts, room utilization rates, and per-building summaries.\n*Use to assess workspace efficiency, plan capacity, and identify underutilized spaces.*\n\n> **Reading pattern:** Stable device counts and expected occupancy = normal. Sudden drops in presence or zero people counts = check Spaces integration or building access."
+				"markdown": "# Building Resilience — Cisco Spaces\n\nReal-time **location analytics, occupancy, and collaboration intelligence** from Cisco Spaces and Webex devices — plus **wireless trust** when Splunk correlates the same MAC addresses with **Cisco ISE**.\n\n**Why Splunk when Spaces already has great maps?** Cisco Spaces tells you *where* people and devices are. Splunk tells you *which devices on the network are authenticated, which are guest-only, and which deserve a second look* — in one place, with your security and IT data, over days or weeks.\n\n**Audience:** Facilities Management, Workplace Services, IT Operations, Security\n**Primary Sources:** Cisco Spaces Firehose, Webex Telemetry, Cisco ISE (`index_identity`)\n**Refresh:** All panels follow the global time picker; Spaces ~5–15 min, ISE per your syslog pipeline\n\n---\n\n## How to Navigate This Dashboard\n\n**Cisco Spaces Overview** — Building hierarchy, device vs user counts, SSID activity, and trends.\n*Mirrors Spaces KPIs; use when validating firehose health.*\n\n**Wireless Trust (Spaces + ISE)** — MAC classification and **devices to review**.\n*This is the Splunk differentiator: connected devices minus corporate ISE success → actionable review list with building/floor context.*\n\n**Collaboration & Occupancy** — Webex inventory, people counts, room utilization.\n*Use for workspace efficiency; drill into Spaces for floor plans and live signage.*\n\n> **Reading pattern:** Large gap between **Connected Devices** and **Active Users** is normal (multiple devices per person). Use **Wireless Trust** to see which MACs are not corporate-authenticated."
 			},
 			"type": "splunk.markdown"
 		},
@@ -62,7 +54,7 @@
 				"backgroundColor": "transparent",
 				"fontColor": "#2B2B2B",
 				"fontSize": "small",
-				"markdown": "## Data Sources & Troubleshooting\n\n---\n\n**Cisco Spaces** — Cisco Spaces App for Splunk\nSourcetypes: `cisco:spaces:firehose` (DEVICE_LOCATION_UPDATE, USER_PRESENCE, SPACE_OCCUPANCY)\nFreshness: ~5 min\n\n**Webex Devices** — Cisco Webex Add-on for Splunk\nSourcetypes: `cisco:webex:devices`, `cisco:webex:telemetry`\nFreshness: ~15 min\n\n---\n\n**Panel showing \"No results\"?**\n\n1. **Widen the time range** — Spaces data may need 4+ hours to populate\n2. **Verify the Spaces App is installed** — check *Manage Apps*\n3. **Confirm Firehose data** — run `index=* sourcetype=cisco:spaces:firehose | head 5`\n4. **Check Webex integration** — verify Webex device telemetry is flowing."
+				"markdown": "## Data Sources & Troubleshooting\n\n---\n\n**Cisco Spaces** — Cisco Spaces App for Splunk\nSourcetypes: `cisco:spaces:firehose` (DEVICE_LOCATION_UPDATE, USER_PRESENCE, SPACE_OCCUPANCY, DEVICE_ASSOCIATION)\nFreshness: ~5 min\n\n**Cisco ISE** — ISE syslog in `index_identity`, sourcetype `cisco:ise:syslog` (5200/5400)\nUsed for MAC ↔ user/profile correlation on the **Wireless Trust** tab\n\n**Webex Devices** — Cisco Webex Add-on for Splunk\nSourcetypes: `cisco:webex:devices`, `cisco:webex:telemetry`\nFreshness: ~15 min\n\n---\n\n**Wireless Trust empty or all \"No ISE record\"?**\n\n1. Confirm ISE logs reach Splunk: `` `index_identity` sourcetype=cisco:ise:syslog \"5200\" | head 5 ``\n2. Widen time range (ISE pass/fail must overlap Spaces MAC activity)\n3. Rogue/interferer labels from Spaces Detect & Locate are not fully in firehose yet — use this tab for policy alignment; confirm device class in Spaces UI\n\n**Other panels \"No results\"?**\n\n1. Widen time range — Spaces may need 4+ hours\n2. Verify Spaces App and firehose: `` sourcetype=cisco:spaces:firehose | head 5 ``"
 			},
 			"type": "splunk.markdown"
 		},
@@ -207,7 +199,7 @@
 			"options": {
 				"fontColor": "#D64550",
 				"fontSize": "small",
-				"markdown": "## Wireless Intelligence"
+				"markdown": "## Wireless Intelligence\n\nSSID distribution from Spaces. For **MAC trust and ISE correlation**, see **Wireless Trust (Spaces + ISE)**."
 			},
 			"type": "splunk.markdown"
 		},
@@ -225,7 +217,7 @@
 				"backgroundColor": "transparent",
 				"fontColor": "#2B2B2B",
 				"fontSize": "small",
-				"markdown": "## Metric Reference — Cisco Spaces Overview Tab\n\n---\n\n**Connected Devices** — Unique device MAC addresses tracked via DEVICE_LOCATION_UPDATE\n**Active Users** — Portfolio-wide headcount from USER_PRESENCE `activeUsersCount.totalUsers` (max per bucket; do not sum floors)\n**Rooms Occupied** — Percent of ROOM-type spaces with people present (`dc` rooms, not `count` rows)\n**Active SSIDs** — Distinct SSIDs with active client associations\n**Webex Devices** — Total Webex devices reporting via WEBEX_TELEMETRY\n\n---\n\n**Location Breakdown** — Campus → Building → Floor hierarchy with device counts\n**Device Presence Trend** — Device location update volume over time\n**SSID Client Trend** — Client count per SSID over time\n**Building Occupancy Trend** — Occupancy levels per building over time"
+				"markdown": "## Metric Reference — Cisco Spaces Overview Tab\n\n---\n\n**Connected Devices** — Unique MAC addresses (`DEVICE_LOCATION_UPDATE` + `dc`)\n**Active Users** — Portfolio headcount (`USER_PRESENCE`, `max(totalUsers)` — never sum floors)\n**Rooms Occupied** — % of ROOM spaces with presence (`dc` room names)\n**Active SSIDs** / **Webex Devices** — As labeled\n\n---\n\n**Wireless Trust tab** — Splunk value-add: ISE auth + SSID + building/floor per MAC; see saved searches `building_resilience_wireless_device_trust_summary` and `building_resilience_wireless_devices_to_review`.\n\n**Location Breakdown** — Campus / Building / Floor device and AP counts\n**Presence Trends** — Users and devices by city over time\n**Wireless Intelligence** — SSID client distribution and trends"
 			},
 			"type": "splunk.markdown"
 		},
@@ -245,7 +237,7 @@
 			"dataSources": {
 				"primary": "ds_kpi_devices"
 			},
-			"description": "Unique network devices detected across Cisco Spaces locations",
+			"description": "Distinct MAC addresses on the wireless network (Spaces). Compare to Active Users and Wireless Trust — not every MAC is a person, and not every MAC is corporate-authenticated.",
 			"options": {
 				"backgroundColor": "transparent",
 				"majorColor": "#049FD9",
@@ -350,7 +342,7 @@
 			"dataSources": {
 				"primary": "ds_kpi_users"
 			},
-			"description": "Unique users detected via wireless association or presence",
+			"description": "Portfolio user headcount (USER_PRESENCE). Typically lower than Connected Devices — people carry multiple MACs; see Wireless Trust for MAC-level policy view.",
 			"options": {
 				"majorColor": "#049FD9",
 				"majorFontSize": 36,
@@ -442,7 +434,7 @@
 				"backgroundColor": "transparent",
 				"fontColor": "#6E6E6E",
 				"fontSize": "small",
-				"markdown": "**Collaboration room utilization and people counts** from Webex devices and Cisco Spaces sensors. Use this tab to assess workspace efficiency and plan capacity."
+				"markdown": "**Room and Webex utilization** — best viewed in Cisco Spaces for live floor plans. Splunk here supports **trends and tables**; use Spaces Space Manager for room-level drill-down."
 			},
 			"type": "splunk.markdown"
 		},
@@ -451,7 +443,7 @@
 				"backgroundColor": "transparent",
 				"fontColor": "#6E6E6E",
 				"fontSize": "small",
-				"markdown": "Real-time **location analytics and occupancy** from Cisco Spaces. Use this tab to monitor device presence, building hierarchy, and historical occupancy across all facilities."
+				"markdown": "Spaces-native KPIs: **where** devices are and how rooms are used. For *which MACs should not be on the network*, open **Wireless Trust (Spaces + ISE)** — Splunk joins location to ISE authorization."
 			},
 			"type": "splunk.markdown"
 		},
@@ -720,6 +712,120 @@
 			"dataSources": {
 				"primary": "ds_kpi_webex_count"
 			}
+		},
+		"viz_box_trust": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.78)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.08)",
+				"strokeWidth": 1
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_hdr_trust": {
+			"options": {
+				"fontColor": "#D64550",
+				"fontSize": "small",
+				"markdown": "## Wireless device trust (Spaces + ISE)"
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_info_trust": {
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#2B2B2B",
+				"fontSize": "small",
+				"markdown": "## Metric Reference — Wireless Trust Tab\n\n---\n\n**Devices to Review** — Count of MACs not corporate-authenticated (ISE pass on non-guest SSID)\n**Trust segments** — Breakdown: corporate auth, guest, guest WLAN only, Spaces-identified, no ISE identity, other\n**Review table** — MAC, building, floor, SSID, ISE user/profile, why flagged\n\n---\n\n**Story for leadership:** *Cisco Spaces tells you where devices are; Splunk tells you which devices on the network are trusted.* Confirm interferer/rogue types in Spaces Detect & Locate until firehose exports those categories."
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_kpi_review": {
+			"context": {
+				"trendColorEditorConfig": [
+					{
+						"to": 0,
+						"value": "#6EBE4A"
+					},
+					{
+						"from": 0,
+						"value": "#D64550"
+					}
+				]
+			},
+			"dataSources": {
+				"primary": "ds_trust_review_count"
+			},
+			"description": "MAC addresses visible to Spaces that are not corporate-authenticated in ISE for this time range",
+			"options": {
+				"backgroundColor": "transparent",
+				"majorColor": "#D64550",
+				"majorFontSize": 36,
+				"showTrendIndicator": false,
+				"sparklineDisplay": "off",
+				"unit": "",
+				"unitPosition": "after"
+			},
+			"title": "Devices to Review",
+			"type": "splunk.singlevalue"
+		},
+		"viz_narr_trust": {
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#6E6E6E",
+				"fontSize": "small",
+				"markdown": "**Splunk value-add:** correlate wireless **MAC addresses** (Cisco Spaces) with **ISE authentication** — who is on the network, on which SSID, and in which building."
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_trust_review_table": {
+			"dataSources": {
+				"primary": "ds_trust_review"
+			},
+			"description": "Endpoints to validate: not corporate-authenticated, or policy mismatch between SSID and ISE",
+			"options": {
+				"backgroundColor": "transparent",
+				"count": 25,
+				"fontSize": "small",
+				"headerVisibility": "fixed",
+				"tableFormat": {
+					"headerBackgroundColor": "#F5F5F5",
+					"headerColor": "#2B2B2B",
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(tableAltRowBackgroundColorsByBackgroundColor)"
+				}
+			},
+			"title": "Devices to review — MAC, location, SSID, ISE",
+			"type": "splunk.table"
+		},
+		"viz_trust_segment_bar": {
+			"dataSources": {
+				"primary": "ds_trust_summary"
+			},
+			"description": "How tracked MACs classify when Spaces location/SSID is joined to ISE pass/fail",
+			"options": {
+				"backgroundColor": "transparent",
+				"dataValuesDisplay": "all",
+				"legendDisplay": "off",
+				"seriesColors": [
+					"#22C55E",
+					"#049FD9",
+					"#EDA800",
+					"#D64550",
+					"#6E6E6E"
+				],
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide"
+			},
+			"title": "Wireless endpoints by trust segment",
+			"type": "splunk.bar"
+		},
+		"viz_why_splunk": {
+			"options": {
+				"backgroundColor": "rgba(5, 80, 115, 0.06)",
+				"fontColor": "#005073",
+				"fontSize": "small",
+				"markdown": "### Why Splunk when Cisco Spaces already has beautiful maps?\n\n**Cisco Spaces** shows live floor plans, room occupancy, and Detect & Locate for a single MAC. **Splunk** answers the cross-domain question David cares about: *of all the devices on the network, which ones are authenticated corporate users, which are guests, and which should we investigate?* — with **building and floor context**, over **your chosen time range**, next to firewall, DNAC, and identity data.\n\n> *Spaces tells you where they are. Splunk tells you which devices on the network are trusted.*"
+			},
+			"type": "splunk.markdown"
 		}
 	},
 	"dataSources": {
@@ -940,6 +1046,36 @@
 				}
 			},
 			"type": "ds.search"
+		},
+		"ds_trust_review": {
+			"name": "Building Resilience - Wireless Devices To Review",
+			"options": {
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" (eventType=\"DEVICE_LOCATION_UPDATE\" OR (eventType=\"DEVICE_ASSOCIATION\" deviceAssociation.event=\"ASSOCIATE\"))\n| eval mac=lower(replace(coalesce('deviceLocationUpdate.device.macAddress', 'deviceAssociation.device.macAddress'), \":\", \"-\"))\n| where isnotnull(mac) AND mac!=\"\"\n| eval ssid=coalesce('deviceAssociation.ssid', \"\")\n| eval spaces_user_id=coalesce('deviceLocationUpdate.device.userId', \"\")\n| eval building=coalesce('deviceLocationUpdate.location.parent.name', 'deviceAssociation.location.parent.name', 'deviceAssociation.location.parent.parent.name')\n| eval floor=coalesce('deviceLocationUpdate.location.name', 'deviceAssociation.location.name')\n| eval spaces_type=coalesce('deviceLocationUpdate.device.type', \"\")\n| stats latest(spaces_user_id) as spaces_user_id, latest(building) as building, latest(floor) as floor, latest(spaces_type) as spaces_type, values(ssid) as ssid_mv by mac\n| eval ssid=coalesce(mvindex(ssid_mv, 0), \"\")\n| fields - ssid_mv\n| join mac type=left [\n    search `index_identity` sourcetype=\"cisco:ise:syslog\" (\"5200\" OR \"5400\")\n    | eval mac=lower(replace(coalesce(Calling_Station_ID, EndPointMACAddress), \":\", \"-\"))\n    | where isnotnull(mac) AND len(mac)>=11\n    | eval identity=lower(trim(coalesce(user, user_name, User_Name, 'User-Name', username, \"\")))\n    | where NOT match(identity, \"^#ctsrequest#$\") AND NOT match(identity, \"^#[^#]+#$\")\n    | eval ise_pass=if(match(_raw, \"5200\") OR match(_raw, \"(?i)CISE_Passed\"), 1, 0)\n    | stats latest(identity) as ise_user, max(ise_pass) as ise_pass, latest(EndpointIdentityGroup) as ise_profile by mac\n  ]\n| eval guest_ssid=if(match(ssid, \"(?i)guest\"), 1, 0)\n| eval corp_ssid=if(isnotnull(ssid) AND ssid!=\"\" AND guest_ssid=0, 1, 0)\n| eval segment=case(\n    ise_pass=1 AND guest_ssid=0, \"Corporate authenticated\",\n    ise_pass=1 AND guest_ssid=1, \"Guest authenticated\",\n    guest_ssid=1, \"Guest WLAN only\",\n    isnotnull(spaces_user_id) AND spaces_user_id!=\"\", \"Spaces-identified device\",\n    isnull(ise_user) OR ise_user=\"\", \"No ISE identity\",\n    1==1, \"Other — review\"\n  )\n| eval ise_result=case(ise_pass=1, \"Pass\", isnotnull(ise_user) AND ise_user!=\"\", \"Fail/No pass in window\", 1==1, \"No ISE record\")\n| eval why_flagged=case(\n    corp_ssid=1 AND ise_result=\"No ISE record\", \"On corporate SSID but no ISE authentication in this window\",\n    corp_ssid=1 AND ise_result=\"Fail/No pass in window\", \"Corporate SSID — ISE did not record a pass in this window\",\n    guest_ssid=1 AND ise_result=\"No ISE record\", \"Guest SSID with no ISE guest auth in this window\",\n    segment=\"No ISE identity\", \"Spaces sees device; ISE has no user identity for this MAC\",\n    segment=\"Other — review\", \"Unclassified — validate in Spaces Detect & Locate\",\n    1==1, segment\n  )\n| where NOT (ise_pass=1 AND guest_ssid=0)\n| eval Building=coalesce(building, \"Unknown\"), Floor=coalesce(floor, \"\"), \"ISE User\"=coalesce(ise_user, \"\"), \"ISE Profile\"=coalesce(ise_profile, \"\"), \"Spaces Type\"=coalesce(spaces_type, \"\")\n| table mac Building Floor SSID \"ISE User\" \"ISE Profile\" ise_result \"Spaces Type\" segment why_flagged\n| rename mac as MAC, ise_result as \"ISE Result\", why_flagged as \"Why Flagged\", segment as Segment\n| sort Building, SSID, -\"ISE Result\"\n| head 200",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_trust_review_count": {
+			"name": "Devices To Review KPI",
+			"options": {
+				"extend": "ds_trust_review",
+				"query": "| stats dc(MAC) as count"
+			},
+			"type": "ds.chain"
+		},
+		"ds_trust_summary": {
+			"name": "Building Resilience - Wireless Device Trust Summary",
+			"options": {
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" (eventType=\"DEVICE_LOCATION_UPDATE\" OR (eventType=\"DEVICE_ASSOCIATION\" deviceAssociation.event=\"ASSOCIATE\"))\n| eval mac=lower(replace(coalesce('deviceLocationUpdate.device.macAddress', 'deviceAssociation.device.macAddress'), \":\", \"-\"))\n| where isnotnull(mac) AND mac!=\"\"\n| eval ssid=coalesce('deviceAssociation.ssid', \"\")\n| eval spaces_user_id=coalesce('deviceLocationUpdate.device.userId', \"\")\n| stats latest(spaces_user_id) as spaces_user_id, values(ssid) as ssid_mv by mac\n| eval ssid=coalesce(mvindex(ssid_mv, 0), \"\")\n| fields - ssid_mv\n| join mac type=left [\n    search `index_identity` sourcetype=\"cisco:ise:syslog\" (\"5200\" OR \"5400\")\n    | eval mac=lower(replace(coalesce(Calling_Station_ID, EndPointMACAddress), \":\", \"-\"))\n    | where isnotnull(mac) AND len(mac)>=11\n    | eval identity=lower(trim(coalesce(user, user_name, User_Name, 'User-Name', username, \"\")))\n    | where NOT match(identity, \"^#ctsrequest#$\") AND NOT match(identity, \"^#[^#]+#$\")\n    | eval ise_pass=if(match(_raw, \"5200\") OR match(_raw, \"(?i)CISE_Passed\"), 1, 0)\n    | stats latest(identity) as ise_user, max(ise_pass) as ise_pass by mac\n  ]\n| eval guest_ssid=if(match(ssid, \"(?i)guest\"), 1, 0)\n| eval segment=case(\n    ise_pass=1 AND guest_ssid=0, \"Corporate authenticated\",\n    ise_pass=1 AND guest_ssid=1, \"Guest authenticated\",\n    guest_ssid=1, \"Guest WLAN only\",\n    isnotnull(spaces_user_id) AND spaces_user_id!=\"\", \"Spaces-identified device\",\n    isnull(ise_user) OR ise_user=\"\", \"No ISE identity\",\n    1==1, \"Other — review\"\n  )\n| stats dc(mac) as Devices by segment\n| rename segment as Segment\n| sort -Devices",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
 		}
 	},
 	"layout": {
@@ -1007,8 +1143,18 @@
 						"item": "viz_info_collab",
 						"position": {
 							"h": 220,
-							"w": 680,
+							"w": 330,
 							"x": 720,
+							"y": 350
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_info_trust",
+						"position": {
+							"h": 220,
+							"w": 330,
+							"x": 1070,
 							"y": 350
 						},
 						"type": "block"
@@ -1173,6 +1319,117 @@
 							"y": 150
 						},
 						"type": "block"
+					}
+				],
+				"type": "absolute"
+			},
+			"layout_trust": {
+				"options": {
+					"backgroundColor": "#f5f6f8",
+					"display": "auto-scale",
+					"height": 1100,
+					"width": 1440
+				},
+				"structure": [
+					{
+						"item": "viz_p_hdr_bg",
+						"position": {
+							"h": 60,
+							"w": 1420,
+							"x": 10,
+							"y": 10
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_p_hdr_title",
+						"position": {
+							"h": 30,
+							"w": 430,
+							"x": 500,
+							"y": 20
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_narr_trust",
+						"position": {
+							"h": 25,
+							"w": 1100,
+							"x": 30,
+							"y": 78
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_why_splunk",
+						"position": {
+							"h": 115,
+							"w": 1380,
+							"x": 30,
+							"y": 108
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_box_trust",
+						"position": {
+							"h": 820,
+							"w": 1420,
+							"x": 10,
+							"y": 240
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_hdr_trust",
+						"position": {
+							"h": 25,
+							"w": 400,
+							"x": 30,
+							"y": 248
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_kpi_review",
+						"position": {
+							"h": 100,
+							"w": 320,
+							"x": 30,
+							"y": 278
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_trust_segment_bar",
+						"position": {
+							"h": 280,
+							"w": 1040,
+							"x": 370,
+							"y": 278
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_trust_review_table",
+						"position": {
+							"h": 450,
+							"w": 1380,
+							"x": 30,
+							"y": 580
+						},
+						"type": "block"
+					},
+					{
+						"item": "input_global_trp",
+						"position": {
+							"h": 70,
+							"w": 198,
+							"x": 30,
+							"y": -8
+						},
+						"type": "input"
 					}
 				],
 				"type": "absolute"
@@ -1487,6 +1744,10 @@
 				{
 					"label": "Cisco Spaces Overview",
 					"layoutId": "layout_overview"
+				},
+				{
+					"label": "Wireless Trust (Spaces + ISE)",
+					"layoutId": "layout_trust"
 				},
 				{
 					"label": "Collaboration & Occupancy",
