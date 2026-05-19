@@ -31,12 +31,10 @@ iseval = 1
 
 Override the default in `local/macros.conf` per deployment.
 
-The customer logo is loaded from
-`appserver/static/images/customer_logo.png`. We ship a generic placeholder
-(seeded from the app icon) so the dashboard never shows a broken image.
-To brand a deployment, replace the file in place — the React Overview
-falls back to an inline SVG glyph via an `onError` handler if the file is
-ever missing.
+The Overview ships with a neutral inline network mark as its default logo.
+To brand a deployment, use the header editor to upload a logo; the override
+is stored in the browser as a data URI. Title can still be set globally via
+`customer_name`.
 
 Each view is a Simple XML dashboard whose only panel is an `<html>` block
 containing `<div id="scan-root">`. A small RequireJS bootstrap (in

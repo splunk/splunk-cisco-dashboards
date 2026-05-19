@@ -8,7 +8,7 @@
  *
  *   • title       — overrides the `[customer_name]` macro fetch
  *   • subtitle    — overrides the hardcoded "Splunk Executive Insights"
- *   • logoDataUri — overrides the `customer_logo.png` static asset.
+ *   • logoDataUri — overrides the built-in default header logo.
  *                   Stored as a `data:` URI (the editor uses
  *                   FileReader to encode the uploaded image), so the
  *                   logo travels with the user's browser profile and
@@ -25,7 +25,7 @@
  *   }
  *
  * Empty / missing fields fall through to the existing defaults
- * (macro for title, hardcoded literal for subtitle, static PNG for
+ * (macro for title, hardcoded literal for subtitle, inline SVG mark for
  * logo). That means an operator who only wants to change the
  * subtitle leaves title and logo as-is.
  *

@@ -147,6 +147,17 @@ export type DeviceShapeId =
     // --- Places ---
     | 'branch_office' // Build 115.5
     | 'datacenter' // Build 115.5
+    // --- Official Cisco icon set ---
+    | 'cisco_router'
+    | 'cisco_switch'
+    | 'cisco_l3_switch'
+    | 'cisco_stack'
+    | 'cisco_wlc'
+    | 'cisco_access_point'
+    | 'cisco_firewall'
+    | 'cisco_server'
+    | 'cisco_cloud'
+    | 'cisco_data_center'
     | 'generic';
 
 /** Health status normalised across all node sources. Mirrors the

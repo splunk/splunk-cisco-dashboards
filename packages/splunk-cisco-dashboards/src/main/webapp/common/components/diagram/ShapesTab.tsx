@@ -51,6 +51,7 @@ type ShapeCategory =
     | 'edge'
     | 'splunk'
     | 'places'
+    | 'cisco'
     | 'layout';
 
 interface ShapeTileSpec {
@@ -138,6 +139,17 @@ const SHAPE_TILES: ShapeTileSpec[] = [
     // Places
     { id: 'branch_office', label: 'Branch Office', description: 'Remote / branch site', category: 'places' },
     { id: 'datacenter', label: 'Data Center', description: 'On-prem / co-located data centre', category: 'places' },
+    // Official Cisco icons
+    { id: 'cisco_router', label: 'Cisco Router', description: 'Official Cisco router icon', category: 'cisco' },
+    { id: 'cisco_switch', label: 'Cisco Switch', description: 'Official Cisco switch icon', category: 'cisco' },
+    { id: 'cisco_l3_switch', label: 'Cisco L3 Switch', description: 'Official Cisco layer 3 switch icon', category: 'cisco' },
+    { id: 'cisco_stack', label: 'Cisco Chassis', description: 'Official Cisco chassis / stack icon', category: 'cisco' },
+    { id: 'cisco_wlc', label: 'Cisco WLC', description: 'Official Cisco wireless controller icon', category: 'cisco' },
+    { id: 'cisco_access_point', label: 'Cisco AP', description: 'Official Cisco wireless access icon', category: 'cisco' },
+    { id: 'cisco_firewall', label: 'Cisco Firewall', description: 'Official Cisco firewall icon', category: 'cisco' },
+    { id: 'cisco_server', label: 'Cisco Server', description: 'Official Cisco server icon', category: 'cisco' },
+    { id: 'cisco_cloud', label: 'Cisco Cloud', description: 'Official Cisco cloud icon', category: 'cisco' },
+    { id: 'cisco_data_center', label: 'Cisco Data Center', description: 'Official Cisco data center icon', category: 'cisco' },
     // Layout
     { id: 'region', label: 'Region / Site', description: 'Labelled container — group devices', category: 'layout' },
     // Build 115.1 — free-placement annotation. Drops a small text
@@ -156,6 +168,7 @@ const CATEGORY_LABELS: Record<ShapeCategory, string> = {
     edge: 'Edge & Cloud',
     splunk: 'Splunk Architecture',
     places: 'Places',
+    cisco: 'Cisco',
     layout: 'Layout',
 };
 
@@ -184,6 +197,16 @@ const SHAPE_SEARCH_ALIASES: Partial<
     iot_sensor: ['iot', 'sensor'],
     branch_office: ['branch', 'office', 'site'],
     datacenter: ['data center', 'dc'],
+    cisco_router: ['official', 'cisco', 'router'],
+    cisco_switch: ['official', 'cisco', 'switch', 'l2'],
+    cisco_l3_switch: ['official', 'cisco', 'layer 3', 'core switch'],
+    cisco_stack: ['official', 'cisco', 'chassis', 'stack'],
+    cisco_wlc: ['official', 'cisco', 'wireless controller'],
+    cisco_access_point: ['official', 'cisco', 'ap', 'wireless', 'wifi'],
+    cisco_firewall: ['official', 'cisco', 'firewall', 'asa', 'ftd'],
+    cisco_server: ['official', 'cisco', 'server', 'ucs'],
+    cisco_cloud: ['official', 'cisco', 'cloud'],
+    cisco_data_center: ['official', 'cisco', 'data center', 'dc'],
     splunk_search_head: ['sh', 'search', 'hybrid search head'],
     splunk_search_head_cluster: ['shc', 'search head cluster'],
     splunk_indexer: ['idx', 'indexer'],
@@ -264,6 +287,16 @@ const SHAPE_DEFAULT_LABEL_OVERRIDES: Partial<Record<DeviceShapeId, string>> = {
     splunk_data_collection: 'Data Collection',
     splunk_edge_processor: 'Edge Processor',
     splunk_sc4s: 'SC4S',
+    cisco_router: 'Cisco Router',
+    cisco_switch: 'Cisco Switch',
+    cisco_l3_switch: 'Cisco L3 Switch',
+    cisco_stack: 'Cisco Chassis',
+    cisco_wlc: 'Cisco WLC',
+    cisco_access_point: 'Cisco AP',
+    cisco_firewall: 'Cisco Firewall',
+    cisco_server: 'Cisco Server',
+    cisco_cloud: 'Cisco Cloud',
+    cisco_data_center: 'Cisco Data Center',
 };
 
 const tilePayload = (
@@ -372,6 +405,7 @@ export const ShapesTab: React.FC = () => {
         'edge',
         'splunk',
         'places',
+        'cisco',
         'layout',
     ];
     const filteredTiles = useMemo(

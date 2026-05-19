@@ -116,6 +116,16 @@ export const SHAPE_FAMILY: Record<DeviceShapeId, SilhouetteFamily> = {
     splunk_sc4s: 'card',
     branch_office: 'building',
     datacenter: 'building',
+    cisco_router: 'card',
+    cisco_switch: 'card',
+    cisco_l3_switch: 'card',
+    cisco_stack: 'card',
+    cisco_wlc: 'card',
+    cisco_access_point: 'card',
+    cisco_firewall: 'card',
+    cisco_server: 'card',
+    cisco_cloud: 'card',
+    cisco_data_center: 'card',
     generic: 'card',
 };
 

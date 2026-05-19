@@ -158,6 +158,17 @@ const SHAPE_TO_ICON: Record<DeviceShapeId, keyof typeof CISCO_ICONS> = {
     // Places
     branch_office: 'branch_office',
     datacenter: 'datacenter',
+    // Official Cisco icon set
+    cisco_router: 'cisco_router',
+    cisco_switch: 'cisco_switch',
+    cisco_l3_switch: 'cisco_l3_switch',
+    cisco_stack: 'cisco_stack',
+    cisco_wlc: 'cisco_wlc',
+    cisco_access_point: 'cisco_access_point',
+    cisco_firewall: 'cisco_firewall',
+    cisco_server: 'cisco_server',
+    cisco_cloud: 'cisco_cloud',
+    cisco_data_center: 'cisco_data_center',
     generic: 'generic',
 };
 

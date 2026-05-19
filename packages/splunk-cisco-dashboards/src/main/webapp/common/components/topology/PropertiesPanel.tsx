@@ -279,6 +279,17 @@ const DEVICE_SHAPE_OPTIONS: Array<{ id: DeviceShapeId; label: string }> = [
     // Places
     { id: 'branch_office', label: 'Branch Office' },
     { id: 'datacenter', label: 'Data Center' },
+    // Cisco official icons
+    { id: 'cisco_router', label: 'Cisco Router' },
+    { id: 'cisco_switch', label: 'Cisco Switch' },
+    { id: 'cisco_l3_switch', label: 'Cisco L3 Switch' },
+    { id: 'cisco_stack', label: 'Cisco Chassis' },
+    { id: 'cisco_wlc', label: 'Cisco WLC' },
+    { id: 'cisco_access_point', label: 'Cisco AP' },
+    { id: 'cisco_firewall', label: 'Cisco Firewall' },
+    { id: 'cisco_server', label: 'Cisco Server' },
+    { id: 'cisco_cloud', label: 'Cisco Cloud' },
+    { id: 'cisco_data_center', label: 'Cisco Data Center' },
     { id: 'generic', label: 'Generic' },
 ];
 

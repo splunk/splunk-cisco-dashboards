@@ -37,6 +37,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+    ArrowUpRight,
     BarChart3,
     ChevronDown,
     ChevronRight,
@@ -277,6 +278,31 @@ export interface KpiPickerPanelProps {
      */
     onApplyDisplayToSection?: (sectionId: string, patch: DisplaySectionPatch) => void;
     /**
+     * Open the full section dashboard for deeper analysis (Build
+     * 1204, closing the loop on Atef's "drill down for deeper
+     * analysis" recommendation from the 2026-05-19 review).
+     *
+     * Surfaces as a "Need deeper analysis?" hint above the Chart
+     * style block when set, giving operators a one-click path
+     * away from the picker to the section's dedicated dashboard
+     * (tables, time-windowed breakdowns, alternative
+     * visualisations) at the exact moment they might otherwise
+     * reach for chart-type changes on the KPI tile itself.
+     *
+     * The picker doesn't know the destination URL — the page
+     * resolves it from `SECTION_META[sectionId].href` and binds
+     * the callback at panel-render time so all three drilldown
+     * paths (section title, `g i / g s / g b` shortcut, this
+     * picker hint) flow through one `openDrilldown` call.
+     *
+     * Required pairing: only renders when `context.sectionId`,
+     * `context.sectionLabel`, AND this callback are all present.
+     * Tiles outside the KPI grid (e.g. the two summary KpiCards
+     * above the topology map) ship without a sectionId by design;
+     * the picker silently skips the hint for those.
+     */
+    onOpenSectionDashboard?: () => void;
+    /**
      * Optional "Open in Splunk Search" handler. When provided, the SPL
      * preview becomes clickable and a small "Test in Search" button
      * sits next to it. The handler receives the *literal* SPL from
@@ -513,6 +539,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     onTestInSearch,
     onResetAllCustomizations,
     onApplyDisplayToSection,
+    onOpenSectionDashboard,
 }) => {
     const [catalogue, setCatalogue] = useState<SearchbaseRecord[]>([]);
     const [loadState, setLoadState] = useState<'idle' | 'loading' | 'error'>('idle');
@@ -637,21 +664,21 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     const [hideOverlayInput, setHideOverlayInput] = useState(false);
 
     /**
-     * Collapse state for the CHART STYLE and DISPLAY blocks (Build
-     * 1203). Both default to collapsed at panel open and auto-expand
-     * if the tile is already customised in that area, so the user
-     * always sees what they've changed while the picker stays
-     * compact for the default case. THRESHOLDS keeps its own
-     * default-expanded behaviour because it's the primary
-     * customisation path.
+     * Collapse state for the editor blocks. Search binding defaults
+     * open because it contains the fields most often edited after
+     * choosing a search. Chart style and Display default collapsed
+     * and auto-expand when customised. Thresholds are presented as a
+     * peer accordion rather than a long always-open tail, keeping the
+     * panel scannable while still one click away.
      *
      * Why collapsed by default: the picker was running 1000+px
      * vertical at full bleed (filters + binding + value field +
-     * chart style + display + thresholds + actions). The first
-     * three are always relevant; chart style and display are
-     * niche decoration tweaks most operators won't touch on most
-     * tiles, so claiming back ~250px at rest is a net UX win.
+     * chart style + display + thresholds + actions). Keeping the
+     * controls in consistent accordions lets operators scan the
+     * available edits without the footer being crowded by whichever
+     * form happens to be expanded.
      */
+    const [bindingOpen, setBindingOpen] = useState(true);
     const [chartStyleOpen, setChartStyleOpen] = useState(false);
     const [displayOpen, setDisplayOpen] = useState(false);
 
@@ -798,6 +825,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         setHideDeltaInput(hideDeltaActive);
         setHideOverlayInput(hideOverlayActive);
 
+        setBindingOpen(true);
         // Build 1203: auto-expand CHART STYLE and DISPLAY when the
         // tile is already customised in those areas. Operators
         // landing on a tile they've previously tweaked should see
@@ -805,16 +833,14 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         // tiles the collapsed default keeps the panel compact.
         setChartStyleOpen(Boolean(context.currentVizOverride));
         setDisplayOpen(hidePeakActive || hideDeltaActive || hideOverlayActive);
-        // Build 98 fix-up: always expand the THRESHOLDS section on
-        // panel open. The previous behaviour ("collapse unless the
-        // user has already customised") buried the form behind a
-        // small chevron toggle that read identically to the "Show
-        // SPL" / "Description" toggles above it, and Alan reported
-        // not being able to find the threshold UI at all even
-        // though it was rendered. Defaulting to expanded makes the
-        // section immediately discoverable; users who want a more
-        // compact bottom panel can collapse it with one click.
-        setThresholdsOpen(true);
+        const defaultThresholds = context.defaultThresholds;
+        const currentDirection = cur?.direction ?? 'higher_is_better';
+        const defaultDirection = defaultThresholds?.direction ?? 'higher_is_better';
+        setThresholdsOpen(
+            cur?.warning !== defaultThresholds?.warning ||
+                cur?.critical !== defaultThresholds?.critical ||
+                currentDirection !== defaultDirection
+        );
         const id = window.setTimeout(() => searchInputRef.current?.focus(), 30);
         return () => window.clearTimeout(id);
     }, [open, context]);
@@ -1972,16 +1998,14 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
 
                 {/* Selection preview + form.
                   *
-                  * `max-h-[34%]` (Build 96, was 42%) hard-caps the
-                  * bottom panel to 34% of the popover so the result
-                  * list always gets ≥66%. The internal `overflow-auto`
-                  * keeps every field reachable when the panel content
-                  * exceeds the cap (USE chips can wrap, the SPL preview
-                  * can be expanded), and the footer (Reset / Apply /
-                  * Cancel) lives in a separate sibling below this div
-                  * so primary actions stay anchored even when the
-                  * scroll region is shorter than its content. */}
-                <div className="border-t border-slate-200 dark:border-slate-800 flex-shrink-0 px-4 py-3 space-y-2.5 max-h-[34%] overflow-auto">
+                  * `max-h-[44%]` gives the accordion editor enough
+                  * room to breathe when one section is open while the
+                  * search result list still owns the majority of the
+                  * drawer. The internal `overflow-auto` keeps every
+                  * field reachable when the panel content exceeds the
+                  * cap, and the footer lives in a separate sibling so
+                  * primary actions stay anchored. */}
+                <div className="border-t border-slate-200 dark:border-slate-800 flex-shrink-0 px-4 py-3 space-y-2.5 max-h-[44%] overflow-auto">
                     {selectedEntry ? (
                         <>
                             <div>
@@ -2044,7 +2068,41 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 </p>
                             </div>
 
-                            <div>
+                            <div className="rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/60 overflow-hidden">
+                                <div className="flex items-center justify-between gap-2 px-2.5 py-2 bg-slate-50 dark:bg-slate-900/80">
+                                    <button
+                                        type="button"
+                                        onClick={() => setBindingOpen((p) => !p)}
+                                        aria-expanded={bindingOpen}
+                                        aria-controls="kpi-picker-binding-block"
+                                        title={
+                                            bindingOpen
+                                                ? 'Hide search binding fields'
+                                                : 'Show search binding fields'
+                                        }
+                                        className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 hover:text-sky-700 dark:hover:text-sky-300 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-0.5 py-0.5"
+                                    >
+                                        <Settings2 className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400 flex-shrink-0" />
+                                        <span className="flex-shrink-0">Search binding</span>
+                                        <span className="min-w-0 truncate text-[9px] font-semibold normal-case tracking-normal text-slate-400 dark:text-slate-500">
+                                            {valueField ? `value: ${valueField}` : 'auto value'}
+                                            {labelOverride.trim() ? ' · custom label' : ''}
+                                        </span>
+                                        <ChevronRight
+                                            className={cn(
+                                                'w-3 h-3 ml-auto text-slate-400 dark:text-slate-500 transition-transform flex-shrink-0',
+                                                bindingOpen && 'rotate-90'
+                                            )}
+                                        />
+                                    </button>
+                                </div>
+
+                                {bindingOpen && (
+                                    <div
+                                        id="kpi-picker-binding-block"
+                                        className="border-t border-slate-200 dark:border-slate-800 p-2.5 flex flex-col gap-2.5"
+                                    >
+                                        <div className="order-2">
                                 {/* Header row: "Show SPL" toggle (collapsed by
                                     default; the SPL block ate ~150px of
                                     vertical real-estate the user rarely needed
@@ -2132,7 +2190,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 is available so the affordance is
                                 discoverable. */}
                             {selectedDescriptionPlain && (
-                                <div>
+                                <div className="order-3">
                                     <button
                                         type="button"
                                         onClick={() => setDescOpen((p) => !p)}
@@ -2170,7 +2228,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 </div>
                             )}
 
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className="order-1 grid grid-cols-2 gap-2">
                                 <div>
                                     <label className="block text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
                                         Value field
@@ -2259,6 +2317,65 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     />
                                 </div>
                             </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* DEEPER ANALYSIS hint (Build 1204,
+                              * closing the loop on Atef's "drill
+                              * down for deeper analysis"
+                              * recommendation from the 2026-05-19
+                              * Executive Dashboard review).
+                              *
+                              * Placement is deliberate: sits between
+                              * the binding form (Saved Search +
+                              * Value field + Label) and the
+                              * presentation forms (Chart style +
+                              * Display + Thresholds). That's the
+                              * moment an operator transitions from
+                              * "what data does this tile show" to
+                              * "how does this tile render", which
+                              * is exactly when they're tempted to
+                              * over-customise the viz on a KPI
+                              * tile. The hint redirects that
+                              * energy toward the section
+                              * dashboard — the right place for
+                              * tables, time-windowed breakdowns,
+                              * and richer visualisations that
+                              * shouldn't live on a status-board
+                              * KPI in the first place.
+                              *
+                              * Only renders when the tile is
+                              * section-scoped AND a callback is
+                              * provided. Tiles outside the KPI
+                              * grid (the two summary KpiCards
+                              * above the topology map) ship
+                              * without a sectionId by design and
+                              * silently skip the hint. */}
+                            {context.sectionId && context.sectionLabel && onOpenSectionDashboard && (
+                                <div className="rounded-md border border-sky-200 dark:border-sky-800 bg-sky-50/70 dark:bg-sky-950/30 p-2.5 flex items-start gap-2">
+                                    <ArrowUpRight className="w-3.5 h-3.5 mt-0.5 text-sky-500 dark:text-sky-400 flex-shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                        <div className="text-[11px] font-black uppercase tracking-wider text-sky-700 dark:text-sky-300">
+                                            Need deeper analysis?
+                                        </div>
+                                        <p className="mt-0.5 text-[10px] text-slate-600 dark:text-slate-300 leading-snug">
+                                            KPI tiles stay single-value by design. For different
+                                            charts, breakdowns, or time-windowed analysis open the
+                                            full section dashboard.
+                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={onOpenSectionDashboard}
+                                            title={`Open the ${context.sectionLabel} dashboard in a new tab`}
+                                            className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-sky-600 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-200 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
+                                        >
+                                            Open {context.sectionLabel}
+                                            <ExternalLink className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* CHART STYLE form (Build 1174).
                               *
@@ -2889,13 +3006,13 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                 </div>
 
                 {/* Footer: actions */}
-                <div className="border-t border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 py-2.5 flex-shrink-0">
-                    <div className="flex items-center gap-3 min-w-0">
+                <div className="border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 px-3 py-2.5 flex-shrink-0">
+                    <div className="flex items-center gap-2 min-w-0 overflow-hidden">
                         <button
                             type="button"
                             onClick={handleResetThisTile}
                             title="Restore this tile to its default saved search"
-                            className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 flex-shrink-0"
+                            className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 flex-shrink-0"
                         >
                             <RotateCcw className="w-3 h-3" />
                             Reset tile
@@ -2919,7 +3036,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     // catches misclicks before
                                     // anything is wiped.
                                     title="Wipe tile, layout, and map customisations; keep header branding"
-                                    className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 flex-shrink-0"
+                                    className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 flex-shrink-0"
                                 >
                                     <RotateCcw className="w-3 h-3" />
                                     Factory reset
@@ -2927,7 +3044,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             </>
                         )}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                         <button
                             type="button"
                             onClick={onClose}

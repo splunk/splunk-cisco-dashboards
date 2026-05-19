@@ -3236,6 +3236,22 @@ const OverviewPage: React.FC = () => {
                 onClose={closePicker}
                 onApply={handlePickerApply}
                 onApplyDisplayToSection={handleApplyDisplayToSection}
+                // Build 1204: drilldown hint inside the picker. Reuses
+                // the same `openDrilldown` the section header and the
+                // `g i / g s / g b` keyboard shortcuts call into, so
+                // there's exactly one URL-resolution path for "open
+                // the section dashboard" anywhere in the app. Bound
+                // at render time to the picker context's section so
+                // the picker stays URL-agnostic; the page owns
+                // SECTION_META.
+                onOpenSectionDashboard={
+                    pickerContext?.sectionId
+                        ? () =>
+                              openDrilldown(
+                                  SECTION_META[pickerContext.sectionId as SectionId].href
+                              )
+                        : undefined
+                }
                 onClearOverride={(tileId) => {
                     clearOverride(tileId);
                     closePicker();
