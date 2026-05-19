@@ -23,6 +23,9 @@
  *         thresholdCritical?: number,  // optional override for threshold.critical
  *         thresholdDirection?: 'higher_is_better' | 'lower_is_better',
  *         vizOverride?: 'area'|'line'|'column'|'bar'|'singlevalue', // Builds 1174 / 1187
+ *         hidePeak?: true,             // Build 1202 — suppress peak callout
+ *         hideDelta?: true,            // Build 1202 — suppress delta pill
+ *         hideOverlay?: true,          // Build 1203 — suppress previous-period dashed overlay
  *       }
  *     }
  *   }
@@ -137,6 +140,32 @@ export interface MetricOverride {
      * `searchbase.conf`'s `default_viz` (current behaviour).
      */
     vizOverride?: 'area' | 'line' | 'column' | 'bar' | 'singlevalue';
+    /**
+     * Display toggles (Build 1202, from Atef's review on 2026-05-19).
+     * Together with the picker-driven KPI binding and Chart style,
+     * these let the operator silence "chrome" around the headline
+     * value when they want the tile to read as a clean single
+     * number — peak callout and delta-vs-previous pill — without
+     * having to fork the searchbase entry. Both default to `false`
+     * (chrome visible, mirrors existing behaviour). Only persisted
+     * when explicitly `true` so the storage payload stays minimal
+     * and the merge layer can treat absence as "default ON".
+     *
+     * Scope note: deliberately NOT a "hide sparkline" toggle —
+     * collapsing the chart is already reachable via
+     * `vizOverride: 'singlevalue'` and a second control would
+     * duplicate the state. The Display section in the picker
+     * documents that path inline.
+     *
+     * `hideOverlay` (Build 1203) was added in the same family: drops
+     * the dashed previous-period (or rolling-average baseline) line
+     * from the sparkline canvas. The chart itself remains, but the
+     * period-over-period comparison overlay is suppressed so the
+     * tile reads as a clean trend.
+     */
+    hidePeak?: boolean;
+    hideDelta?: boolean;
+    hideOverlay?: boolean;
 }
 
 export type MetricOverrideMap = Record<string, MetricOverride>;
@@ -187,6 +216,19 @@ const sanitizeOverride = (raw: unknown): MetricOverride | null => {
     // runtime.
     if (typeof o.vizOverride === 'string' && VALID_VIZ_OVERRIDES.has(o.vizOverride)) {
         out.vizOverride = o.vizOverride as MetricOverride['vizOverride'];
+    }
+    // Display toggles (Build 1202). Only persist `true` values; the
+    // runtime treats absence as "default ON" so we keep the storage
+    // payload tiny and any future default flip happens automatically
+    // for tiles the user hasn't customised.
+    if (o.hidePeak === true) {
+        out.hidePeak = true;
+    }
+    if (o.hideDelta === true) {
+        out.hideDelta = true;
+    }
+    if (o.hideOverlay === true) {
+        out.hideOverlay = true;
     }
     return out;
 };

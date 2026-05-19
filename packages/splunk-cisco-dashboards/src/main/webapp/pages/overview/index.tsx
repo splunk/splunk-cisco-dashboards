@@ -122,7 +122,6 @@ import { cn } from '@/common/lib/utils';
 // =============================================================================
 
 const APP_NAME = 'splunk-cisco-dashboards';
-const CUSTOMER_LOGO_URL = `/static/app/${APP_NAME}/images/customer_logo.png`;
 
 // Default subtitle shown beneath the customer name when no per-user
 // override is set in localStorage. Operators can change the visible
@@ -131,15 +130,16 @@ const CUSTOMER_LOGO_URL = `/static/app/${APP_NAME}/images/customer_logo.png`;
 // out-of-the-box value for fresh deployments.
 const DEFAULT_HEADER_SUBTITLE = 'Splunk Executive Insights';
 const DEFAULT_HEADER_TITLE_FALLBACK = 'Your Organization Name';
-const FALLBACK_LOGO_DATA_URI =
+const DEFAULT_LOGO_DATA_URI =
     'data:image/svg+xml;utf8,' +
     encodeURIComponent(
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" ' +
-            'stroke="white" stroke-width="2" stroke-linecap="round" ' +
-            'stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/>' +
-            '<rect x="14" y="3" width="7" height="5"/>' +
-            '<rect x="14" y="12" width="7" height="9"/>' +
-            '<rect x="3" y="16" width="7" height="5"/></svg>'
+            'stroke="white" stroke-width="1.8" stroke-linecap="round" ' +
+            'stroke-linejoin="round"><circle cx="12" cy="12" r="2.25"/>' +
+            '<circle cx="5.5" cy="7" r="1.65"/><circle cx="18.5" cy="7" r="1.65"/>' +
+            '<circle cx="5.5" cy="17" r="1.65"/><circle cx="18.5" cy="17" r="1.65"/>' +
+            '<path d="M7 8.2 10.2 10.7M16.9 8.2 13.8 10.7M7 15.8 10.2 13.3M16.9 15.8 13.8 13.3"/>' +
+            '<path d="M4 12h3M17 12h3"/></svg>'
     );
 
 const CUSTOMER_NAME_SPL =
@@ -1090,6 +1090,9 @@ const MetricCard: React.FC<MetricCardProps> = ({
             infoAnchor={infoAnchor}
             isCustomized={Boolean(override)}
             vizOverride={override?.vizOverride}
+            hidePeak={override?.hidePeak}
+            hideDelta={override?.hideDelta}
+            hideOverlay={override?.hideOverlay}
         />
     );
 };
@@ -1117,6 +1120,25 @@ interface MetricCardLeafProps extends CommonLeafProps {
      * only the viz primitive changes.
      */
     vizOverride?: 'area' | 'line' | 'column' | 'bar' | 'singlevalue';
+    /**
+     * Display toggles (Build 1202, from Atef's review). When set,
+     * suppress the corresponding chrome around the headline value:
+     *   • `hidePeak` → forces `dataValuesDisplay='off'` so the
+     *     Sparkline draws without min/peak bubble labels.
+     *   • `hideDelta` → drops the `change` prop so MetricItem renders
+     *     no ↑/↓ percentage pill next to the headline.
+     *   • `hideOverlay` (Build 1203) → suppresses the dashed
+     *     previous-period (or baseline) line on the sparkline by
+     *     passing `previousData={undefined}` to MetricItem. The
+     *     primary trend stays; only the comparison overlay goes away.
+     * All three default to `undefined` (treated as `false`); the
+     * runtime merge layer in `applyOverride` deliberately leaves
+     * these on the override object — they affect rendering, not
+     * metric semantics, same shape as `vizOverride`.
+     */
+    hidePeak?: boolean;
+    hideDelta?: boolean;
+    hideOverlay?: boolean;
 }
 
 /**
@@ -1136,6 +1158,9 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
     infoAnchor,
     isCustomized,
     vizOverride,
+    hidePeak,
+    hideDelta,
+    hideOverlay,
 }) => {
     /**
      * Tile viz variant. Resolution order (highest precedence first):
@@ -1252,15 +1277,36 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
                     ? ''
                     : effective.unit
             }
-            change={result.change}
+            // `hideDelta` (Build 1202) drops the change pill entirely
+            // by omitting the `change` prop. MetricItem's `showChange`
+            // guard treats `undefined` as "no pill" — same path as
+            // tiles whose search emits no comparable previous-period
+            // value, so we get the right rendering with zero extra
+            // MetricItem branching.
+            change={hideDelta ? undefined : result.change}
             sparkData={result.sparkData}
-            previousData={result.previousSparkData}
-            previousLabel={effective.overlayLabel}
+            // `hideOverlay` (Build 1203) drops the dashed previous-
+            // period / baseline line from the sparkline canvas by
+            // omitting `previousData` and its label. The Sparkline
+            // component treats `undefined` as "no overlay" — the
+            // same path as tiles whose search doesn't emit a
+            // comparable previous series — so we get the right
+            // rendering with no extra Sparkline branching. The
+            // primary trend, peaks (if enabled), and headline are
+            // unaffected.
+            previousData={hideOverlay ? undefined : result.previousSparkData}
+            previousLabel={hideOverlay ? undefined : effective.overlayLabel}
             sparkTimestamps={result.sparkTimestamps}
             timeRange={range}
             color={tileColor}
             vizType={vizType}
-            dataValuesDisplay={dataValuesDisplay}
+            // `hidePeak` (Build 1202) forces the Sparkline to draw
+            // without min/peak bubble labels. Mapping to the existing
+            // `'off'` mode (the Studio v2 analogue Sparkline already
+            // supports) means we don't add a new prop — we just pin
+            // the existing one regardless of what the searchbase
+            // entry asked for.
+            dataValuesDisplay={hidePeak ? 'off' : dataValuesDisplay}
             status={result.status}
             source={result.source}
             onOpenInSearch={drilldownSpl ? handleClick : undefined}
@@ -1402,14 +1448,16 @@ const OverviewPage: React.FC = () => {
     //      `[customer_name]` macro value fetched at mount. Operator-
     //      controlled via `local/macros.conf`.
     //   3. Hardcoded fallbacks (`DEFAULT_HEADER_TITLE_FALLBACK`,
-    //      `DEFAULT_HEADER_SUBTITLE`, `CUSTOMER_LOGO_URL`) — what
-    //      every fresh install ships with.
+    //      `DEFAULT_HEADER_SUBTITLE`, `DEFAULT_LOGO_DATA_URI`) — what
+    //      every fresh install ships with. The default logo is a
+    //      neutral network mark so the app doesn't imply a specific
+    //      customer, agency, or vendor brand before setup.
     //
     // `effectiveTitle` / `effectiveSubtitle` / `effectiveLogoSrc`
     // (derived below) collapse those layers into the strings the
     // JSX actually renders.
     const [customerName, setCustomerName] = useState<string>('');
-    const [logoSrc, setLogoSrc] = useState<string>(CUSTOMER_LOGO_URL);
+    const [logoSrc, setLogoSrc] = useState<string>(DEFAULT_LOGO_DATA_URI);
     const [splunkUsername, setSplunkUsername] = useState<string>('');
     const {
         override: brandingOverride,
@@ -1425,10 +1473,9 @@ const OverviewPage: React.FC = () => {
     const effectiveSubtitle =
         brandingOverride.subtitle || DEFAULT_HEADER_SUBTITLE;
     // Logo precedence: explicit override (data URI from upload) →
-    // current `logoSrc` (which itself swaps to the SVG fallback if
-    // the static PNG 404s). Keeping `logoSrc` as the second layer
-    // means any deployment that swaps `customer_logo.png` on disk
-    // still wins over the SVG, just below the per-user upload.
+    // current `logoSrc` (the neutral built-in default unless this
+    // session has recovered from an image error). Header branding is
+    // intentionally independent from tile/layout factory reset.
     const effectiveLogoSrc = brandingOverride.logoDataUri || logoSrc;
 
     // ------------------------------ Time + refresh ------------------------------
@@ -2005,6 +2052,19 @@ const OverviewPage: React.FC = () => {
                 defaultThresholds?: MetricThresholds;
                 /** Static unit ('%', 'ms', etc.) for threshold preview formatting. */
                 unit?: string;
+                /**
+                 * Section the tile lives in (Build 1203). Threaded
+                 * through to the picker so the Display block can
+                 * offer "Apply to all tiles in <section>" as an
+                 * ergonomic shortcut for operators who want every
+                 * KPI in a section to read the same way (e.g. hide
+                 * delta pills across all IT Health tiles for a
+                 * cleaner status board view). Optional — when
+                 * omitted (e.g. MetricItem tiles outside the KPI
+                 * grid) the picker silently skips the link, no
+                 * other behaviour changes.
+                 */
+                section?: SectionId;
             }
         ) => {
             const ov: MetricOverride | undefined = overrides[tileId];
@@ -2040,6 +2100,13 @@ const OverviewPage: React.FC = () => {
                 thresholdUnit: current?.unit,
                 usedSavedSearches,
                 currentVizOverride: ov?.vizOverride,
+                currentHidePeak: ov?.hidePeak,
+                currentHideDelta: ov?.hideDelta,
+                currentHideOverlay: ov?.hideOverlay,
+                sectionId: current?.section,
+                sectionLabel: current?.section
+                    ? SECTION_META[current.section]?.title
+                    : undefined,
             });
         },
         [overrides, usedSavedSearches]
@@ -2055,6 +2122,73 @@ const OverviewPage: React.FC = () => {
         [setOverride]
     );
 
+    /**
+     * Section-level "Apply these Display settings to all tiles in
+     * this section" handler (Build 1203, from Atef's "global vs
+     * per-KPI settings" framing). Fans the three display flags
+     * (`hidePeak`, `hideDelta`, `hideOverlay`) out to every
+     * MetricItem AND KpiCard in the named section, including the
+     * current tile, so the picker can close immediately afterwards
+     * without a separate Apply click.
+     *
+     * Merge semantics:
+     *   • Tiles with an existing override → keep every existing
+     *     field (savedSearch, valueField, thresholds, chart style,
+     *     label, etc.) and just overlay the three display flags.
+     *     `false` writes are normalised to "absent" via the
+     *     sanitiser, so a "show everything" patch wipes the flags
+     *     rather than persisting `false`.
+     *   • Tiles without an existing override → write a minimal
+     *     override carrying the tile's own `savedSearch` (the
+     *     required field on `MetricOverride`) plus the requested
+     *     display flags. The tile picks up a "(custom)" dot in
+     *     the UI, which is honest: it IS customised now.
+     *
+     * Why this lives in the page (not the picker): the picker
+     * doesn't know the section roster, and we don't want to hand
+     * it the whole `METRIC_CONFIG` / `KPI_CONFIG` catalogue. The
+     * page owns the catalogue; the picker hands us the section id
+     * and the patch and we do the fan-out.
+     *
+     * Scope contract: deliberately limited to display flags so
+     * the link's behaviour stays predictable. Chart style and
+     * thresholds are still per-tile customisations — that's where
+     * tile-by-tile semantics matter and a section-wide apply would
+     * be more confusing than helpful (a status board with five
+     * tiles forced into the same chart style usually isn't what
+     * the operator wanted).
+     */
+    const handleApplyDisplayToSection = useCallback(
+        (
+            sectionId: string,
+            patch: { hidePeak: boolean; hideDelta: boolean; hideOverlay: boolean }
+        ) => {
+            // Resolve siblings from both catalogues. `KPI_CONFIG`
+            // entries (the two summary cards above the topology map)
+            // don't carry a section, so they're naturally excluded —
+            // see comment on `openPicker` for the rationale.
+            const sectionMetrics = METRIC_CONFIG.filter((m) => m.section === sectionId);
+            for (const m of sectionMetrics) {
+                const existing = overrides[m.id];
+                const baseSavedSearch = existing?.savedSearch ?? m.savedSearch;
+                const next: MetricOverride = {
+                    ...(existing ?? { savedSearch: baseSavedSearch }),
+                    savedSearch: baseSavedSearch,
+                    // Pass `undefined` for false flags so the sanitiser
+                    // strips them from the persisted payload — gives us
+                    // a "show everything" reset path through the same
+                    // code that handles "hide everything".
+                    hidePeak: patch.hidePeak ? true : undefined,
+                    hideDelta: patch.hideDelta ? true : undefined,
+                    hideOverlay: patch.hideOverlay ? true : undefined,
+                };
+                setOverride(m.id, next);
+            }
+            setPickerContext(null);
+        },
+        [overrides, setOverride]
+    );
+
     // "Factory reset" — wipes every persisted dashboard customisation
     // in one shot. The picker shows a `window.confirm()` prompt before
     // calling this, so misclicks are caught at the UI layer; we only
@@ -2065,11 +2199,12 @@ const OverviewPage: React.FC = () => {
     //   • sectionTileCounts.v1          — visible tile count per section
     //   • sectionTileOrder.v1           — drag-to-reorder preference
     //   • customerTopology.v4           — Florida map customisations
-    //   • branding.v1                   — title / subtitle / logo override
     //   • scd_overview_split_pct        — tiles ↔ map splitter position
     //   • scd_overview_map_pos          — map position (right / below / above)
     //
     // What is intentionally NOT reset:
+    //   • header branding (title / subtitle / logo) — identity, not
+    //     dashboard layout or tile state
     //   • theme (light / dark) — UI preference, not layout
     //   • Splunk-side preferences (saved searches, scheduled jobs) —
     //     those don't live in this dashboard's localStorage
@@ -2082,7 +2217,6 @@ const OverviewPage: React.FC = () => {
         resetAllSectionTileCounts();
         resetAllSectionTileOrder();
         clearCustomerTopologyStorage();
-        resetBrandingOverride();
         setTopologyResetKey((n) => n + 1);
         setLeftPct(SPLIT_DEFAULT);
         setMapPosition(MAP_POS_DEFAULT);
@@ -2101,7 +2235,6 @@ const OverviewPage: React.FC = () => {
         resetAllOverrides,
         resetAllSectionTileCounts,
         resetAllSectionTileOrder,
-        resetBrandingOverride,
         SPLIT_KEY,
         SPLIT_DEFAULT,
         setLeftPct,
@@ -2418,19 +2551,20 @@ const OverviewPage: React.FC = () => {
                     <div className="w-9 h-9 bg-sky-600 rounded-lg flex items-center justify-center text-white overflow-hidden p-1 flex-shrink-0">
                         <img
                             src={effectiveLogoSrc}
-                            alt="Customer logo"
+                            alt="Dashboard logo"
                             className="w-full h-full object-contain"
                             onError={() => {
-                                // Only the static-asset path (CUSTOMER_LOGO_URL)
-                                // can 404; data URIs from the override layer are
-                                // self-contained. So we only swap to the SVG
-                                // fallback when the failing source IS the static
-                                // path and we haven't already fallen through.
+                                // If a future non-data default logo fails to
+                                // load, recover to the neutral built-in mark
+                                // instead of leaving a broken image in the
+                                // executive header. User-uploaded data URIs
+                                // are self-contained and managed by the
+                                // branding editor.
                                 if (
                                     !brandingOverride.logoDataUri &&
-                                    logoSrc !== FALLBACK_LOGO_DATA_URI
+                                    logoSrc !== DEFAULT_LOGO_DATA_URI
                                 ) {
-                                    setLogoSrc(FALLBACK_LOGO_DATA_URI);
+                                    setLogoSrc(DEFAULT_LOGO_DATA_URI);
                                 }
                             }}
                         />
@@ -2842,6 +2976,7 @@ const OverviewPage: React.FC = () => {
                                                                     valueField: cfg.valueField,
                                                                     defaultThresholds: cfg.thresholds,
                                                                     unit: cfg.unit,
+                                                                    section: cfg.section,
                                                                 })
                                                             }
                                                         />
@@ -3100,6 +3235,7 @@ const OverviewPage: React.FC = () => {
                 context={pickerContext}
                 onClose={closePicker}
                 onApply={handlePickerApply}
+                onApplyDisplayToSection={handleApplyDisplayToSection}
                 onClearOverride={(tileId) => {
                     clearOverride(tileId);
                     closePicker();

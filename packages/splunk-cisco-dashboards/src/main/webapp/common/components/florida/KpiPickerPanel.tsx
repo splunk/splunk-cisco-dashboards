@@ -40,6 +40,7 @@ import {
     BarChart3,
     ChevronDown,
     ChevronRight,
+    Eye,
     ExternalLink,
     Gauge,
     Loader2,
@@ -215,6 +216,47 @@ export interface KpiPickerContext {
      * selection rather than always landing on "Default".
      */
     currentVizOverride?: MetricOverride['vizOverride'];
+    /**
+     * Currently-applied display toggles (Build 1202, from Atef's
+     * review). Pre-fill the DISPLAY section so re-opening the picker
+     * on a customised tile keeps the toggles in sync with what's
+     * actually rendered. All three default to `false` (chrome
+     * visible). `currentHideOverlay` (Build 1203) suppresses the
+     * dashed previous-period overlay on the sparkline; sibling of
+     * `currentHideDelta` but affects the chart canvas rather than
+     * the pill next to the headline.
+     */
+    currentHidePeak?: boolean;
+    currentHideDelta?: boolean;
+    currentHideOverlay?: boolean;
+    /**
+     * Opaque section identifier for this tile (Build 1203). When
+     * provided alongside an `onApplyDisplayToSection` handler on the
+     * panel props, the Display block surfaces an "Apply these
+     * settings to all tiles in this section" link so a single edit
+     * can fan out to every sibling tile without opening five
+     * pickers. The picker treats the value as a black-box string —
+     * the page-level handler is responsible for resolving siblings.
+     */
+    sectionId?: string;
+    /**
+     * Human-readable section label for the apply-to-section link
+     * ("Apply to all tiles in IT Health"). Falls back to a generic
+     * "section" word when omitted.
+     */
+    sectionLabel?: string;
+}
+
+/**
+ * Patch payload (Build 1203) for the section-level apply shortcut.
+ * Only carries the three display flags — chart-style and threshold
+ * customizations are deliberately scoped per tile so the section
+ * apply does one thing and does it predictably.
+ */
+export interface DisplaySectionPatch {
+    hidePeak: boolean;
+    hideDelta: boolean;
+    hideOverlay: boolean;
 }
 
 export interface KpiPickerPanelProps {
@@ -223,6 +265,17 @@ export interface KpiPickerPanelProps {
     onClose: () => void;
     onApply: (tileId: string, override: MetricOverride) => void;
     onClearOverride: (tileId: string) => void;
+    /**
+     * Section-level apply for the DISPLAY flags only (Build 1203).
+     * When provided, the Display block in the picker renders an
+     * "Apply to all tiles in section" link below the toggles. The
+     * page is responsible for resolving which tiles belong to the
+     * section and merging the patch onto each tile's existing
+     * override (or creating a minimal override for tiles that have
+     * none yet). The picker stays focused on a single tile's
+     * config; this is the ergonomic shortcut, nothing more.
+     */
+    onApplyDisplayToSection?: (sectionId: string, patch: DisplaySectionPatch) => void;
     /**
      * Optional "Open in Splunk Search" handler. When provided, the SPL
      * preview becomes clickable and a small "Test in Search" button
@@ -459,6 +512,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     onClearOverride,
     onTestInSearch,
     onResetAllCustomizations,
+    onApplyDisplayToSection,
 }) => {
     const [catalogue, setCatalogue] = useState<SearchbaseRecord[]>([]);
     const [loadState, setLoadState] = useState<'idle' | 'loading' | 'error'>('idle');
@@ -554,6 +608,53 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     const [vizOverrideInput, setVizOverrideInput] = useState<
         Exclude<MetricOverride['vizOverride'], undefined> | null
     >(null);
+
+    /**
+     * Display toggle state (Build 1202, Atef's review on 2026-05-19).
+     *
+     * Both toggles default to `false` (chrome visible — matches the
+     * shipped behaviour and what every operator sees today). When the
+     * user flips a toggle ON we suppress the corresponding decoration
+     * around the headline value:
+     *
+     *   • `hidePeakInput`  → drop the peak / min-max labels on the
+     *     sparkline canvas (Sparkline's `dataValuesDisplay='none'`)
+     *   • `hideDeltaInput` → drop the ↑/↓ delta-vs-previous pill next
+     *     to the headline
+     *
+     * These are deliberately separate from `vizOverrideInput`:
+     * collapsing the chart entirely is reachable via Chart style →
+     * Single, and adding a third "hide trend" toggle here would
+     * duplicate that state with two competing controls.
+     *
+     * Reset path: `handleResetDisplay` clears both back to the
+     * shipped defaults; the per-section "Reset to default" link only
+     * surfaces when something is customised so the panel stays clean
+     * for the common case.
+     */
+    const [hidePeakInput, setHidePeakInput] = useState(false);
+    const [hideDeltaInput, setHideDeltaInput] = useState(false);
+    const [hideOverlayInput, setHideOverlayInput] = useState(false);
+
+    /**
+     * Collapse state for the CHART STYLE and DISPLAY blocks (Build
+     * 1203). Both default to collapsed at panel open and auto-expand
+     * if the tile is already customised in that area, so the user
+     * always sees what they've changed while the picker stays
+     * compact for the default case. THRESHOLDS keeps its own
+     * default-expanded behaviour because it's the primary
+     * customisation path.
+     *
+     * Why collapsed by default: the picker was running 1000+px
+     * vertical at full bleed (filters + binding + value field +
+     * chart style + display + thresholds + actions). The first
+     * three are always relevant; chart style and display are
+     * niche decoration tweaks most operators won't touch on most
+     * tiles, so claiming back ~250px at rest is a net UX win.
+     */
+    const [chartStyleOpen, setChartStyleOpen] = useState(false);
+    const [displayOpen, setDisplayOpen] = useState(false);
+
     const searchInputRef = useRef<HTMLInputElement | null>(null);
     const tagSelectRef = useRef<HTMLDivElement | null>(null);
     const tagInputRef = useRef<HTMLInputElement | null>(null);
@@ -684,6 +785,26 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         // the picker, which on Apply resolves to "no override
         // persisted" — same pattern as the threshold reset path.
         setVizOverrideInput(context.currentVizOverride ?? null);
+        // Build 1202 / 1203: pre-fill the DISPLAY toggles from the
+        // active override so a tile that's been customised re-opens
+        // with the user's choices visible. All three default to
+        // `false` (chrome visible) — only `true` is persisted, so
+        // absence reliably means "default ON" and the storage
+        // payload stays minimal.
+        const hidePeakActive = context.currentHidePeak === true;
+        const hideDeltaActive = context.currentHideDelta === true;
+        const hideOverlayActive = context.currentHideOverlay === true;
+        setHidePeakInput(hidePeakActive);
+        setHideDeltaInput(hideDeltaActive);
+        setHideOverlayInput(hideOverlayActive);
+
+        // Build 1203: auto-expand CHART STYLE and DISPLAY when the
+        // tile is already customised in those areas. Operators
+        // landing on a tile they've previously tweaked should see
+        // their customisations without an extra click; for fresh
+        // tiles the collapsed default keeps the panel compact.
+        setChartStyleOpen(Boolean(context.currentVizOverride));
+        setDisplayOpen(hidePeakActive || hideDeltaActive || hideOverlayActive);
         // Build 98 fix-up: always expand the THRESHOLDS section on
         // panel open. The previous behaviour ("collapse unless the
         // user has already customised") buried the form behind a
@@ -1195,6 +1316,21 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         if (vizOverrideInput) {
             payload.vizOverride = vizOverrideInput;
         }
+        // Display toggles (Build 1202). Only `true` is persisted —
+        // the storage sanitiser enforces this too, but doing it here
+        // means the payload that hits localStorage matches what the
+        // user picked exactly, with no surprise drops downstream.
+        // `false` means "let the runtime defaults render the chrome",
+        // which is the same as omitting the field entirely.
+        if (hidePeakInput) {
+            payload.hidePeak = true;
+        }
+        if (hideDeltaInput) {
+            payload.hideDelta = true;
+        }
+        if (hideOverlayInput) {
+            payload.hideOverlay = true;
+        }
         // Edge case: the user *cleared* a default-set threshold
         // (e.g. tile defaulted to warning=95, user blanked the input
         // to mean "no warning band"). We can't represent "explicitly
@@ -1224,6 +1360,53 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         setThresholdDirection(d?.direction ?? 'higher_is_better');
     };
 
+    /**
+     * Reset the DISPLAY toggles back to the shipped defaults (Build
+     * 1202). Both toggles ship `false`, so this just flips them off
+     * regardless of their previous state. Scoped to the Display
+     * section only — search binding, value field, label, chart
+     * style, and thresholds are left untouched. User still has to
+     * hit Apply to commit the reset.
+     */
+    const handleResetDisplay = () => {
+        setHidePeakInput(false);
+        setHideDeltaInput(false);
+        setHideOverlayInput(false);
+    };
+
+    /**
+     * Apply just the current Display selections to every tile in
+     * this tile's section (Build 1203). Doesn't touch the tile's
+     * search binding, value field, label, chart style, or
+     * thresholds — scoped to the three display flags only. The
+     * page-level handler decides how to merge onto each sibling
+     * tile's existing override; we just hand it the patch and the
+     * section id.
+     *
+     * The current tile is included in the fan-out: that way the
+     * picker doesn't need a separate "apply locally + apply to
+     * siblings" path. The page handler also writes the current
+     * tile, so the user can close the picker afterwards without
+     * having to also click Apply.
+     */
+    const handleApplyDisplayToSection = () => {
+        if (!context?.sectionId || !onApplyDisplayToSection) return;
+        onApplyDisplayToSection(context.sectionId, {
+            hidePeak: hidePeakInput,
+            hideDelta: hideDeltaInput,
+            hideOverlay: hideOverlayInput,
+        });
+    };
+
+    /**
+     * Has the user changed any display toggle away from the shipped
+     * default? Drives the "(custom)" badge on the Display section
+     * heading and the visibility of the per-section "Reset to
+     * default" affordance — same UX pattern as Chart style and
+     * Thresholds.
+     */
+    const displayCustomised = hidePeakInput || hideDeltaInput || hideOverlayInput;
+
     const handleResetThisTile = () => {
         onClearOverride(context.tileId);
     };
@@ -1244,7 +1427,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                 '  • The order of tiles within each section\n' +
                 '  • The map topology (sites, links, names, positions)\n' +
                 '  • The map ↔ tiles splitter position\n\n' +
-                'Your light/dark theme preference will be kept.\n\n' +
+                'Your header title, subtitle, logo, and light/dark theme preference will be kept.\n\n' +
                 'This action cannot be undone.'
         );
         if (!ok) return;
@@ -2111,7 +2294,18 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                               * already names that viz. */}
                             <div className="rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-2.5">
                                 <div className="flex items-center justify-between gap-2">
-                                    <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 px-0.5 py-0.5">
+                                    <button
+                                        type="button"
+                                        onClick={() => setChartStyleOpen((p) => !p)}
+                                        aria-expanded={chartStyleOpen}
+                                        aria-controls="kpi-picker-chart-style-block"
+                                        title={
+                                            chartStyleOpen
+                                                ? 'Hide the chart style picker'
+                                                : 'Show the chart style picker (override how this tile renders)'
+                                        }
+                                        className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 hover:text-sky-700 dark:hover:text-sky-300 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-0.5 py-0.5"
+                                    >
                                         <BarChart3 className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
                                         Chart style
                                         {vizOverrideInput && (
@@ -2122,8 +2316,14 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 custom
                                             </span>
                                         )}
-                                    </span>
-                                    {vizOverrideInput && (
+                                        <ChevronRight
+                                            className={cn(
+                                                'w-3 h-3 ml-1 text-slate-400 dark:text-slate-500 transition-transform',
+                                                chartStyleOpen && 'rotate-90'
+                                            )}
+                                        />
+                                    </button>
+                                    {chartStyleOpen && vizOverrideInput && (
                                         <button
                                             type="button"
                                             onClick={() => setVizOverrideInput(null)}
@@ -2135,6 +2335,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         </button>
                                     )}
                                 </div>
+                                {chartStyleOpen && (
                                 <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
                                     Override how this tile renders. {' '}
                                     <span className="text-slate-400 dark:text-slate-500">
@@ -2149,7 +2350,9 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         .
                                     </span>
                                 </p>
-                                <div className="mt-2 grid grid-cols-6 gap-1 p-0.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+                                )}
+                                {chartStyleOpen && (
+                                <div id="kpi-picker-chart-style-block" className="mt-2 grid grid-cols-6 gap-1 p-0.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
                                     {(
                                         [
                                             { v: null, label: 'Default', splunkViz: undefined, hint: 'Use the searchbase default_viz' },
@@ -2191,6 +2394,195 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         );
                                     })}
                                 </div>
+                                )}
+                            </div>
+
+                            {/* DISPLAY form (Build 1202, from Atef's
+                              * review on 2026-05-19; Build 1203 added
+                              * the previous-period overlay toggle and
+                              * the section-apply shortcut).
+                              *
+                              * Two opt-out toggles that silence the
+                              * "chrome" around the headline value when
+                              * the operator wants the tile to read as a
+                              * clean single number. Distinct from Chart
+                              * style: Chart style controls the
+                              * underlying viz (area/line/column/bar/
+                              * single); these toggles only affect the
+                              * decoration that sits on top of whichever
+                              * viz is active.
+                              *
+                              * Why no "hide sparkline" toggle: Chart
+                              * style → Single already collapses the
+                              * chart entirely, and a third toggle here
+                              * would duplicate that state with two
+                              * competing controls. The helper text
+                              * points users there if that's what they
+                              * actually want.
+                              *
+                              * Storage rule: only `true` is persisted
+                              * (sanitiser drops anything else), so a
+                              * future flip of the shipped default flows
+                              * through automatically for any tile the
+                              * user hasn't customised. */}
+                            <div className="rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-2.5">
+                                <div className="flex items-center justify-between gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setDisplayOpen((p) => !p)}
+                                        aria-expanded={displayOpen}
+                                        aria-controls="kpi-picker-display-block"
+                                        title={
+                                            displayOpen
+                                                ? 'Hide the display chrome toggles'
+                                                : 'Show the display chrome toggles (hide peak labels, delta pill, comparison overlay)'
+                                        }
+                                        className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 hover:text-sky-700 dark:hover:text-sky-300 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-0.5 py-0.5"
+                                    >
+                                        <Eye className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
+                                        Display
+                                        {displayCustomised && (
+                                            <span
+                                                title="This tile has display chrome hidden (different from the shipped defaults)"
+                                                className="ml-1 inline-flex items-center px-1 py-px rounded-sm bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 text-[8px] font-bold tracking-wide normal-case"
+                                            >
+                                                custom
+                                            </span>
+                                        )}
+                                        <ChevronRight
+                                            className={cn(
+                                                'w-3 h-3 ml-1 text-slate-400 dark:text-slate-500 transition-transform',
+                                                displayOpen && 'rotate-90'
+                                            )}
+                                        />
+                                    </button>
+                                    {displayOpen && displayCustomised && (
+                                        <button
+                                            type="button"
+                                            onClick={handleResetDisplay}
+                                            title="Restore the peak / delta / overlay visibility to the shipped defaults for this tile (still has to be applied)"
+                                            className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
+                                        >
+                                            <RotateCcw className="w-2.5 h-2.5" />
+                                            Reset to default
+                                        </button>
+                                    )}
+                                </div>
+                                {displayOpen && (
+                                <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
+                                    Hide the decoration around the headline value. {' '}
+                                    <span className="text-slate-400 dark:text-slate-500">
+                                        To collapse the chart entirely, use {' '}
+                                        <span className="font-bold">Chart style → Single</span> {' '}
+                                        above.
+                                    </span>
+                                </p>
+                                )}
+                                {displayOpen && (
+                                <div id="kpi-picker-display-block" className="mt-2 grid grid-cols-1 gap-1.5">
+                                    {/* Peak callout toggle. */}
+                                    <label
+                                        className={cn(
+                                            'flex items-start gap-2 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5 cursor-pointer transition-colors',
+                                            'hover:border-sky-300 dark:hover:border-sky-700'
+                                        )}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={hidePeakInput}
+                                            onChange={(e) => setHidePeakInput(e.target.checked)}
+                                            className="mt-0.5 h-3 w-3 rounded border-slate-300 dark:border-slate-600 text-sky-500 focus:ring-1 focus:ring-sky-400 flex-shrink-0"
+                                        />
+                                        <span className="flex-1 min-w-0">
+                                            <span className="block text-[11px] font-bold text-slate-700 dark:text-slate-200 leading-tight">
+                                                Hide peak labels
+                                            </span>
+                                            <span className="block mt-0.5 text-[9.5px] text-slate-500 dark:text-slate-400 leading-snug">
+                                                Removes the min / peak bubbles on the
+                                                sparkline. Useful when the headline value is
+                                                what matters and the highs / lows distract.
+                                            </span>
+                                        </span>
+                                    </label>
+
+                                    {/* Delta-vs-previous toggle. */}
+                                    <label
+                                        className={cn(
+                                            'flex items-start gap-2 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5 cursor-pointer transition-colors',
+                                            'hover:border-sky-300 dark:hover:border-sky-700'
+                                        )}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={hideDeltaInput}
+                                            onChange={(e) => setHideDeltaInput(e.target.checked)}
+                                            className="mt-0.5 h-3 w-3 rounded border-slate-300 dark:border-slate-600 text-sky-500 focus:ring-1 focus:ring-sky-400 flex-shrink-0"
+                                        />
+                                        <span className="flex-1 min-w-0">
+                                            <span className="block text-[11px] font-bold text-slate-700 dark:text-slate-200 leading-tight">
+                                                Hide delta vs previous
+                                            </span>
+                                            <span className="block mt-0.5 text-[9.5px] text-slate-500 dark:text-slate-400 leading-snug">
+                                                Removes the ↑ / ↓ percentage pill next to the
+                                                headline. Pick this when the absolute number
+                                                speaks for itself and the period-over-period
+                                                comparison adds noise.
+                                            </span>
+                                        </span>
+                                    </label>
+
+                                    {/* Previous-period overlay toggle (Build 1203). */}
+                                    <label
+                                        className={cn(
+                                            'flex items-start gap-2 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5 cursor-pointer transition-colors',
+                                            'hover:border-sky-300 dark:hover:border-sky-700'
+                                        )}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={hideOverlayInput}
+                                            onChange={(e) => setHideOverlayInput(e.target.checked)}
+                                            className="mt-0.5 h-3 w-3 rounded border-slate-300 dark:border-slate-600 text-sky-500 focus:ring-1 focus:ring-sky-400 flex-shrink-0"
+                                        />
+                                        <span className="flex-1 min-w-0">
+                                            <span className="block text-[11px] font-bold text-slate-700 dark:text-slate-200 leading-tight">
+                                                Hide comparison overlay
+                                            </span>
+                                            <span className="block mt-0.5 text-[9.5px] text-slate-500 dark:text-slate-400 leading-snug">
+                                                Removes the dashed previous-period / baseline
+                                                line from the sparkline canvas. The trend stays;
+                                                the side-by-side comparison goes away.
+                                            </span>
+                                        </span>
+                                    </label>
+                                </div>
+                                )}
+                                {/* Section-level apply shortcut (Build
+                                  * 1203, from Atef's "global vs per
+                                  * KPI" framing). Surfaces only when
+                                  * the page wired a handler AND the
+                                  * tile reports a section id. Writes
+                                  * the *current* Display selections
+                                  * (whatever the toggles read right
+                                  * now) to every tile in this section
+                                  * — including this one — so the user
+                                  * can close the picker without a
+                                  * separate Apply click. Threshold
+                                  * and Chart style customisations
+                                  * remain per-tile by design. */}
+                                {displayOpen && context?.sectionId && onApplyDisplayToSection && (
+                                    <div className="mt-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                                        <button
+                                            type="button"
+                                            onClick={handleApplyDisplayToSection}
+                                            title="Write these Display settings to every tile in this section. Other tile customisations (search binding, value field, chart style, thresholds) are left untouched."
+                                            className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-sky-600 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-200 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
+                                        >
+                                            <Eye className="w-3 h-3" />
+                                            Apply to all tiles in {context.sectionLabel || 'section'}
+                                        </button>
+                                    </div>
+                                )}
                             </div>
 
                             {/* THRESHOLDS form.
@@ -2526,7 +2918,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     // tile'". A confirm() prompt
                                     // catches misclicks before
                                     // anything is wiped.
-                                    title="Wipe every dashboard customisation and start fresh"
+                                    title="Wipe tile, layout, and map customisations; keep header branding"
                                     className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 flex-shrink-0"
                                 >
                                     <RotateCcw className="w-3 h-3" />
