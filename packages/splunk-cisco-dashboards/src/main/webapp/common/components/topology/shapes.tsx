@@ -520,6 +520,19 @@ export const SplunkEdgeProcessorShape = DeviceShape;
 export const SplunkSc4sShape = DeviceShape;
 export const BranchOfficeShape = DeviceShape;
 export const DatacenterShape = DeviceShape;
+// Official Cisco icon palette entries. They use the same DeviceShape
+// chrome as the rest of the canvas; the icon itself is selected by
+// `ShapeSilhouette` from `node.shape`.
+export const CiscoRouterShape = DeviceShape;
+export const CiscoSwitchShape = DeviceShape;
+export const CiscoL3SwitchShape = DeviceShape;
+export const CiscoStackShape = DeviceShape;
+export const CiscoWlcShape = DeviceShape;
+export const CiscoAccessPointShape = DeviceShape;
+export const CiscoFirewallShape = DeviceShape;
+export const CiscoServerShape = DeviceShape;
+export const CiscoCloudShape = DeviceShape;
+export const CiscoDataCenterShape = DeviceShape;
 
 /** Parent zone container — visual chrome for grouping devices by
  *  customer site. Non-draggable, non-clickable, no handles. */
@@ -614,6 +627,17 @@ export const TOPOLOGY_NODE_TYPES = {
     // Places
     'device:branch_office': BranchOfficeShape,
     'device:datacenter': DatacenterShape,
+    // Official Cisco icon set
+    'device:cisco_router': CiscoRouterShape,
+    'device:cisco_switch': CiscoSwitchShape,
+    'device:cisco_l3_switch': CiscoL3SwitchShape,
+    'device:cisco_stack': CiscoStackShape,
+    'device:cisco_wlc': CiscoWlcShape,
+    'device:cisco_access_point': CiscoAccessPointShape,
+    'device:cisco_firewall': CiscoFirewallShape,
+    'device:cisco_server': CiscoServerShape,
+    'device:cisco_cloud': CiscoCloudShape,
+    'device:cisco_data_center': CiscoDataCenterShape,
     'device:generic': GenericShape,
     topologyZone: TopologyZoneNode,
 } as const;

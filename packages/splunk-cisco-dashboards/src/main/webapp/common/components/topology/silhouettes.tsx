@@ -1231,11 +1231,11 @@ const EndpointSilhouette: React.FC<SilhouetteProps> = ({ Icon, className }) => (
 const CardSilhouette: React.FC<SilhouetteProps> = ({ Icon, className }) => (
     <div
         className={cn(
-            'w-full h-full flex items-center justify-center',
+            'w-full h-full flex items-center justify-center p-[12%]',
             className
         )}
     >
-        <Icon className="w-12 h-12" />
+        <Icon className="w-full h-full" />
     </div>
 );
 
