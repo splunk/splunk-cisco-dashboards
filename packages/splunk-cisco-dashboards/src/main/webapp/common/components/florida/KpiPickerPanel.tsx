@@ -28,16 +28,13 @@
  *
  * Selection preview
  * -----------------
- * The bottom panel surfaces the picked entry's category/tag badges
- * and a description summary up-front, with the SPL block collapsed
- * by default. "Test in Search" is always one click away; the SPL
- * itself opens on demand so the search list above keeps room to
- * breathe.
+ * The bottom panel surfaces the picked entry's category/tag badges,
+ * source actions, and compact tile-mapping controls. Rich narrative
+ * stays in the result row / Searchbase editor so the form stays tidy.
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-    ArrowUpRight,
     BarChart3,
     ChevronDown,
     ChevronRight,
@@ -107,69 +104,6 @@ const DEFAULT_APP_SCOPE = 'splunk-cisco-dashboards';
 const MAX_FIELD_LENGTH = 64;
 const FIELD_NAME_PATTERN = /^[A-Za-z_][\w.]{0,63}$/;
 const TAG_CHIP_LIMIT = 24;
-
-const SPL_COMMANDS = new Set([
-    'append',
-    'appendcols',
-    'bin',
-    'chart',
-    'dedup',
-    'eval',
-    'eventstats',
-    'fields',
-    'filldown',
-    'fillnull',
-    'head',
-    'inputlookup',
-    'join',
-    'lookup',
-    'makeresults',
-    'makemv',
-    'mvexpand',
-    'predict',
-    'rename',
-    'rex',
-    'search',
-    'sort',
-    'spath',
-    'stats',
-    'streamstats',
-    'table',
-    'tail',
-    'timechart',
-    'tstats',
-    'union',
-    'where',
-]);
-
-const SPL_KEYWORDS = new Set([
-    'and',
-    'as',
-    'by',
-    'case',
-    'coalesce',
-    'earliest',
-    'false',
-    'if',
-    'in',
-    'isnotnull',
-    'isnull',
-    'latest',
-    'like',
-    'lower',
-    'match',
-    'max',
-    'min',
-    'not',
-    'null',
-    'or',
-    'round',
-    'sum',
-    'tonumber',
-    'tostring',
-    'true',
-    'values',
-]);
 
 export interface KpiPickerContext {
     /** Stable tile id from the metric/KPI config. */
@@ -278,38 +212,11 @@ export interface KpiPickerPanelProps {
      */
     onApplyDisplayToSection?: (sectionId: string, patch: DisplaySectionPatch) => void;
     /**
-     * Open the full section dashboard for deeper analysis (Build
-     * 1204, closing the loop on Atef's "drill down for deeper
-     * analysis" recommendation from the 2026-05-19 review).
-     *
-     * Surfaces as a "Need deeper analysis?" hint above the Chart
-     * style block when set, giving operators a one-click path
-     * away from the picker to the section's dedicated dashboard
-     * (tables, time-windowed breakdowns, alternative
-     * visualisations) at the exact moment they might otherwise
-     * reach for chart-type changes on the KPI tile itself.
-     *
-     * The picker doesn't know the destination URL — the page
-     * resolves it from `SECTION_META[sectionId].href` and binds
-     * the callback at panel-render time so all three drilldown
-     * paths (section title, `g i / g s / g b` shortcut, this
-     * picker hint) flow through one `openDrilldown` call.
-     *
-     * Required pairing: only renders when `context.sectionId`,
-     * `context.sectionLabel`, AND this callback are all present.
-     * Tiles outside the KPI grid (e.g. the two summary KpiCards
-     * above the topology map) ship without a sectionId by design;
-     * the picker silently skips the hint for those.
-     */
-    onOpenSectionDashboard?: () => void;
-    /**
-     * Optional "Open in Splunk Search" handler. When provided, the SPL
-     * preview becomes clickable and a small "Test in Search" button
-     * sits next to it. The handler receives the *literal* SPL from
+     * Optional "Open in Splunk Search" handler. When provided, a
+     * compact "Test in Search" action appears next to the Searchbase
+     * link. The handler receives the *literal* SPL from
      * `searchbase.conf` (the `search` field), not a saved-search
-     * reference — that way the executive sees and tweaks exactly what
-     * the picker is showing them, and can compare against the
-     * dispatched saved-search separately if they want to.
+     * reference.
      */
     onTestInSearch?: (spl: string) => void;
     /**
@@ -329,103 +236,6 @@ export interface KpiPickerPanelProps {
 }
 
 const escapeRegex = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-const renderSplBlock = (spl: string): React.ReactNode => {
-    const lines = spl.split('\n');
-    return lines.map((line, lineIndex) => (
-        <React.Fragment key={`spl-line-${lineIndex}`}>
-            {renderSplLine(line, lineIndex)}
-            {lineIndex < lines.length - 1 ? '\n' : null}
-        </React.Fragment>
-    ));
-};
-
-const renderSplLine = (line: string, lineIndex: number): React.ReactNode[] => {
-    const pattern =
-        /(`[^`]*`|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\|\s*[A-Za-z_][A-Za-z0-9_]*|\b\d+(?:\.\d+)?\b|\b[A-Za-z_][A-Za-z0-9_.:{}-]*\b)/g;
-    const parts = line.split(pattern);
-
-    return parts.map((part, partIndex) => {
-        if (!part) return null;
-
-        const key = `spl-${lineIndex}-${partIndex}`;
-
-        if (part.startsWith('`') && part.endsWith('`')) {
-            return (
-                <span key={key} className="text-amber-700 dark:text-amber-300">
-                    {part}
-                </span>
-            );
-        }
-
-        if (
-            (part.startsWith('"') && part.endsWith('"')) ||
-            (part.startsWith("'") && part.endsWith("'"))
-        ) {
-            return (
-                <span key={key} className="text-emerald-700 dark:text-emerald-300">
-                    {part}
-                </span>
-            );
-        }
-
-        if (part.startsWith('|')) {
-            const command = part.slice(1).trim();
-            return (
-                <React.Fragment key={key}>
-                    <span className="text-sky-700 dark:text-sky-400">|</span>
-                    {command ? (
-                        <>
-                            {' '}
-                            <span className="text-violet-700 dark:text-violet-300">
-                                {command}
-                            </span>
-                        </>
-                    ) : null}
-                </React.Fragment>
-            );
-        }
-
-        if (/^\d+(?:\.\d+)?$/.test(part)) {
-            return (
-                <span key={key} className="text-orange-700 dark:text-orange-300">
-                    {part}
-                </span>
-            );
-        }
-
-        const normalized = part.toLowerCase();
-        if (SPL_COMMANDS.has(normalized)) {
-            return (
-                <span key={key} className="text-violet-700 dark:text-violet-300">
-                    {part}
-                </span>
-            );
-        }
-
-        if (SPL_KEYWORDS.has(normalized)) {
-            return (
-                <span key={key} className="text-sky-700 dark:text-sky-300">
-                    {part}
-                </span>
-            );
-        }
-
-        if (part.includes('=') || part.includes('.')) {
-            return (
-                <span key={key} className="text-slate-700 dark:text-slate-200">
-                    {part}
-                </span>
-            );
-        }
-
-        return (
-            <span key={key} className="text-slate-900 dark:text-slate-100">
-                {part}
-            </span>
-        );
-    });
-};
 
 /**
  * Extracts the column names a search will emit by walking the SPL and
@@ -530,6 +340,19 @@ const labelFromSearchName = (searchName: string): string => {
     return (parts[parts.length - 1] || searchName).slice(0, 80);
 };
 
+const getSplunkWebLocalePrefix = (): string => {
+    if (typeof window === 'undefined') return '/en-US';
+    const match = window.location.pathname.match(/^\/([^/]+)\/app\//);
+    return match ? `/${match[1]}` : '/en-US';
+};
+
+const buildSearchbaseEditUrl = (entry: SearchbaseRecord): string | null => {
+    const stanza = entry.id.trim();
+    if (!stanza) return null;
+    const origin = typeof window === 'undefined' ? '' : window.location.origin;
+    return `${origin}${getSplunkWebLocalePrefix()}/app/searchbase/start#/edit/${encodeURIComponent(stanza)}#search-spl`;
+};
+
 export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     open,
     context,
@@ -539,7 +362,6 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     onTestInSearch,
     onResetAllCustomizations,
     onApplyDisplayToSection,
-    onOpenSectionDashboard,
 }) => {
     const [catalogue, setCatalogue] = useState<SearchbaseRecord[]>([]);
     const [loadState, setLoadState] = useState<'idle' | 'loading' | 'error'>('idle');
@@ -577,18 +399,10 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     // it. Resets every time the panel reopens so the strip is always
     // available for a fresh tile context. Build 94.
     const [boundDismissed, setBoundDismissed] = useState(false);
-    // Show/hide the long DESCRIPTION block in the bottom preview
-    // panel. Collapsed by default — for a vetted catalogue most of
-    // the picker time is browse-and-apply, not read-the-narrative,
-    // and the block costs ~80–100px every render. Build 94.
-    const [descOpen, setDescOpen] = useState(false);
+    const [expandedDescriptionId, setExpandedDescriptionId] = useState<string | null>(null);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [valueField, setValueField] = useState('');
     const [labelOverride, setLabelOverride] = useState('');
-    // SPL block is hidden by default — most pickers don't need to
-    // re-read the SPL each time, and the block ate ~150px of vertical
-    // real-estate. Reset when the user picks a different entry.
-    const [showSpl, setShowSpl] = useState(false);
     // ---------- THRESHOLDS form state (Build 97) ----------
     //
     // The form drives the same `MetricThresholds` shape the runtime
@@ -664,12 +478,10 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     const [hideOverlayInput, setHideOverlayInput] = useState(false);
 
     /**
-     * Collapse state for the editor blocks. Search binding defaults
-     * open because it contains the fields most often edited after
-     * choosing a search. Chart style and Display default collapsed
-     * and auto-expand when customised. Thresholds are presented as a
-     * peer accordion rather than a long always-open tail, keeping the
-     * panel scannable while still one click away.
+     * Collapse state for the editor blocks. All editor groups start
+     * collapsed so the selected search preview lands as a tidy menu
+     * stack. Groups auto-expand only when an existing customisation
+     * needs to be surfaced immediately.
      *
      * Why collapsed by default: the picker was running 1000+px
      * vertical at full bleed (filters + binding + value field +
@@ -678,7 +490,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
      * available edits without the footer being crowded by whichever
      * form happens to be expanded.
      */
-    const [bindingOpen, setBindingOpen] = useState(true);
+    const [dataMappingOpen, setDataMappingOpen] = useState(false);
     const [chartStyleOpen, setChartStyleOpen] = useState(false);
     const [displayOpen, setDisplayOpen] = useState(false);
 
@@ -783,8 +595,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         setTagDropdownOpen(false);
         setFiltersOpen(false);
         setBoundDismissed(false);
-        setDescOpen(false);
-        setShowSpl(false);
+        setExpandedDescriptionId(null);
         // Highlight the row whose `search_name` matches the tile's
         // currently-bound saved search (if it's in the catalogue).
         const initial = context.currentSavedSearch ?? null;
@@ -825,7 +636,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         setHideDeltaInput(hideDeltaActive);
         setHideOverlayInput(hideOverlayActive);
 
-        setBindingOpen(true);
+        setDataMappingOpen(false);
         // Build 1203: auto-expand CHART STYLE and DISPLAY when the
         // tile is already customised in those areas. Operators
         // landing on a tile they've previously tweaked should see
@@ -891,12 +702,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         }
     }, [selectedApp, selectedCategory, selectedSubCategory, activeTags]);
 
-    // Different selection -> collapse SPL. The user explicitly opens
-    // it for the entry they care about; carrying the open state across
-    // selections shows the wrong SPL for a beat while the new content
-    // renders, which feels broken.
-    //
-    // Same effect also drops the prefilled `valueField` whenever the
+    // Different selection drops the prefilled `valueField` whenever the
     // user picks a search that isn't the tile's current binding.
     // Carrying the field across a search swap was the root cause of
     // headlines remaining stale after a picker change: the new SPL
@@ -905,7 +711,6 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     // Clearing tells `applyOverride` to leave `valueField` undefined,
     // which lets `useMetric` auto-detect the column from live rows.
     useEffect(() => {
-        setShowSpl(false);
         if (!context) return;
         const selectedIsCurrent =
             selectedId === context.currentSavedSearch ||
@@ -1091,6 +896,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                 : null,
         [catalogue, selectedId]
     );
+    const selectedSearchbaseUrl = selectedEntry ? buildSearchbaseEditUrl(selectedEntry) : null;
     const selectedDescriptionPlain = useMemo(
         () => (selectedEntry ? plainTextFromHtml(selectedEntry.description) : ''),
         [selectedEntry]
@@ -1883,6 +1689,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 currentBoundEntry.id === entry.id;
                             const isInUse = entryIsUsed(entry, context.usedSavedSearches);
                             const plainDesc = plainTextFromHtml(entry.description);
+                            const descExpanded = expandedDescriptionId === entry.id;
+                            const descExpandable = plainDesc.length > 120;
                             return (
                                 <div
                                     key={entry.id}
@@ -1985,9 +1793,42 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 </div>
                                             )}
                                             {plainDesc && (
-                                                <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400 line-clamp-2">
-                                                    {highlightMatch(plainDesc, query)}
-                                                </p>
+                                                <div className="mt-1">
+                                                    <p
+                                                        className={cn(
+                                                            'text-[10px] text-slate-500 dark:text-slate-400',
+                                                            !descExpanded && 'line-clamp-2'
+                                                        )}
+                                                    >
+                                                        {highlightMatch(plainDesc, query)}
+                                                    </p>
+                                                    {descExpandable && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setExpandedDescriptionId(
+                                                                    descExpanded ? null : entry.id
+                                                                );
+                                                            }}
+                                                            aria-expanded={descExpanded}
+                                                            title={
+                                                                descExpanded
+                                                                    ? 'Collapse this description'
+                                                                    : 'Show the full description inline'
+                                                            }
+                                                            className="mt-0.5 inline-flex items-center gap-0.5 rounded px-0.5 py-px text-[8px] font-black uppercase tracking-widest text-sky-600 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-200 focus:outline-none focus:ring-1 focus:ring-sky-400"
+                                                        >
+                                                            <ChevronRight
+                                                                className={cn(
+                                                                    'w-2.5 h-2.5 transition-transform',
+                                                                    descExpanded && 'rotate-90'
+                                                                )}
+                                                            />
+                                                            {descExpanded ? 'Less' : 'More'}
+                                                        </button>
+                                                    )}
+                                                </div>
                                             )}
                                         </div>
                                     </div>
@@ -2066,83 +1907,25 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 >
                                     {selectedEntry.searchName}
                                 </p>
-                            </div>
-
-                            <div className="rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/60 overflow-hidden">
-                                <div className="flex items-center justify-between gap-2 px-2.5 py-2 bg-slate-50 dark:bg-slate-900/80">
-                                    <button
-                                        type="button"
-                                        onClick={() => setBindingOpen((p) => !p)}
-                                        aria-expanded={bindingOpen}
-                                        aria-controls="kpi-picker-binding-block"
-                                        title={
-                                            bindingOpen
-                                                ? 'Hide search binding fields'
-                                                : 'Show search binding fields'
-                                        }
-                                        className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 hover:text-sky-700 dark:hover:text-sky-300 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-0.5 py-0.5"
-                                    >
-                                        <Settings2 className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400 flex-shrink-0" />
-                                        <span className="flex-shrink-0">Search binding</span>
-                                        <span className="min-w-0 truncate text-[9px] font-semibold normal-case tracking-normal text-slate-400 dark:text-slate-500">
-                                            {valueField ? `value: ${valueField}` : 'auto value'}
-                                            {labelOverride.trim() ? ' · custom label' : ''}
-                                        </span>
-                                        <ChevronRight
-                                            className={cn(
-                                                'w-3 h-3 ml-auto text-slate-400 dark:text-slate-500 transition-transform flex-shrink-0',
-                                                bindingOpen && 'rotate-90'
-                                            )}
-                                        />
-                                    </button>
-                                </div>
-
-                                {bindingOpen && (
-                                    <div
-                                        id="kpi-picker-binding-block"
-                                        className="border-t border-slate-200 dark:border-slate-800 p-2.5 flex flex-col gap-2.5"
-                                    >
-                                        <div className="order-2">
-                                {/* Header row: "Show SPL" toggle (collapsed by
-                                    default; the SPL block ate ~150px of
-                                    vertical real-estate the user rarely needed
-                                    to re-read) + always-visible "Test in
-                                    Search" launcher. Both reference the
-                                    *literal* SPL from searchbase.conf. */}
-                                <div className="flex items-center justify-between gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowSpl((p) => !p)}
-                                        aria-expanded={showSpl}
-                                        aria-controls="kpi-picker-spl-block"
-                                        title={
-                                            showSpl
-                                                ? 'Hide the SPL preview'
-                                                : 'Show the literal SPL from searchbase.conf'
-                                        }
-                                        className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
-                                    >
-                                        <ChevronRight
-                                            className={cn(
-                                                'w-2.5 h-2.5 transition-transform',
-                                                showSpl && 'rotate-90'
-                                            )}
-                                        />
-                                        {showSpl ? 'Hide SPL' : 'Show SPL'}
-                                        {!showSpl && selectedEntry.search && (
-                                            <span className="font-mono normal-case tracking-normal text-[10px] text-slate-400 dark:text-slate-500 truncate max-w-[180px] ml-1">
-                                                · {selectedEntry.search.split(/\s+/).slice(0, 3).join(' ')}…
-                                            </span>
-                                        )}
-                                    </button>
+                                <div className="mt-1 flex flex-wrap items-center gap-2">
+                                    {selectedSearchbaseUrl && (
+                                        <a
+                                            href={selectedSearchbaseUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            title={`Open ${selectedEntry.id} in Searchbase`}
+                                            className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-sky-600 dark:text-sky-300 hover:text-sky-800 dark:hover:text-sky-100 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
+                                        >
+                                            View in Searchbase
+                                            <ExternalLink className="w-2.5 h-2.5" />
+                                        </a>
+                                    )}
                                     {onTestInSearch && selectedEntry.search && (
                                         <button
                                             type="button"
-                                            onClick={() =>
-                                                onTestInSearch(selectedEntry.search)
-                                            }
+                                            onClick={() => onTestInSearch(selectedEntry.search)}
                                             title="Run this exact SPL in Search (new tab)"
-                                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest text-sky-600 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-900/30 border border-sky-200 dark:border-sky-800 transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400"
+                                            className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-sky-600 dark:text-sky-300 hover:text-sky-800 dark:hover:text-sky-100 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
                                         >
                                             <Play className="w-2.5 h-2.5" />
                                             Test in Search
@@ -2150,85 +1933,43 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         </button>
                                     )}
                                 </div>
-
-                                {showSpl &&
-                                    (onTestInSearch && selectedEntry.search ? (
-                                        <button
-                                            id="kpi-picker-spl-block"
-                                            type="button"
-                                            onClick={() =>
-                                                onTestInSearch(selectedEntry.search)
-                                            }
-                                            title="Click to run this SPL in Search"
-                                            className="mt-1 block w-full rounded-lg border border-slate-200 bg-slate-50 p-2 text-left transition-colors hover:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-sky-500"
-                                        >
-                                            <pre className="m-0 max-h-[20rem] overflow-auto rounded-md border border-slate-200 bg-white px-3 py-3 text-[12px] leading-6 whitespace-pre-wrap break-words text-slate-900 ring-1 ring-black/5 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:ring-white/5">
-                                                {renderSplBlock(selectedEntry.search)}
-                                            </pre>
-                                        </button>
-                                    ) : (
-                                        <pre
-                                            id="kpi-picker-spl-block"
-                                            className="mt-1 max-h-[20rem] overflow-auto rounded-lg border border-slate-200 bg-white px-3 py-3 text-[12px] leading-6 whitespace-pre-wrap break-words text-slate-900 ring-1 ring-black/5 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:ring-white/5"
-                                        >
-                                            {selectedEntry.search
-                                                ? renderSplBlock(selectedEntry.search)
-                                                : '(searchbase.conf entry has no `search` value)'}
-                                        </pre>
-                                    ))}
                             </div>
 
-                            {/* Description block — collapsed by
-                                default to keep the bottom preview
-                                panel compact (Build 94). Same toggle
-                                pattern as "Show SPL" above. The
-                                catalogue is vetted, so the typical
-                                flow is browse → pick → apply; users
-                                who want the long narrative can expand
-                                with one click. The toggle row is
-                                always rendered when description text
-                                is available so the affordance is
-                                discoverable. */}
-                            {selectedDescriptionPlain && (
-                                <div className="order-3">
+                            <div className="rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/60 overflow-hidden">
+                                <div className="flex items-center justify-between gap-2 px-2.5 py-2 bg-slate-50 dark:bg-slate-900/80">
                                     <button
                                         type="button"
-                                        onClick={() => setDescOpen((p) => !p)}
-                                        aria-expanded={descOpen}
-                                        aria-controls="kpi-picker-description-block"
+                                        onClick={() => setDataMappingOpen((p) => !p)}
+                                        aria-expanded={dataMappingOpen}
+                                        aria-controls="kpi-picker-data-mapping-block"
                                         title={
-                                            descOpen
-                                                ? 'Hide the description'
-                                                : 'Show the search description'
+                                            dataMappingOpen
+                                                ? 'Hide data mapping fields'
+                                                : 'Show data mapping fields'
                                         }
-                                        className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
+                                        className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 hover:text-sky-700 dark:hover:text-sky-300 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-0.5 py-0.5"
                                     >
+                                        <Settings2 className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400 flex-shrink-0" />
+                                        <span className="flex-shrink-0">Data mapping</span>
+                                        <span className="min-w-0 truncate text-[9px] font-semibold normal-case tracking-normal text-slate-400 dark:text-slate-500">
+                                            {valueField ? `value: ${valueField}` : 'auto value'}
+                                            {labelOverride.trim() ? ' · custom label' : ''}
+                                        </span>
                                         <ChevronRight
                                             className={cn(
-                                                'w-2.5 h-2.5 transition-transform',
-                                                descOpen && 'rotate-90'
+                                                'w-3 h-3 ml-auto text-slate-400 dark:text-slate-500 transition-transform flex-shrink-0',
+                                                dataMappingOpen && 'rotate-90'
                                             )}
                                         />
-                                        Description
-                                        {!descOpen && (
-                                            <span className="font-normal normal-case tracking-normal text-[10px] text-slate-400 dark:text-slate-500 truncate max-w-[260px] ml-1">
-                                                · {selectedDescriptionPlain.slice(0, 60)}
-                                                {selectedDescriptionPlain.length > 60 ? '…' : ''}
-                                            </span>
-                                        )}
                                     </button>
-                                    {descOpen && (
-                                        <p
-                                            id="kpi-picker-description-block"
-                                            className="mt-1 text-[11px] text-slate-600 dark:text-slate-300 line-clamp-4"
-                                        >
-                                            {selectedDescriptionPlain}
-                                        </p>
-                                    )}
                                 </div>
-                            )}
 
-                            <div className="order-1 grid grid-cols-2 gap-2">
+                                {dataMappingOpen && (
+                                    <div
+                                        id="kpi-picker-data-mapping-block"
+                                        className="border-t border-slate-200 dark:border-slate-800 p-2.5"
+                                    >
+                                        <div className="grid grid-cols-2 gap-2">
                                 <div>
                                     <label className="block text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
                                         Value field
@@ -2320,62 +2061,6 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     </div>
                                 )}
                             </div>
-
-                            {/* DEEPER ANALYSIS hint (Build 1204,
-                              * closing the loop on Atef's "drill
-                              * down for deeper analysis"
-                              * recommendation from the 2026-05-19
-                              * Executive Dashboard review).
-                              *
-                              * Placement is deliberate: sits between
-                              * the binding form (Saved Search +
-                              * Value field + Label) and the
-                              * presentation forms (Chart style +
-                              * Display + Thresholds). That's the
-                              * moment an operator transitions from
-                              * "what data does this tile show" to
-                              * "how does this tile render", which
-                              * is exactly when they're tempted to
-                              * over-customise the viz on a KPI
-                              * tile. The hint redirects that
-                              * energy toward the section
-                              * dashboard — the right place for
-                              * tables, time-windowed breakdowns,
-                              * and richer visualisations that
-                              * shouldn't live on a status-board
-                              * KPI in the first place.
-                              *
-                              * Only renders when the tile is
-                              * section-scoped AND a callback is
-                              * provided. Tiles outside the KPI
-                              * grid (the two summary KpiCards
-                              * above the topology map) ship
-                              * without a sectionId by design and
-                              * silently skip the hint. */}
-                            {context.sectionId && context.sectionLabel && onOpenSectionDashboard && (
-                                <div className="rounded-md border border-sky-200 dark:border-sky-800 bg-sky-50/70 dark:bg-sky-950/30 p-2.5 flex items-start gap-2">
-                                    <ArrowUpRight className="w-3.5 h-3.5 mt-0.5 text-sky-500 dark:text-sky-400 flex-shrink-0" />
-                                    <div className="flex-1 min-w-0">
-                                        <div className="text-[11px] font-black uppercase tracking-wider text-sky-700 dark:text-sky-300">
-                                            Need deeper analysis?
-                                        </div>
-                                        <p className="mt-0.5 text-[10px] text-slate-600 dark:text-slate-300 leading-snug">
-                                            KPI tiles stay single-value by design. For different
-                                            charts, breakdowns, or time-windowed analysis open the
-                                            full section dashboard.
-                                        </p>
-                                        <button
-                                            type="button"
-                                            onClick={onOpenSectionDashboard}
-                                            title={`Open the ${context.sectionLabel} dashboard in a new tab`}
-                                            className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-sky-600 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-200 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
-                                        >
-                                            Open {context.sectionLabel}
-                                            <ExternalLink className="w-3 h-3" />
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
 
                             {/* CHART STYLE form (Build 1174).
                               *
@@ -2707,10 +2392,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                               * Build 97: introduced the form.
                               * Build 98: visual surface + default-expand
                               *   to fix discoverability — the form was
-                              *   here all along, but its toggle row was
-                              *   styled identically to the "Show SPL"
-                              *   and "Description" toggles immediately
-                              *   above and read as just another link.
+                              *   here all along, but its toggle row used
+                              *   to read like a minor utility link.
                               *   Wrapping in a panel-like surface with
                               *   a Gauge icon and a slightly heftier
                               *   heading makes it clear this is *the*

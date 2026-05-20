@@ -2711,7 +2711,15 @@ const OverviewPage: React.FC = () => {
                     <button
                         type="button"
                         onClick={() => setHelpOpen(true)}
-                        title="Keyboard shortcuts (?)"
+                        // Build 1205: title widened from "Keyboard
+                        // shortcuts" to reflect the overlay's broader
+                        // remit — it now also documents the picker's
+                        // scope contract (tile vs. section vs.
+                        // drill-down). The `?` shortcut still works
+                        // and is the affordance power users learned;
+                        // the title text is the discovery hook for
+                        // everyone else.
+                        title="Help & reference (?)"
                         className={iconBtnClass}
                     >
                         <Keyboard className="w-4 h-4" />
@@ -3236,22 +3244,6 @@ const OverviewPage: React.FC = () => {
                 onClose={closePicker}
                 onApply={handlePickerApply}
                 onApplyDisplayToSection={handleApplyDisplayToSection}
-                // Build 1204: drilldown hint inside the picker. Reuses
-                // the same `openDrilldown` the section header and the
-                // `g i / g s / g b` keyboard shortcuts call into, so
-                // there's exactly one URL-resolution path for "open
-                // the section dashboard" anywhere in the app. Bound
-                // at render time to the picker context's section so
-                // the picker stays URL-agnostic; the page owns
-                // SECTION_META.
-                onOpenSectionDashboard={
-                    pickerContext?.sectionId
-                        ? () =>
-                              openDrilldown(
-                                  SECTION_META[pickerContext.sectionId as SectionId].href
-                              )
-                        : undefined
-                }
                 onClearOverride={(tileId) => {
                     clearOverride(tileId);
                     closePicker();
