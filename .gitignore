@@ -1,6 +1,17 @@
 .DS_Store
 .vscode
-.cursor/
+
+# Ignore Cursor local state (transcripts, history, settings) but keep
+# project-shared rules and skills tracked so team guidance ships with
+# the repo.
+# NOTE: must use `.cursor/*` (not `.cursor/`) so git still descends
+# into the directory and honors the negation patterns below. Parent-
+# directory exclusion would otherwise block re-inclusion of children.
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
+!.cursor/skills/
+!.cursor/skills/**
 
 ### Splunk local folders
 local/
@@ -83,3 +94,8 @@ venv.bak/
 
 # PyPI configuration file
 .pypirc
+FDEM.gif
+
+# Playwright MCP — local browser session state (per-machine, contains cookies)
+.cursor/playwright-state.json
+.cursor/playwright-output/

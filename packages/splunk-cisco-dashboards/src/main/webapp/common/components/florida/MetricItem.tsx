@@ -8,7 +8,11 @@ import {
     ExternalLink,
     Settings2,
 } from 'lucide-react';
-import { Sparkline } from './Sparkline';
+import {
+    Sparkline,
+    type SparklineVizType,
+    type DataValuesDisplay,
+} from './Sparkline';
 import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
 import { cn } from '@/common/lib/utils';
 import type {
@@ -16,6 +20,7 @@ import type {
     DataSource,
     TimeRange,
     NoDataReason,
+    ThresholdLine,
 } from '@/common/hooks/useMetric';
 
 interface MetricItemProps {
@@ -32,6 +37,19 @@ interface MetricItemProps {
      * displayed value back to its source.
      */
     descriptionFootnote?: string;
+    /**
+     * Structured rows for the THRESHOLDS section of the info popover.
+     * Built upstream by `deriveThresholdLines(cfg.thresholds, cfg.unit)`
+     * so the rendered ranges are guaranteed to match the
+     * `computeStatus` rules that drive the live tile colour.
+     */
+    thresholdLines?: ThresholdLine[];
+    /**
+     * Optional supplemental sentence beneath the threshold rows. Use
+     * for unit clarifications, threshold-source citations, or as the
+     * sole content for tiles with no fixed numeric threshold.
+     */
+    thresholdNote?: string;
     /** Where the Info tooltip should anchor relative to the icon. */
     infoAnchor?: InfoTooltipAnchor;
     value: string | number;
@@ -39,6 +57,13 @@ interface MetricItemProps {
     change?: number;
     sparkData: number[];
     previousData?: number[];
+    /**
+     * Tooltip label for the dashed comparison overlay on the sparkline.
+     * Defaults to `'Prev'` (previous-period overlay). Baseline-overlay
+     * tiles set this to `'Avg'` so the hover popover reads "Avg: 96"
+     * rather than the misleading "Prev: 96".
+     */
+    previousLabel?: string;
     /**
      * Optional explicit timestamps (Unix-epoch ms) for `sparkData`.
      * Required for the hover tooltip to show real bucket times on
@@ -90,6 +115,20 @@ interface MetricItemProps {
     noDataReason?: NoDataReason;
     /** Label of the dispatched time range — used in the no-data subtext. */
     rangeLabel?: string;
+    /**
+     * Sparkline visualization variant. Sourced from `searchbase.conf`'s
+     * `default_viz` field when present (e.g. `splunk.column` →
+     * `'column'`). Defaults to `'area'`, preserving prior behaviour
+     * for tiles whose stanza doesn't set the field.
+     */
+    vizType?: SparklineVizType;
+    /**
+     * Mirrors Splunk Studio v2's `dataValuesDisplay` option. Sourced
+     * from `searchbase.conf`'s `viz_options.dataValuesDisplay`.
+     * Defaults to `'minmax'` inside Sparkline so every tile labels
+     * both the period low and high without per-stanza configuration.
+     */
+    dataValuesDisplay?: DataValuesDisplay;
     className?: string;
 }
 
@@ -98,6 +137,54 @@ const STATUS_TEXT_COLOR: Record<MetricStatus, string> = {
     warning: 'text-amber-500 dark:text-amber-300',
     critical: 'text-red-600 dark:text-red-400',
     unknown: 'text-sky-600 dark:text-sky-300',
+};
+
+// Change-arrow + delta-percent pill color. Historically this was a
+// direction-only signal (up=green, down=red), which produced a
+// confusing mismatch on "lower is better" metrics: a critical-red
+// headline (e.g. "Failed Auth: 142, threshold 100") could ship with
+// a cheerful green up-arrow because the value had risen. Alan flagged
+// this on 2026-05-11. The fix is to inherit the headline's
+// status-aware color so the headline number, the trend arrow, and
+// the trend-percent pill all read the same story at a glance.
+const STATUS_TREND_COLOR: Record<MetricStatus, string> = {
+    healthy: 'text-sky-600 dark:text-sky-300',
+    warning: 'text-amber-500 dark:text-amber-300',
+    critical: 'text-red-600 dark:text-red-400',
+    unknown: 'text-slate-400 dark:text-slate-500',
+};
+
+// Sparkline stroke/fill palette per status. ALL three statuses
+// resolve to a status-driven color so the chart and the headline
+// always tell the same story; `unknown` falls through to the tile's
+// brand `color` prop so we don't fabricate a status that the data
+// hasn't given us.
+//
+// Why `healthy` is mapped (Build 1174):
+//   The earlier design left `healthy` falling through to the tile's
+//   brand color so resting-state tiles kept their visual identity
+//   (Network Health sky, FW Blocked amber, …). That broke down when
+//   the brand color collided with a status color. FW Blocked's brand
+//   is `#f59e0b` — the same amber as the `warning` palette below —
+//   so a healthy FW Blocked tile rendered with amber bars and looked
+//   identical to a warning FW Blocked tile in the chart, even though
+//   the headline icon was correctly green-checked. Operator flagged
+//   on 2026-05-18 ("I changed the threshold to not alarm until we
+//   hit 20k blocks, the chart below is still orange"). Mapping
+//   healthy to a positive sky tone makes the chart palette tracked
+//   to the threshold status, never the brand, and keeps the three
+//   signals (headline number / trend arrow / chart) in sync. Brand
+//   color is still honoured upstream (singlevalue tile background,
+//   tile accent edge) so the resting-state identity isn't lost.
+//
+// Hex values mirror the Tailwind tokens used by the matching text
+// classes (`text-sky-600`, `text-amber-500`, `text-red-600`) so the
+// chart and the headline visibly match without a separate palette
+// to govern.
+const STATUS_VIZ_COLOR: Partial<Record<MetricStatus, string>> = {
+    healthy: '#0ea5e9',
+    warning: '#f59e0b',
+    critical: '#dc2626',
 };
 
 const COMPACT_SUFFIXES = [
@@ -144,12 +231,15 @@ export const MetricItem: React.FC<MetricItemProps> = ({
     subLabel,
     description,
     descriptionFootnote,
+    thresholdLines,
+    thresholdNote,
     infoAnchor = 'auto',
     value,
     unit = '',
     change,
     sparkData,
     previousData,
+    previousLabel,
     sparkTimestamps,
     timeRange,
     color = '#0ea5e9',
@@ -163,6 +253,8 @@ export const MetricItem: React.FC<MetricItemProps> = ({
     abbreviateTrendValue = true,
     noDataReason,
     rangeLabel,
+    vizType = 'area',
+    dataValuesDisplay,
     className,
 }) => {
     const numericValue = toFiniteNumber(value);
@@ -229,6 +321,8 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                             <InfoTooltip
                                 title={label}
                                 description={description}
+                                thresholdLines={thresholdLines}
+                                thresholdNote={thresholdNote}
                                 footnote={descriptionFootnote}
                                 anchor={infoAnchor}
                                 iconAriaLabel={`What does ${label} measure?`}
@@ -238,8 +332,13 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                             <button
                                 type="button"
                                 onClick={onOpenInSearch}
-                                title={sparkTitle ?? 'Open in Splunk Search'}
-                                aria-label={`Open ${label} in Splunk Search`}
+                                title="Open in Search"
+                                aria-label={`Open ${label} in Search`}
+                                // `data-tile-control` suppresses the
+                                // SortableMetricCard drag handle while
+                                // this button is hovered (see
+                                // SortableMetricCard.tsx for the rule).
+                                data-tile-control="true"
                                 className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
                             >
                                 <ExternalLink className="w-3 h-3 stroke-[2.5px]" />
@@ -255,6 +354,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                                         : `Configure ${label}`
                                 }
                                 aria-label={`Configure ${label} tile`}
+                                data-tile-control="true"
                                 className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400 relative"
                             >
                                 <Settings2 className="w-3 h-3 stroke-[2.5px]" />
@@ -326,11 +426,24 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                 }
                 const showChange =
                     change !== undefined && Number.isFinite(change);
+                // Auto-shrink the headline font when the search emits a
+                // long string headline (e.g. "17 of 18 available") so
+                // it fits inside the tile at typical section widths
+                // without clipping. Numeric headlines and short strings
+                // keep the traditional text-4xl punch. Threshold of 7
+                // characters covers single units like "100%", "1.2k",
+                // "142", and shrinks for "17 of 18", "17/18 sites", etc.
+                const renderedText = `${displayValue}${unit}`;
+                const headlineSizeClass =
+                    typeof value === 'string' && renderedText.length > 7
+                        ? 'text-2xl'
+                        : 'text-4xl';
                 return (
                     <div className="flex items-baseline gap-2 mb-1">
                         <span
                             className={cn(
-                                'text-4xl font-black tracking-tighter leading-none transition-colors',
+                                'font-black tracking-tighter leading-none transition-colors',
+                                headlineSizeClass,
                                 STATUS_TEXT_COLOR[status]
                             )}
                         >
@@ -341,9 +454,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                             <div
                                 className={cn(
                                     'flex items-center text-[10px] font-black',
-                                    (change as number) >= 0
-                                        ? 'text-green-500'
-                                        : 'text-red-500'
+                                    STATUS_TREND_COLOR[status]
                                 )}
                             >
                                 {(change as number) >= 0 ? (
@@ -363,19 +474,93 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                 );
             })()}
 
-            <div className="h-16 mt-6 pt-3 opacity-80 hover:opacity-100 transition-opacity flex-shrink-0">
-                <Sparkline
-                    data={sparkData}
-                    color={color}
-                    previousData={previousData}
-                    timestamps={sparkTimestamps}
-                    timeRange={timeRange}
-                    formatValue={(n) => `${n.toLocaleString()}${unit}`}
-                    onClick={onOpenInSearch}
-                    title={sparkTitle}
-                />
-            </div>
-            <div className="flex-1 min-h-0" aria-hidden="true" />
+            {vizType !== 'singlevalue' ? (
+                // Tile sparkline canvas. We let the chart container *fill
+                // remaining vertical space* (`flex-1`) up to a `max-h-28`
+                // (112px, the design-target where the peak-label bubble
+                // and trend line both read cleanly) and down to a
+                // `min-h-[72px]` floor that still keeps the bubble label
+                // and the bar/line legible. The earlier fixed
+                // `h-28 flex-shrink-0` could not compress when the
+                // browser was shrunk vertically, so the chart's static
+                // 112px would push down past the tile's slot in the
+                // section's flex-column and bleed onto the "Open IT
+                // Health" footer link.
+                //
+                // `overflow-hidden` on the chart container is the
+                // local containment for that bleed: any chart content
+                // that overflows the chart's allocated slot is clipped
+                // at chart bounds, not at the section row level. The
+                // earlier safety-net clip on the tile row in
+                // DashboardSection was the right intent in the wrong
+                // place - it also clipped sibling popovers (notably
+                // the InfoTooltip body) and floating menus. Clipping
+                // here keeps the chart visually contained without
+                // collateral damage to any other tile UI.
+                //
+                // mt-3/pt-2 keeps the headline-to-chart gap tight
+                // without wasting pixels at full size.
+                <div
+                    // Sparkline canvas is marked
+                    // `data-tile-control="true"` so the
+                    // SortableMetricCard drag handle hides while
+                    // the user hovers the chart to read the
+                    // Recharts tooltip. Without this, the handle
+                    // floats over the "Hover for date and value"
+                    // bubble (Alan flagged in the 2026-05-14
+                    // review).
+                    data-tile-control="true"
+                    className="flex-1 min-h-[72px] max-h-28 mt-2 pt-1 opacity-80 hover:opacity-100 transition-opacity overflow-hidden"
+                >
+                    {/* Sparkline is intentionally NOT wired to the
+                        drilldown click. The ExternalLink icon next to
+                        the tile label is the explicit "Open in Search"
+                        affordance — duplicating that on the chart
+                        canvas was a stray click target that kept
+                        yanking users out of the dashboard when they
+                        were just trying to read the trend. The
+                        Recharts hover tooltip remains; only the
+                        clickable wrapper is gone. */}
+                    <Sparkline
+                        data={sparkData}
+                        color={STATUS_VIZ_COLOR[status] ?? color}
+                        vizType={vizType}
+                        dataValuesDisplay={dataValuesDisplay}
+                        previousData={previousData}
+                        previousLabel={previousLabel}
+                        timestamps={sparkTimestamps}
+                        timeRange={timeRange}
+                        // Build 99: tooltip values follow the same
+                        // compact-vs-locale rule as the headline (see
+                        // `displayValue` above) — abbreviate to k/M/B/T
+                        // for raw counts where the headline already
+                        // does, but keep the full number for unit
+                        // domains where compaction makes no sense
+                        // (`%`, `ms`, `Mbps` — already short, and
+                        // `74Mbps` reads OK as `74Mbps` no matter
+                        // what). Without this, the headline showed
+                        // "74k" while the hover bubbles showed
+                        // "73,537.79" — visually disorienting and
+                        // they look like different metrics.
+                        formatValue={(n) =>
+                            abbreviateMajorValue &&
+                            unit !== '%' &&
+                            unit !== 'ms' &&
+                            unit !== 'Mbps'
+                                ? `${formatCompactNumber(n)}${unit}`
+                                : `${n.toLocaleString()}${unit}`
+                        }
+                        title={sparkTitle}
+                    />
+                </div>
+            ) : (
+                // Single-value tiles need a flex spacer so they share
+                // their row's height with chart-bearing siblings; without
+                // this, a singlevalue tile would collapse to its headline
+                // height and the divider rules between tiles would not
+                // line up across the row.
+                <div className="flex-1 min-h-0" aria-hidden="true" />
+            )}
         </div>
     );
 };

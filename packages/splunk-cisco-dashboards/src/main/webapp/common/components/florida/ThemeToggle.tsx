@@ -17,6 +17,7 @@ interface ThemeToggleProps {
     theme: ThemePreference;
     onCycle: () => void;
     className?: string;
+    iconOnly?: boolean;
 }
 
 const PRESET: Record<
@@ -51,7 +52,12 @@ const PRESET: Record<
     },
 };
 
-export const ThemeToggle: React.FC<ThemeToggleProps> = ({ theme, onCycle, className }) => {
+export const ThemeToggle: React.FC<ThemeToggleProps> = ({
+    theme,
+    onCycle,
+    className,
+    iconOnly = false,
+}) => {
     const preset = PRESET[theme];
     const Icon = preset.Icon;
     return (
@@ -61,13 +67,15 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ theme, onCycle, classN
             title={preset.nextLabel}
             aria-label={preset.nextLabel}
             className={cn(
-                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400',
+                iconOnly
+                    ? 'inline-flex items-center justify-center w-10 h-10 rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400'
+                    : 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400',
                 preset.chrome,
                 className
             )}
         >
-            <Icon className="w-3.5 h-3.5" />
-            {preset.label}
+            <Icon className={iconOnly ? 'w-5 h-5' : 'w-3.5 h-3.5'} />
+            {!iconOnly && preset.label}
         </button>
     );
 };

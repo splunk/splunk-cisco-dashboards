@@ -1,0 +1,4536 @@
+{
+  "discovery": {
+    "earliest": "-7d",
+    "generated_at": "2026-05-09T04:59:40-0400",
+    "latest": "now",
+    "merged_with": "live_dnac_v2 (index=dnac, includes catalyst:center:* report sourcetypes)",
+    "sample_rows": 10000
+  },
+  "sourcetypes": {
+    "ActiveDirectory": {
+      "elapsed_ms": 4674,
+      "fields": [
+        "CN",
+        "DC",
+        "LinkId",
+        "OU",
+        "accountExpires",
+        "adminCount",
+        "admonEventType",
+        "appSchemaVersion",
+        "badPasswordTime",
+        "badPwdCount",
+        "c",
+        "cOMClassID",
+        "cn",
+        "codePage",
+        "countryCode",
+        "dNSHostName",
+        "dSCorePropagationData",
+        "dc",
+        "dcName",
+        "department",
+        "description",
+        "displayName",
+        "distinguishedName",
+        "employeeID",
+        "extensionName",
+        "flags",
+        "gPCFileSysPath",
+        "gPCFunctionalityVersion",
+        "gPCMachineExtensionNames",
+        "gPLink",
+        "givenName",
+        "groupType",
+        "guid_lookup",
+        "homePhone",
+        "info",
+        "initials",
+        "installUiLevel",
+        "instanceType",
+        "isCriticalSystemObject",
+        "isDeleted",
+        "isRecycled",
+        "l",
+        "lastKnownParent",
+        "lastLogoff",
+        "lastLogon",
+        "lastLogonTimestamp",
+        "lastUpdateSequence",
+        "localPolicyFlags",
+        "localeID",
+        "location",
+        "lockoutTime",
+        "logonCount",
+        "logonHours",
+        "machineArchitecture",
+        "mail",
+        "managedBy",
+        "managedObjects",
+        "member",
+        "memberOf",
+        "msDFSR_ComputerReferenceBL",
+        "msDS_AzLDAPQuery",
+        "msDS_GenerationId",
+        "msDS_SupportedEncryptionTypes",
+        "msiFileList",
+        "msiScriptName",
+        "msiScriptPath",
+        "name",
+        "objectCategory",
+        "objectClass",
+        "objectGUID",
+        "objectSid",
+        "operatingSystem",
+        "operatingSystemVersion",
+        "ou",
+        "packageFlags",
+        "packageName",
+        "packageType",
+        "physicalDeliveryOfficeName",
+        "postalCode",
+        "primaryGroupID",
+        "productCode",
+        "pwdLastSet",
+        "rIDSetReferences",
+        "revision",
+        "sAMAccountName",
+        "sAMAccountType",
+        "serverReferenceBL",
+        "servicePrincipalName",
+        "showInAdvancedViewOnly",
+        "sid_lookup",
+        "sn",
+        "st",
+        "street",
+        "streetAddress",
+        "systemFlags",
+        "title",
+        "uSNChanged",
+        "uSNCreated",
+        "upgradeProductCode",
+        "userAccountControl",
+        "userAccountPropertyFlag",
+        "userPrincipalName",
+        "versionNumber",
+        "versionNumberHi",
+        "versionNumberLo",
+        "whenChanged",
+        "whenCreated"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 4,
+      "stanzas": [
+        {
+          "line_no": 5313,
+          "name": "admin_macro_index_tuning"
+        },
+        {
+          "line_no": 6652,
+          "name": "asset_inventory_build_lookup"
+        },
+        {
+          "line_no": 6733,
+          "name": "asset_inventory_ds_gap_analysis"
+        },
+        {
+          "line_no": 7372,
+          "name": "executive_dashboard_data_status_pipeline"
+        }
+      ],
+      "status": "pass"
+    },
+    "DhcpSrvLog": {
+      "elapsed_ms": 3035,
+      "fields": [
+        "Mfg",
+        "Mod",
+        "Ser",
+        "Typ",
+        "action",
+        "correlation_id",
+        "date",
+        "description",
+        "dest",
+        "dest_dns",
+        "dest_ip",
+        "dest_mac",
+        "dest_nt_host",
+        "dhc_id",
+        "dns_reg_error",
+        "ip",
+        "mac",
+        "msdhcp_id",
+        "msdhcp_user",
+        "nt_host",
+        "probation_time",
+        "product",
+        "qresult",
+        "quarantine_info",
+        "raw_mac",
+        "reason",
+        "relay_agent_information",
+        "signature",
+        "signature_id",
+        "time",
+        "transaction_id",
+        "user",
+        "userclass_ascii",
+        "userclass_hex",
+        "vendor",
+        "vendor_product",
+        "vendorclass_ascii",
+        "vendorclass_hex"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 10,
+      "stanzas": [
+        {
+          "line_no": 3276,
+          "name": "it_critical_systems_dhcp_pool_exhaustion"
+        },
+        {
+          "line_no": 3300,
+          "name": "it_critical_systems_dhcp_lease_rate"
+        },
+        {
+          "line_no": 3324,
+          "name": "it_critical_systems_dhcp_nack_trend"
+        },
+        {
+          "line_no": 3347,
+          "name": "it_critical_systems_dhcp_scope_utilization"
+        },
+        {
+          "line_no": 5313,
+          "name": "admin_macro_index_tuning"
+        },
+        {
+          "line_no": 6652,
+          "name": "asset_inventory_build_lookup"
+        },
+        {
+          "line_no": 6733,
+          "name": "asset_inventory_ds_gap_analysis"
+        },
+        {
+          "line_no": 7372,
+          "name": "executive_dashboard_data_status_pipeline"
+        },
+        {
+          "line_no": 8123,
+          "name": "it_critical_systems_ds_dhcp_pool_exhaustion"
+        },
+        {
+          "line_no": 8148,
+          "name": "it_critical_systems_ds_dhcp_scope_utilization"
+        }
+      ],
+      "status": "pass"
+    },
+    "MSAD:NT6:DNS": {
+      "elapsed_ms": 4448,
+      "fields": [
+        "ANSWER_OR_UPDATE_SECTION",
+        "Message",
+        "action",
+        "additional_answer_count",
+        "answer",
+        "answer_count",
+        "authority_answer_count",
+        "context",
+        "dest",
+        "direction",
+        "flags",
+        "hexflags",
+        "message_type",
+        "name",
+        "opcode",
+        "operation",
+        "packetid",
+        "protocol",
+        "query",
+        "query_count",
+        "query_type",
+        "questionname",
+        "questiontype",
+        "record_class",
+        "record_class_number",
+        "record_type",
+        "reply_code",
+        "reply_code_id",
+        "response",
+        "src",
+        "src_domain",
+        "src_ip",
+        "src_port",
+        "threadid",
+        "transaction_id",
+        "transport",
+        "vendor_dns_action",
+        "vendor_product",
+        "vendor_query_type",
+        "xid"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 3,
+      "stanzas": [
+        {
+          "line_no": 6652,
+          "name": "asset_inventory_build_lookup"
+        },
+        {
+          "line_no": 6733,
+          "name": "asset_inventory_ds_gap_analysis"
+        },
+        {
+          "line_no": 8616,
+          "name": "security_resilience_ds_base_dns"
+        }
+      ],
+      "status": "pass"
+    },
+    "cisco:asa": {
+      "elapsed_ms": 2793,
+      "fields": [
+        "Group",
+        "IP",
+        "SPI",
+        "Username",
+        "acl",
+        "msgid",
+        "signature_id",
+        "user"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 28,
+      "stanzas": [
+        {
+          "line_no": 785,
+          "name": "executive_dashboard_firewall_blocked_count"
+        },
+        {
+          "line_no": 1849,
+          "name": "security_resilience_firewall_allowed_count"
+        },
+        {
+          "line_no": 2240,
+          "name": "security_resilience_recent_security_events"
+        },
+        {
+          "line_no": 2289,
+          "name": "security_resilience_vpn_session_detail"
+        },
+        {
+          "line_no": 2633,
+          "name": "security_resilience_repeated_blocked_sources"
+        },
+        {
+          "line_no": 2658,
+          "name": "security_resilience_ssh_activity"
+        },
+        {
+          "line_no": 2683,
+          "name": "security_resilience_data_exfiltration_indicators"
+        },
+        {
+          "line_no": 2921,
+          "name": "executive_dashboard_fw_blocked_trend_compare"
+        },
+        {
+          "line_no": 3008,
+          "name": "network_intelligence_blocked_vs_allowed"
+        },
+        {
+          "line_no": 3029,
+          "name": "network_intelligence_traffic_by_action_trend"
+        },
+        {
+          "line_no": 3052,
+          "name": "network_intelligence_external_sources"
+        },
+        {
+          "line_no": 3077,
+          "name": "network_intelligence_traffic_by_protocol"
+        },
+        {
+          "line_no": 3099,
+          "name": "network_intelligence_geo_blocked_traffic"
+        },
+        {
+          "line_no": 3122,
+          "name": "network_intelligence_top_countries_blocked"
+        },
+        {
+          "line_no": 3146,
+          "name": "network_intelligence_top_talkers"
+        },
+        {
+          "line_no": 3170,
+          "name": "network_intelligence_top_blocked_ports"
+        },
+        {
+          "line_no": 3195,
+          "name": "network_intelligence_traffic_volume_trend"
+        },
+        {
+          "line_no": 3220,
+          "name": "security_resilience_assets_at_risk"
+        },
+        {
+          "line_no": 4387,
+          "name": "asset_inventory_firewall_gap"
+        },
+        {
+          "line_no": 5313,
+          "name": "admin_macro_index_tuning"
+        },
+        {
+          "line_no": 7180,
+          "name": "escu_alert_asa_logging_disabled"
+        },
+        {
+          "line_no": 7203,
+          "name": "escu_alert_asa_privilege_escalation"
+        },
+        {
+          "line_no": 7227,
+          "name": "escu_alert_asa_recon_commands"
+        },
+        {
+          "line_no": 7251,
+          "name": "escu_alert_fw_compromised_host_indicators"
+        },
+        {
+          "line_no": 7276,
+          "name": "escu_alert_fw_repeated_blocked_connections"
+        },
+        {
+          "line_no": 7372,
+          "name": "executive_dashboard_data_status_pipeline"
+        },
+        {
+          "line_no": 8634,
+          "name": "security_resilience_ds_base_fw"
+        },
+        {
+          "line_no": 9108,
+          "name": "security_resilience_ds_security_events"
+        }
+      ],
+      "status": "pass"
+    },
+    "cisco:catalyst:center:compliance:report": {
+      "elapsed_ms": 986,
+      "fields": [
+        "Application Visibility",
+        "Compliance Status",
+        "Critical Security Advisories",
+        "Customization Profile",
+        "Device Family",
+        "Device Name",
+        "Device Type",
+        "EoX",
+        "Fabric",
+        "IP Address",
+        "Network Profile",
+        "Network Settings",
+        "Sl.No",
+        "Software Image",
+        "Startup Vs Running Configuration",
+        "cisco_catalyst_host",
+        "collection_timestamp",
+        "report_name",
+        "report_type",
+        "signature_id",
+        "vendor_product"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 3,
+      "stanzas": [
+        {
+          "line_no": 1298,
+          "name": "it_critical_systems_compliance_report_rate"
+        },
+        {
+          "line_no": 1323,
+          "name": "it_critical_systems_compliance_report_status_distribution"
+        },
+        {
+          "line_no": 1346,
+          "name": "it_critical_systems_compliance_report_noncompliant_detail"
+        }
+      ],
+      "status": "pass"
+    },
+    "cisco:catalyst:center:inventory:report": {
+      "elapsed_ms": 942,
+      "fields": [
+        "DNA License",
+        "Device Family",
+        "Device Name",
+        "Device Type",
+        "Fabric Role",
+        "IP Address",
+        "Location",
+        "Network License",
+        "No. of Users",
+        "No. of ethernet ports",
+        "Part No.",
+        "Serial No.",
+        "Software Version",
+        "Status",
+        "Time Since Code Upgrade via Cisco DNA Center SWIM",
+        "Up Time",
+        "cisco_catalyst_host",
+        "collection_timestamp",
+        "report_name",
+        "report_type",
+        "signature_id",
+        "vendor_product"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 3,
+      "stanzas": [
+        {
+          "line_no": 1228,
+          "name": "it_critical_systems_inventory_reachability_summary"
+        },
+        {
+          "line_no": 1252,
+          "name": "it_critical_systems_inventory_unreachable_detail"
+        },
+        {
+          "line_no": 1275,
+          "name": "it_critical_systems_inventory_device_family_distribution"
+        }
+      ],
+      "status": "pass"
+    },
+    "cisco:cloud_security:dns": {
+      "elapsed_ms": 2639,
+      "fields": [],
+      "note": "no events in -7d..now",
+      "row_count": 0,
+      "stanza_count": 5,
+      "stanzas": [
+        {
+          "line_no": 1675,
+          "name": "security_resilience_dns_blocked_queries"
+        },
+        {
+          "line_no": 1697,
+          "name": "security_resilience_dns_blocked_categories"
+        },
+        {
+          "line_no": 2240,
+          "name": "security_resilience_recent_security_events"
+        },
+        {
+          "line_no": 8652,
+          "name": "security_resilience_ds_dns_categories"
+        },
+        {
+          "line_no": 9108,
+          "name": "security_resilience_ds_security_events"
+        }
+      ],
+      "status": "empty"
+    },
+    "cisco:cloud_security:firewall": {
+      "elapsed_ms": 2762,
+      "fields": [
+        "action",
+        "appCategory",
+        "applicationName",
+        "destinationCategories{}",
+        "direction",
+        "dstIp",
+        "dstPort",
+        "externalIp",
+        "identityNames{}",
+        "internalIp",
+        "isoTimestamp",
+        "networkName",
+        "packetSize",
+        "policyName",
+        "protocol",
+        "ruleDescription",
+        "ruleId",
+        "ruleName",
+        "signature_id",
+        "sourceTunnel",
+        "sourceTunnelId",
+        "srcIp",
+        "srcPort",
+        "timestamp",
+        "totalBytes",
+        "trafficSourceType",
+        "trafficType",
+        "tunnelType",
+        "verdict"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 3,
+      "stanzas": [
+        {
+          "line_no": 1761,
+          "name": "security_resilience_cloud_fw_blocked"
+        },
+        {
+          "line_no": 2240,
+          "name": "security_resilience_recent_security_events"
+        },
+        {
+          "line_no": 9108,
+          "name": "security_resilience_ds_security_events"
+        }
+      ],
+      "status": "pass"
+    },
+    "cisco:dnac:audit:logs": {
+      "elapsed_ms": 956,
+      "fields": [
+        "additionalDetails.eventMetadata.auditLogMetadata.type",
+        "additionalDetails.eventMetadata.auditLogMetadata.version",
+        "category",
+        "childCount",
+        "ciscoDnaEventLink",
+        "ciscoDnaEventLinkIPv4",
+        "ciscoDnaEventLinkIPv6",
+        "clientId",
+        "context",
+        "description",
+        "details.authSource",
+        "details.requestPayload",
+        "details.requestPayloadDescriptor",
+        "dnacIP",
+        "dnacIPv4",
+        "dnacIPv6",
+        "domain",
+        "efInstanceId",
+        "eventHierarchy",
+        "eventHierarchy.hierarchy",
+        "eventHierarchy.hierarchyDelimiter",
+        "eventId",
+        "eventSize",
+        "i18n",
+        "instanceId",
+        "isACKnowledgeable",
+        "isAlert",
+        "isDeprecated",
+        "isPrivateEvent",
+        "isSimulated",
+        "message",
+        "messageParams",
+        "name",
+        "namespace",
+        "network",
+        "network.deviceId",
+        "network.siteId",
+        "note",
+        "parentInstanceId",
+        "payloadSize",
+        "productId",
+        "resourceDomain._id",
+        "resourceDomain.name",
+        "resourceDomain.resourceGroups{}.name",
+        "resourceDomain.resourceGroups{}.srcResourceId",
+        "resourceDomain.resourceGroups{}.type",
+        "severity",
+        "signature_id",
+        "src",
+        "startTime",
+        "subDomain",
+        "tenantId",
+        "timestamp",
+        "tntId",
+        "type",
+        "userId",
+        "userName",
+        "vendor_product",
+        "version"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 5,
+      "stanzas": [
+        {
+          "line_no": 1182,
+          "name": "it_critical_systems_configuration_changes"
+        },
+        {
+          "line_no": 1203,
+          "name": "it_critical_systems_configuration_change_trend"
+        },
+        {
+          "line_no": 2240,
+          "name": "security_resilience_recent_security_events"
+        },
+        {
+          "line_no": 9108,
+          "name": "security_resilience_ds_security_events"
+        },
+        {
+          "line_no": 10443,
+          "name": "audit_logs_by_site_lookup_join"
+        }
+      ],
+      "status": "pass"
+    },
+    "cisco:dnac:client": {
+      "elapsed_ms": 972,
+      "fields": [
+        "cisco_catalyst_host",
+        "connectedNetworkDevice.connectedNetworkDeviceId",
+        "connectedNetworkDevice.connectedNetworkDeviceMac",
+        "connectedNetworkDevice.connectedNetworkDeviceManagementIp",
+        "connectedNetworkDevice.connectedNetworkDeviceName",
+        "connectedNetworkDevice.connectedNetworkDeviceType",
+        "connectedNetworkDevice.duplexMode",
+        "connectedNetworkDevice.interfaceName",
+        "connectedNetworkDevice.interfaceSpeed",
+        "connection.apEthernetMac",
+        "connection.apMac",
+        "connection.apMode",
+        "connection.authType",
+        "connection.band",
+        "connection.bridgeVMMode",
+        "connection.channel",
+        "connection.channelWidth",
+        "connection.dataRate",
+        "connection.isFabricClient",
+        "connection.isIosAnalyticsCapable",
+        "connection.l2Vn",
+        "connection.l3Vn",
+        "connection.linkSpeed",
+        "connection.protocol",
+        "connection.protocolCapability",
+        "connection.radioId",
+        "connection.rssi",
+        "connection.securityGroupTag",
+        "connection.sessionDuration",
+        "connection.snr",
+        "connection.ssid",
+        "connection.upnDuid",
+        "connection.upnId",
+        "connection.upnName",
+        "connection.upnOwner",
+        "connection.vlanId",
+        "connection.vnId",
+        "connection.wlcId",
+        "connection.wlcName",
+        "connectionStatus",
+        "deviceType",
+        "formFactor",
+        "health.connectedScore",
+        "health.dataRateThreshold",
+        "health.discardsThreshold",
+        "health.isDataRateIncluded",
+        "health.isDiscardsIncluded",
+        "health.isLinkErrorIncluded",
+        "health.isRetriesIncluded",
+        "health.isRssiIncluded",
+        "health.isSnrIncluded",
+        "health.isUtilizationIncluded",
+        "health.linkErrorPercentageThreshold",
+        "health.onboardingScore",
+        "health.overallScore",
+        "health.retriesThreshold",
+        "health.rssiThreshold",
+        "health.snrThreshold",
+        "health.utilizationThreshold",
+        "id",
+        "ipv4Address",
+        "ipv6Addresses",
+        "isPrivateMacAddress",
+        "lastUpdatedTime",
+        "latency.background",
+        "latency.bestEffort",
+        "latency.video",
+        "latency.voice",
+        "macAddress",
+        "name",
+        "onboarding.aaaFailureReason",
+        "onboarding.aaaServerIp",
+        "onboarding.assocDoneTime",
+        "onboarding.assocFailureReason",
+        "onboarding.authDoneTime",
+        "onboarding.avgAssocDuration",
+        "onboarding.avgAuthDuration",
+        "onboarding.avgDhcpDuration",
+        "onboarding.avgRunDuration",
+        "onboarding.dhcpDoneTime",
+        "onboarding.dhcpFailureReason",
+        "onboarding.dhcpServerIp",
+        "onboarding.failedRoamingCount",
+        "onboarding.latestFailureReason",
+        "onboarding.maxAssocDuration",
+        "onboarding.maxAuthDuration",
+        "onboarding.maxDhcpDuration",
+        "onboarding.maxRoamingDuration",
+        "onboarding.maxRunDuration",
+        "onboarding.onboardingTime",
+        "onboarding.otherFailureReason",
+        "onboarding.roamingTime",
+        "onboarding.successfulRoamingCount",
+        "onboarding.totalRoamingAttempts",
+        "osType",
+        "osVersion",
+        "signature_id",
+        "siteHierarchy",
+        "siteHierarchyId",
+        "siteId",
+        "tracked",
+        "traffic.dnsRequestCount",
+        "traffic.dnsResponseCount",
+        "traffic.inDiscards",
+        "traffic.inUtilization",
+        "traffic.outDiscards",
+        "traffic.outUtilization",
+        "traffic.rxBytes",
+        "traffic.rxLinkErrorPercentage",
+        "traffic.rxPackets",
+        "traffic.rxRate",
+        "traffic.rxRetries",
+        "traffic.rxRetryPercentage",
+        "traffic.txBytes",
+        "traffic.txDropPercentage",
+        "traffic.txDrops",
+        "traffic.txLinkErrorPercentage",
+        "traffic.txPackets",
+        "traffic.txRate",
+        "traffic.usage",
+        "trustScore",
+        "type",
+        "userId",
+        "username",
+        "vendor",
+        "vendor_product"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 35,
+      "stanzas": [
+        {
+          "line_no": 505,
+          "name": "executive_dashboard_active_clients"
+        },
+        {
+          "line_no": 2268,
+          "name": "security_resilience_unauthorized_wireless"
+        },
+        {
+          "line_no": 3393,
+          "name": "user_experience_guest_client_surge"
+        },
+        {
+          "line_no": 3418,
+          "name": "user_experience_client_peak_by_ssid"
+        },
+        {
+          "line_no": 3978,
+          "name": "client_summary_client_by_device_type"
+        },
+        {
+          "line_no": 4000,
+          "name": "client_summary_client_by_band"
+        },
+        {
+          "line_no": 4022,
+          "name": "client_summary_client_by_ssid"
+        },
+        {
+          "line_no": 4046,
+          "name": "client_summary_client_by_protocol"
+        },
+        {
+          "line_no": 4112,
+          "name": "client_summary_client_onboarding"
+        },
+        {
+          "line_no": 4134,
+          "name": "client_summary_top_clients_by_usage"
+        },
+        {
+          "line_no": 4160,
+          "name": "client_summary_client_os_dist"
+        },
+        {
+          "line_no": 4297,
+          "name": "network_activation_ssid_client_trend_24h"
+        },
+        {
+          "line_no": 5113,
+          "name": "user_experience_client_health_distribution"
+        },
+        {
+          "line_no": 5136,
+          "name": "user_experience_client_onboarding_failures"
+        },
+        {
+          "line_no": 5157,
+          "name": "user_experience_client_roaming_analysis"
+        },
+        {
+          "line_no": 5179,
+          "name": "user_experience_client_top_talkers"
+        },
+        {
+          "line_no": 5201,
+          "name": "user_experience_top_ssids_by_clients"
+        },
+        {
+          "line_no": 6931,
+          "name": "client_summary_ds_client_by_ssid"
+        },
+        {
+          "line_no": 6954,
+          "name": "client_summary_ds_client_os_dist"
+        },
+        {
+          "line_no": 6978,
+          "name": "client_summary_ds_client_session_by_band"
+        },
+        {
+          "line_no": 7003,
+          "name": "client_summary_ds_client_session_by_protocol"
+        },
+        {
+          "line_no": 7028,
+          "name": "client_summary_ds_client_session_by_ssid"
+        },
+        {
+          "line_no": 7054,
+          "name": "client_summary_ds_client_traffic_by_band"
+        },
+        {
+          "line_no": 7078,
+          "name": "client_summary_ds_client_traffic_by_protocol"
+        },
+        {
+          "line_no": 7103,
+          "name": "client_summary_ds_client_traffic_by_ssid"
+        },
+        {
+          "line_no": 7129,
+          "name": "client_summary_ds_top_clients_by_usage"
+        },
+        {
+          "line_no": 7154,
+          "name": "client_summary_ds_top_ssids_by_traffic"
+        },
+        {
+          "line_no": 7503,
+          "name": "executive_dashboard_ds_active_clients"
+        },
+        {
+          "line_no": 9224,
+          "name": "statewide_ds_ssid_client_trend_24h"
+        },
+        {
+          "line_no": 9331,
+          "name": "user_experience_ds_base_client"
+        },
+        {
+          "line_no": 9351,
+          "name": "user_experience_ds_client_peak_by_ssid"
+        },
+        {
+          "line_no": 9375,
+          "name": "user_experience_ds_guest_client_surge"
+        },
+        {
+          "line_no": 9424,
+          "name": "user_experience_ds_top_ssids_by_clients"
+        },
+        {
+          "line_no": 9448,
+          "name": "user_experience_ds_wireless_signal_quality"
+        },
+        {
+          "line_no": 10391,
+          "name": "clients_by_building_lookup_join_demo"
+        }
+      ],
+      "status": "pass"
+    },
+    "cisco:dnac:clienthealth": {
+      "elapsed_ms": 975,
+      "fields": [
+        "cisco_catalyst_host",
+        "clientCount",
+        "clientType",
+        "clientUniqueCount",
+        "endtime",
+        "scoreType",
+        "scoreValue",
+        "signature_id",
+        "siteId",
+        "starttime",
+        "vendor_product"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 25,
+      "stanzas": [
+        {
+          "line_no": 1056,
+          "name": "executive_dashboard_user_experience_domain_score"
+        },
+        {
+          "line_no": 2435,
+          "name": "user_experience_client_health_trend"
+        },
+        {
+          "line_no": 2460,
+          "name": "user_experience_client_health_by_type"
+        },
+        {
+          "line_no": 2564,
+          "name": "user_experience_wired_client_health"
+        },
+        {
+          "line_no": 2586,
+          "name": "user_experience_wireless_client_health"
+        },
+        {
+          "line_no": 3466,
+          "name": "user_experience_client_count_trend"
+        },
+        {
+          "line_no": 3697,
+          "name": "executive_summary_client_health_by_site"
+        },
+        {
+          "line_no": 3772,
+          "name": "executive_summary_overall_client_health"
+        },
+        {
+          "line_no": 3816,
+          "name": "executive_summary_client_health_trend"
+        },
+        {
+          "line_no": 3908,
+          "name": "client_summary_client_count_over_time"
+        },
+        {
+          "line_no": 3933,
+          "name": "client_summary_client_health_kpi"
+        },
+        {
+          "line_no": 3955,
+          "name": "client_summary_client_by_location"
+        },
+        {
+          "line_no": 4069,
+          "name": "client_summary_wireless_vs_wired"
+        },
+        {
+          "line_no": 4090,
+          "name": "client_summary_client_health_dist"
+        },
+        {
+          "line_no": 4183,
+          "name": "client_summary_client_health_by_location"
+        },
+        {
+          "line_no": 4211,
+          "name": "network_activation_wireless_health_kpi"
+        },
+        {
+          "line_no": 4233,
+          "name": "network_activation_wired_health_kpi"
+        },
+        {
+          "line_no": 4255,
+          "name": "network_activation_wireless_client_trend_24h"
+        },
+        {
+          "line_no": 4276,
+          "name": "network_activation_wired_client_trend_24h"
+        },
+        {
+          "line_no": 7414,
+          "name": "executive_dashboard_score_pipeline"
+        },
+        {
+          "line_no": 7742,
+          "name": "executive_dashboard_ds_ux_score"
+        },
+        {
+          "line_no": 9245,
+          "name": "statewide_ds_wired_client_trend_24h"
+        },
+        {
+          "line_no": 9266,
+          "name": "statewide_ds_wireless_client_trend_24h"
+        },
+        {
+          "line_no": 9287,
+          "name": "statewide_ds_wireless_client_trend_7d"
+        },
+        {
+          "line_no": 10417,
+          "name": "clienthealth_by_site_lookup_join"
+        }
+      ],
+      "status": "pass"
+    },
+    "cisco:dnac:compliance": {
+      "elapsed_ms": 990,
+      "fields": [
+        "AssociatedWLCIP",
+        "ComplianceComplianceType",
+        "ComplianceCount",
+        "ComplianceDetail",
+        "ComplianceDeviceCount",
+        "ComplianceDeviceID",
+        "ComplianceLastSyncTime",
+        "ComplianceLastUpdateTime",
+        "ComplianceState",
+        "ComplianceStatus",
+        "CompliantDeviceCount",
+        "DeviceFamily",
+        "DeviceName",
+        "DeviceRole",
+        "DeviceSeries",
+        "ImageVersion",
+        "IpAddress",
+        "LastUpdateTime",
+        "LastUpdated",
+        "MACAddress",
+        "ManageErrors",
+        "Manageability",
+        "Platform",
+        "Reachability",
+        "ReachabilityFailureReason",
+        "SerialNumber",
+        "SupportType",
+        "Uptime",
+        "UptimeSeconds",
+        "cisco_catalyst_center_host",
+        "cisco_catalyst_host",
+        "signature_id",
+        "timestamp",
+        "vendor_product"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 11,
+      "stanzas": [
+        {
+          "line_no": 22,
+          "name": "building_resilience_compliance_detail"
+        },
+        {
+          "line_no": 548,
+          "name": "executive_dashboard_building_domain_score"
+        },
+        {
+          "line_no": 858,
+          "name": "executive_dashboard_it_domain_score"
+        },
+        {
+          "line_no": 1136,
+          "name": "it_critical_systems_compliance_rate"
+        },
+        {
+          "line_no": 1160,
+          "name": "it_critical_systems_compliance_distribution"
+        },
+        {
+          "line_no": 3644,
+          "name": "it_critical_systems_compliance_report"
+        },
+        {
+          "line_no": 5043,
+          "name": "security_resilience_compliance_distribution"
+        },
+        {
+          "line_no": 5065,
+          "name": "security_resilience_noncompliant_devices"
+        },
+        {
+          "line_no": 6652,
+          "name": "asset_inventory_build_lookup"
+        },
+        {
+          "line_no": 7414,
+          "name": "executive_dashboard_score_pipeline"
+        },
+        {
+          "line_no": 7523,
+          "name": "executive_dashboard_ds_bldg_score"
+        }
+      ],
+      "status": "pass"
+    },
+    "cisco:dnac:devicehealth": {
+      "elapsed_ms": 778,
+      "fields": [
+        "AirQualityHealthGhz24",
+        "AirQualityHealthGhz50",
+        "AirQualityHealthRadio0",
+        "AirQualityHealthRadio1",
+        "AssociatedWLCIP",
+        "CPUHealth",
+        "CPUUtilization",
+        "ClientCountGhz24",
+        "ClientCountGhz50",
+        "ClientCountRadio0",
+        "ClientCountRadio1",
+        "DeviceDescription",
+        "DeviceFamily",
+        "DeviceID",
+        "DeviceName",
+        "DeviceRole",
+        "DeviceSeries",
+        "DeviceType",
+        "HasAirQualityHealth",
+        "HasClientCount",
+        "HasHealthReport",
+        "HasInterferenceHealth",
+        "HasNoiseHealth",
+        "HasUtilization",
+        "HealthScore",
+        "ImageVersion",
+        "InterDeviceLinkAvailHealth",
+        "InterfaceLinkErrHealth",
+        "InterferenceHealthGhz24",
+        "InterferenceHealthGhz50",
+        "InterferenceHealthRadio0",
+        "InterferenceHealthRadio1",
+        "IpAddress",
+        "IssueCount",
+        "LastUpdateTime",
+        "LastUpdated",
+        "Location",
+        "MACAddress",
+        "ManageErrors",
+        "Manageability",
+        "MemoryUtilization",
+        "MemoryUtilizationHealth",
+        "NoiseHealthGhz24",
+        "NoiseHealthGhz50",
+        "NoiseHealthRadio0",
+        "NoiseHealthRadio1",
+        "OverallHealth",
+        "Platform",
+        "Reachability",
+        "ReachabilityFailureReason",
+        "SerialNumber",
+        "Site",
+        "SupportType",
+        "Uptime",
+        "UptimeSeconds",
+        "UtilizationGhz24",
+        "UtilizationGhz50",
+        "UtilizationRadio0",
+        "UtilizationRadio1",
+        "cisco_catalyst_host",
+        "signature_id",
+        "vendor_product"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 57,
+      "stanzas": [
+        {
+          "line_no": 548,
+          "name": "executive_dashboard_building_domain_score"
+        },
+        {
+          "line_no": 858,
+          "name": "executive_dashboard_it_domain_score"
+        },
+        {
+          "line_no": 1056,
+          "name": "executive_dashboard_user_experience_domain_score"
+        },
+        {
+          "line_no": 1112,
+          "name": "it_critical_systems_ap_count_by_location"
+        },
+        {
+          "line_no": 1442,
+          "name": "it_critical_systems_device_health_trend"
+        },
+        {
+          "line_no": 1465,
+          "name": "it_critical_systems_device_health_score"
+        },
+        {
+          "line_no": 1553,
+          "name": "it_critical_systems_sitelevel_health"
+        },
+        {
+          "line_no": 1580,
+          "name": "it_critical_systems_switch_count_by_location"
+        },
+        {
+          "line_no": 2975,
+          "name": "executive_dashboard_device_health_trend_compare"
+        },
+        {
+          "line_no": 3244,
+          "name": "it_critical_systems_device_health_enriched"
+        },
+        {
+          "line_no": 3672,
+          "name": "executive_summary_network_health_by_site"
+        },
+        {
+          "line_no": 3724,
+          "name": "executive_summary_device_inventory"
+        },
+        {
+          "line_no": 3748,
+          "name": "executive_summary_overall_network_health"
+        },
+        {
+          "line_no": 3879,
+          "name": "executive_summary_ap_count"
+        },
+        {
+          "line_no": 4319,
+          "name": "executive_summary_healthy_device_count"
+        },
+        {
+          "line_no": 4536,
+          "name": "it_critical_systems_ap_air_quality_by_site"
+        },
+        {
+          "line_no": 4559,
+          "name": "it_critical_systems_ap_channel_utilization"
+        },
+        {
+          "line_no": 4582,
+          "name": "it_critical_systems_ap_interference_hotspots"
+        },
+        {
+          "line_no": 4603,
+          "name": "it_critical_systems_cpu_memory_alerts"
+        },
+        {
+          "line_no": 4625,
+          "name": "it_critical_systems_device_health_distribution"
+        },
+        {
+          "line_no": 4828,
+          "name": "it_critical_systems_recent_reboots"
+        },
+        {
+          "line_no": 4897,
+          "name": "it_critical_systems_top_issue_devices"
+        },
+        {
+          "line_no": 4922,
+          "name": "it_critical_systems_topology_device_table"
+        },
+        {
+          "line_no": 4944,
+          "name": "it_critical_systems_topology_linkgraph"
+        },
+        {
+          "line_no": 4969,
+          "name": "it_critical_systems_topology_site_role"
+        },
+        {
+          "line_no": 4993,
+          "name": "it_critical_systems_unreachable_devices"
+        },
+        {
+          "line_no": 6652,
+          "name": "asset_inventory_build_lookup"
+        },
+        {
+          "line_no": 6733,
+          "name": "asset_inventory_ds_gap_analysis"
+        },
+        {
+          "line_no": 6813,
+          "name": "building_resilience_ds_ap_health_site"
+        },
+        {
+          "line_no": 7414,
+          "name": "executive_dashboard_score_pipeline"
+        },
+        {
+          "line_no": 7523,
+          "name": "executive_dashboard_ds_bldg_score"
+        },
+        {
+          "line_no": 7597,
+          "name": "executive_dashboard_ds_device_health_current"
+        },
+        {
+          "line_no": 7622,
+          "name": "executive_dashboard_ds_device_health_trend_compare"
+        },
+        {
+          "line_no": 7742,
+          "name": "executive_dashboard_ds_ux_score"
+        },
+        {
+          "line_no": 7816,
+          "name": "executive_summary_ds_ap_count"
+        },
+        {
+          "line_no": 7839,
+          "name": "executive_summary_ds_device_inventory"
+        },
+        {
+          "line_no": 7861,
+          "name": "executive_summary_ds_healthy_device_count"
+        },
+        {
+          "line_no": 7883,
+          "name": "executive_summary_ds_network_health_by_site"
+        },
+        {
+          "line_no": 7907,
+          "name": "executive_summary_ds_network_health_trend"
+        },
+        {
+          "line_no": 7930,
+          "name": "executive_summary_ds_overall_network_health"
+        },
+        {
+          "line_no": 7952,
+          "name": "it_critical_systems_ds_ap_by_location"
+        },
+        {
+          "line_no": 7978,
+          "name": "it_critical_systems_ds_base_devicehealth"
+        },
+        {
+          "line_no": 8048,
+          "name": "it_critical_systems_ds_device_health"
+        },
+        {
+          "line_no": 8072,
+          "name": "it_critical_systems_ds_device_health_enriched"
+        },
+        {
+          "line_no": 8294,
+          "name": "it_critical_systems_ds_site_health"
+        },
+        {
+          "line_no": 8351,
+          "name": "it_critical_systems_ds_switch_by_location"
+        },
+        {
+          "line_no": 9480,
+          "name": "overview_topology_overview"
+        },
+        {
+          "line_no": 9607,
+          "name": "overview_operational_lead"
+        },
+        {
+          "line_no": 9701,
+          "name": "overview_site_tallahassee_health"
+        },
+        {
+          "line_no": 9730,
+          "name": "overview_site_orlando_health"
+        },
+        {
+          "line_no": 9759,
+          "name": "overview_site_auburndale_health"
+        },
+        {
+          "line_no": 9788,
+          "name": "overview_link_orlando_tallahassee_health"
+        },
+        {
+          "line_no": 9838,
+          "name": "overview_link_auburndale_tallahassee_health"
+        },
+        {
+          "line_no": 9888,
+          "name": "overview_link_orlando_auburndale_health"
+        },
+        {
+          "line_no": 10079,
+          "name": "shared_ds_dev_health_trend"
+        },
+        {
+          "line_no": 10152,
+          "name": "it_critical_systems_site_connectivity_score_trend"
+        },
+        {
+          "line_no": 10178,
+          "name": "it_critical_systems_site_link_availability_pct_trend"
+        }
+      ],
+      "status": "pass"
+    },
+    "cisco:dnac:issue": {
+      "elapsed_ms": 797,
+      "fields": [
+        "DeviceFamily",
+        "DeviceID",
+        "DeviceImageVersion",
+        "DeviceIpAddress",
+        "DeviceLastUpdateTime",
+        "DeviceLastUpdated",
+        "DeviceMACAddress",
+        "DeviceName",
+        "DevicePlatform",
+        "DeviceRole",
+        "DeviceSerialNumber",
+        "DeviceSeries",
+        "DeviceSupportType",
+        "DeviceUptime",
+        "DeviceUptimeSeconds",
+        "IssueAiDriven",
+        "IssueCategory",
+        "IssueClientMac",
+        "IssueCount",
+        "IssueDeviceRole",
+        "IssueID",
+        "IssueName",
+        "IssuePriority",
+        "IssueSpecificCategory",
+        "IssueSpecificDescription",
+        "IssueSpecificEntity",
+        "IssueSpecificEntityValue",
+        "IssueSpecificName",
+        "IssueSpecificPriority",
+        "IssueSpecificSeverity",
+        "IssueSpecificSource",
+        "IssueSpecificSummary",
+        "IssueSpecificTimestamp",
+        "IssueStatus",
+        "cisco_catalyst_host",
+        "signature_id",
+        "vendor_product"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 21,
+      "stanzas": [
+        {
+          "line_no": 527,
+          "name": "executive_dashboard_issue_summary_kpis"
+        },
+        {
+          "line_no": 2169,
+          "name": "security_resilience_rogue_device_detection"
+        },
+        {
+          "line_no": 2193,
+          "name": "security_resilience_rogue_device_detail"
+        },
+        {
+          "line_no": 3490,
+          "name": "it_critical_systems_interface_utilization_issues"
+        },
+        {
+          "line_no": 3512,
+          "name": "it_critical_systems_bgp_neighbor_issues"
+        },
+        {
+          "line_no": 3534,
+          "name": "it_critical_systems_ap_disconnect_issues"
+        },
+        {
+          "line_no": 3556,
+          "name": "it_critical_systems_aaa_server_issues"
+        },
+        {
+          "line_no": 3578,
+          "name": "it_critical_systems_issue_trend"
+        },
+        {
+          "line_no": 3600,
+          "name": "it_critical_systems_issues_by_site"
+        },
+        {
+          "line_no": 3623,
+          "name": "it_critical_systems_issues_by_priority"
+        },
+        {
+          "line_no": 3837,
+          "name": "executive_summary_top_issues"
+        },
+        {
+          "line_no": 3858,
+          "name": "executive_summary_issue_distribution"
+        },
+        {
+          "line_no": 4341,
+          "name": "executive_summary_issue_trend"
+        },
+        {
+          "line_no": 4362,
+          "name": "executive_summary_issue_by_priority_kpi"
+        },
+        {
+          "line_no": 4443,
+          "name": "executive_summary_issue_details"
+        },
+        {
+          "line_no": 7998,
+          "name": "it_critical_systems_ds_base_issues"
+        },
+        {
+          "line_no": 8197,
+          "name": "it_critical_systems_ds_issue_by_priority"
+        },
+        {
+          "line_no": 10204,
+          "name": "it_critical_systems_site_link_events_24h_trend"
+        },
+        {
+          "line_no": 10226,
+          "name": "it_critical_systems_site_bandwidth_pressure_24h_trend"
+        },
+        {
+          "line_no": 10248,
+          "name": "it_critical_systems_site_errors_discards_24h_trend"
+        },
+        {
+          "line_no": 10270,
+          "name": "it_critical_systems_site_power_events_24h_trend"
+        }
+      ],
+      "status": "pass"
+    },
+    "cisco:dnac:networkhealth": {
+      "elapsed_ms": 794,
+      "fields": [
+        "badCount",
+        "badPercentage",
+        "category",
+        "cisco_catalyst_host",
+        "fairCount",
+        "fairPercentage",
+        "goodCount",
+        "goodPercentage",
+        "healthScore",
+        "kpiMetrics{}.key",
+        "kpiMetrics{}.value",
+        "noHealthCount",
+        "noHealthPercentage",
+        "signature_id",
+        "thirdPartyDeviceCount",
+        "time",
+        "totalCount",
+        "vendor_product"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 11,
+      "stanzas": [
+        {
+          "line_no": 858,
+          "name": "executive_dashboard_it_domain_score"
+        },
+        {
+          "line_no": 897,
+          "name": "executive_dashboard_network_health_score"
+        },
+        {
+          "line_no": 1510,
+          "name": "it_critical_systems_network_health_trend"
+        },
+        {
+          "line_no": 1531,
+          "name": "it_critical_systems_network_health_score"
+        },
+        {
+          "line_no": 1647,
+          "name": "it_critical_systems_weekoverweek_health"
+        },
+        {
+          "line_no": 2948,
+          "name": "executive_dashboard_network_health_trend_compare"
+        },
+        {
+          "line_no": 3795,
+          "name": "executive_summary_network_health_trend"
+        },
+        {
+          "line_no": 4669,
+          "name": "it_critical_systems_network_health_category_trend"
+        },
+        {
+          "line_no": 7414,
+          "name": "executive_dashboard_score_pipeline"
+        },
+        {
+          "line_no": 8418,
+          "name": "it_critical_systems_ds_wow_health"
+        },
+        {
+          "line_no": 10292,
+          "name": "it_critical_systems_network_category_distribution_health_trend"
+        }
+      ],
+      "status": "pass"
+    },
+    "cisco:dnac:securityadvisory": {
+      "elapsed_ms": 800,
+      "fields": [
+        "AdvisoryCvesStr",
+        "AdvisoryDefaultDetectionType",
+        "AdvisoryDetectionType",
+        "AdvisoryDeviceCount",
+        "AdvisoryID",
+        "AdvisoryPublicationUrl",
+        "AdvisorySir",
+        "Amount",
+        "Category",
+        "DeviceAssociatedWLCIP",
+        "DeviceFamily",
+        "DeviceImageVersion",
+        "DeviceIpAddress",
+        "DeviceLastUpdateTime",
+        "DeviceLastUpdated",
+        "DeviceMACAddress",
+        "DeviceManageErrors",
+        "DeviceManageability",
+        "DeviceName",
+        "DevicePlatform",
+        "DeviceReachability",
+        "DeviceReachabilityFailureReason",
+        "DeviceRole",
+        "DeviceSerialNumber",
+        "DeviceSeries",
+        "DeviceSupportType",
+        "DeviceUptime",
+        "DeviceUptimeSeconds",
+        "SubCategory",
+        "Summary",
+        "cisco_catalyst_host",
+        "signature_id",
+        "timestamp",
+        "vendor_product"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 4,
+      "stanzas": [
+        {
+          "line_no": 2143,
+          "name": "security_resilience_psirt_advisories"
+        },
+        {
+          "line_no": 5020,
+          "name": "security_resilience_advisory_exposure_by_family"
+        },
+        {
+          "line_no": 5087,
+          "name": "security_resilience_psirt_critical_advisories"
+        },
+        {
+          "line_no": 9041,
+          "name": "security_resilience_ds_psirt"
+        }
+      ],
+      "status": "pass"
+    },
+    "cisco:dnac:site:topology": {
+      "elapsed_ms": 766,
+      "fields": [
+        "address",
+        "cisco_catalyst_host",
+        "country",
+        "floorNumber",
+        "height",
+        "id",
+        "latitude",
+        "length",
+        "longitude",
+        "name",
+        "nameHierarchy",
+        "parentId",
+        "rfModel",
+        "signature_id",
+        "siteHierarchyId",
+        "timestamp",
+        "type",
+        "unitsOfMeasure",
+        "vendor_product",
+        "width"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 3,
+      "stanzas": [
+        {
+          "line_no": 1369,
+          "name": "it_critical_systems_site_topology_recent_changes"
+        },
+        {
+          "line_no": 1394,
+          "name": "it_critical_systems_site_topology_event_type_distribution"
+        },
+        {
+          "line_no": 1417,
+          "name": "it_critical_systems_site_topology_site_type_distribution"
+        }
+      ],
+      "status": "pass"
+    },
+    "cisco:esa:amp": {
+      "elapsed_ms": 2532,
+      "fields": [
+        "Categories",
+        "Category",
+        "Disposition",
+        "MID",
+        "Malware",
+        "Name",
+        "Reason",
+        "SHA256",
+        "Score",
+        "Size",
+        "Type",
+        "from",
+        "sha256",
+        "signature_id",
+        "upload_action",
+        "verdict_source"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 3,
+      "stanzas": [
+        {
+          "line_no": 1720,
+          "name": "security_resilience_email_security_events"
+        },
+        {
+          "line_no": 1742,
+          "name": "security_resilience_email_threat_count"
+        },
+        {
+          "line_no": 8674,
+          "name": "security_resilience_ds_email_security"
+        }
+      ],
+      "status": "pass"
+    },
+    "cisco:esa:antispam": {
+      "elapsed_ms": 2489,
+      "fields": [
+        "idle_wc",
+        "max_cpu",
+        "max_mid",
+        "max_wc",
+        "mean_cpu",
+        "mean_wc",
+        "median_cpu",
+        "median_wc",
+        "min_cpu",
+        "min_wc",
+        "signature_id",
+        "total_cpu",
+        "total_wc"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 3,
+      "stanzas": [
+        {
+          "line_no": 1720,
+          "name": "security_resilience_email_security_events"
+        },
+        {
+          "line_no": 1742,
+          "name": "security_resilience_email_threat_count"
+        },
+        {
+          "line_no": 8674,
+          "name": "security_resilience_ds_email_security"
+        }
+      ],
+      "status": "pass"
+    },
+    "cisco:esa:content_scanner": {
+      "elapsed_ms": 2460,
+      "fields": [
+        "pid",
+        "signature_id"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 3,
+      "stanzas": [
+        {
+          "line_no": 1720,
+          "name": "security_resilience_email_security_events"
+        },
+        {
+          "line_no": 1742,
+          "name": "security_resilience_email_threat_count"
+        },
+        {
+          "line_no": 8674,
+          "name": "security_resilience_ds_email_security"
+        }
+      ],
+      "status": "pass"
+    },
+    "cisco:estreamer:data": {
+      "elapsed_ms": 2507,
+      "fields": [
+        "archive_timestamp",
+        "class",
+        "dst_addr",
+        "dst_port",
+        "event_id",
+        "event_sec",
+        "event_usec",
+        "gen",
+        "impact_flag",
+        "ip_proto",
+        "priority",
+        "rev",
+        "sensor_id",
+        "sid",
+        "signature_id",
+        "src_addr",
+        "src_port"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 3,
+      "stanzas": [
+        {
+          "line_no": 2240,
+          "name": "security_resilience_recent_security_events"
+        },
+        {
+          "line_no": 4387,
+          "name": "asset_inventory_firewall_gap"
+        },
+        {
+          "line_no": 9108,
+          "name": "security_resilience_ds_security_events"
+        }
+      ],
+      "status": "pass"
+    },
+    "cisco:estreamer:log": {
+      "elapsed_ms": 2420,
+      "fields": [
+        "signature_id",
+        "timestamp"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 1,
+      "stanzas": [
+        {
+          "line_no": 4387,
+          "name": "asset_inventory_firewall_gap"
+        }
+      ],
+      "status": "pass"
+    },
+    "cisco:estreamer:status": {
+      "elapsed_ms": 2295,
+      "fields": [],
+      "note": "no events in -7d..now",
+      "row_count": 0,
+      "stanza_count": 1,
+      "stanzas": [
+        {
+          "line_no": 4387,
+          "name": "asset_inventory_firewall_gap"
+        }
+      ],
+      "status": "empty"
+    },
+    "cisco:firepower:syslog": {
+      "elapsed_ms": 2382,
+      "fields": [],
+      "note": "no events in -7d..now",
+      "row_count": 0,
+      "stanza_count": 3,
+      "stanzas": [
+        {
+          "line_no": 4387,
+          "name": "asset_inventory_firewall_gap"
+        },
+        {
+          "line_no": 5313,
+          "name": "admin_macro_index_tuning"
+        },
+        {
+          "line_no": 7372,
+          "name": "executive_dashboard_data_status_pipeline"
+        }
+      ],
+      "status": "empty"
+    },
+    "cisco:ftd": {
+      "elapsed_ms": 2399,
+      "fields": [],
+      "note": "no events in -7d..now",
+      "row_count": 0,
+      "stanza_count": 23,
+      "stanzas": [
+        {
+          "line_no": 785,
+          "name": "executive_dashboard_firewall_blocked_count"
+        },
+        {
+          "line_no": 1849,
+          "name": "security_resilience_firewall_allowed_count"
+        },
+        {
+          "line_no": 2289,
+          "name": "security_resilience_vpn_session_detail"
+        },
+        {
+          "line_no": 2633,
+          "name": "security_resilience_repeated_blocked_sources"
+        },
+        {
+          "line_no": 2658,
+          "name": "security_resilience_ssh_activity"
+        },
+        {
+          "line_no": 2683,
+          "name": "security_resilience_data_exfiltration_indicators"
+        },
+        {
+          "line_no": 2921,
+          "name": "executive_dashboard_fw_blocked_trend_compare"
+        },
+        {
+          "line_no": 3008,
+          "name": "network_intelligence_blocked_vs_allowed"
+        },
+        {
+          "line_no": 3029,
+          "name": "network_intelligence_traffic_by_action_trend"
+        },
+        {
+          "line_no": 3052,
+          "name": "network_intelligence_external_sources"
+        },
+        {
+          "line_no": 3077,
+          "name": "network_intelligence_traffic_by_protocol"
+        },
+        {
+          "line_no": 3099,
+          "name": "network_intelligence_geo_blocked_traffic"
+        },
+        {
+          "line_no": 3122,
+          "name": "network_intelligence_top_countries_blocked"
+        },
+        {
+          "line_no": 3146,
+          "name": "network_intelligence_top_talkers"
+        },
+        {
+          "line_no": 3170,
+          "name": "network_intelligence_top_blocked_ports"
+        },
+        {
+          "line_no": 3195,
+          "name": "network_intelligence_traffic_volume_trend"
+        },
+        {
+          "line_no": 3220,
+          "name": "security_resilience_assets_at_risk"
+        },
+        {
+          "line_no": 4387,
+          "name": "asset_inventory_firewall_gap"
+        },
+        {
+          "line_no": 5313,
+          "name": "admin_macro_index_tuning"
+        },
+        {
+          "line_no": 7251,
+          "name": "escu_alert_fw_compromised_host_indicators"
+        },
+        {
+          "line_no": 7276,
+          "name": "escu_alert_fw_repeated_blocked_connections"
+        },
+        {
+          "line_no": 7372,
+          "name": "executive_dashboard_data_status_pipeline"
+        },
+        {
+          "line_no": 8634,
+          "name": "security_resilience_ds_base_fw"
+        }
+      ],
+      "status": "empty"
+    },
+    "cisco:ios": {
+      "elapsed_ms": 13446,
+      "fields": [
+        "aci_message_text",
+        "action",
+        "alarm",
+        "alignment",
+        "ap_mac",
+        "app",
+        "applet_name",
+        "applet_output",
+        "as_number",
+        "audit_session_id",
+        "authenticator",
+        "bw_down",
+        "bw_up",
+        "bytes",
+        "cdp_local_duplex",
+        "cdp_neighbor",
+        "cdp_remote_duplex",
+        "cdp_remote_dvc",
+        "cdp_remote_dvc_serial",
+        "cdp_remote_dvc_type",
+        "change_type",
+        "char1",
+        "cipher",
+        "cisco_header",
+        "command",
+        "config_source",
+        "correlation_tag",
+        "dest",
+        "dest_int_prefix",
+        "dest_int_suffix",
+        "dest_interface",
+        "dest_ip",
+        "dest_mac",
+        "dest_port",
+        "dest_vlan",
+        "detected_on_interface",
+        "device_time",
+        "direct_ap_mac",
+        "disable_cause",
+        "duration",
+        "dvc",
+        "event_id",
+        "facility",
+        "fail_from",
+        "gateway",
+        "group_id",
+        "hmac",
+        "ip_sla_id",
+        "ip_sla_id_2",
+        "ip_sla_type",
+        "lane",
+        "line",
+        "message_text",
+        "message_type",
+        "mgmt",
+        "mnemonic",
+        "module",
+        "netmask",
+        "network",
+        "notice",
+        "operating_value",
+        "packets",
+        "permanent_virtual_circuit",
+        "process_id",
+        "product",
+        "protocol",
+        "reason",
+        "reliable_time",
+        "result",
+        "routing_protocol",
+        "rule",
+        "sensor",
+        "severity",
+        "severity_description",
+        "severity_id",
+        "severity_id_and_name",
+        "severity_name",
+        "signature_id",
+        "src",
+        "src_int_prefix",
+        "src_int_prefix_long",
+        "src_int_suffix",
+        "src_int_type",
+        "src_interface",
+        "src_interface_description",
+        "src_ip",
+        "src_mac",
+        "src_port",
+        "src_vlan",
+        "state_from",
+        "state_to",
+        "subfacility",
+        "switch",
+        "switch_id",
+        "threshold_value",
+        "time_of_day",
+        "transport",
+        "trigger",
+        "tty",
+        "type",
+        "unit",
+        "unknown_id",
+        "user",
+        "vendor",
+        "vendor_action",
+        "vendor_action_2",
+        "virtual_channel_id",
+        "virtual_circuit_descriptor",
+        "virtual_path_id",
+        "vlan",
+        "vrf"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 37,
+      "stanzas": [
+        {
+          "line_no": 1604,
+          "name": "it_critical_systems_syslog_severity_distribution"
+        },
+        {
+          "line_no": 2169,
+          "name": "security_resilience_rogue_device_detection"
+        },
+        {
+          "line_no": 2193,
+          "name": "security_resilience_rogue_device_detail"
+        },
+        {
+          "line_no": 2268,
+          "name": "security_resilience_unauthorized_wireless"
+        },
+        {
+          "line_no": 2708,
+          "name": "security_resilience_severity_by_host"
+        },
+        {
+          "line_no": 2735,
+          "name": "it_critical_systems_port_flapping"
+        },
+        {
+          "line_no": 2761,
+          "name": "it_critical_systems_route_flapping"
+        },
+        {
+          "line_no": 2782,
+          "name": "it_critical_systems_stp_and_mac_flapping"
+        },
+        {
+          "line_no": 2806,
+          "name": "it_critical_systems_ntp_time_drift"
+        },
+        {
+          "line_no": 2836,
+          "name": "it_critical_systems_config_change_transactions"
+        },
+        {
+          "line_no": 2865,
+          "name": "it_critical_systems_error_disabled_interfaces"
+        },
+        {
+          "line_no": 3370,
+          "name": "it_critical_systems_dhcp_ios_events"
+        },
+        {
+          "line_no": 4647,
+          "name": "it_critical_systems_link_flap_storm"
+        },
+        {
+          "line_no": 4690,
+          "name": "it_critical_systems_power_event_detection"
+        },
+        {
+          "line_no": 4712,
+          "name": "it_critical_systems_power_event_summary"
+        },
+        {
+          "line_no": 4733,
+          "name": "it_critical_systems_power_event_timeline"
+        },
+        {
+          "line_no": 4755,
+          "name": "it_critical_systems_power_impact_report"
+        },
+        {
+          "line_no": 4779,
+          "name": "it_critical_systems_power_outage_history"
+        },
+        {
+          "line_no": 4803,
+          "name": "it_critical_systems_power_outage_trend"
+        },
+        {
+          "line_no": 4853,
+          "name": "it_critical_systems_routing_reconvergence"
+        },
+        {
+          "line_no": 4875,
+          "name": "it_critical_systems_stp_reconvergence"
+        },
+        {
+          "line_no": 5313,
+          "name": "admin_macro_index_tuning"
+        },
+        {
+          "line_no": 6652,
+          "name": "asset_inventory_build_lookup"
+        },
+        {
+          "line_no": 6733,
+          "name": "asset_inventory_ds_gap_analysis"
+        },
+        {
+          "line_no": 7302,
+          "name": "escu_alert_ios_config_exfil_via_tftp"
+        },
+        {
+          "line_no": 7326,
+          "name": "escu_alert_ios_snmp_community_change"
+        },
+        {
+          "line_no": 7349,
+          "name": "escu_alert_ios_suspicious_account_creation"
+        },
+        {
+          "line_no": 7372,
+          "name": "executive_dashboard_data_status_pipeline"
+        },
+        {
+          "line_no": 8020,
+          "name": "it_critical_systems_ds_config_change_transactions"
+        },
+        {
+          "line_no": 8099,
+          "name": "it_critical_systems_ds_dhcp_ios_events"
+        },
+        {
+          "line_no": 8172,
+          "name": "it_critical_systems_ds_error_disabled_interfaces"
+        },
+        {
+          "line_no": 8218,
+          "name": "it_critical_systems_ds_ntp_drift"
+        },
+        {
+          "line_no": 8247,
+          "name": "it_critical_systems_ds_port_flapping"
+        },
+        {
+          "line_no": 8272,
+          "name": "it_critical_systems_ds_route_flapping"
+        },
+        {
+          "line_no": 8326,
+          "name": "it_critical_systems_ds_stp_mac_flapping"
+        },
+        {
+          "line_no": 8376,
+          "name": "it_critical_systems_ds_syslog_severity"
+        },
+        {
+          "line_no": 9134,
+          "name": "security_resilience_ds_severity_by_host"
+        }
+      ],
+      "status": "pass"
+    },
+    "cisco:ise:syslog": {
+      "elapsed_ms": 13656,
+      "fields": [
+        "ACIReportApicNode",
+        "ACIReportDetails",
+        "ACIReportEvent",
+        "ACIReportISENodeIp",
+        "ADDomain",
+        "AD_Connector",
+        "AD_Domain",
+        "AD_Error_Details",
+        "AD_Groups_Names",
+        "AD_Hostname",
+        "AD_Log_Id",
+        "AD_User_Candidate_Identities",
+        "AD_User_DNS_Domain",
+        "AD_User_Join_Point",
+        "AD_User_NetBios_Name",
+        "AD_User_Qualified_Name",
+        "AD_User_Resolved_DNs",
+        "AD_User_Resolved_Identities",
+        "AD_User_SamAccount_Name",
+        "AGG____ACIReportDetails_",
+        "ARPHit",
+        "ARPMiss",
+        "ARPRetrieve",
+        "ARPSave",
+        "ARPUpdate",
+        "AVPair",
+        "AccountName",
+        "AcctRequest_Flags",
+        "Acct_Authentic",
+        "Acct_Delay_Time",
+        "Acct_Input_Octets",
+        "Acct_Input_Packets",
+        "Acct_Link_Count",
+        "Acct_Multi_Session_Id",
+        "Acct_Output_Octets",
+        "Acct_Output_Packets",
+        "Acct_Session_Id",
+        "Acct_Session_Time",
+        "Acct_Status_Type",
+        "AcsInstance",
+        "AcsSessionID",
+        "Action",
+        "ActiveSessionCount",
+        "AdapterInstanceName",
+        "AdapterInstanceUuid",
+        "Admin",
+        "AdminIPAddress",
+        "AdminInterface",
+        "AdminName",
+        "AdminSession",
+        "AdminWebappN",
+        "AdminWebappT",
+        "AdminWebappU",
+        "Administrator_Login",
+        "Airespace_Wlan_Id",
+        "AllowedProtocolMatchedRule",
+        "Altiris_Registry",
+        "AntiSpywareInstalled",
+        "AntiVirusInstalled",
+        "Application_Server",
+        "ArpCache_InsertUpdate_Received",
+        "AuditPasswordType",
+        "Authen_Method",
+        "Authen_Type",
+        "AuthenticationIdentityStore",
+        "AuthenticationMethod",
+        "AuthenticationStatus",
+        "AuthorizationPolicyMatchedRule",
+        "AverageRadiusRequestLatency",
+        "AverageTacacsRequestLatency",
+        "BYODN",
+        "BYODRegistration",
+        "BYODT",
+        "BYODU",
+        "Bad_HTTP_Request",
+        "BindingOperation",
+        "BindingPeerIp",
+        "BindingSXPNodeIp",
+        "BindingSourceType",
+        "BindingTag",
+        "BindingVPN",
+        "CAServiceN",
+        "CAServiceT",
+        "CAServiceU",
+        "CA_Service",
+        "CN",
+        "CPMSessionID",
+        "Called_Station_ID",
+        "Calling_Station_ID",
+        "Certificate_Authority_Service",
+        "ChangePasswordAfterLogin",
+        "ChangePasswordMethod",
+        "ClientLatency",
+        "Client_Provisioning",
+        "CmdSet",
+        "CoAHandledEvents",
+        "Component",
+        "ConfigChangeData",
+        "ConfigVersionId",
+        "Configuration_Changes",
+        "Connect_Info",
+        "Connected_Backup_Application",
+        "Connectivity",
+        "CreateTime",
+        "DBListenerN",
+        "DBListenerT",
+        "DBListenerU",
+        "DBServerN",
+        "DBServerT",
+        "DBServerU",
+        "DC",
+        "DHCP_Endpoint_Detected",
+        "DHCP_Server__dhcpd_",
+        "DHCP_Skip_Profiling",
+        "DNSReverseLookup_Events_Query",
+        "DNS_Endpoint_Detected",
+        "DNS_Server__named_",
+        "DTLSSupport",
+        "Database_Server",
+        "DeltaRadiusRequestCount",
+        "DeltaTacacsRequestCount",
+        "Description",
+        "DestinationIPAddress",
+        "DestinationPort",
+        "DetailedInfo",
+        "Details",
+        "DeviceRegistrationStatus",
+        "Device_Administration",
+        "Device_IP_Address",
+        "Device_Port",
+        "Device_Type",
+        "Device_Unique_Id",
+        "DhcpPacketsReceived",
+        "DhcpSkipProfiling",
+        "DomainName",
+        "Dynamic_Authorization",
+        "EAP",
+        "EAP_FAST",
+        "EAP_Key_Name",
+        "EAP_TLS",
+        "EST_Service",
+        "EapAuthentication",
+        "EapChainingResult",
+        "EapTunnel",
+        "EmailAddress",
+        "EndPointMACAddress",
+        "EndPointMatchedProfile",
+        "EndPoint_Reprofiling_Events",
+        "Endpoint",
+        "EndpointCache_InsertUpdate_Received",
+        "EndpointIPAddress",
+        "EndpointIdentityGroup",
+        "EndpointSourceEvent",
+        "Endpoint_IP_Address",
+        "EndpointsCached",
+        "EndpointsDeleted",
+        "EndpointsDetected",
+        "EndpointsOwnerChanged",
+        "EndpointsProfiled",
+        "EndpointsRetrievedFromOwner",
+        "EndpointsUpdated",
+        "Event_Timestamp",
+        "External_Active_Directory",
+        "FIREW",
+        "Failed_Attempt",
+        "FailureFlag",
+        "FailureReason",
+        "Failure_Reason",
+        "FeedService",
+        "Framed_IP_Address",
+        "Framed_IP_Netmask",
+        "Framed_MTU",
+        "GroupsOrAttributesProcessFailure",
+        "Guest",
+        "GuestN",
+        "GuestT",
+        "GuestU",
+        "Hermes__pxGrid_Cloud_Agent_",
+        "Host",
+        "HostID",
+        "HostIdentityGroup",
+        "HostName_Event_Fetch_FromAD",
+        "HttpPacketsNonAdjacentDropped",
+        "HttpPacketsReceived",
+        "Http_Endpoint_Detected",
+        "IPSEC",
+        "IPSec",
+        "IRF",
+        "ISEPolicySetName",
+        "ISE_API_Gateway_Database_Service",
+        "ISE_API_Gateway_Service",
+        "ISE_Application_Server",
+        "ISE_Database",
+        "ISE_Indexing_Engine",
+        "ISE_M_T_Log_Collector",
+        "ISE_M_T_Log_Processor",
+        "ISE_M_T_Session_Database",
+        "ISE_Messaging_Service",
+        "ISE_Profiler_DB",
+        "IdentityAccessRestricted",
+        "IdentityGroup",
+        "IdentityGroupID",
+        "IdentityMappingServiceN",
+        "IdentityMappingServiceT",
+        "IdentityMappingServiceU",
+        "IdentityPolicyMatchedRule",
+        "IdentitySelectionMatchedRule",
+        "IdentityStoreName",
+        "Identity_Store",
+        "IosSensorHttpDetected",
+        "IpAddress",
+        "IsActive",
+        "IsMachineAuthentication",
+        "IsMachineIdentity",
+        "IsThirdPartyDeviceFlow",
+        "IssuedPacInfo",
+        "Issued_By",
+        "Issued_To",
+        "JVMN",
+        "JVMT",
+        "JVMU",
+        "L",
+        "LAB",
+        "LastActivity",
+        "LastNmapScanTime",
+        "Licensing",
+        "LocalEndPointReads",
+        "Location",
+        "LoggerName",
+        "Logging",
+        "LogicalProfile",
+        "MDM",
+        "MDMFailureReason",
+        "MDMLastCheckinTimeStamp",
+        "MDMServerID",
+        "MDMServerName",
+        "MDMUpdateTime",
+        "MESSAGE_CLASS",
+        "MESSAGE_CODE",
+        "MESSAGE_TEXT",
+        "M_T_Log_Processor",
+        "M_T_Session_Database",
+        "MacAddress",
+        "MatchedCommandSet",
+        "Max_PDP_Session_Count",
+        "McAfee_AV_Installation_Win",
+        "MessageQueueN",
+        "MessageQueueT",
+        "MessageQueueU",
+        "Min_PDP_Session_Count",
+        "MisservicesN",
+        "MisservicesT",
+        "MisservicesU",
+        "MnTLogProcessorN",
+        "MnTLogProcessorT",
+        "MnTLogProcessorU",
+        "MnTSessionDBN",
+        "MnTSessionDBT",
+        "MnTSessionDBU",
+        "Model_Name",
+        "NAD_Address",
+        "NAS_IP",
+        "NAS_IP_Address",
+        "NAS_Identifier",
+        "NAS_Port",
+        "NAS_Port_Id",
+        "NAS_Port_Type",
+        "NMAP_ScanEvent_Query",
+        "NSFN",
+        "NSFT",
+        "NSFU",
+        "Name",
+        "Netflow_Endpoint_Detected",
+        "NetworkDeviceGroups",
+        "NetworkDeviceName",
+        "NetworkDeviceProfileId",
+        "NetworkDeviceProfileName",
+        "Network_Device_Name",
+        "Network_Device_Profile",
+        "Number_of_Guests",
+        "O",
+        "OS_Type",
+        "OU",
+        "ObjectInternalID",
+        "ObjectName",
+        "ObjectType",
+        "Object_Name",
+        "Object_Type",
+        "OpenSSLErrorMessage",
+        "OpenSSLErrorStack",
+        "OperatingSystem",
+        "OperationCounters",
+        "OperationMessageText",
+        "OperatorName",
+        "OriginalUserName",
+        "PID",
+        "PRAAction",
+        "PRAEnforcementFlag",
+        "PRAGraceTime",
+        "PRAInterval",
+        "PSXLMS",
+        "Passed_Authentication",
+        "PassiveID",
+        "PassiveID_API_Service",
+        "PassiveID_Agent_Service",
+        "PassiveID_Endpoint_Service",
+        "PassiveID_SPAN_Service",
+        "PassiveID_Syslog_Service",
+        "PassiveID_WMI_Service",
+        "PasswordType",
+        "PeerIp",
+        "PeerSequence",
+        "PolicySet_Building_SJC14_WNBU",
+        "PolicySet_Building_SJC14_WNBU_Allowed_Protocol_Default",
+        "PolicySet_Building_SJC14_WNBU_Allowed_Protocol_WNBU_SJC14_Wireless_Dot1x",
+        "PolicySet_Building_SJC14_WNBU_Allowed_Protocol_WNBU_SJC14_Wireless_Dot1x_Identity_Default",
+        "PolicySet_Building_SJC14_WNBU_Global_Exception_Default",
+        "PolicySet_Building_SJC14_WNBU_OEAP",
+        "PolicySet_Building_SJC14_WNBU_OEAP_Allowed_Protocol_WNBU_SJC14_Wireless_Dot1x",
+        "PolicySet_Building_SJC14_WNBU_OEAP_Global_Exception_Default",
+        "PolicySet_Building_SJCM1_Guest_DR",
+        "PolicySet_Building_SJCM1_Guest_DR_Allowed_Protocol_SJCM1_WirelessMAB_R",
+        "PolicySet_Building_SJCM1_Guest_DR_Allowed_Protocol_SJCM1_WirelessMAB_R_Identity_Default",
+        "PolicySet_Building_SJCM1_Guest_DR_Global_Exception_Alpha_Guest_Registration",
+        "PolicySet_Location_BXB_Wireless",
+        "PolicySet_Location_BXB_Wireless_Allowed_Protocol_Byod_Dot1x_BXB",
+        "PolicySet_Location_BXB_Wireless_Allowed_Protocol_Byod_Dot1x_BXB_Identity_Default",
+        "Port",
+        "PortNumber",
+        "PortalName",
+        "PortalUser",
+        "Posture",
+        "PostureAgentVersion",
+        "PostureAssessmentStatus",
+        "PostureReport",
+        "PostureStatus",
+        "Privilege_Level",
+        "ProbeDhcpEndpointsDetected",
+        "ProbeDnsEndpointLookup",
+        "ProbeDnsEndpointLookupAvert",
+        "ProbeDnsEndpointsDetected",
+        "ProbeHttpEndpointsDetected",
+        "ProbeRadiusEndpointsDetected",
+        "ProbeSnmpQueryEndpointsDetected",
+        "ProbeSnmpTrapEndpointsDetected",
+        "Probe_Requests_Dropped",
+        "Probe_Requests_Received",
+        "Process_Management",
+        "Profiler",
+        "ProfilerCacheHits",
+        "ProfilerDatabaseN",
+        "ProfilerDatabaseT",
+        "ProfilerDatabaseU",
+        "ProfilerN",
+        "ProfilerServer",
+        "ProfilerT",
+        "ProfilerU",
+        "Profiler_Database",
+        "Protocol",
+        "Protocol_Runtime_Context",
+        "PsnHostName",
+        "QuartzN",
+        "QuartzT",
+        "QuartzU",
+        "RADIUS",
+        "RADIUS_packet_ID",
+        "REST_Auth_Service",
+        "RMIN",
+        "RMIT",
+        "RMIU",
+        "RT_Control",
+        "RadiusFlowType",
+        "RadiusIdentifier",
+        "RadiusPacketType",
+        "RadiusPacketsReceived",
+        "Radius_Accounting",
+        "Radius_Endpoint_Detected",
+        "Reason",
+        "RemoteUpdate",
+        "RemoteUpdateAverted",
+        "Remote_Address",
+        "RequestLatency",
+        "RequestResponseType",
+        "RequestTime",
+        "Response",
+        "ResponseTime",
+        "SGA_PAC",
+        "SNMPQuery_Events_Query",
+        "SNMPTRAP_Endpoint_Detected",
+        "SNMPTrap_Events_Received",
+        "SNMP_Endpoint_Detected",
+        "SPWVersion",
+        "SRC",
+        "SSE_Connector",
+        "SSID",
+        "SSL_routines",
+        "ST",
+        "SXP",
+        "SXPMode",
+        "SXPNodeIp",
+        "SXPVersion",
+        "SXP_Engine_Service",
+        "Segmentation_Policy_Service",
+        "SelectedAccessService",
+        "SelectedAuthenticationIdentityStores",
+        "SelectedAuthorizationProfiles",
+        "SelectedCommandSet",
+        "SelectedShellProfile",
+        "Serial_Number",
+        "Server",
+        "ServerType",
+        "Service",
+        "Service_Argument",
+        "Service_Type",
+        "SessionID",
+        "SessionId",
+        "Session_Timeout",
+        "Severity",
+        "SnmpQueriesPerformed",
+        "SnmpTrapsReceived",
+        "Software_Version",
+        "Source",
+        "Sponsor",
+        "State",
+        "StaticGroupAssignment",
+        "Status",
+        "Step",
+        "StepData",
+        "StepLatency",
+        "SupplicantProfile",
+        "Supplicant_Provisioning",
+        "Sxp",
+        "Symantec_Management__Agent_Service",
+        "SysStatsAcsProcessHealth",
+        "SysStatsCpuCount",
+        "SysStatsProcessMemoryMB",
+        "SysStatsUtilizationCpu",
+        "SysStatsUtilizationDiskIO",
+        "SysStatsUtilizationDiskSpace",
+        "SysStatsUtilizationLoadAvg",
+        "SysStatsUtilizationMemory",
+        "SysStatsUtilizationNetwork",
+        "SyslogN",
+        "SyslogT",
+        "SyslogU",
+        "SystemDomain",
+        "SystemName",
+        "SystemUser",
+        "SystemUserDomain",
+        "System_Management",
+        "System_Stats",
+        "TCNACCoreN",
+        "TCNACCoreT",
+        "TCNACCoreU",
+        "TCNACDSN",
+        "TCNACDST",
+        "TCNACDSU",
+        "TCNACMongoDBN",
+        "TCNACMongoDBT",
+        "TCNACMongoDBU",
+        "TC_NAC_Core_Engine_Container",
+        "TC_NAC_MongoDB_Container",
+        "TLSCipher",
+        "TLSVersion",
+        "TS",
+        "Tacacs_Accounting",
+        "TotalAuthenLatency",
+        "TotalFailedAttempts",
+        "TotalFailedTime",
+        "Total_Certainty_Factor",
+        "TrustSec",
+        "Tunnel_Medium_Type",
+        "Tunnel_Private_Group_ID",
+        "Tunnel_Private_Group_ID_tagged",
+        "Tunnel_Type",
+        "Type",
+        "UniqueSubjectID",
+        "UpdateTime",
+        "UseCase",
+        "User",
+        "UserAccountControl",
+        "UserAdminFlag",
+        "UserAgreementStatus",
+        "UserName",
+        "UserType",
+        "User_Name",
+        "User_Type",
+        "User_change_password",
+        "VADN",
+        "VADT",
+        "VADU",
+        "VAServiceN",
+        "VAServiceT",
+        "VAServiceU",
+        "VA_Database",
+        "VA_Service",
+        "VPN",
+        "acme_av_pair",
+        "action",
+        "alarm_description",
+        "alarm_type",
+        "allowEasyWiredSession",
+        "app",
+        "authentication_method",
+        "body",
+        "change_type",
+        "cisco_av_pair",
+        "cisco_ise_vendor_action",
+        "coaIssued",
+        "command",
+        "cpm_ac_externalRadiusServer_inputFormat",
+        "cpu_load_percent",
+        "dataset_name",
+        "description",
+        "dest",
+        "dest_host",
+        "dest_ip",
+        "dest_mac",
+        "dest_name",
+        "dest_port",
+        "deviceIP",
+        "deviceRegistrationStatus",
+        "dhcpv6_elapsed_time",
+        "dvc",
+        "eventsReceived",
+        "host_name",
+        "id",
+        "identityGroup",
+        "iowait",
+        "ip",
+        "ise_host",
+        "ise_servername",
+        "log_type",
+        "mac",
+        "message",
+        "name",
+        "number_of_processes",
+        "object",
+        "object_attrs",
+        "object_category",
+        "object_id",
+        "portalUser",
+        "probe",
+        "product",
+        "protocol",
+        "provisioning_action",
+        "query",
+        "raw_msg",
+        "rcvd",
+        "rcvd_dropped",
+        "reason",
+        "result",
+        "security_group_tag",
+        "sent",
+        "sent_dropped",
+        "server",
+        "server_type",
+        "service",
+        "service_id",
+        "service_name",
+        "session_id",
+        "severity",
+        "signature",
+        "signature_id",
+        "src",
+        "src_host",
+        "src_int",
+        "src_ip",
+        "src_mac",
+        "src_port",
+        "src_user",
+        "start_mode",
+        "status",
+        "system_mgmt_desc",
+        "threatEventsReceived",
+        "timestamp",
+        "transport",
+        "type",
+        "user",
+        "user_name",
+        "user_type",
+        "vaEventsReceived",
+        "vendor",
+        "vendor_action",
+        "vendor_product",
+        "x_status",
+        "x_user"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 22,
+      "stanzas": [
+        {
+          "line_no": 766,
+          "name": "executive_dashboard_failed_logon_count"
+        },
+        {
+          "line_no": 826,
+          "name": "executive_dashboard_ise_authentication_rate"
+        },
+        {
+          "line_no": 975,
+          "name": "executive_dashboard_security_domain_score"
+        },
+        {
+          "line_no": 1892,
+          "name": "security_resilience_identity_events_trend"
+        },
+        {
+          "line_no": 1915,
+          "name": "security_resilience_identity_overview_trend"
+        },
+        {
+          "line_no": 1996,
+          "name": "security_resilience_ise_authentication_rate"
+        },
+        {
+          "line_no": 2018,
+          "name": "security_resilience_ise_auth_trend"
+        },
+        {
+          "line_no": 2240,
+          "name": "security_resilience_recent_security_events"
+        },
+        {
+          "line_no": 2895,
+          "name": "executive_dashboard_security_trend_compare"
+        },
+        {
+          "line_no": 3442,
+          "name": "user_experience_ise_guest_auth_rate"
+        },
+        {
+          "line_no": 5313,
+          "name": "admin_macro_index_tuning"
+        },
+        {
+          "line_no": 6652,
+          "name": "asset_inventory_build_lookup"
+        },
+        {
+          "line_no": 6733,
+          "name": "asset_inventory_ds_gap_analysis"
+        },
+        {
+          "line_no": 7372,
+          "name": "executive_dashboard_data_status_pipeline"
+        },
+        {
+          "line_no": 7414,
+          "name": "executive_dashboard_score_pipeline"
+        },
+        {
+          "line_no": 8848,
+          "name": "security_resilience_ds_ise_auth"
+        },
+        {
+          "line_no": 8870,
+          "name": "security_resilience_ds_ise_by_nas"
+        },
+        {
+          "line_no": 8896,
+          "name": "security_resilience_ds_ise_fail_count"
+        },
+        {
+          "line_no": 8915,
+          "name": "security_resilience_ds_ise_failure_reasons"
+        },
+        {
+          "line_no": 8939,
+          "name": "security_resilience_ds_ise_trend"
+        },
+        {
+          "line_no": 9108,
+          "name": "security_resilience_ds_security_events"
+        },
+        {
+          "line_no": 9400,
+          "name": "user_experience_ds_ise_guest_auth_rate"
+        }
+      ],
+      "status": "pass"
+    },
+    "cisco:sdwan:linkhealth": {
+      "elapsed_ms": 2768,
+      "fields": [
+        "af-type",
+        "auto-downstream-bandwidth",
+        "auto-neg",
+        "auto-negotiate",
+        "auto-upstream-bandwidth",
+        "bia-address",
+        "bw-down-util",
+        "bw-up-util",
+        "bytes_in",
+        "bytes_out",
+        "description",
+        "duplex",
+        "dvc_ip",
+        "encap-type",
+        "hwaddr",
+        "if-admin-status",
+        "if-oper-status",
+        "ifindex",
+        "ifname",
+        "interface-type",
+        "ip-address",
+        "ipv4-subnet-mask",
+        "ipv4-tcp-adjust-mss",
+        "ipv6-address",
+        "ipv6-addrs",
+        "ipv6-tcp-adjust-mss",
+        "lastupdated",
+        "mtu",
+        "negotiated-duplex-mode",
+        "negotiated-port-speed",
+        "num-flaps",
+        "packets_in",
+        "packets_out",
+        "port-type",
+        "rx-drops",
+        "rx-errors",
+        "rx-kbps",
+        "rx-octets",
+        "rx-packets",
+        "rx-pps",
+        "secondary",
+        "secondary-address",
+        "signature_id",
+        "speed-mbps",
+        "src_interface",
+        "src_ip",
+        "src_mac",
+        "timestamp",
+        "tx-drops",
+        "tx-errors",
+        "tx-kbps",
+        "tx-octets",
+        "tx-packets",
+        "tx-pps",
+        "uptime",
+        "uptime-date",
+        "vdevice-dataKey",
+        "vdevice-host-name",
+        "vdevice-name",
+        "vendor_product",
+        "vpn-id"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 4,
+      "stanzas": [
+        {
+          "line_no": 9480,
+          "name": "overview_topology_overview"
+        },
+        {
+          "line_no": 9720,
+          "name": "overview_link_orlando_tallahassee_health"
+        },
+        {
+          "line_no": 9770,
+          "name": "overview_link_auburndale_tallahassee_health"
+        },
+        {
+          "line_no": 9820,
+          "name": "overview_link_orlando_auburndale_health"
+        }
+      ],
+      "status": "pass"
+    },
+    "cisco:sdwan:utd:logs": {
+      "elapsed_ms": 2587,
+      "fields": [
+        "Category",
+        "Classification",
+        "Filename",
+        "Filetype",
+        "Hostname",
+        "Instance_ID",
+        "Malware",
+        "POLICY",
+        "Priority",
+        "Reputation",
+        "SHA",
+        "System_IP",
+        "URL",
+        "action",
+        "dest_ip",
+        "dest_port",
+        "protocol",
+        "raw_signature_id",
+        "signature_id",
+        "src_ip",
+        "src_port",
+        "token",
+        "utd_amp_disposition",
+        "utd_webfilter",
+        "vendor_product"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 2,
+      "stanzas": [
+        {
+          "line_no": 2219,
+          "name": "security_resilience_sdwan_utd_alerts"
+        },
+        {
+          "line_no": 9087,
+          "name": "security_resilience_ds_sdwan_utd"
+        }
+      ],
+      "status": "pass"
+    },
+    "cisco:sfw:estreamer": {
+      "elapsed_ms": 2571,
+      "fields": [
+        "AC_RuleAction",
+        "AC_RuleReason",
+        "Application",
+        "ApplicationID",
+        "ApplicationProductivityIndex",
+        "ApplicationRiskIndex",
+        "AuthenticationSource",
+        "Classification",
+        "ClientAppDetector",
+        "ClientApplication",
+        "ClientApplicationID",
+        "ClientApplicationProductivityIndex",
+        "ClientApplicationRiskIndex",
+        "ClientApplicationVersion",
+        "ConnectionDuration",
+        "ConnectionID",
+        "DNS_Query",
+        "DNS_RecordDescription",
+        "DNS_ResponseType",
+        "DNS_TTL",
+        "DestinationSecurityGroup",
+        "DestinationSecurityGroupTag",
+        "DestinationSecurityGroupType",
+        "Device",
+        "DeviceIP",
+        "DeviceSerialNumber",
+        "DeviceUUID",
+        "EVE_Fingerprint",
+        "EVE_Process",
+        "EVE_ProcessConfidencePct",
+        "EVE_ThreatConfidenceIndex",
+        "EVE_ThreatConfidencePct",
+        "EgressInterface",
+        "EgressInterfaceUUID",
+        "EgressVRF",
+        "EgressZone",
+        "EgressZoneUUID",
+        "EndpointProfile",
+        "EventID",
+        "EventMicrosecond",
+        "EventSecond",
+        "EventType",
+        "FileAction",
+        "FileCount",
+        "FileDirection",
+        "FileName",
+        "FilePolicy",
+        "FileSHA256",
+        "FileSize",
+        "FileStorageStatus",
+        "FileType",
+        "FirewallPolicy",
+        "FirewallPolicyUUID",
+        "FirewallRule",
+        "FirewallRuleID",
+        "FirstPacketSecond",
+        "GeneratorID",
+        "HTTP_Hostname",
+        "HTTP_Referer",
+        "HTTP_Response",
+        "HTTP_URI",
+        "Hostname",
+        "ICMP_Code",
+        "ICMP_Type",
+        "IOC_Count",
+        "Impact",
+        "ImpactFlag",
+        "IngressInterface",
+        "IngressInterfaceUUID",
+        "IngressVRF",
+        "IngressZone",
+        "IngressZoneUUID",
+        "InitiatorBytes",
+        "InitiatorIP",
+        "InitiatorPackets",
+        "InitiatorPort",
+        "InlineResult",
+        "InlineResultID",
+        "InspectedPacketCount",
+        "InspectionMicroseconds",
+        "InstanceID",
+        "IntrusionCount",
+        "IntrusionPolicy",
+        "IntrusionPolicyRevUUID",
+        "IntrusionPolicyUUID",
+        "IntrusionRuleMessage",
+        "LastPacketSecond",
+        "MitreAttackGroups",
+        "NAP_Policy",
+        "NAP_PolicyUUID",
+        "PacketData",
+        "PacketLength",
+        "PacketLinkTypeID",
+        "PacketMicrosecond",
+        "PacketSecond",
+        "PrefilterPolicy",
+        "Priority",
+        "PriorityID",
+        "Protocol",
+        "ProtocolID",
+        "RealmID",
+        "RealmName",
+        "ReferencedHost",
+        "ResponderBytes",
+        "ResponderContinent",
+        "ResponderContinentCode",
+        "ResponderCountry",
+        "ResponderCountryCode",
+        "ResponderCountryID",
+        "ResponderIP",
+        "ResponderPackets",
+        "ResponderPort",
+        "SHA_Disposition",
+        "SSL_ActualAction",
+        "SSL_CertFingerprint",
+        "SSL_CipherSuite",
+        "SSL_ExpectedAction",
+        "SSL_FlowStatus",
+        "SSL_Policy",
+        "SSL_Rule",
+        "SSL_Server",
+        "SSL_ServerCertStatus",
+        "SSL_SessionID",
+        "SSL_URL_Category",
+        "SSL_Version",
+        "SensorID",
+        "SignatureID",
+        "SignatureRevision",
+        "SnortRuleGroups",
+        "SnortVersionID",
+        "SourceSecurityGroup",
+        "SourceSecurityGroupTag",
+        "SourceSecurityGroupType",
+        "SperoDisposition",
+        "URI",
+        "URL",
+        "URL_Category",
+        "URL_Reputation",
+        "UserAgent",
+        "UserID",
+        "UserName",
+        "UserProtocol",
+        "WebApplication",
+        "WebApplicationHTTP",
+        "WebApplicationID",
+        "WebApplicationProductivityIndex",
+        "signature_id"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 21,
+      "stanzas": [
+        {
+          "line_no": 785,
+          "name": "executive_dashboard_firewall_blocked_count"
+        },
+        {
+          "line_no": 1849,
+          "name": "security_resilience_firewall_allowed_count"
+        },
+        {
+          "line_no": 1974,
+          "name": "security_resilience_idsips_classifications"
+        },
+        {
+          "line_no": 2612,
+          "name": "security_resilience_ips_severity_distribution"
+        },
+        {
+          "line_no": 2633,
+          "name": "security_resilience_repeated_blocked_sources"
+        },
+        {
+          "line_no": 2921,
+          "name": "executive_dashboard_fw_blocked_trend_compare"
+        },
+        {
+          "line_no": 3008,
+          "name": "network_intelligence_blocked_vs_allowed"
+        },
+        {
+          "line_no": 3029,
+          "name": "network_intelligence_traffic_by_action_trend"
+        },
+        {
+          "line_no": 3052,
+          "name": "network_intelligence_external_sources"
+        },
+        {
+          "line_no": 3077,
+          "name": "network_intelligence_traffic_by_protocol"
+        },
+        {
+          "line_no": 3099,
+          "name": "network_intelligence_geo_blocked_traffic"
+        },
+        {
+          "line_no": 3122,
+          "name": "network_intelligence_top_countries_blocked"
+        },
+        {
+          "line_no": 3146,
+          "name": "network_intelligence_top_talkers"
+        },
+        {
+          "line_no": 3170,
+          "name": "network_intelligence_top_blocked_ports"
+        },
+        {
+          "line_no": 3195,
+          "name": "network_intelligence_traffic_volume_trend"
+        },
+        {
+          "line_no": 3220,
+          "name": "security_resilience_assets_at_risk"
+        },
+        {
+          "line_no": 4387,
+          "name": "asset_inventory_firewall_gap"
+        },
+        {
+          "line_no": 5313,
+          "name": "admin_macro_index_tuning"
+        },
+        {
+          "line_no": 7276,
+          "name": "escu_alert_fw_repeated_blocked_connections"
+        },
+        {
+          "line_no": 7372,
+          "name": "executive_dashboard_data_status_pipeline"
+        },
+        {
+          "line_no": 8634,
+          "name": "security_resilience_ds_base_fw"
+        }
+      ],
+      "status": "pass"
+    },
+    "cisco:spaces:firehose": {
+      "elapsed_ms": 2441,
+      "fields": [
+        "cameraCounts.count",
+        "cameraCounts.countDelta",
+        "cameraCounts.location.apCount",
+        "cameraCounts.location.inferredLocationTypes{}",
+        "cameraCounts.location.locationId",
+        "cameraCounts.location.name",
+        "cameraCounts.location.parent.apCount",
+        "cameraCounts.location.parent.inferredLocationTypes{}",
+        "cameraCounts.location.parent.locationId",
+        "cameraCounts.location.parent.name",
+        "cameraCounts.location.parent.parent.apCount",
+        "cameraCounts.location.parent.parent.inferredLocationTypes{}",
+        "cameraCounts.location.parent.parent.locationId",
+        "cameraCounts.location.parent.parent.name",
+        "cameraCounts.location.parent.parent.sourceLocationId",
+        "cameraCounts.location.parent.sourceLocationId",
+        "cameraCounts.location.sourceLocationId",
+        "deviceAssociation.device.deviceId",
+        "deviceAssociation.device.deviceModel",
+        "deviceAssociation.device.dhcpProfileInfo.dcCertaintyMetric",
+        "deviceAssociation.device.dhcpProfileInfo.dcDeviceClassTag",
+        "deviceAssociation.device.dhcpProfileInfo.dcProfileName",
+        "deviceAssociation.device.dhcpProfileInfo.dcProtocolMap",
+        "deviceAssociation.device.email",
+        "deviceAssociation.device.firstName",
+        "deviceAssociation.device.gender",
+        "deviceAssociation.device.lastName",
+        "deviceAssociation.device.macAddress",
+        "deviceAssociation.device.manufacturer",
+        "deviceAssociation.device.mobile",
+        "deviceAssociation.device.openRoamingUserId",
+        "deviceAssociation.device.os",
+        "deviceAssociation.device.osVersion",
+        "deviceAssociation.device.postalCode",
+        "deviceAssociation.device.type",
+        "deviceAssociation.device.userId",
+        "deviceAssociation.event",
+        "deviceAssociation.ipv4",
+        "deviceAssociation.ipv6{}",
+        "deviceAssociation.location.apCount",
+        "deviceAssociation.location.floorNumber",
+        "deviceAssociation.location.inferredLocationTypes{}",
+        "deviceAssociation.location.locationId",
+        "deviceAssociation.location.name",
+        "deviceAssociation.location.parent.apCount",
+        "deviceAssociation.location.parent.inferredLocationTypes{}",
+        "deviceAssociation.location.parent.locationId",
+        "deviceAssociation.location.parent.name",
+        "deviceAssociation.location.parent.parent.apCount",
+        "deviceAssociation.location.parent.parent.inferredLocationTypes{}",
+        "deviceAssociation.location.parent.parent.locationId",
+        "deviceAssociation.location.parent.parent.name",
+        "deviceAssociation.location.parent.parent.parent.apCount",
+        "deviceAssociation.location.parent.parent.parent.inferredLocationTypes{}",
+        "deviceAssociation.location.parent.parent.parent.locationId",
+        "deviceAssociation.location.parent.parent.parent.name",
+        "deviceAssociation.location.parent.parent.parent.parent.apCount",
+        "deviceAssociation.location.parent.parent.parent.parent.inferredLocationTypes{}",
+        "deviceAssociation.location.parent.parent.parent.parent.locationId",
+        "deviceAssociation.location.parent.parent.parent.parent.name",
+        "deviceAssociation.location.parent.parent.parent.parent.sourceLocationId",
+        "deviceAssociation.location.parent.parent.parent.sourceLocationId",
+        "deviceAssociation.location.parent.parent.sourceLocationId",
+        "deviceAssociation.location.parent.sourceLocationId",
+        "deviceAssociation.location.sourceLocationId",
+        "deviceAssociation.rawUserId",
+        "deviceAssociation.ssid",
+        "deviceCounts.associatedCount",
+        "deviceCounts.associatedDelta",
+        "deviceCounts.bleTagCount",
+        "deviceCounts.estimatedCapacityPercentage",
+        "deviceCounts.estimatedDensity",
+        "deviceCounts.estimatedProbingCount",
+        "deviceCounts.location.apCount",
+        "deviceCounts.location.floorNumber",
+        "deviceCounts.location.inferredLocationTypes{}",
+        "deviceCounts.location.locationId",
+        "deviceCounts.location.name",
+        "deviceCounts.location.parent.apCount",
+        "deviceCounts.location.parent.inferredLocationTypes{}",
+        "deviceCounts.location.parent.locationId",
+        "deviceCounts.location.parent.name",
+        "deviceCounts.location.parent.parent.apCount",
+        "deviceCounts.location.parent.parent.inferredLocationTypes{}",
+        "deviceCounts.location.parent.parent.locationId",
+        "deviceCounts.location.parent.parent.name",
+        "deviceCounts.location.parent.parent.parent.apCount",
+        "deviceCounts.location.parent.parent.parent.inferredLocationTypes{}",
+        "deviceCounts.location.parent.parent.parent.locationId",
+        "deviceCounts.location.parent.parent.parent.name",
+        "deviceCounts.location.parent.parent.parent.parent.apCount",
+        "deviceCounts.location.parent.parent.parent.parent.inferredLocationTypes{}",
+        "deviceCounts.location.parent.parent.parent.parent.locationId",
+        "deviceCounts.location.parent.parent.parent.parent.name",
+        "deviceCounts.location.parent.parent.parent.parent.sourceLocationId",
+        "deviceCounts.location.parent.parent.parent.sourceLocationId",
+        "deviceCounts.location.parent.parent.sourceLocationId",
+        "deviceCounts.location.parent.sourceLocationId",
+        "deviceCounts.location.sourceLocationId",
+        "deviceCounts.probingDelta",
+        "deviceCounts.probingRandomizedPercentage",
+        "deviceCounts.rfidTagCount",
+        "deviceCounts.userCount",
+        "deviceCounts.wiredUserCount",
+        "deviceCounts.wirelessUserCount",
+        "deviceLocationUpdate.confidenceFactor",
+        "deviceLocationUpdate.device.deviceId",
+        "deviceLocationUpdate.device.deviceModel",
+        "deviceLocationUpdate.device.dhcpProfileInfo.dcCertaintyMetric",
+        "deviceLocationUpdate.device.dhcpProfileInfo.dcDeviceClassTag",
+        "deviceLocationUpdate.device.dhcpProfileInfo.dcProfileName",
+        "deviceLocationUpdate.device.dhcpProfileInfo.dcProtocolMap",
+        "deviceLocationUpdate.device.email",
+        "deviceLocationUpdate.device.firstName",
+        "deviceLocationUpdate.device.gender",
+        "deviceLocationUpdate.device.lastName",
+        "deviceLocationUpdate.device.macAddress",
+        "deviceLocationUpdate.device.manufacturer",
+        "deviceLocationUpdate.device.mobile",
+        "deviceLocationUpdate.device.openRoamingUserId",
+        "deviceLocationUpdate.device.os",
+        "deviceLocationUpdate.device.osVersion",
+        "deviceLocationUpdate.device.postalCode",
+        "deviceLocationUpdate.device.type",
+        "deviceLocationUpdate.device.userId",
+        "deviceLocationUpdate.deviceClassification",
+        "deviceLocationUpdate.ipv4",
+        "deviceLocationUpdate.ipv6{}",
+        "deviceLocationUpdate.lastSeen",
+        "deviceLocationUpdate.latitude",
+        "deviceLocationUpdate.location.apCount",
+        "deviceLocationUpdate.location.floorNumber",
+        "deviceLocationUpdate.location.inferredLocationTypes{}",
+        "deviceLocationUpdate.location.locationId",
+        "deviceLocationUpdate.location.name",
+        "deviceLocationUpdate.location.parent.apCount",
+        "deviceLocationUpdate.location.parent.inferredLocationTypes{}",
+        "deviceLocationUpdate.location.parent.locationId",
+        "deviceLocationUpdate.location.parent.name",
+        "deviceLocationUpdate.location.parent.parent.apCount",
+        "deviceLocationUpdate.location.parent.parent.inferredLocationTypes{}",
+        "deviceLocationUpdate.location.parent.parent.locationId",
+        "deviceLocationUpdate.location.parent.parent.name",
+        "deviceLocationUpdate.location.parent.parent.parent.apCount",
+        "deviceLocationUpdate.location.parent.parent.parent.inferredLocationTypes{}",
+        "deviceLocationUpdate.location.parent.parent.parent.locationId",
+        "deviceLocationUpdate.location.parent.parent.parent.name",
+        "deviceLocationUpdate.location.parent.parent.parent.parent.apCount",
+        "deviceLocationUpdate.location.parent.parent.parent.parent.inferredLocationTypes{}",
+        "deviceLocationUpdate.location.parent.parent.parent.parent.locationId",
+        "deviceLocationUpdate.location.parent.parent.parent.parent.name",
+        "deviceLocationUpdate.location.parent.parent.parent.parent.sourceLocationId",
+        "deviceLocationUpdate.location.parent.parent.parent.sourceLocationId",
+        "deviceLocationUpdate.location.parent.parent.sourceLocationId",
+        "deviceLocationUpdate.location.parent.sourceLocationId",
+        "deviceLocationUpdate.location.sourceLocationId",
+        "deviceLocationUpdate.longitude",
+        "deviceLocationUpdate.mapId",
+        "deviceLocationUpdate.maxDetectedRssi",
+        "deviceLocationUpdate.rawUserId",
+        "deviceLocationUpdate.ssid",
+        "deviceLocationUpdate.unc",
+        "deviceLocationUpdate.visitId",
+        "deviceLocationUpdate.xPos",
+        "deviceLocationUpdate.yPos",
+        "devicePresence.activeDevicesCount",
+        "devicePresence.daysSinceLastVisit",
+        "devicePresence.device.deviceId",
+        "devicePresence.device.deviceModel",
+        "devicePresence.device.dhcpProfileInfo.dcCertaintyMetric",
+        "devicePresence.device.dhcpProfileInfo.dcDeviceClassTag",
+        "devicePresence.device.dhcpProfileInfo.dcProfileName",
+        "devicePresence.device.dhcpProfileInfo.dcProtocolMap",
+        "devicePresence.device.email",
+        "devicePresence.device.firstName",
+        "devicePresence.device.gender",
+        "devicePresence.device.lastName",
+        "devicePresence.device.macAddress",
+        "devicePresence.device.manufacturer",
+        "devicePresence.device.mobile",
+        "devicePresence.device.openRoamingUserId",
+        "devicePresence.device.os",
+        "devicePresence.device.osVersion",
+        "devicePresence.device.postalCode",
+        "devicePresence.device.type",
+        "devicePresence.device.userId",
+        "devicePresence.deviceClassification",
+        "devicePresence.entryDateTime",
+        "devicePresence.entryTimestamp",
+        "devicePresence.exitDateTime",
+        "devicePresence.exitTimestamp",
+        "devicePresence.inActiveDevicesCount",
+        "devicePresence.location.apCount",
+        "devicePresence.location.inferredLocationTypes{}",
+        "devicePresence.location.locationId",
+        "devicePresence.location.name",
+        "devicePresence.location.parent.apCount",
+        "devicePresence.location.parent.inferredLocationTypes{}",
+        "devicePresence.location.parent.locationId",
+        "devicePresence.location.parent.name",
+        "devicePresence.location.parent.parent.apCount",
+        "devicePresence.location.parent.parent.inferredLocationTypes{}",
+        "devicePresence.location.parent.parent.locationId",
+        "devicePresence.location.parent.parent.name",
+        "devicePresence.location.parent.parent.sourceLocationId",
+        "devicePresence.location.parent.sourceLocationId",
+        "devicePresence.location.sourceLocationId",
+        "devicePresence.presenceEventType",
+        "devicePresence.rawUserId",
+        "devicePresence.ssid",
+        "devicePresence.timeZone",
+        "devicePresence.visitClassification",
+        "devicePresence.visitDurationMinutes",
+        "devicePresence.visitId",
+        "devicePresence.wasInActive",
+        "eventType",
+        "iotTelemetry.deviceInfo.companyId",
+        "iotTelemetry.deviceInfo.deviceId",
+        "iotTelemetry.deviceInfo.deviceMacAddress",
+        "iotTelemetry.deviceInfo.deviceModel",
+        "iotTelemetry.deviceInfo.deviceName",
+        "iotTelemetry.deviceInfo.deviceType",
+        "iotTelemetry.deviceInfo.firmwareVersion",
+        "iotTelemetry.deviceInfo.label",
+        "iotTelemetry.deviceInfo.manufacturer",
+        "iotTelemetry.deviceInfo.rawDeviceId",
+        "iotTelemetry.deviceInfo.serviceUuid",
+        "iotTelemetry.deviceInfo.vendorId",
+        "iotTelemetry.deviceRtcTime",
+        "iotTelemetry.humidity.humidityInPercentage",
+        "iotTelemetry.humidity.rawHumidity",
+        "iotTelemetry.location.apCount",
+        "iotTelemetry.location.inferredLocationTypes{}",
+        "iotTelemetry.location.locationId",
+        "iotTelemetry.location.name",
+        "iotTelemetry.location.parent.apCount",
+        "iotTelemetry.location.parent.inferredLocationTypes{}",
+        "iotTelemetry.location.parent.locationId",
+        "iotTelemetry.location.parent.name",
+        "iotTelemetry.location.parent.parent.apCount",
+        "iotTelemetry.location.parent.parent.inferredLocationTypes{}",
+        "iotTelemetry.location.parent.parent.locationId",
+        "iotTelemetry.location.parent.parent.name",
+        "iotTelemetry.location.parent.parent.sourceLocationId",
+        "iotTelemetry.location.parent.sourceLocationId",
+        "iotTelemetry.location.sourceLocationId",
+        "iotTelemetry.maxDetectedRssi",
+        "iotTelemetry.rawHeader",
+        "iotTelemetry.rawPayload",
+        "iotTelemetry.sequenceNum",
+        "partnerTenantId",
+        "rawCameraCounts.cameraId",
+        "rawCameraCounts.cameraZoneId",
+        "rawCameraCounts.count",
+        "rawCameraCounts.location.apCount",
+        "rawCameraCounts.location.inferredLocationTypes{}",
+        "rawCameraCounts.location.locationId",
+        "rawCameraCounts.location.name",
+        "rawCameraCounts.location.parent.apCount",
+        "rawCameraCounts.location.parent.inferredLocationTypes{}",
+        "rawCameraCounts.location.parent.locationId",
+        "rawCameraCounts.location.parent.name",
+        "rawCameraCounts.location.parent.parent.apCount",
+        "rawCameraCounts.location.parent.parent.inferredLocationTypes{}",
+        "rawCameraCounts.location.parent.parent.locationId",
+        "rawCameraCounts.location.parent.parent.name",
+        "rawCameraCounts.location.parent.parent.sourceLocationId",
+        "rawCameraCounts.location.parent.sourceLocationId",
+        "rawCameraCounts.location.sourceLocationId",
+        "recordTimestamp",
+        "recordUid",
+        "signature_id",
+        "spaceOccupancy.bookingStatus",
+        "spaceOccupancy.location.apCount",
+        "spaceOccupancy.location.floorNumber",
+        "spaceOccupancy.location.inferredLocationTypes{}",
+        "spaceOccupancy.location.locationId",
+        "spaceOccupancy.location.name",
+        "spaceOccupancy.location.parent.apCount",
+        "spaceOccupancy.location.parent.inferredLocationTypes{}",
+        "spaceOccupancy.location.parent.locationId",
+        "spaceOccupancy.location.parent.name",
+        "spaceOccupancy.location.parent.parent.apCount",
+        "spaceOccupancy.location.parent.parent.inferredLocationTypes{}",
+        "spaceOccupancy.location.parent.parent.locationId",
+        "spaceOccupancy.location.parent.parent.name",
+        "spaceOccupancy.location.parent.parent.parent.apCount",
+        "spaceOccupancy.location.parent.parent.parent.inferredLocationTypes{}",
+        "spaceOccupancy.location.parent.parent.parent.locationId",
+        "spaceOccupancy.location.parent.parent.parent.name",
+        "spaceOccupancy.location.parent.parent.parent.parent.apCount",
+        "spaceOccupancy.location.parent.parent.parent.parent.inferredLocationTypes{}",
+        "spaceOccupancy.location.parent.parent.parent.parent.locationId",
+        "spaceOccupancy.location.parent.parent.parent.parent.name",
+        "spaceOccupancy.location.parent.parent.parent.parent.sourceLocationId",
+        "spaceOccupancy.location.parent.parent.parent.sourceLocationId",
+        "spaceOccupancy.location.parent.parent.sourceLocationId",
+        "spaceOccupancy.location.parent.sourceLocationId",
+        "spaceOccupancy.location.sourceLocationId",
+        "spaceOccupancy.peakPeopleCount",
+        "spaceOccupancy.peoplePresence",
+        "spaceOccupancy.space.capacity",
+        "spaceOccupancy.space.floorId",
+        "spaceOccupancy.space.id",
+        "spaceOccupancy.space.name",
+        "spaceOccupancy.space.occupancyType",
+        "spaceOccupancy.space.type",
+        "spaceOccupancy.timeZone",
+        "spaceOccupancy.windowStartDateTime",
+        "spaceOccupancy.windowStartTimestamp",
+        "spacesTenantId",
+        "spacesTenantName",
+        "userPresence.activeUsersCount.totalUsers",
+        "userPresence.activeUsersCount.usersWithUserId",
+        "userPresence.activeUsersCount.usersWithoutUserId",
+        "userPresence.connection",
+        "userPresence.entryDateTime",
+        "userPresence.entryTimestamp",
+        "userPresence.exitDateTime",
+        "userPresence.exitTimestamp",
+        "userPresence.inActiveUsersCount.totalUsers",
+        "userPresence.inActiveUsersCount.usersWithUserId",
+        "userPresence.inActiveUsersCount.usersWithoutUserId",
+        "userPresence.location.apCount",
+        "userPresence.location.floorNumber",
+        "userPresence.location.inferredLocationTypes{}",
+        "userPresence.location.locationId",
+        "userPresence.location.name",
+        "userPresence.location.parent.apCount",
+        "userPresence.location.parent.inferredLocationTypes{}",
+        "userPresence.location.parent.locationId",
+        "userPresence.location.parent.name",
+        "userPresence.location.parent.parent.apCount",
+        "userPresence.location.parent.parent.inferredLocationTypes{}",
+        "userPresence.location.parent.parent.locationId",
+        "userPresence.location.parent.parent.name",
+        "userPresence.location.parent.parent.parent.apCount",
+        "userPresence.location.parent.parent.parent.inferredLocationTypes{}",
+        "userPresence.location.parent.parent.parent.locationId",
+        "userPresence.location.parent.parent.parent.name",
+        "userPresence.location.parent.parent.parent.parent.apCount",
+        "userPresence.location.parent.parent.parent.parent.inferredLocationTypes{}",
+        "userPresence.location.parent.parent.parent.parent.locationId",
+        "userPresence.location.parent.parent.parent.parent.name",
+        "userPresence.location.parent.parent.parent.parent.sourceLocationId",
+        "userPresence.location.parent.parent.parent.sourceLocationId",
+        "userPresence.location.parent.parent.sourceLocationId",
+        "userPresence.location.parent.sourceLocationId",
+        "userPresence.location.sourceLocationId",
+        "userPresence.presenceEventType",
+        "userPresence.rawUserId",
+        "userPresence.timeZone",
+        "userPresence.user.deviceIds{}",
+        "userPresence.user.email",
+        "userPresence.user.firstName",
+        "userPresence.user.gender",
+        "userPresence.user.lastName",
+        "userPresence.user.mobile",
+        "userPresence.user.openRoamingUserId",
+        "userPresence.user.postalCode",
+        "userPresence.user.userId",
+        "userPresence.visitDurationMinutes",
+        "userPresence.visitId",
+        "userPresence.wasInActive",
+        "webexTelemetryUpdate.deviceInfo.deviceId",
+        "webexTelemetryUpdate.deviceInfo.displayName",
+        "webexTelemetryUpdate.deviceInfo.ipAddress",
+        "webexTelemetryUpdate.deviceInfo.macAddress",
+        "webexTelemetryUpdate.deviceInfo.orgId",
+        "webexTelemetryUpdate.deviceInfo.product",
+        "webexTelemetryUpdate.deviceInfo.serialNumber",
+        "webexTelemetryUpdate.deviceInfo.softwareVersion",
+        "webexTelemetryUpdate.deviceInfo.workspaceId",
+        "webexTelemetryUpdate.location.apCount",
+        "webexTelemetryUpdate.location.floorNumber",
+        "webexTelemetryUpdate.location.inferredLocationTypes{}",
+        "webexTelemetryUpdate.location.locationId",
+        "webexTelemetryUpdate.location.name",
+        "webexTelemetryUpdate.location.parent.apCount",
+        "webexTelemetryUpdate.location.parent.inferredLocationTypes{}",
+        "webexTelemetryUpdate.location.parent.locationId",
+        "webexTelemetryUpdate.location.parent.name",
+        "webexTelemetryUpdate.location.parent.parent.apCount",
+        "webexTelemetryUpdate.location.parent.parent.inferredLocationTypes{}",
+        "webexTelemetryUpdate.location.parent.parent.locationId",
+        "webexTelemetryUpdate.location.parent.parent.name",
+        "webexTelemetryUpdate.location.parent.parent.parent.apCount",
+        "webexTelemetryUpdate.location.parent.parent.parent.inferredLocationTypes{}",
+        "webexTelemetryUpdate.location.parent.parent.parent.locationId",
+        "webexTelemetryUpdate.location.parent.parent.parent.name",
+        "webexTelemetryUpdate.location.parent.parent.parent.parent.apCount",
+        "webexTelemetryUpdate.location.parent.parent.parent.parent.inferredLocationTypes{}",
+        "webexTelemetryUpdate.location.parent.parent.parent.parent.locationId",
+        "webexTelemetryUpdate.location.parent.parent.parent.parent.name",
+        "webexTelemetryUpdate.location.parent.parent.parent.parent.sourceLocationId",
+        "webexTelemetryUpdate.location.parent.parent.parent.sourceLocationId",
+        "webexTelemetryUpdate.location.parent.parent.sourceLocationId",
+        "webexTelemetryUpdate.location.parent.sourceLocationId",
+        "webexTelemetryUpdate.location.sourceLocationId",
+        "webexTelemetryUpdate.telemetries{}.activeCalls",
+        "webexTelemetryUpdate.telemetries{}.airQuality",
+        "webexTelemetryUpdate.telemetries{}.ambientNoise",
+        "webexTelemetryUpdate.telemetries{}.ambientTemp",
+        "webexTelemetryUpdate.telemetries{}.peopleCount",
+        "webexTelemetryUpdate.telemetries{}.presence",
+        "webexTelemetryUpdate.telemetries{}.relativeHumidity",
+        "webexTelemetryUpdate.telemetries{}.soundLevel",
+        "webexTelemetryUpdate.telemetries{}.standByState"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 24,
+      "stanzas": [
+        {
+          "line_no": 87,
+          "name": "building_resilience_environmental_health_index"
+        },
+        {
+          "line_no": 151,
+          "name": "building_resilience_humidity"
+        },
+        {
+          "line_no": 275,
+          "name": "building_resilience_temperature"
+        },
+        {
+          "line_no": 319,
+          "name": "building_resilience_webex_devices"
+        },
+        {
+          "line_no": 342,
+          "name": "building_resilience_webex_people_trend"
+        },
+        {
+          "line_no": 365,
+          "name": "building_resilience_ssid_client_associations"
+        },
+        {
+          "line_no": 390,
+          "name": "building_resilience_ssid_association_trend"
+        },
+        {
+          "line_no": 412,
+          "name": "building_resilience_user_presence_trend"
+        },
+        {
+          "line_no": 434,
+          "name": "building_resilience_device_presence_trend"
+        },
+        {
+          "line_no": 456,
+          "name": "building_resilience_room_detail"
+        },
+        {
+          "line_no": 478,
+          "name": "building_resilience_spaces_location_breakdown"
+        },
+        {
+          "line_no": 548,
+          "name": "executive_dashboard_building_domain_score"
+        },
+        {
+          "line_no": 598,
+          "name": "executive_dashboard_building_occupancy"
+        },
+        {
+          "line_no": 4471,
+          "name": "executive_dashboard_active_devices"
+        },
+        {
+          "line_no": 4494,
+          "name": "executive_dashboard_collab_devices"
+        },
+        {
+          "line_no": 4515,
+          "name": "executive_dashboard_wifi_clients"
+        },
+        {
+          "line_no": 6844,
+          "name": "building_resilience_ds_rooms"
+        },
+        {
+          "line_no": 6868,
+          "name": "building_resilience_ds_spaces_kpi_devices"
+        },
+        {
+          "line_no": 6889,
+          "name": "building_resilience_ds_spaces_kpi_ssids"
+        },
+        {
+          "line_no": 6910,
+          "name": "building_resilience_ds_spaces_kpi_users"
+        },
+        {
+          "line_no": 7414,
+          "name": "executive_dashboard_score_pipeline"
+        },
+        {
+          "line_no": 7523,
+          "name": "executive_dashboard_ds_bldg_score"
+        },
+        {
+          "line_no": 7572,
+          "name": "executive_dashboard_ds_building_occupancy"
+        },
+        {
+          "line_no": 10033,
+          "name": "building_resilience_ds_room_detail"
+        }
+      ],
+      "status": "pass"
+    },
+    "cisco:wsa:l4tm": {
+      "elapsed_ms": 2283,
+      "fields": [
+        "signature_id"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 2,
+      "stanzas": [
+        {
+          "line_no": 2310,
+          "name": "security_resilience_web_security_events"
+        },
+        {
+          "line_no": 2330,
+          "name": "security_resilience_web_threat_count"
+        }
+      ],
+      "status": "pass"
+    },
+    "cisco:wsa:squid": {
+      "elapsed_ms": 2248,
+      "fields": [
+        "CatId",
+        "ac",
+        "accountStatusPolicy",
+        "aid",
+        "asid",
+        "campuscode",
+        "category",
+        "ch",
+        "channel",
+        "cid",
+        "cms_redirect",
+        "continue",
+        "creative",
+        "crumb",
+        "de",
+        "device",
+        "emr",
+        "encoding",
+        "flowEntry",
+        "flowName",
+        "followup",
+        "gclick",
+        "gclid",
+        "hl",
+        "hsa_acc",
+        "hsa_ad",
+        "hsa_cam",
+        "hsa_grp",
+        "hsa_net",
+        "hsa_src",
+        "hsa_tgt",
+        "hsa_ver",
+        "keyword",
+        "keywords",
+        "l",
+        "locale",
+        "ls",
+        "match_type",
+        "matchtype",
+        "mediumofinquiry",
+        "message",
+        "mh",
+        "milestone",
+        "mip",
+        "mm",
+        "mn",
+        "ms",
+        "mt",
+        "mv",
+        "mvi",
+        "network",
+        "nw",
+        "o",
+        "openid_assoc_handle",
+        "openid_claimed_id",
+        "openid_identity",
+        "openid_mode",
+        "openid_ns",
+        "openid_ns_pape",
+        "openid_pape_max_auth_age",
+        "openid_return_to",
+        "osid",
+        "osname",
+        "pageId",
+        "passive",
+        "path",
+        "pl",
+        "q",
+        "qo",
+        "rch",
+        "rd",
+        "redirect",
+        "ref",
+        "rid",
+        "school_ad_platform",
+        "school_campus",
+        "school_channel",
+        "school_medium",
+        "school_program",
+        "school_source",
+        "service",
+        "shardbypass",
+        "showRmrMe",
+        "signature_id",
+        "static",
+        "uilel",
+        "url",
+        "utm_campaign",
+        "utm_content",
+        "utm_medium",
+        "utm_source",
+        "utm_term",
+        "v",
+        "vendoraffliatedid",
+        "ver",
+        "visit_id",
+        "zcid"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 2,
+      "stanzas": [
+        {
+          "line_no": 2310,
+          "name": "security_resilience_web_security_events"
+        },
+        {
+          "line_no": 2330,
+          "name": "security_resilience_web_threat_count"
+        }
+      ],
+      "status": "pass"
+    },
+    "cisco:xdr:incidents": {
+      "elapsed_ms": 2255,
+      "fields": [
+        "assignees{}",
+        "categories{}",
+        "client_id",
+        "confidence",
+        "created",
+        "description",
+        "detection_sources{}",
+        "discovery_method",
+        "enrichment_status",
+        "external_ids{}",
+        "external_references{}.description",
+        "external_references{}.external_id",
+        "external_references{}.source_name",
+        "external_references{}.url",
+        "groups{}",
+        "id",
+        "incident_source",
+        "incident_time.closed",
+        "incident_time.contained",
+        "incident_time.discovered",
+        "incident_time.opened",
+        "incident_time.reported",
+        "meta.ai_description",
+        "modified",
+        "owner",
+        "owner_id",
+        "promotion_method",
+        "schema_version",
+        "scores.asset",
+        "scores.global",
+        "scores.ml_score",
+        "scores.ttp",
+        "severity",
+        "short_description",
+        "signature_id",
+        "source_uri",
+        "status",
+        "tactics{}",
+        "techniques{}",
+        "timestamp",
+        "title",
+        "tlp",
+        "type"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 8,
+      "stanzas": [
+        {
+          "line_no": 1089,
+          "name": "executive_dashboard_xdr_incident_count"
+        },
+        {
+          "line_no": 2349,
+          "name": "security_resilience_xdr_by_severity"
+        },
+        {
+          "line_no": 2368,
+          "name": "security_resilience_xdr_incident_detail"
+        },
+        {
+          "line_no": 7774,
+          "name": "executive_dashboard_ds_xdr_incidents"
+        },
+        {
+          "line_no": 9181,
+          "name": "security_resilience_ds_xdr_by_severity"
+        },
+        {
+          "line_no": 9201,
+          "name": "security_resilience_ds_xdr_detail"
+        },
+        {
+          "line_no": 9480,
+          "name": "overview_topology_overview"
+        },
+        {
+          "line_no": 9580,
+          "name": "overview_top_incident_volume"
+        }
+      ],
+      "status": "pass"
+    },
+    "cisco:xdr:incidents-summary": {
+      "elapsed_ms": 2330,
+      "fields": [
+        "assignees{}",
+        "categories{}",
+        "context.asset_properties{}.properties{}.name",
+        "context.asset_properties{}.properties{}.value",
+        "context.attack_patterns{}.abstraction_level",
+        "context.attack_patterns{}.created",
+        "context.attack_patterns{}.description",
+        "context.attack_patterns{}.external_ids{}",
+        "context.attack_patterns{}.external_references{}.description",
+        "context.attack_patterns{}.external_references{}.external_id",
+        "context.attack_patterns{}.external_references{}.source_name",
+        "context.attack_patterns{}.external_references{}.url",
+        "context.attack_patterns{}.groups{}",
+        "context.attack_patterns{}.id",
+        "context.attack_patterns{}.kill_chain_phases{}.kill_chain_name",
+        "context.attack_patterns{}.kill_chain_phases{}.phase_name",
+        "context.attack_patterns{}.modified",
+        "context.attack_patterns{}.owner",
+        "context.attack_patterns{}.schema_version",
+        "context.attack_patterns{}.short_description",
+        "context.attack_patterns{}.source",
+        "context.attack_patterns{}.source_uri",
+        "context.attack_patterns{}.timestamp",
+        "context.attack_patterns{}.title",
+        "context.attack_patterns{}.tlp",
+        "context.attack_patterns{}.type",
+        "context.attack_patterns{}.x_mitre_contributors{}",
+        "context.attack_patterns{}.x_mitre_platforms{}",
+        "context.indicators{}.client_id",
+        "context.indicators{}.created",
+        "context.indicators{}.description",
+        "context.indicators{}.external_ids{}",
+        "context.indicators{}.groups{}",
+        "context.indicators{}.id",
+        "context.indicators{}.modified",
+        "context.indicators{}.owner",
+        "context.indicators{}.producer",
+        "context.indicators{}.schema_version",
+        "context.indicators{}.source",
+        "context.indicators{}.source_uri",
+        "context.indicators{}.tags{}",
+        "context.indicators{}.timestamp",
+        "context.indicators{}.title",
+        "context.indicators{}.tlp",
+        "context.indicators{}.type",
+        "context.indicators{}.valid_time.end_time",
+        "context.indicators{}.valid_time.start_time",
+        "context.relationships{}.client_id",
+        "context.relationships{}.created",
+        "context.relationships{}.external_ids{}",
+        "context.relationships{}.groups{}",
+        "context.relationships{}.id",
+        "context.relationships{}.modified",
+        "context.relationships{}.owner",
+        "context.relationships{}.relationship_type",
+        "context.relationships{}.schema_version",
+        "context.relationships{}.source",
+        "context.relationships{}.source_ref",
+        "context.relationships{}.target_ref",
+        "context.relationships{}.timestamp",
+        "context.relationships{}.tlp",
+        "context.relationships{}.type",
+        "context.sightings{}.created",
+        "context.sightings{}.description",
+        "context.sightings{}.external_ids{}",
+        "context.sightings{}.external_references{}.source_name",
+        "context.sightings{}.internal",
+        "context.sightings{}.modified",
+        "context.sightings{}.observables{}.type",
+        "context.sightings{}.observables{}.value",
+        "context.sightings{}.relations{}.origin",
+        "context.sightings{}.relations{}.related.type",
+        "context.sightings{}.relations{}.related.value",
+        "context.sightings{}.relations{}.relation",
+        "context.sightings{}.relations{}.relation_info.actions{}.applies_to",
+        "context.sightings{}.relations{}.relation_info.actions{}.source",
+        "context.sightings{}.relations{}.relation_info.actions{}.started_at",
+        "context.sightings{}.relations{}.relation_info.actions{}.status",
+        "context.sightings{}.relations{}.relation_info.actions{}.type",
+        "context.sightings{}.relations{}.relation_info.direction",
+        "context.sightings{}.relations{}.source.type",
+        "context.sightings{}.relations{}.source.value",
+        "context.sightings{}.resolution",
+        "context.sightings{}.schema_version",
+        "context.sightings{}.short_description",
+        "context.sightings{}.source",
+        "context.sightings{}.source_uri",
+        "context.sightings{}.targets{}.observables{}.type",
+        "context.sightings{}.targets{}.observables{}.value",
+        "context.sightings{}.targets{}.observed_time.end_time",
+        "context.sightings{}.targets{}.observed_time.start_time",
+        "context.sightings{}.targets{}.type",
+        "context.sightings{}.title",
+        "context.sightings{}.type",
+        "created",
+        "description",
+        "detection_sources{}",
+        "discovery_method",
+        "enrichment_status",
+        "external_ids{}",
+        "external_references{}.description",
+        "external_references{}.external_id",
+        "external_references{}.source_name",
+        "external_references{}.url",
+        "id",
+        "incident_time.discovered",
+        "incident_time.opened",
+        "incident_time.reported",
+        "meta.ai_description",
+        "modified",
+        "promotion_method",
+        "schema_version",
+        "severity",
+        "short_description",
+        "signature_id",
+        "source_uri",
+        "status",
+        "timestamp",
+        "title",
+        "tlp",
+        "type"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 8,
+      "stanzas": [
+        {
+          "line_no": 1089,
+          "name": "executive_dashboard_xdr_incident_count"
+        },
+        {
+          "line_no": 2349,
+          "name": "security_resilience_xdr_by_severity"
+        },
+        {
+          "line_no": 2368,
+          "name": "security_resilience_xdr_incident_detail"
+        },
+        {
+          "line_no": 7774,
+          "name": "executive_dashboard_ds_xdr_incidents"
+        },
+        {
+          "line_no": 9181,
+          "name": "security_resilience_ds_xdr_by_severity"
+        },
+        {
+          "line_no": 9201,
+          "name": "security_resilience_ds_xdr_detail"
+        },
+        {
+          "line_no": 9480,
+          "name": "overview_topology_overview"
+        },
+        {
+          "line_no": 9580,
+          "name": "overview_top_incident_volume"
+        }
+      ],
+      "status": "pass"
+    },
+    "f5:bigip:management:device:icontrol": {
+      "elapsed_ms": 2156,
+      "fields": [],
+      "note": "no events in -7d..now",
+      "row_count": 0,
+      "stanza_count": 1,
+      "stanzas": [
+        {
+          "line_no": 6652,
+          "name": "asset_inventory_build_lookup"
+        }
+      ],
+      "status": "empty"
+    },
+    "meraki:audit": {
+      "elapsed_ms": 2289,
+      "fields": [
+        "adminEmail",
+        "adminId",
+        "adminName",
+        "label",
+        "networkId",
+        "networkName",
+        "newValue",
+        "oldValue",
+        "organizationId",
+        "page",
+        "ts"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 1,
+      "stanzas": [
+        {
+          "line_no": 1203,
+          "name": "it_critical_systems_configuration_change_trend"
+        }
+      ],
+      "status": "pass"
+    },
+    "meraki:devicesavailabilitieschangehistory": {
+      "elapsed_ms": 2251,
+      "fields": [
+        "category",
+        "details.new{}.name",
+        "details.new{}.value",
+        "details.old{}.name",
+        "details.old{}.value",
+        "device.model",
+        "device.name",
+        "device.productType",
+        "device.serial",
+        "device.tags{}",
+        "network.id",
+        "network.name",
+        "network.tags{}",
+        "network.url",
+        "organizationId",
+        "ts"
+      ],
+      "note": "",
+      "row_count": 1,
+      "stanza_count": 1,
+      "stanzas": [
+        {
+          "line_no": 6652,
+          "name": "asset_inventory_build_lookup"
+        }
+      ],
+      "status": "pass"
+    },
+    "meraki:devicesuplinkslossandlatency": {
+      "elapsed_ms": 2162,
+      "fields": [],
+      "note": "no events in -7d..now",
+      "row_count": 0,
+      "stanza_count": 6,
+      "stanzas": [
+        {
+          "line_no": 1625,
+          "name": "it_critical_systems_wan_bandwidth_detail"
+        },
+        {
+          "line_no": 2392,
+          "name": "user_experience_wan_bandwidth_table"
+        },
+        {
+          "line_no": 2414,
+          "name": "user_experience_bandwidth_trend"
+        },
+        {
+          "line_no": 2543,
+          "name": "user_experience_wan_latency_by_uplink"
+        },
+        {
+          "line_no": 8397,
+          "name": "it_critical_systems_ds_wan_bandwidth_detail"
+        },
+        {
+          "line_no": 9308,
+          "name": "user_experience_ds_bandwidth"
+        }
+      ],
+      "status": "empty"
+    },
+    "meraki:sensorreadingshistory": {
+      "elapsed_ms": 2111,
+      "fields": [],
+      "note": "no events in -7d..now",
+      "row_count": 0,
+      "stanza_count": 9,
+      "stanzas": [
+        {
+          "line_no": 1,
+          "name": "building_resilience_co2_level"
+        },
+        {
+          "line_no": 64,
+          "name": "building_resilience_door_alerts"
+        },
+        {
+          "line_no": 87,
+          "name": "building_resilience_environmental_health_index"
+        },
+        {
+          "line_no": 111,
+          "name": "building_resilience_environmental_trend_detail"
+        },
+        {
+          "line_no": 130,
+          "name": "building_resilience_fire_safety_status"
+        },
+        {
+          "line_no": 151,
+          "name": "building_resilience_humidity"
+        },
+        {
+          "line_no": 253,
+          "name": "building_resilience_sensor_detail"
+        },
+        {
+          "line_no": 275,
+          "name": "building_resilience_temperature"
+        },
+        {
+          "line_no": 298,
+          "name": "building_resilience_water_leak_detection"
+        }
+      ],
+      "status": "empty"
+    },
+    "ms:defender:endpoint:alerts": {
+      "elapsed_ms": 2078,
+      "fields": [],
+      "note": "no events in -7d..now",
+      "row_count": 0,
+      "stanza_count": 2,
+      "stanzas": [
+        {
+          "line_no": 1781,
+          "name": "security_resilience_endpoint_alert_detail"
+        },
+        {
+          "line_no": 8696,
+          "name": "security_resilience_ds_endpoint_detail"
+        }
+      ],
+      "status": "empty"
+    },
+    "oncall:incidents": {
+      "elapsed_ms": 2050,
+      "fields": [],
+      "note": "no events in -7d..now",
+      "row_count": 0,
+      "stanza_count": 1,
+      "stanzas": [
+        {
+          "line_no": 6400,
+          "name": "teuc_5_9_51_on_call_incident_routing"
+        }
+      ],
+      "status": "empty"
+    },
+    "thousandeyes:alerts": {
+      "elapsed_ms": 1897,
+      "fields": [],
+      "note": "no events in -7d..now",
+      "row_count": 0,
+      "stanza_count": 4,
+      "stanzas": [
+        {
+          "line_no": 5725,
+          "name": "teuc_5_9_19_isp_performance_degradation_alerts"
+        },
+        {
+          "line_no": 6296,
+          "name": "teuc_5_9_46_alert_severity_distribution"
+        },
+        {
+          "line_no": 6316,
+          "name": "teuc_5_9_47_alert_timeline_trending"
+        },
+        {
+          "line_no": 6466,
+          "name": "teuc_5_9_54_mttr_reduction_via_network_vs_application_isolation"
+        }
+      ],
+      "status": "empty"
+    },
+    "thousandeyes:traces": {
+      "elapsed_ms": 1825,
+      "fields": [],
+      "note": "no events in -7d..now",
+      "row_count": 0,
+      "stanza_count": 1,
+      "stanzas": [
+        {
+          "line_no": 6421,
+          "name": "teuc_5_9_52_trace_span_analysis"
+        }
+      ],
+      "status": "empty"
+    }
+  }
+}

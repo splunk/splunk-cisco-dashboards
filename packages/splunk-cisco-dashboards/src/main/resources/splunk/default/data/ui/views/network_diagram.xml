@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<dashboard version="1.1" hideEdit="true" hideExport="true" hideTitle="true"
+           script="network_diagram_bootstrap.js">
+    <label>Network Diagram</label>
+    <row>
+        <panel>
+            <html>
+                <div id="scan-root"></div>
+            </html>
+        </panel>
+    </row>
+</dashboard>

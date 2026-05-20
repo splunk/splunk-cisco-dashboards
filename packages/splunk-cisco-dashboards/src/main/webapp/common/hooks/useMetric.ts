@@ -39,6 +39,98 @@ export interface MetricThresholds {
     direction: 'higher_is_better' | 'lower_is_better';
 }
 
+/**
+ * Single row in the THRESHOLDS section of the per-tile info popover.
+ * Authored by `deriveThresholdLines` from the same `MetricThresholds`
+ * the runtime uses to colour the headline, so the popover is
+ * guaranteed to match the colour the user sees on the tile — there's
+ * no second source of truth that could drift.
+ */
+export interface ThresholdLine {
+    tone: MetricStatus;
+    /** Short status label, e.g. "Healthy", "Warning", "Critical". */
+    label: string;
+    /** Numeric range, e.g. "≥ 95%", "80% – < 95%", "< 80%". */
+    value: string;
+}
+
+/**
+ * Format a threshold number for display. Adds locale grouping for
+ * integers (so 25,000 doesn't read as 25000) and trims a single
+ * decimal otherwise. The optional `unit` is appended verbatim.
+ */
+export const formatThresholdNumber = (n: number, unit?: string): string => {
+    if (!Number.isFinite(n)) return '';
+    const body = Number.isInteger(n) ? n.toLocaleString() : n.toFixed(1);
+    return unit ? `${body}${unit}` : body;
+};
+
+/**
+ * Derive the human-readable threshold rows from a `MetricThresholds`
+ * config. Returns `undefined` when the metric has no numeric
+ * thresholds (the caller should fall back to a qualitative
+ * `thresholdNote` instead).
+ *
+ * The sentence ranges mirror `computeStatus` exactly:
+ *
+ *   higher_is_better: value < critical → critical
+ *                     critical ≤ value < warning → warning
+ *                     value ≥ warning → healthy
+ *   lower_is_better:  value > critical → critical
+ *                     warning < value ≤ critical → warning
+ *                     value ≤ warning → healthy
+ *
+ * If only one of `warning` / `critical` is set the function emits a
+ * 2-row variant rather than fabricating a fictional middle band.
+ */
+export const deriveThresholdLines = (
+    thresholds?: MetricThresholds,
+    unit?: string
+): ThresholdLine[] | undefined => {
+    if (!thresholds) return undefined;
+    const { warning, critical, direction } = thresholds;
+    if (warning === undefined && critical === undefined) return undefined;
+    const fmt = (n: number) => formatThresholdNumber(n, unit);
+    const lines: ThresholdLine[] = [];
+    if (direction === 'higher_is_better') {
+        if (warning !== undefined) {
+            lines.push({ tone: 'healthy', label: 'Healthy', value: `≥ ${fmt(warning)}` });
+            if (critical !== undefined) {
+                lines.push({
+                    tone: 'warning',
+                    label: 'Warning',
+                    value: `${fmt(critical)} – < ${fmt(warning)}`,
+                });
+                lines.push({ tone: 'critical', label: 'Critical', value: `< ${fmt(critical)}` });
+            } else {
+                lines.push({ tone: 'warning', label: 'Warning', value: `< ${fmt(warning)}` });
+            }
+        } else if (critical !== undefined) {
+            lines.push({ tone: 'healthy', label: 'Healthy', value: `≥ ${fmt(critical)}` });
+            lines.push({ tone: 'critical', label: 'Critical', value: `< ${fmt(critical)}` });
+        }
+        return lines;
+    }
+    // lower_is_better
+    if (warning !== undefined) {
+        lines.push({ tone: 'healthy', label: 'Healthy', value: `≤ ${fmt(warning)}` });
+        if (critical !== undefined) {
+            lines.push({
+                tone: 'warning',
+                label: 'Warning',
+                value: `> ${fmt(warning)} – ${fmt(critical)}`,
+            });
+            lines.push({ tone: 'critical', label: 'Critical', value: `> ${fmt(critical)}` });
+        } else {
+            lines.push({ tone: 'warning', label: 'Warning', value: `> ${fmt(warning)}` });
+        }
+    } else if (critical !== undefined) {
+        lines.push({ tone: 'healthy', label: 'Healthy', value: `≤ ${fmt(critical)}` });
+        lines.push({ tone: 'critical', label: 'Critical', value: `> ${fmt(critical)}` });
+    }
+    return lines;
+};
+
 export interface MetricConfig {
     id: string;
     section: SectionId;
@@ -67,15 +159,66 @@ export interface MetricConfig {
     /** Optional explicit signed % change field; if missing, auto-computed. */
     changeField?: string;
     /**
+     * When set, the headline string is pulled from this column instead
+     * of the numeric `valueField`. Status / threshold / change still
+     * use `valueField`. Lets a single search drive a "12 of 18 available"
+     * style headline (string broadcast via `eventstats latest` onto every
+     * row of a timechart) while keeping numeric thresholding intact.
+     */
+    displayField?: string;
+    /**
+     * When set, the sparkline series is pulled from this column instead
+     * of `valueField`. Used by tiles whose `valueField` is a broadcast
+     * window-total (so reading it per row would produce a flat line) —
+     * the per-bucket trend lives in a separate column.
+     */
+    sparkDataField?: string;
+    /**
+     * When set, the dashed comparison overlay reads this column from
+     * the same rows as the primary series. Use this for a baseline
+     * (rolling-average) overlay computed inline via `eventstats avg`
+     * — no second dispatch needed, no shifted-time-range guesswork.
+     * Mutually exclusive with `comparePeriod`: if both are set, this
+     * field wins and the previous-period dispatch is skipped.
+     */
+    baselineField?: string;
+    /**
+     * Tooltip label for the dashed comparison overlay. Defaults to
+     * `'Prev'` for {@link comparePeriod}; baseline tiles should set
+     * this to `'Avg'` so the hover popover reads naturally.
+     */
+    overlayLabel?: string;
+    /**
      * When true the hook also dispatches a second search shifted back
      * by `range.spanSeconds` to populate the dashed previous-period
      * line on the sparkline. Only meaningful for time-series searches
-     * (multiple rows). Defaults to false.
+     * (multiple rows). Defaults to false. Ignored when
+     * {@link baselineField} is set.
      */
     comparePeriod?: boolean;
     unit?: string;
     color?: string;
     thresholds?: MetricThresholds;
+    /**
+     * Optional supplemental sentence shown beneath the auto-derived
+     * threshold rows in the per-tile info popover. Use it to:
+     *
+     *   1. Explain a unit mismatch — e.g. the headline shows "X of Y
+     *      sites" but the numeric threshold is on a percentage; the
+     *      auto-derived row says "≥ 99.5%" and the note clarifies
+     *      that's "per-site availability, not total count".
+     *   2. Explain a qualitative threshold for tiles that don't have
+     *      a fixed numeric cutoff (e.g. "Active devices" — watch the
+     *      day-over-day trend, not a hardcoded number).
+     *   3. Cite the source of the threshold (Catalyst Center default,
+     *      Cisco hardening guide, customer SLA, etc.).
+     *
+     * When the metric has no `thresholds` field at all, this note is
+     * the only thing rendered in the THRESHOLDS section, so for those
+     * tiles always set it — every Cisco-tagged tile should answer
+     * "what counts as good?" for the operator.
+     */
+    thresholdNote?: string;
     /**
      * When true, a successful search that returns zero rows renders an
      * honest "no data" state (value = 0, source = 'live') instead of
@@ -137,6 +280,14 @@ export type NoDataReason =
 
 export interface MetricResult {
     value: number;
+    /**
+     * Optional string override for the headline. Populated when the
+     * source search emits a `displayField` column (e.g. "12 of 18
+     * available" broadcast onto every row). When undefined, callers
+     * fall back to formatting `value` themselves. Status / threshold
+     * still derive from the numeric `value`.
+     */
+    displayValue?: string;
     change: number;
     sparkData: number[];
     /**
@@ -410,14 +561,21 @@ export const useMetric = (
         });
 
         const previousRange = computePreviousRange(range);
-        const previousPromise = cfg.comparePeriod
-            ? runSearch({
-                  spl,
-                  earliestTime: previousRange.earliest,
-                  latestTime: previousRange.latest,
-                  tag: `${cfg.id}__prev`,
-              }).catch(() => ({ results: [] as Array<Record<string, unknown>> }))
-            : Promise.resolve({ results: [] as Array<Record<string, unknown>> });
+        // `baselineField` reads the overlay from the live-search rows
+        // (a column emitted by `eventstats avg` in the searchbase SPL),
+        // so we never need a second time-shifted dispatch when it's
+        // set. This is the cheaper + more correct path for tiles that
+        // want a "vs. rolling average" overlay rather than a strict
+        // "vs. previous period" overlay.
+        const previousPromise =
+            !cfg.baselineField && cfg.comparePeriod
+                ? runSearch({
+                      spl,
+                      earliestTime: previousRange.earliest,
+                      latestTime: previousRange.latest,
+                      tag: `${cfg.id}__prev`,
+                  }).catch(() => ({ results: [] as Array<Record<string, unknown>> }))
+                : Promise.resolve({ results: [] as Array<Record<string, unknown>> });
 
         const buildNoData = (reason: NoDataReason): MetricResult => ({
             value: Number.NaN,
@@ -584,7 +742,15 @@ export const useMetric = (
                 // data so the trendline still has visual interest.
                 const isSingleRow = liveSeries.length < 2;
                 const value = rowToNumber(latestValueRow[valueField]);
-                const sparkData = isSingleRow ? buildMockSparkline(cfg) : liveSeries;
+                // `sparkDataField` lets a tile keep `valueField` pointed
+                // at a broadcast window-total (so the headline number is
+                // stable) while sourcing the per-bucket sparkline from a
+                // separate column - typical pattern for "current value
+                // big number + per-hour trend" tiles. Falls back to
+                // `valueField` for the existing tile contract.
+                const sparkField = cfg.sparkDataField ?? valueField;
+                const sparkSeries = rows.map((r) => rowToNumber(r[sparkField]));
+                const sparkData = isSingleRow ? buildMockSparkline(cfg) : sparkSeries;
                 const sparkTimestamps = isSingleRow
                     ? []
                     : rows
@@ -600,13 +766,39 @@ export const useMetric = (
                     ? Math.round(((value - baseline) / baseline) * 100)
                     : 0;
 
+                // Comparison overlay. Two mutually-exclusive sources:
+                //   1. `baselineField` - read from the live-search rows
+                //      (e.g. `baseline_pct` broadcast via `eventstats avg`).
+                //   2. `comparePeriod` - read from the previous-period
+                //      dispatch result, indexed by the same `valueField`.
+                // The Sparkline component already resamples to data.length
+                // so a flat broadcast baseline renders as a clean dashed
+                // line through the avg.
                 const prevRows = (prevRes?.results ?? []) as Array<Record<string, unknown>>;
-                const previousSparkData = isSingleRow
+                const previousSparkData = cfg.baselineField
+                    ? rows.map((r) => rowToNumber(r[cfg.baselineField as string]))
+                    : isSingleRow
                     ? []
                     : prevRows.map((r) => rowToNumber(r[valueField]));
 
+                // Optional string headline override. Read from the
+                // latest row only - a `displayField` is always
+                // broadcast-constant (via `eventstats latest`) so any
+                // row would do, but the latest row matches the
+                // `value` source.
+                let displayValue: string | undefined;
+                if (cfg.displayField) {
+                    const raw = latestValueRow[cfg.displayField];
+                    if (typeof raw === 'string' && raw.trim().length > 0) {
+                        displayValue = raw.trim();
+                    } else if (raw !== null && raw !== undefined) {
+                        displayValue = String(raw);
+                    }
+                }
+
                 setResult({
                     value,
+                    displayValue,
                     change,
                     sparkData,
                     sparkTimestamps:
@@ -653,6 +845,18 @@ export interface KpiConfig {
     valueField?: string;
     /** Mock fallback when no search wired. */
     mockValue: string;
+    /**
+     * Body text for the info tooltip ("?" icon) on the KPI card. Kept
+     * optional so tiles without a description simply omit the icon.
+     */
+    description?: string;
+    /**
+     * Qualitative "what counts as good?" sentence rendered in the
+     * THRESHOLDS section of the info popover. KPI cards are string-
+     * valued (site labels, etc.) and have no numeric threshold, so
+     * they describe the *operational reading* instead.
+     */
+    thresholdNote?: string;
     /**
      * Same semantics as {@link MetricConfig.suppressMockOnEmpty}: when
      * true, an empty/erroring search renders "—" instead of the
@@ -832,6 +1036,217 @@ export const useKpi = (
                 });
                 setResult(cfg.suppressMockOnEmpty ? buildKpiNoData('error') : mock);
             });
+        return () => {
+            cancelled = true;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [cfg, range.earliest, range.latest, refreshToken]);
+
+    return result;
+};
+
+// ---------------------------------------------------------------------------
+// useTableData — categorical / row-shaped tile (default_viz = splunk.table)
+// ---------------------------------------------------------------------------
+//
+// MetricItem expects a single number + a sparkline. A `stats count by name`
+// distribution doesn't fit that contract — the `count` column has N category
+// rows, not N time buckets, and useMetric's auto-detect ends up plotting
+// row-order as if it were a time axis (this is the "92 with min=70 / max=99
+// bubble pretending to be a sparkline" you see when a table-shaped search
+// is wired into a metric tile). useTableData skips all that: it dispatches
+// the same SPL useMetric would, then exposes the raw rows + a derived
+// column order so TableTile can render an honest categorical table.
+
+export interface TableDataConfig {
+    id: string;
+    savedSearch?: string;
+    spl?: string;
+    /**
+     * Maximum rows materialised into the tile. oneShot can return up
+     * to 1,000 rows; the executive table tile should cap well before
+     * that to keep DOM weight reasonable. Defaults to 50.
+     */
+    rowLimit?: number;
+    /**
+     * Mirrors {@link MetricConfig.suppressMockOnEmpty} so the same
+     * MetricConfig can be threaded through both hooks. Tables don't
+     * have a mock fallback, so this is currently informational only —
+     * a zero-row result always renders the no-data state.
+     */
+    suppressMockOnEmpty?: boolean;
+}
+
+export interface TableDataResult {
+    rows: Array<Record<string, unknown>>;
+    /** Visible (non-internal) field names in SPL emission order. */
+    columns: string[];
+    /**
+     * Row count BEFORE the {@link TableDataConfig.rowLimit} cap. Lets
+     * the tile show an honest "5 of 23 rows" caption — without this
+     * the cap collapses both numbers to the same value and the user
+     * can't tell whether the search returned more than the tile shows.
+     */
+    totalRowCount: number;
+    source: DataSource;
+    spl: string;
+    resolvedSavedSearch: string;
+    noDataReason?: NoDataReason;
+    rangeLabel?: string;
+}
+
+const DEFAULT_TABLE_ROW_LIMIT = 50;
+
+/**
+ * Predicate used by the Overview wrapper to decide whether to render
+ * a metric tile (sparkline) or a table tile. Centralised so both the
+ * sparkline mapper and this hook agree on what counts as "table".
+ */
+export const isTableViz = (splunkViz: string | undefined): boolean => {
+    if (typeof splunkViz !== 'string') return false;
+    return splunkViz.trim().toLowerCase() === 'splunk.table';
+};
+
+/**
+ * Predicate that selects the BarBreakdownTile renderer instead of
+ * the default sparkline tile. Triggered when the searchbase stanza
+ * declares `default_viz = splunk.bar` — i.e. the search emits a
+ * categorical (non-temporal) `<dimension>, <count>` shape and
+ * should render as a horizontal bar list inside the same tile slot.
+ *
+ * Distinct from `isTableViz`: tables paint a generic multi-column
+ * grid, bars paint a single-series proportional visualisation with
+ * a sum headline. Both reuse `useTableData` for dispatch since the
+ * row shape is the same.
+ */
+export const isBarBreakdownViz = (splunkViz: string | undefined): boolean => {
+    if (typeof splunkViz !== 'string') return false;
+    return splunkViz.trim().toLowerCase() === 'splunk.bar';
+};
+
+export const useTableData = (
+    cfg: TableDataConfig,
+    range: TimeRange,
+    refreshToken: number
+): TableDataResult => {
+    const spl = resolveMetricSpl(cfg);
+    const savedSearchName = cfg.savedSearch ?? '';
+    const rowLimit = Math.max(
+        1,
+        Math.min(cfg.rowLimit ?? DEFAULT_TABLE_ROW_LIMIT, 1000)
+    );
+
+    const [result, setResult] = useState<TableDataResult>(() => ({
+        rows: [],
+        columns: [],
+        totalRowCount: 0,
+        source: 'mock',
+        spl,
+        resolvedSavedSearch: savedSearchName,
+    }));
+
+    useEffect(() => {
+        const fresh: TableDataResult = {
+            rows: [],
+            columns: [],
+            totalRowCount: 0,
+            source: 'mock',
+            spl,
+            resolvedSavedSearch: savedSearchName,
+        };
+        if (!spl) {
+            setResult(fresh);
+            return undefined;
+        }
+        let cancelled = false;
+        setResult({ ...fresh, source: 'loading' });
+
+        const buildNoData = (reason: NoDataReason): TableDataResult => ({
+            rows: [],
+            columns: [],
+            totalRowCount: 0,
+            source: 'live',
+            spl,
+            resolvedSavedSearch: savedSearchName,
+            noDataReason: reason,
+            rangeLabel: range.label,
+        });
+
+        debugLog(cfg.id, 'table dispatching', {
+            spl,
+            earliest: range.earliest,
+            latest: range.latest,
+            label: range.label,
+            rowLimit,
+        });
+
+        runSearch({
+            spl,
+            earliestTime: range.earliest,
+            latestTime: range.latest,
+            tag: cfg.id,
+        })
+            .then((res) => {
+                if (cancelled) return;
+                const allRows = (res?.results ?? []) as Array<
+                    Record<string, unknown>
+                >;
+                if (allRows.length === 0) {
+                    debugLog(cfg.id, 'table no rows', { rangeLabel: range.label });
+                    setResult(buildNoData('empty_rows'));
+                    return;
+                }
+                // Walk every row's keys to build a stable, SPL-order
+                // column list. We can't trust `Object.keys(rows[0])`
+                // alone because `| timechart` (and other commands)
+                // omit a column from rows whose bucket had nothing —
+                // a sparse first row would silently drop columns the
+                // user actually cares about.
+                const seenKeys = new Set<string>();
+                const columns: string[] = [];
+                for (const row of allRows) {
+                    for (const key of Object.keys(row)) {
+                        // Splunk's leading-underscore fields (_time,
+                        // _span, _raw, _bkt, …) are noise in a
+                        // categorical tile — skip them by convention.
+                        if (key.startsWith('_')) continue;
+                        if (seenKeys.has(key)) continue;
+                        seenKeys.add(key);
+                        columns.push(key);
+                    }
+                }
+                if (columns.length === 0) {
+                    debugLog(cfg.id, 'table rows had only internal fields', {
+                        rowCount: allRows.length,
+                        firstRowKeys: Object.keys(allRows[0] ?? {}),
+                    });
+                    setResult(buildNoData('no_numeric_column'));
+                    return;
+                }
+                debugLog(cfg.id, 'table rendering', {
+                    rowCount: allRows.length,
+                    columnCount: columns.length,
+                    columns,
+                });
+                setResult({
+                    rows: allRows.slice(0, rowLimit),
+                    columns,
+                    totalRowCount: allRows.length,
+                    source: 'live',
+                    spl,
+                    resolvedSavedSearch: savedSearchName,
+                    rangeLabel: range.label,
+                });
+            })
+            .catch((err) => {
+                if (cancelled) return;
+                debugLog(cfg.id, 'table dispatch threw', {
+                    error: err instanceof Error ? err.message : String(err),
+                    spl,
+                });
+                setResult(buildNoData('error'));
+            });
+
         return () => {
             cancelled = true;
         };

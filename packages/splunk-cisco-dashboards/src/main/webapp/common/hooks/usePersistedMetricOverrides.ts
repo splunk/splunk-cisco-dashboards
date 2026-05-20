@@ -15,13 +15,34 @@
  *     v: 1,
  *     overrides: {
  *       "<tileId>": {
- *         savedSearch: string,    // searchbase search_name to resolve
- *         label?: string,         // optional friendly label override
- *         valueField?: string,    // optional field to read as the value
- *         description?: string,   // optional info-tooltip override
+ *         savedSearch: string,         // searchbase search_name to resolve
+ *         label?: string,              // optional friendly label override
+ *         valueField?: string,         // optional field to read as the value
+ *         description?: string,        // optional info-tooltip override
+ *         thresholdWarning?: number,   // optional override for threshold.warning
+ *         thresholdCritical?: number,  // optional override for threshold.critical
+ *         thresholdDirection?: 'higher_is_better' | 'lower_is_better',
+ *         vizOverride?: 'area'|'line'|'column'|'bar'|'singlevalue', // Builds 1174 / 1187
+ *         hidePeak?: true,             // Build 1202 — suppress peak callout
+ *         hideDelta?: true,            // Build 1202 — suppress delta pill
+ *         hideOverlay?: true,          // Build 1203 — suppress previous-period dashed overlay
  *       }
  *     }
  *   }
+ *
+ * Threshold storage rules (Build 97):
+ *   • Only fields that differ from the tile's static `MetricThresholds`
+ *     default are persisted. The picker form passes the tile's
+ *     `defaultThresholds` through `KpiPickerContext` so it can omit
+ *     redundant values at apply-time. This keeps the storage payload
+ *     small and makes "Reset to default" trivial — clearing a
+ *     threshold field from the override is identical to falling back
+ *     to the static default at runtime.
+ *   • The runtime merge lives in `applyOverride()` in
+ *     `pages/overview/index.tsx`: any override field that's set wins
+ *     over the static default; unset fields fall through. So a
+ *     partial override (e.g. only `thresholdWarning`) keeps the
+ *     existing critical and direction values untouched.
  *
  * The hook returns:
  *   • `overrides` — current map keyed by tileId
@@ -35,6 +56,43 @@ import { useCallback, useEffect, useState } from 'react';
 const STORAGE_KEY = 'splunk-cisco-dashboards.metricOverrides.v1';
 const STORAGE_VERSION = 1;
 
+/**
+ * Bounds for sanitised threshold numbers. The runtime can express
+ * percentages (0–100), counts (0–N), and rates, so the bounds need to
+ * cover the full usable numeric range while still rejecting obviously
+ * malformed values like `Infinity` or 1e30. The actual sane-range
+ * check (warning < critical for higher_is_better, etc.) is left to the
+ * picker form — operators sometimes intentionally want a "warn-only"
+ * tile with critical higher than warning to disable the red band, and
+ * the storage layer shouldn't second-guess that.
+ */
+const THRESHOLD_MIN = -1_000_000_000;
+const THRESHOLD_MAX = 1_000_000_000;
+
+const isFiniteThresholdNumber = (n: unknown): n is number =>
+    typeof n === 'number' &&
+    Number.isFinite(n) &&
+    n >= THRESHOLD_MIN &&
+    n <= THRESHOLD_MAX;
+
+const VALID_DIRECTIONS = new Set<string>(['higher_is_better', 'lower_is_better']);
+
+/**
+ * Allow-list of viz overrides accepted from the picker (Build 1174).
+ * Mirrors the runtime `SparklineVizType` union — kept as a literal
+ * Set here so a stale localStorage entry can't smuggle in an
+ * unrecognised viz name. New viz types must be added in three
+ * places at once: this set, the runtime SparklineVizType, and the
+ * picker UI's option list.
+ */
+const VALID_VIZ_OVERRIDES = new Set<string>([
+    'area',
+    'line',
+    'column',
+    'bar',
+    'singlevalue',
+]);
+
 export interface MetricOverride {
     /** searchbase search_name. The property name is kept for compatibility. */
     savedSearch: string;
@@ -44,6 +102,70 @@ export interface MetricOverride {
     valueField?: string;
     /** Optional info-tooltip description override. */
     description?: string;
+    /**
+     * Optional override for the warning threshold. When set, replaces
+     * the tile's static `cfg.thresholds.warning` at runtime — the
+     * status colour, the THRESHOLDS rows in the info popover, and
+     * the trend-arrow tint all pick this up automatically because
+     * they all read through the same `MetricThresholds` shape.
+     *
+     * Storage rule: omitted by the picker when the value matches the
+     * static default, so the persisted override map only carries
+     * genuine deltas.
+     */
+    thresholdWarning?: number;
+    /** Optional override for the critical threshold. Same rules as `thresholdWarning`. */
+    thresholdCritical?: number;
+    /**
+     * Optional override for the direction in which the threshold
+     * applies. Use sparingly — flipping direction on a tile usually
+     * means the user picked a value field with inverse semantics
+     * (e.g. swapped a "% healthy" column for a "% failed" one), in
+     * which case overriding direction makes the red/green colours
+     * read correctly without having to fork the tile.
+     */
+    thresholdDirection?: 'higher_is_better' | 'lower_is_better';
+    /**
+     * Optional viz-type override for the tile's chart (Build 1174).
+     * Mirrors the runtime `SparklineVizType` so the picker can swap
+     * the rendering without forking the searchbase entry: an `area`
+     * tile can be re-styled as `line` / `column` / `bar` /
+     * `singlevalue` per user. `singlevalue` collapses the chart
+     * entirely and only shows the headline + threshold rows, useful
+     * for tiles whose timechart adds clutter rather than insight
+     * (Alan asked for this on 2026-05-18). `bar` (Build 1187) is the
+     * recharts-`layout="vertical"` horizontal-bar render path, kept
+     * separate from `column` so the two chart styles are reachable
+     * independently. When unset, the runtime falls back to
+     * `searchbase.conf`'s `default_viz` (current behaviour).
+     */
+    vizOverride?: 'area' | 'line' | 'column' | 'bar' | 'singlevalue';
+    /**
+     * Display toggles (Build 1202, from Atef's review on 2026-05-19).
+     * Together with the picker-driven KPI binding and Chart style,
+     * these let the operator silence "chrome" around the headline
+     * value when they want the tile to read as a clean single
+     * number — peak callout and delta-vs-previous pill — without
+     * having to fork the searchbase entry. Both default to `false`
+     * (chrome visible, mirrors existing behaviour). Only persisted
+     * when explicitly `true` so the storage payload stays minimal
+     * and the merge layer can treat absence as "default ON".
+     *
+     * Scope note: deliberately NOT a "hide sparkline" toggle —
+     * collapsing the chart is already reachable via
+     * `vizOverride: 'singlevalue'` and a second control would
+     * duplicate the state. The Display section in the picker
+     * documents that path inline.
+     *
+     * `hideOverlay` (Build 1203) was added in the same family: drops
+     * the dashed previous-period (or rolling-average baseline) line
+     * from the sparkline canvas. The chart itself remains, but the
+     * period-over-period comparison overlay is suppressed so the
+     * tile reads as a clean trend.
+     */
+    hidePeak?: boolean;
+    hideDelta?: boolean;
+    hideOverlay?: boolean;
 }
 
 export type MetricOverrideMap = Record<string, MetricOverride>;
@@ -72,6 +194,41 @@ const sanitizeOverride = (raw: unknown): MetricOverride | null => {
     }
     if (typeof o.description === 'string' && o.description.length > 0 && o.description.length <= 600) {
         out.description = o.description;
+    }
+    // Threshold overrides (Build 97). Each is independently optional:
+    // the runtime merge in `applyOverride()` falls back to the static
+    // default for any field that's missing, so a partial override is
+    // valid (e.g. only `thresholdWarning` set, critical inherited).
+    if (isFiniteThresholdNumber(o.thresholdWarning)) {
+        out.thresholdWarning = o.thresholdWarning;
+    }
+    if (isFiniteThresholdNumber(o.thresholdCritical)) {
+        out.thresholdCritical = o.thresholdCritical;
+    }
+    if (typeof o.thresholdDirection === 'string' && VALID_DIRECTIONS.has(o.thresholdDirection)) {
+        out.thresholdDirection = o.thresholdDirection as MetricOverride['thresholdDirection'];
+    }
+    // Viz override (Build 1174). Same rules as threshold overrides:
+    // optional, only stored when the picker explicitly chose a viz
+    // distinct from the conf default. Anything outside the allow-
+    // list is silently dropped so a stale or hand-edited localStorage
+    // payload can't smuggle an unrecognised viz name into the
+    // runtime.
+    if (typeof o.vizOverride === 'string' && VALID_VIZ_OVERRIDES.has(o.vizOverride)) {
+        out.vizOverride = o.vizOverride as MetricOverride['vizOverride'];
+    }
+    // Display toggles (Build 1202). Only persist `true` values; the
+    // runtime treats absence as "default ON" so we keep the storage
+    // payload tiny and any future default flip happens automatically
+    // for tiles the user hasn't customised.
+    if (o.hidePeak === true) {
+        out.hidePeak = true;
+    }
+    if (o.hideDelta === true) {
+        out.hideDelta = true;
+    }
+    if (o.hideOverlay === true) {
+        out.hideOverlay = true;
     }
     return out;
 };

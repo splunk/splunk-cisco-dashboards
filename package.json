@@ -11,7 +11,10 @@
         "start": "cd packages/splunk-cisco-dashboards && yarn start",
         "lint": "lerna run lint",
         "clean": "lerna run clean --parallel",
-        "clean:build": "lerna run clean:build"
+        "clean:build": "lerna run clean:build",
+        "package:app": "cd packages/splunk-cisco-dashboards && yarn package:app",
+        "regen:diagrams": "node scripts/generate_oob_diagrams.mjs",
+        "ship": "yarn regen:diagrams && yarn package:app"
     },
     "devDependencies": {
         "lerna": "^4.0.0"

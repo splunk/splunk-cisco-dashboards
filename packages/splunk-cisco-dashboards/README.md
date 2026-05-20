@@ -19,7 +19,7 @@ React-based Splunk app that ships four dashboards for Cisco data:
 
 ## Branding (customer name + logo)
 
-The home dashboard (`home_launchpad_v3`) and the React Overview both pull
+The home dashboard (`home_launchpad_v1`) and the React Overview both pull
 the customer name from a single Splunk macro called `customer_name`,
 defined in `default/macros.conf`:
 
@@ -31,24 +31,24 @@ iseval = 1
 
 Override the default in `local/macros.conf` per deployment.
 
-The customer logo is loaded from
-`appserver/static/images/customer_logo.png`. We ship a generic placeholder
-(seeded from the app icon) so the dashboard never shows a broken image.
-To brand a deployment, replace the file in place — the React Overview
-falls back to an inline SVG glyph via an `onError` handler if the file is
-ever missing.
+The Overview ships with a neutral inline network mark as its default logo.
+To brand a deployment, use the header editor to upload a logo; the override
+is stored in the browser as a data URI. Title can still be set globally via
+`customer_name`.
 
 Each view is a Simple XML dashboard whose only panel is an `<html>` block
 containing `<div id="scan-root">`. A small RequireJS bootstrap (in
 `appserver/static/<view>_bootstrap.js`) loads the matching React bundle
 from `appserver/static/pages/<view>.js`, which mounts into `#scan-root`.
 
-Two mount helpers exist:
+One mount helper is in active use:
 
-* `common/render.jsx` (`mountPage`) — wraps the page in
-  `SplunkThemeProvider` (Prisma family). Used by Devices/Network/Security.
 * `common/render-raw.tsx` (`mountPageRaw`) — bare mount, no theme
   provider. Used by Overview so Tailwind owns 100% of the styling.
+
+A `common/render.jsx` (`mountPage`) variant that wraps the page in
+`SplunkThemeProvider` (Prisma family) is retained for any future React
+view that wants Splunk's default theming.
 
 Tailwind is scoped to `#scan-root` (via `important: '#scan-root'` and
 disabled Preflight) so the utilities and resets never bleed into the

@@ -43,6 +43,22 @@ export interface SearchbaseRecord {
     description: string;
     /** SPL body — useful for the picker's preview pane. */
     search: string;
+    /**
+     * Optional Splunk visualization id (e.g. `splunk.column`,
+     * `splunk.line`, `splunk.area`, `splunk.singlevalue`). Mirrors the
+     * `default_viz` field in the conf. Tiles use this to override the
+     * default sparkline renderer.
+     */
+    defaultViz?: string;
+    /**
+     * Parsed `viz_options` JSON from the conf. Common keys:
+     *   - `seriesColors`: string[] (hex colours; first entry wins for sparkline tint)
+     *   - `stackMode`: "default" | "stacked" (multi-series only)
+     *   - `legendDisplay`: "top" | "bottom" | "left" | "right" | "off"
+     * Empty / malformed JSON yields `undefined` so a single bad
+     * stanza never crashes the picker.
+     */
+    vizOptions?: Record<string, unknown>;
 }
 
 interface SearchbaseEntry {
@@ -58,8 +74,40 @@ interface SearchbaseEntry {
         search?: string;
         disabled?: string;
         search_hidden?: string;
+        default_viz?: string;
+        viz_options?: string;
     };
 }
+
+/**
+ * Defensive JSON parse for `viz_options`. Splunk conf values are
+ * authored as inline JSON; a single malformed quote in one stanza
+ * must not propagate up and break the entire catalogue load.
+ * Returns undefined on non-string / parse failure / non-object result.
+ */
+const parseVizOptions = (raw: string | undefined): Record<string, unknown> | undefined => {
+    if (typeof raw !== 'string') return undefined;
+    const trimmed = raw.trim();
+    if (trimmed.length === 0) return undefined;
+    try {
+        const parsed = JSON.parse(trimmed) as unknown;
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            return parsed as Record<string, unknown>;
+        }
+    } catch {
+        // Swallow: bad JSON → just no viz_options for this stanza.
+    }
+    return undefined;
+};
+
+const SPLUNK_VIZ_PATTERN = /^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+$/i;
+
+const sanitizeDefaultViz = (raw: string | undefined): string | undefined => {
+    if (typeof raw !== 'string') return undefined;
+    const trimmed = raw.trim();
+    if (trimmed.length === 0 || trimmed.length > 64) return undefined;
+    return SPLUNK_VIZ_PATTERN.test(trimmed) ? trimmed : undefined;
+};
 
 interface SearchbaseResponse {
     entry?: SearchbaseEntry[];
@@ -156,6 +204,8 @@ const fetchSearchbase = async (): Promise<SearchbaseRecord[]> => {
                 typeof content.search === 'string'
                     ? collapseExpandedIndexMacro(content.search)
                     : '',
+            defaultViz: sanitizeDefaultViz(content.default_viz),
+            vizOptions: parseVizOptions(content.viz_options),
         });
     }
     return out;

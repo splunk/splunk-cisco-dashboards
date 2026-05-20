@@ -7,11 +7,20 @@
  * and telemetry bindings live in one config object.
  */
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+    useCallback,
+    useEffect,
+    useMemo,
+    useReducer,
+    useRef,
+    useState,
+    useSyncExternalStore,
+} from 'react';
 import {
     Circle,
     MapContainer,
     Marker,
+    Pane,
     Polyline,
     TileLayer,
     ZoomControl,
@@ -22,18 +31,24 @@ import L from 'leaflet';
 import { AnimatePresence, motion, useDragControls } from 'motion/react';
 import {
     Activity,
+    Check,
     ChevronRight,
     Code2,
     Download,
     ExternalLink,
+    Globe,
     Layers,
     Link2,
+    Loader2,
     MapPin,
     MousePointer2,
     Pencil,
     Plus,
     RotateCcw,
     Save,
+    Search,
+    Sparkles,
+    Tag,
     Terminal,
     Trash2,
     Upload,
@@ -69,7 +84,14 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
     subtitle: 'Editable customer site connectivity',
     telemetrySearchName: 'Overview - Topology Overview',
     map: {
-        center: [28.45, -82.85],
+        // Center re-derived for the TLH+AUB-only topology (David call,
+        // 2026-05-12): MCO/Orlando was never an customer site and has been
+        // removed. The midpoint between TLH (30.4383, -84.2807) and
+        // AUB (28.0653, -81.7876) sits at ~(29.25, -83.03), which
+        // keeps both markers visible at the default zoom without
+        // needing to pan. Bounds are kept permissive so the user can
+        // still pan to neighbouring states for context.
+        center: [29.25, -83.0],
         zoom: 6.55,
         minZoom: 5,
         maxZoom: 11,
@@ -78,6 +100,23 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
             [32.5, -77.0],
         ],
     },
+    // `internetEdgeMbps` is intentionally left undefined on every site.
+    // The earlier 1000 / 500 / 500 placeholders were initial estimates
+    // from a design-of-record conversation that was never confirmed
+    // against real circuit records. Shipping them on a customer-facing
+    // exec dashboard meant the popup was claiming a number we did not
+    // actually know. The site-level "Design of Record" block in the
+    // popup is conditional on the value being defined, so leaving it
+    // unset hides the block cleanly and matches the rest of the
+    // popup's "Awaiting"-pattern for empty fields. Customers who want
+    // to surface a real number can enter it through the existing
+    // topology editor pencil-tool ("Internet edge Mbps" field), which
+    // writes to the persisted localStorage payload
+    // (`splunk-cisco-dashboards.customerTopology.v4`) and immediately
+    // repopulates the popup. If the customer's network team ever confirms
+    // actual circuit bandwidths, the values can be restored here as a
+    // packaged default and the editor entry will override them
+    // per-user as before.
     sites: [
         {
             id: 'tlh',
@@ -90,18 +129,6 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
             metrics: {},
             telemetrySource: 'Awaiting normalized site telemetry',
             searchName: 'Overview - Site Tallahassee Health',
-        },
-        {
-            id: 'mco',
-            name: 'Orlando (Regional Hub)',
-            shortName: 'MCO',
-            role: 'regional_hub',
-            lat: 28.5383,
-            lng: -81.3792,
-            status: 'unknown',
-            metrics: {},
-            telemetrySource: 'Awaiting normalized site telemetry',
-            searchName: 'Overview - Site Orlando Health',
         },
         {
             id: 'aub',
@@ -117,15 +144,14 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
         },
     ],
     links: [
-        {
-            id: 'mco-tlh',
-            name: 'Orlando to Tallahassee',
-            sourceSiteId: 'mco',
-            targetSiteId: 'tlh',
-            status: 'unknown',
-            telemetrySource: 'Awaiting topology link telemetry',
-            searchName: 'Overview - Link Orlando to Tallahassee Preview',
-        },
+        // Single TLH<->AUB inter-site link. The TLH<->MCO and
+        // MCO<->AUB legs were removed alongside the MCO site (David
+        // call, 2026-05-12). A ThousandEyes agent-to-agent test does
+        // exist for this pair, but as of the call the Tallahassee
+        // enterprise agent (`demt-te01-va`) is unresponsive to probes,
+        // so the link popup will read "Awaiting" until either the
+        // agent recovers or the SPL stanza is rewired to consume the
+        // A2A `Test_Metrics` data once it's trustworthy.
         {
             id: 'aub-tlh',
             name: 'Auburndale to Tallahassee',
@@ -133,7 +159,18 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
             targetSiteId: 'tlh',
             status: 'unknown',
             telemetrySource: 'Awaiting topology link telemetry',
-            searchName: 'Overview - Link Auburndale to Tallahassee Preview',
+            // OOB default is the dedicated TE A2A stanza
+            // `[overview_link_te_a2a_health]` (added 2026-05-12). It
+            // returns one normalized row per A2A test path between the
+            // two cities with all three network metrics (latency, loss,
+            // jitter) plus geo-enriched agent identity and the TE
+            // permalink. The multi-source umbrella stanza
+            // `Overview - Link Auburndale to Tallahassee Health` is
+            // still in the catalogue for customers running SD-WAN who
+            // want SD-WAN > TE > Catalyst Center prioritization;
+            // operators can swap back to it via the in-popup catalogue
+            // browser.
+            searchName: 'Overview - Link ThousandEyes A2A Health',
         },
     ],
 };
@@ -213,8 +250,8 @@ const ROLE_BEACON_CHROME: Record<
     },
 };
 
-const TOPOLOGY_STORAGE_KEY = 'splunk-cisco-dashboards.customerTopology.v2';
-const TOPOLOGY_STORAGE_VERSION = 2;
+const TOPOLOGY_STORAGE_KEY = 'splunk-cisco-dashboards.customerTopology.v4';
+const TOPOLOGY_STORAGE_VERSION = 4;
 const TOPOLOGY_ROLES: TopologyRole[] = [
     'state_hq',
     'regional_hub',
@@ -243,6 +280,24 @@ export interface TopologySummaryMetric {
 }
 
 export type TopologySummaryMetricMap = Record<string, TopologySummaryMetric>;
+
+/**
+ * Site-level metadata sourced from `cisco:dnac:site:topology` via the
+ * `Site Topology - Map Marker Enrichment (Buildings with GPS)` searchbase
+ * stanza. Keyed by the building's short name (e.g. "TLH", "AUB")
+ * which matches the `shortName` of `TopologySite` entries in
+ * `CUSTOMER_TOPOLOGY`. Sites that DNAC isn't currently managing simply
+ * have no entry; consumers MUST treat the lookup as optional.
+ */
+export interface SiteEnrichment {
+    address?: string;
+    country?: string;
+    lat?: number;
+    lon?: number;
+    nameHierarchy?: string;
+    siteLabel?: string;
+    lastUpdated?: string;
+}
 
 type EditableTopology = Partial<CustomerTopology> & {
     map?: Partial<CustomerTopology['map']>;
@@ -301,30 +356,6 @@ const optionalText = (value: unknown): string | undefined => {
     return text.length > 0 ? text : undefined;
 };
 
-const PREVIEW_LINK_SEARCH_BY_ID: Record<string, string> = {
-    'mco-tlh': 'Overview - Link Orlando to Tallahassee Preview',
-    'aub-tlh': 'Overview - Link Auburndale to Tallahassee Preview',
-};
-
-const LEGACY_LINK_SEARCH_NAMES = new Set([
-    'Overview - Link Orlando to Tallahassee Health',
-    'Overview - Link Auburndale to Tallahassee Health',
-]);
-
-const resolveLinkSearchName = (
-    linkId: string,
-    searchName: string | undefined,
-    fallbackSearchName: string | undefined
-): string | undefined => {
-    const previewSearch = PREVIEW_LINK_SEARCH_BY_ID[linkId];
-    const candidate = searchName ?? fallbackSearchName;
-    if (!previewSearch) return candidate;
-    if (!candidate || LEGACY_LINK_SEARCH_NAMES.has(candidate)) {
-        return previewSearch;
-    }
-    return candidate;
-};
-
 const sanitizeTopology = (
     candidate: unknown,
     fallback: CustomerTopology
@@ -345,6 +376,9 @@ const sanitizeTopology = (
             site.shortName,
             id.replace(/-/g, '').slice(0, 4).toUpperCase()
         ).slice(0, 8);
+        const resolvedSiteSearchName =
+            optionalText(site.searchName) ??
+            optionalText(fallbackSite?.searchName);
         return {
             id,
             name: textValue(site.name, fallbackSite?.name ?? shortName),
@@ -362,14 +396,17 @@ const sanitizeTopology = (
                 latencyMs: finiteOptionalNumber(site.metrics?.latencyMs),
             },
             lastUpdated: optionalText(site.lastUpdated),
-            dataState: site.searchName ? 'loading' : site.dataState ?? 'static',
+            dataState: resolvedSiteSearchName ? 'loading' : site.dataState ?? 'static',
             dataError: optionalText(site.dataError),
             telemetrySource:
                 optionalText(site.telemetrySource) ??
-                (site.searchName
+                (resolvedSiteSearchName
                     ? 'Awaiting normalized site telemetry'
                     : 'Configured topology item'),
-            searchName: optionalText(site.searchName),
+            searchName: resolvedSiteSearchName,
+            internetEdgeMbps:
+                finiteOptionalNumber(site.internetEdgeMbps) ??
+                fallbackSite?.internetEdgeMbps,
         };
     });
 
@@ -441,11 +478,9 @@ const sanitizeTopology = (
             if (lastUpdated) normalized.lastUpdated = lastUpdated;
             const dataError = optionalText(link.dataError);
             if (dataError) normalized.dataError = dataError;
-            const searchName = resolveLinkSearchName(
-                id,
-                optionalText(link.searchName),
-                optionalText(fallbackLink?.searchName)
-            );
+            const searchName =
+                optionalText(link.searchName) ??
+                optionalText(fallbackLink?.searchName);
             if (searchName) normalized.searchName = searchName;
             return normalized;
         })
@@ -455,7 +490,9 @@ const sanitizeTopology = (
         id: normalizeId(source.id, fallback.id),
         name: textValue(source.name, fallback.name),
         subtitle: textValue(source.subtitle, fallback.subtitle),
-        telemetrySearchName: optionalText(source.telemetrySearchName),
+        telemetrySearchName:
+            optionalText(source.telemetrySearchName) ??
+            optionalText(fallback.telemetrySearchName),
         map: {
             center: [
                 numberValue(source.map?.center?.[0], fallbackMap.center[0], -85, 85),
@@ -534,7 +571,22 @@ const clearPersistedTopology = (): void => {
     window.localStorage.removeItem(TOPOLOGY_STORAGE_KEY);
 };
 
-const usePersistedTopology = (fallback: CustomerTopology) => {
+/**
+ * Public-facing helper for the "Reset all customisations" flow on
+ * the Overview page. Wipes the persisted topology so the next mount
+ * of `<CustomerTopologyMap />` reads `null` from localStorage and
+ * falls through to the default `CUSTOMER_TOPOLOGY` factory.
+ *
+ * NOTE: in-tab callers must also force a remount of the map (e.g.
+ * by bumping its `key` prop) — `localStorage` `storage` events only
+ * fire across tabs, not in the originating tab, so the existing
+ * mounted map won't reseed itself just because storage was cleared.
+ */
+export const clearCustomerTopologyStorage = (): void => {
+    clearPersistedTopology();
+};
+
+export const usePersistedTopology = (fallback: CustomerTopology) => {
     const [topology, setTopology] = useState<CustomerTopology>(() =>
         readPersistedTopology(fallback)
     );
@@ -572,52 +624,147 @@ const usePersistedTopology = (fallback: CustomerTopology) => {
     return { topology, saveTopology, resetTopology };
 };
 
+/**
+ * Topology animation level: governs the intensity of map animations
+ * (marker entrance, link hover bumps, packet streams). Persisted in
+ * localStorage so each operator's preference survives reloads.
+ *
+ *  - 'on'     : full effects (entrance bounce, marching dashes, packet streams)
+ *  - 'subtle' : reduced effects (no entrance, slower packets, no bounce)
+ *  - 'off'    : every keyframe halted; equivalent to honoring
+ *               `prefers-reduced-motion` system-wide
+ *
+ * `prefers-reduced-motion: reduce` forces the effective level to 'off'
+ * regardless of the stored preference. Stored preference is preserved so
+ * the user gets their previous setting back if the OS preference flips.
+ */
+type TopologyAnimationLevel = 'on' | 'subtle' | 'off';
+
+const TOPOLOGY_ANIMATION_LEVEL_KEY = 'florida-topology-animation-level';
+const TOPOLOGY_ANIMATION_LEVELS: TopologyAnimationLevel[] = [
+    'on',
+    'subtle',
+    'off',
+];
+
+const readStoredAnimationLevel = (): TopologyAnimationLevel => {
+    if (typeof window === 'undefined') return 'on';
+    try {
+        const stored = window.localStorage.getItem(
+            TOPOLOGY_ANIMATION_LEVEL_KEY
+        );
+        if (
+            stored === 'on' ||
+            stored === 'subtle' ||
+            stored === 'off'
+        ) {
+            return stored;
+        }
+    } catch {
+        /* localStorage may be unavailable (private mode etc.) */
+    }
+    return 'on';
+};
+
+const subscribeStoredAnimationLevel = (
+    onChange: () => void
+): (() => void) => {
+    if (typeof window === 'undefined') return () => undefined;
+    const handler = (event: StorageEvent) => {
+        if (event.key === TOPOLOGY_ANIMATION_LEVEL_KEY) onChange();
+    };
+    window.addEventListener('storage', handler);
+    return () => window.removeEventListener('storage', handler);
+};
+
+const subscribeReducedMotion = (onChange: () => void): (() => void) => {
+    if (typeof window === 'undefined' || !window.matchMedia) {
+        return () => undefined;
+    }
+    const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (typeof mql.addEventListener === 'function') {
+        mql.addEventListener('change', onChange);
+        return () => mql.removeEventListener('change', onChange);
+    }
+    // Safari < 14 fallback
+    mql.addListener(onChange);
+    return () => mql.removeListener(onChange);
+};
+
+const useTopologyAnimationLevel = (): {
+    level: TopologyAnimationLevel; // effective level (after reduced-motion override)
+    storedLevel: TopologyAnimationLevel; // raw stored preference
+    setLevel: (next: TopologyAnimationLevel) => void;
+    reducedMotion: boolean;
+} => {
+    const storedLevel = useSyncExternalStore<TopologyAnimationLevel>(
+        subscribeStoredAnimationLevel,
+        readStoredAnimationLevel,
+        () => 'on'
+    );
+    const reducedMotion = useSyncExternalStore(
+        subscribeReducedMotion,
+        () => {
+            if (typeof window === 'undefined' || !window.matchMedia) return false;
+            return window.matchMedia(
+                '(prefers-reduced-motion: reduce)'
+            ).matches;
+        },
+        () => false
+    );
+    const setLevel = useCallback((next: TopologyAnimationLevel) => {
+        if (typeof window === 'undefined') return;
+        try {
+            window.localStorage.setItem(
+                TOPOLOGY_ANIMATION_LEVEL_KEY,
+                next
+            );
+            // `storage` events do not fire in the same tab, so dispatch
+            // manually to nudge other useSyncExternalStore subscribers
+            // mounted in the same window.
+            window.dispatchEvent(
+                new StorageEvent('storage', {
+                    key: TOPOLOGY_ANIMATION_LEVEL_KEY,
+                    newValue: next,
+                })
+            );
+        } catch {
+            /* swallow */
+        }
+    }, []);
+    return {
+        level: reducedMotion ? 'off' : storedLevel,
+        storedLevel,
+        setLevel,
+        reducedMotion,
+    };
+};
+
+const TOPOLOGY_ANIMATION_LEVEL_LABELS: Record<TopologyAnimationLevel, string> =
+    {
+        on: 'Animations: On',
+        subtle: 'Animations: Subtle',
+        off: 'Animations: Off',
+    };
+
 const topologyAnimationCss = `
-    @keyframes customer-topology-flow {
-        from { stroke-dashoffset: 0; }
-        to { stroke-dashoffset: -72; }
-    }
-    @keyframes customer-topology-flow-glow {
-        0%, 100% { stroke-opacity: 0.28; }
-        50% { stroke-opacity: 0.62; }
-    }
     @keyframes customer-topology-pulse {
         0%, 100% { stroke-opacity: 0.55; }
         50% { stroke-opacity: 0.9; }
     }
-    @keyframes customer-topology-site-breathe {
-        0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.18); }
-        50% { transform: scale(1.08); box-shadow: 0 0 0 8px rgba(14, 165, 233, 0.08); }
+    @keyframes customer-topology-radiate {
+        0% { transform: scale(0.85); opacity: 0.55; }
+        70% { transform: scale(1.55); opacity: 0; }
+        100% { transform: scale(1.55); opacity: 0; }
     }
-    @keyframes customer-topology-site-breathe-alert {
-        0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.14); }
-        50% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(245, 158, 11, 0.08); }
+    @keyframes customer-topology-marker-enter {
+        0%   { transform: scale(0) translateY(-12px); opacity: 0; }
+        70%  { transform: scale(1.18) translateY(0); opacity: 1; }
+        100% { transform: scale(1) translateY(0); opacity: 1; }
     }
-    .customer-topology-flow-line {
-        animation-name: customer-topology-flow;
-        animation-timing-function: linear;
-        animation-iteration-count: infinite;
-        stroke-linecap: round;
-        stroke-dashoffset: 0;
-    }
-    .customer-topology-flow-line-glow {
-        animation:
-            customer-topology-flow linear infinite,
-            customer-topology-flow-glow 2.2s ease-in-out infinite;
-        stroke-linecap: round;
-        stroke-dashoffset: 0;
-    }
-    .customer-topology-flow-fast {
-        animation-duration: 0.65s;
-    }
-    .customer-topology-flow-medium {
-        animation-duration: 1.1s;
-    }
-    .customer-topology-flow-slow {
-        animation-duration: 1.8s;
-    }
-    .customer-topology-flow-idle {
-        animation-duration: 2.4s;
+    @keyframes customer-topology-packet-glow {
+        0%, 100% { filter: drop-shadow(0 0 1.5px currentColor); }
+        50%      { filter: drop-shadow(0 0 4px currentColor); }
     }
     .customer-topology-link-hitbox {
         cursor: pointer;
@@ -625,13 +772,68 @@ const topologyAnimationCss = `
     .customer-topology-alert-ring {
         animation: customer-topology-pulse 2.6s ease-in-out infinite;
     }
-    .customer-topology-site-breathe {
-        animation: customer-topology-site-breathe 2.8s ease-in-out infinite;
+    .customer-topology-radiate {
+        animation-name: customer-topology-radiate;
+        animation-timing-function: ease-out;
+        animation-iteration-count: infinite;
         transform-origin: center;
     }
-    .customer-topology-site-breathe-alert {
-        animation: customer-topology-site-breathe-alert 1.7s ease-in-out infinite;
-        transform-origin: center;
+    .customer-topology-radiate--stable {
+        animation-duration: 3.4s;
+    }
+    .customer-topology-radiate--unknown {
+        animation-duration: 4.6s;
+        opacity: 0.35;
+    }
+    .customer-topology-radiate--warning {
+        animation-duration: 1.7s;
+    }
+    .customer-topology-radiate--critical {
+        animation-duration: 0.95s;
+    }
+    /* Marker entrance — staggered via inline --customer-topology-marker-delay */
+    .customer-topology-marker-enter {
+        animation-name: customer-topology-marker-enter;
+        animation-duration: 720ms;
+        animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+        animation-fill-mode: both;
+        animation-delay: var(--customer-topology-marker-delay, 0ms);
+        transform-origin: center bottom;
+    }
+    /* Hover bump for connectivity lines */
+    .customer-topology-link-shell {
+        transition: stroke-width 180ms ease-out, stroke-opacity 180ms ease-out;
+    }
+    .customer-topology-link-shell:hover {
+        stroke-opacity: 1 !important;
+        stroke-width: calc(var(--customer-topology-link-weight, 2.4) + 1.6px) !important;
+    }
+    /* Packet stream visuals */
+    .customer-topology-packet {
+        animation: customer-topology-packet-glow 1.6s ease-in-out infinite;
+    }
+    .customer-topology-packet--critical { color: #ef4444; }
+    .customer-topology-packet--warning  { color: #f59e0b; }
+    .customer-topology-packet--stable   { color: #38bdf8; }
+    /* Subtle level: slow the packet glow but keep packets visible */
+    .customer-topology-anim--subtle .customer-topology-packet {
+        animation-duration: 2.6s;
+        opacity: 0.75;
+    }
+    /* Off level + prefers-reduced-motion: halt everything */
+    .customer-topology-anim--off .customer-topology-radiate,
+    .customer-topology-anim--off .customer-topology-alert-ring,
+    .customer-topology-anim--off .customer-topology-marker-enter,
+    .customer-topology-anim--off .customer-topology-packet {
+        animation: none !important;
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .customer-topology-radiate,
+        .customer-topology-alert-ring,
+        .customer-topology-marker-enter,
+        .customer-topology-packet {
+            animation: none !important;
+        }
     }
 `;
 
@@ -681,17 +883,39 @@ const escapeHtml = (value: string): string =>
         }
     });
 
-const formatNumber = (value?: number): string =>
-    value === undefined ? 'Awaiting' : value.toLocaleString();
+// Build 103 (2026-05-14): the popup formatters now take an optional
+// `loading` flag so the "no value yet" string can differentiate
+// in-flight data from genuinely-empty values. The TE A2A saved
+// search can take 20-40s on a cold cache (raw-event scan, 13+
+// stats aggregations) — during that window the popup previously
+// rendered identical strings to the "no integration at all" case
+// (`'Awaiting'`), which Alan read as a regression on 2026-05-14.
+// Using `'Loading…'` while `dataState === 'loading'` lets the
+// operator see "search in flight" vs "search returned no value"
+// without having to read the dataState debug field.
+const formatNumber = (value?: number, loading?: boolean): string =>
+    value === undefined ? (loading ? 'Loading…' : 'Awaiting') : value.toLocaleString();
 
-const formatPercent = (value?: number): string =>
-    value === undefined ? 'Awaiting' : `${value.toLocaleString()}%`;
+const formatPercent = (value?: number, loading?: boolean): string =>
+    value === undefined
+        ? loading
+            ? 'Loading…'
+            : 'Awaiting'
+        : `${value.toLocaleString()}%`;
 
-const formatLatency = (value?: number): string =>
-    value === undefined ? 'Awaiting' : `${value.toLocaleString()} ms`;
+const formatLatency = (value?: number, loading?: boolean): string =>
+    value === undefined
+        ? loading
+            ? 'Loading…'
+            : 'Awaiting'
+        : `${value.toLocaleString()} ms`;
 
-const formatMbps = (value?: number): string =>
-    value === undefined ? 'Awaiting' : `${value.toLocaleString()} Mbps`;
+const formatMbps = (value?: number, loading?: boolean): string =>
+    value === undefined
+        ? loading
+            ? 'Loading…'
+            : 'Awaiting'
+        : `${value.toLocaleString()} Mbps`;
 
 const SPL_COMMANDS = new Set([
     'append',
@@ -851,11 +1075,6 @@ const renderSplLine = (line: string, lineIndex: number): React.ReactNode[] => {
     });
 };
 
-const linkWeight = (link: TopologyLink): number => {
-    if (link.utilizationPct === undefined) return 2.4;
-    return Math.max(2.4, Math.min(7, 2.4 + link.utilizationPct / 18));
-};
-
 const normalizeStatus = (raw: unknown): TopologyStatus | null => {
     if (raw === null || raw === undefined) return null;
     const value = String(raw).trim().toLowerCase();
@@ -997,6 +1216,8 @@ const parseLinkRow = (
         lossPct:
             finiteNumberFromRow(row, ['lossPct', 'loss_pct', 'packetLossPct']) ??
             base.lossPct,
+        jitterMs:
+            finiteNumberFromRow(row, ['jitterMs', 'jitter_ms']) ?? base.jitterMs,
         endpointHealthPct:
             finiteNumberFromRow(row, [
                 'endpointHealthPct',
@@ -1005,6 +1226,55 @@ const parseLinkRow = (
         endpointDevices:
             finiteNumberFromRow(row, ['endpointDevices', 'endpoint_devices']) ??
             base.endpointDevices,
+        sourceAgents:
+            textFromRow(row, ['sourceAgents', 'source_agents', 'sourceAgent']) ??
+            base.sourceAgents,
+        targetAgents:
+            textFromRow(row, ['targetAgents', 'target_agents', 'targetAgent']) ??
+            base.targetAgents,
+        sourceLocation:
+            textFromRow(row, [
+                'sourceLocation',
+                'source_location',
+                'thousandeyes.source.agent.location',
+            ]) ?? base.sourceLocation,
+        targetLocation:
+            textFromRow(row, [
+                'targetLocation',
+                'target_location',
+                'thousandeyes.target.agent.location',
+            ]) ?? base.targetLocation,
+        sourceCountry:
+            textFromRow(row, [
+                'sourceCountry',
+                'source_country',
+                'thousandeyes.source.agent.geo.country.iso_code',
+            ]) ?? base.sourceCountry,
+        targetCountry:
+            textFromRow(row, [
+                'targetCountry',
+                'target_country',
+                'thousandeyes.target.agent.geo.country.iso_code',
+            ]) ?? base.targetCountry,
+        sourceRegion:
+            textFromRow(row, [
+                'sourceRegion',
+                'source_region',
+                'thousandeyes.source.agent.geo.region.iso_code',
+            ]) ?? base.sourceRegion,
+        targetRegion:
+            textFromRow(row, [
+                'targetRegion',
+                'target_region',
+                'thousandeyes.target.agent.geo.region.iso_code',
+            ]) ?? base.targetRegion,
+        teLink:
+            textFromRow(row, [
+                'teLink',
+                'te_link',
+                'thousandeyesPermalink',
+                'thousandeyes.permalink',
+            ]) ?? base.teLink,
         lastUpdated:
             textFromRow(row, ['lastUpdated', 'last_updated', '_time']) ??
             base.lastUpdated,
@@ -1113,6 +1383,117 @@ const normalizeMetricId = (value: unknown): string =>
 const normalizedLinkId = (sourceSiteId?: string, targetSiteId?: string): string =>
     sourceSiteId && targetSiteId ? `${sourceSiteId}-${targetSiteId}` : '';
 
+const inferRoleFromName = (name: string): TopologyRole => {
+    const n = name.toLowerCase();
+    if (/\bhq\b|headquart|state[-_ ]?eoc/.test(n)) return 'state_hq';
+    if (/\bhub\b|\breg(ion(al)?)?\d?\b/.test(n)) return 'regional_hub';
+    if (/\blog(istics)?\b|warehouse|distribution|depot/.test(n)) return 'logistics';
+    if (/\bdc\d?\b|datacenter|data[-_ ]center|colo/.test(n)) return 'datacenter';
+    if (/\bcgw\b|\baws\b|\bazure\b|\bgcp\b|\bcloud\b/.test(n)) return 'internet_edge';
+    return 'branch';
+};
+
+const isTopologyRoleValue = (value: unknown): value is TopologyRole =>
+    typeof value === 'string' && (TOPOLOGY_ROLES as readonly string[]).includes(value);
+
+const buildShortName = (name: string): string => {
+    const trimmed = name.trim();
+    if (!trimmed) return '?';
+    const parts = trimmed.split(/[^A-Za-z0-9]+/).filter(Boolean);
+    if (parts.length >= 2) {
+        return (parts[0]![0]! + parts[1]![0]!).toUpperCase();
+    }
+    return trimmed.slice(0, 3).toUpperCase();
+};
+
+/**
+ * Build a full TopologySite from a discovery search row when the siteId
+ * isn't already configured. Requires at least lat/lng + a siteId/name.
+ */
+const parseSiteRowAsDiscovered = (
+    row: Record<string, unknown>
+): TopologySite | null => {
+    const siteId = normalizeId(
+        textFromRow(row, ['siteId', 'site_id', 'site', 'id']),
+        ''
+    );
+    const lat = finiteNumberFromRow(row, ['lat', 'latitude']);
+    const lng = finiteNumberFromRow(row, ['lng', 'lon', 'long', 'longitude']);
+    if (!siteId || lat === undefined || lng === undefined) return null;
+    if (lat === 0 && lng === 0) return null;
+
+    const name =
+        textFromRow(row, ['siteName', 'site_name', 'name', 'displayName']) ?? siteId;
+    const rawRole = textFromRow(row, ['role', 'siteRole', 'site_role']);
+    const role: TopologyRole = isTopologyRoleValue(rawRole)
+        ? rawRole
+        : inferRoleFromName(name);
+    const shortName = (
+        textFromRow(row, ['shortName', 'short_name', 'siteCode', 'site_code']) ??
+        buildShortName(name)
+    )
+        .slice(0, 4)
+        .toUpperCase();
+
+    const placeholder: TopologySite = {
+        id: siteId,
+        name,
+        shortName,
+        role,
+        lat,
+        lng,
+        status: 'unknown',
+        metrics: {},
+        telemetrySource: 'Auto-discovered from topology search',
+        searchName: undefined,
+    };
+    const updates = parseSiteRow(placeholder, row);
+    return {
+        ...placeholder,
+        ...updates,
+        metrics: { ...placeholder.metrics, ...(updates.metrics ?? {}) },
+    };
+};
+
+/**
+ * Build a full TopologyLink from a discovery search row. Requires resolvable
+ * source/target site ids; the caller should ensure both endpoints exist (as
+ * either configured or discovered sites) before rendering it.
+ */
+const parseLinkRowAsDiscovered = (
+    row: Record<string, unknown>
+): TopologyLink | null => {
+    const sourceSiteId = normalizeId(
+        textFromRow(row, ['sourceSiteId', 'source_site_id', 'source']),
+        ''
+    );
+    const targetSiteId = normalizeId(
+        textFromRow(row, ['targetSiteId', 'target_site_id', 'target']),
+        ''
+    );
+    if (!sourceSiteId || !targetSiteId || sourceSiteId === targetSiteId) return null;
+
+    const explicitId = normalizeId(textFromRow(row, ['linkId', 'link_id', 'id']), '');
+    const id = explicitId || normalizedLinkId(sourceSiteId, targetSiteId);
+    if (!id) return null;
+
+    const name =
+        textFromRow(row, ['name', 'linkName', 'link_name']) ??
+        `${sourceSiteId} ↔ ${targetSiteId}`;
+
+    const placeholder: TopologyLink = {
+        id,
+        name,
+        sourceSiteId,
+        targetSiteId,
+        status: 'unknown',
+        telemetrySource: 'Auto-discovered from topology search',
+        searchName: undefined,
+    };
+    const updates = parseLinkRow(placeholder, row);
+    return { ...placeholder, ...updates };
+};
+
 const rowItemType = (row: Record<string, unknown>): string =>
     normalizeMetricId(textFromRow(row, ['itemType', 'item_type', 'type', 'rowType']));
 
@@ -1152,76 +1533,199 @@ const parseSummaryRow = (
     };
 };
 
-const linkFlowClass = (link: TopologyLink): string => {
-    const utilization = link.utilizationPct;
-    if (utilization === undefined) {
-        return link.dataState === 'live'
-            ? 'customer-topology-flow-medium'
-            : 'customer-topology-flow-idle';
+/**
+ * Compute a slight bezier-curved polyline between two geographic points.
+ * The curve sits perpendicular to the chord at its midpoint, giving lines
+ * a subtle "network arc" feel without becoming a route. Curvature is a
+ * fraction of chord length; 32 segments keeps the path smooth at any zoom
+ * level while staying inexpensive to render.
+ */
+const computeBezierLine = (
+    source: [number, number],
+    target: [number, number],
+    curvature = 0.12,
+    segments = 32
+): Array<[number, number]> => {
+    const [sLat, sLng] = source;
+    const [tLat, tLng] = target;
+    const dLat = tLat - sLat;
+    const dLng = tLng - sLng;
+    const length = Math.sqrt(dLat * dLat + dLng * dLng) || 1;
+    const offset = curvature * length;
+    // Perpendicular direction (rotate 90deg clockwise in lat/lng space).
+    const perpLat = -dLng / length;
+    const perpLng = dLat / length;
+    const ctrlLat = (sLat + tLat) / 2 + perpLat * offset;
+    const ctrlLng = (sLng + tLng) / 2 + perpLng * offset;
+    const points: Array<[number, number]> = [];
+    for (let i = 0; i <= segments; i += 1) {
+        const t = i / segments;
+        const oneMinusT = 1 - t;
+        const lat =
+            oneMinusT * oneMinusT * sLat +
+            2 * oneMinusT * t * ctrlLat +
+            t * t * tLat;
+        const lng =
+            oneMinusT * oneMinusT * sLng +
+            2 * oneMinusT * t * ctrlLng +
+            t * t * tLng;
+        points.push([lat, lng]);
     }
-    if (utilization >= 80) return 'customer-topology-flow-fast';
-    if (utilization >= 35) return 'customer-topology-flow-medium';
-    return 'customer-topology-flow-slow';
+    return points;
+};
+
+interface LinkFlowProfile {
+    /**
+     * stroke-dasharray applied to the polyline. `null` means a solid line
+     * (used for the calm "stable" state so healthy links don't appear to
+     * march).
+     */
+    dashArray: string | null;
+    /**
+     * Animation period in seconds for the marching dash. `null` disables
+     * the SVG <animate> element entirely. We keep stable links static so
+     * the eye reads them as quiet/healthy at a glance.
+     */
+    flowSeconds: number | null;
+    /**
+     * If true, also animate stroke-opacity for a "breathing" alert glow.
+     * Reserved for critical so it stands out without being distracting on
+     * warning/unknown.
+     */
+    breathe: boolean;
+    weight: number;
+    opacity: number;
+}
+
+const linkFlowProfile = (link: TopologyLink): LinkFlowProfile => {
+    switch (link.status) {
+        case 'critical':
+            return {
+                dashArray: '6 6',
+                flowSeconds: 0.7,
+                breathe: true,
+                weight: 3.6,
+                opacity: 0.95,
+            };
+        case 'warning':
+            return {
+                dashArray: '8 6',
+                flowSeconds: 1.6,
+                breathe: false,
+                weight: 3.0,
+                opacity: 0.9,
+            };
+        case 'stable':
+            return {
+                dashArray: null,
+                flowSeconds: null,
+                breathe: false,
+                weight: 2.4,
+                opacity: 0.7,
+            };
+        case 'unknown':
+        default:
+            return {
+                dashArray: '2 6',
+                flowSeconds: null,
+                breathe: false,
+                weight: 1.8,
+                opacity: 0.45,
+            };
+    }
+};
+
+/**
+ * Site marker design: status drives the visible chrome (border ring colour,
+ * radiating-halo cadence, optional corner alert dot); role drives the inner
+ * letter glyph and the label-border tint. This keeps "what's wrong" the
+ * dominant signal while still conveying "what role this site plays".
+ */
+const STATUS_RING_COLOR: Record<TopologyStatus, string> = {
+    critical: '#ef4444',
+    warning: '#f59e0b',
+    stable: '#10b981',
+    unknown: '#94a3b8',
+};
+
+const STATUS_HALO_RGBA: Record<TopologyStatus, string> = {
+    critical: 'rgba(239, 68, 68, 0.45)',
+    warning: 'rgba(245, 158, 11, 0.40)',
+    stable: 'rgba(16, 185, 129, 0.32)',
+    unknown: 'rgba(148, 163, 184, 0.28)',
+};
+
+const STATUS_RADIATE_CLASS: Record<TopologyStatus, string> = {
+    critical: 'customer-topology-radiate customer-topology-radiate--critical',
+    warning: 'customer-topology-radiate customer-topology-radiate--warning',
+    stable: 'customer-topology-radiate customer-topology-radiate--stable',
+    unknown: 'customer-topology-radiate customer-topology-radiate--unknown',
 };
 
 const createSiteIcon = (
     site: TopologySite,
     isSelected: boolean,
     isSpotlight: boolean,
-    isDark: boolean
+    isDark: boolean,
+    animateEntrance: boolean,
+    entranceDelayMs: number
 ) => {
     const safeName = escapeHtml(site.name);
     const safeShortName = escapeHtml(site.shortName);
-    const beacon = ROLE_BEACON_CHROME[site.role];
-    const selectionRing = isSelected
-        ? 'ring-4 ring-sky-300/60 scale-110'
+    const roleChrome = ROLE_BEACON_CHROME[site.role];
+    const ringColor = STATUS_RING_COLOR[site.status];
+    const haloColor = STATUS_HALO_RGBA[site.status];
+    const radiateClass = STATUS_RADIATE_CLASS[site.status];
+    const ringWidth = site.status === 'critical' ? 2.5 : 2;
+    const selectionScale = isSelected
+        ? 'scale-110'
         : isSpotlight
-        ? 'ring-4 ring-sky-400/35 scale-105'
+        ? 'scale-105'
         : '';
-    const motionClass = isSelected
-        ? ''
-        : site.status === 'critical' || site.status === 'warning'
-        ? 'customer-topology-site-breathe-alert'
-        : site.dataState === 'live' || site.status === 'stable' || isSpotlight
-        ? 'customer-topology-site-breathe'
-        : '';
+    const selectionRing = isSelected
+        ? `box-shadow:0 0 0 4px rgba(14, 165, 233, 0.35), 0 8px 18px rgba(15,23,42,0.22);`
+        : isSpotlight
+        ? `box-shadow:0 0 0 4px rgba(14, 165, 233, 0.18), 0 6px 14px rgba(15,23,42,0.18);`
+        : `box-shadow:0 6px 14px rgba(15,23,42,0.18);`;
     const labelChrome = isDark
-        ? 'bg-slate-900/90 backdrop-blur-sm border-slate-700'
-        : 'bg-white/90 backdrop-blur-sm border-slate-200';
-    const statusStroke =
-        site.status === 'critical'
-            ? '#ef4444'
-            : site.status === 'warning'
-            ? '#f59e0b'
-            : site.status === 'unknown'
-            ? '#94a3b8'
-            : beacon.fill;
+        ? 'bg-slate-900/90 backdrop-blur-sm border-slate-700 text-slate-100'
+        : 'bg-white/90 backdrop-blur-sm border-slate-200 text-slate-800';
+    const pillBg = isDark ? '#0f172a' : '#ffffff';
+    const showAlertDot =
+        site.status === 'critical' || site.status === 'warning';
+    const entranceClass = animateEntrance
+        ? 'customer-topology-marker-enter'
+        : '';
+    const entranceStyle = animateEntrance
+        ? `--customer-topology-marker-delay:${entranceDelayMs}ms;`
+        : '';
     return L.divIcon({
         className: 'custom-div-icon',
         html: `
-      <div class="relative flex flex-col items-center group w-[200px]">
-        <div class="relative flex items-center justify-center w-14 h-14 ${selectionRing}">
+      <div class="relative flex flex-col items-center group w-[200px] ${entranceClass}" style="${entranceStyle}">
+        <div class="relative flex items-center justify-center w-9 h-9 ${selectionScale} transition-transform duration-200">
           <span
-            class="absolute inset-0 rounded-full ${motionClass}"
-            style="background:${beacon.halo}; box-shadow:0 10px 24px ${beacon.halo};"
+            class="absolute inset-0 rounded-full ${radiateClass}"
+            style="background:${haloColor};"
+            aria-hidden="true"
           ></span>
           <span
-            class="absolute inset-[6px] rounded-full"
-            style="background:${isDark ? '#0f172a' : '#ffffff'}; border:3px solid ${statusStroke}; box-shadow:0 8px 18px rgba(15,23,42,0.18);"
+            class="absolute inset-0 rounded-full"
+            style="background:${pillBg}; border:${ringWidth}px solid ${ringColor}; ${selectionRing}"
+            aria-hidden="true"
           ></span>
           <span
-            class="absolute inset-[12px] rounded-full"
-            style="background:${beacon.fill};"
-          ></span>
-          <span class="relative z-10 font-black text-[15px] tracking-tight text-white drop-shadow-sm">${safeShortName}</span>
+            class="relative z-10 font-black text-[12px] tracking-tight"
+            style="color:${roleChrome.fill};"
+          >${safeShortName}</span>
           ${
-              site.status === 'critical' || site.status === 'warning'
+              showAlertDot
                   ? `
-            <span class="absolute top-[2px] right-[2px] z-20 flex h-4 w-4">
+            <span class="absolute -top-0.5 -right-0.5 z-20 flex h-3 w-3">
               <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
                   site.status === 'critical' ? 'bg-red-400' : 'bg-amber-400'
               }"></span>
-              <span class="relative inline-flex rounded-full h-4 w-4 border-2 border-white ${
+              <span class="relative inline-flex rounded-full h-3 w-3 border border-white ${
                   site.status === 'critical' ? 'bg-red-500' : 'bg-amber-500'
               }"></span>
             </span>
@@ -1229,35 +1733,491 @@ const createSiteIcon = (
                   : ''
           }
         </div>
-        <div class="mt-1 whitespace-nowrap font-black px-3 py-1 rounded-md shadow-sm border ${labelChrome} ${beacon.label} ${
-            isDark ? 'text-[12px] text-slate-100' : 'text-[12px] text-slate-800'
-        }">
+        <div class="mt-1 whitespace-nowrap font-semibold px-2.5 py-0.5 rounded-md shadow-sm border text-[11px] ${labelChrome} ${roleChrome.label}">
           ${safeName}
         </div>
       </div>
     `,
-        iconSize: [200, 86],
-        iconAnchor: [100, 28],
+        iconSize: [200, 70],
+        iconAnchor: [100, 18],
     });
+};
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+interface TopologyLinkPathProps {
+    link: TopologyLink;
+    source: TopologySite;
+    target: TopologySite;
+    isSelected: boolean;
+    onSelect: (link: TopologyLink) => void;
+    /**
+     * Effective animation level. 'off' suppresses SMIL marching/breathing
+     * entirely; 'subtle' slows it; 'on' uses the original cadence.
+     */
+    animationLevel: TopologyAnimationLevel;
+}
+
+/**
+ * Renders a single bezier-curved link line between two sites with a separate
+ * invisible hitbox for clicks. The visible line uses native SVG <animate>
+ * elements injected into Leaflet's underlying <path> for the marching-dash
+ * "flow" effect. SMIL animation runs on the GPU and is anchored to the SVG
+ * element, so it does not stutter when Leaflet redraws the path on pan/zoom
+ * the way a CSS stroke-dashoffset animation would.
+ *
+ * Status drives motion:
+ *   - stable:   solid line, no animation (calm/healthy at a glance)
+ *   - warning:  amber dashes, medium-speed flow
+ *   - critical: red dashes, fast flow + stroke-opacity breathe
+ *   - unknown:  thin grey dashes, no animation
+ */
+const TopologyLinkPath: React.FC<TopologyLinkPathProps> = ({
+    link,
+    source,
+    target,
+    isSelected,
+    onSelect,
+    animationLevel,
+}) => {
+    const positions = useMemo(
+        () =>
+            computeBezierLine(
+                [source.lat, source.lng],
+                [target.lat, target.lng]
+            ),
+        [source.lat, source.lng, target.lat, target.lng]
+    );
+    const profile = useMemo(() => linkFlowProfile(link), [link]);
+    const color = STATUS_STROKE[link.status];
+    const polylineRef = useRef<L.Polyline | null>(null);
+
+    // Subtle level: slow the marching dashes and breathing roughly 70% to keep
+    // the line readable as "alive" without the eye-grabbing cadence of full.
+    // Off level: skip SMIL injection entirely so the path is fully static.
+    const flowSeconds =
+        animationLevel === 'off'
+            ? null
+            : animationLevel === 'subtle' && profile.flowSeconds !== null
+            ? profile.flowSeconds * 1.4
+            : profile.flowSeconds;
+    const enableBreathe = animationLevel !== 'off' && profile.breathe;
+
+    useEffect(() => {
+        const polyline = polylineRef.current;
+        if (!polyline) return undefined;
+        const apply = () => {
+            const element = polyline.getElement() as SVGPathElement | null;
+            if (!element) return;
+            element
+                .querySelectorAll('animate[data-customer-topology-flow]')
+                .forEach((node) => node.remove());
+            if (flowSeconds !== null) {
+                const flow = document.createElementNS(SVG_NS, 'animate');
+                flow.setAttribute('attributeName', 'stroke-dashoffset');
+                flow.setAttribute('from', '0');
+                flow.setAttribute('to', '-24');
+                flow.setAttribute('dur', `${flowSeconds}s`);
+                flow.setAttribute('repeatCount', 'indefinite');
+                flow.setAttribute('data-customer-topology-flow', 'dash');
+                element.appendChild(flow);
+            }
+            if (enableBreathe) {
+                const breathe = document.createElementNS(SVG_NS, 'animate');
+                breathe.setAttribute('attributeName', 'stroke-opacity');
+                breathe.setAttribute(
+                    'values',
+                    `${profile.opacity};${Math.min(1, profile.opacity + 0.05)};${profile.opacity * 0.65};${profile.opacity}`
+                );
+                breathe.setAttribute(
+                    'dur',
+                    animationLevel === 'subtle' ? '2.4s' : '1.4s'
+                );
+                breathe.setAttribute('repeatCount', 'indefinite');
+                breathe.setAttribute('data-customer-topology-flow', 'breathe');
+                element.appendChild(breathe);
+            }
+        };
+        // Leaflet may not have inserted the <path> into the DOM yet on first
+        // mount, so re-apply once the element is available. `add` fires after
+        // the path is attached.
+        apply();
+        polyline.on('add', apply);
+        return () => {
+            polyline.off('add', apply);
+            const element = polyline.getElement() as SVGPathElement | null;
+            element
+                ?.querySelectorAll('animate[data-customer-topology-flow]')
+                .forEach((node) => node.remove());
+        };
+    }, [flowSeconds, enableBreathe, profile.opacity, animationLevel]);
+
+    const handleClick = useCallback(
+        (event: L.LeafletMouseEvent) => {
+            // Leaflet polylines (unlike Markers) bubble click events up to the
+            // map's click handler by default. Without this stop, clicking a
+            // link triggers our background "click outside to dismiss"
+            // handler on the MapContainer right after selectLink runs,
+            // which immediately clears the selection. Stop the propagation
+            // here so the link click is the only event the map sees.
+            L.DomEvent.stopPropagation(event);
+            onSelect(link);
+        },
+        [link, onSelect]
+    );
+
+    return (
+        <>
+            <Polyline
+                positions={positions}
+                pathOptions={{
+                    color: '#ffffff',
+                    weight: 16,
+                    opacity: 0.01,
+                    className: 'customer-topology-link-hitbox',
+                }}
+                eventHandlers={{ click: handleClick }}
+            />
+            <Polyline
+                ref={polylineRef}
+                positions={positions}
+                pathOptions={{
+                    color,
+                    weight: isSelected ? profile.weight + 1 : profile.weight,
+                    opacity: isSelected ? 1 : profile.opacity,
+                    dashArray: profile.dashArray ?? undefined,
+                    lineCap: 'round',
+                    lineJoin: 'round',
+                    className: 'customer-topology-link-shell',
+                }}
+                eventHandlers={{ click: handleClick }}
+            />
+        </>
+    );
+};
+
+/**
+ * Per-link packet stream profile. Counts/durations are deliberately tuned so
+ * that even at level='on' the stable links carry a calm, slow trickle while
+ * critical links pop with a tight, urgent cadence. The eye reads density and
+ * speed *together* as a health signal.
+ */
+interface PacketProfile {
+    count: number;
+    durationSeconds: number;
+    radius: number;
+    fill: string;
+    statusClass: string;
+    opacity: number;
+}
+
+const packetProfile = (
+    status: TopologyStatus,
+    level: TopologyAnimationLevel
+): PacketProfile | null => {
+    if (level === 'off') return null;
+    const subtle = level === 'subtle';
+    if (status === 'unknown') {
+        // 2026-05-13: previously returned null so unknown links
+        // sat completely still. That made the map look broken on
+        // dev stacks where the bound search hadn't started
+        // returning rows yet (e.g. the new TE A2A stanza on a
+        // customer who hasn't had any A2A samples in 24h). The
+        // fix: render a slow, faint "probe" packet stream so the
+        // link is visibly alive even before data lands. This is a
+        // marketing animation, not a status signal — once data
+        // returns, the status promotes to stable/warning/critical
+        // and the packets re-tune accordingly.
+        return {
+            count: subtle ? 1 : 2,
+            durationSeconds: subtle ? 8.0 : 6.5,
+            radius: subtle ? 2.2 : 2.4,
+            fill: '#94a3b8',
+            statusClass: 'customer-topology-packet--stable',
+            opacity: subtle ? 0.35 : 0.45,
+        };
+    }
+    switch (status) {
+        case 'critical':
+            return {
+                count: subtle ? 2 : 3,
+                durationSeconds: subtle ? 2.4 : 1.6,
+                radius: subtle ? 3.2 : 3.6,
+                fill: '#ef4444',
+                statusClass: 'customer-topology-packet--critical',
+                opacity: 0.95,
+            };
+        case 'warning':
+            return {
+                count: subtle ? 2 : 4,
+                durationSeconds: subtle ? 4.4 : 3.2,
+                radius: subtle ? 2.8 : 3.0,
+                fill: '#f59e0b',
+                statusClass: 'customer-topology-packet--warning',
+                opacity: 0.92,
+            };
+        case 'stable':
+        default:
+            return {
+                // Subtle is now "alive but unhurried" instead of "barely
+                // there" — eye still catches motion within a glance, but
+                // it doesn't pull focus from real data.
+                count: subtle ? 3 : 5,
+                durationSeconds: subtle ? 5.5 : 4.5,
+                radius: subtle ? 2.8 : 3.2,
+                fill: '#38bdf8',
+                statusClass: 'customer-topology-packet--stable',
+                opacity: subtle ? 0.85 : 0.95,
+            };
+    }
+};
+
+interface LinkPacketLayerProps {
+    linkSegments: Array<{
+        link: TopologyLink;
+        source: TopologySite;
+        target: TopologySite;
+    }>;
+    animationLevel: TopologyAnimationLevel;
+}
+
+/**
+ * Renders bright "packets" (small SVG circles) traveling end-to-end along
+ * each link's bezier curve, color-coded by health status and density-tuned
+ * by the active animation level.
+ *
+ * The implementation lives inside a custom Leaflet pane (zIndex 410, between
+ * Leaflet's default overlayPane=400 and markerPane=600) so packets appear
+ * above the polyline shells but below the site markers and popups. Custom
+ * panes are translated by Leaflet automatically on pan, so we only need to
+ * recompute path geometry on `zoomend` and `viewreset` — pan is free.
+ *
+ * Animation itself uses SVG <animateMotion> + <mpath> for two reasons:
+ *   1. Consistency with the existing SMIL approach used by TopologyLinkPath
+ *      (the codebase already depends on SMIL working in the target
+ *      browsers).
+ *   2. SMIL animations run inside the browser's compositor without
+ *      involving the JS frame loop, so we keep 60fps even with a dozen
+ *      packets in flight on a busy CPU.
+ */
+/**
+ * Bulletproof packet-flow layer.
+ *
+ * Earlier attempts wrapped the packets in a custom react-leaflet `<Pane>`
+ * with our own `<svg>`. Both attempts had subtle SVG-sizing / viewport
+ * bugs that meant the marching-dash animation worked (because it lives
+ * inside Leaflet's *own* properly-sized overlay SVG) but the packet
+ * circles never painted on the live map even though the same SMIL
+ * pattern rendered fine in a standalone HTML test.
+ *
+ * The fix: stop running our own SVG. Find Leaflet's existing overlay
+ * `<svg>` element — the one Leaflet creates lazily when the first
+ * vector layer is added, and which it sizes / positions correctly on
+ * every zoom + pan — and append a `<g>` group directly into it. All
+ * `<defs><path>` + `<circle>` + `<animateMotion>` elements live inside
+ * that group, so they share Leaflet's already-correct viewBox and
+ * inherit its zoom-driven transforms automatically.
+ *
+ * This mirrors exactly how `TopologyLinkPath` injects its `<animate>`
+ * elements onto the polyline path object — same imperative DOM pattern,
+ * proven to work in this codebase.
+ */
+const LinkPacketLayer: React.FC<LinkPacketLayerProps> = ({
+    linkSegments,
+    animationLevel,
+}) => {
+    const map = useMap();
+    const groupRef = useRef<SVGGElement | null>(null);
+    // version is bumped any time we want the imperative re-render effect
+    // below to run again — i.e. on the very first attach AND on every
+    // map zoomend / viewreset / moveend / resize event.
+    const [version, bumpVersion] = useReducer((n: number) => n + 1, 0);
+
+    // Step 1: find Leaflet's existing overlay <svg> and append our <g>.
+    // Leaflet only creates that <svg> when the first vector renderer is
+    // initialised. By the time this effect runs the `<TopologyLinkPath>`
+    // siblings have already been mounted, but Leaflet sometimes defers
+    // SVG creation by an animation frame — so we retry on rAF until the
+    // element appears.
+    useEffect(() => {
+        const SVG_NS = 'http://www.w3.org/2000/svg';
+        let cancelled = false;
+        let group: SVGGElement | null = null;
+        let rafId: number | null = null;
+
+        const attach = () => {
+            if (cancelled) return;
+            const overlayPane = map.getPanes().overlayPane;
+            const svg = overlayPane?.querySelector('svg');
+            if (!svg) {
+                rafId = requestAnimationFrame(attach);
+                return;
+            }
+            group = document.createElementNS(SVG_NS, 'g');
+            group.setAttribute('class', 'customer-topology-packets-group');
+            group.setAttribute('pointer-events', 'none');
+            svg.appendChild(group);
+            groupRef.current = group;
+            bumpVersion();
+        };
+        attach();
+
+        return () => {
+            cancelled = true;
+            if (rafId !== null) cancelAnimationFrame(rafId);
+            if (group && group.parentNode) {
+                group.parentNode.removeChild(group);
+            }
+            groupRef.current = null;
+        };
+    }, [map]);
+
+    // Step 2: re-render packets whenever the map's world↔pixel mapping
+    // could have changed. Pan moves the overlay SVG via a CSS transform
+    // (no re-render needed for that), but `viewreset` fires when Leaflet
+    // re-anchors the SVG and `zoomend` fires after each zoom completes —
+    // both times we need to recompute layer-point coords.
+    useEffect(() => {
+        const handler = () => bumpVersion();
+        map.on('zoomend', handler);
+        map.on('viewreset', handler);
+        map.on('moveend', handler);
+        map.on('resize', handler);
+        return () => {
+            map.off('zoomend', handler);
+            map.off('viewreset', handler);
+            map.off('moveend', handler);
+            map.off('resize', handler);
+        };
+    }, [map]);
+
+    // Step 3: imperatively rebuild the packet DOM whenever inputs change.
+    // We blow away the previous children and rebuild — `<animateMotion>`
+    // elements are cheap and there's no benefit to diff-style updates.
+    useEffect(() => {
+        const group = groupRef.current;
+        if (!group) return;
+        const SVG_NS = 'http://www.w3.org/2000/svg';
+        const XLINK_NS = 'http://www.w3.org/1999/xlink';
+
+        // Clear previous render
+        while (group.firstChild) {
+            group.removeChild(group.firstChild);
+        }
+        if (animationLevel === 'off') return;
+
+        const defs = document.createElementNS(SVG_NS, 'defs');
+        group.appendChild(defs);
+
+        for (const { link, source, target } of linkSegments) {
+            const profile = packetProfile(link.status, animationLevel);
+            if (!profile) continue;
+            const points = computeBezierLine(
+                [source.lat, source.lng],
+                [target.lat, target.lng]
+            );
+            if (points.length < 2) continue;
+            const layerPoints = points.map(([lat, lng]) =>
+                map.latLngToLayerPoint([lat, lng])
+            );
+            const head = layerPoints[0];
+            const tail = layerPoints
+                .slice(1)
+                .map((p) => `L${p.x},${p.y}`)
+                .join(' ');
+            const d = `M${head.x},${head.y} ${tail}`;
+
+            const pathId = `customer-topology-packet-path-${link.id}`;
+            const path = document.createElementNS(SVG_NS, 'path');
+            path.setAttribute('id', pathId);
+            path.setAttribute('d', d);
+            path.setAttribute('fill', 'none');
+            defs.appendChild(path);
+
+            for (let i = 0; i < profile.count; i++) {
+                // Stagger packet starts so they appear evenly distributed
+                // along the path rather than clumping at the origin.
+                const beginOffset =
+                    (i / profile.count) * profile.durationSeconds;
+                const circle = document.createElementNS(SVG_NS, 'circle');
+                circle.setAttribute('r', String(profile.radius));
+                circle.setAttribute('cx', '0');
+                circle.setAttribute('cy', '0');
+                circle.setAttribute('fill', profile.fill);
+                circle.setAttribute('opacity', String(profile.opacity));
+                circle.setAttribute(
+                    'class',
+                    `customer-topology-packet ${profile.statusClass}`
+                );
+
+                const motion = document.createElementNS(SVG_NS, 'animateMotion');
+                motion.setAttribute('dur', `${profile.durationSeconds}s`);
+                motion.setAttribute('repeatCount', 'indefinite');
+                motion.setAttribute('rotate', 'auto');
+                motion.setAttribute('begin', `-${beginOffset}s`);
+
+                const mpath = document.createElementNS(SVG_NS, 'mpath');
+                // Belt + braces — set both modern and legacy refs since
+                // some Chromium and Safari variants resolve only one
+                // form depending on the host page's SVG mode.
+                mpath.setAttributeNS(XLINK_NS, 'xlink:href', `#${pathId}`);
+                mpath.setAttribute('href', `#${pathId}`);
+
+                motion.appendChild(mpath);
+                circle.appendChild(motion);
+                group.appendChild(circle);
+            }
+        }
+    }, [linkSegments, animationLevel, map, version]);
+
+    return null;
 };
 
 interface MapFrameProps {
     topology: CustomerTopology;
+    autoFitSites?: TopologySite[];
 }
 
-const MapFrame: React.FC<MapFrameProps> = ({ topology }) => {
+const MapFrame: React.FC<MapFrameProps> = ({ topology, autoFitSites }) => {
     const map = useMap();
     const [centerLat, centerLng] = topology.map.center;
     const zoom = topology.map.zoom;
+    const autoFitAppliedRef = useRef(false);
+
+    // Track the last view we *programmatically* set so subsequent renders
+    // that re-derive the same center/zoom don't fight the user's manual
+    // pan/zoom. We only call `setView` when the editor (or persisted
+    // topology) actually changes the requested center / zoom — not on
+    // every render, and not when the user has been panning.
+    //
+    // Why the imperative dance instead of just passing `center`/`zoom` to
+    // <MapContainer>? Because react-leaflet's MapContainer ignores
+    // center/zoom prop changes after the initial mount — that's a
+    // documented quirk of the library. Without `setView` here, edits to
+    // Center Lat / Center Lng / Zoom in the topology editor would write
+    // to localStorage but the visible map would never move.
+    const lastAppliedViewRef = useRef<{
+        lat: number;
+        lng: number;
+        zoom: number;
+    } | null>(null);
+
     useEffect(() => {
-        let firstApply = true;
         const apply = () => {
             map.invalidateSize();
-            if (firstApply) {
-                map.setView([centerLat, centerLng], zoom, {
-                    animate: false,
-                });
-                firstApply = false;
+            const last = lastAppliedViewRef.current;
+            if (
+                !last ||
+                last.lat !== centerLat ||
+                last.lng !== centerLng ||
+                last.zoom !== zoom
+            ) {
+                map.setView([centerLat, centerLng], zoom, { animate: false });
+                lastAppliedViewRef.current = {
+                    lat: centerLat,
+                    lng: centerLng,
+                    zoom,
+                };
             }
         };
         apply();
@@ -1266,19 +2226,52 @@ const MapFrame: React.FC<MapFrameProps> = ({ topology }) => {
         observer.observe(container);
         return () => observer.disconnect();
     }, [centerLat, centerLng, map, zoom]);
+
+    useEffect(() => {
+        if (autoFitAppliedRef.current) return;
+        if (!autoFitSites || autoFitSites.length === 0) return;
+        const usable = autoFitSites.filter(
+            (site) =>
+                Number.isFinite(site.lat) &&
+                Number.isFinite(site.lng) &&
+                !(site.lat === 0 && site.lng === 0)
+        );
+        if (usable.length === 0) return;
+        const bounds = L.latLngBounds(
+            usable.map((site) => [site.lat, site.lng] as [number, number])
+        );
+        if (!bounds.isValid()) return;
+        map.fitBounds(bounds, { padding: [40, 40], animate: false, maxZoom: 9 });
+        autoFitAppliedRef.current = true;
+    }, [autoFitSites, map]);
+
     return null;
 };
 
 interface MapClickCaptureProps {
     enabled: boolean;
     onPick: (lat: number, lng: number) => void;
+    onBackgroundClick?: () => void;
 }
 
-const MapClickCapture: React.FC<MapClickCaptureProps> = ({ enabled, onPick }) => {
+const MapClickCapture: React.FC<MapClickCaptureProps> = ({
+    enabled,
+    onPick,
+    onBackgroundClick,
+}) => {
     useMapEvents({
         click: (event) => {
-            if (!enabled) return;
-            onPick(event.latlng.lat, event.latlng.lng);
+            if (enabled) {
+                onPick(event.latlng.lat, event.latlng.lng);
+                return;
+            }
+            // Map background click (not a marker / not a link path / not the
+            // editor pick mode) — used as a "click outside to dismiss"
+            // affordance for the SelectionCard. Marker and link clicks
+            // don't bubble up to the map's click event, and the
+            // SelectionCard sits as a sibling DOM element so clicks
+            // inside the panel never reach the map.
+            onBackgroundClick?.();
         },
     });
     return null;
@@ -1336,9 +2329,41 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         string,
         Partial<TopologySite>
     >>({});
+    const [discoveredSiteById, setDiscoveredSiteById] = useState<Record<
+        string,
+        TopologySite
+    >>({});
+    const [discoveredLinkById, setDiscoveredLinkById] = useState<Record<
+        string,
+        TopologyLink
+    >>({});
     const [summaryMetricById, setSummaryMetricById] =
         useState<TopologySummaryMetricMap>({});
+    const [siteEnrichmentByShortName, setSiteEnrichmentByShortName] = useState<
+        Record<string, SiteEnrichment>
+    >({});
     const pauseUntilRef = useRef<number>(0);
+
+    // Animation level (controls marker entrance, link hover, packet streams).
+    const {
+        level: animationLevel,
+        storedLevel: storedAnimationLevel,
+        setLevel: setAnimationLevel,
+        reducedMotion,
+    } = useTopologyAnimationLevel();
+
+    // Track which sites we've already shown the entrance animation for so a
+    // later toggle of animation level doesn't restart drop-in for everyone.
+    const animatedSitesRef = useRef<Set<string>>(new Set());
+    const shouldAnimateMarkerEntrance = useCallback(
+        (siteId: string, level: TopologyAnimationLevel) => {
+            if (level !== 'on') return false;
+            if (animatedSitesRef.current.has(siteId)) return false;
+            animatedSitesRef.current.add(siteId);
+            return true;
+        },
+        []
+    );
 
     useEffect(() => {
         if (!isEditorOpen) {
@@ -1375,9 +2400,17 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
 
     useEffect(() => {
         if (catalogueByName === null) return undefined;
-        if (!telemetrySearchName) return undefined;
+        if (!telemetrySearchName) {
+            setDiscoveredSiteById({});
+            setDiscoveredLinkById({});
+            return undefined;
+        }
         const record = catalogueByName[telemetrySearchName];
-        if (!record?.search?.trim()) return undefined;
+        if (!record?.search?.trim()) {
+            setDiscoveredSiteById({});
+            setDiscoveredLinkById({});
+            return undefined;
+        }
 
         let cancelled = false;
         setLiveSiteById((current) => {
@@ -1441,6 +2474,8 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 const siteUpdates: Record<string, Partial<TopologySite>> = {};
                 const linkUpdates: Record<string, Partial<TopologyLink>> = {};
                 const summaryUpdates: TopologySummaryMetricMap = {};
+                const discoveredSites: Record<string, TopologySite> = {};
+                const discoveredLinkRows: Array<Record<string, unknown>> = [];
 
                 for (const row of rows) {
                     const itemType = rowItemType(row);
@@ -1468,7 +2503,12 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                         (siteId && siteByConfiguredId.has(siteId))
                     ) {
                         const site = siteByConfiguredId.get(siteId);
-                        if (site) siteUpdates[site.id] = parseSiteRow(site, row);
+                        if (site) {
+                            siteUpdates[site.id] = parseSiteRow(site, row);
+                        } else if (itemType === 'site' && siteId) {
+                            const discovered = parseSiteRowAsDiscovered(row);
+                            if (discovered) discoveredSites[discovered.id] = discovered;
+                        }
                         continue;
                     }
 
@@ -1481,7 +2521,11 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                         const link =
                             linkByConfiguredId.get(endpointLinkId) ??
                             linkByEndpointKey.get(endpointLinkId);
-                        if (link) linkUpdates[link.id] = parseLinkRow(link, row);
+                        if (link) {
+                            linkUpdates[link.id] = parseLinkRow(link, row);
+                        } else if (itemType === 'link') {
+                            discoveredLinkRows.push(row);
+                        }
                         continue;
                     }
 
@@ -1492,6 +2536,25 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                     ) {
                         const metric = parseSummaryRow(row);
                         if (metric) summaryUpdates[metric.id] = metric;
+                    }
+                }
+
+                const discoveredLinks: Record<string, TopologyLink> = {};
+                if (discoveredLinkRows.length > 0) {
+                    const knownEndpointIds = new Set<string>([
+                        ...siteByConfiguredId.keys(),
+                        ...Object.keys(discoveredSites),
+                    ]);
+                    for (const row of discoveredLinkRows) {
+                        const link = parseLinkRowAsDiscovered(row);
+                        if (!link) continue;
+                        if (
+                            !knownEndpointIds.has(link.sourceSiteId) ||
+                            !knownEndpointIds.has(link.targetSiteId)
+                        ) {
+                            continue;
+                        }
+                        discoveredLinks[link.id] = link;
                     }
                 }
 
@@ -1542,6 +2605,8 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                     }
                     return next;
                 });
+                setDiscoveredSiteById(discoveredSites);
+                setDiscoveredLinkById(discoveredLinks);
                 setSummaryMetricById(summaryUpdates);
             })
             .catch((err) => {
@@ -1574,6 +2639,8 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                     }
                     return next;
                 });
+                setDiscoveredSiteById({});
+                setDiscoveredLinkById({});
                 setSummaryMetricById({});
             });
 
@@ -1671,6 +2738,78 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
 
     useEffect(() => {
         if (catalogueByName === null) return undefined;
+        const enrichmentSearchName =
+            'Site Topology - Map Marker Enrichment (Buildings with GPS)';
+        const record = catalogueByName[enrichmentSearchName];
+        if (!record?.search?.trim()) {
+            // Stanza isn't installed (e.g. dashboard deployed before the
+            // 2026-05-08 site:topology integration). Quietly no-op so older
+            // deployments keep working.
+            return undefined;
+        }
+        let cancelled = false;
+        runSearch({
+            spl: record.search,
+            earliestTime,
+            latestTime,
+            tag: 'topology_marker_enrichment',
+        })
+            .then((res) => {
+                if (cancelled) return;
+                const rows = (res?.results ?? []) as Array<
+                    Record<string, unknown>
+                >;
+                const next: Record<string, SiteEnrichment> = {};
+                for (const row of rows) {
+                    const nameRaw = row['name'];
+                    if (typeof nameRaw !== 'string' || nameRaw.length === 0) {
+                        continue;
+                    }
+                    const shortName = nameRaw.trim();
+                    if (shortName.length === 0) continue;
+                    const latNum = Number(row['lat']);
+                    const lonNum = Number(row['lon']);
+                    next[shortName] = {
+                        address:
+                            typeof row['address'] === 'string'
+                                ? (row['address'] as string)
+                                : undefined,
+                        country:
+                            typeof row['country'] === 'string'
+                                ? (row['country'] as string)
+                                : undefined,
+                        lat: Number.isFinite(latNum) ? latNum : undefined,
+                        lon: Number.isFinite(lonNum) ? lonNum : undefined,
+                        nameHierarchy:
+                            typeof row['nameHierarchy'] === 'string'
+                                ? (row['nameHierarchy'] as string)
+                                : undefined,
+                        siteLabel:
+                            typeof row['Site'] === 'string'
+                                ? (row['Site'] as string)
+                                : undefined,
+                        lastUpdated:
+                            typeof row['lastUpdated'] === 'string'
+                                ? (row['lastUpdated'] as string)
+                                : undefined,
+                    };
+                }
+                setSiteEnrichmentByShortName(next);
+            })
+            .catch(() => {
+                // Lookup may be empty on first deploy (the populator search
+                // hasn't run yet). Don't surface an error to the user — the
+                // map degrades gracefully without enrichment.
+                if (cancelled) return;
+                setSiteEnrichmentByShortName({});
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [catalogueByName, earliestTime, latestTime, refreshToken]);
+
+    useEffect(() => {
+        if (catalogueByName === null) return undefined;
         let cancelled = false;
         const searchableLinks = storedTopology.links.filter((link) => {
             if (!link.searchName) return false;
@@ -1738,29 +2877,40 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         storedTopology.links,
     ]);
 
-    const resolvedTopology = useMemo<CustomerTopology>(
-        () => ({
+    const resolvedTopology = useMemo<CustomerTopology>(() => {
+        const configuredSites = activeTopology.sites.map((site) => {
+            const liveSite = liveSiteById[site.id];
+            return {
+                ...site,
+                dataState: site.searchName ? 'loading' : site.dataState ?? 'static',
+                ...liveSite,
+                metrics: {
+                    ...site.metrics,
+                    ...(liveSite?.metrics ?? {}),
+                },
+            };
+        });
+        const configuredLinks = activeTopology.links.map((link) => ({
+            ...link,
+            dataState: link.searchName ? 'loading' : link.dataState ?? 'static',
+            ...liveLinkById[link.id],
+        }));
+        const configuredSiteIds = new Set(configuredSites.map((s) => s.id));
+        const configuredLinkIds = new Set(configuredLinks.map((l) => l.id));
+
+        const extraSites = Object.values(discoveredSiteById).filter(
+            (site) => !configuredSiteIds.has(site.id)
+        );
+        const extraLinks = Object.values(discoveredLinkById).filter(
+            (link) => !configuredLinkIds.has(link.id)
+        );
+
+        return {
             ...activeTopology,
-            sites: activeTopology.sites.map((site) => {
-                const liveSite = liveSiteById[site.id];
-                return {
-                    ...site,
-                    dataState: site.searchName ? 'loading' : site.dataState ?? 'static',
-                    ...liveSite,
-                    metrics: {
-                        ...site.metrics,
-                        ...(liveSite?.metrics ?? {}),
-                    },
-                };
-            }),
-            links: activeTopology.links.map((link) => ({
-                ...link,
-                dataState: link.searchName ? 'loading' : link.dataState ?? 'static',
-                ...liveLinkById[link.id],
-            })),
-        }),
-        [activeTopology, liveLinkById, liveSiteById]
-    );
+            sites: [...configuredSites, ...extraSites],
+            links: [...configuredLinks, ...extraLinks],
+        };
+    }, [activeTopology, liveLinkById, liveSiteById, discoveredSiteById, discoveredLinkById]);
 
     const siteById = useMemo(() => {
         const map: Record<string, TopologySite> = {};
@@ -1821,6 +2971,17 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
             ? selectedRecord.search.trim()
             : '';
 
+    // NOTE: the popup-side search picker was removed on 2026-05-13
+    // per Alan's request — the read-only popup is now inspect+run
+    // only ("when we actually click on the link itself, there is no
+    // need to have at that point any option to select any search
+    // really, just show what is attached is fine and an ability to
+    // run it"). All search-rebinding now lives in the topology
+    // editor's per-card pickers (pencil button), where it has
+    // proper save/discard semantics. The previous helper functions
+    // (popupSearchOptions, updateSelectedSearchName) lived here
+    // until that change and were removed alongside the picker.
+
     const spotlightOrder = useMemo(
         () =>
             [...resolvedTopology.sites].sort((a, b) => {
@@ -1848,14 +3009,13 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         return () => window.clearInterval(id);
     }, [spotlightIntervalMs, spotlightOrder, paused, resolvedSelected]);
 
-    useEffect(() => {
-        if (!resolvedSelected) return undefined;
-        const onKey = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') setSelected(null);
-        };
-        document.addEventListener('keydown', onKey);
-        return () => document.removeEventListener('keydown', onKey);
-    }, [resolvedSelected]);
+    // Escape-to-dismiss + click-outside-to-dismiss now both live inside
+    // `SelectionCard` so the panel's lifecycle behaviour is colocated
+    // with the panel. The earlier copy of the Escape listener lived
+    // here at the parent level and used the bubble phase, which let
+    // focused descendants (editor inputs, Leaflet keyboard handlers)
+    // swallow the key by stopPropagation. The new copy uses capture
+    // phase from inside the popup component itself.
 
     const tilePreset =
         TILE_LAYER_PRESETS.find((preset) => preset.id === tilePresetId) ??
@@ -1882,26 +3042,55 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         setTilePresetId(next.id);
     };
 
+    // Build 99 fix: the spotlight-pause logic was previously
+    // bumping `pauseUntilRef` on EVERY click, including ones that
+    // *close* the selection panel (toggling off via re-click).
+    // Combined with the 11s spotlight tick interval, that meant
+    // closing the panel left the alert-ring spotlight invisible
+    // for up to 25 seconds — long enough that Alan reported the
+    // ring as "broken until I refresh the browser". Re-clicking
+    // the same marker to dismiss made it worse: a *fresh* 25s
+    // pause clock started every time.
+    //
+    // Correct semantics: pause the spotlight while the user is
+    // actively engaged with a selection (so the spotlight doesn't
+    // pull their eye away to a different site mid-read), and
+    // resume immediately the moment they dismiss. The
+    // `closeSelection` helper below threads that contract through
+    // every dismiss path (X button, Escape, click-outside,
+    // background click, re-click toggle, opening the editor).
+    const closeSelection = useCallback(() => {
+        pauseUntilRef.current = 0;
+        setSelected(null);
+    }, []);
+
     const selectSite = (site: TopologySite) => {
-        pauseUntilRef.current = Date.now() + spotlightPauseMs;
-        setSelected((current) =>
-            current?.kind === 'site' && current.site.id === site.id
-                ? null
-                : { kind: 'site', site }
-        );
+        // Mutate the pause ref *outside* the setState updater because
+        // strict-mode dev builds invoke updater functions twice for
+        // detection — and a ref mutation inside the updater would
+        // double-bump the pause clock. `selected` is read here (not
+        // via the updater) so we capture the closed-over value at the
+        // event boundary.
+        const isClose =
+            selected?.kind === 'site' && selected.site.id === site.id;
+        pauseUntilRef.current = isClose ? 0 : Date.now() + spotlightPauseMs;
+        setSelected(isClose ? null : { kind: 'site', site });
     };
 
     const selectLink = (link: TopologyLink) => {
-        pauseUntilRef.current = Date.now() + spotlightPauseMs;
-        setSelected((current) =>
-            current?.kind === 'link' && current.link.id === link.id
-                ? null
-                : { kind: 'link', link }
-        );
+        const isClose =
+            selected?.kind === 'link' && selected.link.id === link.id;
+        pauseUntilRef.current = isClose ? 0 : Date.now() + spotlightPauseMs;
+        setSelected(isClose ? null : { kind: 'link', link });
     };
 
     const openEditor = () => {
-        pauseUntilRef.current = Date.now() + spotlightPauseMs;
+        // Opening the editor closes any open selection card; that's
+        // a dismiss, so resume spotlight immediately rather than
+        // pausing. The editor itself doesn't render the spotlight
+        // ring (it has its own UI focus), so there's no need to
+        // suppress the cycle while the editor is open.
+        pauseUntilRef.current = 0;
         setSelected(null);
         setDraftTopology(cloneTopology(storedTopology));
         setIsEditorOpen(true);
@@ -1939,6 +3128,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         <div
             className={cn(
                 'relative w-full h-full min-h-[320px] overflow-hidden border rounded-xl shadow-inner group',
+                `customer-topology-anim--${animationLevel}`,
                 isDark
                     ? 'bg-slate-900 border-slate-800'
                     : 'bg-slate-100 border-slate-200'
@@ -1984,73 +3174,42 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 attributionControl={false}
                 className="z-10"
             >
-                <MapFrame topology={resolvedTopology} />
+                <MapFrame
+                    topology={resolvedTopology}
+                    autoFitSites={
+                        activeTopology.sites.length === 0
+                            ? resolvedTopology.sites
+                            : undefined
+                    }
+                />
                 <MapClickCapture
                     enabled={isEditorOpen && Boolean(pickSiteId)}
                     onPick={applyMapPick}
+                    onBackgroundClick={closeSelection}
                 />
                 <TileLayer key={tileUrl} attribution="" url={tileUrl} />
                 <ZoomControl position="bottomright" />
 
-                {linkSegments.map(({ link, source, target }) => {
-                    const positions: [[number, number], [number, number]] = [
-                        [source.lat, source.lng],
-                        [target.lat, target.lng],
-                    ];
-                    const isSelected =
-                        resolvedSelected?.kind === 'link' &&
-                        resolvedSelected.link.id === link.id;
-                    return (
-                        <React.Fragment key={link.id}>
-                            <Polyline
-                                positions={positions}
-                                pathOptions={{
-                                    color: '#ffffff',
-                                    weight: 16,
-                                    opacity: 0.01,
-                                    className: 'customer-topology-link-hitbox',
-                                }}
-                                eventHandlers={{
-                                    click: () => selectLink(link),
-                                }}
-                            />
-                            <Polyline
-                                positions={positions}
-                                pathOptions={{
-                                    color: STATUS_STROKE[link.status],
-                                    weight: Math.max(2.6, linkWeight(link) - 0.8),
-                                    dashArray:
-                                        link.status === 'stable' ? '6 10' : '4 8',
-                                    opacity: isSelected ? 0.68 : 0.42,
-                                    className: cn(
-                                        'customer-topology-flow-line-glow',
-                                        linkFlowClass(link)
-                                    ),
-                                }}
-                                eventHandlers={{
-                                    click: () => selectLink(link),
-                                }}
-                            />
-                            <Polyline
-                                positions={positions}
-                                pathOptions={{
-                                    color: STATUS_STROKE[link.status],
-                                    weight: linkWeight(link) + 1,
-                                    dashArray:
-                                        link.status === 'stable' ? '6 10' : '4 8',
-                                    opacity: isSelected ? 1 : 0.92,
-                                    className: cn(
-                                        'customer-topology-flow-line',
-                                        linkFlowClass(link)
-                                    ),
-                                }}
-                                eventHandlers={{
-                                    click: () => selectLink(link),
-                                }}
-                            />
-                        </React.Fragment>
-                    );
-                })}
+                {linkSegments.map(({ link, source, target }) => (
+                    <TopologyLinkPath
+                        key={link.id}
+                        link={link}
+                        source={source}
+                        target={target}
+                        isSelected={
+                            resolvedSelected?.kind === 'link' &&
+                            resolvedSelected.link.id === link.id
+                        }
+                        onSelect={selectLink}
+                        animationLevel={animationLevel}
+                    />
+                ))}
+
+                <LinkPacketLayer
+                    linkSegments={linkSegments}
+                    animationLevel={animationLevel}
+                />
+
 
                 {spotlightSite &&
                     (spotlightSite.status === 'critical' ||
@@ -2071,7 +3230,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                         />
                     )}
 
-                {resolvedTopology.sites.map((site) => (
+                {resolvedTopology.sites.map((site, index) => (
                     <Marker
                         key={site.id}
                         position={[site.lat, site.lng]}
@@ -2080,7 +3239,13 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                             resolvedSelected?.kind === 'site' &&
                                 resolvedSelected.site.id === site.id,
                             spotlightSite?.id === site.id && !resolvedSelected,
-                            isDark
+                            isDark,
+                            // Entrance animation runs only on the first mount of
+                            // each site marker. We tie it to a stable per-site
+                            // ref so toggling animation level later does not
+                            // re-trigger a now-distracting drop-in.
+                            shouldAnimateMarkerEntrance(site.id, animationLevel),
+                            index * 90
                         )}
                         eventHandlers={{
                             click: () => selectSite(site),
@@ -2097,7 +3262,8 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 catalogueLoaded={catalogueByName !== null}
                 selectedSearchName={selectedSearchName}
                 selectedSpl={selectedSpl}
-                onClose={() => setSelected(null)}
+                siteEnrichmentByShortName={siteEnrichmentByShortName}
+                onClose={closeSelection}
                 onOpenInSearch={onOpenInSearch ? openSelectedInSearch : undefined}
             />
 
@@ -2115,6 +3281,8 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                     setPickSiteId(null);
                     setIsEditorOpen(false);
                 }}
+                catalogueByName={catalogueByName}
+                onOpenInSearch={onOpenInSearch}
             />
 
             <div className="absolute bottom-6 left-4 z-[1000] space-y-3 pointer-events-auto">
@@ -2168,7 +3336,643 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 >
                     <Pencil className="w-4 h-4" />
                 </button>
+
+                <button
+                    type="button"
+                    onClick={() => {
+                        const idx = TOPOLOGY_ANIMATION_LEVELS.indexOf(
+                            storedAnimationLevel
+                        );
+                        const nextIdx =
+                            (idx + 1) % TOPOLOGY_ANIMATION_LEVELS.length;
+                        setAnimationLevel(
+                            TOPOLOGY_ANIMATION_LEVELS[nextIdx]
+                        );
+                    }}
+                    title={
+                        reducedMotion
+                            ? 'Animations forced off by your OS reduce-motion setting. Click to cycle preference (will apply when reduce-motion is disabled).'
+                            : `${TOPOLOGY_ANIMATION_LEVEL_LABELS[storedAnimationLevel]}. Click to cycle.`
+                    }
+                    aria-label={
+                        TOPOLOGY_ANIMATION_LEVEL_LABELS[animationLevel]
+                    }
+                    className={cn(
+                        'border p-2 rounded-lg shadow-md transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400 relative',
+                        buttonChrome,
+                        animationLevel === 'off' && 'opacity-60'
+                    )}
+                >
+                    <Sparkles
+                        className={cn(
+                            'w-4 h-4',
+                            animationLevel === 'on' && 'text-sky-500',
+                            animationLevel === 'subtle' && 'text-slate-400',
+                            animationLevel === 'off' && 'text-slate-500'
+                        )}
+                    />
+                    <span
+                        className={cn(
+                            'absolute -bottom-1 -right-1 px-1 py-0.5 rounded text-[7px] font-bold uppercase tracking-widest text-white shadow-sm',
+                            animationLevel === 'on' && 'bg-sky-500',
+                            animationLevel === 'subtle' && 'bg-slate-500',
+                            animationLevel === 'off' && 'bg-slate-700'
+                        )}
+                    >
+                        {animationLevel === 'on'
+                            ? 'On'
+                            : animationLevel === 'subtle'
+                            ? 'Sub'
+                            : 'Off'}
+                    </span>
+                </button>
             </div>
+        </div>
+    );
+};
+
+/**
+ * `TopologySearchBrowser` — KpiPickerPanel-style browse-and-pick UI
+ * for swapping which `searchbase.conf` entry powers a site marker
+ * or a link line.
+ *
+ * Why a custom component instead of reusing `KpiPickerPanel`
+ * directly: that component is wired to `MetricOverride` (tile
+ * customisations), persists into the metric-override store, and
+ * carries a tile-specific value-field / label override flow that
+ * doesn't apply to topology elements. Topology picks are simpler
+ * (one field: `searchName`) and need to be embedded inline inside
+ * the popup / editor card rather than slid in as a panel. So we
+ * mirror its filter model (free-text + tag chips + scrollable
+ * list, all over the Cisco-tagged catalogue) but keep the surface
+ * area focused on this one job.
+ *
+ * The result list is sorted with three layers of priority:
+ *   1. Currently-bound entry first (so the operator sees their
+ *      starting point at the top, even after typing a query that
+ *      would otherwise demote it).
+ *   2. Entries tagged with one of `preferredTags` next — these
+ *      are the searches we know are shaped for this surface
+ *      (Topology_Site for sites, Topology_Link for links). They
+ *      get a small "site" / "link" badge so the operator can
+ *      scan-spot them.
+ *   3. Everything else alphabetically.
+ *
+ * Tag chips are scoped to the *current filtered slice* (the same
+ * progressive-narrowing pattern the KPI picker uses), so picking
+ * "ThousandEyes" then "agent-to-agent" leaves only entries
+ * matching both — the dropdown options shrink as you narrow.
+ */
+interface TopologySearchBrowserProps {
+    /** Full Cisco-tagged catalogue. Filtering happens inside this component. */
+    catalogue: SearchbaseRecord[];
+    /** searchName currently bound to this site / link, used for highlight + sort. */
+    currentSearchName: string;
+    /** Tag(s) to surface to the top of the list (e.g. `Topology_Site`). */
+    preferredTags: string[];
+    /** Human label for the surface — shown in the header and the per-row badge. */
+    label: 'site' | 'link';
+    /** Click-an-entry handler. Caller persists. */
+    onPick: (searchName: string) => void;
+    isDark: boolean;
+    /**
+     * When true, the browser also emits a free-form text input
+     * underneath the list so the operator can type a custom
+     * stanza name not in the catalogue (used in the editor; the
+     * read-only popup hides this for simplicity).
+     */
+    showFreeFormInput?: boolean;
+}
+
+const TOPOLOGY_TAG_CHIP_LIMIT = 12;
+
+const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
+    catalogue,
+    currentSearchName,
+    preferredTags,
+    label,
+    onPick,
+    isDark,
+    showFreeFormInput = false,
+}) => {
+    const [query, setQuery] = useState('');
+    const [activeTags, setActiveTags] = useState<Set<string>>(() => new Set());
+    const [tagPickerOpen, setTagPickerOpen] = useState(false);
+    // Build 99: typeahead filter for the tag picker dropdown. Mirrors
+    // the KpiPickerPanel pattern — operators with a vocabulary in
+    // mind ("show me ThousandEyes tags") shouldn't have to scroll
+    // through 12 chips, they should type to narrow.
+    const [tagFilter, setTagFilter] = useState('');
+    const tagFilterInputRef = useRef<HTMLInputElement | null>(null);
+    const [customDraft, setCustomDraft] = useState(currentSearchName);
+
+    useEffect(() => {
+        setCustomDraft(currentSearchName);
+    }, [currentSearchName]);
+
+    // Auto-focus the tag-filter input when the picker opens so the
+    // operator can start typing immediately. Reset the filter on
+    // close so re-opening starts clean.
+    useEffect(() => {
+        if (tagPickerOpen) {
+            const id = window.setTimeout(
+                () => tagFilterInputRef.current?.focus(),
+                30
+            );
+            return () => window.clearTimeout(id);
+        }
+        setTagFilter('');
+        return undefined;
+    }, [tagPickerOpen]);
+
+    const queryLower = query.trim().toLowerCase();
+    const filtered = useMemo(() => {
+        return catalogue.filter((entry) => {
+            if (queryLower) {
+                const haystack =
+                    entry.searchName.toLowerCase() +
+                    '\n' +
+                    entry.category.toLowerCase() +
+                    '\n' +
+                    entry.subCategory.toLowerCase() +
+                    '\n' +
+                    entry.tags.join(' ').toLowerCase();
+                if (!haystack.includes(queryLower)) return false;
+            }
+            for (const tag of activeTags) {
+                if (!entry.tags.includes(tag)) return false;
+            }
+            return true;
+        });
+    }, [catalogue, queryLower, activeTags]);
+
+    const sorted = useMemo(() => {
+        return [...filtered].sort((a, b) => {
+            if (a.searchName === currentSearchName) return -1;
+            if (b.searchName === currentSearchName) return 1;
+            const aPreferred = preferredTags.some((tag) =>
+                a.tags.includes(tag)
+            );
+            const bPreferred = preferredTags.some((tag) =>
+                b.tags.includes(tag)
+            );
+            if (aPreferred && !bPreferred) return -1;
+            if (!aPreferred && bPreferred) return 1;
+            return a.searchName.localeCompare(b.searchName, undefined, {
+                sensitivity: 'base',
+            });
+        });
+    }, [filtered, currentSearchName, preferredTags]);
+
+    // All tags present in the filtered slice, ranked by frequency.
+    // Used for the chip picker AND the typeahead match-count badge.
+    // Build 99: split out from the displayed list so the typeahead
+    // can filter without changing the underlying frequency ranking.
+    const tagsAvailableAll = useMemo(() => {
+        const counts = new Map<string, number>();
+        for (const entry of filtered) {
+            for (const tag of entry.tags) {
+                counts.set(tag, (counts.get(tag) ?? 0) + 1);
+            }
+        }
+        return Array.from(counts.entries())
+            .filter(([tag]) => !activeTags.has(tag) && tag !== 'Cisco')
+            .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    }, [filtered, activeTags]);
+
+    const tagFilterLower = tagFilter.trim().toLowerCase();
+    const tagsAvailable = useMemo(() => {
+        const list = tagFilterLower
+            ? tagsAvailableAll.filter(([tag]) =>
+                  tag.toLowerCase().includes(tagFilterLower)
+              )
+            : tagsAvailableAll;
+        return list.slice(0, TOPOLOGY_TAG_CHIP_LIMIT);
+    }, [tagsAvailableAll, tagFilterLower]);
+
+    return (
+        <div
+            className={cn(
+                'space-y-2 rounded-md border-2 px-2.5 py-2.5',
+                isDark
+                    ? 'border-sky-500/60 bg-sky-500/10'
+                    : 'border-sky-500/70 bg-sky-50'
+            )}
+        >
+            <div className="flex items-center justify-between gap-2">
+                <span
+                    className={cn(
+                        'text-[10px] font-black uppercase tracking-widest',
+                        isDark ? 'text-sky-300' : 'text-sky-700'
+                    )}
+                >
+                    Change search ({label})
+                </span>
+                <span
+                    className={cn(
+                        'text-[8px] font-mono uppercase tracking-wider',
+                        isDark ? 'text-sky-400/70' : 'text-sky-600/80'
+                    )}
+                >
+                    {sorted.length} of {catalogue.length}
+                </span>
+            </div>
+
+            <div className="relative">
+                <Search
+                    className={cn(
+                        'absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none',
+                        isDark ? 'text-slate-500' : 'text-slate-400'
+                    )}
+                />
+                <input
+                    type="text"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    // Build 99: placeholder explicitly names the
+                    // fields the input matches against. The
+                    // underlying filter has always searched name +
+                    // category + sub-category + tags, but Alan
+                    // didn't realise tags were in the haystack ("we
+                    // also need the ability to search for tags").
+                    // Spelling it out tells the operator that
+                    // typing "topology" or "thousandeyes" works
+                    // without having to first open the chip
+                    // picker.
+                    placeholder={`Search ${catalogue.length} entries by name, category, or tag…`}
+                    className={cn(
+                        'w-full rounded-md border-2 px-2 py-1.5 pl-7 pr-7 text-[11px] outline-none transition-colors focus:ring-2 focus:ring-sky-400',
+                        isDark
+                            ? 'bg-slate-950 border-sky-500/50 text-slate-100 placeholder:text-slate-600'
+                            : 'bg-white border-sky-400 text-slate-800 placeholder:text-slate-400'
+                    )}
+                />
+                {query && (
+                    <button
+                        type="button"
+                        onClick={() => setQuery('')}
+                        className={cn(
+                            'absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 transition-colors',
+                            isDark
+                                ? 'text-slate-500 hover:text-slate-300'
+                                : 'text-slate-400 hover:text-slate-600'
+                        )}
+                        title="Clear search"
+                    >
+                        <X className="w-3 h-3" />
+                    </button>
+                )}
+            </div>
+
+            {(activeTags.size > 0 || tagsAvailableAll.length > 0) && (
+                <div className="space-y-1.5">
+                    {/* Build 99: typeahead input revealed when the
+                      * tag picker is open. The chip-only list scaled
+                      * fine for the ~12-tag baseline but became
+                      * unscalable as the catalogue grew (now 30+
+                      * unique tags); operators with a tag name in
+                      * mind ("ThousandEyes", "Topology_Site") had to
+                      * scan a long chip wrap to find it. Auto-
+                      * focuses on open, Enter selects the first
+                      * match, Escape closes the picker. Same UX
+                      * contract as KpiPickerPanel's tag dropdown so
+                      * the two feel like the same affordance. */}
+                    {tagPickerOpen && tagsAvailableAll.length > 0 && (
+                        <div className="relative">
+                            <Search
+                                className={cn(
+                                    'absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none',
+                                    isDark ? 'text-slate-500' : 'text-slate-400'
+                                )}
+                            />
+                            <input
+                                ref={tagFilterInputRef}
+                                type="text"
+                                value={tagFilter}
+                                onChange={(event) =>
+                                    setTagFilter(event.target.value)
+                                }
+                                onKeyDown={(event) => {
+                                    if (event.key === 'Escape') {
+                                        event.preventDefault();
+                                        setTagPickerOpen(false);
+                                    } else if (event.key === 'Enter') {
+                                        event.preventDefault();
+                                        if (tagsAvailable.length > 0) {
+                                            const [tag] = tagsAvailable[0];
+                                            setActiveTags((prev) =>
+                                                new Set(prev).add(tag)
+                                            );
+                                            setTagPickerOpen(false);
+                                        }
+                                    }
+                                }}
+                                placeholder={`Filter ${tagsAvailableAll.length} tag${
+                                    tagsAvailableAll.length === 1 ? '' : 's'
+                                }… (Enter applies first match)`}
+                                className={cn(
+                                    'w-full rounded border px-2 py-1 pl-6 pr-6 text-[10px] outline-none transition-colors focus:ring-1 focus:ring-sky-400',
+                                    isDark
+                                        ? 'bg-slate-950 border-slate-700 text-slate-200 placeholder:text-slate-600'
+                                        : 'bg-white border-slate-300 text-slate-700 placeholder:text-slate-400'
+                                )}
+                            />
+                            {tagFilter && (
+                                <button
+                                    type="button"
+                                    onClick={() => setTagFilter('')}
+                                    className={cn(
+                                        'absolute right-1 top-1/2 -translate-y-1/2 rounded p-0.5 transition-colors',
+                                        isDark
+                                            ? 'text-slate-500 hover:text-slate-300'
+                                            : 'text-slate-400 hover:text-slate-600'
+                                    )}
+                                    title="Clear tag filter"
+                                >
+                                    <X className="w-2.5 h-2.5" />
+                                </button>
+                            )}
+                        </div>
+                    )}
+                <div className="flex flex-wrap items-center gap-1">
+                    {Array.from(activeTags).map((tag) => (
+                        <button
+                            key={`active-${tag}`}
+                            type="button"
+                            onClick={() => {
+                                setActiveTags((prev) => {
+                                    const next = new Set(prev);
+                                    next.delete(tag);
+                                    return next;
+                                });
+                            }}
+                            className={cn(
+                                'inline-flex items-center gap-0.5 rounded-full border px-2 py-0.5 text-[9px] font-semibold transition-colors',
+                                isDark
+                                    ? 'bg-sky-500/20 border-sky-500/50 text-sky-200 hover:bg-sky-500/30'
+                                    : 'bg-sky-100 border-sky-300 text-sky-800 hover:bg-sky-200'
+                            )}
+                            title={`Remove tag filter: ${tag}`}
+                        >
+                            {tag}
+                            <X className="w-2.5 h-2.5" />
+                        </button>
+                    ))}
+                    {tagPickerOpen &&
+                        tagsAvailable.map(([tag, count]) => (
+                            <button
+                                key={`avail-${tag}`}
+                                type="button"
+                                onClick={() => {
+                                    setActiveTags((prev) =>
+                                        new Set(prev).add(tag)
+                                    );
+                                    setTagPickerOpen(false);
+                                }}
+                                className={cn(
+                                    'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] transition-colors',
+                                    isDark
+                                        ? 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
+                                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+                                )}
+                                title={`Filter to entries tagged ${tag}`}
+                            >
+                                {tag}
+                                <span
+                                    className={cn(
+                                        'text-[8px]',
+                                        isDark
+                                            ? 'text-slate-500'
+                                            : 'text-slate-400'
+                                    )}
+                                >
+                                    {count}
+                                </span>
+                            </button>
+                        ))}
+                    {!tagPickerOpen && tagsAvailable.length > 0 && (
+                        <button
+                            type="button"
+                            onClick={() => setTagPickerOpen(true)}
+                            className={cn(
+                                'inline-flex items-center gap-0.5 rounded-full border border-dashed px-2 py-0.5 text-[9px] transition-colors',
+                                isDark
+                                    ? 'border-slate-700 text-slate-500 hover:text-slate-300 hover:border-slate-500'
+                                    : 'border-slate-300 text-slate-500 hover:text-slate-700 hover:border-slate-400'
+                            )}
+                            title="Show available tag filters"
+                        >
+                            <Tag className="w-2.5 h-2.5" />
+                            + filter by tag
+                        </button>
+                    )}
+                    {tagPickerOpen && (
+                        <button
+                            type="button"
+                            onClick={() => setTagPickerOpen(false)}
+                            className={cn(
+                                'inline-flex items-center gap-0.5 rounded-full border px-2 py-0.5 text-[9px] transition-colors',
+                                isDark
+                                    ? 'border-slate-700 text-slate-500 hover:text-slate-300'
+                                    : 'border-slate-300 text-slate-500 hover:text-slate-700'
+                            )}
+                            title="Close tag picker"
+                        >
+                            <X className="w-2.5 h-2.5" />
+                            close tags
+                        </button>
+                    )}
+                </div>
+                </div>
+            )}
+
+            <ul
+                className={cn(
+                    'max-h-[18rem] overflow-y-auto rounded-md border',
+                    isDark
+                        ? 'border-slate-800 bg-slate-950/60'
+                        : 'border-slate-200 bg-white'
+                )}
+            >
+                {sorted.length === 0 && (
+                    <li
+                        className={cn(
+                            'px-2 py-3 text-center text-[10px] italic',
+                            isDark ? 'text-slate-500' : 'text-slate-400'
+                        )}
+                    >
+                        No matches. Clear the filters or
+                        {showFreeFormInput
+                            ? ' type a custom name below.'
+                            : ' open the editor to type a custom name.'}
+                    </li>
+                )}
+                {sorted.map((entry) => {
+                    const isSelected = entry.searchName === currentSearchName;
+                    const isPreferred = preferredTags.some((tag) =>
+                        entry.tags.includes(tag)
+                    );
+                    return (
+                        <li key={entry.id}>
+                            <button
+                                type="button"
+                                onClick={() => onPick(entry.searchName)}
+                                className={cn(
+                                    'w-full text-left px-2 py-1.5 border-b last:border-b-0 transition-colors',
+                                    isDark
+                                        ? 'border-slate-800 hover:bg-slate-800/60'
+                                        : 'border-slate-100 hover:bg-sky-50',
+                                    isSelected &&
+                                        (isDark
+                                            ? 'bg-sky-500/15'
+                                            : 'bg-sky-100/70')
+                                )}
+                                title={
+                                    entry.description
+                                        ? entry.description
+                                              .replace(/<[^>]+>/g, '')
+                                              .slice(0, 240)
+                                        : entry.searchName
+                                }
+                            >
+                                <div className="flex items-start gap-1.5">
+                                    {isSelected ? (
+                                        <Check
+                                            className={cn(
+                                                'w-3 h-3 mt-0.5 flex-shrink-0',
+                                                isDark
+                                                    ? 'text-sky-300'
+                                                    : 'text-sky-600'
+                                            )}
+                                        />
+                                    ) : (
+                                        <div className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                                    )}
+                                    <div className="min-w-0 flex-1">
+                                        <div
+                                            className={cn(
+                                                'text-[11px] font-semibold truncate',
+                                                isSelected &&
+                                                    (isDark
+                                                        ? 'text-sky-200'
+                                                        : 'text-sky-800'),
+                                                !isSelected &&
+                                                    (isDark
+                                                        ? 'text-slate-200'
+                                                        : 'text-slate-800')
+                                            )}
+                                        >
+                                            {entry.searchName}
+                                        </div>
+                                        <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                                            {entry.category && (
+                                                <span
+                                                    className={cn(
+                                                        'text-[9px] font-mono',
+                                                        isDark
+                                                            ? 'text-slate-500'
+                                                            : 'text-slate-500'
+                                                    )}
+                                                >
+                                                    {entry.category}
+                                                </span>
+                                            )}
+                                            {entry.subCategory && (
+                                                <span
+                                                    className={cn(
+                                                        'text-[9px]',
+                                                        isDark
+                                                            ? 'text-slate-600'
+                                                            : 'text-slate-400'
+                                                    )}
+                                                >
+                                                    · {entry.subCategory}
+                                                </span>
+                                            )}
+                                            {isPreferred && (
+                                                <span
+                                                    className={cn(
+                                                        'inline-flex rounded px-1 text-[8px] font-bold uppercase tracking-wider',
+                                                        isDark
+                                                            ? 'bg-sky-500/20 text-sky-300'
+                                                            : 'bg-sky-100 text-sky-700'
+                                                    )}
+                                                    title={`This search is shaped for a topology ${label}`}
+                                                >
+                                                    {label}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </button>
+                        </li>
+                    );
+                })}
+            </ul>
+
+            {showFreeFormInput && (
+                <div className="space-y-1">
+                    <label
+                        className={cn(
+                            'block text-[8px] font-black uppercase tracking-widest',
+                            isDark ? 'text-slate-500' : 'text-slate-500'
+                        )}
+                    >
+                        Or type a custom search name
+                    </label>
+                    <div className="flex items-stretch gap-1">
+                        <input
+                            type="text"
+                            value={customDraft}
+                            onChange={(event) =>
+                                setCustomDraft(event.target.value)
+                            }
+                            onKeyDown={(event) => {
+                                if (event.key === 'Enter') {
+                                    event.preventDefault();
+                                    onPick(customDraft.trim());
+                                }
+                            }}
+                            placeholder="e.g. Overview - Site Tallahassee Health"
+                            className={cn(
+                                'flex-1 rounded-md border px-2 py-1.5 text-[11px] outline-none transition-colors focus:ring-2 focus:ring-sky-400',
+                                isDark
+                                    ? 'bg-slate-950 border-slate-700 text-slate-100 placeholder:text-slate-600'
+                                    : 'bg-white border-slate-200 text-slate-800 placeholder:text-slate-400'
+                            )}
+                        />
+                        <button
+                            type="button"
+                            onClick={() => onPick(customDraft.trim())}
+                            disabled={
+                                customDraft.trim() ===
+                                (currentSearchName ?? '').trim()
+                            }
+                            className={cn(
+                                'rounded-md border px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors',
+                                isDark
+                                    ? 'bg-sky-500/20 border-sky-500/50 text-sky-200 hover:bg-sky-500/30 disabled:opacity-40 disabled:cursor-not-allowed'
+                                    : 'bg-sky-100 border-sky-300 text-sky-800 hover:bg-sky-200 disabled:opacity-40 disabled:cursor-not-allowed'
+                            )}
+                            title="Apply this custom name as the search for this element"
+                        >
+                            Apply
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            <p
+                className={cn(
+                    'text-[9px] leading-relaxed',
+                    isDark ? 'text-sky-200/80' : 'text-sky-800/80'
+                )}
+            >
+                Pick any search from the {catalogue.length}-entry searchbase
+                catalogue to drive this {label}. Type to filter, click a tag
+                to narrow, click an entry to apply.
+            </p>
         </div>
     );
 };
@@ -2181,10 +3985,23 @@ interface SelectionCardProps {
     catalogueLoaded: boolean;
     selectedSearchName?: string;
     selectedSpl: string;
+    siteEnrichmentByShortName?: Record<string, SiteEnrichment>;
     onClose: () => void;
     onOpenInSearch?: () => void;
 }
 
+/**
+ * Read-only popup that opens when the operator clicks a marker or
+ * a link on the map. Per Alan's 2026-05-13 feedback, this surface
+ * is intentionally inspect-only: it shows the bound `searchName`,
+ * the live SPL, and an "Open in Splunk Search" button so the
+ * operator can verify and run the underlying query, but it does
+ * NOT offer a search-picker on this surface. Search swaps belong
+ * in the topology editor (pencil button), where they are an
+ * editorial action with proper save/discard semantics. Mixing
+ * "view a marker" and "rebind a marker" on the same popup made
+ * the edit feel surprising and the inspect feel cluttered.
+ */
 const SelectionCard: React.FC<SelectionCardProps> = ({
     selected,
     topology,
@@ -2193,11 +4010,19 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
     catalogueLoaded,
     selectedSearchName,
     selectedSpl,
+    siteEnrichmentByShortName,
     onClose,
     onOpenInSearch,
 }) => {
     const dragControls = useDragControls();
     const [showSpl, setShowSpl] = useState(false);
+    // Ref on the popup container so we can register a *document-level*
+    // mousedown listener that dismisses when the user clicks outside
+    // the panel. The map's MapClickCapture only fires when the click
+    // hits empty map pixels, which doesn't help when the panel covers
+    // basically the entire map column (the customer's narrow right-column
+    // layout). With this ref we catch clicks anywhere on the page.
+    const panelRef = useRef<HTMLDivElement>(null);
     const selectedKey = selected
         ? selected.kind === 'site'
             ? `site:${selected.site.id}`
@@ -2215,6 +4040,55 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
     useEffect(() => {
         setShowSpl(false);
     }, [selectedKey, selectedSearchName]);
+
+    // Document-level click-outside dismiss. We deliberately skip the
+    // dismissal when the click lands on a leaflet marker or
+    // interactive svg path — those have their own click-to-toggle
+    // handlers and we don't want to fight them. We also skip clicks
+    // inside leaflet popups / tooltips (used by the editor pick
+    // mode).
+    useEffect(() => {
+        if (!selected) return undefined;
+        const onMouseDown = (event: MouseEvent) => {
+            const target = event.target;
+            if (!(target instanceof Node)) return;
+            const panel = panelRef.current;
+            if (panel && panel.contains(target)) return;
+            if (
+                target instanceof Element &&
+                target.closest(
+                    '.leaflet-marker-icon, .leaflet-interactive, .leaflet-popup, .leaflet-tooltip'
+                )
+            ) {
+                return;
+            }
+            onClose();
+        };
+        // Capture phase so descendant `stopPropagation()` calls (the
+        // editor panel, the map's marker handlers, etc.) cannot
+        // swallow the dismissal.
+        document.addEventListener('mousedown', onMouseDown, true);
+        return () =>
+            document.removeEventListener('mousedown', onMouseDown, true);
+    }, [selected, onClose]);
+
+    // Document-level Escape dismiss. Owned by SelectionCard rather
+    // than the parent so the dismissal contract sits next to the
+    // panel's other lifecycle behaviour (drag, click-outside, X
+    // button). Capture phase for the same reason as the mousedown
+    // handler above — we never want a focused editor input or a
+    // Leaflet keyboard handler to eat the Escape.
+    useEffect(() => {
+        if (!selected) return undefined;
+        const onKey = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                event.stopPropagation();
+                onClose();
+            }
+        };
+        document.addEventListener('keydown', onKey, true);
+        return () => document.removeEventListener('keydown', onKey, true);
+    }, [selected, onClose]);
 
     const title =
         selected?.kind === 'site'
@@ -2241,6 +4115,7 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
         <AnimatePresence>
             {selected && (
                 <motion.div
+                    ref={panelRef}
                     initial={{ opacity: 0, x: 20, scale: 0.94 }}
                     animate={{ opacity: 1, x: 0, scale: 1 }}
                     exit={{ opacity: 0, x: 20, scale: 0.94 }}
@@ -2310,6 +4185,11 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
                                 site={selected.site}
                                 links={connectedLinks}
                                 isDark={isDark}
+                                enrichment={
+                                    siteEnrichmentByShortName?.[
+                                        selected.site.shortName
+                                    ]
+                                }
                             />
                         ) : (
                             <LinkDetails
@@ -2319,6 +4199,13 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
                             />
                         )}
 
+                        {/*
+                            Inspect-only data-source line. Click is
+                            "view what this marker / link is wired to"
+                            — picking a different search lives in the
+                            editor (pencil button), so this surface
+                            stays focused on inspect + run.
+                        */}
                         <div className="space-y-1">
                             <div className="flex items-center justify-between gap-2">
                                 <button
@@ -2354,9 +4241,9 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
                                 {selectedSpl && onOpenInSearch ? (
                                     <button
                                         type="button"
-                                        aria-label="Open this query in Splunk Search"
+                                        aria-label="Open this query in Search"
                                         onClick={onOpenInSearch}
-                                        title="Open this query in Splunk Search"
+                                        title="Open this query in Search"
                                         className={cn(
                                             'transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-500',
                                             isDark
@@ -2393,7 +4280,7 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
                                         <button
                                             type="button"
                                             onClick={onOpenInSearch}
-                                            title="Click to run this SPL in Splunk Search"
+                                            title="Click to run this SPL in Search"
                                             className={cn(
                                                 'block w-full text-left rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400',
                                                 isDark
@@ -2456,7 +4343,7 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
                                 )}
                             >
                                 <ExternalLink className="w-3 h-3" />
-                                Open in Splunk Search
+                                Open in Search
                         </button>
                     </div>
                 </motion.div>
@@ -2476,6 +4363,22 @@ interface TopologyEditorPanelProps {
     onSave: () => void;
     onResetFactory: () => void;
     onClose: () => void;
+    /**
+     * Searchbase catalogue keyed by `searchName`. Used to populate the
+     * per-site and per-link "Pick search…" dropdowns so demo / fake
+     * stanzas can be swapped in without typing the stanza name.
+     * `null` while the catalogue is still loading.
+     */
+    catalogueByName: Record<string, SearchbaseRecord> | null;
+    /**
+     * Optional dispatch for the per-card "Open in Splunk Search"
+     * affordance. When wired by the parent map, each editor card
+     * gets a button that pushes the bound stanza's SPL into a new
+     * Splunk Search tab — same UX as the "Open in Search" buttons
+     * on tile pickers, so operators can sanity-check a search
+     * before saving the topology.
+     */
+    onOpenInSearch?: (spl: string) => void;
 }
 
 const editorInputClass = (isDark: boolean): string =>
@@ -2499,9 +4402,84 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
     onSave,
     onResetFactory,
     onClose,
+    catalogueByName,
+    onOpenInSearch,
 }) => {
     const [jsonText, setJsonText] = useState('');
     const [jsonError, setJsonError] = useState<string | null>(null);
+
+    // The editor's per-card pickers browse the full dashboard-pack
+    // catalogue, identical to the in-popup `TopologySearchBrowser`.
+    // Tag-narrowing (Topology_Site / Topology_Link) is a *sort
+    // hint*, not a filter — those entries float to the top of the
+    // list, but every dashboard-pack stanza is reachable via search.
+    // This matches the KpiPickerPanel browsing model so editing a
+    // tile and editing a topology element feel like the same
+    // operation.
+    //
+    // Build 98 (2026-05-13): scope changed from `tags.includes('Cisco')`
+    // to `dispatchContext === 'splunk-cisco-dashboards'`. The `Cisco`
+    // tag was removed from every stanza during the FDEM/branding
+    // cleanup in Build 91, so the old filter started returning
+    // nothing — the topology editor's site / link change-search
+    // browsers showed "0 of 0" entries (Alan caught this on
+    // 2026-05-13). Same root-cause and same one-line fix as the KPI
+    // picker hit in Build 91; the `dispatch_context` field is
+    // authored on every stanza in this app's `default/searchbase.conf`
+    // (with `dispatch_context_force = 1`) so it's a stable scope key
+    // that the FDEM scrub didn't touch.
+    const editorSearchOptions = useMemo(() => {
+        if (!catalogueByName) return [] as SearchbaseRecord[];
+        return Object.values(catalogueByName)
+            .filter((record) => record.dispatchContext === 'splunk-cisco-dashboards')
+            .sort((a, b) =>
+                a.searchName.localeCompare(b.searchName, undefined, {
+                    sensitivity: 'base',
+                })
+            );
+    }, [catalogueByName]);
+
+    // Collapsed-by-default site / link cards. Storing the
+    // *expanded* set (rather than the collapsed set) means a fresh
+    // editor open shows everything compact, matching Alan's 2026-
+    // 05-13 ask: "can the sites and links default to collapsable
+    // here?". Keys are site / link IDs, namespaced with `site:` /
+    // `link:` so a future shared ID space wouldn't collide.
+    const [expandedCardKeys, setExpandedCardKeys] = useState<Set<string>>(
+        () => new Set()
+    );
+    const toggleCardExpanded = useCallback((key: string) => {
+        setExpandedCardKeys((prev) => {
+            const next = new Set(prev);
+            if (next.has(key)) {
+                next.delete(key);
+            } else {
+                next.add(key);
+            }
+            return next;
+        });
+    }, []);
+    // Reset card-collapse state every time the editor closes so a
+    // re-open starts from the canonical "everything collapsed"
+    // baseline. Without this, a long editing session can leave a
+    // dozen cards expanded across multiple sessions.
+    useEffect(() => {
+        if (!open) setExpandedCardKeys(new Set());
+    }, [open]);
+
+    // SPL lookup helper for the per-card "Open in Search" button.
+    // Reads the searchbase catalogue and dispatches the bound
+    // stanza's literal SPL through the parent's `onOpenInSearch`
+    // handler — same plumbing as the read-only popup's button, so
+    // both surfaces behave identically.
+    const handleOpenInSearch = useCallback(
+        (searchName: string | undefined) => {
+            if (!searchName || !onOpenInSearch || !catalogueByName) return;
+            const spl = catalogueByName[searchName]?.search?.trim();
+            if (spl) onOpenInSearch(spl);
+        },
+        [onOpenInSearch, catalogueByName]
+    );
 
     useEffect(() => {
         if (!open) {
@@ -2662,10 +4640,24 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                     animate={{ opacity: 1, x: 0, scale: 1 }}
                     exit={{ opacity: 0, x: 28, scale: 0.98 }}
                     className={cn(
-                        'absolute top-3 right-3 bottom-3 z-[2200] w-[min(430px,calc(100%-1.5rem))] rounded-xl border shadow-2xl overflow-hidden flex flex-col',
+                        // Background is fully opaque so map labels (city
+                        // names, road outlines) don't bleed through the
+                        // form fields — that was the "I can't read what
+                        // I'm typing" complaint. Earlier revisions used
+                        // `bg-slate-950/96` / `bg-white/98` for a frosted
+                        // feel, but those slash-opacity values aren't in
+                        // Tailwind's default scale and aren't in
+                        // `tailwind.config.js`, so they were silently
+                        // dropped — the panel rendered effectively
+                        // transparent. `backdrop-blur-sm` keeps a subtle
+                        // overlay feel for the small areas around the
+                        // rounded corners and on top of any drag-handle
+                        // sticker that pokes out, without sacrificing
+                        // legibility of the main form area.
+                        'absolute top-3 right-3 bottom-3 z-[2200] w-[min(430px,calc(100%-1.5rem))] rounded-xl border shadow-2xl overflow-hidden flex flex-col backdrop-blur-sm',
                         isDark
-                            ? 'bg-slate-950/96 border-slate-700 text-slate-100'
-                            : 'bg-white/98 border-slate-200 text-slate-800'
+                            ? 'bg-slate-950 border-slate-700 text-slate-100'
+                            : 'bg-white border-slate-200 text-slate-800'
                     )}
                 >
                     <div
@@ -2854,24 +4846,112 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                 </button>
                             </div>
                             <div className="space-y-2">
-                                {topology.sites.map((site) => (
+                                {topology.sites.map((site) => {
+                                    const cardKey = `site:${site.id}`;
+                                    const isExpanded =
+                                        expandedCardKeys.has(cardKey);
+                                    const boundSearch =
+                                        site.searchName?.trim() || '';
+                                    return (
                                     <div
                                         key={site.id}
                                         className={cn(
-                                            'rounded-lg border p-3 space-y-2',
+                                            'rounded-lg border overflow-hidden',
                                             isDark
                                                 ? 'border-slate-800 bg-slate-900/70'
                                                 : 'border-slate-200 bg-slate-50'
                                         )}
                                     >
-                                        <div className="flex items-center justify-between gap-2">
-                                            <div className="flex items-center gap-2 min-w-0">
+                                        {/*
+                                            Collapsible header. Click the
+                                            chevron + ID block to toggle the
+                                            full-detail body. Defaulting to
+                                            collapsed (per Alan's 2026-05-13
+                                            ask) keeps the editor panel
+                                            short on customers with lots of
+                                            sites — operators expand only
+                                            the card they're touching.
+                                        */}
+                                        <div className="flex items-center justify-between gap-2 p-3">
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    toggleCardExpanded(cardKey)
+                                                }
+                                                aria-expanded={isExpanded}
+                                                title={
+                                                    isExpanded
+                                                        ? 'Collapse site details'
+                                                        : 'Expand site details'
+                                                }
+                                                className={cn(
+                                                    'flex items-center gap-2 min-w-0 flex-1 text-left rounded transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400'
+                                                )}
+                                            >
+                                                <ChevronRight
+                                                    className={cn(
+                                                        'w-3.5 h-3.5 flex-shrink-0 transition-transform',
+                                                        isDark
+                                                            ? 'text-slate-400'
+                                                            : 'text-slate-500',
+                                                        isExpanded && 'rotate-90'
+                                                    )}
+                                                />
                                                 <MapPin className="w-4 h-4 text-sky-500 flex-shrink-0" />
-                                                <span className="text-[10px] font-mono uppercase text-slate-400 truncate">
-                                                    {site.id}
-                                                </span>
-                                            </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="text-[10px] font-mono uppercase text-slate-400 truncate">
+                                                        {site.id}
+                                                    </div>
+                                                    <div
+                                                        className={cn(
+                                                            'text-[10px] truncate',
+                                                            boundSearch
+                                                                ? isDark
+                                                                    ? 'text-slate-200'
+                                                                    : 'text-slate-700'
+                                                                : isDark
+                                                                ? 'text-slate-500 italic'
+                                                                : 'text-slate-400 italic'
+                                                        )}
+                                                        title={
+                                                            boundSearch ||
+                                                            'No search bound — expand to pick one.'
+                                                        }
+                                                    >
+                                                        {boundSearch ||
+                                                            'No search bound'}
+                                                    </div>
+                                                </div>
+                                            </button>
                                             <div className="flex items-center gap-1">
+                                                {onOpenInSearch && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            handleOpenInSearch(
+                                                                boundSearch
+                                                            )
+                                                        }
+                                                        disabled={!boundSearch}
+                                                        title={
+                                                            boundSearch
+                                                                ? `Open this search in Search to test it`
+                                                                : 'Pick a search first to enable testing'
+                                                        }
+                                                        className={cn(
+                                                            'p-1.5 rounded-md transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                                                            !boundSearch
+                                                                ? isDark
+                                                                    ? 'bg-slate-800/50 text-slate-600 cursor-not-allowed'
+                                                                    : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                                                : isDark
+                                                                ? 'bg-slate-800 text-sky-300 hover:bg-sky-950/70'
+                                                                : 'bg-white text-sky-700 hover:bg-sky-50'
+                                                        )}
+                                                    >
+                                                        <ExternalLink className="w-3.5 h-3.5" />
+                                                    </button>
+                                                )}
                                                 <button
                                                     type="button"
                                                     onClick={() =>
@@ -2907,6 +4987,45 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                     <Trash2 className="w-3.5 h-3.5" />
                                                 </button>
                                             </div>
+                                        </div>
+                                        {isExpanded && (
+                                        <div
+                                            className={cn(
+                                                'px-3 pb-3 space-y-2 border-t',
+                                                isDark
+                                                    ? 'border-slate-800'
+                                                    : 'border-slate-200'
+                                            )}
+                                        >
+                                        {/*
+                                            Data-source picker. Lives at the
+                                            top of the expanded body because
+                                            "which search powers this
+                                            marker?" is the most-asked
+                                            question once the site exists in
+                                            the topology. The header above
+                                            already shows the bound search
+                                            name + an "Open in Search"
+                                            button so an operator can
+                                            sanity-check before expanding
+                                            the picker.
+                                        */}
+                                        <div className="pt-2">
+                                            <TopologySearchBrowser
+                                                catalogue={editorSearchOptions}
+                                                currentSearchName={
+                                                    site.searchName ?? ''
+                                                }
+                                                preferredTags={['Topology_Site']}
+                                                label="site"
+                                                onPick={(searchName) =>
+                                                    updateSite(site.id, {
+                                                        searchName,
+                                                    })
+                                                }
+                                                isDark={isDark}
+                                                showFreeFormInput
+                                            />
                                         </div>
                                         <div className="grid grid-cols-2 gap-2">
                                             <label className="space-y-1">
@@ -3072,21 +5191,47 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                         : 'text-slate-400'
                                                 )}
                                             >
-                                                search_name
+                                                Internet edge Mbps
                                             </span>
                                             <input
+                                                type="number"
+                                                min="0"
+                                                step="1"
                                                 className={editorInputClass(isDark)}
-                                                value={site.searchName ?? ''}
-                                                placeholder="Overview - Site Tallahassee Health"
+                                                value={site.internetEdgeMbps ?? ''}
+                                                placeholder="e.g. 1000"
                                                 onChange={(event) =>
                                                     updateSite(site.id, {
-                                                        searchName: event.target.value,
+                                                        internetEdgeMbps:
+                                                            event.target.value === ''
+                                                                ? undefined
+                                                                : Number(
+                                                                      event.target
+                                                                          .value
+                                                                  ),
                                                     })
                                                 }
                                             />
+                                            <span
+                                                className={cn(
+                                                    'block text-[9px] tracking-wide',
+                                                    isDark
+                                                        ? 'text-slate-500'
+                                                        : 'text-slate-400'
+                                                )}
+                                            >
+                                                Optional. Populates the
+                                                "Design of Record" line on this
+                                                site&rsquo;s popup. Leave blank
+                                                if the circuit speed is not
+                                                confirmed yet.
+                                            </span>
                                         </label>
+                                        </div>
+                                        )}
                                     </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </section>
 
@@ -3107,36 +5252,153 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                 </button>
                             </div>
                             <div className="space-y-2">
-                                {topology.links.map((link) => (
+                                {topology.links.map((link) => {
+                                    const cardKey = `link:${link.id}`;
+                                    const isExpanded =
+                                        expandedCardKeys.has(cardKey);
+                                    const boundSearch =
+                                        link.searchName?.trim() || '';
+                                    return (
                                     <div
                                         key={link.id}
                                         className={cn(
-                                            'rounded-lg border p-3 space-y-2',
+                                            'rounded-lg border overflow-hidden',
                                             isDark
                                                 ? 'border-slate-800 bg-slate-900/70'
                                                 : 'border-slate-200 bg-slate-50'
                                         )}
                                     >
-                                        <div className="flex items-center justify-between gap-2">
-                                            <div className="flex items-center gap-2 min-w-0">
-                                                <Link2 className="w-4 h-4 text-sky-500 flex-shrink-0" />
-                                                <span className="text-[10px] font-mono uppercase text-slate-400 truncate">
-                                                    {link.id}
-                                                </span>
-                                            </div>
+                                        <div className="flex items-center justify-between gap-2 p-3">
                                             <button
                                                 type="button"
-                                                onClick={() => removeLink(link.id)}
-                                                title="Remove link"
-                                                className={cn(
-                                                    'p-1.5 rounded-md transition-colors focus:outline-none focus:ring-1 focus:ring-red-400',
-                                                    isDark
-                                                        ? 'bg-slate-800 text-red-300 hover:bg-red-950/70'
-                                                        : 'bg-white text-red-500 hover:bg-red-50'
-                                                )}
+                                                onClick={() =>
+                                                    toggleCardExpanded(cardKey)
+                                                }
+                                                aria-expanded={isExpanded}
+                                                title={
+                                                    isExpanded
+                                                        ? 'Collapse link details'
+                                                        : 'Expand link details'
+                                                }
+                                                className="flex items-center gap-2 min-w-0 flex-1 text-left rounded transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400"
                                             >
-                                                <Trash2 className="w-3.5 h-3.5" />
+                                                <ChevronRight
+                                                    className={cn(
+                                                        'w-3.5 h-3.5 flex-shrink-0 transition-transform',
+                                                        isDark
+                                                            ? 'text-slate-400'
+                                                            : 'text-slate-500',
+                                                        isExpanded && 'rotate-90'
+                                                    )}
+                                                />
+                                                <Link2 className="w-4 h-4 text-sky-500 flex-shrink-0" />
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="text-[10px] font-mono uppercase text-slate-400 truncate">
+                                                        {link.id}
+                                                    </div>
+                                                    <div
+                                                        className={cn(
+                                                            'text-[10px] truncate',
+                                                            boundSearch
+                                                                ? isDark
+                                                                    ? 'text-slate-200'
+                                                                    : 'text-slate-700'
+                                                                : isDark
+                                                                ? 'text-slate-500 italic'
+                                                                : 'text-slate-400 italic'
+                                                        )}
+                                                        title={
+                                                            boundSearch ||
+                                                            'No search bound — expand to pick one.'
+                                                        }
+                                                    >
+                                                        {boundSearch ||
+                                                            'No search bound'}
+                                                    </div>
+                                                </div>
                                             </button>
+                                            <div className="flex items-center gap-1">
+                                                {onOpenInSearch && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            handleOpenInSearch(
+                                                                boundSearch
+                                                            )
+                                                        }
+                                                        disabled={!boundSearch}
+                                                        title={
+                                                            boundSearch
+                                                                ? 'Open this search in Search to test it'
+                                                                : 'Pick a search first to enable testing'
+                                                        }
+                                                        className={cn(
+                                                            'p-1.5 rounded-md transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                                                            !boundSearch
+                                                                ? isDark
+                                                                    ? 'bg-slate-800/50 text-slate-600 cursor-not-allowed'
+                                                                    : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                                                : isDark
+                                                                ? 'bg-slate-800 text-sky-300 hover:bg-sky-950/70'
+                                                                : 'bg-white text-sky-700 hover:bg-sky-50'
+                                                        )}
+                                                    >
+                                                        <ExternalLink className="w-3.5 h-3.5" />
+                                                    </button>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeLink(link.id)}
+                                                    title="Remove link"
+                                                    className={cn(
+                                                        'p-1.5 rounded-md transition-colors focus:outline-none focus:ring-1 focus:ring-red-400',
+                                                        isDark
+                                                            ? 'bg-slate-800 text-red-300 hover:bg-red-950/70'
+                                                            : 'bg-white text-red-500 hover:bg-red-50'
+                                                    )}
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {isExpanded && (
+                                        <div
+                                            className={cn(
+                                                'px-3 pb-3 space-y-2 border-t',
+                                                isDark
+                                                    ? 'border-slate-800'
+                                                    : 'border-slate-200'
+                                            )}
+                                        >
+                                        {/*
+                                            Editor variant of the link
+                                            catalogue browser. Same
+                                            component as the site card,
+                                            scoped to `Topology_Link`-tagged
+                                            stanzas as the preferred sort
+                                            but with full Cisco-tagged
+                                            catalogue browsable. The
+                                            header above already shows the
+                                            bound search name + an "Open
+                                            in Search" button for quick
+                                            sanity-checks.
+                                        */}
+                                        <div className="pt-2">
+                                            <TopologySearchBrowser
+                                                catalogue={editorSearchOptions}
+                                                currentSearchName={
+                                                    link.searchName ?? ''
+                                                }
+                                                preferredTags={['Topology_Link']}
+                                                label="link"
+                                                onPick={(searchName) =>
+                                                    updateLink(link.id, {
+                                                        searchName,
+                                                    })
+                                                }
+                                                isDark={isDark}
+                                                showFreeFormInput
+                                            />
                                         </div>
                                         <label className="block space-y-1">
                                             <span
@@ -3282,30 +5544,11 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                 />
                                             </label>
                                         </div>
-                                        <label className="block space-y-1">
-                                            <span
-                                                className={cn(
-                                                    editorLabelClass,
-                                                    isDark
-                                                        ? 'text-slate-500'
-                                                        : 'text-slate-400'
-                                                )}
-                                            >
-                                                search_name
-                                            </span>
-                                            <input
-                                                className={editorInputClass(isDark)}
-                                                value={link.searchName ?? ''}
-                                                placeholder="Overview - Link Orlando to Tallahassee Health"
-                                                onChange={(event) =>
-                                                    updateLink(link.id, {
-                                                        searchName: event.target.value,
-                                                    })
-                                                }
-                                            />
-                                        </label>
+                                        </div>
+                                        )}
                                     </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </section>
 
@@ -3398,122 +5641,245 @@ interface SiteDetailsProps {
     site: TopologySite;
     links: TopologyLink[];
     isDark: boolean;
+    enrichment?: SiteEnrichment;
 }
 
-const SiteDetails: React.FC<SiteDetailsProps> = ({ site, links, isDark }) => (
-    <>
-        <div className="grid grid-cols-2 gap-2">
-            <MetricPill
-                label="Health"
-                value={formatPercent(site.metrics.healthPct)}
-                isDark={isDark}
-            />
-            <MetricPill
-                label="Devices"
-                value={formatNumber(site.metrics.activeDevices)}
-                isDark={isDark}
-            />
-            <MetricPill
-                label="Alerts"
-                value={formatNumber(site.metrics.alerts)}
-                isDark={isDark}
-            />
-            <MetricPill
-                label="Latency"
-                value={formatLatency(site.metrics.latencyMs)}
-                isDark={isDark}
-            />
-        </div>
-        <div
-            className={cn(
-                'rounded border p-2 space-y-1',
-                isDark ? 'bg-white/5 border-white/5' : 'bg-slate-50 border-slate-200'
-            )}
-        >
-            <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-slate-500">
-                <Code2 className="w-3 h-3" />
-                Telemetry Source
+const SiteDetails: React.FC<SiteDetailsProps> = ({
+    site,
+    links,
+    isDark,
+    enrichment,
+}) => {
+    const hasEnrichment = Boolean(
+        enrichment &&
+            (enrichment.address ||
+                enrichment.lat !== undefined ||
+                enrichment.lon !== undefined)
+    );
+    const coordinatesLabel =
+        enrichment?.lat !== undefined && enrichment?.lon !== undefined
+            ? `${enrichment.lat.toFixed(5)}, ${enrichment.lon.toFixed(5)}`
+            : null;
+
+    // Build 103 (2026-05-14): mirror the link-popup loading-state
+    // treatment for sites — when the per-site saved search is in
+    // flight the metric pills should read "Loading…" instead of
+    // "Awaiting" so operators can tell "search dispatched" from
+    // "no integration wired."
+    const isSiteLoading = site.dataState === 'loading';
+    return (
+        <>
+            <div className="grid grid-cols-3 gap-2">
+                <MetricPill
+                    label="Health"
+                    value={formatPercent(site.metrics.healthPct, isSiteLoading)}
+                    isDark={isDark}
+                />
+                <MetricPill
+                    label="Devices"
+                    value={formatNumber(site.metrics.activeDevices, isSiteLoading)}
+                    isDark={isDark}
+                />
+                <MetricPill
+                    label="Alerts"
+                    value={formatNumber(site.metrics.alerts, isSiteLoading)}
+                    isDark={isDark}
+                />
             </div>
-            <p
+            {hasEnrichment && (
+                <div
+                    className={cn(
+                        'rounded border p-2 space-y-1',
+                        isDark
+                            ? 'bg-white/5 border-white/5'
+                            : 'bg-slate-50 border-slate-200'
+                    )}
+                >
+                    <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-slate-500">
+                        <MapPin className="w-3 h-3" />
+                        Address & Location
+                    </div>
+                    {enrichment?.address && (
+                        <p
+                            className={cn(
+                                'text-[10px] leading-relaxed',
+                                isDark ? 'text-slate-300' : 'text-slate-700'
+                            )}
+                        >
+                            {enrichment.address}
+                        </p>
+                    )}
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[9px] text-slate-500 leading-relaxed">
+                        {enrichment?.country && (
+                            <span>{enrichment.country}</span>
+                        )}
+                        {coordinatesLabel && (
+                            <span className="font-mono">
+                                {coordinatesLabel}
+                            </span>
+                        )}
+                        {enrichment?.siteLabel && (
+                            <span className="font-mono">
+                                {enrichment.siteLabel}
+                            </span>
+                        )}
+                    </div>
+                    <p className="text-[9px] text-slate-500 leading-relaxed">
+                        Source: cisco:dnac:site:topology
+                        {enrichment?.lastUpdated
+                            ? ` - Updated ${enrichment.lastUpdated}`
+                            : ''}
+                    </p>
+                </div>
+            )}
+            {site.internetEdgeMbps !== undefined && (
+                <div
+                    className={cn(
+                        'rounded border p-2 space-y-1',
+                        isDark
+                            ? 'bg-white/5 border-white/5'
+                            : 'bg-slate-50 border-slate-200'
+                    )}
+                >
+                    <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-slate-500">
+                        <Globe className="w-3 h-3" />
+                        Design of Record
+                    </div>
+                    <div className="flex items-center justify-between gap-2 text-[10px] leading-relaxed">
+                        <span
+                            className={cn(
+                                isDark ? 'text-slate-300' : 'text-slate-700'
+                            )}
+                        >
+                            Internet Edge Bandwidth
+                        </span>
+                        <span
+                            className={cn(
+                                'font-mono font-bold',
+                                isDark ? 'text-slate-100' : 'text-slate-900'
+                            )}
+                        >
+                            {formatMbps(site.internetEdgeMbps)}
+                        </span>
+                    </div>
+                    <p className="text-[9px] text-slate-500 leading-relaxed">
+                        Static configuration value &mdash; will be overridden
+                        when per-site Internet uplink telemetry is wired in.
+                    </p>
+                </div>
+            )}
+            <div
                 className={cn(
-                    'text-[10px] leading-relaxed',
-                    isDark ? 'text-slate-300' : 'text-slate-700'
+                    'rounded border p-2 space-y-1',
+                    isDark
+                        ? 'bg-white/5 border-white/5'
+                        : 'bg-slate-50 border-slate-200'
                 )}
             >
-                {site.telemetrySource ??
-                    (site.searchName
-                        ? 'Awaiting normalized site telemetry'
-                        : 'Configured topology item')}
-            </p>
-            <p className="text-[9px] text-slate-500 leading-relaxed">
-                {site.dataState === 'live'
-                    ? 'Live searchbase result'
-                    : site.dataState === 'loading'
-                    ? 'Loading searchbase result'
-                    : site.dataState === 'error'
-                    ? 'Searchbase result unavailable'
-                        : 'Configured value'}
-                {site.lastUpdated ? ` - Updated ${site.lastUpdated}` : ''}
-                {site.dataState === 'error' && site.dataError
-                    ? ` - ${site.dataError}`
-                    : ''}
-            </p>
-        </div>
-        {links.length > 0 && (
-            <div className="space-y-1">
                 <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-slate-500">
-                    <Link2 className="w-3 h-3" />
-                    Connected Paths
+                    <Code2 className="w-3 h-3" />
+                    Telemetry Source
                 </div>
-                <div className="space-y-1">
-                    {links.map((link) => (
-                        <div
-                            key={link.id}
-                            className={cn(
-                                'flex items-center justify-between gap-2 rounded border px-2 py-1',
-                                isDark
-                                    ? 'bg-white/5 border-white/5'
-                                    : 'bg-white border-slate-200'
-                            )}
-                            title={`${link.name}: ${formatMbps(
-                                link.throughputMbps
-                            )}, ${formatPercent(link.utilizationPct)} utilized`}
-                        >
-                            <div className="min-w-0">
-                                <span
-                                    className={cn(
-                                        'block text-[10px] font-bold truncate',
-                                        isDark ? 'text-slate-300' : 'text-slate-700'
-                                    )}
-                                >
-                                    {link.name}
-                                </span>
-                                <span className="block text-[8.5px] font-mono text-slate-500 truncate">
-                                    {formatMbps(link.throughputMbps)} ·{' '}
-                                    {formatPercent(link.utilizationPct)}
-                                </span>
-                            </div>
-                            <div className="flex flex-shrink-0 items-center gap-1.5">
-                                {link.capacityMbps !== undefined && (
-                                    <span className="font-mono text-[8.5px] text-slate-500">
-                                        {formatMbps(link.capacityMbps)}
-                                    </span>
-                                )}
-                                <span
-                                    className={cn(
-                                        'w-2 h-2 rounded-full',
-                                        STATUS_DOT_CLASS[link.status]
-                                    )}
-                                    title={link.status}
-                                />
-                            </div>
-                        </div>
-                    ))}
-                </div>
+                <p
+                    className={cn(
+                        'text-[10px] leading-relaxed',
+                        isDark ? 'text-slate-300' : 'text-slate-700'
+                    )}
+                >
+                    {site.telemetrySource ??
+                        (site.searchName
+                            ? 'Awaiting normalized site telemetry'
+                            : 'Configured topology item')}
+                </p>
+                {/* Build 103 (2026-05-14): inline spinner on the
+                    sub-line when in flight, so the loading state has
+                    a visual affordance not just textual. Mirrors the
+                    treatment in the link-popup TELEMETRY SOURCE
+                    block above. */}
+                <p className="flex items-center gap-1 text-[9px] text-slate-500 leading-relaxed">
+                    {site.dataState === 'loading' && (
+                        <Loader2
+                            className="w-2.5 h-2.5 animate-spin flex-shrink-0"
+                            aria-hidden="true"
+                        />
+                    )}
+                    <span>
+                        {site.dataState === 'live'
+                            ? 'Live searchbase result'
+                            : site.dataState === 'loading'
+                            ? 'Loading searchbase result'
+                            : site.dataState === 'error'
+                            ? 'Searchbase result unavailable'
+                            : 'Configured value'}
+                        {site.lastUpdated
+                            ? ` - Updated ${site.lastUpdated}`
+                            : ''}
+                        {site.dataState === 'error' && site.dataError
+                            ? ` - ${site.dataError}`
+                            : ''}
+                    </span>
+                </p>
             </div>
-        )}
-    </>
-);
+            {links.length > 0 && (
+                <div className="space-y-1">
+                    <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-slate-500">
+                        <Link2 className="w-3 h-3" />
+                        Connected Paths
+                    </div>
+                    <div className="space-y-1">
+                        {links.map((link) => (
+                            <div
+                                key={link.id}
+                                className={cn(
+                                    'flex items-center justify-between gap-2 rounded border px-2 py-1',
+                                    isDark
+                                        ? 'bg-white/5 border-white/5'
+                                        : 'bg-white border-slate-200'
+                                )}
+                                title={`${link.name}: ${formatMbps(
+                                    link.throughputMbps
+                                )}, ${formatPercent(
+                                    link.utilizationPct
+                                )} utilized`}
+                            >
+                                <div className="min-w-0">
+                                    <span
+                                        className={cn(
+                                            'block text-[10px] font-bold truncate',
+                                            isDark
+                                                ? 'text-slate-300'
+                                                : 'text-slate-700'
+                                        )}
+                                    >
+                                        {link.name}
+                                    </span>
+                                    <span className="block text-[8.5px] font-mono text-slate-500 truncate">
+                                        {formatMbps(link.throughputMbps)} ·{' '}
+                                        {formatPercent(link.utilizationPct)}
+                                    </span>
+                                </div>
+                                <div className="flex flex-shrink-0 items-center gap-1.5">
+                                    {link.capacityMbps !== undefined && (
+                                        <span className="font-mono text-[8.5px] text-slate-500">
+                                            {formatMbps(link.capacityMbps)}
+                                        </span>
+                                    )}
+                                    <span
+                                        className={cn(
+                                            'w-2 h-2 rounded-full',
+                                            STATUS_DOT_CLASS[link.status]
+                                        )}
+                                        title={link.status}
+                                    />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </>
+    );
+};
 
 interface LinkDetailsProps {
     link: TopologyLink;
@@ -3521,67 +5887,220 @@ interface LinkDetailsProps {
     isDark: boolean;
 }
 
-const LinkDetails: React.FC<LinkDetailsProps> = ({ link, siteById, isDark }) => (
-    <>
-        <div className="grid grid-cols-2 gap-2">
-            <MetricPill label="Capacity" value={formatMbps(link.capacityMbps)} isDark={isDark} />
-            <MetricPill
-                label="Throughput"
-                value={formatMbps(link.throughputMbps)}
-                isDark={isDark}
-            />
-            <MetricPill
-                label="Peak Throughput"
-                value={formatMbps(link.peakThroughputMbps)}
-                isDark={isDark}
-            />
-            <MetricPill
-                label="Utilization"
-                value={formatPercent(link.utilizationPct)}
-                isDark={isDark}
-            />
-            <MetricPill
-                label="Peak Utilization"
-                value={formatPercent(link.peakUtilizationPct)}
-                isDark={isDark}
-            />
-            <MetricPill label="Latency" value={formatLatency(link.latencyMs)} isDark={isDark} />
-            <MetricPill label="Loss" value={formatPercent(link.lossPct)} isDark={isDark} />
-            <MetricPill
-                label="Endpoint Health"
-                value={formatPercent(link.endpointHealthPct)}
-                isDark={isDark}
-            />
-        </div>
-        <div
-            className={cn(
-                'rounded border p-2 space-y-1',
-                isDark ? 'bg-white/5 border-white/5' : 'bg-slate-50 border-slate-200'
-            )}
-        >
-            <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-slate-500">
-                <Code2 className="w-3 h-3" />
-                Telemetry Source
+const LinkDetails: React.FC<LinkDetailsProps> = ({ link, siteById, isDark }) => {
+    // Render the agent pair only when both sides are present. We learned on
+    // 2026-05-12 that TE test names can be misleading (the "TLH - AUB
+    // Connection" test was actually targeting an Orlando agent under the
+    // hood), so when the underlying data carries explicit source/target
+    // agent names, we display them prominently in the popup as ground truth
+    // — that way the operator sees which agents are *actually* being probed,
+    // not just the test's marketing name.
+    const showAgentPair = Boolean(link.sourceAgents && link.targetAgents);
+    // Build 103 (2026-05-14): pass `dataState === 'loading'` to every
+    // formatter so undefined values render as 'Loading…' instead of
+    // 'Awaiting' while the bound saved search is still in flight.
+    // Without this, the popup looks identical during a slow search
+    // (the TE A2A scan can take 20-40s on a cold cache) and the
+    // "no integration wired" case — Alan misread the in-flight
+    // state as a removal regression on 2026-05-14.
+    const isLoading = link.dataState === 'loading';
+    return (
+        <>
+            <div className="grid grid-cols-2 gap-2">
+                <MetricPill
+                    label="Capacity"
+                    value={formatMbps(link.capacityMbps, isLoading)}
+                    isDark={isDark}
+                />
+                <MetricPill
+                    label="Throughput"
+                    value={formatMbps(link.throughputMbps, isLoading)}
+                    isDark={isDark}
+                />
+                <MetricPill
+                    label="Peak Throughput"
+                    value={formatMbps(link.peakThroughputMbps, isLoading)}
+                    isDark={isDark}
+                />
+                <MetricPill
+                    label="Utilization"
+                    value={formatPercent(link.utilizationPct, isLoading)}
+                    isDark={isDark}
+                />
+                <MetricPill
+                    label="Peak Utilization"
+                    value={formatPercent(link.peakUtilizationPct, isLoading)}
+                    isDark={isDark}
+                />
+                <MetricPill
+                    label="Latency"
+                    value={formatLatency(link.latencyMs, isLoading)}
+                    isDark={isDark}
+                />
+                <MetricPill
+                    label="Loss"
+                    value={formatPercent(link.lossPct, isLoading)}
+                    isDark={isDark}
+                />
+                <MetricPill
+                    label="Jitter"
+                    value={formatLatency(link.jitterMs, isLoading)}
+                    isDark={isDark}
+                />
+                <MetricPill
+                    label="Endpoint Health"
+                    value={formatPercent(link.endpointHealthPct, isLoading)}
+                    isDark={isDark}
+                />
             </div>
-            <p
+            <div
                 className={cn(
-                    'text-[10px] leading-relaxed',
-                    isDark ? 'text-slate-300' : 'text-slate-700'
+                    'rounded border p-2 space-y-1',
+                    isDark ? 'bg-white/5 border-white/5' : 'bg-slate-50 border-slate-200'
                 )}
             >
-                {link.telemetrySource}
-            </p>
-            <p className="text-[9px] text-slate-500 leading-relaxed">
-                {siteById[link.sourceSiteId]?.name ?? link.sourceSiteId} to{' '}
-                {siteById[link.targetSiteId]?.name ?? link.targetSiteId}
-                {link.lastUpdated ? ` - Updated ${link.lastUpdated}` : ''}
-                {link.dataState === 'error' && link.dataError
-                    ? ` - ${link.dataError}`
-                    : ''}
-            </p>
-        </div>
-    </>
-);
+                <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-slate-500">
+                    <Code2 className="w-3 h-3" />
+                    Telemetry Source
+                </div>
+                {/* Build 103 (2026-05-14): visible loading affordance.
+                    During the saved-search round trip the link's
+                    `dataState` is `'loading'` for 20-40s on a cold
+                    cache (the TE A2A SPL scans raw events with
+                    13+ stats aggregations — see the
+                    `[overview_link_te_a2a_health]` stanza explanation
+                    for the perf trade-off). Pre-Build-103 the popup
+                    rendered the static OOB `telemetrySource` text
+                    ("Awaiting topology link telemetry") during that
+                    window, which is identical to the genuinely-not-
+                    wired case. Alan misread that as a regression on
+                    2026-05-14 ("you accidently removed the integration
+                    with ThousandEyes!"). The real fix has two halves:
+                    (1) make the in-flight state visually distinct from
+                    "no integration" via this spinner + descriptive
+                    copy, and (2) tighten the SPL's time scope in
+                    Build 103-B so the cold-cache window is shorter
+                    in the first place. */}
+                {link.dataState === 'loading' ? (
+                    <p
+                        className={cn(
+                            'flex items-center gap-1.5 text-[10px] leading-relaxed',
+                            isDark ? 'text-slate-400' : 'text-slate-500'
+                        )}
+                    >
+                        <Loader2
+                            className="w-3 h-3 animate-spin flex-shrink-0"
+                            aria-hidden="true"
+                        />
+                        <span>
+                            Querying ThousandEyes A2A test data&hellip;{' '}
+                            <span
+                                className={cn(
+                                    'italic',
+                                    isDark ? 'text-slate-500' : 'text-slate-400'
+                                )}
+                            >
+                                first run can take 20-40s while Splunk warms
+                                the cache
+                            </span>
+                        </span>
+                    </p>
+                ) : (
+                    <p
+                        className={cn(
+                            'text-[10px] leading-relaxed',
+                            isDark ? 'text-slate-300' : 'text-slate-700'
+                        )}
+                    >
+                        {link.telemetrySource}
+                    </p>
+                )}
+                {showAgentPair && (
+                    <p
+                        className={cn(
+                            'text-[10px] leading-relaxed font-mono',
+                            isDark ? 'text-slate-400' : 'text-slate-600'
+                        )}
+                    >
+                        Measured by {link.sourceAgents}
+                        {' \u2194 '}
+                        {link.targetAgents}
+                    </p>
+                )}
+                {/* Build 102 (2026-05-14): TE agent-location row
+                    restored. Build 98 dropped this entire row to
+                    resolve a customer-site mismatch ("why is it
+                    saying Orlando instead of Auburndale?"), but
+                    Alan flagged the removal as a regression on
+                    review — the row was the visible proof inside
+                    the popup that ThousandEyes A2A data is
+                    actually reaching the dashboard. Without it the
+                    TELEMETRY SOURCE block reads as "thinly wired"
+                    even when the integration is healthy.
+                    Compromise: bring the row back, but lead with
+                    "TE agents at:" so it reads unambiguously as
+                    the TE-registered agent geography rather than
+                    as a competing claim about the link's
+                    endpoints. The customer-site row immediately
+                    below ("Auburndale (Logistics) to Tallahassee
+                    (State EOC)") stays as ground truth on what
+                    the link actually represents. The Orlando-vs-
+                    Auburndale mismatch is now clearly attributable
+                    to TE agent registration (the AUB-side agent
+                    `dema-te01-va` is registered to the Orlando
+                    metro in TE because TE aggregates by metro), so
+                    operators see WHY the geo string reads
+                    "Orlando" rather than wondering if the dashboard
+                    is broken. */}
+                {(link.sourceLocation || link.targetLocation) && (
+                    <p
+                        className={cn(
+                            'text-[9px] leading-relaxed',
+                            isDark ? 'text-slate-400' : 'text-slate-600'
+                        )}
+                        title="The TE-registered geographic location of each measuring agent (which can differ from the customer site name when TE aggregates agents by metro). The customer site name is shown on the row below."
+                    >
+                        <span
+                            className={cn(
+                                'font-semibold',
+                                isDark ? 'text-slate-500' : 'text-slate-500'
+                            )}
+                        >
+                            TE agents at:
+                        </span>{' '}
+                        {link.sourceLocation ?? '\u2014'}
+                        {' \u2194 '}
+                        {link.targetLocation ?? '\u2014'}
+                    </p>
+                )}
+                <p className="text-[9px] text-slate-500 leading-relaxed">
+                    {siteById[link.sourceSiteId]?.name ?? link.sourceSiteId} to{' '}
+                    {siteById[link.targetSiteId]?.name ?? link.targetSiteId}
+                    {link.lastUpdated ? ` - Updated ${link.lastUpdated}` : ''}
+                    {link.dataState === 'error' && link.dataError
+                        ? ` - ${link.dataError}`
+                        : ''}
+                </p>
+                {link.teLink && (
+                    <a
+                        href={link.teLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={cn(
+                            'mt-1 inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold transition-colors',
+                            isDark
+                                ? 'bg-sky-500/10 text-sky-300 hover:bg-sky-500/20'
+                                : 'bg-sky-50 text-sky-700 hover:bg-sky-100'
+                        )}
+                    >
+                        <ExternalLink className="w-3 h-3" />
+                        View in ThousandEyes
+                    </a>
+                )}
+            </div>
+        </>
+    );
+};
 
 interface MetricPillProps {
     label: string;

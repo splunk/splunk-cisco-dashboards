@@ -663,7 +663,7 @@ export const FloridaMap: React.FC<FloridaMapProps> = ({
                                     <button
                                         type="button"
                                         onClick={handleOpenSelectedInSearch}
-                                        title="Open this query in Splunk Search"
+                                        title="Open this query in Search"
                                         className="w-full text-left bg-black/60 hover:bg-black/80 rounded p-2 border border-slate-800 hover:border-sky-700 font-mono transition-colors focus:outline-none focus:ring-1 focus:ring-sky-500"
                                     >
                                         {catalogueByName === null ? (
@@ -736,7 +736,7 @@ export const FloridaMap: React.FC<FloridaMapProps> = ({
                                     )}
                                 >
                                     <ExternalLink className="w-3 h-3" />
-                                    Open in Splunk Search
+                                    Open in Search
                                 </button>
                             </div>
                         </div>

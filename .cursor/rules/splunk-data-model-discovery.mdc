@@ -1,0 +1,163 @@
+---
+description: How to discover Splunk data-model field and dataset names. ALWAYS request the user-provided DM JSON before authoring any tstats / from datamodel / pivot SPL. Never invent DM field names.
+globs: **/searchbase.conf,**/savedsearches.conf,**/macros.conf,**/transforms.conf,**/data/ui/views/*.xml,**/webapp/**/*.tsx,**/webapp/**/*.ts,**/webapp/**/*.jsx,**/webapp/**/*.js
+alwaysApply: false
+version: 1.0.0
+---
+
+# Splunk SPL — Data-Model Field Discovery Process
+
+When you are about to author or edit SPL that reads from a Splunk
+data model — i.e. any of the following command shapes:
+
+- `| tstats <agg>(<DataSet>.<field>) ... from datamodel=<Model> ...`
+- `| from datamodel:<Model>.<DataSet> ...`
+- `| datamodel <Model> <DataSet> search`
+- `| pivot <Model> <DataSet> ...`
+
+you **must not guess** the dataset names, field names, or constraint
+expressions. Splunk DMs use exact, case-sensitive dataset paths
+(`Cisco_ThousandEyes.Test_Metrics`, `Authentication.Authentication`,
+`Network_Traffic.All_Traffic`, etc.) and equally exact field names.
+A typo (or a field that exists in raw events but isn't in the DM)
+silently returns zero rows or null aggregates — the search still
+"runs" but the dashboard is wrong.
+
+## The required process — do this every time
+
+Before writing or editing any DM-backed SPL, do **all** of the
+following:
+
+### 1. Identify which DM the search will use
+
+Examples in this codebase:
+
+| DM | Datasets used here |
+|---|---|
+| `Cisco_ThousandEyes` | `Test_Metrics`, `Alerts`, `Tests`, `Endpoints` |
+| `Authentication` | `Authentication`, `Failed_Authentication` |
+| `Network_Traffic` | `All_Traffic` |
+| `cisco:dnac:devicehealth` (raw, no DM) | n/a — not all sourcetypes have a DM |
+| `cisco:sdwan:linkhealth` (raw, no DM) | n/a |
+
+If the data does not have a DM, fall back to direct
+`<index_macro> sourcetype="..." ...` SPL and use the appropriate
+field-list discovery process (run `<base> | `field_list`` and ask
+the user to paste the output).
+
+### 2. Ask the user for the DM JSON file
+
+The authoritative source of truth for any DM is its JSON
+definition shipped by the add-on that publishes the DM. Examples:
+
+- Cisco ThousandEyes:
+  `/opt/splunk/etc/apps/ta_cisco_thousandeyes/default/data/models/Cisco_ThousandEyes.json`
+- Splunk CIM Authentication:
+  `/opt/splunk/etc/apps/Splunk_SA_CIM/default/data/models/Authentication.json`
+- Splunk CIM Network Traffic:
+  `/opt/splunk/etc/apps/Splunk_SA_CIM/default/data/models/Network_Traffic.json`
+
+The user may have a non-standard install path. **Ask** them to
+provide the file path or paste its contents. Do not assume.
+
+The required ask, verbatim:
+
+> Before I write SPL against the `<Model>` data model, I need the
+> JSON definition that ships with the add-on. By default it lives at
+> `/opt/splunk/etc/apps/<ta_app>/default/data/models/<Model>.json`,
+> but please confirm the path on your stack (or paste the file)
+> so I can use the exact dataset and field names.
+
+### 3. Read the JSON before writing SPL
+
+Once the user provides the file or its contents, parse the
+`objects` array. Each object is a dataset with:
+
+- `objectName` — the dataset name you put after the model
+  (`Cisco_ThousandEyes.<objectName>`).
+- `fields[]` — the fields in that dataset, with:
+  - `fieldName` — the exact name to put after `<DataSet>.` in
+    `tstats` aggregate calls.
+  - `type` — `number`, `string`, `boolean`, `timestamp`, `objectCount`.
+  - `multivalue`, `required`, `hidden`.
+- `calculations[]` — eval / lookup-derived fields. Pay attention:
+  these may exist in the DM but not in raw events (or vice versa).
+- `constraints[]` — the dataset's base search. If your filter
+  duplicates a constraint, you're paying twice.
+
+### 4. Build the SPL using exact names
+
+For the metric store (e.g. ThousandEyes `cisco:thousandeyes:metric`)
+the field names in the DM include the `metric_name:` prefix:
+
+```
+| tstats avg(Test_Metrics.metric_name:network.latency) as avg_latency_s
+  from datamodel=Cisco_ThousandEyes
+  where Test_Metrics.thousandeyes.test.type="agent-to-agent"
+  by Test_Metrics.thousandeyes.source.agent.name,
+     Test_Metrics.thousandeyes.target.agent.name
+```
+
+For raw-event-backed datasets, fields are named without the
+`metric_name:` prefix and dotted-field quoting follows
+`splunk-spl-field-syntax.mdc` (single-quote in `eval` / `where`
+expressions, bare in `tstats` / `stats` argument and `by` lists).
+
+### 5. Document the source you used
+
+In any new DM-backed stanza's `description` or `explanation`,
+mention the DM and dataset:
+
+```
+description = ... runs over the <code>Cisco_ThousandEyes.Test_Metrics</code>
+data model, joining on <code>thousandeyes.test.type</code> ...
+```
+
+This makes the SPL's data-source assumption auditable later.
+
+## What NOT to do
+
+- ❌ Guess at field names ("it's probably `Test_Metrics.network.jitter`").
+- ❌ Copy a field name from a raw-event search and paste it after a
+  DM dataset prefix without confirming the DM accelerates that
+  field.
+- ❌ Mix raw-event field names and DM field names in the same
+  search.
+- ❌ Strip the `metric_name:` prefix from a metric-store DM field
+  name. The DM JSON is the authority — if the field is
+  `metric_name:network.latency` in the JSON, use exactly that.
+- ❌ Quote DM field paths in `tstats` / `stats` argument or `by`
+  lists. They follow the same bare-field rule as raw fields
+  (see `splunk-spl-field-syntax.mdc`).
+
+## Why this rule exists
+
+This rule exists because the agent (me) has, repeatedly, written
+SPL against the Cisco ThousandEyes DM that:
+
+1. Used `Test_Metrics.network.jitter` instead of
+   `Test_Metrics.metric_name:network.jitter` — silently null on
+   the metric-store-backed dataset.
+2. Used dataset names that don't exist (e.g. `Network` instead of
+   `Test_Metrics`) — runs without error, returns zero rows.
+3. Single-quoted DM field paths in `tstats` arguments — same silent-null
+   failure mode.
+
+Each of those bugs would have been caught immediately by reading
+the DM JSON first. The user's standing rule is: **"I prefer to
+use the DM to stay consistent. If you're using a DM, ask me for
+the JSON."**
+
+## Verification before committing DM-backed SPL
+
+Before declaring a DM-backed SPL change ready:
+
+1. Confirm every `<DataSet>.<field>` reference exists in the DM
+   JSON's `objects[].fields[]` array.
+2. Run the search against the user's stack and confirm non-null
+   results (or, when the user can run the search, ask them to).
+3. If using the metric store, confirm every metric field uses
+   the `metric_name:` prefix.
+
+You must always explain how this rule was applied and why it was
+applied.

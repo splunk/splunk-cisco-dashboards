@@ -30,8 +30,8 @@ export default function App() {
             <LayoutDashboard className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-xl font-black text-sky-900 tracking-tight leading-none uppercase">Florida Division of Emergency Management</h1>
-            <p className="text-[10px] font-bold text-sky-600 uppercase tracking-[0.3em] mt-1">Splunk Executive Control Center</p>
+            <h1 className="text-xl font-black text-sky-900 tracking-tight leading-none uppercase">Your Organization Name</h1>
+            <p className="text-[10px] font-bold text-sky-600 uppercase tracking-[0.3em] mt-1">Splunk Executive Insights</p>
           </div>
         </div>
 

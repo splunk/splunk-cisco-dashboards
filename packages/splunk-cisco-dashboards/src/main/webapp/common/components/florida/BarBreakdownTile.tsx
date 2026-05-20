@@ -1,0 +1,375 @@
+/**
+ * BarBreakdownTile — categorical horizontal-bar tile.
+ *
+ * Sibling of {@link MetricItem} (sparkline) and {@link TableTile}
+ * (multi-row table). Used when the underlying searchbase stanza
+ * declares `default_viz = splunk.bar` and the search returns a small
+ * categorical distribution (e.g. `| stats count by severity`). The
+ * tile renders the rows as a tight horizontal bar list inside the
+ * same outer chrome as MetricItem, so a section can mix sparkline
+ * and bar-breakdown tiles without visual fracture.
+ *
+ * Design notes:
+ *  - Headline = sum across all rows (the "total" the operator
+ *    reaches for first), so the tile retains the single-glance
+ *    headline experience of MetricItem.
+ *  - Each row = one severity (or whatever the dimension column is).
+ *    Bar width is proportional to the row's value over the max value
+ *    in the result set, NOT the total — bars at the same scale are
+ *    easier to compare than bars normalised to the sum.
+ *  - Color is driven by the dimension label (severity-aware: red
+ *    for critical, orange for high, …). Falls back to a neutral
+ *    sky tone for unknown dimensions so this tile can be used for
+ *    breakdowns other than severity.
+ *  - Up to 5 rows display; anything beyond that becomes "+N more"
+ *    captioned at the bottom (matches TableTile's row-cap idiom).
+ *
+ * The component is dumb: it accepts pre-resolved rows/columns from
+ * {@link useTableData} (same shape as TableTile) and just paints
+ * them. All dispatch and column-derivation logic lives in the hook.
+ */
+
+import React, { useMemo } from 'react';
+import { ExternalLink, Settings2 } from 'lucide-react';
+import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
+import { cn } from '@/common/lib/utils';
+import type { DataSource, NoDataReason } from '@/common/hooks/useMetric';
+
+interface BarBreakdownTileProps {
+    label: string;
+    subLabel?: string;
+    description?: string;
+    descriptionFootnote?: string;
+    /** Forwarded to the info tooltip's THRESHOLDS section. */
+    thresholdNote?: string;
+    infoAnchor?: InfoTooltipAnchor;
+    /** Rows from `useTableData`, already capped to a sensible limit. */
+    rows: ReadonlyArray<Record<string, unknown>>;
+    /** Visible columns in SPL emission order (first = dimension, second = numeric). */
+    columns: ReadonlyArray<string>;
+    source?: DataSource;
+    onOpenInSearch?: () => void;
+    onConfigure?: () => void;
+    isCustomized?: boolean;
+    noDataReason?: NoDataReason;
+    rangeLabel?: string;
+    /** Maximum number of bars rendered. Anything beyond is captioned. */
+    visibleRowCap?: number;
+    className?: string;
+}
+
+const DEFAULT_VISIBLE_ROW_CAP = 5;
+
+/**
+ * Severity priority used to order the bars left-to-right (or top-to-
+ * bottom in the horizontal layout). Lower index = higher visual
+ * priority. Anything not in this list lands at the bottom in
+ * search-order. Keeping the list lower-cased and using
+ * `dimensionPriority` to look up case-insensitively means TE orgs
+ * that emit "Critical" / "CRITICAL" / "critical" all land in the
+ * same slot.
+ */
+const SEVERITY_PRIORITY: Record<string, number> = {
+    critical: 0,
+    error: 0,
+    high: 1,
+    warning: 2,
+    medium: 2,
+    moderate: 2,
+    low: 3,
+    notice: 4,
+    info: 4,
+    informational: 4,
+};
+
+/**
+ * Severity-aware bar colors. Lower-cased substring match against the
+ * dimension value so "Critical (P1)" and "critical" both light up red.
+ * Order matters: more specific terms win over generic ones.
+ */
+const SEVERITY_COLOR_MAP: Array<{ match: RegExp; tw: string }> = [
+    { match: /critical|fatal|p1\b/i, tw: 'bg-rose-500' },
+    { match: /error|high|p2\b/i, tw: 'bg-orange-500' },
+    { match: /warn|medium|moderate|p3\b/i, tw: 'bg-amber-500' },
+    { match: /low|p4\b/i, tw: 'bg-yellow-500' },
+    { match: /notice|info|p5\b/i, tw: 'bg-emerald-500' },
+];
+
+const FALLBACK_COLOR_TW = 'bg-sky-500';
+
+const colorForLabel = (label: string): string => {
+    if (typeof label !== 'string' || label.length === 0) return FALLBACK_COLOR_TW;
+    for (const entry of SEVERITY_COLOR_MAP) {
+        if (entry.match.test(label)) return entry.tw;
+    }
+    return FALLBACK_COLOR_TW;
+};
+
+const dimensionPriority = (label: string): number => {
+    if (typeof label !== 'string') return 99;
+    return SEVERITY_PRIORITY[label.trim().toLowerCase()] ?? 99;
+};
+
+const coerceNumber = (raw: unknown): number => {
+    if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+    if (typeof raw === 'string') {
+        const n = Number(raw.trim());
+        return Number.isFinite(n) ? n : 0;
+    }
+    return 0;
+};
+
+const formatCount = (n: number): string =>
+    n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+
+const NoDataState: React.FC<{
+    noDataReason?: NoDataReason;
+    rangeLabel?: string;
+    source?: DataSource;
+}> = ({ noDataReason, rangeLabel, source }) => {
+    let subtext: string;
+    if (source === 'loading') {
+        subtext = 'loading…';
+    } else if (noDataReason === 'error') {
+        subtext = 'search failed';
+    } else if (noDataReason === 'empty_rows') {
+        subtext = rangeLabel
+            ? `0 rows · ${rangeLabel.toLowerCase()}`
+            : '0 rows returned';
+    } else {
+        subtext = rangeLabel
+            ? `no data · ${rangeLabel.toLowerCase()}`
+            : 'no data';
+    }
+    return (
+        <div className="flex flex-col items-start mb-1">
+            <span className="text-4xl font-black tracking-tighter leading-none text-slate-400 dark:text-slate-500">
+                —
+            </span>
+            <span className="text-[9px] font-medium text-slate-400 dark:text-slate-500 mt-0.5 leading-tight">
+                {subtext}
+            </span>
+        </div>
+    );
+};
+
+export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
+    label,
+    subLabel,
+    description,
+    descriptionFootnote,
+    thresholdNote,
+    infoAnchor = 'auto',
+    rows,
+    columns,
+    source,
+    onOpenInSearch,
+    onConfigure,
+    isCustomized = false,
+    noDataReason,
+    rangeLabel,
+    visibleRowCap = DEFAULT_VISIBLE_ROW_CAP,
+    className,
+}) => {
+    // First column = dimension (severity), second column = numeric
+    // count. We don't try to be smart about which numeric column to
+    // pick because the bar tile is single-series by design — the
+    // catalogue stanza is responsible for emitting `<dimension>,
+    // <count>` in that order. If a caller binds a wider table here,
+    // the extra columns are simply ignored.
+    const dimensionCol = columns[0];
+    const valueCol = columns[1];
+
+    const aggregated = useMemo(() => {
+        if (!dimensionCol || !valueCol) {
+            return { entries: [] as Array<{ key: string; value: number }>, total: 0, max: 0 };
+        }
+        const buckets = new Map<string, number>();
+        for (const r of rows) {
+            const dimRaw = r[dimensionCol];
+            const valRaw = r[valueCol];
+            const key =
+                typeof dimRaw === 'string'
+                    ? dimRaw.trim()
+                    : dimRaw === null || dimRaw === undefined
+                    ? ''
+                    : String(dimRaw);
+            if (key === '') continue;
+            buckets.set(key, (buckets.get(key) ?? 0) + coerceNumber(valRaw));
+        }
+        const entries = Array.from(buckets.entries()).map(([key, value]) => ({
+            key,
+            value,
+        }));
+        // Stable order: severity priority first, then descending count
+        // for ties / unknown dimensions.
+        entries.sort((a, b) => {
+            const pa = dimensionPriority(a.key);
+            const pb = dimensionPriority(b.key);
+            if (pa !== pb) return pa - pb;
+            return b.value - a.value;
+        });
+        const total = entries.reduce((acc, e) => acc + e.value, 0);
+        const max = entries.reduce((acc, e) => Math.max(acc, e.value), 0);
+        return { entries, total, max };
+    }, [rows, dimensionCol, valueCol]);
+
+    const visibleEntries = aggregated.entries.slice(0, visibleRowCap);
+    const overflowCount = Math.max(0, aggregated.entries.length - visibleEntries.length);
+    const hasData = aggregated.entries.length > 0;
+
+    return (
+        <div
+            className={cn(
+                'flex flex-col flex-1 basis-0 min-w-[140px] px-1.5 py-1 relative',
+                className
+            )}
+        >
+            {source && (
+                <span
+                    className={cn(
+                        'absolute top-1 right-2 w-1.5 h-1.5 rounded-full',
+                        source === 'live'
+                            ? 'bg-emerald-500'
+                            : source === 'loading'
+                            ? 'bg-amber-400 animate-pulse'
+                            : 'bg-slate-300'
+                    )}
+                    title={
+                        source === 'live'
+                            ? 'Wired to saved search (live)'
+                            : source === 'loading'
+                            ? 'Loading saved search…'
+                            : 'No saved search assigned'
+                    }
+                />
+            )}
+
+            <div className="flex flex-col mb-0.5">
+                <span className="text-[12px] font-bold text-slate-800 dark:text-slate-100 tracking-tight leading-tight uppercase flex items-center gap-1">
+                    <span className="flex items-center gap-1 min-w-0 truncate">
+                        {label}
+                    </span>
+                    <span className="ml-auto flex items-center gap-0.5 flex-shrink-0">
+                        {description && (
+                            <InfoTooltip
+                                title={label}
+                                description={description}
+                                thresholdNote={thresholdNote}
+                                footnote={descriptionFootnote}
+                                anchor={infoAnchor}
+                                iconAriaLabel={`What does ${label} measure?`}
+                            />
+                        )}
+                        {onOpenInSearch && (
+                            <button
+                                type="button"
+                                onClick={onOpenInSearch}
+                                title="Open in Search"
+                                aria-label={`Open ${label} in Search`}
+                                data-tile-control="true"
+                                className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
+                            >
+                                <ExternalLink className="w-3 h-3 stroke-[2.5px]" />
+                            </button>
+                        )}
+                        {onConfigure && (
+                            <button
+                                type="button"
+                                onClick={onConfigure}
+                                title={
+                                    isCustomized
+                                        ? `Configure ${label} (customised)`
+                                        : `Configure ${label}`
+                                }
+                                aria-label={`Configure ${label} tile`}
+                                data-tile-control="true"
+                                className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400 relative"
+                            >
+                                <Settings2 className="w-3 h-3 stroke-[2.5px]" />
+                                {isCustomized && (
+                                    <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-sky-500 border border-white dark:border-slate-900" />
+                                )}
+                            </button>
+                        )}
+                    </span>
+                </span>
+                {subLabel && (
+                    <span className="text-[9.5px] text-slate-400 dark:text-slate-500 font-medium tracking-tight leading-tight line-clamp-1 min-h-[12px]">
+                        {subLabel}
+                    </span>
+                )}
+            </div>
+
+            {hasData ? (
+                <>
+                    {/* Headline = sum across all rows. Same big-number
+                        shape as MetricItem so a row of mixed sparkline
+                        and bar-breakdown tiles aligns vertically. The
+                        sum-to-headline mapping deliberately ignores
+                        the visibleRowCap, so when the cap kicks in the
+                        headline still reflects the full result set. */}
+                    <div className="flex items-baseline gap-2 mb-1">
+                        <span className="text-4xl font-black tracking-tighter leading-none text-slate-700 dark:text-slate-100">
+                            {formatCount(aggregated.total)}
+                        </span>
+                    </div>
+
+                    {/* Bar list. flex-1 + min-h-[72px] + max-h-28 so
+                        the row of bars consumes the same slot as the
+                        sparkline canvas in MetricItem; tighter mt/pt
+                        than MetricItem because horizontal bars don't
+                        need the visual breathing room a sparkline
+                        peak-label needs. overflow-hidden contains
+                        any content beyond the slot at the local
+                        boundary. `data-tile-control` so hovering
+                        over a bar (to read its title tooltip)
+                        suppresses the SortableMetricCard drag
+                        handle just like the sparkline canvas does. */}
+                    <div
+                        data-tile-control="true"
+                        className="flex-1 min-h-[72px] max-h-28 mt-1 pt-0.5 overflow-hidden flex flex-col gap-1"
+                    >
+                        {visibleEntries.map((entry) => {
+                            const widthPct =
+                                aggregated.max > 0
+                                    ? Math.max(2, (entry.value / aggregated.max) * 100)
+                                    : 0;
+                            return (
+                                <div
+                                    key={entry.key}
+                                    className="flex items-center gap-1.5 text-[10px] leading-tight"
+                                    title={`${entry.key}: ${formatCount(entry.value)}`}
+                                >
+                                    <span className="w-14 truncate text-slate-500 dark:text-slate-400 font-medium capitalize">
+                                        {entry.key}
+                                    </span>
+                                    <div className="flex-1 min-w-0 h-2 bg-slate-100 dark:bg-slate-800 rounded-sm overflow-hidden">
+                                        <div
+                                            className={cn('h-full rounded-sm', colorForLabel(entry.key))}
+                                            style={{ width: `${widthPct}%` }}
+                                        />
+                                    </div>
+                                    <span className="w-8 text-right text-slate-700 dark:text-slate-200 font-semibold tabular-nums">
+                                        {formatCount(entry.value)}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                        {overflowCount > 0 && (
+                            <span className="text-[9px] text-slate-400 dark:text-slate-500 italic">
+                                +{overflowCount} more
+                            </span>
+                        )}
+                    </div>
+                </>
+            ) : (
+                <NoDataState
+                    noDataReason={noDataReason}
+                    rangeLabel={rangeLabel}
+                    source={source}
+                />
+            )}
+        </div>
+    );
+};
