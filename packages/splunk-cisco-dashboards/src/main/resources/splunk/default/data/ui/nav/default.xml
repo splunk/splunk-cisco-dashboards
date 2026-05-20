@@ -3,6 +3,7 @@
     <!-- Primary dashboards: daily-use executive + operations landing pages -->
     <!-- ================================================================= -->
     <view name="overview" default="true" label="Executive Briefing"/>
+    <view name="health_monitoring" label="Health Monitoring"/>
     <a href="it_health_v1">IT Health</a>
     <a href="security_v1">Security</a>
     <a href="topology_canvas_v1">Topology Canvas</a>

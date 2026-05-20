@@ -82,6 +82,10 @@ const stageRoot = path.join(__dirname, 'stage');
 const commonConfig = webpackMerge(baseConfig, {
     entry: {
         overview: path.join(webappRoot, 'pages/overview/render.tsx'),
+        health_monitoring: path.join(
+            webappRoot,
+            'pages/health_monitoring/render.tsx'
+        ),
         topology_canvas_v1: path.join(
             webappRoot,
             'pages/topology_canvas_v1/render.tsx'
