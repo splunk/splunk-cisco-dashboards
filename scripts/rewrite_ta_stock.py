@@ -134,6 +134,25 @@ DRILLDOWN_PLACEHOLDER_RE = re.compile(r"\$app_dd_\d+\$")
 # isn't safe — the subsearch would parse as malformed.
 INLINE_TKN_RE = re.compile(r"\s*\$tkn_[a-zA-Z0-9_]+\$\s*")
 
+# After inline token removal we sometimes end up with a parenthesised
+# group whose only remaining content is a leading/trailing boolean
+# operator — e.g. the upstream had::
+#
+#     WHERE ($tkn_acc_group$ OR NOT Test_Metrics.server.address="*") ...
+#
+# and ``INLINE_TKN_RE`` reduced it to ``( OR NOT ...="*")``, which is a
+# Splunk parse error ("'OR' operator is missing on the left hand
+# side"). The two regexes below detect both shapes — leading-operator
+# and trailing-operator — and drop the entire parenthesised group.
+DANGLING_LEADING_OP_RE = re.compile(
+    r"\(\s*(?:OR|AND)\s+[^()]*?\)\s*",
+    flags=re.IGNORECASE,
+)
+DANGLING_TRAILING_OP_RE = re.compile(
+    r"\([^()]*?\s+(?:OR|AND)\s*\)\s*",
+    flags=re.IGNORECASE,
+)
+
 
 @dataclass
 class Stanza:
@@ -392,6 +411,12 @@ def detokenize_search_block(body_lines: List[str]) -> List[str]:
         # subsearch parseable and semantically aligned with the
         # main-search stripping we just did.
         new = INLINE_TKN_RE.sub(" ", new)
+        # Inline removal can leave a parenthesised group whose only
+        # remaining content is a dangling boolean operator
+        # (``( OR NOT addr="*")`` / ``(addr="*" OR )``). Drop those
+        # entire groups before they reach the SPL parser.
+        new = DANGLING_LEADING_OP_RE.sub(" ", new)
+        new = DANGLING_TRAILING_OP_RE.sub(" ", new)
         rewritten.append(new)
 
     # Pass 3: re-balance trailing line-continuation backslashes. If
