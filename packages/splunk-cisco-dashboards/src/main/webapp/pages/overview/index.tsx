@@ -3066,8 +3066,10 @@ const OverviewPage: React.FC = () => {
                     </span>
                     <a
                         href={splunkViewAppUrl('statewide_exercise_v1')}
-                        title="Open the Statewide Network Activation Report"
-                        aria-label="Open the Statewide Network Activation Report"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Open the Statewide Network Activation Report (new tab)"
+                        aria-label="Open the Statewide Network Activation Report in a new tab"
                         data-testid="featured-report-cta"
                         className="flex-shrink-0 ml-auto inline-flex items-center gap-1.5 px-3 py-1 rounded bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white text-[11px] font-bold tracking-wide uppercase shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-1 dark:focus:ring-offset-slate-900"
                     >

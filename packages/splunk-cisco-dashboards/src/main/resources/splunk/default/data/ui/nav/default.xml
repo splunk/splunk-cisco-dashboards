@@ -3,35 +3,27 @@
     <!-- Primary dashboards: daily-use executive + operations landing pages -->
     <!-- ================================================================= -->
     <view name="overview" default="true" label="Executive Briefing"/>
-    <view name="health_monitoring" label="Health Monitoring"/>
     <a href="it_health_v1">IT Health</a>
     <a href="security_v1">Security</a>
     <a href="building_v1">Building Intelligence</a>
-
-    <!-- ================================================================= -->
-    <!-- Reports: periodic, event-driven, and inventory views               -->
-    <!-- ================================================================= -->
-    <collection label="Reports">
-        <a href="statewide_exercise_v1">Network Activation Report</a>
-        <a href="asset_inventory_v1">Asset Inventory</a>
-    </collection>
+    <a href="statewide_exercise_v1">Network Activation Report</a>
 
     <collection label="Concepts">
-        <a href="topology_canvas_v1">Topology Canvas</a>
+        <view name="health_monitoring" label="Health Monitoring"/>
+        <!-- <a href="home_launchpad_v1">Executive Launchpad</a> -->
+        <a href="netops_readiness_v1">NetOps Readiness</a>
+        <view name="spaces_intelligence_v1"/>
+        <view name="workplace_spog_v1"/>
         <a href="network_diagram">Network Diagram</a>
-        <collection label="Workplace">
-            <view name="spaces_intelligence_v1"/>
-            <view name="workplace_spog_v1"/>
-        </collection>
+        <a href="topology_canvas_v1">Topology Canvas</a>
     </collection>
 
     <!-- ================================================================= -->
     <!-- Tools: operator launchpads, docs, scaffolding, built-in Splunk     -->
     <!-- ================================================================= -->
     <collection label="Tools">
-        <a href="home_launchpad_v1">Executive Launchpad</a>
-        <a href="netops_readiness_v1">NetOps Readiness</a>
         <a href="admin_guide_v1">Admin Guide</a>
+        <a href="asset_inventory_v1">Asset Inventory</a>
         <a href="template">Customer Template</a>
         <divider/>
         <view name="reports"/>
