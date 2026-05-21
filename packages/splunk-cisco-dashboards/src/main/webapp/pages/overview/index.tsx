@@ -38,6 +38,9 @@ import {
     Edit3,
     Upload,
     X,
+    CheckCircle2,
+    AlertCircle,
+    Table2,
 } from 'lucide-react';
 import { DashboardSection } from '@/common/components/florida/DashboardSection';
 import { MetricItem } from '@/common/components/florida/MetricItem';
@@ -84,6 +87,10 @@ import {
     usePersistedMetricOverrides,
     type MetricOverride,
 } from '@/common/hooks/usePersistedMetricOverrides';
+import {
+    usePersistedSearchbaseDrilldowns,
+    type SearchbaseDrilldownMap,
+} from '@/common/hooks/usePersistedSearchbaseDrilldowns';
 import { usePersistedSectionTileCounts } from '@/common/hooks/usePersistedSectionTileCounts';
 import { usePersistedSectionTileOrder } from '@/common/hooks/usePersistedSectionTileOrder';
 import {
@@ -408,18 +415,27 @@ const METRIC_CONFIG: MetricConfig[] = [
         id: 'threat_sources',
         section: 'security',
         label: 'Threat sources',
-        subLabel: 'Unique IPs blocked at firewall',
+        subLabel: 'Unique IPs blocked (with baseline)',
         description:
-            'Number of distinct external source IPs being denied by the firewall. ' +
-            'Climbing values usually indicate distributed scanning or a low-and-slow ' +
-            'campaign.',
-        // Promoted to a first-class searchbase stanza so the picker
-        // can offer it like the other 14 tiles and authors can tune
-        // viz_options + tags from the conf instead of editing this
-        // file. The underlying SPL still wraps the same Network_Traffic
-        // tstats, just resolved through searchbaseCatalogue.
-        savedSearch: 'Executive Dashboard - Threat Sources',
-        valueField: 'count',
+            'Distinct external source IPs blocked by the firewall over the ' +
+            'dispatched window. The headline is the window-wide distinct count — ' +
+            "same meaning as the original 'Threat Sources' single-value tile. " +
+            'The sparkline shows per-bucket distinct sources; the dashed line ' +
+            'is the rolling-average baseline so a sustained spike (i.e. ' +
+            'distributed scanning) stands out against normal background noise.',
+        // Bucketed timechart variant: { _time, sources, baseline, total_sources }.
+        // total_sources is broadcast (window-wide dc(src), the headline);
+        // sources is per-bucket (sparkline); baseline is window-avg
+        // (dashed overlay). Replaces the single-row Network_Traffic
+        // tstats binding, which was triggering useMetric's
+        // `isSingleRow` mock-spark fallback — the chart was synthesised
+        // RNG between sparkMin (5) and sparkMax (20), not real data.
+        // See SESSION_LOG Build 1209 for the full diagnosis.
+        savedSearch: 'Executive Dashboard - Threat Sources (with Baseline)',
+        valueField: 'total_sources',
+        sparkDataField: 'sources',
+        baselineField: 'baseline',
+        overlayLabel: 'Avg',
         // Resting/healthy color is neutral sky so the line doesn't pre-
         // tint as "alarming" when the count is fine. The status palette
         // in MetricItem flips the sparkline to amber/red when the tile
@@ -431,7 +447,8 @@ const METRIC_CONFIG: MetricConfig[] = [
             'Distinct *source* IPs, not block events. A single IP retrying 10,000 ' +
             'times still counts as one. > 100 distinct sources in a 24h window is ' +
             'the classic distributed-scan signature and warrants a look at the ' +
-            'firewall logs.',
+            'firewall logs. Compare against the baseline overlay before sounding ' +
+            'the alarm — sustained elevation matters more than a single hot bucket.',
         mock: { seed: 22, sparkMin: 5, sparkMax: 20, value: 18, change: -5 },
     },
     {
@@ -831,6 +848,198 @@ const splunkSearchAppUrl = (spl: string, range: TimeRange): string => {
     return `/${locale}/app/${APP_NAME}/search?${params.toString()}`;
 };
 
+type MetricDetailTableColumnKind = 'text' | 'status' | 'metric';
+
+interface MetricDetailTableColumn {
+    field: string;
+    label: string;
+    align?: 'left' | 'right';
+    kind?: MetricDetailTableColumnKind;
+    fallback?: string;
+    truncate?: boolean;
+}
+
+interface MetricDetailTableConfig {
+    title: string;
+    buttonTitle: string;
+    subtitle: (range: TimeRange) => string;
+    spl: string;
+    tag: string;
+    rowKeyField: string;
+    emptyMessage: string;
+    errorMessage: string;
+    statusField?: string;
+    availableStatus?: string;
+    unavailableStatus?: string;
+    columns: MetricDetailTableColumn[];
+}
+
+const DETAIL_TABLE_COLUMN_KINDS = new Set<MetricDetailTableColumnKind>([
+    'text',
+    'status',
+    'metric',
+]);
+
+const readDetailStringOption = (
+    options: Record<string, unknown> | undefined,
+    key: string
+): string | undefined => {
+    const raw = options?.[key];
+    if (typeof raw !== 'string') return undefined;
+    const trimmed = raw.trim();
+    return trimmed.length > 0 && trimmed.length <= 256 ? trimmed : undefined;
+};
+
+const parseDetailTableColumns = (
+    raw: unknown
+): MetricDetailTableColumn[] => {
+    if (!Array.isArray(raw)) return [];
+    const columns: MetricDetailTableColumn[] = [];
+    raw.forEach((item) => {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) return;
+        const candidate = item as Record<string, unknown>;
+        const field = typeof candidate.field === 'string' ? candidate.field.trim() : '';
+        const label =
+            typeof candidate.label === 'string' ? candidate.label.trim() : field;
+        if (!field || !label || field.length > 96 || label.length > 96) return;
+        const align =
+            candidate.align === 'right' || candidate.align === 'left'
+                ? candidate.align
+                : undefined;
+        const kind =
+            typeof candidate.kind === 'string' &&
+            DETAIL_TABLE_COLUMN_KINDS.has(candidate.kind as MetricDetailTableColumnKind)
+                ? (candidate.kind as MetricDetailTableColumnKind)
+                : undefined;
+        const fallback =
+            typeof candidate.fallback === 'string'
+                ? candidate.fallback.slice(0, 120)
+                : undefined;
+        columns.push({
+            field,
+            label,
+            align,
+            kind,
+            fallback,
+            truncate: candidate.truncate === true,
+        });
+    });
+    return columns.slice(0, 12);
+};
+
+const INFERRED_DETAIL_TABLE_SKIP_FIELDS = new Set([
+    '_raw',
+    '_serial',
+    '_si',
+    '_span',
+    'splunk_server',
+]);
+
+const humanizeDetailFieldLabel = (field: string): string =>
+    field
+        .replace(/^Test_Metrics\./, '')
+        .replace(/[_.]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+
+const isNumericLike = (value: unknown): boolean => {
+    if (typeof value === 'number') return Number.isFinite(value);
+    if (typeof value !== 'string') return false;
+    return /^-?\d+(?:\.\d+)?%?$/.test(value.trim());
+};
+
+const inferDetailTableColumns = (
+    rows: Array<Record<string, unknown>>
+): MetricDetailTableColumn[] => {
+    const fields: string[] = [];
+    const seen = new Set<string>();
+    for (const row of rows) {
+        for (const field of Object.keys(row)) {
+            if (seen.has(field)) continue;
+            if (INFERRED_DETAIL_TABLE_SKIP_FIELDS.has(field)) continue;
+            if (field.startsWith('_') && field !== '_time') continue;
+            seen.add(field);
+            fields.push(field);
+            if (fields.length >= 12) break;
+        }
+        if (fields.length >= 12) break;
+    }
+    return fields.map((field) => {
+        const sample = rows.find((row) => row[field] !== undefined)?.[field];
+        return {
+            field,
+            label: humanizeDetailFieldLabel(field),
+            align: isNumericLike(sample) ? 'right' : undefined,
+            truncate: field.length > 32,
+        };
+    });
+};
+
+const interpolateDetailSubtitle = (
+    template: string,
+    source: SearchbaseRecord,
+    detail: SearchbaseRecord,
+    range: TimeRange
+): string =>
+    template
+        .replace(/\{rangeLabel\}/g, range.label.toLowerCase())
+        .replace(/\{RangeLabel\}/g, range.label)
+        .replace(/\{searchName\}/g, source.searchName)
+        .replace(/\{drilldownSearchName\}/g, detail.searchName);
+
+const buildMetricDetailTableConfig = (
+    source: SearchbaseRecord | null,
+    searchbaseByName: Map<string, SearchbaseRecord> | null | undefined,
+    searchbaseDrilldowns: SearchbaseDrilldownMap
+): MetricDetailTableConfig | null => {
+    const userDrilldown =
+        source && Object.prototype.hasOwnProperty.call(searchbaseDrilldowns, source.searchName)
+            ? searchbaseDrilldowns[source.searchName]
+            : undefined;
+    const drilldownName =
+        userDrilldown === null
+            ? ''
+            : (userDrilldown ?? source?.drilldownSearchName)?.trim();
+    if (!source || !drilldownName || !searchbaseByName) return null;
+    const detail = searchbaseByName.get(drilldownName);
+    if (!detail?.search) return null;
+    const options = detail.vizOptions;
+    const columns = parseDetailTableColumns(options?.columns);
+    const subtitleTemplate =
+        readDetailStringOption(options, 'modalSubtitle') ??
+        'Detail table for {searchName} over {rangeLabel}.';
+    const tag = `detail_table_${detail.id || detail.searchName}`.replace(
+        /[^A-Za-z0-9_]+/g,
+        '_'
+    );
+    return {
+        title:
+            readDetailStringOption(options, 'modalTitle') ??
+            `${source.searchName} Details`,
+        buttonTitle:
+            source.drilldownButtonTitle ??
+            readDetailStringOption(options, 'buttonTitle') ??
+            `View ${source.searchName} detail table`,
+        subtitle: (range) =>
+            interpolateDetailSubtitle(subtitleTemplate, source, detail, range),
+        spl: detail.search,
+        tag,
+        rowKeyField:
+            readDetailStringOption(options, 'rowKeyField') ?? columns[0]?.field ?? '',
+        emptyMessage:
+            readDetailStringOption(options, 'emptyMessage') ??
+            'No detail rows returned for this time range.',
+        errorMessage:
+            readDetailStringOption(options, 'errorMessage') ??
+            `Unable to load ${detail.searchName}.`,
+        statusField: readDetailStringOption(options, 'statusField'),
+        availableStatus: readDetailStringOption(options, 'availableStatus'),
+        unavailableStatus: readDetailStringOption(options, 'unavailableStatus'),
+        columns,
+    };
+};
+
 // =============================================================================
 // Per-metric component (renders one MetricItem and reports its status up)
 // =============================================================================
@@ -852,6 +1061,8 @@ interface MetricCardProps {
      */
     override?: MetricOverride;
     onConfigure: () => void;
+    onOpenDetailTable?: (config: MetricDetailTableConfig) => void;
+    searchbaseDrilldowns: SearchbaseDrilldownMap;
     /**
      * Lookup of `searchbase.conf` entries keyed by `search_name`.
      *
@@ -1005,6 +1216,8 @@ const MetricCard: React.FC<MetricCardProps> = ({
     infoAnchor = 'auto',
     override,
     onConfigure,
+    onOpenDetailTable,
+    searchbaseDrilldowns,
     searchbaseByName,
 }) => {
     const effective = useMemo(() => applyOverride(cfg, override), [cfg, override]);
@@ -1048,6 +1261,20 @@ const MetricCard: React.FC<MetricCardProps> = ({
         return searchbaseByName.get(effective.savedSearch) ?? null;
     }, [effective.savedSearch, searchbaseByName]);
 
+    const detailTableConfig = useMemo(
+        () =>
+            buildMetricDetailTableConfig(
+                sbRecord,
+                searchbaseByName,
+                searchbaseDrilldowns
+            ),
+        [sbRecord, searchbaseByName, searchbaseDrilldowns]
+    );
+    const openDetailTable =
+        detailTableConfig && onOpenDetailTable
+            ? () => onOpenDetailTable(detailTableConfig)
+            : undefined;
+
     // Branch on viz type: tables and bar-breakdowns get wholly different
     // rendering paths (TableTile / BarBreakdownTile + useTableData) so we
     // never coerce categorical row distributions through the
@@ -1070,6 +1297,8 @@ const MetricCard: React.FC<MetricCardProps> = ({
                 refreshToken={refreshToken}
                 onStatus={onStatus}
                 onConfigure={onConfigure}
+                onOpenDetailTable={openDetailTable}
+                detailTableTitle={detailTableConfig?.buttonTitle}
                 infoAnchor={infoAnchor}
                 isCustomized={Boolean(override)}
             />
@@ -1098,6 +1327,8 @@ const MetricCard: React.FC<MetricCardProps> = ({
             refreshToken={refreshToken}
             onStatus={onStatus}
             onConfigure={onConfigure}
+            onOpenDetailTable={openDetailTable}
+            detailTableTitle={detailTableConfig?.buttonTitle}
             infoAnchor={infoAnchor}
             isCustomized={Boolean(override)}
             vizOverride={override?.vizOverride}
@@ -1115,6 +1346,8 @@ interface CommonLeafProps {
     refreshToken: number;
     onStatus: (id: string, status: MetricStatus) => void;
     onConfigure: () => void;
+    onOpenDetailTable?: () => void;
+    detailTableTitle?: string;
     infoAnchor: 'auto' | 'left' | 'right';
     isCustomized: boolean;
 }
@@ -1166,6 +1399,8 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
     refreshToken,
     onStatus,
     onConfigure,
+    onOpenDetailTable,
+    detailTableTitle,
     infoAnchor,
     isCustomized,
     vizOverride,
@@ -1321,6 +1556,8 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
             status={result.status}
             source={result.source}
             onOpenInSearch={drilldownSpl ? handleClick : undefined}
+            onOpenDetailTable={onOpenDetailTable}
+            detailTableTitle={detailTableTitle}
             onConfigure={onConfigure}
             isCustomized={isCustomized}
             sparkTitle={
@@ -1998,7 +2235,15 @@ const OverviewPage: React.FC = () => {
         resetAll: resetAllOverrides,
         overrideCount,
     } = usePersistedMetricOverrides();
+    const {
+        drilldowns: searchbaseDrilldowns,
+        setDrilldown: setSearchbaseDrilldown,
+        clearDrilldown: clearSearchbaseDrilldown,
+        resetAll: resetAllSearchbaseDrilldowns,
+    } = usePersistedSearchbaseDrilldowns();
     const [pickerContext, setPickerContext] = useState<KpiPickerContext | null>(null);
+    const [activeDetailTable, setActiveDetailTable] =
+        useState<MetricDetailTableConfig | null>(null);
 
     // Bump this counter to force a fresh mount of <CustomerTopologyMap>.
     // localStorage `storage` events only fire across tabs, so wiping
@@ -2133,6 +2378,20 @@ const OverviewPage: React.FC = () => {
         [setOverride]
     );
 
+    const handleSearchbaseDrilldownApply = useCallback(
+        (sourceSearchName: string, drilldownSearchName: string | null) => {
+            const source = searchbaseByName?.get(sourceSearchName);
+            const defaultName = source?.drilldownSearchName?.trim() ?? '';
+            const nextName = drilldownSearchName?.trim() ?? '';
+            if (nextName === defaultName || (!nextName && !defaultName)) {
+                clearSearchbaseDrilldown(sourceSearchName);
+                return;
+            }
+            setSearchbaseDrilldown(sourceSearchName, nextName || null);
+        },
+        [clearSearchbaseDrilldown, searchbaseByName, setSearchbaseDrilldown]
+    );
+
     /**
      * Section-level "Apply these Display settings to all tiles in
      * this section" handler (Build 1203, from Atef's "global vs
@@ -2207,6 +2466,7 @@ const OverviewPage: React.FC = () => {
     //
     // What gets reset (and the localStorage key cleared):
     //   • metricOverrides.v1            — per-tile picker bindings
+    //   • searchbaseDrilldowns.v1       — picker-wired drilldown bindings
     //   • sectionTileCounts.v1          — visible tile count per section
     //   • sectionTileOrder.v1           — drag-to-reorder preference
     //   • customerTopology.v4           — Florida map customisations
@@ -2225,6 +2485,7 @@ const OverviewPage: React.FC = () => {
     // through to the canonical CUSTOMER_TOPOLOGY factory.
     const handleResetAllCustomizations = useCallback(() => {
         resetAllOverrides();
+        resetAllSearchbaseDrilldowns();
         resetAllSectionTileCounts();
         resetAllSectionTileOrder();
         clearCustomerTopologyStorage();
@@ -2244,6 +2505,7 @@ const OverviewPage: React.FC = () => {
         setPickerContext(null);
     }, [
         resetAllOverrides,
+        resetAllSearchbaseDrilldowns,
         resetAllSectionTileCounts,
         resetAllSectionTileOrder,
         SPLIT_KEY,
@@ -2989,6 +3251,12 @@ const OverviewPage: React.FC = () => {
                                                             }
                                                             override={overrides[cfg.id]}
                                                             searchbaseByName={searchbaseByName}
+                                                            searchbaseDrilldowns={
+                                                                searchbaseDrilldowns
+                                                            }
+                                                            onOpenDetailTable={
+                                                                setActiveDetailTable
+                                                            }
                                                             onConfigure={() =>
                                                                 openPicker(cfg.id, cfg.label, {
                                                                     savedSearch: cfg.savedSearch,
@@ -3255,6 +3523,8 @@ const OverviewPage: React.FC = () => {
                 onClose={closePicker}
                 onApply={handlePickerApply}
                 onApplyDisplayToSection={handleApplyDisplayToSection}
+                drilldownBindings={searchbaseDrilldowns}
+                onSetSearchDrilldown={handleSearchbaseDrilldownApply}
                 onClearOverride={(tileId) => {
                     clearOverride(tileId);
                     closePicker();
@@ -3275,6 +3545,15 @@ const OverviewPage: React.FC = () => {
                 }}
                 onResetAllCustomizations={handleResetAllCustomizations}
             />
+
+            {activeDetailTable && (
+                <MetricDetailTableModal
+                    config={activeDetailTable}
+                    onClose={() => setActiveDetailTable(null)}
+                    range={timeRange}
+                    refreshToken={refreshToken}
+                />
+            )}
 
             <BrandingEditorModal
                 isOpen={isBrandingEditorOpen}
@@ -3372,6 +3651,305 @@ const RegionalViewToggle: React.FC<RegionalViewToggleProps> = ({ value, onChange
             >
                 TABLE
             </button>
+        </div>
+    );
+};
+
+// =============================================================================
+// Metric detail-table modal
+// =============================================================================
+
+interface MetricDetailTableModalProps {
+    config: MetricDetailTableConfig;
+    onClose: () => void;
+    range: TimeRange;
+    refreshToken: number;
+}
+
+const readRowString = (
+    row: Record<string, unknown>,
+    field: string,
+    fallback = ''
+): string => {
+    const raw = row[field];
+    if (raw === null || raw === undefined) return fallback;
+    if (Array.isArray(raw)) return raw.map(String).join(', ');
+    const text = String(raw).trim();
+    if (text.toLowerCase() === 'null') return fallback;
+    return text || fallback;
+};
+
+const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
+    config,
+    onClose,
+    range,
+    refreshToken,
+}) => {
+    const [rows, setRows] = useState<Array<Record<string, string>>>([]);
+    const [tableColumns, setTableColumns] =
+        useState<MetricDetailTableColumn[]>(config.columns);
+    const [loading, setLoading] = useState<boolean>(false);
+    const [errorMessage, setErrorMessage] = useState<string>('');
+
+    useEffect(() => {
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [onClose]);
+
+    useEffect(() => {
+        let cancelled = false;
+        setLoading(true);
+        setRows([]);
+        setTableColumns(config.columns);
+        setErrorMessage('');
+
+        runSearch({
+            spl: config.spl,
+            earliestTime: range.earliest,
+            latestTime: range.latest,
+            tag: config.tag,
+        })
+            .then((res) => {
+                if (cancelled) return;
+                const rawRows = (res?.results ?? []) as Array<
+                    Record<string, unknown>
+                >;
+                const columns =
+                    config.columns.length > 0
+                        ? config.columns
+                        : inferDetailTableColumns(rawRows);
+                const nextRows = rawRows.map((row) => {
+                    const detailRow: Record<string, string> = {};
+                    columns.forEach((column) => {
+                        detailRow[column.field] = readRowString(
+                            row,
+                            column.field,
+                            column.fallback ?? ''
+                        );
+                    });
+                    return detailRow;
+                });
+                setTableColumns(columns);
+                setRows(nextRows);
+            })
+            .catch(() => {
+                if (!cancelled) {
+                    setRows([]);
+                    setTableColumns(config.columns);
+                    setErrorMessage(config.errorMessage);
+                }
+            })
+            .finally(() => {
+                if (!cancelled) setLoading(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [config, range.earliest, range.latest, refreshToken]);
+
+    const availableStatus = config.availableStatus ?? 'Available';
+    const unavailableStatus = config.unavailableStatus ?? 'Unavailable';
+    const titleId = `${config.tag}-title`;
+    const statusField = config.statusField;
+    const displayColumns = tableColumns.length > 0 ? tableColumns : config.columns;
+    const columnCount = Math.max(displayColumns.length, 1);
+    const availableCount = statusField
+        ? rows.filter((row) => row[statusField] === availableStatus).length
+        : 0;
+    const unavailableCount = statusField ? rows.length - availableCount : 0;
+    const searchUrl = splunkSearchAppUrl(config.spl, range);
+
+    return (
+        <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            className="fixed inset-0 z-[1700] flex items-center justify-center p-4"
+            onClick={(e) => {
+                if (e.target === e.currentTarget) onClose();
+            }}
+        >
+            <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm" />
+            <div className="relative w-full max-w-6xl max-h-[88vh] overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 shadow-2xl">
+                <div className="flex items-start justify-between gap-4 px-5 py-4 border-b border-slate-200 dark:border-slate-800">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <Table2 className="w-4 h-4 text-sky-600 dark:text-sky-300" />
+                            <h2
+                                id={titleId}
+                                className="text-base font-bold text-slate-900 dark:text-slate-100"
+                            >
+                                {config.title}
+                            </h2>
+                        </div>
+                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                            {config.subtitle(range)}
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        {statusField && (
+                            <div className="hidden sm:flex items-center gap-2 text-xs font-semibold">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 px-2 py-1 text-emerald-700 dark:text-emerald-300">
+                                    <CheckCircle2 className="w-3 h-3" />
+                                    {availableCount} available
+                                </span>
+                                <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 dark:bg-rose-950/50 px-2 py-1 text-rose-700 dark:text-rose-300">
+                                    <AlertCircle className="w-3 h-3" />
+                                    {unavailableCount} unavailable
+                                </span>
+                            </div>
+                        )}
+                        <a
+                            href={searchUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={`Open ${config.title} in Search`}
+                            aria-label={`Open ${config.title} in Search`}
+                            className="inline-flex items-center gap-1.5 rounded border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-sky-700 dark:hover:text-sky-200 hover:border-sky-300 dark:hover:border-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/40 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400"
+                        >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            <span>Open in Search</span>
+                        </a>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            title="Close"
+                            aria-label={`Close ${config.title}`}
+                            className="p-1.5 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
+
+                <div className="overflow-auto max-h-[calc(88vh-90px)]">
+                    <table className="w-full min-w-[860px] text-sm">
+                        <thead className="sticky top-0 z-10 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
+                            <tr className="text-left text-xs font-bold text-slate-500 dark:text-slate-400">
+                                {displayColumns.map((column, index) => (
+                                    <th
+                                        key={column.field}
+                                        className={cn(
+                                            index === 0 ? 'px-5' : 'px-4',
+                                            'py-3',
+                                            column.align === 'right' && 'text-right'
+                                        )}
+                                    >
+                                        {column.label}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                            {loading ? (
+                                <tr>
+                                    <td
+                                        colSpan={columnCount}
+                                        className="px-5 py-10 text-center text-sm text-slate-500 dark:text-slate-400"
+                                    >
+                                        Loading {config.title.toLowerCase()}...
+                                    </td>
+                                </tr>
+                            ) : errorMessage ? (
+                                <tr>
+                                    <td
+                                        colSpan={columnCount}
+                                        className="px-5 py-10 text-center text-sm text-rose-600 dark:text-rose-300"
+                                    >
+                                        {errorMessage}
+                                    </td>
+                                </tr>
+                            ) : rows.length === 0 ? (
+                                <tr>
+                                    <td
+                                        colSpan={columnCount}
+                                        className="px-5 py-10 text-center text-sm text-slate-500 dark:text-slate-400"
+                                    >
+                                        {config.emptyMessage}
+                                    </td>
+                                </tr>
+                            ) : (
+                                rows.map((row, rowIndex) => {
+                                    const rowStatus = statusField
+                                        ? row[statusField]
+                                        : '';
+                                    const rowIsAvailable =
+                                        rowStatus === availableStatus;
+                                    const rowKey =
+                                        (config.rowKeyField &&
+                                            row[config.rowKeyField]) ||
+                                        displayColumns
+                                            .map((column) => row[column.field])
+                                            .join('|') ||
+                                        'detail-row';
+                                    return (
+                                        <tr
+                                            key={`${rowKey}-${rowIndex}`}
+                                            className="hover:bg-slate-50 dark:hover:bg-slate-900/70 transition-colors"
+                                        >
+                                            {displayColumns.map((column, index) => {
+                                                const value = row[column.field];
+                                                const isStatusColumn =
+                                                    column.kind === 'status';
+                                                const statusIsAvailable =
+                                                    value === availableStatus;
+                                                const statusIsUnavailable =
+                                                    value === unavailableStatus;
+                                                return (
+                                                    <td
+                                                        key={column.field}
+                                                        className={cn(
+                                                            index === 0
+                                                                ? 'px-5 font-medium text-slate-900 dark:text-slate-100'
+                                                                : 'px-4 text-slate-600 dark:text-slate-300',
+                                                            'py-3',
+                                                            column.align === 'right' &&
+                                                                'text-right tabular-nums',
+                                                            column.truncate &&
+                                                                'max-w-xs truncate',
+                                                            column.kind === 'metric' &&
+                                                                statusField &&
+                                                                (rowIsAvailable
+                                                                    ? 'font-medium text-emerald-600 dark:text-emerald-300'
+                                                                    : 'font-medium text-rose-600 dark:text-rose-300')
+                                                        )}
+                                                    >
+                                                        {isStatusColumn ? (
+                                                            <span
+                                                                className={cn(
+                                                                    'inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-bold',
+                                                                    statusIsAvailable
+                                                                        ? 'bg-emerald-600 text-white'
+                                                                        : statusIsUnavailable
+                                                                          ? 'bg-rose-600 text-white'
+                                                                          : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
+                                                                )}
+                                                            >
+                                                                {statusIsAvailable ? (
+                                                                    <CheckCircle2 className="w-3 h-3" />
+                                                                ) : (
+                                                                    <AlertCircle className="w-3 h-3" />
+                                                                )}
+                                                                {value}
+                                                            </span>
+                                                        ) : (
+                                                            value
+                                                        )}
+                                                    </td>
+                                                );
+                                            })}
+                                        </tr>
+                                    );
+                                })
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     );
 };

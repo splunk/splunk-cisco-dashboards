@@ -7,6 +7,7 @@ import {
     CheckCircle2,
     ExternalLink,
     Settings2,
+    Table2,
 } from 'lucide-react';
 import {
     Sparkline,
@@ -87,6 +88,10 @@ interface MetricItemProps {
      * sparkline area. When omitted, both affordances are hidden.
      */
     onOpenInSearch?: () => void;
+    /** Optional secondary action for contextual detail, distinct from Search. */
+    onOpenDetailTable?: () => void;
+    /** Tooltip / accessible label for the detail-table action. */
+    detailTableTitle?: string;
     /**
      * Click → opens the KPI picker for this tile. When omitted, the
      * gear icon is hidden — useful for tiles that aren't user-editable.
@@ -246,6 +251,8 @@ export const MetricItem: React.FC<MetricItemProps> = ({
     status = 'unknown',
     source,
     onOpenInSearch,
+    onOpenDetailTable,
+    detailTableTitle,
     onConfigure,
     isCustomized = false,
     sparkTitle,
@@ -357,6 +364,18 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                                 className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
                             >
                                 <ExternalLink className="w-3 h-3 stroke-[2.5px]" />
+                            </button>
+                        )}
+                        {onOpenDetailTable && (
+                            <button
+                                type="button"
+                                onClick={onOpenDetailTable}
+                                title={detailTableTitle ?? 'View detail table'}
+                                aria-label={detailTableTitle ?? `View ${label} detail table`}
+                                data-tile-control="true"
+                                className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
+                            >
+                                <Table2 className="w-3 h-3 stroke-[2.5px]" />
                             </button>
                         )}
                         {onConfigure && (

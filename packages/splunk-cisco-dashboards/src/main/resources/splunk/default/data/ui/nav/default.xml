@@ -6,17 +6,7 @@
     <view name="health_monitoring" label="Health Monitoring"/>
     <a href="it_health_v1">IT Health</a>
     <a href="security_v1">Security</a>
-    <a href="topology_canvas_v1">Topology Canvas</a>
-    <a href="network_diagram">Network Diagram</a>
-
-    <!-- ================================================================= -->
-    <!-- Workplace: Cisco Spaces and physical-building dashboards           -->
-    <!-- ================================================================= -->
-    <collection label="Workplace">
-        <a href="building_v1">Building Intelligence</a>
-        <view name="spaces_intelligence_v1"/>
-        <view name="workplace_spog_v1"/>
-    </collection>
+    <a href="building_v1">Building Intelligence</a>
 
     <!-- ================================================================= -->
     <!-- Reports: periodic, event-driven, and inventory views               -->
@@ -24,6 +14,15 @@
     <collection label="Reports">
         <a href="statewide_exercise_v1">Network Activation Report</a>
         <a href="asset_inventory_v1">Asset Inventory</a>
+    </collection>
+
+    <collection label="Concepts">
+        <a href="topology_canvas_v1">Topology Canvas</a>
+        <a href="network_diagram">Network Diagram</a>
+        <collection label="Workplace">
+            <view name="spaces_intelligence_v1"/>
+            <view name="workplace_spog_v1"/>
+        </collection>
     </collection>
 
     <!-- ================================================================= -->

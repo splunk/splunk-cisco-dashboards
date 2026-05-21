@@ -46,6 +46,7 @@ import {
     RotateCcw,
     Search,
     Settings2,
+    Table2,
     Tag,
     X,
 } from 'lucide-react';
@@ -57,6 +58,7 @@ import {
     type SearchbaseRecord,
 } from '@/common/services/searchbaseCatalogue';
 import type { MetricOverride } from '@/common/hooks/usePersistedMetricOverrides';
+import type { SearchbaseDrilldownMap } from '@/common/hooks/usePersistedSearchbaseDrilldowns';
 import {
     deriveThresholdLines,
     formatThresholdNumber,
@@ -201,6 +203,17 @@ export interface KpiPickerPanelProps {
     onApply: (tileId: string, override: MetricOverride) => void;
     onClearOverride: (tileId: string) => void;
     /**
+     * Search-level drilldown bindings keyed by source `search_name`.
+     * These sit beside `searchbase.conf`'s shipped
+     * `drilldown_search_name` relationship and let an operator attach
+     * a drilldown from the picker without hand-editing conf.
+     */
+    drilldownBindings?: SearchbaseDrilldownMap;
+    onSetSearchDrilldown?: (
+        sourceSearchName: string,
+        drilldownSearchName: string | null
+    ) => void;
+    /**
      * Section-level apply for the DISPLAY flags only (Build 1203).
      * When provided, the Display block in the picker renders an
      * "Apply to all tiles in section" link below the toggles. The
@@ -318,6 +331,7 @@ const matchesQuery = (entry: SearchbaseRecord, query: string): boolean => {
     const plainDescription = plainTextFromHtml(entry.description);
     return (
         entry.searchName.toLowerCase().includes(trimmed) ||
+        (entry.drilldownSearchName ?? '').toLowerCase().includes(trimmed) ||
         plainDescription.toLowerCase().includes(trimmed) ||
         entry.subCategory.toLowerCase().includes(trimmed) ||
         entry.tags.some((t) => t.toLowerCase().includes(trimmed))
@@ -328,6 +342,28 @@ const entryMatchesKey = (entry: SearchbaseRecord, key: string | null | undefined
     const trimmed = key?.trim();
     if (!trimmed) return false;
     return entry.id === trimmed || entry.searchName === trimmed;
+};
+
+const entryMatchesFacetSelection = (
+    entry: SearchbaseRecord,
+    app: string,
+    category: string,
+    subCategory: string,
+    tags: ReadonlySet<string>
+): boolean => {
+    if (app !== ALL_APPS && entry.dispatchContext !== app) {
+        return false;
+    }
+    if (category !== ALL_CATEGORIES && entry.category !== category) {
+        return false;
+    }
+    if (subCategory !== ALL_SUB_CATEGORIES && entry.subCategory !== subCategory) {
+        return false;
+    }
+    for (const tag of tags) {
+        if (!entry.tags.includes(tag)) return false;
+    }
+    return true;
 };
 
 const entryIsUsed = (entry: SearchbaseRecord, used: Set<string> | undefined): boolean => {
@@ -353,12 +389,24 @@ const buildSearchbaseEditUrl = (entry: SearchbaseRecord): string | null => {
     return `${origin}${getSplunkWebLocalePrefix()}/app/searchbase/start#/edit/${encodeURIComponent(stanza)}#search-spl`;
 };
 
+const configuredDrilldownNameFor = (
+    entry: SearchbaseRecord,
+    bindings: SearchbaseDrilldownMap | undefined
+): string => {
+    if (bindings && Object.prototype.hasOwnProperty.call(bindings, entry.searchName)) {
+        return bindings[entry.searchName]?.trim() ?? '';
+    }
+    return entry.drilldownSearchName?.trim() ?? '';
+};
+
 export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     open,
     context,
     onClose,
     onApply,
     onClearOverride,
+    drilldownBindings,
+    onSetSearchDrilldown,
     onTestInSearch,
     onResetAllCustomizations,
     onApplyDisplayToSection,
@@ -491,12 +539,29 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
      * form happens to be expanded.
      */
     const [dataMappingOpen, setDataMappingOpen] = useState(false);
+    const [drilldownOpen, setDrilldownOpen] = useState(false);
+    const [drilldownQuery, setDrilldownQuery] = useState('');
+    const [drilldownDraftSearchName, setDrilldownDraftSearchName] = useState('');
+    const [drilldownFiltersOpen, setDrilldownFiltersOpen] = useState(false);
+    const [drilldownSelectedApp, setDrilldownSelectedApp] =
+        useState<string>(DEFAULT_APP_SCOPE);
+    const [drilldownSelectedCategory, setDrilldownSelectedCategory] =
+        useState<string>(ALL_CATEGORIES);
+    const [drilldownSelectedSubCategory, setDrilldownSelectedSubCategory] =
+        useState<string>(ALL_SUB_CATEGORIES);
+    const [drilldownActiveTags, setDrilldownActiveTags] = useState<Set<string>>(
+        () => new Set()
+    );
+    const [drilldownTagFilter, setDrilldownTagFilter] = useState('');
+    const [drilldownTagDropdownOpen, setDrilldownTagDropdownOpen] = useState(false);
     const [chartStyleOpen, setChartStyleOpen] = useState(false);
     const [displayOpen, setDisplayOpen] = useState(false);
 
     const searchInputRef = useRef<HTMLInputElement | null>(null);
     const tagSelectRef = useRef<HTMLDivElement | null>(null);
     const tagInputRef = useRef<HTMLInputElement | null>(null);
+    const drilldownTagSelectRef = useRef<HTMLDivElement | null>(null);
+    const drilldownTagInputRef = useRef<HTMLInputElement | null>(null);
 
     // Lazy-load searchbase.conf when the panel first opens. Cached at
     // the service layer; subsequent opens reuse the in-memory list.
@@ -637,6 +702,14 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         setHideOverlayInput(hideOverlayActive);
 
         setDataMappingOpen(false);
+        setDrilldownOpen(false);
+        setDrilldownFiltersOpen(false);
+        setDrilldownSelectedApp(DEFAULT_APP_SCOPE);
+        setDrilldownSelectedCategory(ALL_CATEGORIES);
+        setDrilldownSelectedSubCategory(ALL_SUB_CATEGORIES);
+        setDrilldownActiveTags(new Set());
+        setDrilldownTagFilter('');
+        setDrilldownTagDropdownOpen(false);
         // Build 1203: auto-expand CHART STYLE and DISPLAY when the
         // tile is already customised in those areas. Operators
         // landing on a tile they've previously tweaked should see
@@ -675,6 +748,11 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         setActiveTags(new Set());
     }, [selectedCategory]);
 
+    useEffect(() => {
+        setDrilldownSelectedSubCategory(ALL_SUB_CATEGORIES);
+        setDrilldownActiveTags(new Set());
+    }, [drilldownSelectedCategory]);
+
     // When the App facet changes, reset the downstream facets. Picking
     // a different app namespace surfaces a different category /
     // sub-category / tag vocabulary, so carrying old selections over
@@ -685,6 +763,12 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         setSelectedSubCategory(ALL_SUB_CATEGORIES);
         setActiveTags(new Set());
     }, [selectedApp]);
+
+    useEffect(() => {
+        setDrilldownSelectedCategory(ALL_CATEGORIES);
+        setDrilldownSelectedSubCategory(ALL_SUB_CATEGORIES);
+        setDrilldownActiveTags(new Set());
+    }, [drilldownSelectedApp]);
 
     // Auto-expand the Filters block whenever an applied facet appears
     // — guarantees the user can always see what's narrowing the result
@@ -701,6 +785,22 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
             setFiltersOpen(true);
         }
     }, [selectedApp, selectedCategory, selectedSubCategory, activeTags]);
+
+    useEffect(() => {
+        if (
+            drilldownSelectedApp !== DEFAULT_APP_SCOPE ||
+            drilldownSelectedCategory !== ALL_CATEGORIES ||
+            drilldownSelectedSubCategory !== ALL_SUB_CATEGORIES ||
+            drilldownActiveTags.size > 0
+        ) {
+            setDrilldownFiltersOpen(true);
+        }
+    }, [
+        drilldownSelectedApp,
+        drilldownSelectedCategory,
+        drilldownSelectedSubCategory,
+        drilldownActiveTags,
+    ]);
 
     // Different selection drops the prefilled `valueField` whenever the
     // user picks a search that isn't the tile's current binding.
@@ -741,6 +841,17 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
     }, [open, tagDropdownOpen]);
+
+    useEffect(() => {
+        if (!open || !drilldownTagDropdownOpen) return undefined;
+        const handler = (e: MouseEvent) => {
+            if (!drilldownTagSelectRef.current?.contains(e.target as Node)) {
+                setDrilldownTagDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [open, drilldownTagDropdownOpen]);
 
     // Distinct, sorted category list — drives the Category dropdown.
     // Scoped to the active App facet so picking a single app narrows
@@ -794,6 +905,60 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
             a.localeCompare(b, undefined, { sensitivity: 'base' })
         );
     }, [catalogue]);
+
+    const drilldownBaseEntries = useMemo(
+        () =>
+            catalogue.filter((entry) => {
+                if (!entry.search?.trim()) return false;
+                if (!selectedId) return true;
+                return !entryMatchesKey(entry, selectedId);
+            }),
+        [catalogue, selectedId]
+    );
+
+    const drilldownApps = useMemo(() => {
+        const set = new Set<string>();
+        for (const entry of drilldownBaseEntries) {
+            if (entry.dispatchContext) set.add(entry.dispatchContext);
+        }
+        return Array.from(set).sort((a, b) =>
+            a.localeCompare(b, undefined, { sensitivity: 'base' })
+        );
+    }, [drilldownBaseEntries]);
+
+    const drilldownCategories = useMemo(() => {
+        const set = new Set<string>();
+        for (const entry of drilldownBaseEntries) {
+            if (
+                drilldownSelectedApp !== ALL_APPS &&
+                entry.dispatchContext !== drilldownSelectedApp
+            ) {
+                continue;
+            }
+            if (entry.category) set.add(entry.category);
+        }
+        return Array.from(set).sort((a, b) =>
+            a.localeCompare(b, undefined, { sensitivity: 'base' })
+        );
+    }, [drilldownBaseEntries, drilldownSelectedApp]);
+
+    const drilldownSubCategories = useMemo(() => {
+        if (drilldownSelectedCategory === ALL_CATEGORIES) return [];
+        const set = new Set<string>();
+        for (const entry of drilldownBaseEntries) {
+            if (
+                drilldownSelectedApp !== ALL_APPS &&
+                entry.dispatchContext !== drilldownSelectedApp
+            ) {
+                continue;
+            }
+            if (entry.category !== drilldownSelectedCategory) continue;
+            if (entry.subCategory) set.add(entry.subCategory);
+        }
+        return Array.from(set).sort((a, b) =>
+            a.localeCompare(b, undefined, { sensitivity: 'base' })
+        );
+    }, [drilldownBaseEntries, drilldownSelectedApp, drilldownSelectedCategory]);
 
     // Tag counts are scoped to the current result slice, including
     // already-selected tags. This makes the tag picker progressive:
@@ -861,6 +1026,57 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         return m;
     }, [allTagsWithCounts]);
 
+    const drilldownTagFacetEntries = useMemo(() => {
+        return drilldownBaseEntries.filter((entry) => {
+            if (
+                !entryMatchesFacetSelection(
+                    entry,
+                    drilldownSelectedApp,
+                    drilldownSelectedCategory,
+                    drilldownSelectedSubCategory,
+                    drilldownActiveTags
+                )
+            ) {
+                return false;
+            }
+            return matchesQuery(entry, drilldownQuery);
+        });
+    }, [
+        drilldownBaseEntries,
+        drilldownSelectedApp,
+        drilldownSelectedCategory,
+        drilldownSelectedSubCategory,
+        drilldownActiveTags,
+        drilldownQuery,
+    ]);
+
+    const drilldownAllTagsWithCounts = useMemo(() => {
+        const map = new Map<string, number>();
+        for (const entry of drilldownTagFacetEntries) {
+            for (const tag of entry.tags) map.set(tag, (map.get(tag) ?? 0) + 1);
+        }
+        return Array.from(map.entries()).sort(
+            (a, b) => b[1] - a[1] || a[0].localeCompare(b[0])
+        );
+    }, [drilldownTagFacetEntries]);
+
+    const drilldownTagDropdownOptions = useMemo(() => {
+        const filter = drilldownTagFilter.trim().toLowerCase();
+        const available = drilldownAllTagsWithCounts.filter(
+            ([tag]) => !drilldownActiveTags.has(tag)
+        );
+        if (!filter) {
+            return available.slice(0, TAG_CHIP_LIMIT);
+        }
+        return available.filter(([tag]) => tag.toLowerCase().includes(filter));
+    }, [drilldownAllTagsWithCounts, drilldownTagFilter, drilldownActiveTags]);
+
+    const drilldownTagCountByName = useMemo(() => {
+        const m = new Map<string, number>();
+        for (const [t, c] of drilldownAllTagsWithCounts) m.set(t, c);
+        return m;
+    }, [drilldownAllTagsWithCounts]);
+
     const filtered = useMemo(() => {
         return catalogue.filter((entry) => {
             if (
@@ -897,10 +1113,78 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         [catalogue, selectedId]
     );
     const selectedSearchbaseUrl = selectedEntry ? buildSearchbaseEditUrl(selectedEntry) : null;
+    const selectedConfiguredDrilldownName = useMemo(
+        () =>
+            selectedEntry
+                ? configuredDrilldownNameFor(selectedEntry, drilldownBindings)
+                : '',
+        [selectedEntry, drilldownBindings]
+    );
+    const selectedDrilldownEntry = useMemo(() => {
+        const drilldownName = drilldownDraftSearchName.trim();
+        if (!drilldownName) return null;
+        return catalogue.find((entry) => entryMatchesKey(entry, drilldownName)) ?? null;
+    }, [catalogue, drilldownDraftSearchName]);
+    const selectedDrilldownUrl = selectedDrilldownEntry
+        ? buildSearchbaseEditUrl(selectedDrilldownEntry)
+        : null;
+    const drilldownCandidates = useMemo(() => {
+        if (!selectedEntry) return [];
+        const q = drilldownQuery.trim();
+        return catalogue
+            .filter((entry) => {
+                if (!entry.search?.trim()) return false;
+                if (entry.id === selectedEntry.id) return false;
+                if (entry.searchName === selectedEntry.searchName) return false;
+                if (
+                    !entryMatchesFacetSelection(
+                        entry,
+                        drilldownSelectedApp,
+                        drilldownSelectedCategory,
+                        drilldownSelectedSubCategory,
+                        drilldownActiveTags
+                    )
+                ) {
+                    return false;
+                }
+                return matchesQuery(entry, q);
+            })
+            .sort((a, b) => {
+                const aSelected = entryMatchesKey(a, drilldownDraftSearchName) ? 1 : 0;
+                const bSelected = entryMatchesKey(b, drilldownDraftSearchName) ? 1 : 0;
+                if (aSelected !== bSelected) return bSelected - aSelected;
+                const aTable = a.defaultViz === 'splunk.table' ? 1 : 0;
+                const bTable = b.defaultViz === 'splunk.table' ? 1 : 0;
+                if (aTable !== bTable) return bTable - aTable;
+                return a.searchName.localeCompare(b.searchName, undefined, {
+                    sensitivity: 'base',
+                });
+            })
+            .slice(0, 8);
+    }, [
+        catalogue,
+        selectedEntry,
+        drilldownQuery,
+        drilldownDraftSearchName,
+        drilldownSelectedApp,
+        drilldownSelectedCategory,
+        drilldownSelectedSubCategory,
+        drilldownActiveTags,
+    ]);
     const selectedDescriptionPlain = useMemo(
         () => (selectedEntry ? plainTextFromHtml(selectedEntry.description) : ''),
         [selectedEntry]
     );
+
+    useEffect(() => {
+        if (!open || !selectedEntry) {
+            setDrilldownDraftSearchName('');
+            setDrilldownQuery('');
+            return;
+        }
+        setDrilldownDraftSearchName(selectedConfiguredDrilldownName);
+        setDrilldownQuery('');
+    }, [open, selectedEntry, selectedConfiguredDrilldownName]);
 
     // Output column names parsed from the selected entry's SPL — drives
     // the clickable chip list under the Value Field input. Empty array
@@ -1008,6 +1292,50 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         }
     };
 
+    const addDrilldownTag = (tag: string) => {
+        setDrilldownActiveTags((prev) => {
+            if (prev.has(tag)) return prev;
+            const next = new Set(prev);
+            next.add(tag);
+            return next;
+        });
+        setDrilldownTagFilter('');
+        drilldownTagInputRef.current?.focus();
+    };
+
+    const removeDrilldownTag = (tag: string) => {
+        setDrilldownActiveTags((prev) => {
+            if (!prev.has(tag)) return prev;
+            const next = new Set(prev);
+            next.delete(tag);
+            return next;
+        });
+    };
+
+    const handleDrilldownTagInputKeyDown = (
+        e: React.KeyboardEvent<HTMLInputElement>
+    ) => {
+        if (
+            e.key === 'Backspace' &&
+            drilldownTagFilter === '' &&
+            drilldownActiveTags.size > 0
+        ) {
+            e.preventDefault();
+            const arr = Array.from(drilldownActiveTags);
+            removeDrilldownTag(arr[arr.length - 1]);
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            setDrilldownTagDropdownOpen(false);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (drilldownTagDropdownOptions.length > 0) {
+                addDrilldownTag(drilldownTagDropdownOptions[0][0]);
+            }
+        } else if (e.key === 'ArrowDown' && !drilldownTagDropdownOpen) {
+            setDrilldownTagDropdownOpen(true);
+        }
+    };
+
     const fieldNameValid = valueField === '' || FIELD_NAME_PATTERN.test(valueField);
     const labelValid = labelOverride === '' || labelOverride.trim().length <= 80;
 
@@ -1105,6 +1433,13 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         activeTags.size;
 
     const facetsActive = activeFilterCount > 0 || tagFilter.trim().length > 0;
+    const drilldownActiveFilterCount =
+        (drilldownSelectedApp !== DEFAULT_APP_SCOPE ? 1 : 0) +
+        (drilldownSelectedCategory !== ALL_CATEGORIES ? 1 : 0) +
+        (drilldownSelectedSubCategory !== ALL_SUB_CATEGORIES ? 1 : 0) +
+        drilldownActiveTags.size;
+    const drilldownFacetsActive =
+        drilldownActiveFilterCount > 0 || drilldownTagFilter.trim().length > 0;
 
     const handleApply = () => {
         if (!selectedEntry || !canApply) return;
@@ -1163,6 +1498,10 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         if (hideOverlayInput) {
             payload.hideOverlay = true;
         }
+        onSetSearchDrilldown?.(
+            selectedEntry.searchName,
+            drilldownDraftSearchName.trim() || null
+        );
         // Edge case: the user *cleared* a default-set threshold
         // (e.g. tile defaulted to warning=95, user blanked the input
         // to mean "no warning band"). We can't represent "explicitly
@@ -1255,6 +1594,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
             'Reset all dashboard customisations?\n\n' +
                 'This will undo every change you have made to:\n' +
                 "  • Each tile's bound search, value field, label, and description\n" +
+                '  • Searchbase drilldown bindings chosen in this picker\n' +
                 '  • The visible tile count in each section\n' +
                 '  • The order of tiles within each section\n' +
                 '  • The map topology (sites, links, names, positions)\n' +
@@ -1272,6 +1612,14 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         setSelectedSubCategory(ALL_SUB_CATEGORIES);
         setActiveTags(new Set());
         setTagFilter('');
+    };
+
+    const handleClearDrilldownFacets = () => {
+        setDrilldownSelectedApp(DEFAULT_APP_SCOPE);
+        setDrilldownSelectedCategory(ALL_CATEGORIES);
+        setDrilldownSelectedSubCategory(ALL_SUB_CATEGORIES);
+        setDrilldownActiveTags(new Set());
+        setDrilldownTagFilter('');
     };
 
     return (
@@ -1790,6 +2138,15 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                             +{entry.tags.length - 4}
                                                         </span>
                                                     )}
+                                                    {entry.drilldownSearchName && (
+                                                        <span
+                                                            title={`Attached drilldown: ${entry.drilldownSearchName}`}
+                                                            className="inline-flex items-center gap-0.5 px-1.5 py-px rounded-sm text-[8px] font-black uppercase tracking-widest bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300"
+                                                        >
+                                                            <Table2 className="w-2.5 h-2.5" />
+                                                            Drilldown
+                                                        </span>
+                                                    )}
                                                 </div>
                                             )}
                                             {plainDesc && (
@@ -1932,6 +2289,29 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             <ExternalLink className="w-2.5 h-2.5" />
                                         </button>
                                     )}
+                                    {drilldownDraftSearchName && (
+                                        selectedDrilldownUrl ? (
+                                            <a
+                                                href={selectedDrilldownUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                title={`Open attached drilldown ${selectedDrilldownEntry?.id ?? ''} in Searchbase`}
+                                                className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-300 hover:text-emerald-800 dark:hover:text-emerald-100 focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded px-1 py-0.5"
+                                            >
+                                                <Table2 className="w-2.5 h-2.5" />
+                                                Drilldown table
+                                                <ExternalLink className="w-2.5 h-2.5" />
+                                            </a>
+                                        ) : (
+                                            <span
+                                                title="Attached drilldown searchbase entry is not loaded"
+                                                className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-300 rounded px-1 py-0.5"
+                                            >
+                                                <Table2 className="w-2.5 h-2.5" />
+                                                Drilldown table
+                                                </span>
+                                        )
+                                    )}
                                 </div>
                             </div>
 
@@ -2058,6 +2438,552 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     />
                                 </div>
                             </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-2.5">
+                                <div className="flex items-center justify-between gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setDrilldownOpen((p) => !p)}
+                                        aria-expanded={drilldownOpen}
+                                        aria-controls="kpi-picker-drilldown-block"
+                                        title={
+                                            drilldownOpen
+                                                ? 'Hide drilldown details'
+                                                : 'Show attached drilldown details'
+                                        }
+                                        className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 hover:text-sky-700 dark:hover:text-sky-300 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-0.5 py-0.5"
+                                    >
+                                        <Table2 className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400 flex-shrink-0" />
+                                        <span className="flex-shrink-0">Drilldown</span>
+                                        <span className="min-w-0 truncate text-[9px] font-semibold normal-case tracking-normal text-slate-400 dark:text-slate-500">
+                                            {drilldownDraftSearchName
+                                                ? selectedDrilldownEntry?.searchName ??
+                                                  drilldownDraftSearchName
+                                                : 'none'}
+                                        </span>
+                                        <ChevronRight
+                                            className={cn(
+                                                'w-3 h-3 ml-auto text-slate-400 dark:text-slate-500 transition-transform flex-shrink-0',
+                                                drilldownOpen && 'rotate-90'
+                                            )}
+                                        />
+                                    </button>
+                                </div>
+
+                                {drilldownOpen && (
+                                    <div
+                                        id="kpi-picker-drilldown-block"
+                                        className="mt-2 border-t border-slate-200 dark:border-slate-800 pt-2"
+                                    >
+                                        <div className="space-y-2">
+                                            <div className="rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5">
+                                                {drilldownDraftSearchName ? (
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-start justify-between gap-2">
+                                                            <p className="min-w-0 text-[11px] font-bold text-slate-700 dark:text-slate-200 leading-snug break-words">
+                                                                {selectedDrilldownEntry?.searchName ??
+                                                                    drilldownDraftSearchName}
+                                                            </p>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    setDrilldownDraftSearchName('')
+                                                                }
+                                                                title="Remove this drilldown binding"
+                                                                className="flex-shrink-0 inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-300 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
+                                                            >
+                                                                <X className="w-2.5 h-2.5" />
+                                                                Clear
+                                                            </button>
+                                                        </div>
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            {selectedDrilldownUrl && (
+                                                                <a
+                                                                    href={selectedDrilldownUrl}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    title={`Open attached drilldown ${selectedDrilldownEntry?.id ?? ''} in Searchbase`}
+                                                                    className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-300 hover:text-emerald-800 dark:hover:text-emerald-100 focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded px-1 py-0.5"
+                                                                >
+                                                                    View in Searchbase
+                                                                    <ExternalLink className="w-2.5 h-2.5" />
+                                                                </a>
+                                                            )}
+                                                            {onTestInSearch &&
+                                                                selectedDrilldownEntry?.search && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            onTestInSearch(
+                                                                                selectedDrilldownEntry.search
+                                                                            )
+                                                                        }
+                                                                        title="Run the attached drilldown SPL in Search (new tab)"
+                                                                        className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-300 hover:text-emerald-800 dark:hover:text-emerald-100 focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded px-1 py-0.5"
+                                                                    >
+                                                                        <Play className="w-2.5 h-2.5" />
+                                                                        Test drilldown
+                                                                        <ExternalLink className="w-2.5 h-2.5" />
+                                                                    </button>
+                                                                )}
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                                                        No drilldown attached.
+                                                    </p>
+                                                )}
+                                            </div>
+
+                                            <label className="relative block">
+                                                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                                                <input
+                                                    type="text"
+                                                    value={drilldownQuery}
+                                                    onChange={(e) =>
+                                                        setDrilldownQuery(e.target.value)
+                                                    }
+                                                    placeholder="Search Searchbase drilldowns..."
+                                                    className="w-full pl-7 pr-2 py-1.5 text-[11px] rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                                                />
+                                            </label>
+
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            setDrilldownFiltersOpen((o) => !o)
+                                                        }
+                                                        aria-expanded={drilldownFiltersOpen}
+                                                        aria-controls="kpi-picker-drilldown-filters"
+                                                        title={
+                                                            drilldownFiltersOpen
+                                                                ? 'Hide drilldown filters'
+                                                                : 'Show drilldown filters'
+                                                        }
+                                                        className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-slate-100 dark:bg-slate-800/80 text-[10px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-200 hover:text-sky-700 dark:hover:text-sky-300 focus:outline-none focus:ring-1 focus:ring-sky-400"
+                                                    >
+                                                        <ChevronDown
+                                                            className={cn(
+                                                                'w-3 h-3 transition-transform',
+                                                                !drilldownFiltersOpen &&
+                                                                    '-rotate-90'
+                                                            )}
+                                                        />
+                                                        Filters
+                                                        {drilldownActiveFilterCount > 0 && (
+                                                            <span
+                                                                className="ml-1 px-1.5 py-px rounded-full bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300 text-[8px] tracking-normal normal-case font-semibold"
+                                                                title={`${drilldownActiveFilterCount} active drilldown filter${drilldownActiveFilterCount === 1 ? '' : 's'}`}
+                                                            >
+                                                                {drilldownActiveFilterCount} active
+                                                            </span>
+                                                        )}
+                                                    </button>
+                                                    {drilldownFacetsActive && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleClearDrilldownFacets}
+                                                            title="Reset every drilldown filter to its default"
+                                                            className="text-[9px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200"
+                                                        >
+                                                            Clear filters
+                                                        </button>
+                                                    )}
+                                                </div>
+
+                                                {drilldownFiltersOpen && (
+                                                    <div
+                                                        id="kpi-picker-drilldown-filters"
+                                                        className="space-y-2 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-2"
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            <span
+                                                                className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex-shrink-0 w-16"
+                                                                title="Splunk app the drilldown search belongs to"
+                                                            >
+                                                                App
+                                                            </span>
+                                                            <select
+                                                                value={drilldownSelectedApp}
+                                                                onChange={(e) =>
+                                                                    setDrilldownSelectedApp(
+                                                                        e.target.value
+                                                                    )
+                                                                }
+                                                                className="flex-1 px-2 py-1 text-[11px] rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                                                            >
+                                                                <option value={ALL_APPS}>
+                                                                    All apps ({drilldownApps.length})
+                                                                </option>
+                                                                {drilldownApps.map((app) => (
+                                                                    <option key={app} value={app}>
+                                                                        {app}
+                                                                    </option>
+                                                                ))}
+                                                                {!drilldownApps.includes(
+                                                                    DEFAULT_APP_SCOPE
+                                                                ) && (
+                                                                    <option
+                                                                        value={DEFAULT_APP_SCOPE}
+                                                                    >
+                                                                        {DEFAULT_APP_SCOPE}
+                                                                    </option>
+                                                                )}
+                                                            </select>
+                                                        </div>
+
+                                                        {drilldownCategories.length > 1 && (
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex-shrink-0 w-16">
+                                                                    Category
+                                                                </span>
+                                                                <select
+                                                                    value={
+                                                                        drilldownSelectedCategory
+                                                                    }
+                                                                    onChange={(e) =>
+                                                                        setDrilldownSelectedCategory(
+                                                                            e.target.value
+                                                                        )
+                                                                    }
+                                                                    className="flex-1 px-2 py-1 text-[11px] rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                                                                >
+                                                                    <option
+                                                                        value={ALL_CATEGORIES}
+                                                                    >
+                                                                        All categories
+                                                                    </option>
+                                                                    {drilldownCategories.map(
+                                                                        (category) => (
+                                                                            <option
+                                                                                key={category}
+                                                                                value={category}
+                                                                            >
+                                                                                {category}
+                                                                            </option>
+                                                                        )
+                                                                    )}
+                                                                </select>
+                                                            </div>
+                                                        )}
+
+                                                        {drilldownSelectedCategory !==
+                                                            ALL_CATEGORIES &&
+                                                            drilldownSubCategories.length > 0 && (
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex-shrink-0 w-16">
+                                                                        Sub-cat
+                                                                    </span>
+                                                                    <select
+                                                                        value={
+                                                                            drilldownSelectedSubCategory
+                                                                        }
+                                                                        onChange={(e) =>
+                                                                            setDrilldownSelectedSubCategory(
+                                                                                e.target.value
+                                                                            )
+                                                                        }
+                                                                        className="flex-1 px-2 py-1 text-[11px] rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                                                                    >
+                                                                        <option
+                                                                            value={
+                                                                                ALL_SUB_CATEGORIES
+                                                                            }
+                                                                        >
+                                                                            All sub-categories (
+                                                                            {
+                                                                                drilldownSubCategories.length
+                                                                            }
+                                                                            )
+                                                                        </option>
+                                                                        {drilldownSubCategories.map(
+                                                                            (subCategory) => (
+                                                                                <option
+                                                                                    key={
+                                                                                        subCategory
+                                                                                    }
+                                                                                    value={
+                                                                                        subCategory
+                                                                                    }
+                                                                                >
+                                                                                    {
+                                                                                        subCategory
+                                                                                    }
+                                                                                </option>
+                                                                            )
+                                                                        )}
+                                                                    </select>
+                                                                </div>
+                                                            )}
+
+                                                        {(drilldownAllTagsWithCounts.length > 0 ||
+                                                            drilldownActiveTags.size > 0) && (
+                                                            <div
+                                                                className="relative"
+                                                                ref={drilldownTagSelectRef}
+                                                            >
+                                                                <div
+                                                                    onClick={() => {
+                                                                        setDrilldownTagDropdownOpen(
+                                                                            true
+                                                                        );
+                                                                        drilldownTagInputRef.current?.focus();
+                                                                    }}
+                                                                    className={cn(
+                                                                        'flex flex-wrap items-center gap-1 px-1.5 py-1 rounded-md border bg-white dark:bg-slate-800 cursor-text transition-shadow',
+                                                                        drilldownTagDropdownOpen
+                                                                            ? 'border-sky-400 ring-2 ring-sky-400/40'
+                                                                            : 'border-slate-200 dark:border-slate-700'
+                                                                    )}
+                                                                >
+                                                                    <Tag className="w-3 h-3 text-slate-400 flex-shrink-0 ml-0.5" />
+                                                                    {Array.from(
+                                                                        drilldownActiveTags
+                                                                    ).map((tag) => {
+                                                                        const count =
+                                                                            drilldownTagCountByName.get(
+                                                                                tag
+                                                                            ) ?? 0;
+                                                                        return (
+                                                                            <span
+                                                                                key={tag}
+                                                                                className="inline-flex items-center gap-1 pl-1.5 pr-0.5 py-0.5 rounded-full bg-sky-500 text-white text-[9px] font-bold uppercase tracking-wider"
+                                                                            >
+                                                                                {tag}
+                                                                                {count > 0 && (
+                                                                                    <span className="opacity-70 font-normal">
+                                                                                        {count}
+                                                                                    </span>
+                                                                                )}
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={(
+                                                                                        e
+                                                                                    ) => {
+                                                                                        e.stopPropagation();
+                                                                                        removeDrilldownTag(
+                                                                                            tag
+                                                                                        );
+                                                                                    }}
+                                                                                    title={`Remove ${tag} drilldown filter`}
+                                                                                    aria-label={`Remove ${tag} drilldown filter`}
+                                                                                    className="p-0.5 rounded-full hover:bg-sky-700/40"
+                                                                                >
+                                                                                    <X className="w-2 h-2" />
+                                                                                </button>
+                                                                            </span>
+                                                                        );
+                                                                    })}
+                                                                    <input
+                                                                        ref={drilldownTagInputRef}
+                                                                        type="text"
+                                                                        value={drilldownTagFilter}
+                                                                        onChange={(e) => {
+                                                                            setDrilldownTagFilter(
+                                                                                e.target.value
+                                                                            );
+                                                                            setDrilldownTagDropdownOpen(
+                                                                                true
+                                                                            );
+                                                                        }}
+                                                                        onFocus={() =>
+                                                                            setDrilldownTagDropdownOpen(
+                                                                                true
+                                                                            )
+                                                                        }
+                                                                        onKeyDown={
+                                                                            handleDrilldownTagInputKeyDown
+                                                                        }
+                                                                        placeholder={
+                                                                            drilldownActiveTags.size ===
+                                                                            0
+                                                                                ? `Filter by tag (${drilldownAllTagsWithCounts.length} available, AND combined)…`
+                                                                                : 'Add tag…'
+                                                                        }
+                                                                        maxLength={64}
+                                                                        aria-label="Filter drilldown results by tag"
+                                                                        className="flex-1 min-w-[80px] bg-transparent border-0 outline-none text-[11px] text-slate-700 dark:text-slate-100 placeholder:text-slate-400 py-0.5"
+                                                                    />
+                                                                </div>
+
+                                                                {drilldownTagDropdownOpen && (
+                                                                    <div
+                                                                        role="listbox"
+                                                                        aria-label="Available drilldown tags"
+                                                                        className="absolute left-0 right-0 top-full mt-1 z-30 max-h-56 overflow-auto rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl"
+                                                                    >
+                                                                        {drilldownTagDropdownOptions.length ===
+                                                                        0 ? (
+                                                                            <p className="px-2 py-2 text-[10px] italic text-slate-400 dark:text-slate-500">
+                                                                                {drilldownTagFilter.trim()
+                                                                                    ? `No more tags match "${drilldownTagFilter.trim()}".`
+                                                                                    : drilldownActiveTags.size >
+                                                                                        0
+                                                                                      ? 'All available tags already selected.'
+                                                                                      : 'No tags available in this slice.'}
+                                                                            </p>
+                                                                        ) : (
+                                                                            <>
+                                                                                {drilldownTagDropdownOptions.map(
+                                                                                    ([
+                                                                                        tag,
+                                                                                        count,
+                                                                                    ], idx) => {
+                                                                                        const isFirstTyped =
+                                                                                            idx ===
+                                                                                                0 &&
+                                                                                            Boolean(
+                                                                                                drilldownTagFilter.trim()
+                                                                                            );
+                                                                                        return (
+                                                                                            <button
+                                                                                                key={
+                                                                                                    tag
+                                                                                                }
+                                                                                                type="button"
+                                                                                                role="option"
+                                                                                                aria-selected={
+                                                                                                    isFirstTyped
+                                                                                                }
+                                                                                                onClick={() =>
+                                                                                                    addDrilldownTag(
+                                                                                                        tag
+                                                                                                    )
+                                                                                                }
+                                                                                                title={`${count} drilldown search${count === 1 ? '' : 'es'} tagged ${tag}`}
+                                                                                                className={cn(
+                                                                                                    'w-full flex items-center justify-between gap-2 px-2 py-1 text-left text-[11px] focus:outline-none transition-colors',
+                                                                                                    isFirstTyped
+                                                                                                        ? 'bg-sky-50 dark:bg-sky-900/30'
+                                                                                                        : 'hover:bg-sky-50 dark:hover:bg-sky-900/30'
+                                                                                                )}
+                                                                                            >
+                                                                                                <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-200 truncate min-w-0">
+                                                                                                    <Tag className="w-2.5 h-2.5 flex-shrink-0 text-slate-400" />
+                                                                                                    <span className="truncate">
+                                                                                                        {drilldownTagFilter.trim()
+                                                                                                            ? highlightMatch(
+                                                                                                                  tag,
+                                                                                                                  drilldownTagFilter
+                                                                                                              )
+                                                                                                            : tag}
+                                                                                                    </span>
+                                                                                                </span>
+                                                                                                <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 flex-shrink-0">
+                                                                                                    {
+                                                                                                        count
+                                                                                                    }
+                                                                                                </span>
+                                                                                            </button>
+                                                                                        );
+                                                                                    }
+                                                                                )}
+                                                                                {!drilldownTagFilter.trim() &&
+                                                                                    drilldownAllTagsWithCounts.length -
+                                                                                        drilldownActiveTags.size >
+                                                                                        drilldownTagDropdownOptions.length && (
+                                                                                        <p className="px-2 py-1 text-[9px] text-slate-400 dark:text-slate-500 border-t border-slate-100 dark:border-slate-800">
+                                                                                            Top{' '}
+                                                                                            {
+                                                                                                drilldownTagDropdownOptions.length
+                                                                                            }{' '}
+                                                                                            of{' '}
+                                                                                            {drilldownAllTagsWithCounts.length -
+                                                                                                drilldownActiveTags.size}{' '}
+                                                                                            — type to filter.
+                                                                                        </p>
+                                                                                    )}
+                                                                            </>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="max-h-44 overflow-auto space-y-1 pr-1">
+                                                {drilldownCandidates.length === 0 ? (
+                                                    <p className="px-1 py-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                                                        No matching Searchbase entries.
+                                                    </p>
+                                                ) : (
+                                                    drilldownCandidates.map((entry) => {
+                                                        const isPicked = entryMatchesKey(
+                                                            entry,
+                                                            drilldownDraftSearchName
+                                                        );
+                                                        const viz = resolveVizMapping(
+                                                            entry.defaultViz
+                                                        );
+                                                        const description =
+                                                            plainTextFromHtml(
+                                                                entry.description
+                                                            );
+                                                        return (
+                                                            <button
+                                                                key={entry.id}
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    setDrilldownDraftSearchName(
+                                                                        entry.searchName
+                                                                    )
+                                                                }
+                                                                title={`Use ${entry.searchName} as the drilldown table`}
+                                                                className={cn(
+                                                                    'w-full text-left rounded border px-2 py-1.5 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400',
+                                                                    isPicked
+                                                                        ? 'border-sky-400 bg-sky-50 dark:border-sky-600 dark:bg-sky-950/40'
+                                                                        : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-sky-300 dark:hover:border-sky-700'
+                                                                )}
+                                                            >
+                                                                <span className="flex items-center gap-1.5">
+                                                                    <VizIcon
+                                                                        splunkViz={
+                                                                            entry.defaultViz
+                                                                        }
+                                                                        size={12}
+                                                                        showTooltip={false}
+                                                                        className="text-sky-600 dark:text-sky-300 flex-shrink-0"
+                                                                    />
+                                                                    <span className="min-w-0 flex-1 truncate text-[10.5px] font-bold text-slate-700 dark:text-slate-200">
+                                                                        {highlightMatch(
+                                                                            entry.searchName,
+                                                                            drilldownQuery
+                                                                        )}
+                                                                    </span>
+                                                                    <span
+                                                                        className={cn(
+                                                                            'flex-shrink-0 rounded-sm px-1 py-px text-[8px] font-black uppercase tracking-widest',
+                                                                            entry.defaultViz ===
+                                                                                'splunk.table'
+                                                                                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
+                                                                                : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                                                                        )}
+                                                                    >
+                                                                        {entry.defaultViz ===
+                                                                        'splunk.table'
+                                                                            ? 'table'
+                                                                            : viz.label}
+                                                                    </span>
+                                                                </span>
+                                                                {description && (
+                                                                    <span className="mt-0.5 block line-clamp-2 text-[9.5px] leading-snug text-slate-500 dark:text-slate-400">
+                                                                        {description}
+                                                                    </span>
+                                                                )}
+                                                            </button>
+                                                        );
+                                                    })
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
                             </div>

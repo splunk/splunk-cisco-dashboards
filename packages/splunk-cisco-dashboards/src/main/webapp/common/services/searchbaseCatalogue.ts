@@ -44,6 +44,15 @@ export interface SearchbaseRecord {
     /** SPL body — useful for the picker's preview pane. */
     search: string;
     /**
+     * Optional relationship to another searchbase stanza that should
+     * open as this search's contextual drilldown. The Overview page
+     * currently renders table-shaped drilldowns in a modal, using the
+     * target stanza's SPL and `viz_options` column metadata.
+     */
+    drilldownSearchName?: string;
+    /** Optional label for the tile-level drilldown affordance. */
+    drilldownButtonTitle?: string;
+    /**
      * Optional Splunk visualization id (e.g. `splunk.column`,
      * `splunk.line`, `splunk.area`, `splunk.singlevalue`). Mirrors the
      * `default_viz` field in the conf. Tiles use this to override the
@@ -72,6 +81,8 @@ interface SearchbaseEntry {
         dispatch_context?: string;
         description?: string;
         search?: string;
+        drilldown_search_name?: string;
+        drilldown_button_title?: string;
         disabled?: string;
         search_hidden?: string;
         default_viz?: string;
@@ -151,6 +162,15 @@ const splitTags = (raw: string | undefined): string[] => {
 const isTruthyConfValue = (raw: string | undefined): boolean =>
     typeof raw === 'string' && /^(1|true|yes)$/i.test(raw.trim());
 
+const sanitizeConfText = (
+    raw: string | undefined,
+    maxLength: number
+): string | undefined => {
+    if (typeof raw !== 'string') return undefined;
+    const trimmed = raw.trim();
+    return trimmed.length > 0 && trimmed.length <= maxLength ? trimmed : undefined;
+};
+
 /**
  * Splunk can hand back conf-searchbase `search` values with app macro
  * expansions inlined as a macro plus explicit index disjunction.
@@ -204,6 +224,8 @@ const fetchSearchbase = async (): Promise<SearchbaseRecord[]> => {
                 typeof content.search === 'string'
                     ? collapseExpandedIndexMacro(content.search)
                     : '',
+            drilldownSearchName: sanitizeConfText(content.drilldown_search_name, 256),
+            drilldownButtonTitle: sanitizeConfText(content.drilldown_button_title, 120),
             defaultViz: sanitizeDefaultViz(content.default_viz),
             vizOptions: parseVizOptions(content.viz_options),
         });
