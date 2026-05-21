@@ -205,7 +205,16 @@ export const TableTile: React.FC<TableTileProps> = ({
                 />
             )}
 
-            <div className="flex flex-col mb-1">
+            <div
+                // `data-tile-control` so the title/header row
+                // suppresses the SortableMetricCard drag handle
+                // while the cursor is over the tile name. See
+                // the matching block in MetricItem.tsx for the
+                // full rationale (label-clip from the grip chip
+                // at top-0.5 left-0.5).
+                data-tile-control="true"
+                className="flex flex-col mb-1"
+            >
                 <span className="text-[12px] font-bold text-slate-800 dark:text-slate-100 tracking-tight leading-tight uppercase flex items-center gap-1">
                     <span className="flex items-center gap-1 min-w-0 truncate">
                         {label}

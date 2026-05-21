@@ -310,7 +310,22 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                 />
             )}
 
-            <div className="flex flex-col mb-0.5">
+            <div
+                // `data-tile-control` so the title/header row
+                // suppresses the SortableMetricCard drag handle
+                // while the cursor is over the tile name (or its
+                // inline controls). Without this, the GripVertical
+                // chip at `top-0.5 left-0.5` pops in on any tile
+                // hover and visibly clips the first character of
+                // the uppercase label (e.g. the "N" in "NETWORK
+                // HEALTH"). The grip still appears when the
+                // cursor is over the empty top-left corner of the
+                // sortable wrapper — i.e. the actual drag zone —
+                // so the affordance isn't lost, just no longer
+                // floating over the label text.
+                data-tile-control="true"
+                className="flex flex-col mb-0.5"
+            >
                 <span className="text-[12px] font-bold text-slate-800 dark:text-slate-100 tracking-tight leading-tight uppercase flex items-center gap-1">
                     <span className="flex items-center gap-1 min-w-0 truncate">
                         {label}
