@@ -563,13 +563,24 @@ const METRIC_CONFIG: MetricConfig[] = [
         id: 'wifi_clients',
         section: 'building',
         label: 'Wi-Fi clients',
-        subLabel: 'Wireless clients on APs',
+        subLabel: 'Wireless clients on APs (with baseline)',
         description:
-            'Distinct Wi-Fi MAC addresses currently associated to access points, ' +
-            'taken from Cisco Spaces DEVICE_ASSOCIATION ASSOCIATE events.',
-        // Single row: { score }
+            'Distinct Wi-Fi MAC addresses that associated to access points across ' +
+            'the dispatched window, taken from Cisco Spaces DEVICE_ASSOCIATION ' +
+            'ASSOCIATE events. Headline is the window-wide distinct-MAC count ' +
+            "broadcast onto every row (so the executive number is stable and " +
+            "does not drift with the latest bucket's noise); sparkline is the " +
+            'per-bucket distinct count with a rolling-average baseline overlay.',
+        // Bucketed timechart: { _time, clients, baseline, total_clients, score }.
+        // score is broadcast (= total_clients, window-wide dc(mac), the
+        // headline); clients is per-bucket (sparkline); baseline is
+        // window-avg (dashed overlay). See searchbase stanza
+        // executive_dashboard_wifi_clients for the SPL.
         savedSearch: 'Executive Dashboard - Wifi Clients',
         valueField: 'score',
+        sparkDataField: 'clients',
+        baselineField: 'baseline',
+        overlayLabel: 'Avg',
         thresholdNote:
             'Trend metric — no fixed cutoff. Use this against the AP-capacity ' +
             'baseline for the campus: a sudden drop usually means an AP cluster ' +
