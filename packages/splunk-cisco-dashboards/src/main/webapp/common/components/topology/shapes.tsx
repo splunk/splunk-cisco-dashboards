@@ -23,6 +23,9 @@
  *   - Handles on all four sides (Top / Right / Bottom / Left).
  *   - Handles are visually small at rest and grow on node hover so
  *     operators discover the connection points without clutter.
+ *   - Invisible full-surface end handles let an in-flight connector
+ *     land anywhere on the device face; the canvas persists that
+ *     cursor point as a normalised edge anchor.
  *   - `isConnectable={true}` so dragging from any handle creates a
  *     new edge — wired to the canvas's `onConnect` handler which
  *     opens the Build 105 properties panel for the new edge.
@@ -39,6 +42,7 @@ import type {
     TopologyDiscoveredNode,
     DeviceShapeId,
 } from '@/common/services/topologyDiscovery';
+import type { CustomStencilAsset } from '@/common/services/diagramPersistenceService';
 import { ShapeSilhouette } from './silhouettes';
 import { useIpAddressVisibility } from '@/common/contexts/IpAddressVisibilityContext';
 import {
@@ -53,7 +57,20 @@ interface ShapeData {
      *  the saved payload (`SavedDiagramNode.ipAddress`) stay in
      *  sync via a single field name. */
     node: TopologyDiscoveredNode;
+    /** Network Diagram authoring surface only: allow connectors
+     *  to land anywhere on the node face and persist exact edge
+     *  anchors. The live topology canvas keeps its classic four
+     *  port handles. */
+    freeformAnchors?: boolean;
+    /** User-imported SVG/PNG stencil artwork. Present only for
+     *  `device:custom_stencil` nodes in the Network Diagram. */
+    customStencil?: CustomStencilAsset;
 }
+
+const CATALYST_STENCIL_SHAPES = new Set<DeviceShapeId>([
+    'catalyst_3850_24_front',
+    'catalyst_3850_24_rear',
+]);
 
 /**
  * Build 111: added `dotGlow` per status — a coloured drop-shadow
@@ -128,6 +145,17 @@ const STATUS_PRESETS: Record<
  *  `CISCO_ICONS[shape]` from `ciscoIcons.tsx` is the canonical
  *  source — the keys are 1:1 with `DeviceShapeId`. */
 
+const SURFACE_HANDLE_STYLE: React.CSSProperties = {
+    left: 0,
+    top: 0,
+    width: '100%',
+    height: '100%',
+    transform: 'none',
+    borderRadius: 0,
+    border: 0,
+    background: 'transparent',
+};
+
 /** Connection handles on all four sides. Each side gets BOTH a
  *  `source` and `target` handle so React Flow can attach edges in
  *  either direction. They share an id-prefix per side so the
@@ -151,7 +179,7 @@ const STATUS_PRESETS: Record<
  *  bug ("arrow points the wrong way") survived 115.5 because
  *  the swap landed in the wrong file. Fixing it here is the
  *  actual fix. */
-const NodeHandles: React.FC = () => {
+const NodeHandles: React.FC<{ freeform?: boolean }> = ({ freeform }) => {
     const sides: Array<{ pos: Position; id: string; style: React.CSSProperties }> = [
         { pos: Position.Top, id: 'top', style: { top: -4 } },
         { pos: Position.Right, id: 'right', style: { right: -4 } },
@@ -160,6 +188,28 @@ const NodeHandles: React.FC = () => {
     ];
     return (
         <>
+            {freeform && (
+                <>
+                    <Handle
+                        type="target"
+                        position={Position.Top}
+                        id="surface-target"
+                        isConnectableStart={false}
+                        isConnectableEnd
+                        className="!min-w-0 !min-h-0 !opacity-0"
+                        style={SURFACE_HANDLE_STYLE}
+                    />
+                    <Handle
+                        type="source"
+                        position={Position.Top}
+                        id="surface-source"
+                        isConnectableStart={false}
+                        isConnectableEnd
+                        className="!min-w-0 !min-h-0 !opacity-0"
+                        style={SURFACE_HANDLE_STYLE}
+                    />
+                </>
+            )}
             {sides.map((s) => (
                 <React.Fragment key={s.id}>
                     <Handle
@@ -246,6 +296,42 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
         const spl = buildMetadataHostSpl(candidateHost);
         openSplunkSearch(spl);
     };
+    const isCatalystStencil = CATALYST_STENCIL_SHAPES.has(node.shape);
+    const customStencil = data.customStencil;
+    const title = `${node.label}\nStatus: ${status.label}${
+        node.healthScore !== undefined ? ` (${node.healthScore})` : ''
+    }${node.managementSource ? `\nSource: ${node.managementSource}` : ''}${
+        vendorModelLine ? `\nHardware: ${vendorModelLine}` : ''
+    }${node.serialNumber ? `\nSerial: ${node.serialNumber}` : ''}`;
+
+    if (customStencil || isCatalystStencil) {
+        return (
+            <div
+                className="group relative flex h-full w-full items-center justify-center bg-transparent"
+                style={{ width: '100%', height: '100%' }}
+                title={title}
+            >
+                <NodeResizer
+                    isVisible={selected === true}
+                    minWidth={180}
+                    minHeight={20}
+                    lineClassName="!border-sky-500/55"
+                    handleClassName="!bg-sky-500 !border-white !w-2 !h-2"
+                />
+                <NodeHandles freeform={data.freeformAnchors === true} />
+                {customStencil ? (
+                    <img
+                        src={customStencil.src}
+                        alt={customStencil.label}
+                        className="block h-full w-full object-contain"
+                        draggable={false}
+                    />
+                ) : (
+                    <ShapeSilhouette shape={node.shape} className="h-full w-full" />
+                )}
+            </div>
+        );
+    }
 
     return (
         <div
@@ -286,11 +372,7 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
             // resizer enforces a 90×100 floor so a panicked drag
             // can't collapse the card to an unreadable nub.
             style={{ width: '100%', height: '100%' }}
-            title={`${node.label}\nStatus: ${status.label}${
-                node.healthScore !== undefined ? ` (${node.healthScore})` : ''
-            }${node.managementSource ? `\nSource: ${node.managementSource}` : ''}${
-                vendorModelLine ? `\nHardware: ${vendorModelLine}` : ''
-            }${node.serialNumber ? `\nSerial: ${node.serialNumber}` : ''}`}
+            title={title}
         >
             {/* Build 115.11 — eight resize handles (4 corners + 4
              *  edges) appear when the card is selected. Min sizes
@@ -311,7 +393,7 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
                 lineClassName="!border-sky-500/50"
                 handleClassName="!bg-sky-500 !border-white !w-2 !h-2"
             />
-            <NodeHandles />
+            <NodeHandles freeform={data.freeformAnchors === true} />
             {/* Silhouette area — top 2/3.
 
                 Build 115.13 replaces the previous "centred lucide
@@ -466,6 +548,9 @@ export const F5LoadBalancerShape = DeviceShape;
 export const ModularChassisSwitchShape = DeviceShape;
 export const NexusAciFabricShape = DeviceShape;
 export const SdwanControllerShape = DeviceShape;
+export const Catalyst385024FrontShape = DeviceShape;
+export const Catalyst385024RearShape = DeviceShape;
+export const CustomStencilShape = DeviceShape;
 export const VpnConcentratorShape = DeviceShape;
 export const IdsIpsShape = DeviceShape;
 export const PaloAltoFirewallShape = DeviceShape;
@@ -573,6 +658,9 @@ export const TOPOLOGY_NODE_TYPES = {
     'device:modular_chassis_switch': ModularChassisSwitchShape,
     'device:nexus_aci_fabric': NexusAciFabricShape,
     'device:sdwan_controller': SdwanControllerShape,
+    'device:catalyst_3850_24_front': Catalyst385024FrontShape,
+    'device:catalyst_3850_24_rear': Catalyst385024RearShape,
+    'device:custom_stencil': CustomStencilShape,
     // Security
     'device:firewall': FirewallShape,
     'device:palo_alto_firewall': PaloAltoFirewallShape,

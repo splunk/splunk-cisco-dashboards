@@ -251,6 +251,11 @@ export interface SavedDiagramNode {
      *  asset_inventory row (if any). Empty string → clear the
      *  override; `undefined` → no change. */
     ipAddress?: string;
+    /** Build 115.21 — user-imported stencil artwork. Diagrams
+     *  persist the exact asset dropped onto the canvas so a saved
+     *  diagram keeps rendering even if the operator later clears
+     *  their local custom-shape library. */
+    customStencil?: CustomStencilAsset;
     /** Build 115.1: free-placement textbox styling. Only present
      *  when `type === 'textBox'`. Carries everything needed to
      *  re-hydrate the on-canvas annotation: text, fontSize, color,
@@ -269,6 +274,15 @@ export interface SavedDiagramNode {
         border?: string;
         align?: 'left' | 'center' | 'right';
     };
+}
+
+export interface CustomStencilAsset {
+    id: string;
+    label: string;
+    src: string;
+    mediaType: 'image/svg+xml' | 'image/png';
+    width?: number;
+    height?: number;
 }
 
 export interface SavedDiagramEdge {
@@ -339,6 +353,18 @@ export interface SavedDiagramEdge {
      *  they had before. */
     sourceHandle?: string;
     targetHandle?: string;
+    /** Build 115.20 — exact endpoint anchors inside each node,
+     *  stored as normalised 0..1 coordinates relative to the
+     *  node's current bounds. This lets diagram connectors land
+     *  anywhere on a device face (Visio-style) instead of snapping
+     *  back to one of the four named React Flow side handles. */
+    sourceAnchor?: DiagramEdgeAnchor;
+    targetAnchor?: DiagramEdgeAnchor;
+}
+
+export interface DiagramEdgeAnchor {
+    x: number;
+    y: number;
 }
 
 /**

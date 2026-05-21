@@ -27,12 +27,18 @@
  * "this is grabbable" is obvious without arrow cursors.
  */
 
-import React, { useMemo, useState } from 'react';
-import { Search, X } from 'lucide-react';
+import React, { useMemo, useRef, useState } from 'react';
+import { ExternalLink, Search, Trash2, Upload, X } from 'lucide-react';
+import { strFromU8, unzipSync } from 'fflate';
 import { cn } from '@/common/lib/utils';
 import { CISCO_ICONS } from '@/common/components/topology/ciscoIcons';
 import type { DeviceShapeId } from '@/common/services/topologyDiscovery';
-import { PALETTE_DND_MIME, type PaletteDragPayload } from './types';
+import type { CustomStencilAsset } from '@/common/services/diagramPersistenceService';
+import {
+    PALETTE_DND_MIME,
+    nodeSizeForCustomStencil,
+    type PaletteDragPayload,
+} from './types';
 
 // Build 115.5 — palette is split into named sections so the 42
 // shapes don't dump as one long alphabetised list. The category
@@ -51,6 +57,7 @@ type ShapeCategory =
     | 'edge'
     | 'splunk'
     | 'places'
+    | 'catalyst'
     | 'cisco'
     | 'layout';
 
@@ -83,6 +90,9 @@ const SHAPE_TILES: ShapeTileSpec[] = [
     { id: 'nexus_aci_fabric', label: 'Nexus / ACI', description: 'Cisco Nexus / ACI fabric', category: 'advanced' },
     { id: 'sdwan_controller', label: 'SD-WAN Controller', description: 'Cisco SD-WAN control plane / vManage', category: 'advanced' },
     { id: 'f5_load_balancer', label: 'F5 Load Balancer', description: 'F5 BIG-IP / LTM / GTM load balancer', category: 'advanced' },
+    // Extracted Catalyst stencil assets
+    { id: 'catalyst_3850_24_front', label: 'C3850-24 Front', description: 'Cisco Catalyst 3850 24-port front face', category: 'catalyst' },
+    { id: 'catalyst_3850_24_rear', label: 'C3850-24 Rear', description: 'Cisco Catalyst 3850 24-port rear face', category: 'catalyst' },
     // Security
     { id: 'firewall', label: 'Firewall', description: 'Perimeter / DC firewall (ASA / FTD)', category: 'security' },
     { id: 'palo_alto_firewall', label: 'Palo Alto FW', description: 'Palo Alto Networks firewall', category: 'security' },
@@ -168,6 +178,7 @@ const CATEGORY_LABELS: Record<ShapeCategory, string> = {
     edge: 'Edge & Cloud',
     splunk: 'Splunk Architecture',
     places: 'Places',
+    catalyst: 'Catalyst 3850',
     cisco: 'Cisco',
     layout: 'Layout',
 };
@@ -181,6 +192,8 @@ const SHAPE_SEARCH_ALIASES: Partial<
     modular_chassis_switch: ['modular', 'chassis', '6500', '6504', '4500', '4507', 'supervisor', 'line card'],
     nexus_aci_fabric: ['nexus', 'aci', 'apic', 'fabric', 'leaf spine', 'spine leaf'],
     sdwan_controller: ['sdwan', 'sd-wan', 'vmanage', 'vsmart', 'vbond', 'controller'],
+    catalyst_3850_24_front: ['cisco', 'catalyst', '3850', 'ws-c3850', '24 port', 'front', 'switch'],
+    catalyst_3850_24_rear: ['cisco', 'catalyst', '3850', 'ws-c3850', '24 port', 'rear', 'switch'],
     wlc: ['wireless controller', 'wireless lan controller'],
     access_point: ['ap', 'wireless'],
     load_balancer: ['lb', 'vip', 'elastic load balancer', 'hec endpoint'],
@@ -225,8 +238,271 @@ const SHAPE_SEARCH_ALIASES: Partial<
     textbox: ['text', 'label', 'annotation', 'caption'],
 };
 
+const CUSTOM_STENCIL_STORAGE_KEY = 'scd.networkDiagram.customStencils.v1';
+const CUSTOM_STENCIL_IMPORT_LIMIT = 120;
+const CUSTOM_STENCIL_BYTE_BUDGET = 4_000_000;
+const CISCO_VISIO_STENCIL_LIBRARY_URL =
+    'https://www.cisco.com/c/en/us/products/visio-stencil-listing.html';
+
 const normalizeSearch = (value: string): string =>
     value.trim().replace(/\s+/g, ' ').toLowerCase();
+
+const loadCustomStencils = (): CustomStencilAsset[] => {
+    if (typeof window === 'undefined') return [];
+    try {
+        const raw = window.localStorage.getItem(CUSTOM_STENCIL_STORAGE_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw) as CustomStencilAsset[];
+        if (!Array.isArray(parsed)) return [];
+        return parsed.filter(
+            (asset) =>
+                asset &&
+                typeof asset.id === 'string' &&
+                typeof asset.label === 'string' &&
+                typeof asset.src === 'string' &&
+                (asset.mediaType === 'image/svg+xml' ||
+                    asset.mediaType === 'image/png')
+        );
+    } catch {
+        return [];
+    }
+};
+
+const saveCustomStencils = (assets: CustomStencilAsset[]): boolean => {
+    if (typeof window === 'undefined') return false;
+    try {
+        window.localStorage.setItem(
+            CUSTOM_STENCIL_STORAGE_KEY,
+            JSON.stringify(assets)
+        );
+        return true;
+    } catch {
+        return false;
+    }
+};
+
+const slugify = (value: string): string =>
+    value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 48) || 'stencil';
+
+const hashString = (value: string): string => {
+    let hash = 5381;
+    for (let i = 0; i < value.length; i += 1) {
+        hash = (hash * 33) ^ value.charCodeAt(i);
+    }
+    return (hash >>> 0).toString(36);
+};
+
+const bytesToBase64 = (bytes: Uint8Array): string => {
+    let binary = '';
+    const chunkSize = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+        binary += String.fromCharCode(...bytes.slice(i, i + chunkSize));
+    }
+    return btoa(binary);
+};
+
+const dataUrlFor = (
+    bytes: Uint8Array,
+    mediaType: CustomStencilAsset['mediaType']
+): string => `data:${mediaType};base64,${bytesToBase64(bytes)}`;
+
+const cleanStencilLabel = (path: string): string => {
+    const name = path.split('/').pop() ?? path;
+    return name
+        .replace(/\.[^.]+$/, '')
+        .replace(/^\d+\s*-\s*/, '')
+        .replace(/[_-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+};
+
+const parseCsv = (text: string): Array<Record<string, string>> => {
+    const rows: string[][] = [];
+    let row: string[] = [];
+    let cell = '';
+    let quoted = false;
+    for (let i = 0; i < text.length; i += 1) {
+        const ch = text[i];
+        if (quoted) {
+            if (ch === '"' && text[i + 1] === '"') {
+                cell += '"';
+                i += 1;
+            } else if (ch === '"') {
+                quoted = false;
+            } else {
+                cell += ch;
+            }
+            continue;
+        }
+        if (ch === '"') {
+            quoted = true;
+        } else if (ch === ',') {
+            row.push(cell);
+            cell = '';
+        } else if (ch === '\n') {
+            row.push(cell);
+            rows.push(row);
+            row = [];
+            cell = '';
+        } else if (ch !== '\r') {
+            cell += ch;
+        }
+    }
+    if (cell || row.length) {
+        row.push(cell);
+        rows.push(row);
+    }
+    const [headers, ...body] = rows;
+    if (!headers) return [];
+    return body
+        .filter((r) => r.some((v) => v.trim().length > 0))
+        .map((r) =>
+            Object.fromEntries(
+                headers.map((h, index) => [h.trim(), (r[index] ?? '').trim()])
+            )
+        );
+};
+
+const svgDimensions = (
+    bytes: Uint8Array
+): Pick<CustomStencilAsset, 'width' | 'height'> => {
+    const text = strFromU8(bytes);
+    const numberFromAttr = (name: string): number | undefined => {
+        const match = text.match(new RegExp(`${name}="([0-9.]+)`));
+        return match ? Number(match[1]) : undefined;
+    };
+    const width = numberFromAttr('width');
+    const height = numberFromAttr('height');
+    if (width && height) return { width, height };
+    const viewBox = text.match(/viewBox="([^"]+)"/);
+    if (!viewBox) return {};
+    const parts = viewBox[1].trim().split(/\s+/).map(Number);
+    if (parts.length !== 4) return {};
+    return {
+        width: Number.isFinite(parts[2]) ? parts[2] : undefined,
+        height: Number.isFinite(parts[3]) ? parts[3] : undefined,
+    };
+};
+
+const pngDimensions = (
+    bytes: Uint8Array
+): Pick<CustomStencilAsset, 'width' | 'height'> => {
+    if (
+        bytes.length < 24 ||
+        bytes[0] !== 0x89 ||
+        bytes[1] !== 0x50 ||
+        bytes[2] !== 0x4e ||
+        bytes[3] !== 0x47
+    ) {
+        return {};
+    }
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    return {
+        width: view.getUint32(16),
+        height: view.getUint32(20),
+    };
+};
+
+interface ImportedStencilResult {
+    assets: CustomStencilAsset[];
+    skipped: number;
+    containsVisioStencil: boolean;
+}
+
+const importCustomStencilsFromZip = (
+    bytes: Uint8Array
+): ImportedStencilResult => {
+    const entries = unzipSync(bytes);
+    const entryPaths = Object.keys(entries);
+    const containsVisioStencil = entryPaths.some((path) =>
+        /\.(vss|vssx)$/i.test(path)
+    );
+    const byLowerPath = new Map<string, string>();
+    entryPaths.forEach((path) => byLowerPath.set(path.toLowerCase(), path));
+    const manifestPath = byLowerPath.get('manifest.csv');
+    const candidates: Array<{ path: string; label: string }> = [];
+
+    if (manifestPath) {
+        const rows = parseCsv(strFromU8(entries[manifestPath]));
+        for (const row of rows) {
+            const label = row.name || cleanStencilLabel(row.svg || row.png || '');
+            const svgPath = row.svg ? `svg/${row.svg}` : '';
+            const pngPath = row.svg
+                ? `png/${row.svg.replace(/\.svg$/i, '.png')}`
+                : row.png
+                  ? `png/${row.png}`
+                  : '';
+            const chosen =
+                byLowerPath.get(pngPath.toLowerCase()) ??
+                byLowerPath.get(svgPath.toLowerCase());
+            if (chosen) candidates.push({ path: chosen, label });
+        }
+    }
+
+    if (candidates.length === 0) {
+        const grouped = new Map<string, { png?: string; svg?: string; label: string }>();
+        for (const path of entryPaths) {
+            const lower = path.toLowerCase();
+            if (!lower.endsWith('.svg') && !lower.endsWith('.png')) continue;
+            const label = cleanStencilLabel(path);
+            const key = slugify(label);
+            const current = grouped.get(key) ?? { label };
+            if (lower.endsWith('.png')) current.png = path;
+            if (lower.endsWith('.svg')) current.svg = path;
+            grouped.set(key, current);
+        }
+        for (const group of grouped.values()) {
+            candidates.push({ path: group.png ?? group.svg ?? '', label: group.label });
+        }
+    }
+
+    const assets: CustomStencilAsset[] = [];
+    let totalBytes = 0;
+    let skipped = 0;
+    for (const candidate of candidates) {
+        if (!candidate.path || assets.length >= CUSTOM_STENCIL_IMPORT_LIMIT) {
+            skipped += 1;
+            continue;
+        }
+        const file = entries[candidate.path];
+        if (!file) continue;
+        const lower = candidate.path.toLowerCase();
+        const mediaType: CustomStencilAsset['mediaType'] = lower.endsWith('.svg')
+            ? 'image/svg+xml'
+            : 'image/png';
+        const src = dataUrlFor(file, mediaType);
+        if (totalBytes + src.length > CUSTOM_STENCIL_BYTE_BUDGET) {
+            skipped += 1;
+            continue;
+        }
+        totalBytes += src.length;
+        const dimensions =
+            mediaType === 'image/svg+xml' ? svgDimensions(file) : pngDimensions(file);
+        assets.push({
+            id: `custom-${slugify(candidate.label)}-${hashString(
+                `${candidate.path}:${file.length}`
+            )}`,
+            label: candidate.label || cleanStencilLabel(candidate.path),
+            src,
+            mediaType,
+            ...dimensions,
+        });
+    }
+    return { assets, skipped, containsVisioStencil };
+};
+
+const customStencilMatchesQuery = (
+    asset: CustomStencilAsset,
+    query: string
+): boolean => {
+    if (!query) return true;
+    const haystack = `${asset.id} ${asset.label} custom imported stencil`.toLowerCase();
+    return query.split(' ').every((term) => haystack.includes(term));
+};
 
 const tileMatchesQuery = (tile: ShapeTileSpec, query: string): boolean => {
     if (!query) return true;
@@ -297,6 +573,8 @@ const SHAPE_DEFAULT_LABEL_OVERRIDES: Partial<Record<DeviceShapeId, string>> = {
     cisco_server: 'Cisco Server',
     cisco_cloud: 'Cisco Cloud',
     cisco_data_center: 'Cisco Data Center',
+    catalyst_3850_24_front: 'WS-C3850-24 Front',
+    catalyst_3850_24_rear: 'WS-C3850-24 Rear',
 };
 
 const tilePayload = (
@@ -333,6 +611,8 @@ const ShapeTile: React.FC<ShapeTileSpec> = ({ id, label, description }) => {
     // "T" for textbox). Everything else looks up the Cisco SVG.
     const Icon =
         id === 'region' || id === 'textbox' ? null : CISCO_ICONS[id];
+    const isCatalystStencil =
+        id === 'catalyst_3850_24_front' || id === 'catalyst_3850_24_rear';
     const handleDragStart = (e: React.DragEvent<HTMLDivElement>): void => {
         const payload = tilePayload(id);
         e.dataTransfer.setData(PALETTE_DND_MIME, JSON.stringify(payload));
@@ -361,9 +641,20 @@ const ShapeTile: React.FC<ShapeTileSpec> = ({ id, label, description }) => {
                 'transition-all duration-150'
             )}
         >
-            <div className="w-10 h-10 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:text-sky-600 dark:group-hover:text-sky-400">
+            <div
+                className={cn(
+                    'flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:text-sky-600 dark:group-hover:text-sky-400',
+                    isCatalystStencil ? 'h-10 w-full px-1' : 'w-10 h-10'
+                )}
+            >
                 {Icon ? (
-                    <Icon className="w-9 h-9" />
+                    <Icon
+                        className={
+                            isCatalystStencil
+                                ? 'w-full h-9 object-contain'
+                                : 'w-9 h-9'
+                        }
+                    />
                 ) : id === 'textbox' ? (
                     // A typographic "T" reads as "text" at a glance,
                     // matching the affordance of design-tool text
@@ -384,8 +675,63 @@ const ShapeTile: React.FC<ShapeTileSpec> = ({ id, label, description }) => {
     );
 };
 
+const CustomStencilTile: React.FC<{ asset: CustomStencilAsset }> = ({ asset }) => {
+    const size = nodeSizeForCustomStencil(asset);
+    const isWide = size.width / size.height >= 2.5;
+    const handleDragStart = (e: React.DragEvent<HTMLDivElement>): void => {
+        const payload: PaletteDragPayload = {
+            variant: 'customStencil',
+            asset,
+        };
+        e.dataTransfer.setData(PALETTE_DND_MIME, JSON.stringify(payload));
+        e.dataTransfer.setData('text/plain', asset.label);
+        e.dataTransfer.effectAllowed = 'copy';
+    };
+
+    return (
+        <div
+            draggable
+            onDragStart={handleDragStart}
+            role="button"
+            tabIndex={0}
+            aria-label={`Drag ${asset.label} to canvas`}
+            title={asset.label}
+            className={cn(
+                'group flex flex-col items-center justify-center gap-1 p-2 rounded-lg cursor-grab active:cursor-grabbing select-none',
+                'border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900',
+                'hover:border-sky-400 hover:shadow-md hover:bg-sky-50/50 dark:hover:bg-sky-950/30',
+                'transition-all duration-150'
+            )}
+        >
+            <div
+                className={cn(
+                    'flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:text-sky-600 dark:group-hover:text-sky-400',
+                    isWide ? 'h-10 w-full px-1' : 'w-10 h-10'
+                )}
+            >
+                <img
+                    src={asset.src}
+                    alt=""
+                    className={cn(
+                        'block object-contain',
+                        isWide ? 'h-9 w-full' : 'h-9 w-9'
+                    )}
+                    draggable={false}
+                />
+            </div>
+            <div className="text-[10px] font-medium text-slate-700 dark:text-slate-200 text-center leading-tight">
+                {asset.label}
+            </div>
+        </div>
+    );
+};
+
 export const ShapesTab: React.FC = () => {
     const [query, setQuery] = useState('');
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const [customStencils, setCustomStencils] =
+        useState<CustomStencilAsset[]>(loadCustomStencils);
+    const [importMessage, setImportMessage] = useState<string>('');
     const normalizedQuery = normalizeSearch(query);
     // Build 115 — group tiles by category so the 18-shape palette
     // stays scannable. We compute groups inline rather than
@@ -405,6 +751,7 @@ export const ShapesTab: React.FC = () => {
         'edge',
         'splunk',
         'places',
+        'catalyst',
         'cisco',
         'layout',
     ];
@@ -414,6 +761,13 @@ export const ShapesTab: React.FC = () => {
                 tileMatchesQuery(tile, normalizedQuery)
             ),
         [normalizedQuery]
+    );
+    const filteredCustomStencils = useMemo(
+        () =>
+            customStencils.filter((asset) =>
+                customStencilMatchesQuery(asset, normalizedQuery)
+            ),
+        [customStencils, normalizedQuery]
     );
     const grouped = useMemo(() => {
         const next = new Map<ShapeCategory, ShapeTileSpec[]>();
@@ -425,38 +779,137 @@ export const ShapesTab: React.FC = () => {
         return next;
     }, [filteredTiles]);
 
+    const handleImportClick = (): void => {
+        fileInputRef.current?.click();
+    };
+
+    const handleImportFile = async (
+        event: React.ChangeEvent<HTMLInputElement>
+    ): Promise<void> => {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+        if (!file) return;
+        try {
+            const result = importCustomStencilsFromZip(
+                new Uint8Array(await file.arrayBuffer())
+            );
+            if (result.assets.length === 0) {
+                setImportMessage(
+                    result.containsVisioStencil
+                        ? 'That Cisco ZIP contains Visio .vss files. Import an SVG/PNG icon ZIP after conversion.'
+                        : 'No SVG or PNG stencils found in that zip.'
+                );
+                return;
+            }
+            const merged = [
+                ...result.assets,
+                ...customStencils.filter(
+                    (existing) =>
+                        !result.assets.some((asset) => asset.id === existing.id)
+                ),
+            ];
+            const stored = saveCustomStencils(merged);
+            setCustomStencils(merged);
+            setImportMessage(
+                `${result.assets.length} imported${
+                    result.skipped ? `, ${result.skipped} skipped` : ''
+                }${stored ? '' : ' (not saved; browser storage is full)'}`
+            );
+        } catch {
+            setImportMessage('Could not read that zip file.');
+        }
+    };
+
+    const handleClearCustomStencils = (): void => {
+        setCustomStencils([]);
+        saveCustomStencils([]);
+        setImportMessage('');
+    };
+
     return (
         <div className="flex flex-col gap-3 p-3">
-            <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+            <div className="flex gap-2">
+                <div className="relative min-w-0 flex-1">
+                    <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                    <input
+                        value={query}
+                        onChange={(event) => setQuery(event.target.value)}
+                        type="search"
+                        placeholder="Search shapes..."
+                        aria-label="Search shapes"
+                        className={cn(
+                            'h-8 w-full rounded-md border border-slate-200 bg-white pl-8 pr-8 text-xs text-slate-700 outline-none',
+                            'placeholder:text-slate-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-100',
+                            'dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:focus:ring-sky-950'
+                        )}
+                    />
+                    {query ? (
+                        <button
+                            type="button"
+                            onClick={() => setQuery('')}
+                            aria-label="Clear shape search"
+                            className="absolute right-1.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                        >
+                            <X className="h-3.5 w-3.5" />
+                        </button>
+                    ) : null}
+                </div>
                 <input
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    type="search"
-                    placeholder="Search shapes..."
-                    aria-label="Search shapes"
-                    className={cn(
-                        'h-8 w-full rounded-md border border-slate-200 bg-white pl-8 pr-8 text-xs text-slate-700 outline-none',
-                        'placeholder:text-slate-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-100',
-                        'dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:focus:ring-sky-950'
-                    )}
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".zip,application/zip"
+                    className="hidden"
+                    onChange={(event) => {
+                        void handleImportFile(event);
+                    }}
                 />
-                {query ? (
+                <button
+                    type="button"
+                    onClick={handleImportClick}
+                    title="Import stencil zip"
+                    className="flex h-8 items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2 text-xs font-medium text-slate-600 hover:border-sky-400 hover:text-sky-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+                >
+                    <Upload className="h-3.5 w-3.5" />
+                    Import
+                </button>
+                {customStencils.length > 0 ? (
                     <button
                         type="button"
-                        onClick={() => setQuery('')}
-                        aria-label="Clear shape search"
-                        className="absolute right-1.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                        onClick={handleClearCustomStencils}
+                        title="Clear custom stencils"
+                        className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-400 hover:border-rose-300 hover:text-rose-500 dark:border-slate-800 dark:bg-slate-900"
                     >
-                        <X className="h-3.5 w-3.5" />
+                        <Trash2 className="h-3.5 w-3.5" />
                     </button>
                 ) : null}
+            </div>
+            {importMessage ? (
+                <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+                    {importMessage}
+                </div>
+            ) : null}
+            <div className="rounded-md border border-sky-100 bg-sky-50/60 px-2 py-1.5 text-[10px] leading-snug text-slate-600 dark:border-sky-950 dark:bg-sky-950/20 dark:text-slate-300">
+                Need Cisco device artwork? Download stencil ZIPs from{' '}
+                <a
+                    href={CISCO_VISIO_STENCIL_LIBRARY_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-0.5 font-medium text-sky-700 hover:text-sky-800 dark:text-sky-300 dark:hover:text-sky-200"
+                >
+                    Cisco&apos;s Visio stencil library
+                    <ExternalLink className="h-3 w-3" />
+                </a>
+                . Import a ZIP with SVG or PNG exports; raw .vss downloads need
+                conversion first.
             </div>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
                 {normalizedQuery ? (
                     <>
-                        {filteredTiles.length}{' '}
-                        {filteredTiles.length === 1 ? 'shape' : 'shapes'} found
+                        {filteredTiles.length + filteredCustomStencils.length}{' '}
+                        {filteredTiles.length + filteredCustomStencils.length === 1
+                            ? 'shape'
+                            : 'shapes'}{' '}
+                        found
                     </>
                 ) : (
                     <>
@@ -469,8 +922,22 @@ export const ShapesTab: React.FC = () => {
                 )}
             </p>
             {filteredTiles.length === 0 ? (
-                <div className="rounded-md border border-dashed border-slate-200 px-3 py-5 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                    No shapes match that search.
+                filteredCustomStencils.length === 0 ? (
+                    <div className="rounded-md border border-dashed border-slate-200 px-3 py-5 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                        No shapes match that search.
+                    </div>
+                ) : null
+            ) : null}
+            {filteredCustomStencils.length > 0 ? (
+                <div className="flex flex-col gap-1.5">
+                    <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-0.5">
+                        Custom Stencils
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                        {filteredCustomStencils.map((asset) => (
+                            <CustomStencilTile key={asset.id} asset={asset} />
+                        ))}
+                    </div>
                 </div>
             ) : null}
             {ordered.map((cat) => {

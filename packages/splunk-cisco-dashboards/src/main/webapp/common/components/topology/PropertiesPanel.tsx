@@ -225,6 +225,7 @@ const DEVICE_SHAPE_OPTIONS: Array<{ id: DeviceShapeId; label: string }> = [
     { id: 'modular_chassis_switch', label: 'Modular Chassis Switch' },
     { id: 'nexus_aci_fabric', label: 'Nexus / ACI Fabric' },
     { id: 'sdwan_controller', label: 'SD-WAN Controller' },
+    { id: 'custom_stencil', label: 'Custom Stencil' },
     // Security
     { id: 'firewall', label: 'Firewall' },
     { id: 'palo_alto_firewall', label: 'Palo Alto Firewall' },

@@ -69,6 +69,9 @@ export const SHAPE_FAMILY: Record<DeviceShapeId, SilhouetteFamily> = {
     modular_chassis_switch: 'card',
     nexus_aci_fabric: 'card',
     sdwan_controller: 'card',
+    catalyst_3850_24_front: 'card',
+    catalyst_3850_24_rear: 'card',
+    custom_stencil: 'card',
     firewall: 'rack',
     palo_alto_firewall: 'card',
     fortinet_firewall: 'card',
@@ -1260,14 +1263,26 @@ const SPECIALISED_RACK: Partial<
     wlc: WlcChassis,
 };
 
+const STENCIL_IMAGE_SHAPES = new Set<DeviceShapeId>([
+    'catalyst_3850_24_front',
+    'catalyst_3850_24_rear',
+]);
+
 export const ShapeSilhouette: React.FC<{
     shape: DeviceShapeId;
     className?: string;
 }> = ({ shape, className }) => {
-    const family = resolveSilhouetteFamily(shape);
     const Icon = (CISCO_ICONS[shape] ?? CISCO_ICONS.generic) as React.ComponentType<{
         className?: string;
     }>;
+    if (STENCIL_IMAGE_SHAPES.has(shape)) {
+        return (
+            <Icon
+                className={cn('block h-full w-full object-contain', className)}
+            />
+        );
+    }
+    const family = resolveSilhouetteFamily(shape);
     if (family === 'rack') {
         const Specialised = SPECIALISED_RACK[shape];
         if (Specialised) {

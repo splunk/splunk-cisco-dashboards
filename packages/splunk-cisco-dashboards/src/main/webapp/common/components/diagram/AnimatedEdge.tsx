@@ -56,12 +56,19 @@
 import React from 'react';
 import {
     EdgeLabelRenderer,
+    Position,
     getBezierPath,
+    getStraightPath,
+    useReactFlow,
     useStore,
     type EdgeProps,
+    type XYPosition,
 } from '@xyflow/react';
 import type { EdgeDirection } from '@/common/components/topology/PropertiesPanel';
-import type { SavedDiagramEdge } from '@/common/services/diagramPersistenceService';
+import type {
+    DiagramEdgeAnchor,
+    SavedDiagramEdge,
+} from '@/common/services/diagramPersistenceService';
 import type { HealthStatus } from '@/common/services/topologyDiscovery';
 import { useAnimationsEnabled } from '@/common/contexts/AnimationsEnabledContext';
 
@@ -84,6 +91,16 @@ const DEFAULT_DURATION_MS = 2000;
  *  shorter ones. */
 const DOT_RADIUS = 4;
 
+export type EdgeEndpoint = 'source' | 'target';
+export type EdgeEndpointDragPhase = 'start' | 'preview' | 'commit' | 'cancel';
+
+export interface EdgeEndpointDragArgs {
+    edgeId: string;
+    endpoint: EdgeEndpoint;
+    phase: EdgeEndpointDragPhase;
+    point?: XYPosition;
+}
+
 interface AnimatedEdgeData {
     kind?: SavedDiagramEdge['kind'];
     direction?: EdgeDirection;
@@ -102,7 +119,74 @@ interface AnimatedEdgeData {
     arrowStyle?: SavedDiagramEdge['arrowStyle'];
     notes?: string;
     layer?: string;
+    sourceAnchor?: DiagramEdgeAnchor;
+    targetAnchor?: DiagramEdgeAnchor;
+    onEndpointDrag?: (args: EdgeEndpointDragArgs) => void;
 }
+
+const isFiniteAnchor = (anchor: unknown): anchor is DiagramEdgeAnchor => {
+    if (!anchor || typeof anchor !== 'object') return false;
+    const a = anchor as Partial<DiagramEdgeAnchor>;
+    return Number.isFinite(a.x) && Number.isFinite(a.y);
+};
+
+const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
+
+const anchorSide = (
+    anchor: DiagramEdgeAnchor | undefined,
+    fallback: Position
+): Position => {
+    if (!isFiniteAnchor(anchor)) return fallback;
+    const distances = [
+        { side: Position.Left, value: anchor.x },
+        { side: Position.Right, value: 1 - anchor.x },
+        { side: Position.Top, value: anchor.y },
+        { side: Position.Bottom, value: 1 - anchor.y },
+    ];
+    return distances.reduce((best, candidate) =>
+        candidate.value < best.value ? candidate : best
+    ).side;
+};
+
+const resolveAnchorPoint = (
+    node: unknown,
+    anchor: DiagramEdgeAnchor | undefined
+): XYPosition | null => {
+    if (!isFiniteAnchor(anchor) || !node || typeof node !== 'object') {
+        return null;
+    }
+    const n = node as {
+        internals?: { positionAbsolute?: XYPosition };
+        measured?: { width?: number; height?: number };
+        width?: number;
+        height?: number;
+        initialWidth?: number;
+        initialHeight?: number;
+    };
+    const absolute = n.internals?.positionAbsolute;
+    const width = n.measured?.width ?? n.width ?? n.initialWidth;
+    const height = n.measured?.height ?? n.height ?? n.initialHeight;
+    if (
+        !absolute ||
+        !Number.isFinite(absolute.x) ||
+        !Number.isFinite(absolute.y) ||
+        !Number.isFinite(width) ||
+        !Number.isFinite(height)
+    ) {
+        return null;
+    }
+    const resolvedWidth = width as number;
+    const resolvedHeight = height as number;
+    return {
+        x: absolute.x + resolvedWidth * clamp01(anchor.x),
+        y: absolute.y + resolvedHeight * clamp01(anchor.y),
+    };
+};
+
+const isStencilShape = (shape: unknown): boolean =>
+    shape === 'custom_stencil' ||
+    shape === 'catalyst_3850_24_front' ||
+    shape === 'catalyst_3850_24_rear';
 
 /** Build 115.11 — palette for the live-status mode. Mirrors the
  *  Florida overview dashboard's site connector colours: emerald
@@ -208,16 +292,62 @@ export const AnimatedEdge: React.FC<EdgeProps> = ({
     label,
     selected,
 }) => {
-    const [edgePath, labelX, labelY] = getBezierPath({
-        sourceX,
-        sourceY,
-        sourcePosition,
-        targetX,
-        targetY,
-        targetPosition,
-    });
-
+    const reactFlow = useReactFlow();
+    const [hovered, setHovered] = React.useState(false);
     const d = (data ?? {}) as AnimatedEdgeData;
+    const sourceAnchor = isFiniteAnchor(d.sourceAnchor)
+        ? d.sourceAnchor
+        : undefined;
+    const targetAnchor = isFiniteAnchor(d.targetAnchor)
+        ? d.targetAnchor
+        : undefined;
+    const sourceAnchorPoint = useStore((s) =>
+        resolveAnchorPoint(s.nodeLookup.get(source), sourceAnchor)
+    );
+    const targetAnchorPoint = useStore((s) =>
+        resolveAnchorPoint(s.nodeLookup.get(target), targetAnchor)
+    );
+    const anchoredSourceX = sourceAnchorPoint?.x ?? sourceX;
+    const anchoredSourceY = sourceAnchorPoint?.y ?? sourceY;
+    const anchoredTargetX = targetAnchorPoint?.x ?? targetX;
+    const anchoredTargetY = targetAnchorPoint?.y ?? targetY;
+    const anchoredSourcePosition = anchorSide(sourceAnchor, sourcePosition);
+    const anchoredTargetPosition = anchorSide(targetAnchor, targetPosition);
+    const sourceShape = useStore(
+        (s) =>
+            (
+                s.nodeLookup.get(source)?.data as
+                    | { node?: { shape?: string } }
+                    | undefined
+            )?.node?.shape
+    );
+    const targetShape = useStore(
+        (s) =>
+            (
+                s.nodeLookup.get(target)?.data as
+                    | { node?: { shape?: string } }
+                    | undefined
+            )?.node?.shape
+    );
+    const shouldUseStraightPath =
+        (sourceAnchor || targetAnchor) &&
+        (isStencilShape(sourceShape) || isStencilShape(targetShape));
+    const [edgePath, labelX, labelY] = shouldUseStraightPath
+        ? getStraightPath({
+              sourceX: anchoredSourceX,
+              sourceY: anchoredSourceY,
+              targetX: anchoredTargetX,
+              targetY: anchoredTargetY,
+          })
+        : getBezierPath({
+              sourceX: anchoredSourceX,
+              sourceY: anchoredSourceY,
+              sourcePosition: anchoredSourcePosition,
+              targetX: anchoredTargetX,
+              targetY: anchoredTargetY,
+              targetPosition: anchoredTargetPosition,
+          });
+
     const direction: EdgeDirection = d.direction ?? 'none';
     const kind = d.kind ?? 'physical';
     // Build 115.12 — page-level animations kill switch. When OFF
@@ -282,6 +412,55 @@ export const AnimatedEdge: React.FC<EdgeProps> = ({
     // RF re-renders this whole component on viewport change so the
     // id stays addressable as long as the edge exists.
     const pathId = `edge-path-${id}`;
+    const endpointDragEnabled = typeof d.onEndpointDrag === 'function';
+    const showEndpointGrabbers = endpointDragEnabled && (selected || hovered);
+
+    const handleEndpointPointerDown = (
+        endpoint: EdgeEndpoint,
+        event: React.PointerEvent<Element>
+    ): void => {
+        if (!d.onEndpointDrag || event.button !== 0) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const toFlowPoint = (evt: PointerEvent): XYPosition =>
+            reactFlow.screenToFlowPosition({
+                x: evt.clientX,
+                y: evt.clientY,
+            });
+        const onMove = (evt: PointerEvent): void => {
+            d.onEndpointDrag?.({
+                edgeId: id,
+                endpoint,
+                phase: 'preview',
+                point: toFlowPoint(evt),
+            });
+        };
+        const finish =
+            (phase: EdgeEndpointDragPhase) =>
+            (evt: PointerEvent): void => {
+                window.removeEventListener('pointermove', onMove);
+                window.removeEventListener('pointerup', onUp);
+                window.removeEventListener('pointercancel', onCancel);
+                document.body.style.cursor = '';
+                d.onEndpointDrag?.({
+                    edgeId: id,
+                    endpoint,
+                    phase,
+                    point: phase === 'cancel' ? undefined : toFlowPoint(evt),
+                });
+            };
+        const onUp = finish('commit');
+        const onCancel = finish('cancel');
+        document.body.style.cursor = 'grabbing';
+        d.onEndpointDrag({
+            edgeId: id,
+            endpoint,
+            phase: 'start',
+        });
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', onUp);
+        window.addEventListener('pointercancel', onCancel);
+    };
 
     // When the edge is selected we bump the stroke a hair so the
     // operator can confirm they grabbed the right edge — but we
@@ -324,6 +503,8 @@ export const AnimatedEdge: React.FC<EdgeProps> = ({
                 pointerEvents="stroke"
                 style={{ cursor: 'pointer' }}
                 className="react-flow__edge-interaction"
+                onMouseEnter={() => setHovered(true)}
+                onMouseLeave={() => setHovered(false)}
             />
             <path
                 id={pathId}
@@ -396,26 +577,83 @@ export const AnimatedEdge: React.FC<EdgeProps> = ({
                     )}
                 </>
             )}
-            {label && (
+            {(showEndpointGrabbers || label) && (
                 <EdgeLabelRenderer>
-                    <div
-                        style={{
-                            position: 'absolute',
-                            transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
-                            background: 'rgba(255, 255, 255, 0.92)',
-                            padding: '2px 6px',
-                            borderRadius: 4,
-                            fontSize: 10,
-                            fontWeight: 500,
-                            color: '#334155',
-                            border: '1px solid #e2e8f0',
-                            pointerEvents: 'all',
-                            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
-                        }}
-                        className="nodrag nopan"
-                    >
-                        {label}
-                    </div>
+                    {showEndpointGrabbers && (
+                        <>
+                            <button
+                                type="button"
+                                aria-label="Move connector source"
+                                title="Drag to move connector endpoint"
+                                className="nodrag nopan"
+                                onMouseEnter={() => setHovered(true)}
+                                onMouseLeave={() => setHovered(false)}
+                                onPointerDown={(event) =>
+                                    handleEndpointPointerDown('source', event)
+                                }
+                                style={{
+                                    position: 'absolute',
+                                    transform: `translate(-50%, -50%) translate(${anchoredSourceX}px, ${anchoredSourceY}px)`,
+                                    width: 12,
+                                    height: 12,
+                                    borderRadius: 999,
+                                    border: '2px solid #ffffff',
+                                    background: '#0ea5e9',
+                                    cursor: 'grab',
+                                    pointerEvents: 'all',
+                                    zIndex: 40,
+                                    boxShadow:
+                                        '0 1px 4px rgba(14,165,233,0.45)',
+                                }}
+                            />
+                            <button
+                                type="button"
+                                aria-label="Move connector target"
+                                title="Drag to move connector endpoint"
+                                className="nodrag nopan"
+                                onMouseEnter={() => setHovered(true)}
+                                onMouseLeave={() => setHovered(false)}
+                                onPointerDown={(event) =>
+                                    handleEndpointPointerDown('target', event)
+                                }
+                                style={{
+                                    position: 'absolute',
+                                    transform: `translate(-50%, -50%) translate(${anchoredTargetX}px, ${anchoredTargetY}px)`,
+                                    width: 12,
+                                    height: 12,
+                                    borderRadius: 999,
+                                    border: '2px solid #ffffff',
+                                    background: '#0ea5e9',
+                                    cursor: 'grab',
+                                    pointerEvents: 'all',
+                                    zIndex: 40,
+                                    boxShadow:
+                                        '0 1px 4px rgba(14,165,233,0.45)',
+                                }}
+                            />
+                        </>
+                    )}
+                    {label && (
+                        <div
+                            style={{
+                                position: 'absolute',
+                                transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+                                background: 'rgba(255, 255, 255, 0.92)',
+                                padding: '2px 6px',
+                                borderRadius: 4,
+                                fontSize: 10,
+                                fontWeight: 500,
+                                color: '#334155',
+                                border: '1px solid #e2e8f0',
+                                pointerEvents: 'all',
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                                zIndex: 30,
+                            }}
+                            className="nodrag nopan"
+                        >
+                            {label}
+                        </div>
+                    )}
                 </EdgeLabelRenderer>
             )}
         </>

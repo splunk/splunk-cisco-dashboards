@@ -11,6 +11,7 @@
  */
 
 import type { DeviceShapeId } from '@/common/services/topologyDiscovery';
+import type { CustomStencilAsset } from '@/common/services/diagramPersistenceService';
 
 /** MIME type used to round-trip a palette drag through the
  *  HTML5 DnD `dataTransfer` channel. We pick a custom mime so
@@ -63,6 +64,14 @@ export type PaletteDragPayload =
           siteLabel?: string;
       }
     | {
+          /** Build 115.21 — user-imported SVG/PNG stencil. Treated
+           *  as a device-like node for drag, resize, connect, save,
+           *  and export, but its artwork comes from the imported
+           *  asset rather than the built-in icon registry. */
+          variant: 'customStencil';
+          asset: CustomStencilAsset;
+      }
+    | {
           /** Build 115.1 — free-placement annotation. Spawns a
            *  TextBoxNode at the drop point with default styling.
            *  The operator can re-style via the inspector after
@@ -83,5 +92,53 @@ export type PaletteDragPayload =
  *  (icon card vs region container) stays consistent. */
 export const NODE_SIZE_PRESETS = {
     device: { width: 100, height: 110 },
+    wideDevice: { width: 420, height: 42 },
     region: { width: 360, height: 220 },
 } as const;
+
+const clamp = (value: number, min: number, max: number): number =>
+    Math.min(max, Math.max(min, value));
+
+export const nodeSizeForCustomStencil = (
+    asset: Pick<CustomStencilAsset, 'width' | 'height'> | undefined
+): { width: number; height: number } => {
+    const width = asset?.width;
+    const height = asset?.height;
+    if (!width || !height || width <= 0 || height <= 0) {
+        return NODE_SIZE_PRESETS.wideDevice;
+    }
+    const ratio = width / height;
+    if (ratio >= 2.5) {
+        const targetWidth = 420;
+        return {
+            width: targetWidth,
+            height: Math.round(clamp(targetWidth / ratio, 28, 140)),
+        };
+    }
+    if (ratio <= 0.75) {
+        const targetHeight = 140;
+        return {
+            width: Math.round(clamp(targetHeight * ratio, 54, 160)),
+            height: targetHeight,
+        };
+    }
+    const targetWidth = 120;
+    return {
+        width: targetWidth,
+        height: Math.round(clamp(targetWidth / ratio, 80, 140)),
+    };
+};
+
+const WIDE_DEVICE_SHAPES = new Set<DeviceShapeId>([
+    'catalyst_3850_24_front',
+    'catalyst_3850_24_rear',
+]);
+
+export const nodeSizeForShape = (
+    shape: DeviceShapeId | undefined
+): { width: number; height: number } =>
+    shape === 'custom_stencil'
+        ? NODE_SIZE_PRESETS.wideDevice
+        : shape && WIDE_DEVICE_SHAPES.has(shape)
+          ? NODE_SIZE_PRESETS.wideDevice
+          : NODE_SIZE_PRESETS.device;
