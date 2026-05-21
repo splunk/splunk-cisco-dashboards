@@ -41,6 +41,8 @@ import {
     CheckCircle2,
     AlertCircle,
     Table2,
+    ClipboardCheck,
+    ArrowRight,
 } from 'lucide-react';
 import { DashboardSection } from '@/common/components/florida/DashboardSection';
 import { MetricItem } from '@/common/components/florida/MetricItem';
@@ -828,6 +830,16 @@ const SECTION_META: Record<
 // =============================================================================
 // Splunk Search drilldown URL builder
 // =============================================================================
+
+// Locale-aware URL builder for a sibling Splunk view inside this app
+// (e.g. statewide_exercise_v1). Mirrors splunkSearchAppUrl's locale
+// detection so the URL stays valid in non-en-US Splunk installs.
+const splunkViewAppUrl = (viewName: string): string => {
+    const path = typeof window !== 'undefined' ? window.location.pathname : '/en-US';
+    const localeMatch = path.match(/^\/([a-z]{2}-[A-Z]{2})\//);
+    const locale = localeMatch ? localeMatch[1] : 'en-US';
+    return `/${locale}/app/${APP_NAME}/${viewName}`;
+};
 
 const splunkSearchAppUrl = (spl: string, range: TimeRange): string => {
     // Open the stock Splunk search bar but *under this app's namespace*
@@ -3023,6 +3035,47 @@ const OverviewPage: React.FC = () => {
 
             {/* Mini incident ticker */}
             <IncidentTicker range={timeRange} refreshToken={refreshToken} />
+
+            {/* Featured-report strip — drives executives + NetOps to the
+                Catalyst Center–backed Statewide Network Activation Report
+                (statewide_exercise_v1). Sits between the incident ticker
+                and the section grid so it occupies the highest-attention
+                row on the page without breaking the three-section layout.
+                Single-row chrome (matches IncidentTicker's py-1.5 rhythm)
+                with a sky accent + left edge bar so the customer can't
+                miss it. The narrative copy collapses first on narrow
+                widths (`truncate min-w-0`); the CTA button always stays
+                visible on the right. */}
+            <div className="flex-shrink-0 relative border-b border-sky-200 dark:border-sky-800/60 bg-gradient-to-r from-sky-50 via-white to-sky-50 dark:from-sky-950/30 dark:via-slate-900 dark:to-sky-950/30">
+                <div
+                    aria-hidden="true"
+                    className="absolute left-0 top-0 bottom-0 w-1 bg-sky-600 dark:bg-sky-500"
+                />
+                <div className="flex items-center gap-3 pl-5 pr-4 py-2">
+                    <div className="flex-shrink-0 w-7 h-7 rounded bg-sky-600 text-white flex items-center justify-center shadow-sm">
+                        <ClipboardCheck className="w-4 h-4 stroke-[2.5px]" />
+                    </div>
+                    <span className="text-[9px] font-black text-sky-700 dark:text-sky-300 uppercase tracking-[0.25em] flex-shrink-0 hidden sm:inline">
+                        Featured Report
+                    </span>
+                    <span className="text-[13px] font-bold text-slate-900 dark:text-slate-100 flex-shrink-0">
+                        Statewide Network Activation Report
+                    </span>
+                    <span className="text-[11px] text-slate-600 dark:text-slate-400 truncate min-w-0 hidden md:inline">
+                        — Client health &amp; Catalyst Center readiness across all sites.
+                    </span>
+                    <a
+                        href={splunkViewAppUrl('statewide_exercise_v1')}
+                        title="Open the Statewide Network Activation Report"
+                        aria-label="Open the Statewide Network Activation Report"
+                        data-testid="featured-report-cta"
+                        className="flex-shrink-0 ml-auto inline-flex items-center gap-1.5 px-3 py-1 rounded bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white text-[11px] font-bold tracking-wide uppercase shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-1 dark:focus:ring-offset-slate-900"
+                    >
+                        Open report
+                        <ArrowRight className="w-3.5 h-3.5 stroke-[2.5px]" />
+                    </a>
+                </div>
+            </div>
 
             {/* Edge-to-edge layout: no `max-w` clamp and only a thin
                 horizontal gutter. The previous `max-w-[1600px] mx-auto`
