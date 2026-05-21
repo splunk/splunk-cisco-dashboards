@@ -1,0 +1,42 @@
+---
+description: Never add a Cursor Co-authored-by trailer to git commits
+alwaysApply: true
+---
+
+# No `Co-authored-by: Cursor` trailer on commits
+
+When creating git commits in this repository (or any repository), do **NOT** add the following trailer (or any similar variant) to the commit message:
+
+```
+Co-authored-by: Cursor <cursoragent@cursor.com>
+```
+
+The user has explicitly asked for this trailer to be omitted from every commit.
+
+## What to do
+
+- Write the commit message exactly as drafted, with no auto-appended Cursor/agent attribution trailer.
+- The Cursor IDE/agent runtime injects this trailer even when the commit message file does not contain it; passing `--cleanup=verbatim` alone is **not** sufficient to suppress the injection.
+- Do **not** add `Co-authored-by:` trailers for any AI agent (Cursor, Claude, Copilot, etc.) unless the user explicitly requests one.
+- Human `Co-authored-by:` trailers (for actual collaborating humans) are fine when the user asks for them.
+
+## Proven post-commit fix
+
+Whenever you commit on behalf of the user (and the amend rules in the parent agent prompt permit it — HEAD was authored this conversation and has not been pushed), immediately follow up with:
+
+```bash
+git log -1 --format='%B' | grep -v '^Co-authored-by: Cursor ' > /tmp/clean_msg.txt
+git commit --amend --no-verify --cleanup=verbatim -F /tmp/clean_msg.txt
+```
+
+The `--no-verify` is what bypasses the Cursor trailer injection. `--cleanup=verbatim` preserves the exact message file. After the amend, verify with:
+
+```bash
+git log -1 --format='%B' | tail -5
+```
+
+If a `Co-authored-by: Cursor <cursoragent@cursor.com>` line is still present, do **not** silently leave it — report it to the user.
+
+## Note on already-pushed commits
+
+If the trailer landed on a commit that has already been pushed to the remote, do **not** rewrite history to strip it without an explicit user request. Just stop adding it on subsequent commits.
