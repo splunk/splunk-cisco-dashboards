@@ -2089,9 +2089,10 @@
     ],
     "layoutDefinitions": {
       "layout_overview": {
-        "type": "grid",
+        "type": "absolute",
         "options": {
           "backgroundColor": "#f5f7fb",
+          "display": "auto-scale",
           "width": 1440,
           "height": 1600
         },
@@ -2209,9 +2210,10 @@
         ]
       },
       "layout_exec": {
-        "type": "grid",
+        "type": "absolute",
         "options": {
           "backgroundColor": "#f5f7fb",
+          "display": "auto-scale",
           "width": 1440,
           "height": 1530
         },
@@ -2329,9 +2331,10 @@
         ]
       },
       "layout_client": {
-        "type": "grid",
+        "type": "absolute",
         "options": {
           "backgroundColor": "#f5f7fb",
+          "display": "auto-scale",
           "width": 1440,
           "height": 1930
         },
@@ -2429,9 +2432,10 @@
         ]
       },
       "layout_about": {
-        "type": "grid",
+        "type": "absolute",
         "options": {
           "backgroundColor": "#f5f7fb",
+          "display": "auto-scale",
           "width": 1440,
           "height": 900
         },
