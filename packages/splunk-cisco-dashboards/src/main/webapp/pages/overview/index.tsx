@@ -886,6 +886,135 @@ const SECTION_META: Record<
     },
 };
 
+// Leave blank until a deployment wires a saved search returning
+// `_time, severity, source, message`. When blank, the incident ticker
+// stays hidden rather than showing customer-facing placeholder copy.
+const OVERVIEW_INCIDENT_TICKER_SAVED_SEARCH: string = '';
+
+interface AppPriorityDrilldown {
+    viewName: string;
+    title: string;
+    description: string;
+    timeToken?: string;
+}
+
+const PRIORITY_DRILLDOWN_LABEL = 'Priority Drill-Down';
+const PRIORITY_DRILLDOWN_CTA = 'Open dashboard';
+const PRIORITY_DRILLDOWN_STORAGE_KEY =
+    'splunk-cisco-dashboards.priorityDrilldown.v1';
+const DEFAULT_PRIORITY_DRILLDOWN_VIEW = 'statewide_exercise_v1';
+
+// App-local allow-list only. These are shipped views in this app, curated
+// from default/data/ui/nav/default.xml plus default/data/ui/views/*.xml.
+// Archive, overview, test, template, admin, and platform utility views are
+// intentionally excluded from the executive drill-down picker.
+const APP_PRIORITY_DRILLDOWNS: readonly AppPriorityDrilldown[] = [
+    {
+        viewName: 'statewide_exercise_v1',
+        title: 'Statewide Network Activation Report',
+        description: 'Client health, readiness, and activation signals across all sites.',
+        timeToken: 'time_tok',
+    },
+    {
+        viewName: 'it_health_v1',
+        title: 'IT Health',
+        description: 'Critical systems, network posture, device health, and compliance.',
+        timeToken: 'global_time',
+    },
+    {
+        viewName: 'security_v1',
+        title: 'Security Resilience',
+        description: 'Firewall, identity, XDR, IDS/IPS, DNS, and endpoint signals.',
+        timeToken: 'global_time',
+    },
+    {
+        viewName: 'building_v1',
+        title: 'Building Intelligence',
+        description: 'Cisco Spaces occupancy, wireless trust, and workplace telemetry.',
+        timeToken: 'global_time',
+    },
+    {
+        viewName: 'health_monitoring',
+        title: 'Health Monitoring',
+        description: 'Operational health monitoring for sites and infrastructure.',
+    },
+    {
+        viewName: 'netops_readiness_v1',
+        title: 'NetOps Readiness',
+        description: 'Readiness, site posture, and field-operation validation.',
+        timeToken: 'global_time',
+    },
+    {
+        viewName: 'spaces_intelligence_v1',
+        title: 'Spaces Intelligence',
+        description: 'Cisco Spaces intelligence for locations, devices, and activity.',
+        timeToken: 'global_time',
+    },
+    {
+        viewName: 'workplace_spog_v1',
+        title: 'Workplace Single Pane',
+        description: 'Unified workplace and collaboration operating view.',
+        timeToken: 'global_time',
+    },
+    {
+        viewName: 'asset_inventory_v1',
+        title: 'Asset Inventory',
+        description: 'Asset inventory across Cisco and Splunk-connected sources.',
+        timeToken: 'time_tok',
+    },
+    {
+        viewName: 'network_diagram',
+        title: 'Network Diagram',
+        description: 'Network diagram and topology-oriented operational context.',
+    },
+    {
+        viewName: 'topology_canvas_v1',
+        title: 'Topology Canvas',
+        description: 'Interactive network topology canvas for site and device context.',
+    },
+];
+
+const getPriorityDrilldown = (viewName: string): AppPriorityDrilldown =>
+    APP_PRIORITY_DRILLDOWNS.find((item) => item.viewName === viewName) ??
+    APP_PRIORITY_DRILLDOWNS[0];
+
+const readPriorityDrilldownView = (): string => {
+    if (typeof window === 'undefined' || !window.localStorage) {
+        return DEFAULT_PRIORITY_DRILLDOWN_VIEW;
+    }
+    try {
+        const raw = window.localStorage.getItem(PRIORITY_DRILLDOWN_STORAGE_KEY);
+        if (!raw) return DEFAULT_PRIORITY_DRILLDOWN_VIEW;
+        const parsed = JSON.parse(raw) as { viewName?: unknown };
+        const viewName = typeof parsed.viewName === 'string' ? parsed.viewName : '';
+        return getPriorityDrilldown(viewName).viewName;
+    } catch {
+        return DEFAULT_PRIORITY_DRILLDOWN_VIEW;
+    }
+};
+
+const writePriorityDrilldownView = (viewName: string): void => {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    try {
+        window.localStorage.setItem(
+            PRIORITY_DRILLDOWN_STORAGE_KEY,
+            JSON.stringify({ viewName })
+        );
+    } catch {
+        // Storage may be unavailable; the in-memory state still works
+        // for the current session.
+    }
+};
+
+const clearPriorityDrilldownView = (): void => {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    try {
+        window.localStorage.removeItem(PRIORITY_DRILLDOWN_STORAGE_KEY);
+    } catch {
+        // Storage unavailable; ignore.
+    }
+};
+
 // =============================================================================
 // Splunk Search drilldown URL builder
 // =============================================================================
@@ -893,11 +1022,21 @@ const SECTION_META: Record<
 // Locale-aware URL builder for a sibling Splunk view inside this app
 // (e.g. statewide_exercise_v1). Mirrors splunkSearchAppUrl's locale
 // detection so the URL stays valid in non-en-US Splunk installs.
-const splunkViewAppUrl = (viewName: string): string => {
+const splunkViewAppUrl = (
+    viewName: string,
+    range?: TimeRange,
+    timeToken?: string
+): string => {
     const path = typeof window !== 'undefined' ? window.location.pathname : '/en-US';
     const localeMatch = path.match(/^\/([a-z]{2}-[A-Z]{2})\//);
     const locale = localeMatch ? localeMatch[1] : 'en-US';
-    return `/${locale}/app/${APP_NAME}/${viewName}`;
+    const baseUrl = `/${locale}/app/${APP_NAME}/${viewName}`;
+    if (!range || !timeToken) return baseUrl;
+
+    const params = new URLSearchParams();
+    params.set(`form.${timeToken}.earliest`, range.earliest);
+    params.set(`form.${timeToken}.latest`, range.latest);
+    return `${baseUrl}?${params.toString()}`;
 };
 
 const splunkSearchAppUrl = (spl: string, range: TimeRange): string => {
@@ -1828,6 +1967,39 @@ const OverviewPage: React.FC = () => {
             TIME_RANGE_OPTIONS.find((o) => o.label === DEFAULT_TIME_RANGE_LABEL) ??
             TIME_RANGE_OPTIONS[1]
     );
+    const [selectedPriorityDrilldownView, setSelectedPriorityDrilldownView] =
+        useState<string>(readPriorityDrilldownView);
+    const configuredIncidentTickerSearch = OVERVIEW_INCIDENT_TICKER_SAVED_SEARCH.trim();
+    const selectedPriorityDrilldown = useMemo(
+        () => getPriorityDrilldown(selectedPriorityDrilldownView),
+        [selectedPriorityDrilldownView]
+    );
+    const featuredDrilldownHref = useMemo(
+        () =>
+            splunkViewAppUrl(
+                selectedPriorityDrilldown.viewName,
+                timeRange,
+                selectedPriorityDrilldown.timeToken
+            ),
+        [selectedPriorityDrilldown, timeRange]
+    );
+    const handlePriorityDrilldownChange = useCallback(
+        (viewName: string) => {
+            const next = getPriorityDrilldown(viewName);
+            setSelectedPriorityDrilldownView(next.viewName);
+            writePriorityDrilldownView(next.viewName);
+        },
+        []
+    );
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+        const onStorage = (e: StorageEvent) => {
+            if (e.key !== PRIORITY_DRILLDOWN_STORAGE_KEY) return;
+            setSelectedPriorityDrilldownView(readPriorityDrilldownView());
+        };
+        window.addEventListener('storage', onStorage);
+        return () => window.removeEventListener('storage', onStorage);
+    }, []);
     const [autoRefreshSeconds, setAutoRefreshSeconds] = useState<number>(0);
     const [refreshToken, setRefreshToken] = useState<number>(0);
     const [lastRefreshed, setLastRefreshed] = useState<Date>(() => new Date());
@@ -2568,6 +2740,7 @@ const OverviewPage: React.FC = () => {
     //   • customerTopology.v4           — Florida map customisations
     //   • scd_overview_split_pct        — tiles ↔ map splitter position
     //   • scd_overview_map_pos          — map position (right / below / above)
+    //   • priorityDrilldown.v1          — pinned app-local drill-down target
     //
     // What is intentionally NOT reset:
     //   • header branding (title / subtitle / logo) — identity, not
@@ -2588,6 +2761,8 @@ const OverviewPage: React.FC = () => {
         setTopologyResetKey((n) => n + 1);
         setLeftPct(SPLIT_DEFAULT);
         setMapPosition(MAP_POS_DEFAULT);
+        setSelectedPriorityDrilldownView(DEFAULT_PRIORITY_DRILLDOWN_VIEW);
+        clearPriorityDrilldownView();
         if (typeof window !== 'undefined' && window.localStorage) {
             try {
                 window.localStorage.removeItem(SPLIT_KEY);
@@ -3119,49 +3294,82 @@ const OverviewPage: React.FC = () => {
                 </div>
             </header>
 
-            {/* Mini incident ticker */}
-            <IncidentTicker range={timeRange} refreshToken={refreshToken} />
+            {/* Mini incident ticker: hidden until a saved search is configured. */}
+            {configuredIncidentTickerSearch ? (
+                <IncidentTicker
+                    savedSearch={configuredIncidentTickerSearch}
+                    range={timeRange}
+                    refreshToken={refreshToken}
+                />
+            ) : null}
 
-            {/* Featured-report strip — drives executives + NetOps to the
-                Catalyst Center–backed Statewide Network Activation Report
-                (statewide_exercise_v1). Sits between the incident ticker
-                and the section grid so it occupies the highest-attention
-                row on the page without breaking the three-section layout.
-                Single-row chrome (matches IncidentTicker's py-1.5 rhythm)
-                with a sky accent + left edge bar so the customer can't
-                miss it. The narrative copy collapses first on narrow
-                widths (`truncate min-w-0`); the CTA button always stays
-                visible on the right. */}
-            <div className="flex-shrink-0 relative border-b border-sky-200 dark:border-sky-800/60 bg-gradient-to-r from-sky-50 via-white to-sky-50 dark:from-sky-950/30 dark:via-slate-900 dark:to-sky-950/30">
+            {/* Customer-pinned, app-local drill-down. Keep this to one
+                primary path so the executive overview has a decisive
+                next step without becoming another navigation menu. */}
+            <div
+                data-testid="priority-drilldown-row"
+                className="group flex-shrink-0 relative block border-b border-sky-200 dark:border-sky-800/60 bg-white hover:bg-sky-50/80 dark:bg-slate-900 dark:hover:bg-sky-950/30 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-inset"
+            >
                 <div
                     aria-hidden="true"
                     className="absolute left-0 top-0 bottom-0 w-1 bg-sky-600 dark:bg-sky-500"
                 />
-                <div className="flex items-center gap-3 pl-5 pr-4 py-2">
-                    <div className="flex-shrink-0 w-7 h-7 rounded bg-sky-600 text-white flex items-center justify-center shadow-sm">
-                        <ClipboardCheck className="w-4 h-4 stroke-[2.5px]" />
-                    </div>
-                    <span className="text-[9px] font-black text-sky-700 dark:text-sky-300 uppercase tracking-[0.25em] flex-shrink-0 hidden sm:inline">
-                        Featured Report
-                    </span>
-                    <span className="text-[13px] font-bold text-slate-900 dark:text-slate-100 flex-shrink-0">
-                        Statewide Network Activation Report
-                    </span>
-                    <span className="text-[11px] text-slate-600 dark:text-slate-400 truncate min-w-0 hidden md:inline">
-                        — Client health &amp; Catalyst Center readiness across all sites.
-                    </span>
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 pl-5 pr-4 py-2">
                     <a
-                        href={splunkViewAppUrl('statewide_exercise_v1')}
+                        href={featuredDrilldownHref}
                         target="_blank"
                         rel="noopener noreferrer"
-                        title="Open the Statewide Network Activation Report (new tab)"
-                        aria-label="Open the Statewide Network Activation Report in a new tab"
-                        data-testid="featured-report-cta"
-                        className="flex-shrink-0 ml-auto inline-flex items-center gap-1.5 px-3 py-1 rounded bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white text-[11px] font-bold tracking-wide uppercase shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-1 dark:focus:ring-offset-slate-900"
+                        title={`Open ${selectedPriorityDrilldown.title} in a new tab`}
+                        aria-label={`Open ${selectedPriorityDrilldown.title} in a new tab`}
+                        className="min-w-0 h-7 flex items-center gap-3 rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
                     >
-                        Open report
-                        <ArrowRight className="w-3.5 h-3.5 stroke-[2.5px]" />
+                        <div className="flex-shrink-0 w-7 h-7 rounded bg-sky-600 text-white flex items-center justify-center shadow-sm">
+                            <ClipboardCheck className="w-4 h-4 stroke-[2.5px]" />
+                        </div>
+                        <span className="text-[9px] font-black text-sky-700 dark:text-sky-300 uppercase tracking-[0.25em] whitespace-nowrap flex-shrink-0 hidden sm:inline w-[172px]">
+                            {PRIORITY_DRILLDOWN_LABEL}
+                        </span>
+                        <span className="text-[13px] font-bold text-slate-900 dark:text-slate-100 truncate min-w-0">
+                            {selectedPriorityDrilldown.title}
+                        </span>
+                        <span className="text-[11px] text-slate-600 dark:text-slate-400 truncate min-w-0 hidden lg:inline">
+                            {selectedPriorityDrilldown.description}
+                        </span>
                     </a>
+                    <div className="flex items-center justify-end gap-2">
+                        <label className="hidden md:flex flex-shrink-0 items-center gap-1.5 h-7 !mb-0">
+                            <span className="sr-only">Priority drill-down dashboard</span>
+                            <Settings2
+                                className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500"
+                                aria-hidden="true"
+                            />
+                            <select
+                                value={selectedPriorityDrilldown.viewName}
+                                onChange={(e) => handlePriorityDrilldownChange(e.target.value)}
+                                title="Choose priority drill-down dashboard"
+                                aria-label="Choose priority drill-down dashboard"
+                                className="h-7 !mb-0 w-[220px] max-w-[22vw] rounded-md border border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 px-2 py-0 text-[11px] leading-none font-semibold text-slate-700 dark:text-slate-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
+                            >
+                                {APP_PRIORITY_DRILLDOWNS.map((item) => (
+                                    <option key={item.viewName} value={item.viewName}>
+                                        {item.title}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                        <a
+                            href={featuredDrilldownHref}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={`Open ${selectedPriorityDrilldown.title} in a new tab`}
+                            aria-label={`Open ${selectedPriorityDrilldown.title} in a new tab`}
+                            data-testid="featured-report-cta"
+                            className="h-7 flex-shrink-0 inline-flex items-center gap-1.5 px-3 rounded bg-sky-600 group-hover:bg-sky-500 active:bg-sky-700 text-white text-[11px] font-bold tracking-wide uppercase shadow-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+                        >
+                            {PRIORITY_DRILLDOWN_CTA}
+                            <ArrowRight className="w-3.5 h-3.5 stroke-[2.5px]" />
+                        </a>
+                    </div>
                 </div>
             </div>
 

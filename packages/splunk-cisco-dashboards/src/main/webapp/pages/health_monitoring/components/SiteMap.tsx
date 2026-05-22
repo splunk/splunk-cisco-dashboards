@@ -63,7 +63,7 @@ export const SiteMap: React.FC<SiteMapProps> = ({
             <div className="mb-2 flex items-start justify-between gap-4 px-1">
                 <div className="min-w-0">
                     <h2 className="truncate text-[17px] font-black uppercase tracking-wide text-sky-900 dark:text-sky-200">
-                        Florida Site Connectivity
+                        Customer Site Connectivity
                     </h2>
                     <p className="mt-1 truncate text-[11px] font-semibold text-slate-400 dark:text-slate-500">
                         Editable customer site connectivity

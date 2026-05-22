@@ -7,6 +7,61 @@
 
 ---
 
+## 2026-05-22 — Overview priority drill-down and hidden incident feed
+
+### Goal
+
+Operator: hide the Incident Feed strip until it is truly configured,
+then make the Featured Report row feel like a customer-selected
+critical drill-down rather than a static announcement banner.
+
+### Fix
+
+The IncidentTicker now renders nothing when no saved search has been
+wired. Deployments can still pass fallback rows explicitly, but the
+Overview page's default state no longer exposes "Incident feed not
+configured" to customers.
+
+The former Featured Report strip is now a single customer-pinned
+Priority Drill-Down. The row includes an app-local dashboard picker
+backed by a curated allow-list of active views shipped with this app.
+The selected target is persisted in localStorage, the primary text and
+CTA open that selected dashboard, and Dashboard Studio targets receive
+the Overview time range through their configured token parameters.
+
+### Files changed
+
+| File | Net effect |
+|---|---|
+| `src/main/webapp/common/components/florida/IncidentTicker.tsx` | Uses an empty default fallback and returns `null` when there are no incident rows. |
+| `src/main/webapp/pages/overview/index.tsx` | Adds incident-feed and app-local priority-drilldown config constants, hides the ticker until configured, persists the selected priority target, renders the dashboard picker, and passes the current time range to compatible target dashboards. |
+| `docs/SESSION_LOG.md` | This entry. |
+
+### Verification
+
+  * `yarn --cwd packages/splunk-cisco-dashboards typecheck` — passes.
+  * `yarn --cwd packages/splunk-cisco-dashboards stylelint` — passes.
+  * `yarn --cwd packages/splunk-cisco-dashboards build` — passes with
+    only pre-existing webpack bundle-size warnings.
+  * In-app Splunk browser at
+    `/en-US/app/splunk-cisco-dashboards/overview`:
+      * "Incident feed not configured" no longer appears.
+      * "Featured Report" no longer appears.
+      * "Priority Drill-Down" and "Open dashboard" appear.
+      * The picker offers only active dashboards shipped in this app.
+      * The selected drill-down target persists in localStorage.
+      * Dashboard Studio targets receive the current time range in the
+        target URL, for example
+        `form.time_tok.earliest=-24h@h&form.time_tok.latest=now`.
+      * Document overflow remains 0px in the 1416×1054 viewport.
+
+### What's next
+
+Pick the production saved search for the incident feed, or leave it
+blank so the Overview page stays focused on measured dashboard data.
+
+---
+
 ## 2026-05-22 — Overview responsive fit: measure available Splunk viewport instead of raw 100vh
 
 ### Goal

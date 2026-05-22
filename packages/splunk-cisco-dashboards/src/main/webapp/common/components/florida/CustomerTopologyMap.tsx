@@ -80,7 +80,7 @@ L.Icon.Default.mergeOptions({
 
 export const CUSTOMER_TOPOLOGY: CustomerTopology = {
     id: 'customer-site-connectivity',
-    name: 'Florida Site Connectivity',
+    name: 'Customer Site Connectivity',
     subtitle: 'Editable customer site connectivity',
     telemetrySearchName: 'Overview - Topology Overview',
     map: {
