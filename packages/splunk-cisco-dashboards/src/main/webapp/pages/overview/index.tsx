@@ -22,7 +22,14 @@
  * without rippling the rest of the page.
  */
 
-import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import React, {
+    useCallback,
+    useEffect,
+    useLayoutEffect,
+    useMemo,
+    useRef,
+    useState,
+} from 'react';
 import {
     User,
     RefreshCw,
@@ -161,6 +168,55 @@ const splunkLocalePrefix = (): string => {
     if (typeof window === 'undefined') return '/en-US';
     const match = window.location.pathname.match(/^\/([a-z]{2}-[A-Z]{2})(?:\/|$)/);
     return `/${match ? match[1] : 'en-US'}`;
+};
+
+const MIN_DASHBOARD_HEIGHT_PX = 520;
+const COMPACT_HEIGHT_THRESHOLD_PX = 720;
+
+const useAvailableDashboardHeight = (): number | null => {
+    const [height, setHeight] = useState<number | null>(null);
+
+    useLayoutEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+
+        let animationFrame = 0;
+        let resizeObserver: ResizeObserver | null = null;
+
+        const measure = () => {
+            window.cancelAnimationFrame(animationFrame);
+            animationFrame = window.requestAnimationFrame(() => {
+                const mount = document.getElementById('scan-root');
+                const top = mount?.getBoundingClientRect().top ?? 0;
+                const next = Math.max(
+                    MIN_DASHBOARD_HEIGHT_PX,
+                    Math.floor(window.innerHeight - Math.max(top, 0))
+                );
+                setHeight((current) =>
+                    current !== null && Math.abs(current - next) < 2
+                        ? current
+                        : next
+                );
+            });
+        };
+
+        measure();
+        window.addEventListener('resize', measure);
+
+        if ('ResizeObserver' in window) {
+            resizeObserver = new ResizeObserver(measure);
+            resizeObserver.observe(document.body);
+            const mount = document.getElementById('scan-root');
+            if (mount?.parentElement) resizeObserver.observe(mount.parentElement);
+        }
+
+        return () => {
+            window.cancelAnimationFrame(animationFrame);
+            window.removeEventListener('resize', measure);
+            resizeObserver?.disconnect();
+        };
+    }, []);
+
+    return height;
 };
 
 // =============================================================================
@@ -1070,6 +1126,8 @@ interface MetricCardProps {
      * overflow the card.
      */
     infoAnchor?: 'auto' | 'left' | 'right';
+    /** Tightens nonessential chart chrome when the available viewport is short. */
+    compactDensity?: boolean;
     /**
      * Optional override applied on top of the static config. When
      * present, the gear icon is rendered with a "modified" dot.
@@ -1229,6 +1287,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
     refreshToken,
     onStatus,
     infoAnchor = 'auto',
+    compactDensity = false,
     override,
     onConfigure,
     onOpenDetailTable,
@@ -1350,6 +1409,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
             hidePeak={override?.hidePeak}
             hideDelta={override?.hideDelta}
             hideOverlay={override?.hideOverlay}
+            compactDensity={compactDensity}
         />
     );
 };
@@ -1398,6 +1458,7 @@ interface MetricCardLeafProps extends CommonLeafProps {
     hidePeak?: boolean;
     hideDelta?: boolean;
     hideOverlay?: boolean;
+    compactDensity?: boolean;
 }
 
 /**
@@ -1422,6 +1483,7 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
     hidePeak,
     hideDelta,
     hideOverlay,
+    compactDensity = false,
 }) => {
     /**
      * Tile viz variant. Resolution order (highest precedence first):
@@ -1567,7 +1629,13 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
             // supports) means we don't add a new prop — we just pin
             // the existing one regardless of what the searchbase
             // entry asked for.
-            dataValuesDisplay={hidePeak ? 'off' : dataValuesDisplay}
+            dataValuesDisplay={
+                hidePeak
+                    ? 'off'
+                    : compactDensity && dataValuesDisplay === 'minmax'
+                    ? 'maxonly'
+                    : dataValuesDisplay
+            }
             status={result.status}
             source={result.source}
             onOpenInSearch={drilldownSpl ? handleClick : undefined}
@@ -1700,6 +1768,19 @@ const BarBreakdownCardLeaf: React.FC<CommonLeafProps> = ({
 const OverviewPage: React.FC = () => {
     // ------------------------------ Theme ------------------------------
     const { theme, resolvedTheme, cycle: cycleTheme } = useTheme();
+    const availableDashboardHeight = useAvailableDashboardHeight();
+    const compactDensity =
+        availableDashboardHeight !== null &&
+        availableDashboardHeight < COMPACT_HEIGHT_THRESHOLD_PX;
+    const dashboardShellStyle = useMemo<React.CSSProperties>(
+        () => ({
+            height:
+                availableDashboardHeight !== null
+                    ? `${availableDashboardHeight}px`
+                    : '100vh',
+        }),
+        [availableDashboardHeight]
+    );
 
     // ------------------------------ Branding ------------------------------
     //
@@ -2811,8 +2892,10 @@ const OverviewPage: React.FC = () => {
     return (
         <div
             ref={exportRef}
+            style={dashboardShellStyle}
             className={cn(
-                'h-screen flex flex-col font-sans overflow-hidden',
+                'scd-overview-page flex flex-col font-sans overflow-hidden',
+                compactDensity && 'scd-overview-compact',
                 'bg-slate-50 text-slate-900',
                 'dark:bg-slate-950 dark:text-slate-100',
                 resolvedTheme === 'dark' && 'dark'
@@ -3091,12 +3174,20 @@ const OverviewPage: React.FC = () => {
                 cards from touching the chrome border) and the splitter
                 drives column widths from there.
                 
-                Below xl (<1280px) the layout collapses to a single
-                stacked column so the splitter never strands the map
-                or tiles in a slim phone-sized strip. */}
-            <main className="flex-1 min-h-0 px-1.5 py-2 w-full overflow-hidden">
+                Below ~1120px the layout collapses to a single stacked
+                column so the splitter never strands the map or tiles in
+                a slim phone-sized strip. The exact breakpoint lives in
+                tailwind.css because it sits between Tailwind's stock lg
+                and xl stops. */}
+            <main
+                className={cn(
+                    'flex-1 min-h-0 w-full overflow-hidden',
+                    compactDensity ? 'px-1 py-1.5' : 'px-1.5 py-2'
+                )}
+            >
                 <div
                     ref={splitContainerRef}
+                    data-map-position={mapPosition}
                     className={cn(
                         // Map placement is now operator-configurable. Three
                         // modes are wired to the segmented control in the
@@ -3114,7 +3205,7 @@ const OverviewPage: React.FC = () => {
                         //              than rearranging the JSX so the
                         //              splitter logic stays attached to
                         //              its sibling.
-                        'flex gap-2 h-full min-h-0 relative',
+                        'scd-overview-split flex gap-2 h-full min-h-0 relative',
                         mapPosition === 'right'
                             ? 'flex-col xl:flex-row'
                             : mapPosition === 'above'
@@ -3155,11 +3246,12 @@ const OverviewPage: React.FC = () => {
                         // scrollbar from showing up due to the cards'
                         // shadow bleed at narrow widths.
                         className={cn(
-                            'flex flex-col gap-2 min-h-0 min-w-0 w-full overflow-y-auto overflow-x-hidden',
+                            'scd-overview-metrics flex flex-col gap-2 min-h-0 min-w-0 w-full overflow-y-auto overflow-x-hidden',
                             mapPosition === 'right'
                                 ? 'xl:w-[var(--scd-left-pct)] xl:flex-shrink-0'
                                 : ''
                         )}
+                        data-map-position={mapPosition}
                         style={
                             isVerticalSplit
                                 ? {
@@ -3266,7 +3358,10 @@ const OverviewPage: React.FC = () => {
                                     // same model Splunk Dashboard
                                     // Studio uses for fixed-height
                                     // grid tiles.
-                                    className="flex-1 min-h-[180px]"
+                                    className={cn(
+                                        'flex-1',
+                                        compactDensity ? 'min-h-[174px]' : 'min-h-[180px]'
+                                    )}
                                     tileCount={{
                                         value: visibleCount,
                                         min: sectionTileBounds.minCount,
@@ -3312,6 +3407,7 @@ const OverviewPage: React.FC = () => {
                                                             searchbaseDrilldowns={
                                                                 searchbaseDrilldowns
                                                             }
+                                                            compactDensity={compactDensity}
                                                             onOpenDetailTable={
                                                                 setActiveDetailTable
                                                             }
@@ -3362,7 +3458,7 @@ const OverviewPage: React.FC = () => {
                         onKeyDown={onSplitterKeyDown}
                         onDoubleClick={resetSplit}
                         className={cn(
-                            'flex flex-shrink-0 items-center justify-center group relative',
+                            'scd-overview-splitter flex flex-shrink-0 items-center justify-center group relative',
                             'rounded-full transition-colors',
                             'focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
                             // Right mode hides the splitter on sub-xl
@@ -3378,6 +3474,7 @@ const OverviewPage: React.FC = () => {
                                 ? 'bg-sky-500'
                                 : 'bg-slate-200 dark:bg-slate-700 hover:bg-sky-400 dark:hover:bg-sky-500'
                         )}
+                        data-map-position={mapPosition}
                     >
                         {/* Visible grip dots — three subtle dashes,
                             oriented perpendicular to the drag axis so
@@ -3424,9 +3521,10 @@ const OverviewPage: React.FC = () => {
                         share. */}
                     <div
                         className={cn(
-                            'flex flex-col min-h-0 min-w-0 w-full',
+                            'scd-overview-map flex flex-col min-h-0 min-w-0 w-full',
                             mapPosition === 'right' ? 'xl:flex-1' : 'flex-1'
                         )}
+                        data-map-position={mapPosition}
                     >
                         <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-3 shadow-sm flex flex-col">
                             <div className="flex items-center justify-between mb-2 flex-shrink-0">
