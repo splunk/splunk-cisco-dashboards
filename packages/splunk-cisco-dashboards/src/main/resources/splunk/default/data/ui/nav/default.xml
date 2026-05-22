@@ -16,6 +16,9 @@
         <view name="workplace_spog_v1"/>
         <a href="network_diagram">Network Diagram</a>
         <a href="topology_canvas_v1">Topology Canvas</a>
+        <a href="statewide_exercise_v1_studio_modern">Test</a>
+        <view name=""/>
+        
     </collection>
 
     <!-- ================================================================= -->
