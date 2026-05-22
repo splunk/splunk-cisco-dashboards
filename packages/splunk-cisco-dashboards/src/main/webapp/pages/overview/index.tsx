@@ -43,6 +43,9 @@ import {
     Table2,
     ClipboardCheck,
     ArrowRight,
+    ArrowUp,
+    ArrowDown,
+    ArrowUpDown,
 } from 'lucide-react';
 import { DashboardSection } from '@/common/components/florida/DashboardSection';
 import { MetricItem } from '@/common/components/florida/MetricItem';
@@ -3721,6 +3724,13 @@ interface MetricDetailTableModalProps {
     refreshToken: number;
 }
 
+type MetricDetailSortDirection = 'asc' | 'desc';
+
+interface MetricDetailSortState {
+    field: string;
+    direction: MetricDetailSortDirection;
+}
+
 const readRowString = (
     row: Record<string, unknown>,
     field: string,
@@ -3734,6 +3744,89 @@ const readRowString = (
     return text || fallback;
 };
 
+const EMPTY_SORT_VALUES = new Set([
+    '',
+    '-',
+    'n/a',
+    'na',
+    'none',
+    'null',
+    'undefined',
+    'no current sample',
+]);
+
+const DURATION_UNIT_TO_MS: Record<string, number> = {
+    ms: 1,
+    millisecond: 1,
+    milliseconds: 1,
+    s: 1000,
+    sec: 1000,
+    secs: 1000,
+    second: 1000,
+    seconds: 1000,
+    m: 60_000,
+    min: 60_000,
+    mins: 60_000,
+    minute: 60_000,
+    minutes: 60_000,
+    h: 3_600_000,
+    hr: 3_600_000,
+    hrs: 3_600_000,
+    hour: 3_600_000,
+    hours: 3_600_000,
+    d: 86_400_000,
+    day: 86_400_000,
+    days: 86_400_000,
+};
+
+const isEmptySortValue = (value: string): boolean =>
+    EMPTY_SORT_VALUES.has(value.trim().toLowerCase());
+
+const parseSortableDetailNumber = (value: string): number | null => {
+    const normalized = value.trim().toLowerCase().replace(/,/g, '');
+    if (!normalized || isEmptySortValue(normalized)) return null;
+
+    if (/^[+-]?(?:\d+(?:\.\d+)?|\.\d+)\s*%?$/.test(normalized)) {
+        return Number.parseFloat(normalized);
+    }
+
+    const durationMatch = normalized.match(
+        /^([+-]?(?:\d+(?:\.\d+)?|\.\d+))\s*([a-z]+)(?:\s+ago)?$/
+    );
+    if (durationMatch) {
+        const unit = durationMatch[2];
+        const multiplier = DURATION_UNIT_TO_MS[unit];
+        if (multiplier !== undefined) {
+            return Number.parseFloat(durationMatch[1]) * multiplier;
+        }
+    }
+
+    return null;
+};
+
+const compareDetailCellValues = (
+    a: string,
+    b: string,
+    direction: MetricDetailSortDirection
+): number => {
+    const aEmpty = isEmptySortValue(a);
+    const bEmpty = isEmptySortValue(b);
+    if (aEmpty && bEmpty) return 0;
+    if (aEmpty) return 1;
+    if (bEmpty) return -1;
+
+    const aNumber = parseSortableDetailNumber(a);
+    const bNumber = parseSortableDetailNumber(b);
+    const base =
+        aNumber !== null && bNumber !== null
+            ? aNumber - bNumber
+            : a.localeCompare(b, undefined, {
+                  numeric: true,
+                  sensitivity: 'base',
+              });
+    return direction === 'asc' ? base : -base;
+};
+
 const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
     config,
     onClose,
@@ -3745,6 +3838,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
         useState<MetricDetailTableColumn[]>(config.columns);
     const [loading, setLoading] = useState<boolean>(false);
     const [errorMessage, setErrorMessage] = useState<string>('');
+    const [sortState, setSortState] = useState<MetricDetailSortState | null>(null);
 
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {
@@ -3812,6 +3906,35 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
     const statusField = config.statusField;
     const displayColumns = tableColumns.length > 0 ? tableColumns : config.columns;
     const columnCount = Math.max(displayColumns.length, 1);
+    const sortedRows = useMemo(() => {
+        if (!sortState) return rows;
+        const columnExists = displayColumns.some(
+            (column) => column.field === sortState.field
+        );
+        if (!columnExists) return rows;
+        return rows
+            .map((row, index) => ({ row, index }))
+            .sort((a, b) => {
+                const result = compareDetailCellValues(
+                    a.row[sortState.field] ?? '',
+                    b.row[sortState.field] ?? '',
+                    sortState.direction
+                );
+                return result || a.index - b.index;
+            })
+            .map(({ row }) => row);
+    }, [displayColumns, rows, sortState]);
+    const handleSortColumn = (field: string) => {
+        setSortState((current) => {
+            if (current?.field === field) {
+                return {
+                    field,
+                    direction: current.direction === 'asc' ? 'desc' : 'asc',
+                };
+            }
+            return { field, direction: 'asc' };
+        });
+    };
     const availableCount = statusField
         ? rows.filter((row) => row[statusField] === availableStatus).length
         : 0;
@@ -3885,18 +4008,59 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
                     <table className="w-full min-w-[860px] text-sm">
                         <thead className="sticky top-0 z-10 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
                             <tr className="text-left text-xs font-bold text-slate-500 dark:text-slate-400">
-                                {displayColumns.map((column, index) => (
-                                    <th
-                                        key={column.field}
-                                        className={cn(
-                                            index === 0 ? 'px-5' : 'px-4',
-                                            'py-3',
-                                            column.align === 'right' && 'text-right'
-                                        )}
-                                    >
-                                        {column.label}
-                                    </th>
-                                ))}
+                                {displayColumns.map((column, index) => {
+                                    const isSorted = sortState?.field === column.field;
+                                    const SortIcon = isSorted
+                                        ? sortState.direction === 'asc'
+                                            ? ArrowUp
+                                            : ArrowDown
+                                        : ArrowUpDown;
+                                    return (
+                                        <th
+                                            key={column.field}
+                                            scope="col"
+                                            aria-sort={
+                                                isSorted
+                                                    ? sortState.direction === 'asc'
+                                                        ? 'ascending'
+                                                        : 'descending'
+                                                    : 'none'
+                                            }
+                                            className={cn(
+                                                index === 0 ? 'px-5' : 'px-4',
+                                                'py-3',
+                                                column.align === 'right' && 'text-right'
+                                            )}
+                                        >
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    handleSortColumn(column.field)
+                                                }
+                                                title={`Sort by ${column.label}`}
+                                                className={cn(
+                                                    'group inline-flex w-full items-center gap-1.5 rounded px-1 py-0.5 -mx-1 text-left transition-colors hover:text-sky-600 dark:hover:text-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-400',
+                                                    column.align === 'right'
+                                                        ? 'justify-end'
+                                                        : 'justify-start',
+                                                    isSorted &&
+                                                        'text-sky-600 dark:text-sky-300'
+                                                )}
+                                            >
+                                                <span>{column.label}</span>
+                                                <SortIcon
+                                                    className={cn(
+                                                        'h-3 w-3 flex-shrink-0',
+                                                        isSorted
+                                                            ? 'opacity-100'
+                                                            : 'opacity-35 group-hover:opacity-80'
+                                                    )}
+                                                    aria-hidden="true"
+                                                />
+                                            </button>
+                                        </th>
+                                    );
+                                })}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -3928,7 +4092,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
                                     </td>
                                 </tr>
                             ) : (
-                                rows.map((row, rowIndex) => {
+                                sortedRows.map((row, rowIndex) => {
                                     const rowStatus = statusField
                                         ? row[statusField]
                                         : '';

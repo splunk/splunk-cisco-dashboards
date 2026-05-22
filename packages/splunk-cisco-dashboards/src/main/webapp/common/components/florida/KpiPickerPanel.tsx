@@ -562,6 +562,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     const tagInputRef = useRef<HTMLInputElement | null>(null);
     const drilldownTagSelectRef = useRef<HTMLDivElement | null>(null);
     const drilldownTagInputRef = useRef<HTMLInputElement | null>(null);
+    const drilldownDraftResetKeyRef = useRef<string>('');
 
     // Lazy-load searchbase.conf when the panel first opens. Cached at
     // the service layer; subsequent opens reuse the in-memory list.
@@ -1159,8 +1160,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                 return a.searchName.localeCompare(b.searchName, undefined, {
                     sensitivity: 'base',
                 });
-            })
-            .slice(0, 8);
+            });
     }, [
         catalogue,
         selectedEntry,
@@ -1178,13 +1178,17 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
 
     useEffect(() => {
         if (!open || !selectedEntry) {
+            drilldownDraftResetKeyRef.current = '';
             setDrilldownDraftSearchName('');
             setDrilldownQuery('');
             return;
         }
+        const resetKey = `${selectedEntry.id}:${selectedConfiguredDrilldownName}`;
+        if (drilldownDraftResetKeyRef.current === resetKey) return;
+        drilldownDraftResetKeyRef.current = resetKey;
         setDrilldownDraftSearchName(selectedConfiguredDrilldownName);
         setDrilldownQuery('');
-    }, [open, selectedEntry, selectedConfiguredDrilldownName]);
+    }, [open, selectedEntry?.id, selectedConfiguredDrilldownName]);
 
     // Output column names parsed from the selected entry's SPL — drives
     // the clickable chip list under the Value Field input. Empty array
@@ -2908,7 +2912,20 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 )}
                                             </div>
 
-                                            <div className="max-h-44 overflow-auto space-y-1 pr-1">
+                                            <div className="flex items-center justify-between gap-2 px-1 text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                                                <span>
+                                                    {drilldownCandidates.length.toLocaleString()}{' '}
+                                                    {drilldownCandidates.length === 1
+                                                        ? 'match'
+                                                        : 'matches'}
+                                                </span>
+                                                <span>
+                                                    {drilldownBaseEntries.length.toLocaleString()}{' '}
+                                                    searchable
+                                                </span>
+                                            </div>
+
+                                            <div className="max-h-72 overflow-auto space-y-1 pr-1">
                                                 {drilldownCandidates.length === 0 ? (
                                                     <p className="px-1 py-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
                                                         No matching Searchbase entries.
