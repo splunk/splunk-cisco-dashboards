@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
-# Package and install the Splunk Cisco Dashboards app into local Splunk.
+# Package the Splunk Cisco Dashboards app. Optionally install into local Splunk.
 #
-# Default workflow:
+# Default workflow (package only, no install):
 #   ./build.sh
 #
 # Useful options:
-#   ./build.sh --restart
-#   SPLUNK_AUTH='admin:changeme' ./build.sh
-#   SPLUNK_BIN=/opt/splunk/bin/splunk ./build.sh
+#   ./build.sh --install
+#   ./build.sh --install --restart
+#   SPLUNK_AUTH='admin:changeme' ./build.sh --install
+#   SPLUNK_BIN=/opt/splunk/bin/splunk ./build.sh --install
 
 set -euo pipefail
 
@@ -17,16 +18,19 @@ DIST_DIR="${ROOT_DIR}/dist"
 APP_NAME="splunk-cisco-dashboards"
 SPLUNK_BIN="${SPLUNK_BIN:-/opt/splunk/bin/splunk}"
 
+do_install=0
 restart_after_install=0
-skip_install=0
 
 usage() {
     cat <<EOF
 Usage: ./build.sh [options]
 
+By default this script only packages the app into ./dist and exits.
+Pass --install to also install the package into local Splunk.
+
 Options:
-  --restart       Restart Splunk after installing the app.
-  --no-install    Build/package only; do not install into Splunk.
+  --install       Install the packaged app into local Splunk.
+  --restart       Restart Splunk after installing (requires --install).
   --splunk-bin P  Use a specific Splunk CLI path.
   -h, --help      Show this help.
 
@@ -38,12 +42,12 @@ EOF
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --restart)
-            restart_after_install=1
+        --install)
+            do_install=1
             shift
             ;;
-        --no-install)
-            skip_install=1
+        --restart)
+            restart_after_install=1
             shift
             ;;
         --splunk-bin)
@@ -83,8 +87,11 @@ fi
 
 echo "[build] Package ready: ${package_path}"
 
-if [[ "$skip_install" -eq 1 ]]; then
-    echo "[build] Skipping Splunk install (--no-install)."
+if [[ "$do_install" -eq 0 ]]; then
+    if [[ "$restart_after_install" -eq 1 ]]; then
+        echo "[build] --restart has no effect without --install; skipping." >&2
+    fi
+    echo "[build] Package only. Pass --install to install into Splunk."
     exit 0
 fi
 
@@ -110,5 +117,5 @@ if [[ "$restart_after_install" -eq 1 ]]; then
     echo "[build] Restarting Splunk..."
     "${restart_cmd[@]}"
 else
-    echo "[build] Install complete. Run './build.sh --restart' when you want a full Splunk restart."
+    echo "[build] Install complete. Run './build.sh --install --restart' when you want a full Splunk restart."
 fi
