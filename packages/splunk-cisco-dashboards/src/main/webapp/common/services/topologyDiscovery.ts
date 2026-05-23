@@ -92,8 +92,6 @@ export type DeviceShapeId =
     | 'modular_chassis_switch'
     | 'nexus_aci_fabric'
     | 'sdwan_controller'
-    | 'catalyst_3850_24_front'
-    | 'catalyst_3850_24_rear'
     | 'custom_stencil'
     // --- Security ---
     | 'firewall'

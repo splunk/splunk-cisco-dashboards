@@ -62,12 +62,14 @@ import { AnimationsEnabledProvider } from '@/common/contexts/AnimationsEnabledCo
 import { IpAddressVisibilityProvider } from '@/common/contexts/IpAddressVisibilityContext';
 import { useExportPage } from '@/common/hooks/useExportPage';
 
-const BLANK_PAYLOAD: SavedDiagramPayload = {
+const createBlankPayload = (): SavedDiagramPayload => ({
     version: 1,
     nodes: [],
     edges: [],
     groups: [],
-};
+});
+
+const BLANK_PAYLOAD: SavedDiagramPayload = createBlankPayload();
 
 interface StatusMessage {
     kind: 'info' | 'error';
@@ -133,6 +135,7 @@ const NetworkDiagramPage: React.FC = () => {
     const [activePayload, setActivePayload] = useState<SavedDiagramPayload | null>(
         BLANK_PAYLOAD
     );
+    const [canvasResetVersion, setCanvasResetVersion] = useState<number>(0);
     /** Mirrors the canvas's current payload (live as the user
      *  edits). Distinct from `activePayload` (which is what's on
      *  disk, or null for "no diagram loaded yet") — this is what
@@ -527,9 +530,11 @@ const NetworkDiagramPage: React.FC = () => {
             );
             if (!confirm) return;
         }
+        const blankPayload = createBlankPayload();
         setDiagramName(null);
-        setActivePayload(BLANK_PAYLOAD);
-        livePayloadRef.current = BLANK_PAYLOAD;
+        setActivePayload(blankPayload);
+        livePayloadRef.current = blankPayload;
+        setCanvasResetVersion((current) => current + 1);
         setDirty(false);
         writeDiagramHash(null);
         setStatusMessage({ kind: 'info', text: 'Started new blank diagram.' });
@@ -676,9 +681,11 @@ const NetworkDiagramPage: React.FC = () => {
                     // can't be loaded, fall through to the blank
                     // state so the operator isn't stuck on a
                     // stale local payload.
+                    const blankPayload = createBlankPayload();
                     setDiagramName(null);
-                    setActivePayload(BLANK_PAYLOAD);
-                    livePayloadRef.current = BLANK_PAYLOAD;
+                    setActivePayload(blankPayload);
+                    livePayloadRef.current = blankPayload;
+                    setCanvasResetVersion((current) => current + 1);
                     setDirty(false);
                     writeDiagramHash(null);
                     setStatusMessage({
@@ -687,13 +694,15 @@ const NetworkDiagramPage: React.FC = () => {
                     });
                 }
             } else {
+                const blankPayload = createBlankPayload();
                 setStatusMessage({
                     kind: 'info',
                     text: `Deleted "${diagramName}".`,
                 });
                 setDiagramName(null);
-                setActivePayload(BLANK_PAYLOAD);
-                livePayloadRef.current = BLANK_PAYLOAD;
+                setActivePayload(blankPayload);
+                livePayloadRef.current = blankPayload;
+                setCanvasResetVersion((current) => current + 1);
                 setDirty(false);
                 writeDiagramHash(null);
             }
@@ -811,6 +820,7 @@ const NetworkDiagramPage: React.FC = () => {
                     <AnimationsEnabledProvider value={animationsEnabled}>
                         <IpAddressVisibilityProvider value={ipAddressesVisible}>
                             <NetworkDiagramCanvas
+                                key={`canvas-${canvasResetVersion}`}
                                 initialPayload={activePayload}
                                 assetIndex={assetIndex}
                                 hostVisibility={hostVisibility}

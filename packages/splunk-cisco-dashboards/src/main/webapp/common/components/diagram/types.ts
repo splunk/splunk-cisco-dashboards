@@ -129,16 +129,9 @@ export const nodeSizeForCustomStencil = (
     };
 };
 
-const WIDE_DEVICE_SHAPES = new Set<DeviceShapeId>([
-    'catalyst_3850_24_front',
-    'catalyst_3850_24_rear',
-]);
-
 export const nodeSizeForShape = (
     shape: DeviceShapeId | undefined
 ): { width: number; height: number } =>
     shape === 'custom_stencil'
         ? NODE_SIZE_PRESETS.wideDevice
-        : shape && WIDE_DEVICE_SHAPES.has(shape)
-          ? NODE_SIZE_PRESETS.wideDevice
-          : NODE_SIZE_PRESETS.device;
+        : NODE_SIZE_PRESETS.device;

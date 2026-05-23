@@ -928,39 +928,6 @@ export const CiscoIotSensorIcon = wrap(Activity, COLOR.LIME);
 export const CiscoBranchOfficeIcon = wrap(Building2, COLOR.INDIGO);
 export const CiscoDatacenterIcon = wrap(Warehouse, COLOR.SLATE);
 
-const CATALYST_3850_IMAGE_ROOT =
-    '/static/app/splunk-cisco-dashboards/images/catalyst-3850';
-
-const catalyst3850ImageIcon = (
-    displayName: string,
-    fallbackTitle: string,
-    fileName: string
-): React.FC<IconProps> => {
-    const Wrapped: React.FC<IconProps> = ({ className, title }) => (
-        <img
-            src={`${CATALYST_3850_IMAGE_ROOT}/${fileName}`}
-            alt={title ?? fallbackTitle}
-            title={title ?? fallbackTitle}
-            className={cn('object-contain', className)}
-            draggable={false}
-        />
-    );
-    Wrapped.displayName = `DeviceIcon(${displayName})`;
-    return Wrapped;
-};
-
-export const Catalyst385024FrontIcon = catalyst3850ImageIcon(
-    'Catalyst385024Front',
-    'Cisco Catalyst 3850 24 front',
-    'ws-c3850-24-front.png'
-);
-
-export const Catalyst385024RearIcon = catalyst3850ImageIcon(
-    'Catalyst385024Rear',
-    'Cisco Catalyst 3850 24 rear',
-    'ws-c3850-24-rear.png'
-);
-
 /** Registry — keys are `DeviceShapeId` values. Order matters for
  *  human-friendly diffing only; consumers index by id.
  *
@@ -984,8 +951,6 @@ export const CISCO_ICONS = {
     modular_chassis_switch: CiscoModularChassisIcon,
     nexus_aci_fabric: CiscoNexusAciFabricIcon,
     sdwan_controller: CiscoSdwanControllerIcon,
-    catalyst_3850_24_front: Catalyst385024FrontIcon,
-    catalyst_3850_24_rear: Catalyst385024RearIcon,
     custom_stencil: CiscoGenericIcon,
 
     // Security

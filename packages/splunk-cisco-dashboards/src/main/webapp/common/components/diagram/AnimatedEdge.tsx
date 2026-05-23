@@ -184,9 +184,7 @@ const resolveAnchorPoint = (
 };
 
 const isStencilShape = (shape: unknown): boolean =>
-    shape === 'custom_stencil' ||
-    shape === 'catalyst_3850_24_front' ||
-    shape === 'catalyst_3850_24_rear';
+    shape === 'custom_stencil';
 
 /** Build 115.11 — palette for the live-status mode. Mirrors the
  *  Florida overview dashboard's site connector colours: emerald

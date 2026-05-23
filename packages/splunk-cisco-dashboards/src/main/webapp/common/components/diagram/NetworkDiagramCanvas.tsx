@@ -602,23 +602,12 @@ const savedNodeToRF = (
         shape === 'custom_stencil'
             ? nodeSizeForCustomStencil(saved.customStencil)
             : nodeSizeForShape(shape);
-    const isCatalystStencil =
-        shape === 'catalyst_3850_24_front' ||
-        shape === 'catalyst_3850_24_rear';
     const savedWidth =
         typeof saved.width === 'number' ? saved.width : undefined;
     const savedHeight =
         typeof saved.height === 'number' ? saved.height : undefined;
     const width = savedWidth ?? defaultSize.width;
-    const height =
-        isCatalystStencil &&
-        savedHeight !== undefined &&
-        savedHeight > defaultSize.height * 2
-            ? Math.max(
-                  defaultSize.height,
-                  Math.round((width * defaultSize.height) / defaultSize.width)
-              )
-            : savedHeight ?? defaultSize.height;
+    const height = savedHeight ?? defaultSize.height;
     return {
         id: saved.id,
         type: `device:${shape}`,

@@ -67,11 +67,6 @@ interface ShapeData {
     customStencil?: CustomStencilAsset;
 }
 
-const CATALYST_STENCIL_SHAPES = new Set<DeviceShapeId>([
-    'catalyst_3850_24_front',
-    'catalyst_3850_24_rear',
-]);
-
 /**
  * Build 111: added `dotGlow` per status — a coloured drop-shadow
  * around the status dot so it reads as a glowing LED rather than a
@@ -296,7 +291,6 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
         const spl = buildMetadataHostSpl(candidateHost);
         openSplunkSearch(spl);
     };
-    const isCatalystStencil = CATALYST_STENCIL_SHAPES.has(node.shape);
     const customStencil = data.customStencil;
     const title = `${node.label}\nStatus: ${status.label}${
         node.healthScore !== undefined ? ` (${node.healthScore})` : ''
@@ -304,7 +298,7 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
         vendorModelLine ? `\nHardware: ${vendorModelLine}` : ''
     }${node.serialNumber ? `\nSerial: ${node.serialNumber}` : ''}`;
 
-    if (customStencil || isCatalystStencil) {
+    if (customStencil) {
         return (
             <div
                 className="group relative flex h-full w-full items-center justify-center bg-transparent"
@@ -319,16 +313,12 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
                     handleClassName="!bg-sky-500 !border-white !w-2 !h-2"
                 />
                 <NodeHandles freeform={data.freeformAnchors === true} />
-                {customStencil ? (
-                    <img
-                        src={customStencil.src}
-                        alt={customStencil.label}
-                        className="block h-full w-full object-contain"
-                        draggable={false}
-                    />
-                ) : (
-                    <ShapeSilhouette shape={node.shape} className="h-full w-full" />
-                )}
+                <img
+                    src={customStencil.src}
+                    alt={customStencil.label}
+                    className="block h-full w-full object-contain"
+                    draggable={false}
+                />
             </div>
         );
     }
@@ -548,8 +538,6 @@ export const F5LoadBalancerShape = DeviceShape;
 export const ModularChassisSwitchShape = DeviceShape;
 export const NexusAciFabricShape = DeviceShape;
 export const SdwanControllerShape = DeviceShape;
-export const Catalyst385024FrontShape = DeviceShape;
-export const Catalyst385024RearShape = DeviceShape;
 export const CustomStencilShape = DeviceShape;
 export const VpnConcentratorShape = DeviceShape;
 export const IdsIpsShape = DeviceShape;
@@ -658,8 +646,6 @@ export const TOPOLOGY_NODE_TYPES = {
     'device:modular_chassis_switch': ModularChassisSwitchShape,
     'device:nexus_aci_fabric': NexusAciFabricShape,
     'device:sdwan_controller': SdwanControllerShape,
-    'device:catalyst_3850_24_front': Catalyst385024FrontShape,
-    'device:catalyst_3850_24_rear': Catalyst385024RearShape,
     'device:custom_stencil': CustomStencilShape,
     // Security
     'device:firewall': FirewallShape,

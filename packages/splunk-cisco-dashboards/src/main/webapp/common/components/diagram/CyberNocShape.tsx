@@ -104,8 +104,6 @@ const SHAPE_TO_ICON: Record<DeviceShapeId, keyof typeof CISCO_ICONS> = {
     modular_chassis_switch: 'modular_chassis_switch',
     nexus_aci_fabric: 'nexus_aci_fabric',
     sdwan_controller: 'sdwan_controller',
-    catalyst_3850_24_front: 'catalyst_3850_24_front',
-    catalyst_3850_24_rear: 'catalyst_3850_24_rear',
     custom_stencil: 'custom_stencil',
     // Security
     firewall: 'firewall',

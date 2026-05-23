@@ -57,7 +57,6 @@ type ShapeCategory =
     | 'edge'
     | 'splunk'
     | 'places'
-    | 'catalyst'
     | 'cisco'
     | 'layout';
 
@@ -90,9 +89,6 @@ const SHAPE_TILES: ShapeTileSpec[] = [
     { id: 'nexus_aci_fabric', label: 'Nexus / ACI', description: 'Cisco Nexus / ACI fabric', category: 'advanced' },
     { id: 'sdwan_controller', label: 'SD-WAN Controller', description: 'Cisco SD-WAN control plane / vManage', category: 'advanced' },
     { id: 'f5_load_balancer', label: 'F5 Load Balancer', description: 'F5 BIG-IP / LTM / GTM load balancer', category: 'advanced' },
-    // Extracted Catalyst stencil assets
-    { id: 'catalyst_3850_24_front', label: 'C3850-24 Front', description: 'Cisco Catalyst 3850 24-port front face', category: 'catalyst' },
-    { id: 'catalyst_3850_24_rear', label: 'C3850-24 Rear', description: 'Cisco Catalyst 3850 24-port rear face', category: 'catalyst' },
     // Security
     { id: 'firewall', label: 'Firewall', description: 'Perimeter / DC firewall (ASA / FTD)', category: 'security' },
     { id: 'palo_alto_firewall', label: 'Palo Alto FW', description: 'Palo Alto Networks firewall', category: 'security' },
@@ -178,7 +174,6 @@ const CATEGORY_LABELS: Record<ShapeCategory, string> = {
     edge: 'Edge & Cloud',
     splunk: 'Splunk Architecture',
     places: 'Places',
-    catalyst: 'Catalyst 3850',
     cisco: 'Cisco',
     layout: 'Layout',
 };
@@ -192,8 +187,6 @@ const SHAPE_SEARCH_ALIASES: Partial<
     modular_chassis_switch: ['modular', 'chassis', '6500', '6504', '4500', '4507', 'supervisor', 'line card'],
     nexus_aci_fabric: ['nexus', 'aci', 'apic', 'fabric', 'leaf spine', 'spine leaf'],
     sdwan_controller: ['sdwan', 'sd-wan', 'vmanage', 'vsmart', 'vbond', 'controller'],
-    catalyst_3850_24_front: ['cisco', 'catalyst', '3850', 'ws-c3850', '24 port', 'front', 'switch'],
-    catalyst_3850_24_rear: ['cisco', 'catalyst', '3850', 'ws-c3850', '24 port', 'rear', 'switch'],
     wlc: ['wireless controller', 'wireless lan controller'],
     access_point: ['ap', 'wireless'],
     load_balancer: ['lb', 'vip', 'elastic load balancer', 'hec endpoint'],
@@ -573,8 +566,6 @@ const SHAPE_DEFAULT_LABEL_OVERRIDES: Partial<Record<DeviceShapeId, string>> = {
     cisco_server: 'Cisco Server',
     cisco_cloud: 'Cisco Cloud',
     cisco_data_center: 'Cisco Data Center',
-    catalyst_3850_24_front: 'WS-C3850-24 Front',
-    catalyst_3850_24_rear: 'WS-C3850-24 Rear',
 };
 
 const tilePayload = (
@@ -611,8 +602,6 @@ const ShapeTile: React.FC<ShapeTileSpec> = ({ id, label, description }) => {
     // "T" for textbox). Everything else looks up the Cisco SVG.
     const Icon =
         id === 'region' || id === 'textbox' ? null : CISCO_ICONS[id];
-    const isCatalystStencil =
-        id === 'catalyst_3850_24_front' || id === 'catalyst_3850_24_rear';
     const handleDragStart = (e: React.DragEvent<HTMLDivElement>): void => {
         const payload = tilePayload(id);
         e.dataTransfer.setData(PALETTE_DND_MIME, JSON.stringify(payload));
@@ -644,17 +633,11 @@ const ShapeTile: React.FC<ShapeTileSpec> = ({ id, label, description }) => {
             <div
                 className={cn(
                     'flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:text-sky-600 dark:group-hover:text-sky-400',
-                    isCatalystStencil ? 'h-10 w-full px-1' : 'w-10 h-10'
+                    'w-10 h-10'
                 )}
             >
                 {Icon ? (
-                    <Icon
-                        className={
-                            isCatalystStencil
-                                ? 'w-full h-9 object-contain'
-                                : 'w-9 h-9'
-                        }
-                    />
+                    <Icon className="w-9 h-9" />
                 ) : id === 'textbox' ? (
                     // A typographic "T" reads as "text" at a glance,
                     // matching the affordance of design-tool text
@@ -751,7 +734,6 @@ export const ShapesTab: React.FC = () => {
         'edge',
         'splunk',
         'places',
-        'catalyst',
         'cisco',
         'layout',
     ];
