@@ -7,6 +7,7 @@
 # Useful options:
 #   ./build.sh --install
 #   ./build.sh --install --restart
+#   ./build.sh --install --auth admin:changeme
 #   SPLUNK_AUTH='admin:changeme' ./build.sh --install
 #   SPLUNK_BIN=/opt/splunk/bin/splunk ./build.sh --install
 
@@ -31,12 +32,15 @@ Pass --install to also install the package into local Splunk.
 Options:
   --install       Install the packaged app into local Splunk.
   --restart       Restart Splunk after installing (requires --install).
+  --auth U:P      Splunk auth (user:password) passed to install/restart.
+                  Overrides the SPLUNK_AUTH environment variable.
   --splunk-bin P  Use a specific Splunk CLI path.
   -h, --help      Show this help.
 
 Environment:
   SPLUNK_BIN      Splunk CLI path. Defaults to /opt/splunk/bin/splunk.
   SPLUNK_AUTH     Optional auth passed as -auth, for example admin:changeme.
+                  --auth (if provided) takes precedence over this.
 EOF
 }
 
@@ -49,6 +53,18 @@ while [[ $# -gt 0 ]]; do
         --restart)
             restart_after_install=1
             shift
+            ;;
+        --auth)
+            if [[ $# -lt 2 ]]; then
+                echo "ERROR: --auth requires user:password." >&2
+                exit 2
+            fi
+            if [[ "$2" != *:* ]]; then
+                echo "ERROR: --auth value must be in user:password form." >&2
+                exit 2
+            fi
+            SPLUNK_AUTH="$2"
+            shift 2
             ;;
         --splunk-bin)
             if [[ $# -lt 2 ]]; then
@@ -90,6 +106,9 @@ echo "[build] Package ready: ${package_path}"
 if [[ "$do_install" -eq 0 ]]; then
     if [[ "$restart_after_install" -eq 1 ]]; then
         echo "[build] --restart has no effect without --install; skipping." >&2
+    fi
+    if [[ -n "${SPLUNK_AUTH:-}" ]]; then
+        echo "[build] --auth/SPLUNK_AUTH has no effect without --install; skipping." >&2
     fi
     echo "[build] Package only. Pass --install to install into Splunk."
     exit 0
