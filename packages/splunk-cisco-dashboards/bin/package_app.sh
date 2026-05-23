@@ -48,6 +48,27 @@ if [[ -f "$META_FILE" ]]; then
   echo "[package] default.meta: reverted export to 'none' for Splunkbase"
 fi
 
+# Bump [install] build in the packaged app.conf only. Source app.conf is
+# never modified. Counter climbs across runs: new = max(source_build, highest
+# build stamped in any existing dist/ tarball) + 1. The .tar.gz files in
+# dist/ act as the persistent counter — no state file needed.
+PKG_APP_CONF="${TMP_DIR}/${APP_NAME}/default/app.conf"
+source_build=$(grep -E '^\s*build\s*=' "$APP_CONF" | head -1 | sed -E 's/.*=\s*//' | tr -d '[:space:]')
+highest_prev=0
+for prev_tar in "${DIST_DIR}"/${APP_NAME}-*.tar.gz; do
+  [[ -f "$prev_tar" ]] || continue
+  b=$(tar -xzOf "$prev_tar" "${APP_NAME}/default/app.conf" 2>/dev/null \
+      | grep -E '^\s*build\s*=' | head -1 | sed -E 's/.*=\s*//' | tr -d '[:space:]')
+  if [[ "$b" =~ ^[0-9]+$ ]] && (( b > highest_prev )); then
+    highest_prev=$b
+  fi
+done
+base=$source_build
+(( highest_prev > base )) && base=$highest_prev
+new_build=$((base + 1))
+sed -i '' -E "s/^([[:space:]]*build[[:space:]]*=[[:space:]]*)[0-9]+/\\1${new_build}/" "$PKG_APP_CONF"
+echo "[package] app.conf: bumped build ${base} -> ${new_build} (package only, source unchanged)"
+
 # Strip macOS extended attributes to keep archive clean
 xattr -cr "${TMP_DIR}/${APP_NAME}" 2>/dev/null || true
 
