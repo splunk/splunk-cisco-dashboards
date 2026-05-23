@@ -17,6 +17,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="${ROOT_DIR}/packages/splunk-cisco-dashboards"
 DIST_DIR="${ROOT_DIR}/dist"
 APP_NAME="splunk-cisco-dashboards"
+APP_CONF="${APP_DIR}/src/main/resources/splunk/default/app.conf"
 SPLUNK_BIN="${SPLUNK_BIN:-/opt/splunk/bin/splunk}"
 
 do_install=0
@@ -85,6 +86,36 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+# Bump [install] build in app.conf so every package gets a unique build
+# number. Splunk uses this value to invalidate the UI bundle cache after
+# install, so a fresh number per package guarantees customers see new
+# CSS/JS the moment they reload. Bump runs before packaging so the value
+# baked into the .tar.gz is the new one. A failed build still leaves
+# app.conf dirty — that's expected; the next run picks up from the new
+# number and the user can `git checkout` the file if they want to undo.
+if [[ ! -f "$APP_CONF" ]]; then
+    echo "ERROR: app.conf not found at ${APP_CONF}" >&2
+    exit 1
+fi
+current_build="$(
+    grep -E '^[[:space:]]*build[[:space:]]*=' "$APP_CONF" \
+        | head -1 \
+        | sed -E 's/.*=[[:space:]]*//' \
+        | tr -d '[:space:]'
+)"
+if [[ ! "$current_build" =~ ^[0-9]+$ ]]; then
+    echo "ERROR: Could not read numeric '[install] build' from app.conf (got '${current_build}')." >&2
+    exit 1
+fi
+new_build=$((current_build + 1))
+# Portable in-place edit (works on both macOS BSD sed and GNU sed). The
+# regex anchors on '^[[:space:]]*build[[:space:]]*=' and requires digits
+# after the '=' so 'version = 1.0.10' is never matched.
+tmp_app_conf="$(mktemp)"
+sed -E "s/^([[:space:]]*build[[:space:]]*=[[:space:]]*)[0-9]+/\1${new_build}/" \
+    "$APP_CONF" > "$tmp_app_conf" && mv "$tmp_app_conf" "$APP_CONF"
+echo "[build] Bumped [install] build: ${current_build} -> ${new_build}"
 
 echo "[build] Packaging ${APP_NAME}..."
 (cd "$APP_DIR" && yarn run package:app)
