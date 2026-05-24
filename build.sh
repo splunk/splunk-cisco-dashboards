@@ -103,6 +103,16 @@ fi
 
 echo "[build] Package ready: ${package_path}"
 
+# Read the [install] build value stamped into the packaged app.conf so we
+# can echo it at the end of the run for visibility.
+package_build="$(
+    tar -xzOf "$package_path" "${APP_NAME}/default/app.conf" 2>/dev/null \
+        | grep -E '^[[:space:]]*build[[:space:]]*=' \
+        | head -1 \
+        | sed -E 's/.*=[[:space:]]*//' \
+        | tr -d '[:space:]'
+)"
+
 if [[ "$do_install" -eq 0 ]]; then
     if [[ "$restart_after_install" -eq 1 ]]; then
         echo "[build] --restart has no effect without --install; skipping." >&2
@@ -111,6 +121,7 @@ if [[ "$do_install" -eq 0 ]]; then
         echo "[build] --auth/SPLUNK_AUTH has no effect without --install; skipping." >&2
     fi
     echo "[build] Package only. Pass --install to install into Splunk."
+    echo "[build] Done. [install] build = ${package_build:-unknown}"
     exit 0
 fi
 
@@ -138,3 +149,5 @@ if [[ "$restart_after_install" -eq 1 ]]; then
 else
     echo "[build] Install complete. Run './build.sh --install --restart' when you want a full Splunk restart."
 fi
+
+echo "[build] Done. [install] build = ${package_build:-unknown}"
