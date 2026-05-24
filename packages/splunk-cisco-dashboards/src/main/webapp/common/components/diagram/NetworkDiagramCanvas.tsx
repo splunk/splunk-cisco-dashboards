@@ -3629,7 +3629,7 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                 defaultViewport={{ x: 0, y: 0, zoom: 1 }}
                 proOptions={proOptions}
                 minZoom={0.2}
-                maxZoom={5}
+                maxZoom={10}
                 connectOnClick={false}
                 // Build 113: gate every editing affordance on `mode`.
                 // View mode preserves pan + zoom (so the operator can

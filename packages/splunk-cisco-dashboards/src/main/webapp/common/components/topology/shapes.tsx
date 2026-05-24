@@ -159,6 +159,9 @@ const CUSTOM_STENCIL_PORT_ANCHORS = [22, 36, 50, 64, 78].flatMap((y) =>
     }))
 );
 
+const isCustomStencilGuideAnchor = (anchor: { x: number; y: number }): boolean =>
+    anchor.y === 50 && (anchor.x - 5) % 15 === 0;
+
 /** Connection handles on all four sides. Each side gets BOTH a
  *  `source` and `target` handle so React Flow can attach edges in
  *  either direction. They share an id-prefix per side so the
@@ -188,6 +191,7 @@ const CustomStencilPortHandles: React.FC<{ selected?: boolean }> = ({
     <>
         {CUSTOM_STENCIL_PORT_ANCHORS.map((anchor) => {
             const idBase = `surface-${anchor.x}-${anchor.y}`;
+            const guideAnchor = isCustomStencilGuideAnchor(anchor);
             const style: React.CSSProperties = {
                 left: `${anchor.x}%`,
                 top: `${anchor.y}%`,
@@ -195,10 +199,12 @@ const CustomStencilPortHandles: React.FC<{ selected?: boolean }> = ({
                 zIndex: 20,
             };
             const className = cn(
-                '!h-1.5 !w-1.5 !min-h-0 !min-w-0 !rounded-full',
+                guideAnchor ? '!h-1.5 !w-1.5' : '!h-1 !w-1',
+                '!min-h-0 !min-w-0 !rounded-full',
                 '!border !border-white !bg-sky-500',
                 'transition-opacity',
-                selected ? 'opacity-80' : 'opacity-0 group-hover:opacity-80'
+                selected && guideAnchor ? 'opacity-70' : 'opacity-0',
+                guideAnchor ? 'group-hover:opacity-80' : 'group-hover:opacity-40'
             );
             return (
                 <React.Fragment key={idBase}>
@@ -260,24 +266,25 @@ const NodeHandles: React.FC<{
             {freeform && customStencil && (
                 <CustomStencilPortHandles selected={selected} />
             )}
-            {sides.map((s) => (
-                <React.Fragment key={s.id}>
-                    <Handle
-                        type="target"
-                        position={s.pos}
-                        id={`${s.id}-target`}
-                        className="!w-2.5 !h-2.5 !bg-sky-400 !border-2 !border-white dark:!border-slate-900 opacity-0 group-hover:opacity-100 transition-opacity"
-                        style={s.style}
-                    />
-                    <Handle
-                        type="source"
-                        position={s.pos}
-                        id={`${s.id}-source`}
-                        className="!w-2.5 !h-2.5 !bg-sky-500 !border-2 !border-white dark:!border-slate-900 opacity-0 group-hover:opacity-100 transition-opacity"
-                        style={s.style}
-                    />
-                </React.Fragment>
-            ))}
+            {!customStencil &&
+                sides.map((s) => (
+                    <React.Fragment key={s.id}>
+                        <Handle
+                            type="target"
+                            position={s.pos}
+                            id={`${s.id}-target`}
+                            className="!w-2.5 !h-2.5 !bg-sky-400 !border-2 !border-white dark:!border-slate-900 opacity-0 group-hover:opacity-100 transition-opacity"
+                            style={s.style}
+                        />
+                        <Handle
+                            type="source"
+                            position={s.pos}
+                            id={`${s.id}-source`}
+                            className="!w-2.5 !h-2.5 !bg-sky-500 !border-2 !border-white dark:!border-slate-900 opacity-0 group-hover:opacity-100 transition-opacity"
+                            style={s.style}
+                        />
+                    </React.Fragment>
+                ))}
         </>
     );
 };
