@@ -58,6 +58,30 @@
     height: 100vh;
 }
 
+/*
+ * Port-level diagramming: imported stencil artwork can represent
+ * real switch/router faceplates, so connectors need to remain
+ * visible as they cross the image. React Flow normally paints
+ * edges below nodes; for this authoring surface we promote the
+ * edge and edge-label layers above node artwork while leaving the
+ * wide transparent interaction path on the SVG edge itself.
+ */
+#scan-root .scd-network-diagram-page .react-flow__nodes {
+    z-index: 20;
+}
+
+#scan-root .scd-network-diagram-page .react-flow__edges {
+    z-index: 30;
+}
+
+#scan-root .scd-network-diagram-page .react-flow__edgelabel-renderer {
+    z-index: 40;
+}
+
+#scan-root .scd-network-diagram-page .react-flow__connectionline {
+    z-index: 45;
+}
+
 /* Edge defaults inside the diagram canvas. The Cyber-NOC theme
  * is dark, so the lighter operations-canvas defaults read as
  * faint gray on near-black. Brighter base color keeps lines

@@ -58,7 +58,6 @@ import {
     isFactoryDiagram as isFactoryDiagramName,
     type DiagramSummary,
 } from '@/common/services/diagramPersistenceService';
-import { APP_BUILD, APP_VERSION_LABEL } from '@/common/lib/buildInfo';
 
 interface DiagramHeaderProps {
     /** Friendly name of the active diagram. `null` while a brand
@@ -348,19 +347,6 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                             )}
                             <ChevronDown className="w-3 h-3 opacity-60" aria-hidden />
                         </button>
-                        <span
-                            className={cn(
-                                'hidden sm:inline-flex items-center h-6 px-2 rounded-md',
-                                'border border-slate-200 dark:border-slate-700',
-                                'bg-slate-50 dark:bg-slate-800',
-                                'font-mono text-[11px] text-slate-500 dark:text-slate-400',
-                                'select-none flex-shrink-0'
-                            )}
-                            title={APP_VERSION_LABEL}
-                            aria-label={APP_VERSION_LABEL}
-                        >
-                            Build {APP_BUILD}
-                        </span>
                         {/* Build 115.20 — only INFO toasts render
                          *  inline next to the picker.
                          *
@@ -396,7 +382,7 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
              *  mode. Pressing Esc also exits (handled by the parent
              *  page's fullscreenchange listener), so this is a
              *  belt-and-suspenders for users not on a keyboard. */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex flex-shrink-0 items-center gap-2">
                 {isViewMode ? (
                     <HeaderButton
                         icon={Pencil}
@@ -407,111 +393,110 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                     />
                 ) : (
                     <>
-                        <HeaderButton
-                            icon={Plus}
-                            label="New"
-                            onClick={onNew}
-                            title="Start a blank diagram"
-                        />
-                        {/* Build 113: Title button — adds an on-canvas
-                         *  headline when none exists yet, or selects the
-                         *  existing one so it can be re-styled. */}
-                        <HeaderButton
-                            icon={Pencil}
-                            label={hasTitle ? 'Edit title' : 'Add title'}
-                            onClick={onAddOrSelectTitle}
-                            title={
-                                hasTitle
-                                    ? 'Select the diagram title to re-style it'
-                                    : 'Insert a draggable on-canvas headline'
-                            }
-                        />
-                        <HeaderButton
-                            icon={Upload}
-                            label="Save"
-                            onClick={onSave}
-                            disabled={busy || !diagramName}
-                            accent={dirty}
-                            title={
-                                diagramName
-                                    ? 'Save the current diagram'
-                                    : 'Pick a name with Save As to save'
-                            }
-                        />
-                        <HeaderButton
-                            icon={Save}
-                            label="Save As"
-                            onClick={handleSaveAsClick}
-                            disabled={busy}
-                            title="Save this diagram under a new name"
-                        />
-                        {/* Build 115.7 — Delete vs Revert.
-                         *
-                         *   isFactoryDiagram && hasLocalOverride:
-                         *     Show "Revert" with a rotate-back icon.
-                         *     Click clears the local stanza so the
-                         *     factory version reappears.
-                         *
-                         *   isFactoryDiagram && !hasLocalOverride:
-                         *     Show "Delete" but disabled with a
-                         *     tooltip explaining why — splunkd's
-                         *     conf REST won't remove default-shipped
-                         *     stanzas, so the click would be a no-op.
-                         *
-                         *   Custom diagrams: regular Delete behaviour.
-                         *
-                         *   `diagramExistsOnServer` still gates
-                         *   the unsaved-draft case (no row yet → no
-                         *   action). */}
-                        {isFactoryDiagram && hasLocalOverride ? (
+                        <ToolbarGroup label="Create">
                             <HeaderButton
-                                icon={RotateCcw}
-                                label="Revert"
-                                onClick={handleDeleteClick}
-                                disabled={busy || !diagramExistsOnServer}
-                                danger
-                                title="Revert this factory diagram to its OOB copy by clearing local customizations"
+                                icon={Plus}
+                                label="New"
+                                onClick={onNew}
+                                title="Start a blank diagram"
                             />
-                        ) : (
+                            {/* Build 113: Title button — adds an on-canvas
+                             *  headline when none exists yet, or selects the
+                             *  existing one so it can be re-styled. */}
                             <HeaderButton
-                                icon={Trash2}
-                                label="Delete"
-                                onClick={handleDeleteClick}
-                                disabled={
-                                    busy ||
-                                    !diagramExistsOnServer ||
-                                    (isFactoryDiagram && !hasLocalOverride)
-                                }
-                                danger
+                                icon={Pencil}
+                                label={hasTitle ? 'Edit title' : 'Add title'}
+                                onClick={onAddOrSelectTitle}
                                 title={
-                                    isFactoryDiagram && !hasLocalOverride
-                                        ? 'Factory diagram — nothing to delete. Save changes first if you want to customize it.'
-                                        : 'Delete this diagram from the server'
+                                    hasTitle
+                                        ? 'Select the diagram title to re-style it'
+                                        : 'Insert a draggable on-canvas headline'
                                 }
                             />
-                        )}
-                        {/* A thin visual divider between the file/title
-                         *  cluster and the Present button so the latter
-                         *  reads as a separate "mode switch" affordance. */}
-                        <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1" />
-                        {/* Build 113: Present button — switches the
-                         *  canvas to read-only view mode and the parent
-                         *  page enters fullscreen. */}
-                        <HeaderButton
-                            icon={Presentation}
-                            label="Present"
-                            onClick={() => onModeChange('view')}
-                            disabled={busy}
-                            title="Open the diagram full-screen as a read-only view"
-                        />
-                        {/* Build 115.12 — animations kill switch. Lives
-                         *  next to the theme toggle so the two
-                         *  presentation-time controls cluster
-                         *  together. Icon: Zap when on (canvas is
-                         *  alive), ZapOff when paused. */}
-                        {onToggleAnimations && (
-                            <>
-                                <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1" />
+                        </ToolbarGroup>
+                        <ToolbarGroup label="Save">
+                            <HeaderButton
+                                icon={Upload}
+                                label="Save"
+                                onClick={onSave}
+                                disabled={busy || !diagramName}
+                                accent={dirty}
+                                title={
+                                    diagramName
+                                        ? 'Save the current diagram'
+                                        : 'Pick a name with Save As to save'
+                                }
+                            />
+                            <HeaderButton
+                                icon={Save}
+                                label="Save As"
+                                onClick={handleSaveAsClick}
+                                disabled={busy}
+                                title="Save this diagram under a new name"
+                            />
+                            {/* Build 115.7 — Delete vs Revert.
+                             *
+                             *   isFactoryDiagram && hasLocalOverride:
+                             *     Show "Revert" with a rotate-back icon.
+                             *     Click clears the local stanza so the
+                             *     factory version reappears.
+                             *
+                             *   isFactoryDiagram && !hasLocalOverride:
+                             *     Show "Delete" but disabled with a
+                             *     tooltip explaining why — splunkd's
+                             *     conf REST won't remove default-shipped
+                             *     stanzas, so the click would be a no-op.
+                             *
+                             *   Custom diagrams: regular Delete behaviour.
+                             *
+                             *   `diagramExistsOnServer` still gates
+                             *   the unsaved-draft case (no row yet → no
+                             *   action). */}
+                            {isFactoryDiagram && hasLocalOverride ? (
+                                <HeaderButton
+                                    icon={RotateCcw}
+                                    label="Revert"
+                                    onClick={handleDeleteClick}
+                                    disabled={busy || !diagramExistsOnServer}
+                                    danger
+                                    title="Revert this factory diagram to its OOB copy by clearing local customizations"
+                                />
+                            ) : (
+                                <HeaderButton
+                                    icon={Trash2}
+                                    label="Delete"
+                                    onClick={handleDeleteClick}
+                                    disabled={
+                                        busy ||
+                                        !diagramExistsOnServer ||
+                                        (isFactoryDiagram && !hasLocalOverride)
+                                    }
+                                    danger
+                                    title={
+                                        isFactoryDiagram && !hasLocalOverride
+                                            ? 'Factory diagram — nothing to delete. Save changes first if you want to customize it.'
+                                            : 'Delete this diagram from the server'
+                                    }
+                                />
+                            )}
+                        </ToolbarGroup>
+                        <ToolbarGroup label="View">
+                            {/* Build 113: Present button — switches the
+                             *  canvas to read-only view mode and the parent
+                             *  page enters fullscreen. */}
+                            <HeaderButton
+                                icon={Presentation}
+                                label="Present"
+                                onClick={() => onModeChange('view')}
+                                disabled={busy}
+                                title="Open the diagram full-screen as a read-only view"
+                            />
+                            {/* Build 115.12 — animations kill switch. Lives
+                             *  next to the theme toggle so the two
+                             *  presentation-time controls cluster
+                             *  together. Icon: Zap when on (canvas is
+                             *  alive), ZapOff when paused. */}
+                            {onToggleAnimations && (
                                 <button
                                     type="button"
                                     onClick={onToggleAnimations}
@@ -522,7 +507,7 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                                             : 'Animations are OFF — click to resume flowing dots and live-status dashes.'
                                     }
                                     className={cn(
-                                        'inline-flex items-center justify-center w-10 h-10 rounded-xl border transition-colors',
+                                        'inline-flex h-9 w-9 items-center justify-center rounded-lg border transition-colors',
                                         animationsEnabled !== false
                                             ? 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-amber-500 hover:border-slate-300 dark:hover:border-slate-600'
                                             : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-400 hover:border-slate-400 dark:hover:border-slate-500'
@@ -534,111 +519,111 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                                         <ZapOff className="w-4 h-4" aria-hidden />
                                     )}
                                 </button>
-                            </>
-                        )}
-                        {/* Build 115.13 — IP visibility toggle. Sits in
-                         *  the same presentation-time cluster as the
-                         *  animations toggle. Eye = visible, EyeOff =
-                         *  redacted. Used right before sharing the
-                         *  diagram with an audience that shouldn't
-                         *  see internal addressing. */}
-                        {onToggleIpAddresses && (
-                            <button
-                                type="button"
-                                onClick={onToggleIpAddresses}
-                                aria-pressed={ipAddressesVisible !== false}
-                                title={
-                                    ipAddressesVisible !== false
-                                        ? 'IP addresses are visible — click to hide every IP for sharing.'
-                                        : 'IP addresses are hidden — click to reveal every IP again.'
-                                }
-                                className={cn(
-                                    'inline-flex items-center justify-center w-10 h-10 rounded-xl border transition-colors',
-                                    ipAddressesVisible !== false
-                                        ? 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-sky-500 hover:border-slate-300 dark:hover:border-slate-600'
-                                        : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-400 hover:border-slate-400 dark:hover:border-slate-500'
-                                )}
-                            >
-                                {ipAddressesVisible !== false ? (
-                                    <Eye className="w-4 h-4" aria-hidden />
-                                ) : (
-                                    <EyeOff className="w-4 h-4" aria-hidden />
-                                )}
-                            </button>
-                        )}
-                        {/* Build 115.13 — Save-to-PNG / Save-to-PDF
-                         *  dropdown. Same hover-to-open pattern the
-                         *  overview dashboard uses, so operators get
-                         *  a familiar Download glyph that expands
-                         *  into the two format choices. We disable
-                         *  the trigger while a capture is in flight
-                         *  to prevent multiple concurrent renders. */}
-                        {onExport && (
-                            <div className="relative group">
+                            )}
+                            {/* Build 115.13 — IP visibility toggle. Sits in
+                             *  the same presentation-time cluster as the
+                             *  animations toggle. Eye = visible, EyeOff =
+                             *  redacted. Used right before sharing the
+                             *  diagram with an audience that shouldn't
+                             *  see internal addressing. */}
+                            {onToggleIpAddresses && (
                                 <button
                                     type="button"
-                                    disabled={exporting === true}
-                                    title="Save the diagram as PNG or PDF"
-                                    aria-busy={exporting === true}
+                                    onClick={onToggleIpAddresses}
+                                    aria-pressed={ipAddressesVisible !== false}
+                                    title={
+                                        ipAddressesVisible !== false
+                                            ? 'IP addresses are visible — click to hide every IP for sharing.'
+                                            : 'IP addresses are hidden — click to reveal every IP again.'
+                                    }
                                     className={cn(
-                                        'inline-flex items-center justify-center w-10 h-10 rounded-xl border transition-colors',
-                                        'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600',
-                                        'disabled:opacity-50 disabled:cursor-wait'
+                                        'inline-flex h-9 w-9 items-center justify-center rounded-lg border transition-colors',
+                                        ipAddressesVisible !== false
+                                            ? 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-sky-500 hover:border-slate-300 dark:hover:border-slate-600'
+                                            : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-400 hover:border-slate-400 dark:hover:border-slate-500'
                                     )}
                                 >
-                                    {exporting === true ? (
-                                        <Pause
-                                            className="w-4 h-4 animate-pulse"
-                                            aria-hidden
-                                        />
+                                    {ipAddressesVisible !== false ? (
+                                        <Eye className="w-4 h-4" aria-hidden />
                                     ) : (
-                                        <Download className="w-4 h-4" aria-hidden />
+                                        <EyeOff className="w-4 h-4" aria-hidden />
                                     )}
                                 </button>
-                                {/* Build 115.16 — split the menu into an
-                                 *  outer "hover catcher" (with `pt-1`
-                                 *  internal padding) and an inner
-                                 *  visual panel. The catcher's bounding
-                                 *  box now starts right at the
-                                 *  trigger's bottom edge with no
-                                 *  margin gap, so the cursor never
-                                 *  leaves the `.group` container while
-                                 *  travelling from the trigger down to
-                                 *  the menu — fixing the "the menu
-                                 *  escapes from me weirdly when I try
-                                 *  to select PNG" report. The 4px of
-                                 *  visible breathing room moves from
-                                 *  `mt-1` (margin, outside the
-                                 *  hover area) to `pt-1` (padding,
-                                 *  inside the hover area). */}
-                                <div className="absolute right-0 top-full pt-1 hidden group-hover:block group-focus-within:block z-50 w-32">
-                                    <div className="flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md shadow-lg overflow-hidden">
-                                        <button
-                                            type="button"
-                                            onClick={() => onExport('png')}
-                                            disabled={exporting === true}
-                                            className="px-3 py-1.5 text-[11px] text-left font-semibold text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-slate-800 disabled:opacity-50"
-                                        >
-                                            Save as PNG
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => onExport('pdf')}
-                                            disabled={exporting === true}
-                                            className="px-3 py-1.5 text-[11px] text-left font-semibold text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-slate-800 border-t border-slate-100 dark:border-slate-700 disabled:opacity-50"
-                                        >
-                                            Save as PDF
-                                        </button>
+                            )}
+                        </ToolbarGroup>
+                        <ToolbarGroup label="Export">
+                            {/* Build 115.13 — Save-to-PNG / Save-to-PDF
+                             *  dropdown. Same hover-to-open pattern the
+                             *  overview dashboard uses, so operators get
+                             *  a familiar Download glyph that expands
+                             *  into the two format choices. We disable
+                             *  the trigger while a capture is in flight
+                             *  to prevent multiple concurrent renders. */}
+                            {onExport && (
+                                <div className="relative group">
+                                    <button
+                                        type="button"
+                                        disabled={exporting === true}
+                                        title="Save the diagram as PNG or PDF"
+                                        aria-busy={exporting === true}
+                                        className={cn(
+                                            'inline-flex h-9 w-9 items-center justify-center rounded-lg border transition-colors',
+                                            'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600',
+                                            'disabled:opacity-50 disabled:cursor-wait'
+                                        )}
+                                    >
+                                        {exporting === true ? (
+                                            <Pause
+                                                className="w-4 h-4 animate-pulse"
+                                                aria-hidden
+                                            />
+                                        ) : (
+                                            <Download
+                                                className="w-4 h-4"
+                                                aria-hidden
+                                            />
+                                        )}
+                                    </button>
+                                    {/* Build 115.16 — split the menu into an
+                                     *  outer "hover catcher" (with `pt-1`
+                                     *  internal padding) and an inner
+                                     *  visual panel. The catcher's bounding
+                                     *  box now starts right at the
+                                     *  trigger's bottom edge with no
+                                     *  margin gap, so the cursor never
+                                     *  leaves the `.group` container while
+                                     *  travelling from the trigger down to
+                                     *  the menu — fixing the "the menu
+                                     *  escapes from me weirdly when I try
+                                     *  to select PNG" report. The 4px of
+                                     *  visible breathing room moves from
+                                     *  `mt-1` (margin, outside the
+                                     *  hover area) to `pt-1` (padding,
+                                     *  inside the hover area). */}
+                                    <div className="absolute right-0 top-full pt-1 hidden group-hover:block group-focus-within:block z-50 w-32">
+                                        <div className="flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md shadow-lg overflow-hidden">
+                                            <button
+                                                type="button"
+                                                onClick={() => onExport('png')}
+                                                disabled={exporting === true}
+                                                className="px-3 py-1.5 text-[11px] text-left font-semibold text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-slate-800 disabled:opacity-50"
+                                            >
+                                                Save as PNG
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => onExport('pdf')}
+                                                disabled={exporting === true}
+                                                className="px-3 py-1.5 text-[11px] text-left font-semibold text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-slate-800 border-t border-slate-100 dark:border-slate-700 disabled:opacity-50"
+                                            >
+                                                Save as PDF
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        )}
-                        {themeSlot && (
-                            <>
-                                <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1" />
-                                {themeSlot}
-                            </>
-                        )}
+                            )}
+                            {themeSlot && <div className="ml-1">{themeSlot}</div>}
+                        </ToolbarGroup>
                     </>
                 )}
                 {busy && (
@@ -936,6 +921,24 @@ interface HeaderButtonProps {
     danger?: boolean;
 }
 
+interface ToolbarGroupProps {
+    label: string;
+    children: React.ReactNode;
+}
+
+const ToolbarGroup: React.FC<ToolbarGroupProps> = ({ label, children }) => (
+    <div
+        aria-label={`${label} actions`}
+        className={cn(
+            'inline-flex items-center gap-1 rounded-xl border border-slate-200/80 bg-slate-50/80 p-1',
+            'dark:border-slate-700/80 dark:bg-slate-800/55'
+        )}
+    >
+        <span className="sr-only">{label}</span>
+        {children}
+    </div>
+);
+
 const HeaderButton: React.FC<HeaderButtonProps> = ({
     icon: Icon,
     label,
@@ -951,7 +954,8 @@ const HeaderButton: React.FC<HeaderButtonProps> = ({
         disabled={disabled}
         title={title}
         className={cn(
-            'flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm leading-none font-medium border transition-colors',
+            'flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs leading-none font-medium border transition-colors',
+            'whitespace-nowrap',
             'disabled:opacity-50 disabled:cursor-not-allowed',
             !disabled && accent
                 ? 'bg-sky-500 hover:bg-sky-600 text-white border-sky-600'
@@ -960,7 +964,7 @@ const HeaderButton: React.FC<HeaderButtonProps> = ({
                   : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
         )}
     >
-        <Icon className="w-5 h-5" aria-hidden />
+        <Icon className="w-4 h-4" aria-hidden />
         {label}
     </button>
 );

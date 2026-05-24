@@ -147,9 +147,8 @@ export interface TextBoxUpdate {
 export type EdgeDirection = 'none' | 'forward' | 'backward' | 'both';
 
 /** Build 115.11 — arrow tip styles operators can pick from in the
- *  edge inspector. `closed` is the default (current behaviour), the
- *  rest are new alternatives. Mirrored in
- *  `SavedDiagramEdge.arrowStyle`. */
+ *  edge inspector. `thin` is the default; the glyphs are rendered
+ *  by AnimatedEdge so they inherit the connector colour. */
 export type ArrowStyle = 'closed' | 'open' | 'thin' | 'dot' | 'diamond';
 
 export interface EdgeUpdate {
@@ -1530,9 +1529,9 @@ const ARROW_STYLE_OPTIONS: Array<{
     label: string;
     hint: string;
 }> = [
-    { id: 'closed', label: 'Filled triangle', hint: 'Default — filled arrow' },
+    { id: 'thin', label: 'Thin chevron', hint: 'Default — subtle, minimal' },
     { id: 'open', label: 'Open chevron', hint: 'Lighter look' },
-    { id: 'thin', label: 'Thin chevron', hint: 'Subtle, minimal' },
+    { id: 'closed', label: 'Filled dart', hint: 'Filled directional tip' },
     { id: 'dot', label: 'Dot', hint: 'Circle terminator' },
     { id: 'diamond', label: 'Diamond', hint: 'Filled rhombus' },
 ];
@@ -1554,7 +1553,7 @@ const EdgePropertiesForm: React.FC<{
     };
     const initialKind = (data.kind ?? data.edge?.kind ?? 'physical') as EdgeUpdate['kind'];
     const initialDirection = (data.direction ?? 'none') as EdgeDirection;
-    const initialArrowStyle: ArrowStyle = (data.arrowStyle as ArrowStyle) ?? 'closed';
+    const initialArrowStyle: ArrowStyle = (data.arrowStyle as ArrowStyle) ?? 'thin';
     const initialLiveStatus = data.liveStatus === true;
     const initialLabel =
         typeof edge.label === 'string' ? edge.label : data.edge?.label ?? '';

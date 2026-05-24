@@ -149,7 +149,15 @@ const SURFACE_HANDLE_STYLE: React.CSSProperties = {
     borderRadius: 0,
     border: 0,
     background: 'transparent',
+    zIndex: 10,
 };
+
+const CUSTOM_STENCIL_PORT_ANCHORS = [22, 36, 50, 64, 78].flatMap((y) =>
+    Array.from({ length: 19 }, (_, index) => ({
+        x: 5 + index * 5,
+        y,
+    }))
+);
 
 /** Connection handles on all four sides. Each side gets BOTH a
  *  `source` and `target` handle so React Flow can attach edges in
@@ -174,7 +182,51 @@ const SURFACE_HANDLE_STYLE: React.CSSProperties = {
  *  bug ("arrow points the wrong way") survived 115.5 because
  *  the swap landed in the wrong file. Fixing it here is the
  *  actual fix. */
-const NodeHandles: React.FC<{ freeform?: boolean }> = ({ freeform }) => {
+const CustomStencilPortHandles: React.FC<{ selected?: boolean }> = ({
+    selected,
+}) => (
+    <>
+        {CUSTOM_STENCIL_PORT_ANCHORS.map((anchor) => {
+            const idBase = `surface-${anchor.x}-${anchor.y}`;
+            const style: React.CSSProperties = {
+                left: `${anchor.x}%`,
+                top: `${anchor.y}%`,
+                transform: 'translate(-50%, -50%)',
+                zIndex: 20,
+            };
+            const className = cn(
+                '!h-1.5 !w-1.5 !min-h-0 !min-w-0 !rounded-full',
+                '!border !border-white !bg-sky-500',
+                'transition-opacity',
+                selected ? 'opacity-80' : 'opacity-0 group-hover:opacity-80'
+            );
+            return (
+                <React.Fragment key={idBase}>
+                    <Handle
+                        type="target"
+                        position={Position.Top}
+                        id={`${idBase}-target`}
+                        className={className}
+                        style={style}
+                    />
+                    <Handle
+                        type="source"
+                        position={Position.Top}
+                        id={`${idBase}-source`}
+                        className={className}
+                        style={style}
+                    />
+                </React.Fragment>
+            );
+        })}
+    </>
+);
+
+const NodeHandles: React.FC<{
+    freeform?: boolean;
+    customStencil?: boolean;
+    selected?: boolean;
+}> = ({ freeform, customStencil, selected }) => {
     const sides: Array<{ pos: Position; id: string; style: React.CSSProperties }> = [
         { pos: Position.Top, id: 'top', style: { top: -4 } },
         { pos: Position.Right, id: 'right', style: { right: -4 } },
@@ -204,6 +256,9 @@ const NodeHandles: React.FC<{ freeform?: boolean }> = ({ freeform }) => {
                         style={SURFACE_HANDLE_STYLE}
                     />
                 </>
+            )}
+            {freeform && customStencil && (
+                <CustomStencilPortHandles selected={selected} />
             )}
             {sides.map((s) => (
                 <React.Fragment key={s.id}>
@@ -296,12 +351,14 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
         node.healthScore !== undefined ? ` (${node.healthScore})` : ''
     }${node.managementSource ? `\nSource: ${node.managementSource}` : ''}${
         vendorModelLine ? `\nHardware: ${vendorModelLine}` : ''
-    }${node.serialNumber ? `\nSerial: ${node.serialNumber}` : ''}`;
+    }${showIp ? `\nIP: ${ipAddress}` : ''}${
+        node.serialNumber ? `\nSerial: ${node.serialNumber}` : ''
+    }`;
 
     if (customStencil) {
         return (
             <div
-                className="group relative flex h-full w-full items-center justify-center bg-transparent"
+                className="group relative flex h-full w-full items-center justify-center overflow-visible bg-transparent"
                 style={{ width: '100%', height: '100%' }}
                 title={title}
             >
@@ -312,13 +369,54 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
                     lineClassName="!border-sky-500/55"
                     handleClassName="!bg-sky-500 !border-white !w-2 !h-2"
                 />
-                <NodeHandles freeform={data.freeformAnchors === true} />
+                <NodeHandles
+                    freeform={data.freeformAnchors === true}
+                    customStencil
+                    selected={selected}
+                />
                 <img
                     src={customStencil.src}
                     alt={customStencil.label}
-                    className="block h-full w-full object-contain"
+                    className="pointer-events-none block h-full w-full object-contain"
                     draggable={false}
                 />
+                <div className="pointer-events-none absolute left-0 top-full mt-1 min-w-28 max-w-72 rounded-md border border-slate-200 bg-white/95 px-1.5 py-1 leading-tight shadow-sm backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/95">
+                    <div className="flex items-center gap-1">
+                        <span
+                            className={cn(
+                                'h-1.5 w-1.5 shrink-0 rounded-full',
+                                status.dot,
+                                status.dotGlow
+                            )}
+                            aria-hidden
+                        />
+                        <span className="truncate text-[10px] font-semibold text-slate-900 dark:text-slate-100">
+                            {node.shortLabel}
+                        </span>
+                    </div>
+                    <div
+                        className={cn(
+                            'truncate text-[8px] font-mono tracking-tight',
+                            vendorModelLine
+                                ? 'text-slate-600 dark:text-slate-300'
+                                : 'text-transparent'
+                        )}
+                        title={vendorModelLine ?? undefined}
+                    >
+                        {vendorModelLine ?? '-'}
+                    </div>
+                    <div
+                        className={cn(
+                            'truncate text-[8px] font-mono tracking-tight',
+                            showIp
+                                ? 'text-sky-600 dark:text-sky-400'
+                                : 'text-transparent'
+                        )}
+                        title={showIp ? ipAddress : undefined}
+                    >
+                        {showIp ? ipAddress : '-'}
+                    </div>
+                </div>
             </div>
         );
     }

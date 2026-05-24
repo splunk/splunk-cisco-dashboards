@@ -746,7 +746,7 @@ const NetworkDiagramPage: React.FC = () => {
         <div
             ref={pageWrapperRef}
             className={cn(
-                'scd-network-diagram-page flex flex-col w-full h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100',
+                'scd-network-diagram-page flex flex-col w-full h-[calc(100vh-8rem)] max-h-[calc(100vh-8rem)] overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100',
                 // Build 115.10 — Tailwind runs in `class` darkMode,
                 // so we need the literal `dark` class on a wrapper
                 // when the resolved theme is dark. The wrapper-level
@@ -789,7 +789,7 @@ const NetworkDiagramPage: React.FC = () => {
                     <ThemeToggle theme={theme} onCycle={cycleTheme} iconOnly />
                 }
             />
-            <main className="flex-1 min-h-0 flex">
+            <main className="flex-1 min-h-0 flex overflow-hidden">
                 {/* Build 113: hide the device palette entirely in view
                  *  mode. The whole point of view mode is to show the
                  *  diagram as a finished artefact — exposing the
@@ -803,7 +803,8 @@ const NetworkDiagramPage: React.FC = () => {
                         // canvas fills edge-to-edge, giving the
                         // presentation a true "fullscreen diagram"
                         // feel without a narrow gutter around it.
-                        isViewMode ? 'p-0' : 'p-3'
+                        isViewMode ? 'p-0' : 'p-3',
+                        'min-h-0'
                     )}
                 >
                     {/* Build 115.12 — fan the page-level animations
