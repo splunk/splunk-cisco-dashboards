@@ -3057,7 +3057,7 @@ const OverviewPage: React.FC = () => {
     // ------------------------------ Render ------------------------------
     const inputClass =
         'text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 border border-slate-200 ' +
-        'dark:border-slate-700 rounded-md px-2 py-1 text-slate-700 dark:text-slate-200 ' +
+        'dark:border-slate-700 rounded-md m-0 h-8 px-2 py-0 text-slate-700 dark:text-slate-200 ' +
         'hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 ' +
         'focus:ring-sky-500 cursor-pointer';
     const iconBtnClass =
@@ -3136,7 +3136,7 @@ const OverviewPage: React.FC = () => {
 
                 <div className="flex items-center gap-2.5 flex-shrink-0">
                     <HealthBadge statuses={statusList} />
-                    <label className="flex items-center gap-1.5">
+                    <label className="m-0 flex h-8 items-center gap-1.5">
                         <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest hidden lg:inline">
                             Range
                         </span>
@@ -3158,7 +3158,7 @@ const OverviewPage: React.FC = () => {
                             ))}
                         </select>
                     </label>
-                    <label className="flex items-center gap-1.5">
+                    <label className="m-0 flex h-8 items-center gap-1.5">
                         <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest hidden lg:inline">
                             Auto
                         </span>
@@ -3868,8 +3868,7 @@ const OverviewPage: React.FC = () => {
             </main>
 
             <footer className="flex-shrink-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-1 text-center text-[8.5px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] leading-none">
-                Splunk Adaptive Operations · Secure Executive Environment ©{' '}
-                {lastRefreshed.getFullYear()}
+                Splunk Field Solutions - Executive Insights
             </footer>
 
             <HelpOverlay

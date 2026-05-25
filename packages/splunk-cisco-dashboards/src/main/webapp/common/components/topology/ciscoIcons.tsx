@@ -345,41 +345,41 @@ export const CiscoOfficialDataCenterIcon = ciscoLineIcon(
     </>
 );
 
-// Build 1201 — compact load-balancer glyph. Operators preferred the
-// simple square service icon style: an outlined box with a small
-// internal splitter mark. Keep it blue and restrained so it reads
-// clearly in the picker and does not compete with device-card chrome.
+// Build 1222 — generic load balancer. The previous boxed glyph read
+// like an abstract badge at canvas size. Use the more familiar
+// "one VIP/input distributes to multiple backends" topology mark.
 const LoadBalancerSVG: React.FC<IconProps> = ({ className, title }) => (
     <svg
         viewBox="0 0 64 64"
         className={cn(COLOR.BLUE, className)}
         fill="none"
         stroke="currentColor"
-        strokeWidth={3}
+        strokeWidth={3.2}
         strokeLinecap="round"
         strokeLinejoin="round"
         aria-label={title ?? 'Load balancer'}
         role="img"
     >
         {title ? <title>{title}</title> : null}
+        <circle cx={32} cy={9} r={4} fill="currentColor" stroke="none" />
+        <path d="M32 13 V20" />
         <rect
-            x={18}
-            y={12}
-            width={28}
-            height={28}
-            rx={2.5}
-            strokeWidth={2.6}
+            x={15}
+            y={20}
+            width={34}
+            height={22}
+            rx={6}
+            fill="white"
+            fillOpacity={0.18}
         />
-        <rect x={24} y={19} width={4.5} height={4.5} rx={0.7} fill="currentColor" stroke="none" />
-        <rect x={30} y={19} width={4.5} height={4.5} rx={0.7} fill="currentColor" stroke="none" />
-        <rect x={36} y={19} width={4.5} height={4.5} rx={0.7} fill="currentColor" stroke="none" />
-        <path d="M26.25 23.5 V28.5" />
-        <path d="M32.25 23.5 V32" />
-        <path d="M38.25 23.5 V28.5" />
-        <path d="M26.25 28.5 C26.25 31.5 30.2 31.5 30.2 35" />
-        <path d="M38.25 28.5 C38.25 31.5 34.3 31.5 34.3 35" />
-        <path d="M32.25 32 V36" />
-        <path d="M29.8 35.4 H34.7" />
+        <path d="M23 30 H41" />
+        <path d="M25 36 H39" opacity={0.75} />
+        <path d="M32 42 V49" />
+        <path d="M32 49 H18" />
+        <path d="M32 49 H46" />
+        <circle cx={18} cy={54} r={4} fill="currentColor" stroke="none" />
+        <circle cx={32} cy={54} r={4} fill="currentColor" stroke="none" />
+        <circle cx={46} cy={54} r={4} fill="currentColor" stroke="none" />
     </svg>
 );
 LoadBalancerSVG.displayName = 'DeviceIcon(LoadBalancer)';

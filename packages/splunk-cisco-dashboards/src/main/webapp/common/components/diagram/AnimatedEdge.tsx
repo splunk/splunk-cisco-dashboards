@@ -164,6 +164,89 @@ const resolveArrowStyle = (
 const angleBetween = (from: XYPosition, to: XYPosition): number =>
     (Math.atan2(to.y - from.y, to.x - from.x) * 180) / Math.PI;
 
+const BEZIER_CURVATURE = 0.25;
+
+/** Mirrors React Flow's Bezier control-point math so arrowheads can
+ *  follow the actual endpoint tangent instead of the source→target
+ *  chord. */
+const calculateControlOffset = (distance: number, curvature: number): number =>
+    distance >= 0 ? 0.5 * distance : curvature * 25 * Math.sqrt(-distance);
+
+const getBezierControlPoint = ({
+    position,
+    point,
+    otherPoint,
+}: {
+    position: Position;
+    point: XYPosition;
+    otherPoint: XYPosition;
+}): XYPosition => {
+    switch (position) {
+        case Position.Left:
+            return {
+                x:
+                    point.x -
+                    calculateControlOffset(point.x - otherPoint.x, BEZIER_CURVATURE),
+                y: point.y,
+            };
+        case Position.Right:
+            return {
+                x:
+                    point.x +
+                    calculateControlOffset(otherPoint.x - point.x, BEZIER_CURVATURE),
+                y: point.y,
+            };
+        case Position.Top:
+            return {
+                x: point.x,
+                y:
+                    point.y -
+                    calculateControlOffset(point.y - otherPoint.y, BEZIER_CURVATURE),
+            };
+        case Position.Bottom:
+            return {
+                x: point.x,
+                y:
+                    point.y +
+                    calculateControlOffset(otherPoint.y - point.y, BEZIER_CURVATURE),
+            };
+    }
+};
+
+const getBezierControlPoints = ({
+    source,
+    target,
+    sourcePosition,
+    targetPosition,
+}: {
+    source: XYPosition;
+    target: XYPosition;
+    sourcePosition: Position;
+    targetPosition: Position;
+}): { sourceControl: XYPosition; targetControl: XYPosition } => ({
+    sourceControl: getBezierControlPoint({
+        position: sourcePosition,
+        point: source,
+        otherPoint: target,
+    }),
+    targetControl: getBezierControlPoint({
+        position: targetPosition,
+        point: target,
+        otherPoint: source,
+    }),
+});
+
+/** The dragged bend handle is an on-curve midpoint. Derive the
+ *  quadratic control point that makes the curve pass through it. */
+const getQuadraticControlThroughMidpoint = (
+    source: XYPosition,
+    midpoint: XYPosition,
+    target: XYPosition
+): XYPosition => ({
+    x: 2 * midpoint.x - (source.x + target.x) / 2,
+    y: 2 * midpoint.y - (source.y + target.y) / 2,
+});
+
 const anchorSide = (
     anchor: DiagramEdgeAnchor | undefined,
     fallback: Position
@@ -340,6 +423,8 @@ export const AnimatedEdge: React.FC<EdgeProps> = ({
     const anchoredSourceY = sourceAnchorPoint?.y ?? sourceY;
     const anchoredTargetX = targetAnchorPoint?.x ?? targetX;
     const anchoredTargetY = targetAnchorPoint?.y ?? targetY;
+    const sourcePoint = { x: anchoredSourceX, y: anchoredSourceY };
+    const targetPoint = { x: anchoredTargetX, y: anchoredTargetY };
     const anchoredSourcePosition = anchorSide(sourceAnchor, sourcePosition);
     const anchoredTargetPosition = anchorSide(targetAnchor, targetPosition);
     const sourceShape = useStore(
@@ -363,9 +448,21 @@ export const AnimatedEdge: React.FC<EdgeProps> = ({
         (isStencilShape(sourceShape) || isStencilShape(targetShape));
     const midpointX = (anchoredSourceX + anchoredTargetX) / 2;
     const midpointY = (anchoredSourceY + anchoredTargetY) / 2;
+    const bendControlPoint = bendPoint
+        ? getQuadraticControlThroughMidpoint(sourcePoint, bendPoint, targetPoint)
+        : undefined;
+    const bezierControlPoints =
+        !bendPoint && !shouldUseStraightPath
+            ? getBezierControlPoints({
+                  source: sourcePoint,
+                  target: targetPoint,
+                  sourcePosition: anchoredSourcePosition,
+                  targetPosition: anchoredTargetPosition,
+              })
+            : undefined;
     const [edgePath, labelX, labelY] = bendPoint
         ? [
-              `M ${anchoredSourceX},${anchoredSourceY} L ${bendPoint.x},${bendPoint.y} L ${anchoredTargetX},${anchoredTargetY}`,
+              `M ${anchoredSourceX},${anchoredSourceY} Q ${bendControlPoint?.x ?? bendPoint.x},${bendControlPoint?.y ?? bendPoint.y} ${anchoredTargetX},${anchoredTargetY}`,
               bendPoint.x,
               bendPoint.y,
           ]
@@ -383,6 +480,7 @@ export const AnimatedEdge: React.FC<EdgeProps> = ({
               targetX: anchoredTargetX,
               targetY: anchoredTargetY,
               targetPosition: anchoredTargetPosition,
+              curvature: BEZIER_CURVATURE,
           });
 
     const direction: EdgeDirection = d.direction ?? 'none';
@@ -582,7 +680,7 @@ export const AnimatedEdge: React.FC<EdgeProps> = ({
                     key={key}
                     cx={tip.x}
                     cy={tip.y}
-                    r={3.8}
+                    r={3.2}
                     fill={strokeColor}
                     pointerEvents="none"
                 />
@@ -592,7 +690,7 @@ export const AnimatedEdge: React.FC<EdgeProps> = ({
             return (
                 <path
                     key={key}
-                    d="M 0 0 L -5 -4.5 L -10 0 L -5 4.5 Z"
+                    d="M 0 0 L -4 -3.8 L -8 0 L -4 3.8 Z"
                     transform={transform}
                     fill={strokeColor}
                     stroke={strokeColor}
@@ -605,7 +703,7 @@ export const AnimatedEdge: React.FC<EdgeProps> = ({
             return (
                 <path
                     key={key}
-                    d="M 0 0 L -10 -5 L -7 0 L -10 5 Z"
+                    d="M 0 0 L -8 -4 L -6 0 L -8 4 Z"
                     transform={transform}
                     fill={strokeColor}
                     stroke={strokeColor}
@@ -617,11 +715,11 @@ export const AnimatedEdge: React.FC<EdgeProps> = ({
         return (
             <path
                 key={key}
-                d="M -10 -5 L 0 0 L -10 5"
+                d="M -7.5 -3.75 L 0 0 L -7.5 3.75"
                 transform={transform}
                 fill="none"
                 stroke={strokeColor}
-                strokeWidth={arrowStyle === 'open' ? 2.2 : 1.6}
+                strokeWidth={arrowStyle === 'open' ? 2 : 1.55}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 pointerEvents="none"
@@ -629,14 +727,10 @@ export const AnimatedEdge: React.FC<EdgeProps> = ({
         );
     };
 
-    const sourceTangentPoint = bendPoint ?? {
-        x: anchoredTargetX,
-        y: anchoredTargetY,
-    };
-    const targetTangentPoint = bendPoint ?? {
-        x: anchoredSourceX,
-        y: anchoredSourceY,
-    };
+    const sourceTangentPoint =
+        bendControlPoint ?? bezierControlPoints?.sourceControl ?? targetPoint;
+    const targetTangentPoint =
+        bendControlPoint ?? bezierControlPoints?.targetControl ?? sourcePoint;
 
     return (
         <>
