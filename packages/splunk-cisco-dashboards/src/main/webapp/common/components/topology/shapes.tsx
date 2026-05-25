@@ -688,6 +688,7 @@ export const SplunkIndexerShape = DeviceShape;
 export const SplunkIndexerClusterShape = DeviceShape;
 export const SplunkHeavyForwarderShape = DeviceShape;
 export const SplunkUniversalForwarderShape = DeviceShape;
+export const SplunkIntermediateForwarderShape = DeviceShape;
 export const SplunkClusterManagerShape = DeviceShape;
 export const SplunkDeployerShape = DeviceShape;
 export const SplunkLicenseManagerShape = DeviceShape;
@@ -795,6 +796,7 @@ export const TOPOLOGY_NODE_TYPES = {
     'device:splunk_indexer_cluster': SplunkIndexerClusterShape,
     'device:splunk_heavy_forwarder': SplunkHeavyForwarderShape,
     'device:splunk_universal_forwarder': SplunkUniversalForwarderShape,
+    'device:splunk_intermediate_forwarder': SplunkIntermediateForwarderShape,
     'device:splunk_cluster_manager': SplunkClusterManagerShape,
     'device:splunk_deployer': SplunkDeployerShape,
     'device:splunk_license_manager': SplunkLicenseManagerShape,

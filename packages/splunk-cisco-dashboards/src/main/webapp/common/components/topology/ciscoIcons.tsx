@@ -641,14 +641,124 @@ export const SplunkDataCollectionIcon = svaRasterIcon(
     'data-collection.png',
     'Splunk Data Collection'
 );
-export const SplunkHeavyForwarderIcon = svaRasterIcon(
-    'data-collection.png',
-    'Splunk Heavy Forwarder'
-);
-export const SplunkUniversalForwarderIcon = svaRasterIcon(
-    'data-collection.png',
-    'Splunk Universal Forwarder'
-);
+
+type ForwarderVariant = 'universal' | 'heavy' | 'intermediate';
+
+const FORWARDER_ICON_CONFIG: Record<
+    ForwarderVariant,
+    { className: string; title: string }
+> = {
+    universal: {
+        className: COLOR.EMERALD,
+        title: 'Splunk Universal Forwarder',
+    },
+    heavy: {
+        className: COLOR.AMBER,
+        title: 'Splunk Heavy Forwarder',
+    },
+    intermediate: {
+        className: COLOR.RED,
+        title: 'Splunk Intermediate Forwarder',
+    },
+};
+
+const ForwarderSignal: React.FC<{ variant: ForwarderVariant }> = ({
+    variant,
+}) => {
+    if (variant === 'universal') {
+        return (
+            <>
+                <path d="M22 25 H43" />
+                <path d="M20 33 H47" />
+                <path d="M22 41 H43" />
+                <path d="M25 49 H38" />
+                <path d="M45 22 L60 37 L45 52" />
+            </>
+        );
+    }
+
+    return (
+        <>
+            <path d="M21 24 H30 M36 24 H41" />
+            <path d="M21 32 H28 M35 32 H44" />
+            <path d="M21 40 H31 M38 40 H45" />
+            <path d="M21 48 H28 M35 48 H40" />
+            <path d="M43 24 L52 33" />
+            <path d="M45 50 L52 42" />
+            <path d="M50 22 L64 37 L50 52" />
+        </>
+    );
+};
+
+const forwarderIcon = (
+    variant: ForwarderVariant
+): React.FC<IconProps> => {
+    const ForwarderIcon: React.FC<IconProps> = ({ className, title }) => {
+        const config = FORWARDER_ICON_CONFIG[variant];
+        const label = title ?? config.title;
+        const stacked = variant === 'intermediate';
+        return (
+            <svg
+                viewBox="0 0 80 80"
+                className={cn(config.className, className)}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={3.4}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-label={label}
+                role="img"
+            >
+                <title>{label}</title>
+                {stacked ? (
+                    <>
+                        <rect
+                            x={19}
+                            y={8}
+                            width={46}
+                            height={58}
+                            rx={8}
+                            fill="white"
+                            fillOpacity={0.92}
+                            opacity={0.65}
+                        />
+                        <rect
+                            x={15}
+                            y={12}
+                            width={46}
+                            height={58}
+                            rx={8}
+                            fill="white"
+                            fillOpacity={0.96}
+                            opacity={0.82}
+                        />
+                    </>
+                ) : null}
+                <rect
+                    x={10}
+                    y={16}
+                    width={50}
+                    height={58}
+                    rx={8}
+                    fill="white"
+                    fillOpacity={0.98}
+                />
+                <path d="M10 58 H60" />
+                <circle cx={18} cy={66} r={2.3} fill="currentColor" stroke="none" />
+                <g transform="translate(0 -2)">
+                    <ForwarderSignal variant={variant} />
+                </g>
+            </svg>
+        );
+    };
+    ForwarderIcon.displayName = `DeviceIcon(${FORWARDER_ICON_CONFIG[variant].title})`;
+    return ForwarderIcon;
+};
+
+export const SplunkUniversalForwarderIcon = forwarderIcon('universal');
+export const SplunkHeavyForwarderIcon = forwarderIcon('heavy');
+export const SplunkIntermediateForwarderIcon =
+    forwarderIcon('intermediate');
 export const SplunkEdgeProcessorIcon = svaRasterIcon(
     'data-collection.png',
     'Splunk Edge Processor'
@@ -786,6 +896,7 @@ export const CISCO_ICONS = {
     splunk_indexer_cluster: SplunkIndexerClusterIcon,
     splunk_heavy_forwarder: SplunkHeavyForwarderIcon,
     splunk_universal_forwarder: SplunkUniversalForwarderIcon,
+    splunk_intermediate_forwarder: SplunkIntermediateForwarderIcon,
     splunk_cluster_manager: SplunkClusterManagerIcon,
     splunk_deployer: SplunkDeployerIcon,
     splunk_license_manager: SplunkLicenseManagerIcon,

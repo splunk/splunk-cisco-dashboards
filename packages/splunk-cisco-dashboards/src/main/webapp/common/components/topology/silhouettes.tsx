@@ -107,6 +107,7 @@ export const SHAPE_FAMILY: Record<DeviceShapeId, SilhouetteFamily> = {
     splunk_indexer_cluster: 'card',
     splunk_heavy_forwarder: 'card',
     splunk_universal_forwarder: 'card',
+    splunk_intermediate_forwarder: 'card',
     splunk_cluster_manager: 'card',
     splunk_deployer: 'card',
     splunk_license_manager: 'card',

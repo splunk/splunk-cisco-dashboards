@@ -137,6 +137,7 @@ export type DeviceShapeId =
     | 'splunk_indexer_cluster'
     | 'splunk_heavy_forwarder'
     | 'splunk_universal_forwarder'
+    | 'splunk_intermediate_forwarder'
     | 'splunk_cluster_manager'
     | 'splunk_deployer'
     | 'splunk_license_manager'
@@ -608,6 +609,13 @@ const mapSplunkRoleToShape = (
     if (p === 'universal_forwarder' || n.startsWith('uf-')) {
         return 'splunk_universal_forwarder';
     }
+    if (
+        p === 'intermediate_forwarder' ||
+        p === 'intermediary_forwarder' ||
+        n.startsWith('if-')
+    ) {
+        return 'splunk_intermediate_forwarder';
+    }
     if (p === 'idm' || n.startsWith('idm-')) return 'splunk_data_collection';
     return 'server';
 };
@@ -651,6 +659,9 @@ const deriveSplunkModel = (
             return 'Heavy Forwarder';
         case 'universal_forwarder':
             return 'Universal Forwarder';
+        case 'intermediate_forwarder':
+        case 'intermediary_forwarder':
+            return 'Intermediate Forwarder';
         case 'idm':
             return 'Inputs Data Manager';
         default:

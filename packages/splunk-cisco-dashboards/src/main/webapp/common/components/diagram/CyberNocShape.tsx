@@ -148,6 +148,7 @@ const SHAPE_TO_ICON: Record<DeviceShapeId, keyof typeof CISCO_ICONS> = {
     splunk_indexer_cluster: 'splunk_indexer_cluster',
     splunk_heavy_forwarder: 'splunk_heavy_forwarder',
     splunk_universal_forwarder: 'splunk_universal_forwarder',
+    splunk_intermediate_forwarder: 'splunk_intermediate_forwarder',
     splunk_cluster_manager: 'splunk_cluster_manager',
     splunk_deployer: 'splunk_deployer',
     splunk_license_manager: 'splunk_license_manager',

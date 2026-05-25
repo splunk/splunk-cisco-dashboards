@@ -387,6 +387,9 @@ const resolveLegacySplunkShape = (
     if (text.includes('universal forwarder') || /\bufs?\b/.test(text)) {
         return 'splunk_universal_forwarder';
     }
+    if (text.includes('intermediate forwarder') || text.includes('intermediary forwarder')) {
+        return 'splunk_intermediate_forwarder';
+    }
     if (text.includes('edge processor')) return 'splunk_edge_processor';
     if (text.includes('connect for syslog') || text.includes('sc4s')) return 'splunk_sc4s';
     if (text.includes('data collection') || text.includes('idm')) {
