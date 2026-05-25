@@ -22,9 +22,24 @@
  * hundred stanzas, so still within reason).
  *
  * The stable external key is `search_name`.
+ *
+ * Visibility: stanzas with `search_hidden = 1` (or `true` / `yes`) are
+ * omitted from the default catalogue. All current consumers (Overview
+ * dashboard, KPI picker, topology search browsers, and the Searchbase
+ * Canvas) call `getSearchbaseCatalogue()` with that default so hidden
+ * entries never surface in the UI. Pass `{ includeHidden: true }` to
+ * opt back in (e.g. for one-off auditing tools).
  */
 
 import { getSearchAppContext } from './splunkSearchService';
+
+export interface SearchbaseCatalogueOptions {
+    /**
+     * When true, include stanzas marked `search_hidden`. Default false.
+     * Overview and picker consumers should omit this flag.
+     */
+    includeHidden?: boolean;
+}
 
 export interface SearchbaseRecord {
     /** Stanza id in searchbase.conf (lowercase, snake_case). */
@@ -159,8 +174,19 @@ const splitTags = (raw: string | undefined): string[] => {
         .slice(0, 20);
 };
 
-const isTruthyConfValue = (raw: string | undefined): boolean =>
+export const isTruthyConfValue = (raw: string | undefined): boolean =>
     typeof raw === 'string' && /^(1|true|yes)$/i.test(raw.trim());
+
+/** True when a conf-searchbase entry should be omitted from a catalogue fetch. */
+export const isSearchbaseStanzaExcluded = (
+    content: Pick<NonNullable<SearchbaseEntry['content']>, 'disabled' | 'search_hidden'> | undefined,
+    options?: SearchbaseCatalogueOptions
+): boolean => {
+    const stanza = content ?? {};
+    if (isTruthyConfValue(stanza.disabled)) return true;
+    if (!options?.includeHidden && isTruthyConfValue(stanza.search_hidden)) return true;
+    return false;
+};
 
 const sanitizeConfText = (
     raw: string | undefined,
@@ -185,9 +211,14 @@ const collapseExpandedIndexMacro = (spl: string): string =>
         '$1'
     );
 
-let CACHED_PROMISE: Promise<SearchbaseRecord[]> | null = null;
+const catalogueCacheKey = (options?: SearchbaseCatalogueOptions): string =>
+    options?.includeHidden ? 'includeHidden' : 'visible';
 
-const fetchSearchbase = async (): Promise<SearchbaseRecord[]> => {
+const CACHED_PROMISES = new Map<string, Promise<SearchbaseRecord[]>>();
+
+const fetchSearchbase = async (
+    options?: SearchbaseCatalogueOptions
+): Promise<SearchbaseRecord[]> => {
     if (!isInSplunkRuntime()) return [];
     const appName = getSearchAppContext();
     const headers: Record<string, string> = { Accept: 'application/json' };
@@ -206,7 +237,7 @@ const fetchSearchbase = async (): Promise<SearchbaseRecord[]> => {
     const out: SearchbaseRecord[] = [];
     for (const e of entries) {
         const content = e.content ?? {};
-        if (isTruthyConfValue(content.disabled) || isTruthyConfValue(content.search_hidden)) {
+        if (isSearchbaseStanzaExcluded(content, options)) {
             continue;
         }
         const searchName = typeof content.search_name === 'string' ? content.search_name.trim() : '';
@@ -238,14 +269,19 @@ const fetchSearchbase = async (): Promise<SearchbaseRecord[]> => {
  * call kicks off the REST request; subsequent calls reuse the same
  * promise. On error the cache resets so the next call retries.
  */
-export const getSearchbaseCatalogue = async (): Promise<SearchbaseRecord[]> => {
-    if (!CACHED_PROMISE) {
-        CACHED_PROMISE = fetchSearchbase().catch((err) => {
-            CACHED_PROMISE = null;
+export const getSearchbaseCatalogue = async (
+    options?: SearchbaseCatalogueOptions
+): Promise<SearchbaseRecord[]> => {
+    const cacheKey = catalogueCacheKey(options);
+    let cached = CACHED_PROMISES.get(cacheKey);
+    if (!cached) {
+        cached = fetchSearchbase(options).catch((err) => {
+            CACHED_PROMISES.delete(cacheKey);
             throw err;
         });
+        CACHED_PROMISES.set(cacheKey, cached);
     }
-    return CACHED_PROMISE;
+    return cached;
 };
 
 /**
@@ -271,5 +307,5 @@ export const plainTextFromHtml = (html: string): string => {
 
 /** Force the next call to re-fetch from Splunk. */
 export const clearSearchbaseCache = (): void => {
-    CACHED_PROMISE = null;
+    CACHED_PROMISES.clear();
 };

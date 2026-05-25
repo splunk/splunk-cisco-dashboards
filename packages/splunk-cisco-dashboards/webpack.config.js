@@ -94,6 +94,10 @@ const commonConfig = webpackMerge(baseConfig, {
             webappRoot,
             'pages/network_diagram/render.tsx'
         ),
+        searchbase_canvas: path.join(
+            webappRoot,
+            'pages/searchbase_canvas/render.tsx'
+        ),
     },
     output: {
         path: path.join(stageRoot, 'appserver', 'static', 'pages'),
