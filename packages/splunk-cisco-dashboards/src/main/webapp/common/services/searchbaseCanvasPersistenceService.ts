@@ -6,6 +6,8 @@
  * through Splunk's public conf REST endpoint.
  */
 
+import { createFetchInit } from '@splunk/splunk-utils/fetch';
+
 import { getSearchAppContext } from './splunkSearchService';
 
 const CONF_BASENAME = 'searchbase_canvases';
@@ -322,13 +324,6 @@ const upsertRow = async (row: CanvasRow): Promise<void> => {
     }
 
     const appName = getSearchAppContext();
-    const headers: Record<string, string> = {
-        Accept: 'application/json',
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'X-Requested-With': 'XMLHttpRequest',
-    };
-    const csrf = getCsrfToken();
-    if (csrf) headers['X-Splunk-Form-Key'] = csrf;
 
     const body = new URLSearchParams({
         schema_version: String(row.schemaVersion),
@@ -344,16 +339,14 @@ const upsertRow = async (row: CanvasRow): Promise<void> => {
     });
 
     const updateUrl = `${buildBaseUrl(appName, true)}/${encodeURIComponent(row.name)}`;
+    const postInit = createFetchInit({
+        method: 'POST',
+        body: body.toString(),
+        headers: { Accept: 'application/json' },
+    });
     let response: Response;
     try {
-        response = await withRetry(() =>
-            fetch(updateUrl, {
-                method: 'POST',
-                credentials: 'include',
-                headers,
-                body: body.toString(),
-            })
-        );
+        response = await withRetry(() => fetch(updateUrl, postInit));
     } catch (error) {
         throw new SearchbaseCanvasPersistenceError(
             `Couldn't save canvas: ${
@@ -366,13 +359,13 @@ const upsertRow = async (row: CanvasRow): Promise<void> => {
     if (response.status === 404) {
         const createBody = new URLSearchParams(body);
         createBody.set('name', row.name);
+        const createInit = createFetchInit({
+            method: 'POST',
+            body: createBody.toString(),
+            headers: { Accept: 'application/json' },
+        });
         const createResponse = await withRetry(() =>
-            fetch(buildBaseUrl(appName, true), {
-                method: 'POST',
-                credentials: 'include',
-                headers,
-                body: createBody.toString(),
-            })
+            fetch(buildBaseUrl(appName, true), createInit)
         );
         if (createResponse.ok) return;
         let createError: unknown = null;
@@ -475,23 +468,15 @@ export const deleteSearchbaseCanvas = async (name: string): Promise<void> => {
     }
 
     const appName = getSearchAppContext();
-    const headers: Record<string, string> = {
-        Accept: 'application/json',
-        'X-Requested-With': 'XMLHttpRequest',
-    };
-    const csrf = getCsrfToken();
-    if (csrf) headers['X-Splunk-Form-Key'] = csrf;
     const url = `${buildBaseUrl(appName, true)}/${encodeURIComponent(
         trimmed
     )}?output_mode=json`;
+    const deleteInit = createFetchInit({
+        method: 'DELETE',
+        headers: { Accept: 'application/json' },
+    });
 
-    const response = await withRetry(() =>
-        fetch(url, {
-            method: 'DELETE',
-            credentials: 'include',
-            headers,
-        })
-    );
+    const response = await withRetry(() => fetch(url, deleteInit));
     if (response.ok || response.status === 404) return;
     let body: unknown = null;
     try {
