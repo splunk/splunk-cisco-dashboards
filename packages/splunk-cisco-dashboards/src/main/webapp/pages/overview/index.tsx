@@ -2152,6 +2152,9 @@ const OverviewPage: React.FC = () => {
     const [searchbaseByName, setSearchbaseByName] = useState<
         Map<string, SearchbaseRecord> | null
     >(null);
+    // `getSearchbaseCatalogue()` omits stanzas with `search_hidden = 1`
+    // (and `disabled = 1`) so the KPI picker, topology browsers, and
+    // tile dispatch never surface hidden catalogue entries on Overview.
     useEffect(() => {
         let cancelled = false;
         getSearchbaseCatalogue()

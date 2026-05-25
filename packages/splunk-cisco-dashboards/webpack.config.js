@@ -98,6 +98,10 @@ const commonConfig = webpackMerge(baseConfig, {
             webappRoot,
             'pages/searchbase_canvas/render.tsx'
         ),
+        m365_activity_monitoring: path.join(
+            webappRoot,
+            'pages/m365_activity_monitoring/render.tsx'
+        ),
     },
     output: {
         path: path.join(stageRoot, 'appserver', 'static', 'pages'),

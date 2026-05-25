@@ -865,6 +865,26 @@ const topologyAnimationCss = `
         transform-origin: center;
         z-index: 0;
     }
+    .customer-topology-site-beacon--dark .customer-topology-site-wave {
+        inset: 7px;
+        border-width: 1.25px;
+        border-color: var(--site-accent);
+        background:
+            radial-gradient(circle, var(--site-accent-soft) 0%, transparent 54%);
+        box-shadow:
+            0 0 0 1px rgba(248, 250, 252, 0.32) inset,
+            0 0 14px var(--site-accent-soft);
+    }
+    .customer-topology-site-beacon--light .customer-topology-site-wave {
+        inset: 4px;
+        border-width: 2px;
+        border-color: var(--site-accent);
+        background:
+            radial-gradient(circle, var(--site-accent-soft) 0%, transparent 58%);
+        box-shadow:
+            0 0 0 1px rgba(15, 23, 42, 0.16) inset,
+            0 0 24px var(--site-accent-soft);
+    }
     .customer-topology-site-wave--2 {
         animation-delay: -0.95s;
     }
@@ -895,6 +915,27 @@ const topologyAnimationCss = `
             ease-in-out
             infinite;
     }
+    .customer-topology-site-beacon--dark .customer-topology-site-core {
+        border-width: 3px;
+        border-color: var(--site-accent);
+        box-shadow:
+            0 10px 22px rgba(2, 6, 23, 0.55),
+            0 0 0 4px var(--site-accent-soft),
+            0 0 18px var(--site-accent-soft),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.9);
+    }
+    .customer-topology-site-beacon--light .customer-topology-site-core {
+        border-width: 3px;
+        border-color: #ffffff;
+        background:
+            radial-gradient(circle at 28% 22%, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.26) 30%, transparent 48%),
+            linear-gradient(145deg, var(--site-surface), var(--site-surface));
+        box-shadow:
+            0 12px 24px rgba(15, 23, 42, 0.34),
+            0 0 0 2px rgba(15, 23, 42, 0.2),
+            0 0 0 7px var(--site-accent-soft),
+            0 0 28px var(--site-accent-soft);
+    }
     .customer-topology-site-core::before {
         content: '';
         position: absolute;
@@ -919,6 +960,34 @@ const topologyAnimationCss = `
             linear
             infinite;
     }
+    .customer-topology-site-beacon--light .customer-topology-site-core::before {
+        background:
+            conic-gradient(
+                from 0deg,
+                transparent 0deg,
+                var(--site-accent) 44deg,
+                transparent 82deg,
+                transparent 180deg,
+                var(--site-accent) 224deg,
+                transparent 270deg,
+                transparent 360deg
+            );
+        opacity: 0.72;
+    }
+    .customer-topology-site-beacon--dark .customer-topology-site-core::before {
+        background:
+            conic-gradient(
+                from 0deg,
+                transparent 0deg,
+                var(--site-accent) 44deg,
+                transparent 82deg,
+                transparent 180deg,
+                var(--site-accent) 224deg,
+                transparent 270deg,
+                transparent 360deg
+            );
+        opacity: 0.62;
+    }
     .customer-topology-site-core::after {
         content: '';
         position: absolute;
@@ -927,6 +996,12 @@ const topologyAnimationCss = `
         border: 1px solid rgba(15, 23, 42, 0.08);
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
     }
+    .customer-topology-site-beacon--light .customer-topology-site-core::after {
+        border-color: rgba(255, 255, 255, 0.24);
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.55),
+            inset 0 -10px 18px rgba(15, 23, 42, 0.08);
+    }
     .customer-topology-site-code {
         position: relative;
         z-index: 2;
@@ -934,7 +1009,7 @@ const topologyAnimationCss = `
         font-size: 11px;
         font-weight: 950;
         letter-spacing: 0;
-        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.82);
+        text-shadow: var(--site-text-shadow);
     }
     .customer-topology-site-led {
         position: absolute;
@@ -1843,6 +1918,13 @@ const STATUS_MARKER_SPEED: Record<TopologyStatus, string> = {
     unknown: '4.6s',
 };
 
+const STATUS_DARK_CORE_SURFACE: Record<TopologyStatus, string> = {
+    critical: '#fff1f2',
+    warning: '#fff7ed',
+    stable: '#ecfdf5',
+    unknown: '#f8fafc',
+};
+
 const createSiteIcon = (
     site: TopologySite,
     isSelected: boolean,
@@ -1870,7 +1952,20 @@ const createSiteIcon = (
     const labelChrome = isDark
         ? 'bg-slate-900/90 backdrop-blur-sm border-slate-700 text-slate-100'
         : 'bg-white/90 backdrop-blur-sm border-slate-200 text-slate-800';
-    const pillBg = isDark ? '#0f172a' : '#ffffff';
+    const markerAccentColor =
+        site.status === 'unknown' ? roleChrome.fill : ringColor;
+    const markerAccentHalo =
+        site.status === 'unknown' ? roleChrome.halo : haloColor;
+    const pillBg = isDark
+        ? STATUS_DARK_CORE_SURFACE[site.status]
+        : markerAccentColor;
+    const siteTextColor = isDark ? '#0f172a' : '#ffffff';
+    const siteTextShadow = isDark
+        ? '0 1px 0 rgba(255, 255, 255, 0.72)'
+        : '0 1px 2px rgba(15, 23, 42, 0.36)';
+    const beaconModeClass = isDark
+        ? 'customer-topology-site-beacon--dark'
+        : 'customer-topology-site-beacon--light';
     const entranceClass = animateEntrance
         ? 'customer-topology-marker-enter'
         : '';
@@ -1880,14 +1975,17 @@ const createSiteIcon = (
     const healthStyle =
         `--site-health:${ringColor};` +
         `--site-health-soft:${haloColor};` +
+        `--site-accent:${markerAccentColor};` +
+        `--site-accent-soft:${markerAccentHalo};` +
         `--site-surface:${pillBg};` +
-        `--site-text:${ringColor};` +
+        `--site-text:${siteTextColor};` +
+        `--site-text-shadow:${siteTextShadow};` +
         `--site-wave-speed:${waveSpeed};`;
     return L.divIcon({
         className: 'custom-div-icon',
         html: `
       <div class="relative flex flex-col items-center group w-[220px] ${entranceClass}" style="${entranceStyle}${healthStyle}">
-        <div class="customer-topology-site-beacon ${selectionScale} transition-transform duration-200" style="${selectionRing}">
+        <div class="customer-topology-site-beacon ${beaconModeClass} ${selectionScale} transition-transform duration-200" style="${selectionRing}">
           <span class="customer-topology-site-wave" aria-hidden="true"></span>
           <span class="customer-topology-site-wave customer-topology-site-wave--2" aria-hidden="true"></span>
           <span class="customer-topology-site-wave customer-topology-site-wave--3" aria-hidden="true"></span>
