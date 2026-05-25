@@ -28,7 +28,7 @@
  */
 
 import React, { useMemo, useRef, useState } from 'react';
-import { ExternalLink, Search, Trash2, Upload, X } from 'lucide-react';
+import { ChevronRight, ExternalLink, Search, Trash2, Upload, X } from 'lucide-react';
 import { strFromU8, unzipSync } from 'fflate';
 import { cn } from '@/common/lib/utils';
 import { CISCO_ICONS } from '@/common/components/topology/ciscoIcons';
@@ -710,12 +710,62 @@ const CustomStencilTile: React.FC<{ asset: CustomStencilAsset }> = ({ asset }) =
     );
 };
 
+interface CategoryDrawerProps {
+    label: string;
+    count: number;
+    open: boolean;
+    onToggle: () => void;
+    children: React.ReactNode;
+}
+
+const CategoryDrawer: React.FC<CategoryDrawerProps> = ({
+    label,
+    count,
+    open,
+    onToggle,
+    children,
+}) => (
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/70">
+        <button
+            type="button"
+            aria-expanded={open}
+            onClick={onToggle}
+            className={cn(
+                'flex w-full items-center justify-between gap-2 px-2.5 py-2 text-left',
+                'text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400',
+                'hover:bg-slate-50 hover:text-sky-700 dark:hover:bg-slate-800/70 dark:hover:text-sky-300'
+            )}
+        >
+            <span className="flex min-w-0 items-center gap-1.5">
+                <ChevronRight
+                    className={cn(
+                        'h-3.5 w-3.5 flex-shrink-0 transition-transform duration-150',
+                        open && 'rotate-90'
+                    )}
+                />
+                <span className="truncate">{label}</span>
+            </span>
+            <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                {count}
+            </span>
+        </button>
+        {open ? (
+            <div className="grid grid-cols-2 gap-2 border-t border-slate-100 p-2 dark:border-slate-800">
+                {children}
+            </div>
+        ) : null}
+    </div>
+);
+
 export const ShapesTab: React.FC = () => {
     const [query, setQuery] = useState('');
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const [customStencils, setCustomStencils] =
         useState<CustomStencilAsset[]>(loadCustomStencils);
     const [importMessage, setImportMessage] = useState<string>('');
+    const [expandedCategories, setExpandedCategories] = useState<
+        Set<ShapeCategory>
+    >(() => new Set());
     const normalizedQuery = normalizeSearch(query);
     // Build 115 — group tiles by category so the 18-shape palette
     // stays scannable. We compute groups inline rather than
@@ -807,6 +857,27 @@ export const ShapesTab: React.FC = () => {
         setCustomStencils([]);
         saveCustomStencils([]);
         setImportMessage('');
+    };
+
+    const visibleCategories = ordered.filter((cat) => grouped.has(cat));
+    const allVisibleExpanded =
+        visibleCategories.length > 0 &&
+        visibleCategories.every((cat) => expandedCategories.has(cat));
+    const toggleCategory = (cat: ShapeCategory): void => {
+        setExpandedCategories((current) => {
+            const next = new Set(current);
+            if (next.has(cat)) {
+                next.delete(cat);
+            } else {
+                next.add(cat);
+            }
+            return next;
+        });
+    };
+    const toggleAllCategories = (): void => {
+        setExpandedCategories(
+            allVisibleExpanded ? new Set() : new Set(visibleCategories)
+        );
     };
 
     return (
@@ -904,6 +975,18 @@ export const ShapesTab: React.FC = () => {
                     </>
                 )}
             </p>
+            {filteredTiles.length > 0 && !normalizedQuery ? (
+                <button
+                    type="button"
+                    onClick={toggleAllCategories}
+                    className={cn(
+                        'self-start rounded-md border border-slate-200 px-2 py-1 text-[10px] font-semibold text-slate-500',
+                        'hover:border-sky-300 hover:text-sky-700 dark:border-slate-800 dark:text-slate-400 dark:hover:border-sky-900 dark:hover:text-sky-300'
+                    )}
+                >
+                    {allVisibleExpanded ? 'Collapse all' : 'Expand all'}
+                </button>
+            ) : null}
             {filteredTiles.length === 0 ? (
                 filteredCustomStencils.length === 0 ? (
                     <div className="rounded-md border border-dashed border-slate-200 px-3 py-5 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
@@ -926,17 +1009,20 @@ export const ShapesTab: React.FC = () => {
             {ordered.map((cat) => {
                 const tiles = grouped.get(cat);
                 if (!tiles || tiles.length === 0) return null;
+                const isOpen =
+                    Boolean(normalizedQuery) || expandedCategories.has(cat);
                 return (
-                    <div key={cat} className="flex flex-col gap-1.5">
-                        <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-0.5">
-                            {CATEGORY_LABELS[cat]}
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                            {tiles.map((s) => (
-                                <ShapeTile key={s.id} {...s} />
-                            ))}
-                        </div>
-                    </div>
+                    <CategoryDrawer
+                        key={cat}
+                        label={CATEGORY_LABELS[cat]}
+                        count={tiles.length}
+                        open={isOpen}
+                        onToggle={() => toggleCategory(cat)}
+                    >
+                        {tiles.map((s) => (
+                            <ShapeTile key={s.id} {...s} />
+                        ))}
+                    </CategoryDrawer>
                 );
             })}
         </div>
