@@ -380,7 +380,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                                 // this button is hovered (see
                                 // SortableMetricCard.tsx for the rule).
                                 data-tile-control="true"
-                                className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
+                                className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-400 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
                             >
                                 <ExternalLink className="w-3 h-3 stroke-[2.5px]" />
                             </button>
@@ -392,7 +392,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                                 title={detailTableTitle ?? 'View detail table'}
                                 aria-label={detailTableTitle ?? `View ${label} detail table`}
                                 data-tile-control="true"
-                                className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
+                                className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-400 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
                             >
                                 <Table2 className="w-3 h-3 stroke-[2.5px]" />
                             </button>
@@ -408,7 +408,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                                 }
                                 aria-label={`Configure ${label} tile`}
                                 data-tile-control="true"
-                                className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400 relative"
+                                className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-400 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400 relative"
                             >
                                 <Settings2 className="w-3 h-3 stroke-[2.5px]" />
                                 {isCustomized && (
@@ -419,7 +419,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                     </span>
                 </span>
                 {subLabel && (
-                    <span className="text-[9.5px] text-slate-400 dark:text-slate-500 font-medium tracking-tight leading-tight line-clamp-1 min-h-[12px]">
+                    <span className="text-[9.5px] text-slate-400 dark:text-slate-400 font-medium tracking-tight leading-tight line-clamp-1 min-h-[12px]">
                         {subLabel}
                     </span>
                 )}

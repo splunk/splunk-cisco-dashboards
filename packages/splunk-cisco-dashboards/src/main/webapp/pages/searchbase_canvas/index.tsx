@@ -2,6 +2,7 @@ import React, {
     useCallback,
     useEffect,
     useMemo,
+    useRef,
     useState,
 } from 'react';
 import {
@@ -755,8 +756,8 @@ const SearchbaseNoDataPanel: React.FC<{
             className={cn(
                 'flex h-full min-h-[220px] flex-col rounded-md border border-dashed p-4',
                 isError
-                    ? 'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-900/70 dark:bg-rose-950/30 dark:text-rose-100'
-                    : 'border-sky-200 bg-sky-50 text-slate-900 dark:border-sky-900/70 dark:bg-sky-950/30 dark:text-slate-50'
+                    ? 'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-100'
+                    : 'border-sky-200 bg-sky-50 text-slate-900 dark:border-sky-800 dark:bg-slate-800 dark:text-slate-50'
             )}
         >
             <div className="flex items-start gap-3">
@@ -764,7 +765,7 @@ const SearchbaseNoDataPanel: React.FC<{
                     className={cn(
                         'flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md',
                         isError
-                            ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-100'
+                            ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/70 dark:text-rose-100'
                             : 'bg-white text-sky-700 shadow-sm dark:bg-slate-950 dark:text-sky-200'
                     )}
                 >
@@ -779,7 +780,7 @@ const SearchbaseNoDataPanel: React.FC<{
                             'mt-1 text-xs leading-snug',
                             isError
                                 ? 'text-rose-700 dark:text-rose-200'
-                                : 'text-slate-600 dark:text-slate-300'
+                                : 'text-slate-600 dark:text-slate-200'
                         )}
                     >
                         {copy.detail}
@@ -788,10 +789,10 @@ const SearchbaseNoDataPanel: React.FC<{
             </div>
 
             <div className="mt-4 min-w-0">
-                <div className="truncate text-xs font-black uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                <div className="truncate text-xs font-black uppercase tracking-wide text-slate-500 dark:text-slate-300">
                     {record.searchName}
                 </div>
-                <p className="mt-1 line-clamp-3 text-xs leading-snug text-slate-600 dark:text-slate-300">
+                <p className="mt-1 line-clamp-3 text-xs leading-snug text-slate-600 dark:text-slate-200">
                     {description || record.id}
                 </p>
             </div>
@@ -1081,7 +1082,7 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
     ]);
 
     return (
-        <div className="group/tile flex min-h-[248px] flex-col rounded-md border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-slate-800 dark:bg-slate-950/80">
+        <div className="group/tile flex min-h-[248px] flex-col rounded-md border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-800/95 dark:shadow-none dark:ring-1 dark:ring-slate-900/30">
             <div className="flex h-full min-h-0 flex-1 flex-col p-2">
                 {isTableViz(viz) ? (
                     <SearchbaseTableTileBody
@@ -1136,7 +1137,7 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                     />
                 )}
             </div>
-            <div className="flex items-center gap-2 border-t border-slate-100 px-2 py-1.5 text-[10px] font-semibold text-slate-500 dark:border-slate-800 dark:text-slate-400">
+            <div className="flex items-center gap-2 border-t border-slate-100 px-2 py-1.5 text-[10px] font-semibold text-slate-500 dark:border-slate-700 dark:text-slate-300">
                 <TileVizSelect
                     tile={tile}
                     record={record}
@@ -1212,7 +1213,7 @@ const SearchbasePreviewTile: React.FC<ResolvedSearchbaseCanvasTileProps> = ({
     };
 
     return (
-        <div className="group/tile flex min-h-[248px] flex-col rounded-md border border-dashed border-slate-300 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-950/80">
+        <div className="group/tile flex min-h-[248px] flex-col rounded-md border border-dashed border-slate-300 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800/95 dark:shadow-none dark:ring-1 dark:ring-slate-900/30">
             <div className="flex min-h-0 flex-1 flex-col p-4">
                 <div className="flex items-start gap-3">
                     <div
@@ -1271,7 +1272,7 @@ const SearchbasePreviewTile: React.FC<ResolvedSearchbaseCanvasTileProps> = ({
                 </button>
             </div>
 
-            <div className="flex items-center gap-2 border-t border-slate-100 px-2 py-1.5 text-[10px] font-semibold text-slate-500 dark:border-slate-800 dark:text-slate-400">
+            <div className="flex items-center gap-2 border-t border-slate-100 px-2 py-1.5 text-[10px] font-semibold text-slate-500 dark:border-slate-700 dark:text-slate-300">
                 <TileVizSelect
                     tile={tile}
                     record={record}
@@ -2331,6 +2332,8 @@ const SearchbaseCanvasPage: React.FC = () => {
     const [saveStatus, setSaveStatus] = useState('');
     const [savingCanvas, setSavingCanvas] = useState(false);
     const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+    const [editingCanvasName, setEditingCanvasName] = useState(false);
+    const canvasNameInputRef = useRef<HTMLInputElement | null>(null);
     const { theme, resolvedTheme, cycle } = useTheme();
 
     const range =
@@ -2357,6 +2360,13 @@ const SearchbaseCanvasPage: React.FC = () => {
         () => Array.from(observedNoDataByTile.values()),
         [observedNoDataByTile]
     );
+    const canvasNameDisplay = canvasName.trim() || 'Untitled canvas';
+
+    useEffect(() => {
+        if (!editingCanvasName) return;
+        canvasNameInputRef.current?.focus();
+        canvasNameInputRef.current?.select();
+    }, [editingCanvasName]);
 
     useEffect(() => {
         let cancelled = false;
@@ -2826,57 +2836,70 @@ const SearchbaseCanvasPage: React.FC = () => {
         <div
             className={cn(
                 resolvedTheme === 'dark' && 'dark',
-                'min-h-screen overflow-x-hidden bg-slate-50 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-50'
+                'min-h-screen overflow-x-hidden bg-slate-50 font-sans text-slate-900 dark:bg-slate-900 dark:text-slate-50'
             )}
         >
             <div className="flex min-h-screen min-w-0 flex-col overflow-x-hidden">
                 <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-                    <div className="flex min-h-12 flex-wrap items-center gap-3 border-b border-slate-200 px-3 py-1 dark:border-slate-800">
-                        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
-                            <input
-                                value={canvasName}
-                                onChange={(event) => setCanvasName(event.target.value)}
-                                placeholder="Untitled canvas"
-                                style={{
-                                    width: `${Math.min(
-                                        Math.max((canvasName || 'Untitled canvas').length + 1, 12),
-                                        32
-                                    )}ch`,
-                                }}
-                                className="h-8 min-w-[120px] max-w-[300px] rounded-sm bg-transparent px-0 text-base font-black leading-8 text-slate-950 outline-none transition placeholder:text-slate-400 focus:bg-slate-50 focus:px-1 focus:ring-1 focus:ring-slate-300 dark:text-slate-50 dark:placeholder:text-slate-600 dark:focus:bg-slate-900 dark:focus:ring-slate-700"
-                                aria-label="Canvas name"
-                            />
-                            <select
-                                value={activeSavedCanvasName ?? ''}
-                                onChange={(event) => {
-                                    const name = event.target.value;
-                                    if (name) void loadCanvasByName(name);
-                                }}
-                                disabled={savingCanvas}
-                                className="h-8 w-full rounded-sm border border-slate-300 bg-white px-2 text-sm text-slate-700 outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50 sm:w-[225px] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-slate-500"
-                            >
-                                <option value="">Load saved canvas...</option>
-                                {savedCanvases.map((canvas) => (
-                                    <option key={canvas.name} value={canvas.name}>
-                                        {canvas.name}
-                                    </option>
-                                ))}
-                            </select>
-                            <span className="sr-only" aria-live="polite">
-                                {catalogueError
-                                    ? catalogueError
-                                    : loadingCatalogue
-                                    ? 'Loading catalogue'
-                                    : saveStatus || (canvasDirty ? 'Unsaved changes' : '')}
-                            </span>
+                    <div className="flex h-12 min-w-0 items-center border-b border-slate-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-950">
+                        <div className="flex h-8 w-[240px] min-w-0 shrink-0 items-center">
+                            {editingCanvasName ? (
+                                <input
+                                    ref={canvasNameInputRef}
+                                    value={canvasName}
+                                    onChange={(event) => setCanvasName(event.target.value)}
+                                    onBlur={() => setEditingCanvasName(false)}
+                                    onKeyDown={(event) => {
+                                        if (event.key === 'Enter' || event.key === 'Escape') {
+                                            setEditingCanvasName(false);
+                                        }
+                                    }}
+                                    placeholder="Untitled canvas"
+                                    className="block h-8 w-full rounded-none border-0 border-b border-slate-300 bg-transparent p-0 text-base font-bold leading-8 text-slate-950 outline-none transition-colors placeholder:text-slate-400 focus:ring-0 dark:border-slate-600 dark:text-slate-50 dark:placeholder:text-slate-600"
+                                    aria-label="Canvas name"
+                                />
+                            ) : (
+                                <button
+                                    type="button"
+                                    onDoubleClick={() => setEditingCanvasName(true)}
+                                    className="flex h-8 w-full items-center truncate border-0 bg-transparent p-0 text-left text-base font-bold leading-8 text-slate-950 transition-colors focus:outline-none dark:text-slate-50"
+                                    title="Double-click to rename"
+                                    aria-label="Edit canvas name"
+                                >
+                                    {canvasNameDisplay}
+                                </button>
+                            )}
                         </div>
-                        <div className="flex items-center gap-1">
+                        <select
+                            value={activeSavedCanvasName ?? ''}
+                            onChange={(event) => {
+                                const name = event.target.value;
+                                if (name) void loadCanvasByName(name);
+                            }}
+                            disabled={savingCanvas}
+                            className="ml-3 block h-8 w-[260px] shrink-0 rounded-sm border border-slate-300 bg-white px-3 py-0 text-sm leading-8 text-slate-900 outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-slate-500"
+                        >
+                            <option value="">Load saved canvas...</option>
+                            {savedCanvases.map((canvas) => (
+                                <option key={canvas.name} value={canvas.name}>
+                                    {canvas.name}
+                                </option>
+                            ))}
+                        </select>
+                        <span className="sr-only" aria-live="polite">
+                            {catalogueError
+                                ? catalogueError
+                                : loadingCatalogue
+                                ? 'Loading catalogue'
+                                : saveStatus || (canvasDirty ? 'Unsaved changes' : '')}
+                        </span>
+                        <div className="ml-auto flex h-8 items-center gap-1">
                             <button
                                 type="button"
                                 onClick={cycle}
                                 title={themeTitle}
                                 aria-label={themeTitle}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:text-slate-200 dark:hover:bg-slate-900 dark:focus:ring-slate-700"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus:ring-slate-700"
                             >
                                 <HeaderThemeIcon className="h-4 w-4" />
                             </button>
@@ -2887,7 +2910,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                     aria-expanded={moreMenuOpen}
                                     title="More canvas actions"
                                     aria-label="More canvas actions"
-                                    className="inline-flex h-8 w-8 items-center justify-center rounded-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:text-slate-200 dark:hover:bg-slate-900 dark:focus:ring-slate-700"
+                                    className="inline-flex h-8 w-8 items-center justify-center rounded-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus:ring-slate-700"
                                 >
                                     <MoreVertical className="h-4 w-4" />
                                 </button>
@@ -2945,8 +2968,8 @@ const SearchbaseCanvasPage: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="grid min-h-[52px] grid-cols-1 items-center gap-2 border-b border-slate-200 px-3 py-2 dark:border-slate-800 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
-                        <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <div className="relative flex h-[54px] min-w-0 items-center border-b border-slate-200 bg-slate-50/60 px-4 dark:border-slate-800 dark:bg-slate-950">
+                        <div className="flex min-w-0 items-center gap-2">
                             <button
                                 type="button"
                                 onClick={saveCurrentCanvas}
@@ -2993,13 +3016,13 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 setReplaceTileId(null);
                                 setBrowserOpen(true);
                             }}
-                            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-sm bg-[#00A86B] px-7 text-sm font-bold text-white transition hover:bg-[#008556] focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                            className="absolute left-1/2 inline-flex h-9 -translate-x-1/2 items-center justify-center gap-1.5 rounded-sm bg-[#00A86B] px-7 text-sm font-bold text-white transition hover:bg-[#008556] focus:outline-none focus:ring-2 focus:ring-emerald-300"
                         >
                             <Plus className="h-4 w-4" />
                             Add Tiles
                         </button>
 
-                        <div className="flex min-w-0 flex-wrap items-center justify-start gap-2 lg:justify-end">
+                        <div className="ml-auto flex min-w-0 items-center gap-2">
                             <button
                                 type="button"
                                 disabled={idleVisibleTileCount === 0}
@@ -3026,14 +3049,14 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 disabled={runningTileIds.size === 0}
                                 title="Refresh running tiles"
                                 aria-label="Refresh running tiles"
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-sm text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:text-slate-200 dark:hover:bg-slate-900 dark:focus:ring-slate-700"
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-sm text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus:ring-slate-700"
                             >
                                 <RefreshCw className="h-4 w-4" />
                             </button>
                         </div>
                     </div>
 
-                    <div className="flex min-h-11 min-w-0 flex-wrap items-center gap-2 border-b border-slate-200 bg-slate-50 px-3 py-1.5 dark:border-slate-800 dark:bg-slate-900/50">
+                    <div className="flex h-10 min-w-0 items-center gap-2 border-b border-slate-200 bg-slate-50 px-4 dark:border-slate-800 dark:bg-slate-900/70">
                         <span className="inline-flex h-7 items-center rounded-sm border border-slate-300 bg-white px-2 text-sm font-semibold text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
                             Tiles: {tiles.length.toLocaleString()}
                         </span>
@@ -3061,7 +3084,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                             Total Searches: {records.length.toLocaleString()}
                         </span>
 
-                        <div className="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto">
+                        <div className="ml-auto flex items-center gap-2">
                             <select
                                 value={rangeLabel}
                                 onChange={(event) => setRangeLabel(event.target.value)}
@@ -3092,7 +3115,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                     </div>
                 </header>
 
-                <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden p-5">
+                <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden bg-slate-50 p-5 dark:bg-slate-900">
                     <div className="mb-4 flex min-w-0 flex-wrap items-center gap-2">
                         <button
                             type="button"

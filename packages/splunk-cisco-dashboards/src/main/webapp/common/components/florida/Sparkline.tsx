@@ -909,7 +909,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
                 </div>
                 {showFooter && (
                     <div
-                        className={`flex items-center pt-0.5 px-3 text-[9px] tabular-nums leading-none text-slate-400 dark:text-slate-500 font-medium select-none ${footerJustify}`}
+                        className={`flex items-center pt-0.5 px-3 text-[9px] tabular-nums leading-none text-slate-400 dark:text-slate-400 font-medium select-none ${footerJustify}`}
                         aria-hidden="true"
                     >
                         {sameTime ? (
