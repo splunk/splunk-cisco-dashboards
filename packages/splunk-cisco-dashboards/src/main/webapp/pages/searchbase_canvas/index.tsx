@@ -12,8 +12,10 @@ import {
     Copy,
     ExternalLink,
     Gauge,
-    Layers3,
     Maximize2,
+    MonitorSmartphone,
+    Moon,
+    MoreVertical,
     PanelRightOpen,
     Play,
     Plus,
@@ -22,6 +24,8 @@ import {
     Search,
     Settings2,
     SlidersHorizontal,
+    Square,
+    Sun,
     Table2,
     Trash2,
     X,
@@ -45,7 +49,6 @@ import { BarBreakdownTile } from '@/common/components/florida/BarBreakdownTile';
 import { MetricItem } from '@/common/components/florida/MetricItem';
 import { SortableMetricCard } from '@/common/components/florida/SortableMetricCard';
 import { TableTile } from '@/common/components/florida/TableTile';
-import { ThemeToggle } from '@/common/components/florida/ThemeToggle';
 import {
     normalizeDataValuesDisplay,
     sparklineVizTypeFromSplunkViz,
@@ -2327,6 +2330,7 @@ const SearchbaseCanvasPage: React.FC = () => {
     const [lastSavedSignature, setLastSavedSignature] = useState('');
     const [saveStatus, setSaveStatus] = useState('');
     const [savingCanvas, setSavingCanvas] = useState(false);
+    const [moreMenuOpen, setMoreMenuOpen] = useState(false);
     const { theme, resolvedTheme, cycle } = useTheme();
 
     const range =
@@ -2346,7 +2350,9 @@ const SearchbaseCanvasPage: React.FC = () => {
         currentCanvasSignature !== lastSavedSignature;
     const hasUnsavedCurrentCanvas =
         activeSavedCanvasName === null &&
-        (tiles.length > 0 || canvasName.trim() !== 'Searchbase Canvas');
+        (tiles.length > 0 ||
+            (canvasName.trim().length > 0 &&
+                canvasName.trim() !== 'Searchbase Canvas'));
     const observedNoDataRows = useMemo(
         () => Array.from(observedNoDataByTile.values()),
         [observedNoDataByTile]
@@ -2591,6 +2597,7 @@ const SearchbaseCanvasPage: React.FC = () => {
         try {
             await deleteSearchbaseCanvas(activeSavedCanvasName);
             setSaveStatus(`Deleted "${activeSavedCanvasName}".`);
+            setCanvasName('');
             setActiveSavedCanvasName(null);
             setLastSavedSignature('');
             refreshSavedCanvases();
@@ -2784,52 +2791,61 @@ const SearchbaseCanvasPage: React.FC = () => {
         setLastSavedSignature('');
     };
 
+    const createNewCanvas = useCallback(() => {
+        if (
+            (canvasDirty || hasUnsavedCurrentCanvas) &&
+            typeof window !== 'undefined' &&
+            !window.confirm('Discard unsaved canvas changes?')
+        ) {
+            return;
+        }
+        setCanvasName('Searchbase Canvas');
+        setPageSize(25);
+        setRangeLabel(DEFAULT_TIME_RANGE_LABEL);
+        setTiles([]);
+        setRunningTileIds(new Set());
+        setObservedNoDataByTile(new Map());
+        setPageIndex(0);
+        setBrowserOpen(false);
+        setReplaceTileId(null);
+        setActiveSavedCanvasName(null);
+        setLastSavedSignature('');
+        setSaveStatus('New empty canvas.');
+    }, [canvasDirty, hasUnsavedCurrentCanvas]);
+
+    const HeaderThemeIcon =
+        theme === 'system' ? MonitorSmartphone : resolvedTheme === 'dark' ? Moon : Sun;
+    const themeTitle =
+        theme === 'system'
+            ? 'Following system theme'
+            : resolvedTheme === 'dark'
+            ? 'Dark theme'
+            : 'Light theme';
+
     return (
         <div
             className={cn(
                 resolvedTheme === 'dark' && 'dark',
-                'min-h-screen bg-slate-50 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-50'
+                'min-h-screen overflow-x-hidden bg-slate-50 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-50'
             )}
         >
-            <div className="flex min-h-screen flex-col">
-                <header className="border-b border-slate-200 bg-white px-5 py-4 dark:border-slate-800 dark:bg-slate-950">
-                    <div className="flex flex-wrap items-center gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-md bg-sky-50 text-sky-600 dark:bg-sky-950 dark:text-sky-300">
-                            <Layers3 className="h-6 w-6" />
-                        </div>
-                        <div className="min-w-[220px] flex-1">
+            <div className="flex min-h-screen min-w-0 flex-col overflow-x-hidden">
+                <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+                    <div className="flex min-h-12 flex-wrap items-center gap-3 border-b border-slate-200 px-3 py-1 dark:border-slate-800">
+                        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
                             <input
                                 value={canvasName}
                                 onChange={(event) => setCanvasName(event.target.value)}
-                                className="w-full bg-transparent text-2xl font-black tracking-tight text-slate-950 outline-none dark:text-slate-50"
+                                placeholder="Untitled canvas"
+                                style={{
+                                    width: `${Math.min(
+                                        Math.max((canvasName || 'Untitled canvas').length + 1, 12),
+                                        32
+                                    )}ch`,
+                                }}
+                                className="h-8 min-w-[120px] max-w-[300px] rounded-sm bg-transparent px-0 text-base font-black leading-8 text-slate-950 outline-none transition placeholder:text-slate-400 focus:bg-slate-50 focus:px-1 focus:ring-1 focus:ring-slate-300 dark:text-slate-50 dark:placeholder:text-slate-600 dark:focus:bg-slate-900 dark:focus:ring-slate-700"
                                 aria-label="Canvas name"
                             />
-                            <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                                <span>{tiles.length.toLocaleString()} tiles</span>
-                                <span>{runningTileIds.size.toLocaleString()} running</span>
-                                {observedNoDataRows.length > 0 && (
-                                    <span>
-                                        {observedNoDataRows.length.toLocaleString()} no data
-                                    </span>
-                                )}
-                                <span>{records.length.toLocaleString()} searches</span>
-                                {canvasDirty && <span>Unsaved changes</span>}
-                                {saveStatus && (
-                                    <span className="text-sky-700 dark:text-sky-300">
-                                        {saveStatus}
-                                    </span>
-                                )}
-                                {loadingCatalogue && <span>Loading catalogue</span>}
-                                {catalogueError && (
-                                    <span className="text-rose-600 dark:text-rose-300">
-                                        {catalogueError}
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-
-                        <label className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-slate-400">
-                            Canvas
                             <select
                                 value={activeSavedCanvasName ?? ''}
                                 onChange={(event) => {
@@ -2837,127 +2853,139 @@ const SearchbaseCanvasPage: React.FC = () => {
                                     if (name) void loadCanvasByName(name);
                                 }}
                                 disabled={savingCanvas}
-                                className="h-9 max-w-[220px] rounded-md border border-slate-300 bg-white px-2 text-sm font-semibold normal-case tracking-normal text-slate-700 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-200 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
+                                className="h-8 w-full rounded-sm border border-slate-300 bg-white px-2 text-sm text-slate-700 outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50 sm:w-[225px] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-slate-500"
                             >
-                                <option value="">Current canvas</option>
+                                <option value="">Load saved canvas...</option>
                                 {savedCanvases.map((canvas) => (
                                     <option key={canvas.name} value={canvas.name}>
                                         {canvas.name}
                                     </option>
                                 ))}
                             </select>
-                        </label>
-
-                        <button
-                            type="button"
-                            onClick={saveCurrentCanvas}
-                            disabled={savingCanvas || tiles.length === 0}
-                            title="Save canvas"
-                            className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-black text-slate-600 transition hover:border-sky-300 hover:text-sky-600 disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-sky-700 dark:hover:text-sky-300"
-                        >
-                            <Save className="h-4 w-4" />
-                            Save
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={saveCanvasAs}
-                            disabled={savingCanvas || tiles.length === 0}
-                            title="Save canvas as"
-                            className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-black text-slate-600 transition hover:border-sky-300 hover:text-sky-600 disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-sky-700 dark:hover:text-sky-300"
-                        >
-                            <Copy className="h-4 w-4" />
-                            Save as
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={deleteActiveCanvas}
-                            disabled={savingCanvas || !activeSavedCanvasName}
-                            title="Delete saved canvas"
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 transition hover:border-rose-300 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-rose-800 dark:hover:text-rose-300"
-                        >
-                            <Trash2 className="h-4 w-4" />
-                        </button>
-
-                        <label className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-slate-400">
-                            Time
-                            <select
-                                value={rangeLabel}
-                                onChange={(event) => setRangeLabel(event.target.value)}
-                                className="h-9 rounded-md border border-slate-300 bg-white px-2 text-sm font-semibold normal-case tracking-normal text-slate-700 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
+                            <span className="sr-only" aria-live="polite">
+                                {catalogueError
+                                    ? catalogueError
+                                    : loadingCatalogue
+                                    ? 'Loading catalogue'
+                                    : saveStatus || (canvasDirty ? 'Unsaved changes' : '')}
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <button
+                                type="button"
+                                onClick={cycle}
+                                title={themeTitle}
+                                aria-label={themeTitle}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:text-slate-200 dark:hover:bg-slate-900 dark:focus:ring-slate-700"
                             >
-                                {TIME_RANGE_OPTIONS.map((option) => (
-                                    <option key={option.label} value={option.label}>
-                                        {option.label}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
+                                <HeaderThemeIcon className="h-4 w-4" />
+                            </button>
+                            <div className="relative">
+                                <button
+                                    type="button"
+                                    onClick={() => setMoreMenuOpen((open) => !open)}
+                                    aria-expanded={moreMenuOpen}
+                                    title="More canvas actions"
+                                    aria-label="More canvas actions"
+                                    className="inline-flex h-8 w-8 items-center justify-center rounded-sm text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:text-slate-200 dark:hover:bg-slate-900 dark:focus:ring-slate-700"
+                                >
+                                    <MoreVertical className="h-4 w-4" />
+                                </button>
+                                {moreMenuOpen && (
+                                    <div className="absolute right-0 z-30 mt-2 w-52 rounded-sm border border-slate-200 bg-white p-1.5 shadow-lg dark:border-slate-800 dark:bg-slate-900">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setMoreMenuOpen(false);
+                                                createNewCanvas();
+                                            }}
+                                            className="flex h-8 w-full items-center gap-2 rounded px-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+                                        >
+                                            <Plus className="h-3.5 w-3.5" />
+                                            New empty canvas
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setMoreMenuOpen(false);
+                                                saveCanvasAs();
+                                            }}
+                                            disabled={savingCanvas || tiles.length === 0}
+                                            className="flex h-8 w-full items-center gap-2 rounded px-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-slate-200 dark:hover:bg-slate-800"
+                                        >
+                                            <Copy className="h-3.5 w-3.5" />
+                                            Save as
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setMoreMenuOpen(false);
+                                                setNoDataReportOpen(true);
+                                            }}
+                                            className="flex h-8 w-full items-center gap-2 rounded px-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+                                        >
+                                            <Table2 className="h-3.5 w-3.5" />
+                                            No data report
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setMoreMenuOpen(false);
+                                                void deleteActiveCanvas();
+                                            }}
+                                            disabled={savingCanvas || !activeSavedCanvasName}
+                                            className="flex h-8 w-full items-center gap-2 rounded px-2 text-left text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40 dark:text-rose-300 dark:hover:bg-rose-950"
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                            Delete saved canvas
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
 
-                        <label className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-slate-400">
-                            Page
-                            <select
-                                value={pageSize}
-                                onChange={(event) =>
-                                    setPageSize(Number(event.target.value) as PageSize)
-                                }
-                                className="h-9 rounded-md border border-slate-300 bg-white px-2 text-sm font-semibold normal-case tracking-normal text-slate-700 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
+                    <div className="grid min-h-[52px] grid-cols-1 items-center gap-2 border-b border-slate-200 px-3 py-2 dark:border-slate-800 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+                        <div className="flex min-w-0 flex-wrap items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={saveCurrentCanvas}
+                                disabled={savingCanvas || tiles.length === 0}
+                                title="Save canvas"
+                                className="inline-flex h-9 items-center gap-1.5 rounded-sm bg-[#00A86B] px-3 text-sm font-bold text-white transition hover:bg-[#008556] disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 focus:ring-emerald-300"
                             >
-                                {PAGE_SIZE_OPTIONS.map((option) => (
-                                    <option key={option} value={option}>
-                                        {option}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
-
-                        <button
-                            type="button"
-                            onClick={refreshRunningTiles}
-                            disabled={runningTileIds.size === 0}
-                            title="Refresh running tiles"
-                            aria-label="Refresh running tiles"
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 transition hover:border-sky-300 hover:text-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-sky-700 dark:hover:text-sky-300"
-                        >
-                            <RefreshCw className="h-4 w-4" />
-                        </button>
-
-                        <button
-                            type="button"
-                            disabled={idleVisibleTileCount === 0}
-                            onClick={runVisibleTiles}
-                            title={runVisibleTitle}
-                            className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-black text-slate-600 transition hover:border-sky-300 hover:text-sky-600 disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-sky-700 dark:hover:text-sky-300"
-                        >
-                            <Play className="h-4 w-4" />
-                            Run visible
-                        </button>
-
-                        <button
-                            type="button"
-                            disabled={runningTileIds.size === 0}
-                            onClick={stopAllTiles}
-                            title="Stop all running tiles"
-                            className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-black text-slate-600 transition hover:border-amber-300 hover:text-amber-600 disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-amber-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-amber-700 dark:hover:text-amber-300"
-                        >
-                            <X className="h-4 w-4" />
-                            Stop
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() => setNoDataReportOpen(true)}
-                            title={`Show ${observedNoDataRows.length.toLocaleString()} observed no-data ${
-                                observedNoDataRows.length === 1 ? 'search' : 'searches'
-                            }`}
-                            className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-black text-slate-600 transition hover:border-sky-300 hover:text-sky-600 disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-sky-700 dark:hover:text-sky-300"
-                        >
-                            <Table2 className="h-4 w-4" />
-                            No data report
-                        </button>
-
-                        <ThemeToggle theme={theme} onCycle={cycle} />
+                                <Save className="h-3.5 w-3.5" />
+                                Save
+                            </button>
+                            <button
+                                type="button"
+                                onClick={saveCanvasAs}
+                                disabled={savingCanvas || tiles.length === 0}
+                                title="Save canvas as"
+                                className="inline-flex h-9 items-center rounded-sm bg-slate-200 px-3 text-sm font-bold text-slate-900 transition hover:bg-slate-300 disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+                            >
+                                Save As
+                            </button>
+                            <button
+                                type="button"
+                                onClick={deleteActiveCanvas}
+                                disabled={savingCanvas || !activeSavedCanvasName}
+                                title="Delete saved canvas"
+                                className="inline-flex h-9 items-center gap-1.5 rounded-sm px-2.5 text-sm font-bold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 focus:ring-red-200 dark:text-red-300 dark:hover:bg-red-950"
+                            >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Delete
+                            </button>
+                            <button
+                                type="button"
+                                onClick={createNewCanvas}
+                                title="Create a new empty canvas"
+                                className="inline-flex h-9 items-center gap-1.5 rounded-sm px-2.5 text-sm font-bold text-slate-900 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:text-slate-100 dark:hover:bg-slate-900 dark:focus:ring-slate-700"
+                            >
+                                <Plus className="h-3.5 w-3.5" />
+                                New
+                            </button>
+                        </div>
 
                         <button
                             type="button"
@@ -2965,16 +2993,107 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 setReplaceTileId(null);
                                 setBrowserOpen(true);
                             }}
-                            className="inline-flex h-9 items-center gap-2 rounded-md bg-sky-600 px-3 text-sm font-black text-white transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-sm bg-[#00A86B] px-7 text-sm font-bold text-white transition hover:bg-[#008556] focus:outline-none focus:ring-2 focus:ring-emerald-300"
                         >
-                            <PanelRightOpen className="h-4 w-4" />
-                            Add tiles
+                            <Plus className="h-4 w-4" />
+                            Add Tiles
                         </button>
+
+                        <div className="flex min-w-0 flex-wrap items-center justify-start gap-2 lg:justify-end">
+                            <button
+                                type="button"
+                                disabled={idleVisibleTileCount === 0}
+                                onClick={runVisibleTiles}
+                                title={runVisibleTitle}
+                                className="inline-flex h-9 items-center gap-1.5 rounded-sm bg-[#00A86B] px-3 text-sm font-bold text-white transition hover:bg-[#008556] disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                            >
+                                <Play className="h-3.5 w-3.5" />
+                                Run Visible
+                            </button>
+                            <button
+                                type="button"
+                                disabled={runningTileIds.size === 0}
+                                onClick={stopAllTiles}
+                                title="Stop all running tiles"
+                                className="inline-flex h-9 items-center gap-1.5 rounded-sm bg-red-500 px-3 text-sm font-bold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 focus:ring-red-300"
+                            >
+                                <Square className="h-3.5 w-3.5" />
+                                Stop
+                            </button>
+                            <button
+                                type="button"
+                                onClick={refreshRunningTiles}
+                                disabled={runningTileIds.size === 0}
+                                title="Refresh running tiles"
+                                aria-label="Refresh running tiles"
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-sm text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:text-slate-200 dark:hover:bg-slate-900 dark:focus:ring-slate-700"
+                            >
+                                <RefreshCw className="h-4 w-4" />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="flex min-h-11 min-w-0 flex-wrap items-center gap-2 border-b border-slate-200 bg-slate-50 px-3 py-1.5 dark:border-slate-800 dark:bg-slate-900/50">
+                        <span className="inline-flex h-7 items-center rounded-sm border border-slate-300 bg-white px-2 text-sm font-semibold text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
+                            Tiles: {tiles.length.toLocaleString()}
+                        </span>
+                        <span
+                            className={cn(
+                                'inline-flex h-7 items-center rounded-sm border px-2 text-sm font-semibold',
+                                runningTileIds.size > 0
+                                    ? 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200'
+                                    : 'border-slate-300 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300'
+                            )}
+                        >
+                            Running: {runningTileIds.size.toLocaleString()}
+                        </span>
+                        <span
+                            className={cn(
+                                'inline-flex h-7 items-center rounded-sm border px-2 text-sm font-semibold',
+                                observedNoDataRows.length > 0
+                                    ? 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200'
+                                    : 'border-slate-300 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300'
+                            )}
+                        >
+                            No Data: {observedNoDataRows.length.toLocaleString()}
+                        </span>
+                        <span className="inline-flex h-7 items-center rounded-sm border border-slate-300 bg-white px-2 text-sm font-semibold text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
+                            Total Searches: {records.length.toLocaleString()}
+                        </span>
+
+                        <div className="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto">
+                            <select
+                                value={rangeLabel}
+                                onChange={(event) => setRangeLabel(event.target.value)}
+                                aria-label="Time range"
+                                className="h-8 w-[150px] rounded-sm border border-slate-300 bg-white px-2 text-sm text-slate-900 outline-none focus:border-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-slate-500"
+                            >
+                                {TIME_RANGE_OPTIONS.map((option) => (
+                                    <option key={option.label} value={option.label}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                            <select
+                                value={pageSize}
+                                onChange={(event) =>
+                                    setPageSize(Number(event.target.value) as PageSize)
+                                }
+                                aria-label="Tiles per page"
+                                className="h-8 w-[130px] rounded-sm border border-slate-300 bg-white px-2 text-sm text-slate-900 outline-none focus:border-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-slate-500"
+                            >
+                                {PAGE_SIZE_OPTIONS.map((option) => (
+                                    <option key={option} value={option}>
+                                        {option} per page
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
                 </header>
 
-                <main className="min-h-0 flex-1 p-5">
-                    <div className="mb-4 flex flex-wrap items-center gap-2">
+                <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden p-5">
+                    <div className="mb-4 flex min-w-0 flex-wrap items-center gap-2">
                         <button
                             type="button"
                             disabled={clampedPageIndex === 0}
@@ -2983,11 +3102,11 @@ const SearchbaseCanvasPage: React.FC = () => {
                             }
                             title="Previous page"
                             aria-label="Previous page"
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 transition hover:border-sky-300 hover:text-sky-600 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-sm border border-slate-300 bg-white text-slate-600 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-900"
                         >
                             <ChevronLeft className="h-4 w-4" />
                         </button>
-                        <div className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
+                        <div className="inline-flex h-8 items-center rounded-sm border border-slate-300 bg-white px-3 text-sm font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
                             Page {clampedPageIndex + 1} of {totalPages}
                         </div>
                         <button
@@ -3000,7 +3119,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                             }
                             title="Next page"
                             aria-label="Next page"
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 transition hover:border-sky-300 hover:text-sky-600 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-sm border border-slate-300 bg-white text-slate-600 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-900"
                         >
                             <ChevronRight className="h-4 w-4" />
                         </button>
@@ -3016,7 +3135,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                             <button
                                 type="button"
                                 onClick={clearCanvas}
-                                className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-500 transition hover:border-rose-300 hover:text-rose-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-rose-800 dark:hover:text-rose-300"
+                                className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-sm border border-slate-300 bg-white px-3 text-xs font-black text-slate-500 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300 dark:hover:border-rose-800 dark:hover:bg-rose-950 dark:hover:text-rose-300"
                             >
                                 <Trash2 className="h-3.5 w-3.5" />
                                 Clear
@@ -3056,7 +3175,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 items={visibleTiles.map((tile) => tile.id)}
                                 strategy={rectSortingStrategy}
                             >
-                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                                <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4 [&>*]:min-w-0">
                                     {visibleTiles.map((tile) => (
                                         <div
                                             key={tile.id}
