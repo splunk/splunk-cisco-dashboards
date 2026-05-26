@@ -164,10 +164,15 @@ def join_search_lines(search: str) -> str:
     for part in raw_lines:
         if not part:
             continue
-        if merged and re.match(r"^\|\s*(FROM|WHERE|BY)\b", part, re.I):
+        # Only merge uppercase FROM/WHERE/BY continuations into tstats (not | where pipe stages).
+        if (
+            merged
+            and re.match(r"^\|\s*(FROM|WHERE|BY)\b", part)
+            and re.search(r"\btstats\b", merged[-1], re.I)
+        ):
             merged[-1] = merged[-1] + " " + part.lstrip("| ").lstrip()
             continue
-        if merged and re.match(r"^\s+(FROM|WHERE|BY)\b", part, re.I):
+        if merged and re.match(r"^\s+(FROM|WHERE|BY)\b", part):
             merged[-1] = merged[-1] + " " + part.strip()
             continue
         if (
@@ -176,10 +181,14 @@ def join_search_lines(search: str) -> str:
             and not re.match(r"^\s*\|", part)
         ):
             prev = merged[-1]
-            if re.match(r"^\|?\s*(eval|eventstats)\b", prev, re.I):
-                merged[-1] = prev.rstrip(", ") + ", " + part.strip()
+            cont = part.strip()
+            is_eval = re.match(r"^\|?\s*eval\b", prev, re.I) is not None
+            if prev.rstrip().endswith("("):
+                merged[-1] = prev.rstrip() + cont
+            elif is_eval:
+                merged[-1] = prev.rstrip(", ") + ", " + cont
             else:
-                merged[-1] = prev + " " + part.strip()
+                merged[-1] = prev + " " + cont
             continue
         merged.append(part)
     return " ".join(merged)
@@ -269,9 +278,24 @@ def _split_where_conditions(where_body: str) -> list[str]:
     return [body]
 
 
+def _tstats_has_multiline_clauses(stage: str) -> bool:
+    """True when FROM/WHERE/BY are already split across physical lines."""
+    if "\n" in stage:
+        return True
+    return bool(
+        re.search(
+            r"(?:^|\n)\s+(?:FROM|WHERE|BY)\b|^\|\s*(?:FROM|WHERE|BY)\b",
+            stage,
+            re.M,
+        )
+    )
+
+
 def format_tstats_stage(stage: str) -> str:
     stage = collapse_whitespace(stage)
     if not re.match(r"^\|?\s*tstats\b", stage, re.I):
+        return stage
+    if not _tstats_has_multiline_clauses(stage):
         return stage
 
     has_leading_pipe = stage.lstrip().startswith("|")
@@ -282,9 +306,9 @@ def format_tstats_stage(stage: str) -> str:
     hits = [
         h
         for h in (
-            _find_keyword(work, ("FROM", "from")),
-            _find_keyword(work, ("WHERE", "where")),
-            _find_keyword(work, ("BY", "by")),
+            _find_keyword(work, ("FROM",)),
+            _find_keyword(work, ("WHERE",)),
+            _find_keyword(work, ("BY",)),
         )
         if h
     ]
@@ -398,7 +422,11 @@ def _ensure_leading_pipe(line: str) -> str:
     st = line.strip()
     if st.startswith("|"):
         return st
-    if re.match(r"^(tstats|makeresults|inputlookup|datamodel)\b", st, re.I):
+    if re.match(
+        r"^(tstats|makeresults|inputlookup|datamodel|savedsearch|rest|noop)\b",
+        st,
+        re.I,
+    ):
         return "| " + st
     return st
 
