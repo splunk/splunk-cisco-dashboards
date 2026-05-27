@@ -38,6 +38,7 @@ FIELD_ORDER_BEFORE_VIZ = [
     "tags",
     "dispatch_context",
     "dispatch_context_force",
+    "search_hidden",
 ]
 
 VIZ_FIELDS = ("default_viz", "viz_options")
@@ -335,21 +336,27 @@ def emit_search_field(search: str) -> list[str]:
     return lines
 
 
-def metadata_needs_reorder(fields: dict[str, str]) -> bool:
-    desired: list[str] = list(FIELD_ORDER_BEFORE_VIZ)
+def _field_order_lists(fields: dict[str, str]) -> tuple[list[str], list[str]]:
+    """Return (known_pre_search_order, unknown_extras) for a stanza."""
+    known: list[str] = list(FIELD_ORDER_BEFORE_VIZ)
     for vf in VIZ_FIELDS:
         if vf in fields:
-            desired.append(vf)
+            known.append(vf)
     for ef in EXTRA_AFTER_VIZ:
         if ef in fields:
-            desired.append(ef)
-    desired.extend(PROSE_FIELDS)
-    desired.append("search")
+            known.append(ef)
+    known.extend(PROSE_FIELDS)
+    extras = [k for k in fields if k not in known and k != "search"]
+    return known, extras
 
+
+def metadata_needs_reorder(fields: dict[str, str]) -> bool:
+    known, extras = _field_order_lists(fields)
     actual = [k for k in fields if k != "search"]
-    target = [k for k in desired if k in fields]
-    extras = [k for k in actual if k not in target]
+    target = [k for k in known if k in fields]
     target_full = target + extras
+    if "search" in fields:
+        target_full.append("search")
     return actual != target_full
 
 
@@ -360,19 +367,17 @@ def format_stanza(stanza_id: str, fields: dict[str, str]) -> tuple[str, bool, bo
         new_search, search_changed = format_search(fields["search"])
         fields = {**fields, "search": new_search}
 
-    ordered_keys: list[str] = list(FIELD_ORDER_BEFORE_VIZ)
-    for vf in VIZ_FIELDS:
-        if vf in fields:
-            ordered_keys.append(vf)
-    for ef in EXTRA_AFTER_VIZ:
-        if ef in fields:
-            ordered_keys.append(ef)
-    ordered_keys.extend(PROSE_FIELDS)
+    known_keys, extras = _field_order_lists(fields)
+    if extras:
+        print(
+            f"WARNING [{stanza_id}]: unknown metadata field(s) {extras!r} — "
+            "add to FIELD_ORDER_BEFORE_VIZ (or VIZ/EXTRA/PROSE lists) in "
+            "scripts/format_searchbase_conf.py",
+            file=sys.stderr,
+        )
+    full_order = list(known_keys) + extras
     if "search" in fields:
-        ordered_keys.append("search")
-
-    extras = [k for k in fields if k not in ordered_keys]
-    full_order = ordered_keys + extras
+        full_order.append("search")
 
     old_keys = list(fields.keys())
     target_keys = [k for k in full_order if k in fields]
