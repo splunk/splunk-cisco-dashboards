@@ -37,7 +37,7 @@ Skip `default_viz` / `viz_options` only when the stanza is purely a backend sear
 
 ## Search field formatting
 
-The `search` field uses `\` line continuations. Read [searchbase.conf](../../packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf) for canonical examples and follow the same shape.
+The `search` field uses `\` line continuations. Read [searchbase.conf](../../../packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf) for canonical examples and follow the same shape.
 
 This style matches the upstream `searchbase` app (`~/repo/searchbase`). Keep the rules deliberately simple — the formatter is not allowed to split clauses, reorder aggregates, or insert/remove commas.
 
@@ -51,7 +51,7 @@ This style matches the upstream `searchbase` app (`~/repo/searchbase`). Keep the
    - `eval foo=..., bar=..., baz=...` — multi-clause eval is never split on commas.
 3. **Subsearches (`[ ... ]`, `append [...]`, `join ... [...]`, `appendcols [...]`):** preserve the existing multi-line layout of the bracketed body if it has one. The formatter does not try to flatten a multi-line subsearch back to one line, and does not try to wrap a single-line subsearch.
 4. **No tabs.** Use spaces only.
-5. **Field name punctuation:** follow [splunk-spl-field-syntax.mdc](../../.cursor/rules/splunk-spl-field-syntax.mdc). Dotted fields are bare in `stats … by`, `rename`, and `BY`, but single-quoted inside `eval(...)`.
+5. **Field name punctuation:** follow [splunk-spl-field-syntax.mdc](../../../.cursor/rules/splunk-spl-field-syntax.mdc). Dotted fields are bare in `stats … by`, `rename`, and `BY`, but single-quoted inside `eval(...)`.
 
 ### Canonical example (one pipe per line)
 
@@ -158,7 +158,7 @@ When pulling a search from `ta_cisco_thousandeyes` (or another upstream add-on):
 
 ## Cross-references
 
-- [splunk-spl-field-syntax.mdc](../../.cursor/rules/splunk-spl-field-syntax.mdc) — when to single-quote dotted field names
-- [splunk-cisco-thousandeyes-fields.mdc](../../.cursor/rules/splunk-cisco-thousandeyes-fields.mdc) — authoritative TE field dictionary
-- [splunk-data-model-discovery.mdc](../../.cursor/rules/splunk-data-model-discovery.mdc) — how to discover DM-eligible fields
-- [splunk-cisco-dnac-fields.mdc](../../.cursor/rules/splunk-cisco-dnac-fields.mdc) — DNAC field reference
+- [splunk-spl-field-syntax.mdc](../../../.cursor/rules/splunk-spl-field-syntax.mdc) — when to single-quote dotted field names
+- [splunk-cisco-thousandeyes-fields.mdc](../../../.cursor/rules/splunk-cisco-thousandeyes-fields.mdc) — authoritative TE field dictionary
+- [splunk-data-model-discovery.mdc](../../../.cursor/rules/splunk-data-model-discovery.mdc) — how to discover DM-eligible fields
+- [splunk-cisco-dnac-fields.mdc](../../../.cursor/rules/splunk-cisco-dnac-fields.mdc) — DNAC field reference
