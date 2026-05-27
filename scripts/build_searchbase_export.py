@@ -8,6 +8,13 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+# Reuse the canonical SPL formatter so every exported `search` field is
+# guaranteed to be one-pipe-per-line + trailing-backslash, regardless of
+# whether the upstream searchbase.conf was formatted before this script
+# ran. Single source of truth for the SPL house style.
+from format_searchbase_conf import format_search, emit_search_field
+
 SOURCE = Path(__file__).resolve().parents[1] / (
     "packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf"
 )
@@ -293,9 +300,11 @@ def format_stanza(stanza_id: str, fields: dict[str, str]) -> str:
             continue
         val = fields[key]
         if key == "search":
-            lines.append("search = " + val.split("\n", 1)[0])
-            for part in val.split("\n")[1:]:
-                lines.append(part)
+            # Re-run the canonical formatter (one-pipe-per-line +
+            # trailing-backslash). Idempotent when the source is already
+            # canonical; corrective when it isn't.
+            canonical, _ = format_search(val)
+            lines.extend(emit_search_field(canonical))
         else:
             lines.append(f"{key} = {val}")
     return "\n".join(lines)

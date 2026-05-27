@@ -189,6 +189,25 @@ BEST_FIT = {
     "security_resilience_web_threat_count": ("security_resilience_ds_web_security", "View web threat detail"),
     "security_resilience_xdr_by_severity": ("security_resilience_ds_xdr_detail", "View XDR incident detail"),
     "security_resilience_xdr_incident_detail": ("security_resilience_ds_xdr_detail", "View XDR incident detail"),
+    # === Orphan _ds_ chart stanzas (added 2026-05-27) ===
+    # These were skipped by the original heuristic because their IDs
+    # contain `_ds_` (treated as "internal data source"), but they're
+    # surfaced in the picker just like regular tiles and need drilldowns
+    # to existing detail leaves. Targets chosen from sibling _ds_ stanzas
+    # already established as drilldown destinations.
+    "client_summary_ds_client_os_dist": ("client_summary_ds_client_by_ssid", "View clients by SSID detail"),
+    "client_summary_ds_client_session_by_band": ("client_summary_ds_client_by_ssid", "View clients by SSID detail"),
+    "client_summary_ds_client_session_by_protocol": ("client_summary_ds_client_by_ssid", "View clients by SSID detail"),
+    "client_summary_ds_client_session_by_ssid": ("client_summary_ds_client_by_ssid", "View clients by SSID detail"),
+    "client_summary_ds_client_traffic_by_band": ("client_summary_ds_client_by_ssid", "View clients by SSID detail"),
+    "client_summary_ds_client_traffic_by_protocol": ("client_summary_ds_client_by_ssid", "View clients by SSID detail"),
+    "client_summary_ds_client_traffic_by_ssid": ("client_summary_ds_client_by_ssid", "View clients by SSID detail"),
+    "client_summary_ds_top_ssids_by_traffic": ("client_summary_ds_client_by_ssid", "View clients by SSID detail"),
+    "it_critical_systems_ds_device_health_enriched": ("it_critical_systems_ds_site_health", "View site health"),
+    "it_critical_systems_ds_issue_by_priority": ("it_critical_systems_ds_base_issues", "View all active issues"),
+    "it_critical_systems_ds_switch_by_location": ("it_critical_systems_ds_site_health", "View site health"),
+    "it_critical_systems_ds_wow_health": ("it_critical_systems_ds_site_health", "View site health"),
+    "user_experience_ds_wireless_signal_quality": ("user_experience_ds_base_client", "View client base detail"),
     # === User Experience ===
     "user_experience_client_count_trend": ("user_experience_ds_base_client", "View client detail"),
     "user_experience_client_health_by_type": ("user_experience_ds_base_client", "View client detail"),
@@ -227,18 +246,31 @@ if missing_targets:
 # Now apply: find the insertion point in each stanza block
 applied = 0
 skipped = 0
+already_set = 0
 for src_name, (tgt_name, btn_title) in BEST_FIT.items():
     if src_name not in blocks:
         print(f"SKIP: source stanza {src_name} not found")
         skipped += 1
         continue
-    
+
+    # Idempotency: if the stanza already has any drilldown_search_name,
+    # leave it alone. Re-running this script must not duplicate fields
+    # or overwrite hand-tuned drilldowns. Run a separate audit if you
+    # need to find stanzas pointed at the wrong target.
+    if any(line.startswith('drilldown_search_name ') for line in blocks[src_name]):
+        already_set += 1
+        continue
+
     tgt_search_name = snames.get(tgt_name)
     if not tgt_search_name:
         # Use the stanza name as fallback
         tgt_search_name = tgt_name
-    
-    # Find the stanza header line and insert after dispatch_context_force line
+
+    # Find the stanza header line and insert after dispatch_context_force line.
+    # The canonical field-order formatter (`format_searchbase_conf.py`)
+    # will move the inserted lines into the proper slot (after
+    # viz_options) on its next pass, so the exact insertion anchor here
+    # only matters for idempotency, not for final output ordering.
     pattern = re.compile(
         r'(\[' + re.escape(src_name) + r'\]\n(?:.*\n)*?dispatch_context_force\s*=\s*1\n)',
         re.MULTILINE
@@ -256,4 +288,5 @@ with open(f, 'w') as fh:
     fh.write(content)
 
 print(f"\nApplied: {applied}")
+print(f"Already set (idempotent skip): {already_set}")
 print(f"Skipped: {skipped}")
