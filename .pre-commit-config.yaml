@@ -16,3 +16,16 @@ repos:
     -   id: debug-statements
         files: ^package/bin/
         exclude: ^package/bin/[^/]+/aob_py3/
+
+# Splunk SPL anti-pattern linter — catches gotchas like single-quoted
+# dotted field names inside stats/chart/timechart aggregations, which
+# Splunk silently treats as literal strings instead of field references.
+# Pure stdlib Python; runs on every commit that touches searchbase.conf.
+-   repo: local
+    hooks:
+    -   id: spl-antipatterns
+        name: Splunk SPL anti-pattern linter
+        entry: python3 scripts/lint_spl_antipatterns.py
+        language: system
+        files: ^packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase\.conf$
+        pass_filenames: false
