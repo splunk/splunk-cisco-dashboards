@@ -621,6 +621,7 @@ interface SearchbaseCanvasTileProps {
     isRunning: boolean;
     onRun: (tileId: string) => void;
     onStop: (tileId: string) => void;
+    onRefresh: (tileId: string) => void;
     onConfigure: (tileId: string) => void;
     onRemove: (tileId: string) => void;
     onCycleSize: (tileId: string) => void;
@@ -1048,6 +1049,7 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
     onOpenDetailTable,
     onNoDataObservation,
     onStop,
+    onRefresh,
 }) => {
     const description = recordPlainText(record);
     const color = firstSeriesColor(record.vizOptions);
@@ -1144,6 +1146,15 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                     onChangeViz={onChangeViz}
                 />
                 <span className="ml-auto flex items-center gap-1">
+                    <button
+                        type="button"
+                        onClick={() => onRefresh(tile.id)}
+                        title="Refresh this tile"
+                        aria-label="Refresh this tile"
+                        className="rounded p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-sky-300"
+                    >
+                        <RefreshCw className="h-3.5 w-3.5" />
+                    </button>
                     {detailTableConfig && (
                         <button
                             type="button"
@@ -2310,6 +2321,7 @@ const SearchbaseCanvasPage: React.FC = () => {
     const [loadingCatalogue, setLoadingCatalogue] = useState(true);
     const [rangeLabel, setRangeLabel] = useState(DEFAULT_TIME_RANGE_LABEL);
     const [refreshToken, setRefreshToken] = useState(0);
+    const [tileRefreshCounts, setTileRefreshCounts] = useState<Record<string, number>>({});
     const [browserOpen, setBrowserOpen] = useState(tiles.length === 0);
     const [replaceTileId, setReplaceTileId] = useState<string | null>(null);
     const [activeDetailTable, setActiveDetailTable] =
@@ -2748,6 +2760,12 @@ const SearchbaseCanvasPage: React.FC = () => {
             next.delete(tileId);
             return next;
         });
+        setTileRefreshCounts((current) => {
+            if (!(tileId in current)) return current;
+            const next = { ...current };
+            delete next[tileId];
+            return next;
+        });
         clearObservedNoData([tileId]);
     }, [clearObservedNoData]);
 
@@ -2790,6 +2808,17 @@ const SearchbaseCanvasPage: React.FC = () => {
         clearObservedNoData(runningIds);
         setRefreshToken((current) => current + 1);
     }, [clearObservedNoData, runningTileIds]);
+
+    const refreshTile = useCallback(
+        (tileId: string) => {
+            clearObservedNoData([tileId]);
+            setTileRefreshCounts((current) => ({
+                ...current,
+                [tileId]: (current[tileId] ?? 0) + 1,
+            }));
+        },
+        [clearObservedNoData]
+    );
 
     const cycleSize = useCallback((tileId: string) => {
         setTiles((current) =>
@@ -3308,10 +3337,14 @@ const SearchbaseCanvasPage: React.FC = () => {
                                                     record={entryByName.get(tile.searchName)}
                                                     entryByName={entryByName}
                                                     range={range}
-                                                    refreshToken={refreshToken}
+                                                    refreshToken={
+                                                        refreshToken +
+                                                        (tileRefreshCounts[tile.id] ?? 0)
+                                                    }
                                                     isRunning={runningTileIds.has(tile.id)}
                                                     onRun={runTile}
                                                     onStop={stopTile}
+                                                    onRefresh={refreshTile}
                                                     onConfigure={configureTile}
                                                     onRemove={removeTile}
                                                     onCycleSize={cycleSize}
