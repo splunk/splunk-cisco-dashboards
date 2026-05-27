@@ -1,5 +1,19 @@
 #!/usr/bin/env python3
-"""Format searchbase.conf per .cursor/skills/splunk-spl-searchbase-format/SKILL.md."""
+"""Format searchbase.conf per .cursor/skills/splunk-spl-searchbase-format/SKILL.md.
+
+Rules (matches the upstream `searchbase` app):
+  - Each top-level pipe `|` starts a new line.
+  - Backslash `\\` is flush against the last char of every non-final line.
+  - Subsearches inside `[ ... ]` keep their existing multi-line layout.
+  - Non-subsearch stages collapse to a single physical line.
+  - Tabs are converted to spaces.
+  - Metadata fields are emitted in the canonical order.
+
+The formatter is deliberately small and conservative: it never tries to
+split clauses, never inserts commas, never reorders aggregates. All it
+does is one-pipe-per-line + trailing-backslash + collapse-whitespace
+within non-subsearch stages.
+"""
 
 from __future__ import annotations
 
@@ -27,9 +41,7 @@ FIELD_ORDER_BEFORE_VIZ = [
 ]
 
 VIZ_FIELDS = ("default_viz", "viz_options")
-
 EXTRA_AFTER_VIZ = ("drilldown_search_name", "drilldown_button_title")
-
 PROSE_FIELDS = ("description", "explanation", "solution", "related_info")
 
 REQUIRED_FOR_GAP_REPORT = (
@@ -48,14 +60,7 @@ REQUIRED_FOR_GAP_REPORT = (
     "explanation",
     "solution",
     "related_info",
-    "search",
 )
-
-CONTINUE_INDENT = 4
-WHERE_CONT_INDENT = 10
-EVAL_CONT_INDENT = 7
-
-TSTATS_KW = ("FROM", "WHERE", "BY", "from", "where", "by")
 
 
 def parse_stanzas(text: str) -> list[tuple[str, dict[str, str]]]:
@@ -109,15 +114,17 @@ def parse_stanzas(text: str) -> list[tuple[str, dict[str, str]]]:
     return stanzas
 
 
-def _scan_top_level(s: str) -> list[tuple[int, int, str]]:
-    """Return [(start, end, text)] spans at top level (not inside quotes/parens/brackets)."""
+def _scan_top_level_pipes(s: str) -> list[tuple[int, int, str]]:
+    """Return [(start, end, text)] for each top-level pipe-delimited stage.
+
+    Top-level means: outside quotes, parens, and brackets.
+    """
     spans: list[tuple[int, int, str]] = []
     i = 0
     n = len(s)
     start = 0
     depth_paren = depth_bracket = 0
     in_quote: str | None = None
-
     while i < n:
         c = s[i]
         if in_quote:
@@ -141,60 +148,55 @@ def _scan_top_level(s: str) -> list[tuple[int, int, str]]:
         elif c == "]":
             depth_bracket = max(0, depth_bracket - 1)
         elif c == "|" and depth_paren == 0 and depth_bracket == 0:
-            part = s[start:i].strip()
-            if part:
-                spans.append((start, i, part))
+            chunk = s[start:i].strip()
+            if chunk:
+                spans.append((start, i, chunk))
             start = i + 1
         i += 1
-    part = s[start:n].strip()
-    if part:
-        spans.append((start, n, part))
+    chunk = s[start:n].strip()
+    if chunk:
+        spans.append((start, n, chunk))
     return spans
 
 
-def join_search_lines(search: str) -> str:
-    raw_lines: list[str] = []
-    for line in search.split("\n"):
-        stripped = line.rstrip()
-        if stripped.endswith("\\"):
-            stripped = stripped[:-1].rstrip()
-        raw_lines.append(stripped)
-
-    merged: list[str] = []
-    for part in raw_lines:
-        if not part:
+def _stage_has_top_level_subsearch(stage: str) -> bool:
+    """True if the stage contains a `[` outside of quotes/parens at top level."""
+    depth_paren = 0
+    in_quote: str | None = None
+    i = 0
+    n = len(stage)
+    while i < n:
+        c = stage[i]
+        if in_quote:
+            if c == "\\" and i + 1 < n:
+                i += 2
+                continue
+            if c == in_quote:
+                in_quote = None
+            i += 1
             continue
-        # Only merge uppercase FROM/WHERE/BY continuations into tstats (not | where pipe stages).
-        if (
-            merged
-            and re.match(r"^\|\s*(FROM|WHERE|BY)\b", part)
-            and re.search(r"\btstats\b", merged[-1], re.I)
-        ):
-            merged[-1] = merged[-1] + " " + part.lstrip("| ").lstrip()
+        if c in '"\'`':
+            in_quote = c
+            i += 1
             continue
-        if merged and re.match(r"^\s+(FROM|WHERE|BY)\b", part):
-            merged[-1] = merged[-1] + " " + part.strip()
-            continue
-        if (
-            merged
-            and part.startswith(" ")
-            and not re.match(r"^\s*\|", part)
-        ):
-            prev = merged[-1]
-            cont = part.strip()
-            is_eval = re.match(r"^\|?\s*eval\b", prev, re.I) is not None
-            if prev.rstrip().endswith("("):
-                merged[-1] = prev.rstrip() + cont
-            elif is_eval:
-                merged[-1] = prev.rstrip(", ") + ", " + cont
-            else:
-                merged[-1] = prev + " " + cont
-            continue
-        merged.append(part)
-    return " ".join(merged)
+        if c == "(":
+            depth_paren += 1
+        elif c == ")":
+            depth_paren = max(0, depth_paren - 1)
+        elif c == "[" and depth_paren == 0:
+            return True
+        i += 1
+    return False
 
 
 def collapse_whitespace(s: str) -> str:
+    """Collapse runs of whitespace to a single space, preserving quoted content.
+
+    Also strips whitespace immediately after `(` and immediately before `)` to
+    match the upstream `searchbase` house style (e.g. `case(arg1, ...)` rather
+    than `case( arg1, ...)`). Whitespace inside function calls is semantically
+    insignificant in Splunk SPL, so this is purely cosmetic normalization.
+    """
     out: list[str] = []
     i = 0
     n = len(s)
@@ -223,301 +225,113 @@ def collapse_whitespace(s: str) -> str:
             while i < n and s[i].isspace():
                 i += 1
             continue
+        if c == "(":
+            out.append(c)
+            i += 1
+            while i < n and s[i].isspace():
+                i += 1
+            continue
+        if c == ")" and out and out[-1] == " ":
+            out.pop()
         out.append(c)
         i += 1
     return "".join(out).strip()
 
 
-def _find_keyword(stage: str, keywords: tuple[str, ...]) -> tuple[str, int, int] | None:
-    """Find first keyword at top level; return (keyword, start, end)."""
-    i = 0
-    n = len(stage)
-    depth_paren = depth_bracket = 0
-    in_quote: str | None = None
-    while i < n:
-        c = stage[i]
-        if in_quote:
-            if c == "\\" and i + 1 < n:
-                i += 2
-                continue
-            if c == in_quote:
-                in_quote = None
-            i += 1
-            continue
-        if c in '"\'`':
-            in_quote = c
-            i += 1
-            continue
-        if c == "(":
-            depth_paren += 1
-        elif c == ")":
-            depth_paren = max(0, depth_paren - 1)
-        elif c == "[":
-            depth_bracket += 1
-        elif c == "]":
-            depth_bracket = max(0, depth_bracket - 1)
-        elif depth_paren == 0 and depth_bracket == 0:
-            for kw in keywords:
-                end = i + len(kw)
-                if stage[i:end].upper() == kw.upper():
-                    before_ok = i == 0 or not stage[i - 1].isalnum()
-                    after_ok = end >= n or not stage[end].isalnum()
-                    if before_ok and after_ok:
-                        return kw, i, end
-        i += 1
-    return None
+_LEADING_PIPE_CMDS = re.compile(
+    r"^(tstats|makeresults|inputlookup|datamodel|savedsearch|rest|noop|"
+    r"multisearch|union|mstats|metadata|loadjob|history|gentimes|dbinspect|"
+    r"from)\b",
+    re.I,
+)
 
 
-def _split_where_conditions(where_body: str) -> list[str]:
-    body = collapse_whitespace(where_body)
-    if not body:
-        return []
-    parts = re.split(r"\s+AND\s+", body, flags=re.I)
-    if len(parts) > 1:
-        return [collapse_whitespace(p) for p in parts if p.strip()]
-    return [body]
-
-
-def _tstats_has_multiline_clauses(stage: str) -> bool:
-    """True when FROM/WHERE/BY are already split across physical lines."""
-    if "\n" in stage:
-        return True
-    return bool(
-        re.search(
-            r"(?:^|\n)\s+(?:FROM|WHERE|BY)\b|^\|\s*(?:FROM|WHERE|BY)\b",
-            stage,
-            re.M,
-        )
-    )
-
-
-def format_tstats_stage(stage: str) -> str:
-    stage = collapse_whitespace(stage)
-    if not re.match(r"^\|?\s*tstats\b", stage, re.I):
-        return stage
-    if not _tstats_has_multiline_clauses(stage):
-        return stage
-
-    has_leading_pipe = stage.lstrip().startswith("|")
-    work = stage.lstrip()
-    if work.startswith("|"):
-        work = work[1:].lstrip()
-
-    hits = [
-        h
-        for h in (
-            _find_keyword(work, ("FROM",)),
-            _find_keyword(work, ("WHERE",)),
-            _find_keyword(work, ("BY",)),
-        )
-        if h
-    ]
-    if not hits:
-        return stage
-
-    order = sorted([(kw, start, end) for kw, start, end in hits], key=lambda x: x[1])
-    final: dict[str, str] = {}
-    final["AGG"] = work[: order[0][1]].strip()
-    clauses: list[tuple[str, str]] = []
-    for idx, (kw, _start, end) in enumerate(order):
-        next_start = order[idx + 1][1] if idx + 1 < len(order) else len(work)
-        clauses.append((kw, work[end:next_start].strip()))
-
-    lines: list[str] = []
-    agg = collapse_whitespace(final["AGG"])
-    lines.append(_ensure_leading_pipe(agg))
-
-    for kw, body in clauses:
-        if not body:
-            continue
-        if kw.upper() == "WHERE":
-            conds = _split_where_conditions(body)
-            if not conds:
-                lines.append(f"{' ' * CONTINUE_INDENT}WHERE")
-            elif len(conds) == 1:
-                lines.append(f"{' ' * CONTINUE_INDENT}WHERE {conds[0]}")
-            else:
-                lines.append(f"{' ' * CONTINUE_INDENT}WHERE {conds[0]}")
-                for cond in conds[1:]:
-                    lines.append(f"{' ' * WHERE_CONT_INDENT}{cond}")
-        else:
-            lines.append(f"{' ' * CONTINUE_INDENT}{kw} {body}")
-
-    return "\n".join(lines)
-
-
-def _split_top_level_commas(expr: str) -> list[str]:
-    parts: list[str] = []
-    current: list[str] = []
-    depth_paren = depth_bracket = 0
-    in_quote: str | None = None
-    i = 0
-    n = len(expr)
-    while i < n:
-        c = expr[i]
-        if in_quote:
-            if c == "\\" and i + 1 < n:
-                current.append(c)
-                current.append(expr[i + 1])
-                i += 2
-                continue
-            if c == in_quote:
-                in_quote = None
-            current.append(c)
-            i += 1
-            continue
-        if c in '"\'`':
-            in_quote = c
-            current.append(c)
-            i += 1
-            continue
-        if c == "(":
-            depth_paren += 1
-        elif c == ")":
-            depth_paren = max(0, depth_paren - 1)
-        elif c == "[":
-            depth_bracket += 1
-        elif c == "]":
-            depth_bracket = max(0, depth_bracket - 1)
-        elif c == "," and depth_paren == 0 and depth_bracket == 0:
-            part = "".join(current).strip()
-            if part:
-                parts.append(part)
-            current = []
-            i += 1
-            continue
-        current.append(c)
-        i += 1
-    part = "".join(current).strip()
-    if part:
-        parts.append(part)
-    return parts
-
-
-def format_eval_like_stage(stage: str) -> str:
-    stage = collapse_whitespace(stage)
-    m = re.match(r"^(\|?\s*)(eval|eventstats)\s+(.*)$", stage, re.I | re.S)
-    if not m:
-        return stage
-    lead, cmd, rest = m.group(1), m.group(2).lower(), m.group(3)
-    clauses = _split_top_level_commas(rest)
-    if len(clauses) <= 1:
-        return stage
-    pipe_prefix = "| " if lead.strip().startswith("|") else ""
-    cont_lines = [f"{pipe_prefix}{cmd} {clauses[0]},"]
-    for clause in clauses[1:-1]:
-        cont_lines.append(f"{' ' * EVAL_CONT_INDENT}{clause},")
-    cont_lines.append(f"{' ' * EVAL_CONT_INDENT}{clauses[-1]}")
-    return "\n".join(cont_lines)
-
-
-def spl_logical_form(search: str) -> str:
-    """Normalize SPL for equality checks (whitespace + continuations only)."""
-    joined = join_search_lines(search.replace("\t", " "))
-    stages = [collapse_whitespace(t) for _, _, t in _scan_top_level(joined)]
-    return " | ".join(stages)
-
-
-def _ensure_leading_pipe(line: str) -> str:
+def _ensure_leading_pipe(line: str, *, is_first_stage: bool) -> str:
+    """Ensure a non-first stage starts with `| `; first stage keeps base search shape."""
     st = line.strip()
+    if is_first_stage:
+        if st.startswith("|"):
+            return st
+        if _LEADING_PIPE_CMDS.match(st):
+            return "| " + st
+        return st  # base search form (e.g. `index="..." sourcetype=...`)
     if st.startswith("|"):
         return st
-    if re.match(
-        r"^(tstats|makeresults|inputlookup|datamodel|savedsearch|rest|noop)\b",
-        st,
-        re.I,
-    ):
-        return "| " + st
-    return st
+    return "| " + st
 
 
-def _stage_to_lines(stage: str, *, is_first: bool) -> list[str]:
-    """Expand one pipe stage; internal newlines are continuations, not new pipes."""
-    if "\n" not in stage:
-        st = stage.strip()
-        if is_first:
-            st = _ensure_leading_pipe(st)
-        elif not st.startswith("|"):
-            st = "| " + st.lstrip("| ")
-        return [st]
+def _strip_trailing_backslash(line: str) -> str:
+    s = line.rstrip()
+    if s.endswith("\\"):
+        s = s[:-1].rstrip()
+    return s
 
-    out: list[str] = []
-    for j, raw in enumerate(line for line in stage.split("\n") if line.strip()):
-        if j == 0:
-            line = raw.strip()
-            if is_first:
-                line = _ensure_leading_pipe(line)
-            elif not line.startswith("|"):
-                line = "| " + line.lstrip("| ")
-            out.append(line)
-        else:
-            out.append(raw.rstrip())
-    return out
+
+def _normalize_for_compare(s: str) -> str:
+    """Normalize a search string for change-detection (strip continuations + trim)."""
+    return "\n".join(
+        _strip_trailing_backslash(ln) for ln in s.split("\n")
+    ).strip()
 
 
 def format_search(search: str) -> tuple[str, bool]:
+    """Reformat a search field per the rules. Returns (new_search, changed)."""
     original = search
-    if "\t" in search:
-        search = search.replace("\t", " ")
+    text = search.replace("\t", " ")
 
-    joined = join_search_lines(search)
-    spans = _scan_top_level(joined)
+    raw_lines = [_strip_trailing_backslash(ln) for ln in text.split("\n")]
+    while raw_lines and not raw_lines[-1].strip():
+        raw_lines.pop()
+    if not raw_lines:
+        return original, False
+
+    glued = "\n".join(raw_lines)
+    spans = _scan_top_level_pipes(glued)
     if not spans:
         return original, False
 
-    flat_lines: list[str] = []
-    for idx, (_start, _end, stage_text) in enumerate(spans):
-        st = collapse_whitespace(stage_text)
-        if re.match(r"^\|?\s*tstats\b", st, re.I):
-            st = format_tstats_stage(st)
-        elif re.match(r"^\|?\s*(eval|eventstats)\b", st, re.I):
-            st = format_eval_like_stage(st)
-        flat_lines.extend(_stage_to_lines(st, is_first=idx == 0))
+    out_lines: list[str] = []
+    for idx, (_s, _e, stage_text) in enumerate(spans):
+        is_first = idx == 0
+        if _stage_has_top_level_subsearch(stage_text):
+            stage_lines = [
+                _strip_trailing_backslash(ln).rstrip()
+                for ln in stage_text.split("\n")
+            ]
+            stage_lines = [ln for ln in stage_lines if ln.strip() != ""]
+            if not stage_lines:
+                continue
+            stage_lines[0] = _ensure_leading_pipe(
+                stage_lines[0], is_first_stage=is_first
+            )
+            out_lines.extend(stage_lines)
+        else:
+            single = collapse_whitespace(stage_text)
+            single = _ensure_leading_pipe(single, is_first_stage=is_first)
+            out_lines.append(single)
 
-    if len(flat_lines) == 1 and len(flat_lines[0]) < 120:
-        out = flat_lines[0]
-    else:
-        out = "\n".join(flat_lines)
-
-    norm_orig = original.replace("\t", " ")
-    changed = spl_logical_form(norm_orig) != spl_logical_form(out) or _search_layout(
-        norm_orig
-    ) != _search_layout(out)
-    return out, changed
-
-
-def _search_layout(search: str) -> str:
-    """Normalize layout (continuations, trailing slashes) for idempotency checks."""
-    lines = []
-    for line in search.splitlines():
-        s = line.rstrip()
-        if s.endswith("\\"):
-            s = s[:-1].rstrip()
-        lines.append(s)
-    return "\n".join(lines)
+    new_search = "\n".join(out_lines)
+    changed = _normalize_for_compare(new_search) != _normalize_for_compare(original)
+    return new_search, changed
 
 
 def emit_search_field(search: str) -> list[str]:
-    """Emit search = line(s) with trailing backslashes on non-final lines."""
-    if "\n" in search:
-        parts = search.split("\n")
-    else:
-        parts = [search]
+    """Emit `search = ...\\` lines with the backslash flush against the last char."""
+    parts = search.split("\n") if "\n" in search else [search]
+    parts = [_strip_trailing_backslash(p).rstrip() for p in parts]
+    while parts and not parts[-1]:
+        parts.pop()
+    if not parts:
+        return ["search = "]
 
     lines: list[str] = []
     for i, part in enumerate(parts):
-        part = part.rstrip()
         is_last = i == len(parts) - 1
-        if i == 0:
-            prefix = "search = "
+        prefix = "search = " if i == 0 else ""
+        if is_last:
+            lines.append(prefix + part)
         else:
-            prefix = ""
-        if not is_last:
-            if not part.endswith("\\"):
-                part = part + " \\"
-        else:
-            part = part.rstrip("\\").rstrip()
-        lines.append(prefix + part)
+            lines.append(prefix + part + "\\")
     return lines
 
 
@@ -532,9 +346,6 @@ def metadata_needs_reorder(fields: dict[str, str]) -> bool:
     desired.extend(PROSE_FIELDS)
     desired.append("search")
 
-    seen_keys = [k for k in fields if k != "search"]
-    # Build actual order from file - we only know dict order is insertion order from parser
-    # Parser reads in file order - good
     actual = [k for k in fields if k != "search"]
     target = [k for k in desired if k in fields]
     extras = [k for k in actual if k not in target]
@@ -544,13 +355,10 @@ def metadata_needs_reorder(fields: dict[str, str]) -> bool:
 
 def format_stanza(stanza_id: str, fields: dict[str, str]) -> tuple[str, bool, bool]:
     search_changed = False
-    meta_changed = False
 
     if "search" in fields:
         new_search, search_changed = format_search(fields["search"])
         fields = {**fields, "search": new_search}
-
-    lines = [f"[{stanza_id}]"]
 
     ordered_keys: list[str] = list(FIELD_ORDER_BEFORE_VIZ)
     for vf in VIZ_FIELDS:
@@ -566,9 +374,11 @@ def format_stanza(stanza_id: str, fields: dict[str, str]) -> tuple[str, bool, bo
     extras = [k for k in fields if k not in ordered_keys]
     full_order = ordered_keys + extras
 
-    old_keys = [k for k in fields]
-    meta_changed = old_keys != [k for k in full_order if k in fields]
+    old_keys = list(fields.keys())
+    target_keys = [k for k in full_order if k in fields]
+    meta_changed = old_keys != target_keys
 
+    lines = [f"[{stanza_id}]"]
     for key in full_order:
         if key not in fields:
             continue

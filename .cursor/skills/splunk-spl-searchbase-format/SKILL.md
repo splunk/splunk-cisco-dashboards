@@ -39,44 +39,59 @@ Skip `default_viz` / `viz_options` only when the stanza is purely a backend sear
 
 The `search` field uses `\` line continuations. Read [searchbase.conf](../../packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf) for canonical examples and follow the same shape.
 
+This style matches the upstream `searchbase` app (`~/repo/searchbase`). Keep the rules deliberately simple — the formatter is not allowed to split clauses, reorder aggregates, or insert/remove commas.
+
 ### Rules
 
-1. **Every top-level pipe begins a new line.** The continuation marker (`\`) goes on the *previous* line, never on the final line.
-2. **`tstats` clauses break onto separate lines:** the aggregate list stays on the `tstats` line; `FROM`, `WHERE`, and `BY` each start their own line, indented 4 spaces.
-3. **Multi-condition `WHERE` clauses:** the first filter goes on the `WHERE` line; subsequent filters indent 10 spaces (so they line up under the first filter, not under `WHERE`).
-4. **Multi-clause `eval` and `eventstats`:** put one clause per line, comma-separated, with the continuation lines aligned under the first clause.
-5. **Subsearches (`[ ... ]`, `append [...]`, `appendcols [...]`):** keep the bracketed body on a single line *within its pipeline segment*. Don't try to wrap inside the brackets.
-6. **No tabs.** Use spaces only.
-7. **Field name punctuation:** follow [splunk-spl-field-syntax.mdc](../../.cursor/rules/splunk-spl-field-syntax.mdc). Dotted fields are bare in `stats … by`, `rename`, and `BY`, but single-quoted inside `eval(...)`.
+1. **Every top-level pipe `|` begins a new line.** The continuation marker `\` goes flush against the last char of every non-final line. The final line has no trailing `\`.
+2. **Everything inside a single pipe stage stays on one physical line** — no matter how long. That includes:
+   - `tstats <aggs> from <dm> where (...) by <fields>` — entire `tstats` (with `WHERE` and `BY`) is one line.
+   - `eventstats <agg1> as <a> <agg2> as <b> by <field>` — one line, whatever separator (space or comma) the SPL uses.
+   - `eval foo=case(arg1,"a",arg2,"b",1==1,"default")` — `case(...)` / `if(...)` / `coalesce(...)` arguments are never broken out.
+   - `eval foo=..., bar=..., baz=...` — multi-clause eval is never split on commas.
+3. **Subsearches (`[ ... ]`, `append [...]`, `join ... [...]`, `appendcols [...]`):** preserve the existing multi-line layout of the bracketed body if it has one. The formatter does not try to flatten a multi-line subsearch back to one line, and does not try to wrap a single-line subsearch.
+4. **No tabs.** Use spaces only.
+5. **Field name punctuation:** follow [splunk-spl-field-syntax.mdc](../../.cursor/rules/splunk-spl-field-syntax.mdc). Dotted fields are bare in `stats … by`, `rename`, and `BY`, but single-quoted inside `eval(...)`.
 
-### Canonical example
+### Canonical example (one pipe per line)
 
 ```spl
-search = | tstats `summariesonly` avg(Test_Metrics.metric_name:http.server.request.availability) AS avg_avail \
-    FROM datamodel="Cisco_ThousandEyes.Test_Metrics" \
-    WHERE Test_Metrics.metric_name:http.server.request.availability="*" \
-          Test_Metrics.thousandeyes.test.type="http-server" \
-    BY _time span=1h, Test_Metrics.server.address, Test_Metrics.thousandeyes.test.name \
-| rename Test_Metrics.server.address AS site \
-| stats avg(avg_avail) AS site_avail BY _time, site \
-| eval available = if(site_avail >= 99.5, 1, 0) \
-| timechart span=1h sum(available) AS sites_up, dc(site) AS sites_total \
-| eval current_pct = if(sites_total > 0, round(100 * sites_up / sites_total, 1), null()) \
-| eventstats avg(current_pct) AS baseline_pct, \
-             latest(sites_up) AS latest_up, \
-             latest(sites_total) AS latest_total \
-| eval display = tostring(latest_up) . " of " . tostring(latest_total) . " available", \
-       headline_pct = if(latest_total > 0, round(100 * latest_up / latest_total, 1), null()) \
+search = | tstats `summariesonly` avg(Test_Metrics.metric_name:http.server.request.availability) AS avg_avail FROM datamodel="Cisco_ThousandEyes.Test_Metrics" WHERE Test_Metrics.metric_name:http.server.request.availability="*" Test_Metrics.thousandeyes.test.type="http-server" BY _time span=1h, Test_Metrics.server.address, Test_Metrics.thousandeyes.test.name\
+| rename Test_Metrics.server.address AS site\
+| stats avg(avg_avail) AS site_avail BY _time, site\
+| eval available = if(site_avail >= 99.5, 1, 0)\
+| timechart span=1h sum(available) AS sites_up, dc(site) AS sites_total\
+| eval current_pct = if(sites_total > 0, round(100 * sites_up / sites_total, 1), null())\
+| eventstats avg(current_pct) AS baseline_pct latest(sites_up) AS latest_up latest(sites_total) AS latest_total\
+| eval display = tostring(latest_up) . " of " . tostring(latest_total) . " available", headline_pct = if(latest_total > 0, round(100 * latest_up / latest_total, 1), null())\
 | fields _time current_pct baseline_pct sites_up sites_total display headline_pct
 ```
+
+Yes, the `tstats` line is long. That's intentional and matches the upstream app.
+
+### Subsearch example (multi-line preserved)
+
+```spl
+search = `index_spaces` sourcetype="cisco:spaces:firehose" (eventType="DEVICE_LOCATION_UPDATE")\
+| eval mac=lower(replace(coalesce('deviceLocationUpdate.device.macAddress'), ":", "-"))\
+| join mac type=left [\
+    search `index_identity` sourcetype="cisco:ise:syslog" ("5200" OR "5400")\
+    | eval mac=lower(replace(coalesce(Calling_Station_ID, EndPointMACAddress), ":", "-"))\
+    | where isnotnull(mac) AND len(mac)>=11\
+    | stats latest(EndpointIdentityGroup) as ise_profile by mac\
+  ]\
+| eval segment=case(ise_pass=1, "Corporate", 1==1, "Other")
+```
+
+The `[ ... ]` block keeps each inner pipe on its own indented line because the source already has it that way; the formatter preserves it.
 
 ### Anti-pattern (do not commit this)
 
 ```spl
-search = | tstats `summariesonly` count(Activities.event) as event FROM datamodel="Cisco_ThousandEyes.Activities"  WHERE $tkn_acc_group$ $tkn_user$ BY Activities.event
+search = | tstats count from datamodel=Foo  by Foo.bar    Foo.baz
 ```
 
-A single very long line is unreadable in code review and in the .conf file. Always break per the rules above.
+Two consecutive spaces, tabs, or stray indentation inside a single pipe stage. Whitespace inside a pipe stage should always collapse to single spaces.
 
 ## Metadata rules
 
