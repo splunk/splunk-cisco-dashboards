@@ -2316,6 +2316,7 @@ const SearchbaseCanvasPage: React.FC = () => {
         useState<SearchbaseDetailTableConfig | null>(null);
     const [noDataReportOpen, setNoDataReportOpen] = useState(false);
     const [pageIndex, setPageIndex] = useState(0);
+    const [tileSearchQuery, setTileSearchQuery] = useState('');
     const [runningTileIds, setRunningTileIds] = useState<Set<string>>(
         () => new Set()
     );
@@ -2423,10 +2424,42 @@ const SearchbaseCanvasPage: React.FC = () => {
         return map;
     }, [records]);
 
-    const totalPages = Math.max(1, Math.ceil(tiles.length / pageSize));
+    const tileSearchTerms = useMemo(
+        () =>
+            tileSearchQuery
+                .trim()
+                .toLowerCase()
+                .split(/\s+/)
+                .filter(Boolean),
+        [tileSearchQuery]
+    );
+    const hasTileSearch = tileSearchTerms.length > 0;
+    const filteredTiles = useMemo(() => {
+        if (!hasTileSearch) return tiles;
+        return tiles.filter((tile) => {
+            const record = entryByName.get(tile.searchName);
+            const searchableText = [
+                tile.searchName,
+                record?.id,
+                record?.searchName,
+                record?.category,
+                record?.subCategory,
+                ...(record?.tags ?? []),
+                record?.search,
+                record?.description ? plainTextFromHtml(record.description) : '',
+            ]
+                .filter(Boolean)
+                .join(' ')
+                .toLowerCase();
+            return tileSearchTerms.every((term) => searchableText.includes(term));
+        });
+    }, [entryByName, hasTileSearch, tileSearchTerms, tiles]);
+
+    const totalPages = Math.max(1, Math.ceil(filteredTiles.length / pageSize));
     const clampedPageIndex = Math.min(pageIndex, totalPages - 1);
     const pageStart = clampedPageIndex * pageSize;
-    const visibleTiles = tiles.slice(pageStart, pageStart + pageSize);
+    const visibleTiles = filteredTiles.slice(pageStart, pageStart + pageSize);
+    const pageEnd = Math.min(pageStart + pageSize, filteredTiles.length);
     const runnableVisibleTiles = visibleTiles.filter((tile) =>
         entryByName.has(tile.searchName)
     );
@@ -2443,6 +2476,10 @@ const SearchbaseCanvasPage: React.FC = () => {
     useEffect(() => {
         setPageIndex((current) => Math.min(current, totalPages - 1));
     }, [totalPages]);
+
+    useEffect(() => {
+        setPageIndex(0);
+    }, [tileSearchQuery]);
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -2570,6 +2607,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                 setRangeLabel(next.rangeLabel);
                 setTiles(next.tiles);
                 setPageIndex(0);
+                setTileSearchQuery('');
                 setRunningTileIds(new Set());
                 setObservedNoDataByTile(new Map());
                 setBrowserOpen(next.tiles.length === 0);
@@ -2795,6 +2833,7 @@ const SearchbaseCanvasPage: React.FC = () => {
         setRunningTileIds(new Set());
         setObservedNoDataByTile(new Map());
         setPageIndex(0);
+        setTileSearchQuery('');
         setBrowserOpen(true);
         setReplaceTileId(null);
         setActiveSavedCanvasName(null);
@@ -2816,6 +2855,7 @@ const SearchbaseCanvasPage: React.FC = () => {
         setRunningTileIds(new Set());
         setObservedNoDataByTile(new Map());
         setPageIndex(0);
+        setTileSearchQuery('');
         setBrowserOpen(false);
         setReplaceTileId(null);
         setActiveSavedCanvasName(null);
@@ -3116,6 +3156,38 @@ const SearchbaseCanvasPage: React.FC = () => {
                 </header>
 
                 <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden bg-slate-50 p-5 dark:bg-slate-900">
+                    <div className="mb-4 flex min-w-0 items-center gap-3">
+                        <div className="relative w-full max-w-[520px]">
+                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 dark:text-slate-400" />
+                            <input
+                                type="search"
+                                value={tileSearchQuery}
+                                onChange={(event) => setTileSearchQuery(event.target.value)}
+                                placeholder="Search tiles by name or query..."
+                                disabled={tiles.length === 0}
+                                className="h-11 w-full rounded-md border border-slate-300 bg-white pl-10 pr-10 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-sky-400 focus:ring-2 focus:ring-sky-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-sky-500 dark:focus:ring-sky-950 dark:disabled:bg-slate-900"
+                                aria-label="Search tiles by name or query"
+                            />
+                            {tileSearchQuery.trim().length > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={() => setTileSearchQuery('')}
+                                    title="Clear tile search"
+                                    aria-label="Clear tile search"
+                                    className="absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-sm text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100 dark:focus:ring-slate-700"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            )}
+                        </div>
+                        {hasTileSearch && (
+                            <div className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+                                {filteredTiles.length.toLocaleString()} of{' '}
+                                {tiles.length.toLocaleString()} matched
+                            </div>
+                        )}
+                    </div>
+
                     <div className="mb-4 flex min-w-0 flex-wrap items-center gap-2">
                         <button
                             type="button"
@@ -3147,12 +3219,13 @@ const SearchbaseCanvasPage: React.FC = () => {
                             <ChevronRight className="h-4 w-4" />
                         </button>
                         <div className="text-sm font-semibold text-slate-500 dark:text-slate-400">
-                            {tiles.length === 0
+                            {filteredTiles.length === 0
                                 ? '0 shown'
-                                : `${pageStart + 1}-${Math.min(
-                                      pageStart + pageSize,
-                                      tiles.length
-                                  )} of ${tiles.length}`}
+                                : `${pageStart + 1}-${pageEnd} of ${
+                                      hasTileSearch
+                                          ? `${filteredTiles.length.toLocaleString()} matched`
+                                          : filteredTiles.length.toLocaleString()
+                                  }`}
                         </div>
                         {tiles.length > 0 && (
                             <button
@@ -3185,6 +3258,28 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 >
                                     <PanelRightOpen className="h-4 w-4" />
                                     Open catalogue
+                                </button>
+                            </div>
+                        </div>
+                    ) : filteredTiles.length === 0 ? (
+                        <div className="flex min-h-[360px] items-center justify-center rounded-md border border-dashed border-slate-300 bg-white dark:border-slate-800 dark:bg-slate-900">
+                            <div className="mx-auto max-w-sm px-6 text-center">
+                                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-md bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                                    <Search className="h-7 w-7" />
+                                </div>
+                                <h2 className="mt-4 text-xl font-black text-slate-950 dark:text-slate-50">
+                                    No matching tiles
+                                </h2>
+                                <p className="mt-2 text-sm font-medium leading-6 text-slate-500 dark:text-slate-400">
+                                    Try a different tile name, tag, category, or SPL fragment.
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => setTileSearchQuery('')}
+                                    className="mt-5 inline-flex items-center gap-2 rounded-md bg-slate-900 px-4 py-2 text-sm font-black text-white transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-white"
+                                >
+                                    <X className="h-4 w-4" />
+                                    Clear search
                                 </button>
                             </div>
                         </div>
