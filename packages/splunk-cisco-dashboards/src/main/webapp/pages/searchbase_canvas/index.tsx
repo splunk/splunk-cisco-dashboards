@@ -69,7 +69,10 @@ import {
     splunkSearchAppUrl,
 } from '@/common/lib/splunkSearchUrl';
 import { cn } from '@/common/lib/utils';
-import { runSearch } from '@/common/services/splunkSearchService';
+import {
+    classifySearchDispatchError,
+    runSearch,
+} from '@/common/services/splunkSearchService';
 import {
     deleteSearchbaseCanvas,
     listSearchbaseCanvases,
@@ -383,6 +386,8 @@ const splunkStringLiteral = (value: string): string => {
 
 const noDataReasonLabel = (reason: NoDataReason): string => {
     if (reason === 'empty_rows') return '0 rows';
+    if (reason === 'dispatch_failed') return 'dispatch failed';
+    if (reason === 'job_failed') return 'search job failed';
     if (reason === 'error') return 'search failed';
     if (reason === 'column_missing') return 'configured field missing';
     if (reason === 'no_numeric_column') return 'no numeric value';
@@ -678,13 +683,34 @@ interface SearchbaseTileBodyProps {
 
 const noDataCopy = (
     reason: NoDataReason | undefined,
-    rangeLabel: string | undefined
+    rangeLabel: string | undefined,
+    failureMessage?: string,
+    failureHttpStatus?: number
 ): { title: string; detail: string } => {
     const rangeText = rangeLabel ? ` for ${rangeLabel.toLowerCase()}` : '';
+    if (reason === 'dispatch_failed') {
+        const statusSuffix =
+            typeof failureHttpStatus === 'number' ? ` (HTTP ${failureHttpStatus})` : '';
+        return {
+            title: `Search dispatch failed${statusSuffix}`,
+            detail:
+                failureMessage ??
+                'Splunk could not start this search (the dispatcher may be overloaded). Use the refresh button below to retry once load drops, or open the search in Search.',
+        };
+    }
+    if (reason === 'job_failed') {
+        return {
+            title: 'Search failed',
+            detail:
+                failureMessage ??
+                'Splunk reported an error while running this search. Open it in Search to inspect the SPL error.',
+        };
+    }
     if (reason === 'error') {
         return {
             title: 'Search failed',
             detail:
+                failureMessage ??
                 'Splunk could not complete this search. Open it in Search to inspect the error.',
         };
     }
@@ -735,6 +761,8 @@ const SearchbaseNoDataPanel: React.FC<{
     description: string;
     noDataReason?: NoDataReason;
     rangeLabel?: string;
+    failureMessage?: string;
+    failureHttpStatus?: number;
     onConfigure: () => void;
     onOpenSearch: () => void;
     onOpenDrilldown?: () => void;
@@ -744,13 +772,23 @@ const SearchbaseNoDataPanel: React.FC<{
     description,
     noDataReason,
     rangeLabel,
+    failureMessage,
+    failureHttpStatus,
     onConfigure,
     onOpenSearch,
     onOpenDrilldown,
     drilldownTitle,
 }) => {
-    const copy = noDataCopy(noDataReason, rangeLabel);
-    const isError = noDataReason === 'error';
+    const copy = noDataCopy(
+        noDataReason,
+        rangeLabel,
+        failureMessage,
+        failureHttpStatus
+    );
+    const isError =
+        noDataReason === 'error' ||
+        noDataReason === 'dispatch_failed' ||
+        noDataReason === 'job_failed';
 
     return (
         <div
@@ -903,6 +941,8 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
                 description={description}
                 noDataReason={metric.noDataReason}
                 rangeLabel={metric.rangeLabel}
+                failureMessage={metric.failureMessage}
+                failureHttpStatus={metric.failureHttpStatus}
                 onConfigure={onConfigure}
                 onOpenSearch={onOpenSearch}
                 onOpenDrilldown={onOpenDrilldown}
@@ -992,6 +1032,8 @@ const SearchbaseTableTileBody: React.FC<
                 description={description}
                 noDataReason={table.noDataReason}
                 rangeLabel={table.rangeLabel}
+                failureMessage={table.failureMessage}
+                failureHttpStatus={table.failureHttpStatus}
                 onConfigure={onConfigure}
                 onOpenSearch={onOpenSearch}
             />
@@ -1410,11 +1452,18 @@ const SearchbaseDetailTableModal: React.FC<{
                 setColumns(nextColumns);
                 setRows(nextRows);
             })
-            .catch(() => {
+            .catch((err) => {
                 if (cancelled) return;
+                const failure = classifySearchDispatchError(err);
+                console.error('[searchbase_canvas] detail dispatch failed', {
+                    tag: config.tag,
+                    httpStatus: failure.httpStatus,
+                    reason: failure.reason,
+                    message: failure.message,
+                });
                 setRows([]);
                 setColumns(config.columns);
-                setErrorMessage(config.errorMessage);
+                setErrorMessage(failure.message || config.errorMessage);
             })
             .finally(() => {
                 if (!cancelled) setLoading(false);

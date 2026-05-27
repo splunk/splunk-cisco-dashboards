@@ -22,7 +22,10 @@
  *
  * Use `setSearchAppContext('<other-app>')` in dev/tests to override.
  */
-import { oneShot, addLeadingSearchCommand } from '@splunk/splunk-utils/search';
+import { addLeadingSearchCommand } from '@splunk/splunk-utils/search';
+import { createRESTURL } from '@splunk/splunk-utils/url';
+import { findErrorMessage, getDefaultFetchInit, handleResponse } from '@splunk/splunk-utils/fetch';
+import querystring from 'querystring';
 
 // SPL is authored in searchbase.conf or code, not typed directly by
 // an end user. A character allow-list is too brittle for real SPL
@@ -182,11 +185,179 @@ const mockSearch = ({ tag }) => simulateLatency(FIXTURES[tag] || []);
 const FAILED_SPL_CACHE = new Set();
 const cacheKey = (spl, earliestTime, latestTime) => `${earliestTime}|${latestTime}|${spl}`;
 
+/** Max in-flight Splunk one-shot dispatches (shared FIFO queue). */
+export const MAX_CONCURRENT_TILE_SEARCHES = 4;
+
+const DISPATCH_RETRY_BASE_MS = [500, 1500, 4000];
+const DISPATCH_MAX_ATTEMPTS = 1 + DISPATCH_RETRY_BASE_MS.length;
+
+let dispatchInFlight = 0;
+/** @type {Array<() => void>} */
+const dispatchWaitQueue = [];
+
+const acquireDispatchSlot = () =>
+    new Promise((resolve) => {
+        if (dispatchInFlight < MAX_CONCURRENT_TILE_SEARCHES) {
+            dispatchInFlight += 1;
+            resolve();
+            return;
+        }
+        dispatchWaitQueue.push(() => {
+            dispatchInFlight += 1;
+            resolve();
+        });
+    });
+
+const releaseDispatchSlot = () => {
+    dispatchInFlight = Math.max(0, dispatchInFlight - 1);
+    const next = dispatchWaitQueue.shift();
+    if (next) next();
+};
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const jitteredDelay = (baseMs) => {
+    const spread = baseMs * 0.2;
+    return Math.max(0, baseMs + (Math.random() * 2 - 1) * spread);
+};
+
+/**
+ * Splunk dispatch/job failure with a stable machine-readable kind for UI.
+ * @public
+ */
+export class SearchDispatchError extends Error {
+    /**
+     * @param {string} message
+     * @param {{ httpStatus?: number, kind?: 'dispatch_failed'|'job_failed', retryable?: boolean }} [meta]
+     */
+    constructor(message, { httpStatus, kind = 'dispatch_failed', retryable = false } = {}) {
+        super(message);
+        this.name = 'SearchDispatchError';
+        this.httpStatus = httpStatus;
+        this.kind = kind;
+        this.retryable = retryable;
+    }
+}
+
+const isAbortError = (err) =>
+    (typeof DOMException !== 'undefined' &&
+        err instanceof DOMException &&
+        err.name === 'AbortError') ||
+    (err && typeof err === 'object' && err.name === 'AbortError');
+
+const isNetworkError = (err) => {
+    if (!err || typeof err !== 'object') return false;
+    if (isAbortError(err)) return true;
+    if (err instanceof TypeError) return true;
+    const message = typeof err.message === 'string' ? err.message : '';
+    return /failed to fetch|network|load failed/i.test(message);
+};
+
+const isRetryableHttpStatus = (status) => status === 503 || status === 429;
+
+const shouldCacheSplFailure = (status) =>
+    typeof status === 'number' && status >= 400 && status < 500 && !isRetryableHttpStatus(status);
+
+const splunkJobErrorText = (payload) => {
+    const entry = findErrorMessage(payload);
+    return entry && typeof entry.text === 'string' ? entry.text : null;
+};
+
+/**
+ * Map a rejected dispatch to UI-facing reason metadata.
+ * @param {unknown} err
+ * @returns {{ reason: 'dispatch_failed'|'job_failed'|'error', message: string, httpStatus?: number }}
+ */
+export const classifySearchDispatchError = (err) => {
+    if (err instanceof SearchDispatchError) {
+        return {
+            reason: err.kind === 'job_failed' ? 'job_failed' : 'dispatch_failed',
+            message: err.message,
+            httpStatus: err.httpStatus,
+        };
+    }
+    const message = err instanceof Error ? err.message : String(err);
+    return { reason: 'error', message };
+};
+
+const dispatchOneShot = async (searchParameters, namespaceOptions) => {
+    const response = await fetch(
+        createRESTURL('search/v2/jobs', namespaceOptions),
+        {
+            ...getDefaultFetchInit(),
+            method: 'POST',
+            body: querystring.encode({
+                output_mode: 'json',
+                ...searchParameters,
+                exec_mode: 'oneshot',
+            }),
+        }
+    );
+
+    if (response.status !== 200) {
+        const status = response.status;
+        let message = `Search dispatch failed (HTTP ${status})`;
+        try {
+            const body = await response.json();
+            const serverText = splunkJobErrorText(body);
+            if (serverText) message = serverText;
+        } catch {
+            // Non-JSON 503 bodies are common under load; keep the HTTP status message.
+        }
+        throw new SearchDispatchError(message, {
+            httpStatus: status,
+            kind: 'dispatch_failed',
+            retryable: isRetryableHttpStatus(status),
+        });
+    }
+
+    const payload = await handleResponse(200)(response);
+    const jobError = splunkJobErrorText(payload);
+    if (jobError) {
+        throw new SearchDispatchError(jobError, {
+            kind: 'job_failed',
+            retryable: false,
+        });
+    }
+    return payload;
+};
+
+const dispatchOneShotWithRetry = async (searchParameters, namespaceOptions) => {
+    let lastError;
+    for (let attempt = 0; attempt < DISPATCH_MAX_ATTEMPTS; attempt += 1) {
+        try {
+            return await dispatchOneShot(searchParameters, namespaceOptions);
+        } catch (err) {
+            lastError = err;
+            const status =
+                err instanceof SearchDispatchError ? err.httpStatus : undefined;
+            const retryable =
+                (err instanceof SearchDispatchError && err.retryable) ||
+                isRetryableHttpStatus(status) ||
+                isNetworkError(err);
+            const hasMoreAttempts = attempt < DISPATCH_MAX_ATTEMPTS - 1;
+            if (!retryable || !hasMoreAttempts) {
+                throw err;
+            }
+            await sleep(jitteredDelay(DISPATCH_RETRY_BASE_MS[attempt]));
+        }
+    }
+    throw lastError;
+};
+
 /**
  * Test-only: clear the failure cache. Exported so React tests can
  * exercise retry paths without leaking state across test cases.
  */
 export const __resetFailedSplCache = () => FAILED_SPL_CACHE.clear();
+
+/**
+ * Test-only: reset the dispatch concurrency queue between cases.
+ */
+export const __resetDispatchQueue = () => {
+    dispatchInFlight = 0;
+    dispatchWaitQueue.length = 0;
+};
 
 /**
  * Run a Splunk search.
@@ -249,26 +420,43 @@ export const runSearch = async ({
  // which lets `| savedsearch "..."` resolve any saved search bundled
  // with the app, even though the app isn't exported globally.
  const dispatchedSpl = addLeadingSearchCommand(spl);
- try {
- const response = await oneShot(
- {
+ const namespace = { app: CURRENT_APP_CONTEXT };
+ const searchParameters = {
  search: dispatchedSpl,
  earliest_time: earliestTime,
  latest_time: latestTime,
  output_mode: 'json',
  count,
- },
- { app: CURRENT_APP_CONTEXT }
- );
- return { results: (response && response.results) || [] };
- } catch (err) {
- // Remember that this SPL fails so we don't re-dispatch it on
- // the next refresh-tick. The hook layer already swallows the
- // rejection and falls back to mock data, so the user-facing
- // experience is unchanged — just quieter on subsequent loads.
+ };
+
+ return acquireDispatchSlot()
+ .then(() => dispatchOneShotWithRetry(searchParameters, namespace))
+ .then((response) => ({ results: (response && response.results) || [] }))
+ .catch((err) => {
+ const status =
+ err instanceof SearchDispatchError ? err.httpStatus : undefined;
+ if (shouldCacheSplFailure(status)) {
  FAILED_SPL_CACHE.add(key);
- throw err;
  }
+ const classified = classifySearchDispatchError(err);
+ const tagLabel = tag || 'splunk-search';
+ console.error('[splunkSearchService] dispatch failed', {
+ tag: tagLabel,
+ httpStatus: classified.httpStatus ?? status,
+ reason: classified.reason,
+ message: classified.message,
+ });
+ throw err instanceof SearchDispatchError
+ ? err
+ : new SearchDispatchError(classified.message, {
+ httpStatus: status,
+ kind: classified.reason === 'job_failed' ? 'job_failed' : 'dispatch_failed',
+ retryable: false,
+ });
+ })
+ .finally(() => {
+ releaseDispatchSlot();
+ });
 };
 
 export const SPL = Object.freeze({

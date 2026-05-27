@@ -17,7 +17,10 @@
  */
 
 import { useEffect, useState } from 'react';
-import { runSearch } from '../services/splunkSearchService';
+import {
+    classifySearchDispatchError,
+    runSearch,
+} from '../services/splunkSearchService';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -268,15 +271,24 @@ export interface TimeRange {
  *                            the user typed it on purpose, so we let
  *                            them see the failure (and the picker
  *                            chips guide them to a valid one).
- *   • 'error'              — the dispatch itself rejected (e.g. CIM
- *                            data model missing, app namespace mis-
- *                            configuration, SPL validation failure).
+ *   • 'dispatch_failed'    — Splunk refused to create the job (HTTP
+ *                            503/429, network/abort after retries).
+ *   • 'job_failed'         — Job was created but Splunk reported an
+ *                            ERROR/FATAL message (missing macro, etc.).
+ *   • 'error'              — other dispatch failure (legacy bucket).
  */
 export type NoDataReason =
     | 'empty_rows'
     | 'no_numeric_column'
     | 'column_missing'
+    | 'dispatch_failed'
+    | 'job_failed'
     | 'error';
+
+export interface SearchFailureDetail {
+    message: string;
+    httpStatus?: number;
+}
 
 export interface MetricResult {
     value: number;
@@ -308,6 +320,9 @@ export interface MetricResult {
     resolvedSavedSearch: string;
     /** Set only when `Number.isNaN(value)` — see {@link NoDataReason}. */
     noDataReason?: NoDataReason;
+    /** Human-readable Splunk/dispatch error when {@link noDataReason} is not empty_rows. */
+    failureMessage?: string;
+    failureHttpStatus?: number;
     /**
      * Echo of the time range we ran against. The UI uses this to show
      * "no data in last 7 days" rather than "no data" alone, so it's
@@ -577,7 +592,10 @@ export const useMetric = (
                   }).catch(() => ({ results: [] as Array<Record<string, unknown>> }))
                 : Promise.resolve({ results: [] as Array<Record<string, unknown>> });
 
-        const buildNoData = (reason: NoDataReason): MetricResult => ({
+        const buildNoData = (
+            reason: NoDataReason,
+            failure?: SearchFailureDetail
+        ): MetricResult => ({
             value: Number.NaN,
             change: Number.NaN,
             sparkData: [],
@@ -588,6 +606,8 @@ export const useMetric = (
             spl,
             resolvedSavedSearch: savedSearchName,
             noDataReason: reason,
+            failureMessage: failure?.message,
+            failureHttpStatus: failure?.httpStatus,
             rangeLabel: range.label,
         });
 
@@ -812,11 +832,24 @@ export const useMetric = (
             })
             .catch((err) => {
                 if (cancelled) return;
+                const failure = classifySearchDispatchError(err);
+                console.error('[useMetric] dispatch failed', {
+                    stanzaId: cfg.id,
+                    httpStatus: failure.httpStatus,
+                    reason: failure.reason,
+                    message: failure.message,
+                });
                 debugLog(cfg.id, 'dispatch threw', {
-                    error: err instanceof Error ? err.message : String(err),
+                    error: failure.message,
+                    httpStatus: failure.httpStatus,
+                    reason: failure.reason,
                     spl,
                 });
-                setResult(cfg.suppressMockOnEmpty ? buildNoData('error') : mock);
+                setResult(
+                    cfg.suppressMockOnEmpty
+                        ? buildNoData(failure.reason, failure)
+                        : mock
+                );
             });
 
         return () => {
@@ -872,6 +905,8 @@ export interface KpiResult {
     spl: string;
     resolvedSavedSearch: string;
     noDataReason?: NoDataReason;
+    failureMessage?: string;
+    failureHttpStatus?: number;
     rangeLabel?: string;
 }
 
@@ -906,12 +941,17 @@ export const useKpi = (
         }
         let cancelled = false;
         setResult({ ...mock, source: 'loading' });
-        const buildKpiNoData = (reason: NoDataReason): KpiResult => ({
+        const buildKpiNoData = (
+            reason: NoDataReason,
+            failure?: SearchFailureDetail
+        ): KpiResult => ({
             value: '—',
             source: 'live',
             spl,
             resolvedSavedSearch: savedSearchName,
             noDataReason: reason,
+            failureMessage: failure?.message,
+            failureHttpStatus: failure?.httpStatus,
             rangeLabel: range.label,
         });
         debugLog(cfg.id, 'kpi dispatching', {
@@ -1034,7 +1074,18 @@ export const useKpi = (
                     error: err instanceof Error ? err.message : String(err),
                     spl,
                 });
-                setResult(cfg.suppressMockOnEmpty ? buildKpiNoData('error') : mock);
+                const failure = classifySearchDispatchError(err);
+                console.error('[useKpi] dispatch failed', {
+                    stanzaId: cfg.id,
+                    httpStatus: failure.httpStatus,
+                    reason: failure.reason,
+                    message: failure.message,
+                });
+                setResult(
+                    cfg.suppressMockOnEmpty
+                        ? buildKpiNoData(failure.reason, failure)
+                        : mock
+                );
             });
         return () => {
             cancelled = true;
@@ -1092,6 +1143,8 @@ export interface TableDataResult {
     spl: string;
     resolvedSavedSearch: string;
     noDataReason?: NoDataReason;
+    failureMessage?: string;
+    failureHttpStatus?: number;
     rangeLabel?: string;
 }
 
@@ -1161,7 +1214,10 @@ export const useTableData = (
         let cancelled = false;
         setResult({ ...fresh, source: 'loading' });
 
-        const buildNoData = (reason: NoDataReason): TableDataResult => ({
+        const buildNoData = (
+            reason: NoDataReason,
+            failure?: SearchFailureDetail
+        ): TableDataResult => ({
             rows: [],
             columns: [],
             totalRowCount: 0,
@@ -1169,6 +1225,8 @@ export const useTableData = (
             spl,
             resolvedSavedSearch: savedSearchName,
             noDataReason: reason,
+            failureMessage: failure?.message,
+            failureHttpStatus: failure?.httpStatus,
             rangeLabel: range.label,
         });
 
@@ -1240,11 +1298,20 @@ export const useTableData = (
             })
             .catch((err) => {
                 if (cancelled) return;
+                const failure = classifySearchDispatchError(err);
+                console.error('[useTableData] dispatch failed', {
+                    stanzaId: cfg.id,
+                    httpStatus: failure.httpStatus,
+                    reason: failure.reason,
+                    message: failure.message,
+                });
                 debugLog(cfg.id, 'table dispatch threw', {
-                    error: err instanceof Error ? err.message : String(err),
+                    error: failure.message,
+                    httpStatus: failure.httpStatus,
+                    reason: failure.reason,
                     spl,
                 });
-                setResult(buildNoData('error'));
+                setResult(buildNoData(failure.reason, failure));
             });
 
         return () => {
