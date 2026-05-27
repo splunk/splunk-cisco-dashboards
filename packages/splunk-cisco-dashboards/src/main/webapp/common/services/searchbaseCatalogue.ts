@@ -141,6 +141,24 @@ interface SearchbaseResponse {
 
 const APP_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_\-.]{0,127}$/;
 
+/**
+ * Builds the REST URL for fetching `searchbase.conf` entries, restricted
+ * to stanzas owned by the given app via the `eai:acl.app` filter.
+ *
+ * Why `/servicesNS/-/-/` (wildcard user + wildcard app) instead of
+ * `/servicesNS/-/<app>/`: the app-scoped namespace is INCLUSIVE, not
+ * exclusive — Splunk returns stanzas from `<app>` plus any other app
+ * that ships `searchbase.conf` with `global` sharing. The picker then
+ * sees stanzas from upstream TAs (ThousandEyes, ISE, etc.) bleeding in.
+ *
+ * Equivalent SPL one-liner for hand-testing:
+ *   | rest splunk_server=local /servicesNS/-/-/configs/conf-searchbase
+ *       search="eai:acl.app=splunk-cisco-dashboards"
+ *
+ * The `search` query parameter pushes the ACL filter to splunkd so the
+ * client never has to dedupe foreign-app stanzas, and the cache stays
+ * small.
+ */
 const buildUrl = (appName: string): string => {
     if (!APP_NAME_PATTERN.test(appName)) {
         throw new Error('Invalid Splunk app name.');
@@ -148,8 +166,9 @@ const buildUrl = (appName: string): string => {
     const params = new URLSearchParams({
         output_mode: 'json',
         count: '0',
+        search: `eai:acl.app=${appName}`,
     });
-    return `/en-US/splunkd/__raw/servicesNS/-/${encodeURIComponent(appName)}/configs/conf-searchbase?${params.toString()}`;
+    return `/en-US/splunkd/__raw/servicesNS/-/-/configs/conf-searchbase?${params.toString()}`;
 };
 
 const isInSplunkRuntime = (): boolean => {
@@ -240,6 +259,13 @@ const fetchSearchbase = async (
         if (isSearchbaseStanzaExcluded(content, options)) {
             continue;
         }
+        // Belt-and-suspenders: the URL already filters on
+        // `eai:acl.app=<appName>`, but the response is the source of
+        // truth — if splunkd ever returns a foreign-app stanza
+        // (older Splunk versions don't honour the filter param on
+        // every endpoint), drop it here too.
+        const aclApp = typeof e.acl?.app === 'string' ? e.acl.app : '';
+        if (aclApp && aclApp !== appName) continue;
         const searchName = typeof content.search_name === 'string' ? content.search_name.trim() : '';
         if (searchName.length === 0) continue; // Without a join key we can't enrich anything.
         out.push({
@@ -248,8 +274,13 @@ const fetchSearchbase = async (
             category: typeof content.category === 'string' ? content.category : '',
             subCategory: typeof content.sub_category === 'string' ? content.sub_category : '',
             tags: splitTags(content.tags),
-            dispatchContext:
-                typeof content.dispatch_context === 'string' ? content.dispatch_context : appName,
+            // Source the App-filter value from `acl.app` (the actual
+            // owning app) instead of the stanza-author-supplied
+            // `dispatch_context` field, which is semantically about
+            // "what app should dispatch this search" and is often
+            // hard-coded to splunk-cisco-dashboards even when the
+            // stanza lives in another app.
+            dispatchContext: aclApp || appName,
             description: typeof content.description === 'string' ? content.description : '',
             search:
                 typeof content.search === 'string'
