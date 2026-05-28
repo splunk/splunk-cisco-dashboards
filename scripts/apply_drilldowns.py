@@ -208,6 +208,13 @@ BEST_FIT = {
     "it_critical_systems_ds_switch_by_location": ("it_critical_systems_ds_site_health", "View site health"),
     "it_critical_systems_ds_wow_health": ("it_critical_systems_ds_site_health", "View site health"),
     "user_experience_ds_wireless_signal_quality": ("user_experience_ds_base_client", "View client base detail"),
+    # === Orphan drilldown batch (2026-05-27, second pass) ===
+    "client_summary_ds_client_by_ssid": ("client_summary_ds_top_clients_by_usage", "Open client usage breakdown"),
+    "executive_dashboard_ds_fw_blocked": ("executive_dashboard_firewall_blocked_with_baseline_drilldown", "View top blocked flows"),
+    "executive_dashboard_ds_ux_score": ("user_experience_ds_wireless_signal_quality", "Inspect wireless signal quality"),
+    "it_critical_systems_ds_ap_by_location": ("it_critical_systems_topology_device_table", "View per-AP device detail"),
+    "it_critical_systems_ds_site_health": ("it_critical_systems_ds_base_devicehealth", "Open device health detail"),
+    "overview_inter_site_latency": ("overview_link_auburndale_tallahassee_health", "Open inter-site link detail"),
     # === User Experience ===
     "user_experience_client_count_trend": ("user_experience_ds_base_client", "View client detail"),
     "user_experience_client_health_by_type": ("user_experience_ds_base_client", "View client detail"),
