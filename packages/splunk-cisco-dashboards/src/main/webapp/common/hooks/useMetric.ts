@@ -19,6 +19,7 @@
 import { useEffect, useState } from 'react';
 import {
     classifySearchDispatchError,
+    isAbortError,
     runSearch,
 } from '../services/splunkSearchService';
 
@@ -565,6 +566,7 @@ export const useMetric = (
             setResult(mock);
             return undefined;
         }
+        const controller = new AbortController();
         let cancelled = false;
         setResult({ ...mock, source: 'loading' });
 
@@ -573,6 +575,7 @@ export const useMetric = (
             earliestTime: range.earliest,
             latestTime: range.latest,
             tag: cfg.id,
+            signal: controller.signal,
         });
 
         const previousRange = computePreviousRange(range);
@@ -589,7 +592,12 @@ export const useMetric = (
                       earliestTime: previousRange.earliest,
                       latestTime: previousRange.latest,
                       tag: `${cfg.id}__prev`,
-                  }).catch(() => ({ results: [] as Array<Record<string, unknown>> }))
+                      signal: controller.signal,
+                  }).catch((err) =>
+                      isAbortError(err)
+                          ? Promise.reject(err)
+                          : { results: [] as Array<Record<string, unknown>> }
+                  )
                 : Promise.resolve({ results: [] as Array<Record<string, unknown>> });
 
         const buildNoData = (
@@ -831,7 +839,7 @@ export const useMetric = (
                 });
             })
             .catch((err) => {
-                if (cancelled) return;
+                if (cancelled || isAbortError(err)) return;
                 const failure = classifySearchDispatchError(err);
                 console.error('[useMetric] dispatch failed', {
                     stanzaId: cfg.id,
@@ -854,6 +862,7 @@ export const useMetric = (
 
         return () => {
             cancelled = true;
+            controller.abort();
         };
         // refreshToken in deps ensures the manual "refresh now" button
         // and the auto-refresh interval re-trigger every metric.
@@ -939,6 +948,7 @@ export const useKpi = (
             setResult(mock);
             return undefined;
         }
+        const controller = new AbortController();
         let cancelled = false;
         setResult({ ...mock, source: 'loading' });
         const buildKpiNoData = (
@@ -967,6 +977,7 @@ export const useKpi = (
             earliestTime: range.earliest,
             latestTime: range.latest,
             tag: cfg.id,
+            signal: controller.signal,
         })
             .then((res) => {
                 if (cancelled) return;
@@ -1069,7 +1080,7 @@ export const useKpi = (
                 });
             })
             .catch((err) => {
-                if (cancelled) return;
+                if (cancelled || isAbortError(err)) return;
                 debugLog(cfg.id, 'kpi dispatch threw', {
                     error: err instanceof Error ? err.message : String(err),
                     spl,
@@ -1089,6 +1100,7 @@ export const useKpi = (
             });
         return () => {
             cancelled = true;
+            controller.abort();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [cfg, range.earliest, range.latest, refreshToken]);
@@ -1211,6 +1223,7 @@ export const useTableData = (
             setResult(fresh);
             return undefined;
         }
+        const controller = new AbortController();
         let cancelled = false;
         setResult({ ...fresh, source: 'loading' });
 
@@ -1243,6 +1256,7 @@ export const useTableData = (
             earliestTime: range.earliest,
             latestTime: range.latest,
             tag: cfg.id,
+            signal: controller.signal,
         })
             .then((res) => {
                 if (cancelled) return;
@@ -1297,7 +1311,7 @@ export const useTableData = (
                 });
             })
             .catch((err) => {
-                if (cancelled) return;
+                if (cancelled || isAbortError(err)) return;
                 const failure = classifySearchDispatchError(err);
                 console.error('[useTableData] dispatch failed', {
                     stanzaId: cfg.id,
@@ -1316,6 +1330,7 @@ export const useTableData = (
 
         return () => {
             cancelled = true;
+            controller.abort();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [cfg, range.earliest, range.latest, refreshToken]);

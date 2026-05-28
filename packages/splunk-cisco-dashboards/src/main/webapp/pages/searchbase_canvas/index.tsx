@@ -2381,6 +2381,7 @@ const SearchbaseCanvasPage: React.FC = () => {
     const [runningTileIds, setRunningTileIds] = useState<Set<string>>(
         () => new Set()
     );
+    const userStoppedRef = useRef(false);
     const [observedNoDataByTile, setObservedNoDataByTile] = useState<
         Map<string, ObservedNoDataEntry>
     >(() => new Map());
@@ -2839,9 +2840,11 @@ const SearchbaseCanvasPage: React.FC = () => {
             next.delete(tileId);
             return next;
         });
+        userStoppedRef.current = true;
     }, []);
 
     const runVisibleTiles = useCallback(() => {
+        userStoppedRef.current = false;
         clearObservedNoData(runnableVisibleTiles.map((tile) => tile.id));
         setRunningTileIds((current) => {
             const next = new Set(current);
@@ -2853,11 +2856,14 @@ const SearchbaseCanvasPage: React.FC = () => {
     }, [clearObservedNoData, runnableVisibleTiles]);
 
     useEffect(() => {
+        userStoppedRef.current = false;
+
         if (loadingCatalogue || idleVisibleTileCount === 0) {
             return undefined;
         }
 
         const timeoutId = window.setTimeout(() => {
+            if (userStoppedRef.current) return;
             runVisibleTiles();
         }, 200);
 
@@ -2870,11 +2876,11 @@ const SearchbaseCanvasPage: React.FC = () => {
         tileSearchQuery,
         visibleTilesRunKey,
         loadingCatalogue,
-        idleVisibleTileCount,
         runVisibleTiles,
     ]);
 
     const stopAllTiles = useCallback(() => {
+        userStoppedRef.current = true;
         setRunningTileIds(new Set());
     }, []);
 

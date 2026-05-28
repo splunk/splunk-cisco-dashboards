@@ -192,26 +192,92 @@ const DISPATCH_RETRY_BASE_MS = [500, 1500, 4000];
 const DISPATCH_MAX_ATTEMPTS = 1 + DISPATCH_RETRY_BASE_MS.length;
 
 let dispatchInFlight = 0;
-/** @type {Array<() => void>} */
+/** @type {Array<{ resolve: () => void, reject: (err: Error) => void, signal?: AbortSignal, onAbortCleanup?: () => void }>} */
 const dispatchWaitQueue = [];
 
-const acquireDispatchSlot = () =>
-    new Promise((resolve) => {
-        if (dispatchInFlight < MAX_CONCURRENT_TILE_SEARCHES) {
+const makeAbortError = () =>
+    typeof DOMException !== 'undefined'
+        ? new DOMException('Aborted', 'AbortError')
+        : Object.assign(new Error('Aborted'), { name: 'AbortError' });
+
+const abortPromise = (signal) => {
+    if (!signal) return null;
+    if (signal.aborted) {
+        return Promise.reject(makeAbortError());
+    }
+    return new Promise((_, reject) => {
+        const onAbort = () => {
+            signal.removeEventListener('abort', onAbort);
+            reject(makeAbortError());
+        };
+        signal.addEventListener('abort', onAbort);
+    });
+};
+
+const cancellableSleep = (ms, signal) => {
+    if (!signal) {
+        return sleep(ms);
+    }
+    if (signal.aborted) {
+        return Promise.reject(makeAbortError());
+    }
+    const raced = Promise.race([sleep(ms), abortPromise(signal)]);
+    return raced;
+};
+
+const removeQueuedEntry = (entry) => {
+    const idx = dispatchWaitQueue.indexOf(entry);
+    if (idx !== -1) {
+        dispatchWaitQueue.splice(idx, 1);
+    }
+};
+
+const acquireDispatchSlot = (signal) => {
+    if (signal?.aborted) {
+        return Promise.reject(makeAbortError());
+    }
+    return new Promise((resolve, reject) => {
+        const grantSlot = () => {
             dispatchInFlight += 1;
             resolve();
+        };
+        if (dispatchInFlight < MAX_CONCURRENT_TILE_SEARCHES) {
+            grantSlot();
             return;
         }
-        dispatchWaitQueue.push(() => {
-            dispatchInFlight += 1;
-            resolve();
-        });
+        const entry = { resolve: grantSlot, reject, signal };
+        if (signal) {
+            const onAbort = () => {
+                signal.removeEventListener('abort', onAbort);
+                removeQueuedEntry(entry);
+                reject(makeAbortError());
+            };
+            if (signal.aborted) {
+                onAbort();
+                return;
+            }
+            signal.addEventListener('abort', onAbort);
+            entry.onAbortCleanup = () => signal.removeEventListener('abort', onAbort);
+        }
+        dispatchWaitQueue.push(entry);
     });
+};
 
 const releaseDispatchSlot = () => {
     dispatchInFlight = Math.max(0, dispatchInFlight - 1);
-    const next = dispatchWaitQueue.shift();
-    if (next) next();
+    while (dispatchWaitQueue.length > 0) {
+        const next = dispatchWaitQueue.shift();
+        if (next?.onAbortCleanup) {
+            next.onAbortCleanup();
+        }
+        if (next?.signal?.aborted) {
+            next.reject(makeAbortError());
+            continue;
+        }
+        dispatchInFlight += 1;
+        next.resolve();
+        return;
+    }
 };
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -239,7 +305,7 @@ export class SearchDispatchError extends Error {
     }
 }
 
-const isAbortError = (err) =>
+export const isAbortError = (err) =>
     (typeof DOMException !== 'undefined' &&
         err instanceof DOMException &&
         err.name === 'AbortError') ||
@@ -247,7 +313,7 @@ const isAbortError = (err) =>
 
 const isNetworkError = (err) => {
     if (!err || typeof err !== 'object') return false;
-    if (isAbortError(err)) return true;
+    if (isAbortError(err)) return false;
     if (err instanceof TypeError) return true;
     const message = typeof err.message === 'string' ? err.message : '';
     return /failed to fetch|network|load failed/i.test(message);
@@ -280,7 +346,7 @@ export const classifySearchDispatchError = (err) => {
     return { reason: 'error', message };
 };
 
-const dispatchOneShot = async (searchParameters, namespaceOptions) => {
+const dispatchOneShot = async (searchParameters, namespaceOptions, signal) => {
     const response = await fetch(
         createRESTURL('search/v2/jobs', namespaceOptions),
         {
@@ -291,6 +357,7 @@ const dispatchOneShot = async (searchParameters, namespaceOptions) => {
                 ...searchParameters,
                 exec_mode: 'oneshot',
             }),
+            signal,
         }
     );
 
@@ -322,13 +389,19 @@ const dispatchOneShot = async (searchParameters, namespaceOptions) => {
     return payload;
 };
 
-const dispatchOneShotWithRetry = async (searchParameters, namespaceOptions) => {
+const dispatchOneShotWithRetry = async (searchParameters, namespaceOptions, signal) => {
     let lastError;
     for (let attempt = 0; attempt < DISPATCH_MAX_ATTEMPTS; attempt += 1) {
+        if (signal?.aborted) {
+            throw makeAbortError();
+        }
         try {
-            return await dispatchOneShot(searchParameters, namespaceOptions);
+            return await dispatchOneShot(searchParameters, namespaceOptions, signal);
         } catch (err) {
             lastError = err;
+            if (isAbortError(err)) {
+                throw err;
+            }
             const status =
                 err instanceof SearchDispatchError ? err.httpStatus : undefined;
             const retryable =
@@ -339,7 +412,7 @@ const dispatchOneShotWithRetry = async (searchParameters, namespaceOptions) => {
             if (!retryable || !hasMoreAttempts) {
                 throw err;
             }
-            await sleep(jitteredDelay(DISPATCH_RETRY_BASE_MS[attempt]));
+            await cancellableSleep(jitteredDelay(DISPATCH_RETRY_BASE_MS[attempt]), signal);
         }
     }
     throw lastError;
@@ -373,6 +446,8 @@ export const __resetDispatchQueue = () => {
  *   population — e.g. `| metadata type=hosts` on a stack with thousands of
  *   reporting hosts. Pass 0 to disable the cap (Splunk semantics: count=0 →
  *   "return all results"); the server-side `max_count` setting still applies.
+ * @param {AbortSignal} [params.signal] - When aborted, queued dispatches are
+ *   dropped, in-flight fetch is cancelled, and retry sleeps end early.
  * @returns {Promise<{results: Array<Object>}>}
  */
 export const runSearch = async ({
@@ -381,8 +456,13 @@ export const runSearch = async ({
  latestTime = 'now',
  tag,
  count = 1000,
+ signal,
 } = {}) => {
  assertSafeSpl(spl);
+
+ if (signal?.aborted) {
+ throw makeAbortError();
+ }
 
  if (!isInSplunkRuntime()) {
  return mockSearch({ tag });
@@ -429,10 +509,17 @@ export const runSearch = async ({
  count,
  };
 
- return acquireDispatchSlot()
- .then(() => dispatchOneShotWithRetry(searchParameters, namespace))
+ let slotHeld = false;
+ return acquireDispatchSlot(signal)
+ .then(() => {
+ slotHeld = true;
+ return dispatchOneShotWithRetry(searchParameters, namespace, signal);
+ })
  .then((response) => ({ results: (response && response.results) || [] }))
  .catch((err) => {
+ if (isAbortError(err)) {
+ throw err;
+ }
  const status =
  err instanceof SearchDispatchError ? err.httpStatus : undefined;
  if (shouldCacheSplFailure(status)) {
@@ -455,7 +542,9 @@ export const runSearch = async ({
  });
  })
  .finally(() => {
+ if (slotHeld) {
  releaseDispatchSlot();
+ }
  });
 };
 
