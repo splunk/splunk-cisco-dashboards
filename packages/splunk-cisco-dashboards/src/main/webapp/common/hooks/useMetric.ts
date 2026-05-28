@@ -503,6 +503,24 @@ const isMetricDebug = (): boolean => {
     );
 };
 
+const isCanvasDebug = (): boolean => {
+    if (typeof window === 'undefined') return false;
+    try {
+        if (window.localStorage.getItem('searchbase.canvas.debug') === '1') {
+            return true;
+        }
+        return new URLSearchParams(window.location.search).get('canvasDebug') === '1';
+    } catch {
+        return false;
+    }
+};
+
+const canvasDebug = (...args: unknown[]): void => {
+    if (!isCanvasDebug()) return;
+    // eslint-disable-next-line no-console
+    console.debug(...args);
+};
+
 const debugLog = (id: string, msg: string, payload: unknown): void => {
     if (!isMetricDebug()) return;
     // eslint-disable-next-line no-console
@@ -568,7 +586,18 @@ export const useMetric = (
         }
         const controller = new AbortController();
         let cancelled = false;
-        setResult({ ...mock, source: 'loading' });
+        canvasDebug('[canvas/tile-dispatch] effect-run', {
+            stanzaId: cfg.id,
+            refreshToken,
+        });
+        setResult((prev) => {
+            canvasDebug('[canvas/tile-state] transition', {
+                stanzaId: cfg.id,
+                from: prev.source,
+                to: 'loading',
+            });
+            return { ...mock, source: 'loading' };
+        });
 
         const livePromise = runSearch({
             spl,
@@ -824,6 +853,12 @@ export const useMetric = (
                     }
                 }
 
+                canvasDebug('[canvas/tile-state] transition', {
+                    stanzaId: cfg.id,
+                    from: 'loading',
+                    to: 'live',
+                    rowCount: rows.length,
+                });
                 setResult({
                     value,
                     displayValue,
@@ -853,6 +888,12 @@ export const useMetric = (
                     reason: failure.reason,
                     spl,
                 });
+                canvasDebug('[canvas/tile-state] transition', {
+                    stanzaId: cfg.id,
+                    from: 'loading',
+                    to: cfg.suppressMockOnEmpty ? 'live-no-data' : 'mock',
+                    reason: failure.reason,
+                });
                 setResult(
                     cfg.suppressMockOnEmpty
                         ? buildNoData(failure.reason, failure)
@@ -862,7 +903,12 @@ export const useMetric = (
 
         return () => {
             cancelled = true;
+            canvasDebug('[canvas/tile-dispatch] effect-cleanup', {
+                stanzaId: cfg.id,
+                aborted: controller.signal.aborted,
+            });
             controller.abort();
+            setResult(mock);
         };
         // refreshToken in deps ensures the manual "refresh now" button
         // and the auto-refresh interval re-trigger every metric.
@@ -950,6 +996,11 @@ export const useKpi = (
         }
         const controller = new AbortController();
         let cancelled = false;
+        canvasDebug('[canvas/tile-dispatch] effect-run', {
+            stanzaId: cfg.id,
+            hook: 'useKpi',
+            refreshToken,
+        });
         setResult({ ...mock, source: 'loading' });
         const buildKpiNoData = (
             reason: NoDataReason,
@@ -1100,7 +1151,13 @@ export const useKpi = (
             });
         return () => {
             cancelled = true;
+            canvasDebug('[canvas/tile-dispatch] effect-cleanup', {
+                stanzaId: cfg.id,
+                hook: 'useKpi',
+                aborted: controller.signal.aborted,
+            });
             controller.abort();
+            setResult(initialMock);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [cfg, range.earliest, range.latest, refreshToken]);
@@ -1225,6 +1282,11 @@ export const useTableData = (
         }
         const controller = new AbortController();
         let cancelled = false;
+        canvasDebug('[canvas/tile-dispatch] effect-run', {
+            stanzaId: cfg.id,
+            hook: 'useTableData',
+            refreshToken,
+        });
         setResult({ ...fresh, source: 'loading' });
 
         const buildNoData = (
@@ -1330,7 +1392,13 @@ export const useTableData = (
 
         return () => {
             cancelled = true;
+            canvasDebug('[canvas/tile-dispatch] effect-cleanup', {
+                stanzaId: cfg.id,
+                hook: 'useTableData',
+                aborted: controller.signal.aborted,
+            });
             controller.abort();
+            setResult(fresh);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [cfg, range.earliest, range.latest, refreshToken]);

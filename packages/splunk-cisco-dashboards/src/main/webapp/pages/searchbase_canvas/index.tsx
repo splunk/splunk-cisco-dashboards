@@ -47,7 +47,17 @@ import {
     sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
 import { BarBreakdownTile } from '@/common/components/florida/BarBreakdownTile';
+import {
+    isFillerGaugeViz,
+    isMarkerGaugeViz,
+    isPieViz,
+    isSingleValueRadialViz,
+} from '@/common/components/florida/canvasVizPredicates';
+import { FillerGaugeTile } from '@/common/components/florida/FillerGaugeTile';
+import { MarkerGaugeTile } from '@/common/components/florida/MarkerGaugeTile';
 import { MetricItem } from '@/common/components/florida/MetricItem';
+import { PieTile } from '@/common/components/florida/PieTile';
+import { SingleValueRadialTile } from '@/common/components/florida/SingleValueRadialTile';
 import { SortableMetricCard } from '@/common/components/florida/SortableMetricCard';
 import { TableTile } from '@/common/components/florida/TableTile';
 import {
@@ -90,6 +100,25 @@ import {
 const APP_NAME = 'splunk-cisco-dashboards';
 const STORAGE_KEY = 'scd_searchbase_canvas_v1';
 const MAX_BATCH_RUNS = 10;
+
+const isCanvasDebug = (): boolean => {
+    if (typeof window === 'undefined') return false;
+    try {
+        if (window.localStorage.getItem('searchbase.canvas.debug') === '1') {
+            return true;
+        }
+        return new URLSearchParams(window.location.search).get('canvasDebug') === '1';
+    } catch {
+        return false;
+    }
+};
+
+/** Gated console debug for Searchbase Canvas (localStorage or ?canvasDebug=1). */
+const canvasDebug = (...args: unknown[]): void => {
+    if (!isCanvasDebug()) return;
+    // eslint-disable-next-line no-console
+    console.debug(...args);
+};
 
 const TIME_RANGE_OPTIONS: TimeRange[] = [
     { earliest: '-4h@h', latest: 'now', label: 'Last 4 hours', spanSeconds: 4 * 3600 },
@@ -147,9 +176,21 @@ const TILE_VIZ_OPTIONS = [
     { value: 'splunk.line', label: 'Line' },
     { value: 'splunk.column', label: 'Column' },
     { value: 'splunk.bar', label: 'Bar' },
+    { value: 'splunk.pie', label: 'Pie' },
     { value: 'splunk.table', label: 'Table' },
     { value: 'splunk.singlevalue', label: 'Single value' },
+    { value: 'splunk.singlevalueradial', label: 'Single value radial' },
+    { value: 'splunk.fillergauge', label: 'Filler gauge' },
+    { value: 'splunk.markergauge', label: 'Marker gauge' },
 ] as const;
+
+const seriesColorsFromVizOptions = (
+    options: Record<string, unknown> | undefined
+): string[] | undefined => {
+    const colors = options?.seriesColors;
+    if (!Array.isArray(colors)) return undefined;
+    return colors.filter((entry): entry is string => typeof entry === 'string');
+};
 
 const isPageSize = (value: unknown): value is PageSize =>
     PAGE_SIZE_OPTIONS.includes(value as PageSize);
@@ -330,6 +371,17 @@ const effectiveTileViz = (
     tile: CanvasTile,
     record: SearchbaseRecord
 ): string | undefined => tile.vizOverride ?? record.defaultViz;
+
+/** Stable key so metric vs table hook trees remount when viz family changes. */
+const searchbaseTileBodyKey = (
+    tileId: string,
+    viz: string | undefined
+): string => {
+    if (isTableViz(viz)) return `${tileId}:table`;
+    if (isBarBreakdownViz(viz)) return `${tileId}:bar`;
+    if (isPieViz(viz)) return `${tileId}:pie`;
+    return `${tileId}:metric`;
+};
 
 const TileVizSelect: React.FC<{
     tile: CanvasTile;
@@ -951,6 +1003,36 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
         );
     }
 
+    const scalarTileProps = {
+        label: record.searchName,
+        subLabel: [record.category, record.subCategory].filter(Boolean).join(' / '),
+        description,
+        descriptionFootnote: record.id,
+        thresholdNote: 'Searchbase canvas tile.',
+        onOpenInSearch: onOpenSearch,
+        onConfigure,
+        onOpenDetailTable: onOpenDrilldown,
+        detailTableTitle: drilldownTitle ?? 'View detail',
+        isCustomized: true as const,
+        className: 'h-full',
+        value: metric.displayValue ?? metric.value,
+        accentColor: color,
+        vizOptions: record.vizOptions,
+        source: metric.source,
+        noDataReason: metric.noDataReason,
+        rangeLabel: metric.rangeLabel,
+    };
+
+    if (isSingleValueRadialViz(viz)) {
+        return <SingleValueRadialTile {...scalarTileProps} />;
+    }
+    if (isFillerGaugeViz(viz)) {
+        return <FillerGaugeTile {...scalarTileProps} />;
+    }
+    if (isMarkerGaugeViz(viz)) {
+        return <MarkerGaugeTile {...scalarTileProps} />;
+    }
+
     return (
         <MetricItem
             label={record.searchName}
@@ -985,7 +1067,7 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
 };
 
 const SearchbaseTableTileBody: React.FC<
-    SearchbaseTileBodyProps & { variant: 'table' | 'bar' }
+    SearchbaseTileBodyProps & { variant: 'table' | 'bar' | 'pie' }
 > = ({
     tile,
     record,
@@ -1065,6 +1147,20 @@ const SearchbaseTableTileBody: React.FC<
         );
     }
 
+    if (variant === 'pie') {
+        return (
+            <PieTile
+                {...commonTileProps}
+                rows={table.rows}
+                columns={table.columns}
+                seriesColors={seriesColorsFromVizOptions(record.vizOptions)}
+                source={table.source}
+                noDataReason={table.noDataReason}
+                rangeLabel={table.rangeLabel}
+            />
+        );
+    }
+
     return (
         <TableTile
             {...commonTileProps}
@@ -1096,6 +1192,7 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
     const description = recordPlainText(record);
     const color = firstSeriesColor(record.vizOptions);
     const viz = effectiveTileViz(tile, record);
+    const tileBodyKey = searchbaseTileBodyKey(tile.id, viz);
     const drilldownRecord = record.drilldownSearchName
         ? entryByName.get(record.drilldownSearchName)
         : undefined;
@@ -1130,6 +1227,7 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
             <div className="flex h-full min-h-0 flex-1 flex-col p-2">
                 {isTableViz(viz) ? (
                     <SearchbaseTableTileBody
+                        key={tileBodyKey}
                         tile={tile}
                         record={record}
                         range={range}
@@ -1146,6 +1244,7 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                     />
                 ) : isBarBreakdownViz(viz) ? (
                     <SearchbaseTableTileBody
+                        key={tileBodyKey}
                         tile={tile}
                         record={record}
                         range={range}
@@ -1160,8 +1259,26 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                             onNoDataObservation(tile.id, entry)
                         }
                     />
+                ) : isPieViz(viz) ? (
+                    <SearchbaseTableTileBody
+                        key={tileBodyKey}
+                        tile={tile}
+                        record={record}
+                        range={range}
+                        refreshToken={refreshToken}
+                        viz={viz}
+                        color={color}
+                        description={description}
+                        onConfigure={() => onConfigure(tile.id)}
+                        onOpenSearch={openSearch}
+                        variant="pie"
+                        onNoDataObservation={(entry) =>
+                            onNoDataObservation(tile.id, entry)
+                        }
+                    />
                 ) : (
                     <SearchbaseMetricTileBody
+                        key={tileBodyKey}
                         tile={tile}
                         record={record}
                         range={range}
@@ -1386,6 +1503,20 @@ const SearchbasePreviewTile: React.FC<ResolvedSearchbaseCanvasTileProps> = ({
 };
 
 const SearchbaseCanvasTile: React.FC<SearchbaseCanvasTileProps> = (props) => {
+    useEffect(() => {
+        canvasDebug('[canvas/tile-state] mount', {
+            stanzaId: props.tile.id,
+            searchName: props.tile.searchName,
+            isRunning: props.isRunning,
+        });
+        return () => {
+            canvasDebug('[canvas/tile-state] unmount', {
+                stanzaId: props.tile.id,
+                searchName: props.tile.searchName,
+            });
+        };
+    }, [props.isRunning, props.tile.id, props.tile.searchName]);
+
     if (!props.record) {
         return <MissingSearchbaseTile tile={props.tile} onRemove={props.onRemove} />;
     }
@@ -2382,6 +2513,10 @@ const SearchbaseCanvasPage: React.FC = () => {
         () => new Set()
     );
     const userStoppedRef = useRef(false);
+    const runningTileIdsRef = useRef(runningTileIds);
+    runningTileIdsRef.current = runningTileIds;
+    const runnableVisibleTilesRef = useRef<CanvasTile[]>([]);
+    const runVisibleTilesRef = useRef<() => void>(() => undefined);
     const [observedNoDataByTile, setObservedNoDataByTile] = useState<
         Map<string, ObservedNoDataEntry>
     >(() => new Map());
@@ -2522,12 +2657,21 @@ const SearchbaseCanvasPage: React.FC = () => {
     const pageStart = clampedPageIndex * pageSize;
     const visibleTiles = filteredTiles.slice(pageStart, pageStart + pageSize);
     const pageEnd = Math.min(pageStart + pageSize, filteredTiles.length);
-    const runnableVisibleTiles = visibleTiles.filter((tile) =>
-        entryByName.has(tile.searchName)
-    );
     const visibleTilesRunKey = useMemo(
-        () => runnableVisibleTiles.map((tile) => tile.id).join('\u0001'),
-        [runnableVisibleTiles]
+        () =>
+            filteredTiles
+                .slice(pageStart, pageStart + pageSize)
+                .filter((tile) => entryByName.has(tile.searchName))
+                .map((tile) => tile.id)
+                .join('\u0001'),
+        [clampedPageIndex, entryByName, filteredTiles, pageSize, pageStart]
+    );
+    const runnableVisibleTiles = useMemo(
+        () =>
+            filteredTiles
+                .slice(pageStart, pageStart + pageSize)
+                .filter((tile) => entryByName.has(tile.searchName)),
+        [clampedPageIndex, entryByName, filteredTiles, pageSize, pageStart]
     );
     const idleVisibleTileCount = runnableVisibleTiles.filter(
         (tile) => !runningTileIds.has(tile.id)
@@ -2840,34 +2984,129 @@ const SearchbaseCanvasPage: React.FC = () => {
             next.delete(tileId);
             return next;
         });
-        userStoppedRef.current = true;
     }, []);
 
     const runVisibleTiles = useCallback(() => {
         userStoppedRef.current = false;
-        clearObservedNoData(runnableVisibleTiles.map((tile) => tile.id));
-        setRunningTileIds((current) => {
-            const next = new Set(current);
-            for (const tile of runnableVisibleTiles) {
-                next.add(tile.id);
+        const tiles = runnableVisibleTilesRef.current;
+        const tileIds = tiles.map((tile) => tile.id);
+        canvasDebug('[canvas/run-visible] entry', {
+            tileIds,
+            userStopped: userStoppedRef.current,
+            runnableCount: tiles.length,
+        });
+        if (tileIds.length === 0) {
+            canvasDebug('[canvas/run-visible] bail-out', { reason: 'no_runnable_tiles' });
+            return;
+        }
+        clearObservedNoData(tileIds);
+        setTileRefreshCounts((current) => {
+            const next = { ...current };
+            for (const tileId of tileIds) {
+                const prev = current[tileId] ?? 0;
+                next[tileId] = prev + 1;
+                canvasDebug('[canvas/run-visible] refresh-count', {
+                    tileId,
+                    prev,
+                    next: next[tileId],
+                });
             }
             return next;
         });
-    }, [clearObservedNoData, runnableVisibleTiles]);
+        setRunningTileIds((current) => {
+            const next = new Set(current);
+            for (const tileId of tileIds) {
+                next.add(tileId);
+            }
+            canvasDebug('[canvas/run-visible] running-set', {
+                added: tileIds,
+                sizeBefore: current.size,
+                sizeAfter: next.size,
+            });
+            return next;
+        });
+    }, [clearObservedNoData]);
+
+    runnableVisibleTilesRef.current = runnableVisibleTiles;
+    runVisibleTilesRef.current = runVisibleTiles;
+
+    // Re-arm auto-run on navigation/filter changes. Drop stale running markers
+    // so the visible page always gets a fresh dispatch (not stuck loading).
+    useEffect(() => {
+        const visibleIds = runnableVisibleTilesRef.current.map((tile) => tile.id);
+        const runningBefore = runningTileIdsRef.current.size;
+        userStoppedRef.current = false;
+        setRunningTileIds((current) => {
+            if (current.size === 0) return current;
+            canvasDebug('[canvas/page-change] clear-running', {
+                page: clampedPageIndex + 1,
+                pageSize,
+                runningBefore: current.size,
+                runningIds: Array.from(current),
+                visibleTileIds: visibleIds,
+            });
+            return new Set();
+        });
+        canvasDebug('[canvas/page-change]', {
+            page: clampedPageIndex + 1,
+            pageSize,
+            totalPages,
+            visibleTileIds: visibleIds,
+            runningTileIdsBefore: runningBefore,
+            tileSearchQuery: tileSearchQuery.trim() || null,
+        });
+    }, [clampedPageIndex, pageSize, tileSearchQuery, visibleTilesRunKey, totalPages]);
 
     useEffect(() => {
-        userStoppedRef.current = false;
-
-        if (loadingCatalogue || idleVisibleTileCount === 0) {
+        if (loadingCatalogue) {
+            canvasDebug('[canvas/auto-run] bail-out', { reason: 'loading_catalogue' });
             return undefined;
         }
 
+        const runnableCount = runnableVisibleTilesRef.current.length;
+        const idleCount = runnableVisibleTilesRef.current.filter(
+            (tile) => !runningTileIdsRef.current.has(tile.id)
+        ).length;
+        canvasDebug('[canvas/auto-run] schedule', {
+            page: clampedPageIndex + 1,
+            pageSize,
+            runnableCount,
+            idleCount,
+            userStopped: userStoppedRef.current,
+            debounceMs: 200,
+        });
+
         const timeoutId = window.setTimeout(() => {
-            if (userStoppedRef.current) return;
-            runVisibleTiles();
+            if (userStoppedRef.current) {
+                canvasDebug('[canvas/auto-run] bail-out', { reason: 'user_stopped' });
+                return;
+            }
+            const tiles = runnableVisibleTilesRef.current;
+            const hasIdleVisible = tiles.some(
+                (tile) => !runningTileIdsRef.current.has(tile.id)
+            );
+            if (!hasIdleVisible) {
+                canvasDebug('[canvas/auto-run] bail-out', {
+                    reason: 'no_idle_visible',
+                    runnableCount: tiles.length,
+                    runningCount: runningTileIdsRef.current.size,
+                });
+                return;
+            }
+            canvasDebug('[canvas/auto-run] firing', {
+                page: clampedPageIndex + 1,
+                pageSize,
+                runnableCount: tiles.length,
+                tileIds: tiles.map((tile) => tile.id),
+                userStopped: userStoppedRef.current,
+            });
+            runVisibleTilesRef.current();
         }, 200);
 
         return () => {
+            canvasDebug('[canvas/auto-run] debounce-clear', {
+                page: clampedPageIndex + 1,
+            });
             window.clearTimeout(timeoutId);
         };
     }, [
@@ -2876,19 +3115,52 @@ const SearchbaseCanvasPage: React.FC = () => {
         tileSearchQuery,
         visibleTilesRunKey,
         loadingCatalogue,
-        runVisibleTiles,
     ]);
 
     const stopAllTiles = useCallback(() => {
+        const stoppedCount = runningTileIdsRef.current.size;
+        canvasDebug('[canvas/stop] click', {
+            runningCount: stoppedCount,
+            runningIds: Array.from(runningTileIdsRef.current),
+        });
         userStoppedRef.current = true;
+        canvasDebug('[canvas/stop] userStopped-set', { userStopped: true });
         setRunningTileIds(new Set());
     }, []);
 
     const refreshRunningTiles = useCallback(() => {
-        const runningIds = Array.from(runningTileIds);
-        clearObservedNoData(runningIds);
+        userStoppedRef.current = false;
+        const targets =
+            runningTileIds.size > 0
+                ? runnableVisibleTiles.filter((tile) => runningTileIds.has(tile.id))
+                : runnableVisibleTiles;
+        const tileIds = targets.map((tile) => tile.id);
+        canvasDebug('[canvas/refresh] click', {
+            tileIds,
+            mode: runningTileIds.size > 0 ? 'running_subset' : 'all_visible',
+            runningCount: runningTileIds.size,
+        });
+        if (tileIds.length === 0) {
+            canvasDebug('[canvas/refresh] bail-out', { reason: 'no_targets' });
+            return;
+        };
+        clearObservedNoData(tileIds);
+        setTileRefreshCounts((current) => {
+            const next = { ...current };
+            for (const tileId of tileIds) {
+                next[tileId] = (current[tileId] ?? 0) + 1;
+            }
+            return next;
+        });
+        setRunningTileIds((current) => {
+            const next = new Set(current);
+            for (const tileId of tileIds) {
+                next.add(tileId);
+            }
+            return next;
+        });
         setRefreshToken((current) => current + 1);
-    }, [clearObservedNoData, runningTileIds]);
+    }, [clearObservedNoData, runningTileIds, runnableVisibleTiles]);
 
     const refreshTile = useCallback(
         (tileId: string) => {
@@ -3176,7 +3448,13 @@ const SearchbaseCanvasPage: React.FC = () => {
                             <button
                                 type="button"
                                 disabled={idleVisibleTileCount === 0}
-                                onClick={runVisibleTiles}
+                                onClick={() => {
+                                    canvasDebug('[canvas/run-visible] click', {
+                                        idleVisibleTileCount,
+                                        runnableCount: runnableVisibleTiles.length,
+                                    });
+                                    runVisibleTiles();
+                                }}
                                 title={runVisibleTitle}
                                 className="inline-flex h-9 items-center gap-1.5 rounded-sm bg-[#00A86B] px-3 text-sm font-bold text-white transition hover:bg-[#008556] disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 focus:ring-emerald-300"
                             >
@@ -3196,9 +3474,17 @@ const SearchbaseCanvasPage: React.FC = () => {
                             <button
                                 type="button"
                                 onClick={refreshRunningTiles}
-                                disabled={runningTileIds.size === 0}
-                                title="Refresh running tiles"
-                                aria-label="Refresh running tiles"
+                                disabled={runnableVisibleTiles.length === 0}
+                                title={
+                                    runningTileIds.size > 0
+                                        ? 'Refresh running tiles'
+                                        : 'Refresh visible tiles'
+                                }
+                                aria-label={
+                                    runningTileIds.size > 0
+                                        ? 'Refresh running tiles'
+                                        : 'Refresh visible tiles'
+                                }
                                 className="inline-flex h-9 w-9 items-center justify-center rounded-sm text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus:ring-slate-700"
                             >
                                 <RefreshCw className="h-4 w-4" />

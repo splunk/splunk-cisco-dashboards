@@ -44,6 +44,27 @@ const UNSAFE_CONTROL_CHAR_PATTERN = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u00
 // control-character check above, not the length cap.
 const MAX_SPL_LENGTH = 300 * 1024;
 
+const isCanvasDebug = () => {
+    if (typeof window === 'undefined') return false;
+    try {
+        if (window.localStorage.getItem('searchbase.canvas.debug') === '1') {
+            return true;
+        }
+        return new URLSearchParams(window.location.search).get('canvasDebug') === '1';
+    } catch {
+        return false;
+    }
+};
+
+const canvasDebug = (...args) => {
+    if (!isCanvasDebug()) return;
+    // eslint-disable-next-line no-console
+    console.debug(...args);
+};
+
+const splFingerprint = (spl) =>
+    typeof spl === 'string' ? spl.trim().slice(0, 60) : '';
+
 // Splunk app the dispatcher should resolve saved searches in. Mutable
 // only via setSearchAppContext to keep the invariant that all dispatches
 // hit the same namespace.
@@ -239,17 +260,29 @@ const acquireDispatchSlot = (signal) => {
     return new Promise((resolve, reject) => {
         const grantSlot = () => {
             dispatchInFlight += 1;
+            canvasDebug('[search/queue] grant', {
+                inFlight: dispatchInFlight,
+                queueLength: dispatchWaitQueue.length,
+            });
             resolve();
         };
         if (dispatchInFlight < MAX_CONCURRENT_TILE_SEARCHES) {
             grantSlot();
             return;
         }
+        canvasDebug('[search/queue] wait', {
+            inFlight: dispatchInFlight,
+            queueLength: dispatchWaitQueue.length + 1,
+        });
         const entry = { resolve: grantSlot, reject, signal };
         if (signal) {
             const onAbort = () => {
                 signal.removeEventListener('abort', onAbort);
                 removeQueuedEntry(entry);
+                canvasDebug('[search/queue] abort', {
+                    queueLength: dispatchWaitQueue.length,
+                    aborted: true,
+                });
                 reject(makeAbortError());
             };
             if (signal.aborted) {
@@ -264,6 +297,12 @@ const acquireDispatchSlot = (signal) => {
 };
 
 const releaseDispatchSlot = () => {
+    // Free the slot we held. The freshly-promoted queue entry's resolve is
+    // `grantSlot`, which re-takes the slot itself (dispatchInFlight += 1).
+    // Do NOT also increment here — that double-counts and inflates the
+    // counter every time a queued entry is promoted. Once it exceeds the
+    // concurrency cap, every new dispatch queues forever (e.g. tiles on
+    // page 2 after page 1's queue churn).
     dispatchInFlight = Math.max(0, dispatchInFlight - 1);
     while (dispatchWaitQueue.length > 0) {
         const next = dispatchWaitQueue.shift();
@@ -274,7 +313,6 @@ const releaseDispatchSlot = () => {
             next.reject(makeAbortError());
             continue;
         }
-        dispatchInFlight += 1;
         next.resolve();
         return;
     }
@@ -396,10 +434,19 @@ const dispatchOneShotWithRetry = async (searchParameters, namespaceOptions, sign
             throw makeAbortError();
         }
         try {
-            return await dispatchOneShot(searchParameters, namespaceOptions, signal);
+            const payload = await dispatchOneShot(searchParameters, namespaceOptions, signal);
+            canvasDebug('[search/dispatch] retry-outcome', {
+                attempt: attempt + 1,
+                outcome: 'resolved',
+            });
+            return payload;
         } catch (err) {
             lastError = err;
             if (isAbortError(err)) {
+                canvasDebug('[search/dispatch] retry-outcome', {
+                    attempt: attempt + 1,
+                    outcome: 'aborted',
+                });
                 throw err;
             }
             const status =
@@ -409,6 +456,12 @@ const dispatchOneShotWithRetry = async (searchParameters, namespaceOptions, sign
                 isRetryableHttpStatus(status) ||
                 isNetworkError(err);
             const hasMoreAttempts = attempt < DISPATCH_MAX_ATTEMPTS - 1;
+            canvasDebug('[search/dispatch] retry-outcome', {
+                attempt: attempt + 1,
+                outcome: retryable && hasMoreAttempts ? 'retry' : 'reject',
+                httpStatus: status,
+                retryable,
+            });
             if (!retryable || !hasMoreAttempts) {
                 throw err;
             }
@@ -464,6 +517,12 @@ export const runSearch = async ({
  throw makeAbortError();
  }
 
+ canvasDebug('[search/dispatch] enqueue', {
+ tag: tag || null,
+ spl: splFingerprint(spl),
+ aborted: Boolean(signal?.aborted),
+ });
+
  if (!isInSplunkRuntime()) {
  return mockSearch({ tag });
  }
@@ -515,9 +574,19 @@ export const runSearch = async ({
  slotHeld = true;
  return dispatchOneShotWithRetry(searchParameters, namespace, signal);
  })
- .then((response) => ({ results: (response && response.results) || [] }))
+ .then((response) => {
+ canvasDebug('[search/dispatch] resolved', {
+ tag: tag || null,
+ rowCount: (response && response.results && response.results.length) || 0,
+ });
+ return { results: (response && response.results) || [] };
+ })
  .catch((err) => {
  if (isAbortError(err)) {
+ canvasDebug('[search/dispatch] rejected', {
+ tag: tag || null,
+ aborted: true,
+ });
  throw err;
  }
  const status =
@@ -527,6 +596,12 @@ export const runSearch = async ({
  }
  const classified = classifySearchDispatchError(err);
  const tagLabel = tag || 'splunk-search';
+ canvasDebug('[search/dispatch] rejected', {
+ tag: tagLabel,
+ aborted: false,
+ httpStatus: classified.httpStatus ?? status,
+ reason: classified.reason,
+ });
  console.error('[splunkSearchService] dispatch failed', {
  tag: tagLabel,
  httpStatus: classified.httpStatus ?? status,
