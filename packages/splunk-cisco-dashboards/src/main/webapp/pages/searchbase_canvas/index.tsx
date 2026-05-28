@@ -2524,6 +2524,10 @@ const SearchbaseCanvasPage: React.FC = () => {
     const runnableVisibleTiles = visibleTiles.filter((tile) =>
         entryByName.has(tile.searchName)
     );
+    const visibleTilesRunKey = useMemo(
+        () => runnableVisibleTiles.map((tile) => tile.id).join('\u0001'),
+        [runnableVisibleTiles]
+    );
     const idleVisibleTileCount = runnableVisibleTiles.filter(
         (tile) => !runningTileIds.has(tile.id)
     ).length;
@@ -2847,6 +2851,28 @@ const SearchbaseCanvasPage: React.FC = () => {
             return next;
         });
     }, [clearObservedNoData, runnableVisibleTiles]);
+
+    useEffect(() => {
+        if (loadingCatalogue || idleVisibleTileCount === 0) {
+            return undefined;
+        }
+
+        const timeoutId = window.setTimeout(() => {
+            runVisibleTiles();
+        }, 200);
+
+        return () => {
+            window.clearTimeout(timeoutId);
+        };
+    }, [
+        clampedPageIndex,
+        pageSize,
+        tileSearchQuery,
+        visibleTilesRunKey,
+        loadingCatalogue,
+        idleVisibleTileCount,
+        runVisibleTiles,
+    ]);
 
     const stopAllTiles = useCallback(() => {
         setRunningTileIds(new Set());
