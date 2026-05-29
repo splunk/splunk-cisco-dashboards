@@ -11,25 +11,111 @@ rule_id: splunk-cisco-dnac-fields
 
 This is the **single source of truth** for canonical field names of `cisco:dnac:*` and `cisco:catalyst:center:*` sourcetypes as confirmed against the FDEM (Florida Division of Emergency Management) production stack on 2026-05-08.
 
-## Sourcetype onboarding status (FDEM, as of 2026-05-08)
+## Sourcetype onboarding status (FDEM, as of 2026-05-08; demo-stack reconfirm 2026-05-29)
 
-The Catalyst Center TA exposes 11 sourcetypes total. FDEM has onboarded 9 of them; 2 are still pending.
+The Catalyst Center TA exposes 11 sourcetypes total. FDEM has onboarded 9 of them; the two `:report` sourcetypes are pending on FDEM but **were confirmed present and populated on the demo `sh-i-ak` stack on 2026-05-29** — see field inventories below.
 
-| Sourcetype | FDEM onboarded? | Fields documented below? | Demo data available? |
+| Sourcetype | FDEM onboarded? | Demo stack onboarded? | Fields documented below? | Demo data available? |
+|---|---|---|---|---|
+| `cisco:dnac:devicehealth` | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
+| `cisco:dnac:issue` | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
+| `cisco:dnac:client` | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
+| `cisco:dnac:clienthealth` | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
+| `cisco:dnac:networkhealth` | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
+| `cisco:dnac:compliance` | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
+| `cisco:dnac:audit:logs` | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
+| `cisco:dnac:securityadvisory` | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
+| `cisco:dnac:site:topology` | ✅ Yes (added 2026-05-08, passive/snapshot) | ✅ Yes | ✅ Yes | ✅ Yes |
+| `cisco:catalyst:center:inventory:report` | ❌ Pending input add | ✅ Yes (4,460 events on sh-i-ak as of 2026-05-29) | ✅ Yes (see [Catalyst Center scheduled reports](#catalyst-center-scheduled-reports-cisco-catalyst-center-report)) | ✅ Yes |
+| `cisco:catalyst:center:compliance:report` | ❌ Pending input add | ✅ Yes (4,440 events on sh-i-ak as of 2026-05-29) | ✅ Yes (see [Catalyst Center scheduled reports](#catalyst-center-scheduled-reports-cisco-catalyst-center-report)) | ✅ Yes |
+
+**Implication for FDEM-tagged saved searches:** until the missing 2 are onboarded *at FDEM*, FDEM-targeted searches MUST use only the 9 confirmed sourcetypes above. Searches that depend on the `:report` sourcetypes will work against the demo stack today (and against any non-FDEM environment that has the inputs enabled) but must include a graceful fallback or be tagged as demo-only when shipped to FDEM.
+
+## Catalyst Center scheduled reports (`cisco:catalyst:center:*:report`)
+
+These sourcetypes carry the daily/scheduled reports emitted via Catalyst Center's **Reports** API (not the live monitoring endpoints that feed the other `cisco:dnac:*` sourcetypes). Each event is one row from the report. Field names follow the report's column headers — **spaces are preserved** for the inventory report, and the compliance report uses camelCase keys.
+
+### `cisco:catalyst:center:inventory:report` (Daily Inventory Report)
+
+Column-named fields (all contain spaces — single-quote in `eval()`):
+
+| Field | Type | Example | Notes |
 |---|---|---|---|
-| `cisco:dnac:devicehealth` | ✅ Yes | ✅ Yes | ✅ Yes |
-| `cisco:dnac:issue` | ✅ Yes | ✅ Yes | ✅ Yes |
-| `cisco:dnac:client` | ✅ Yes | ✅ Yes | ✅ Yes |
-| `cisco:dnac:clienthealth` | ✅ Yes | ✅ Yes | ✅ Yes |
-| `cisco:dnac:networkhealth` | ✅ Yes | ✅ Yes | ✅ Yes |
-| `cisco:dnac:compliance` | ✅ Yes | ✅ Yes | ✅ Yes |
-| `cisco:dnac:audit:logs` | ✅ Yes | ✅ Yes | ✅ Yes |
-| `cisco:dnac:securityadvisory` | ✅ Yes | ✅ Yes | ✅ Yes |
-| `cisco:dnac:site:topology` | ✅ Yes (added 2026-05-08, passive/snapshot) | ✅ Yes | ✅ Yes |
-| `cisco:catalyst:center:inventory:report` | ❌ Pending input add | ❌ Awaiting field list | ✅ Yes |
-| `cisco:catalyst:center:compliance:report` | ❌ Pending input add | ❌ Awaiting field list | ✅ Yes |
+| `'Device Name'` | string | `corp-9300x-edge-05` | Stable per-device identifier; present on every event. |
+| `'Device Type'` | string | `Cisco Catalyst 9300X-48HX Switch` | |
+| `'Device Family'` | string | `Switches and Hubs` / `Unified AP` / `Routers` / `Wireless Controller` | Use for high-level inventory rollups. |
+| `'Device Series'` | string | `Cisco Catalyst 9300X Series Switches` | Not present on every event; check `isnotnull` before using. |
+| `'IP Address'` | string | `10.100.0.5` | |
+| `'MAC Address'` | string | `02:0e:aa:cf:30:38` | Not present on every event. |
+| `'Platform'` | string | `C9300X-48HX` | Not present on every event. |
+| `'Software Type'` | string | `IOS-XE` | Not present on every event. |
+| `'Software Version'` | string | `17.15.3` | Present on every event; suitable for version-distribution rollups. |
+| `'Serial Number'` | string | `FCW0560DC54` | |
+| `'Reachability Status'` | string | `Reachable` / `Unreachable` | Sparsely populated. |
+| `'Manageability Status'` | string | `Managed` / `Unmanaged` | Sparsely populated. |
+| `'Up Time'` | string | `277 days, 07:07:26.265` | Free-text duration string; parse with regex if needed. |
+| `'Role'` | string | `BORDER ROUTER` / `ACCESS` / `DISTRIBUTION` | Sparsely populated. |
+| `'Role Source'` | string | `AUTO` / `MANUAL` | |
+| `'Site Hierarchy'` | string | `Global/USA/San-Jose-CA/East Wing/WAN-Edge` | Sparsely populated. Use with `dnac_site_normalize` if mixing FDEM and demo data. |
+| `Hostname` | string | (matches `'Device Name'`) | Sparsely populated. |
+| `'Image Version'` | string | `17.15.3` | Same value as `'Software Version'`. |
+| `'Last Sync Time'` | epoch ms | `1780025620360` | Convert with `_time=strftime(...)`. |
+| `'AP Floor'` | string | (for APs) | |
+| `'Wlc Ip Address'` | string | (for APs) | Controller IP. |
+| `cisco_catalyst_host` | string | `https://catalystcenter01.acme.example.com` | Source CC tenant. |
+| `report_type` | string | `inventory` | |
+| `report_name` | string | `Daily Inventory Report` | |
+| `collection_timestamp` | epoch s | `1780027200` | |
 
-**Implication for FDEM-tagged saved searches:** until the missing 2 are onboarded, FDEM-targeted searches MUST use only the 9 confirmed sourcetypes above. Searches that depend on the missing 2 should be tagged for demo-data only, or designed with a graceful fallback to a confirmed sourcetype.
+**Coverage note:** field counts vary across events — the TA appears to emit some lighter records alongside full ones. About 55% of inventory events have `Hostname` / `Reachability Status` / `Site Hierarchy` populated; 100% have `Device Name` / `Device Family` / `IP Address` / `Software Version`. For rollups that depend on the richer fields, filter `where isnotnull('Hostname')` to keep only full records.
+
+### `cisco:catalyst:center:compliance:report` (Network Compliance Report)
+
+camelCase fields:
+
+| Field | Type | Example | Notes |
+|---|---|---|---|
+| `deviceUuid` | string | `8b97db12-1ae0-a74d-9c29-65ec0a9bf230` | |
+| `deviceName` | string | `corp-9300x-edge-05` | Use as the join key when correlating with the inventory report's `'Device Name'`. |
+| `ipAddress` | string | `10.100.0.5` | |
+| `macAddress` | string | | |
+| `deviceType` | string | | |
+| `deviceFamily` | string | `Switches and Hubs` / `Unified AP` / `Routers` / `Wireless Controller` | |
+| `deviceSeries` | string | | |
+| `softwareVersion` | string | | |
+| `softwareType` | string | `IOS-XE` | |
+| `siteHierarchy` | string | `Global/USA/San-Jose-CA/East Wing/WAN-Edge` | |
+| `role` | string | `BORDER ROUTER` / `ACCESS` | |
+| `serialNumber` | string | | |
+| `reachabilityStatus` | string | `Reachable` / `Unreachable` | |
+| `complianceStatus` | string | `COMPLIANT` / `NON_COMPLIANT` / `ERROR` | Primary status field. |
+| `complianceMessage` | string | `All compliance checks passed` / `4 compliance check(s) failed` | |
+| `totalChecks` | int | `9` | Constant for the standard policy set. |
+| `passCount` | int | `9` | |
+| `failCount` | int | `0` | |
+| `complianceTypeBreakdown{}.complianceType` | mv-string | `NETWORK_PROFILE` / `IMAGE` / `RUNNING_CONFIG` / `STARTUP_CONFIG` / `FABRIC` / `EOX` / `PSIRT` / `WORKFLOW` / `NETWORK_SETTINGS` | Per-type compliance result. mvzip with `.status` to pair them. |
+| `complianceTypeBreakdown{}.status` | mv-string | `COMPLIANT` / `NON_COMPLIANT` / `ERROR` | Parallel array to `.complianceType`. |
+| `complianceTypeBreakdown{}.lastSyncTime` | mv-epoch ms | | Parallel to the others. |
+| `issuesDetected{}.complianceType` | mv-string | | Only populated when failCount > 0. |
+| `issuesDetected{}.severity` | mv-string | | |
+| `issuesDetected{}.reason` | mv-string | | |
+| `issuesDetected{}.detectedAt` | mv-epoch ms | | |
+| `lastUpdateTime` | epoch ms | `1780025197291` | |
+| `lastSyncTime` | epoch ms | `1780025197291` | |
+| `cisco_catalyst_host` | string | | |
+| `report_type` | string | `compliance` | |
+| `report_name` | string | `Network Compliance Report` | |
+| `collection_timestamp` | epoch s | | |
+
+**Per-type breakdown idiom** — to extract just the failing compliance types as a comma-separated list:
+
+```spl
+| eval pair=mvzip('complianceTypeBreakdown{}.complianceType', 'complianceTypeBreakdown{}.status', "||")
+| eval failing_types=mvjoin(mvfilter(match(pair, "\\|\\|(NON_COMPLIANT|ERROR)$")), ", ")
+| eval failing_types=replace(failing_types, "\\|\\|(NON_COMPLIANT|ERROR)", " (\\1)")
+```
+
+Yields strings like `NETWORK_PROFILE (NON_COMPLIANT), IMAGE (NON_COMPLIANT)`.
 
 **`cisco:dnac:site:topology` caveat:** despite the name, this is **site hierarchy** (areas/buildings/floors), NOT network topology (devices/links). See dedicated section below for the field inventory and recommended use patterns.
 

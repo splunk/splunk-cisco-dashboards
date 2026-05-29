@@ -30,6 +30,51 @@
         'Helvetica Neue', Arial, sans-serif;
 }
 
+/*
+ * React-mounted dashboards own their full page frame. Splunk Simple XML
+ * otherwise wraps the mount point in row/panel padding that makes a
+ * `100vh`-style dashboard taller than the visible browser space.
+ */
+.dashboard-body:has(#scan-root) {
+    padding: 0 !important;
+}
+
+.dashboard-row:has(#scan-root),
+.dashboard-cell:has(#scan-root),
+.dashboard-panel:has(#scan-root) {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.dashboard-panel:has(#scan-root) .panel-body {
+    padding: 0 !important;
+}
+
+/*
+ * Overview has enough room for the right-side map before Tailwind's
+ * stock xl breakpoint. Keeping the split active down to ~1120px makes
+ * MacBook-width browser windows resize more predictably.
+ */
+@media (min-width: 1120px) {
+    #scan-root .scd-overview-split[data-map-position='right'] {
+        flex-direction: row;
+    }
+
+    #scan-root .scd-overview-metrics[data-map-position='right'] {
+        flex-shrink: 0;
+        width: var(--scd-left-pct);
+    }
+
+    #scan-root .scd-overview-splitter[data-map-position='right'] {
+        display: flex;
+    }
+
+    #scan-root .scd-overview-map[data-map-position='right'] {
+        flex: 1 1 0%;
+        width: auto;
+    }
+}
+
 #scan-root h1,
 #scan-root h2,
 #scan-root h3,

@@ -67,14 +67,14 @@ export const HealthBadge: React.FC<HealthBadgeProps> = ({ statuses, className })
     return (
         <div
             className={cn(
-                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase tracking-widest',
+                'inline-flex h-8 items-center gap-1.5 rounded-full border px-2.5 py-0 text-[10px] font-bold uppercase leading-none tracking-widest',
                 palette,
                 className
             )}
             title={`${agg.healthy} healthy / ${agg.warning} warning / ${agg.critical} critical / ${agg.unknown} unknown`}
         >
-            <Icon className="w-3 h-3" />
-            <span>{label}</span>
+            <Icon className="h-3 w-3 flex-shrink-0" />
+            <span className="leading-none">{label}</span>
         </div>
     );
 };

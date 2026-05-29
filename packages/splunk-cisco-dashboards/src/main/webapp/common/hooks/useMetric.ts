@@ -17,7 +17,11 @@
  */
 
 import { useEffect, useState } from 'react';
-import { runSearch } from '../services/splunkSearchService';
+import {
+    classifySearchDispatchError,
+    isAbortError,
+    runSearch,
+} from '../services/splunkSearchService';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -156,7 +160,22 @@ export interface MetricConfig {
     spl?: string;
     /** Field name in the search results to read the headline + sparkline from. */
     valueField?: string;
-    /** Optional explicit signed % change field; if missing, auto-computed. */
+    /**
+     * Optional explicit delta column.
+     *
+     * Historically the column was assumed to carry a signed *percent*
+     * change between the first and last bucket; if missing, the hook
+     * auto-computes that percent. As of Build 1224 the column may
+     * also carry an *absolute* signed delta — interpretation now
+     * happens at the renderer layer (e.g. `SingleValueRadialTile`'s
+     * `viz_options.deltaFormat`), so the hook no longer rescales the
+     * column it reads. Authors that want the radial's DS-style `↑4`
+     * absolute delta should emit a raw signed integer here and set
+     * `viz_options.deltaFormat = "absolute"` (the default).
+     *
+     * Wired from `viz_options.deltaField` on the Searchbase Canvas
+     * (see `searchbase_canvas/index.tsx`).
+     */
     changeField?: string;
     /**
      * When set, the headline string is pulled from this column instead
@@ -268,15 +287,24 @@ export interface TimeRange {
  *                            the user typed it on purpose, so we let
  *                            them see the failure (and the picker
  *                            chips guide them to a valid one).
- *   • 'error'              — the dispatch itself rejected (e.g. CIM
- *                            data model missing, app namespace mis-
- *                            configuration, SPL validation failure).
+ *   • 'dispatch_failed'    — Splunk refused to create the job (HTTP
+ *                            503/429, network/abort after retries).
+ *   • 'job_failed'         — Job was created but Splunk reported an
+ *                            ERROR/FATAL message (missing macro, etc.).
+ *   • 'error'              — other dispatch failure (legacy bucket).
  */
 export type NoDataReason =
     | 'empty_rows'
     | 'no_numeric_column'
     | 'column_missing'
+    | 'dispatch_failed'
+    | 'job_failed'
     | 'error';
+
+export interface SearchFailureDetail {
+    message: string;
+    httpStatus?: number;
+}
 
 export interface MetricResult {
     value: number;
@@ -308,6 +336,9 @@ export interface MetricResult {
     resolvedSavedSearch: string;
     /** Set only when `Number.isNaN(value)` — see {@link NoDataReason}. */
     noDataReason?: NoDataReason;
+    /** Human-readable Splunk/dispatch error when {@link noDataReason} is not empty_rows. */
+    failureMessage?: string;
+    failureHttpStatus?: number;
     /**
      * Echo of the time range we ran against. The UI uses this to show
      * "no data in last 7 days" rather than "no data" alone, so it's
@@ -487,6 +518,24 @@ const isMetricDebug = (): boolean => {
     );
 };
 
+const isCanvasDebug = (): boolean => {
+    if (typeof window === 'undefined') return false;
+    try {
+        if (window.localStorage.getItem('searchbase.canvas.debug') === '1') {
+            return true;
+        }
+        return new URLSearchParams(window.location.search).get('canvasDebug') === '1';
+    } catch {
+        return false;
+    }
+};
+
+const canvasDebug = (...args: unknown[]): void => {
+    if (!isCanvasDebug()) return;
+    // eslint-disable-next-line no-console
+    console.debug(...args);
+};
+
 const debugLog = (id: string, msg: string, payload: unknown): void => {
     if (!isMetricDebug()) return;
     // eslint-disable-next-line no-console
@@ -550,14 +599,27 @@ export const useMetric = (
             setResult(mock);
             return undefined;
         }
+        const controller = new AbortController();
         let cancelled = false;
-        setResult({ ...mock, source: 'loading' });
+        canvasDebug('[canvas/tile-dispatch] effect-run', {
+            stanzaId: cfg.id,
+            refreshToken,
+        });
+        setResult((prev) => {
+            canvasDebug('[canvas/tile-state] transition', {
+                stanzaId: cfg.id,
+                from: prev.source,
+                to: 'loading',
+            });
+            return { ...mock, source: 'loading' };
+        });
 
         const livePromise = runSearch({
             spl,
             earliestTime: range.earliest,
             latestTime: range.latest,
             tag: cfg.id,
+            signal: controller.signal,
         });
 
         const previousRange = computePreviousRange(range);
@@ -574,10 +636,18 @@ export const useMetric = (
                       earliestTime: previousRange.earliest,
                       latestTime: previousRange.latest,
                       tag: `${cfg.id}__prev`,
-                  }).catch(() => ({ results: [] as Array<Record<string, unknown>> }))
+                      signal: controller.signal,
+                  }).catch((err) =>
+                      isAbortError(err)
+                          ? Promise.reject(err)
+                          : { results: [] as Array<Record<string, unknown>> }
+                  )
                 : Promise.resolve({ results: [] as Array<Record<string, unknown>> });
 
-        const buildNoData = (reason: NoDataReason): MetricResult => ({
+        const buildNoData = (
+            reason: NoDataReason,
+            failure?: SearchFailureDetail
+        ): MetricResult => ({
             value: Number.NaN,
             change: Number.NaN,
             sparkData: [],
@@ -588,6 +658,8 @@ export const useMetric = (
             spl,
             resolvedSavedSearch: savedSearchName,
             noDataReason: reason,
+            failureMessage: failure?.message,
+            failureHttpStatus: failure?.httpStatus,
             rangeLabel: range.label,
         });
 
@@ -796,6 +868,12 @@ export const useMetric = (
                     }
                 }
 
+                canvasDebug('[canvas/tile-state] transition', {
+                    stanzaId: cfg.id,
+                    from: 'loading',
+                    to: 'live',
+                    rowCount: rows.length,
+                });
                 setResult({
                     value,
                     displayValue,
@@ -811,16 +889,41 @@ export const useMetric = (
                 });
             })
             .catch((err) => {
-                if (cancelled) return;
+                if (cancelled || isAbortError(err)) return;
+                const failure = classifySearchDispatchError(err);
+                console.error('[useMetric] dispatch failed', {
+                    stanzaId: cfg.id,
+                    httpStatus: failure.httpStatus,
+                    reason: failure.reason,
+                    message: failure.message,
+                });
                 debugLog(cfg.id, 'dispatch threw', {
-                    error: err instanceof Error ? err.message : String(err),
+                    error: failure.message,
+                    httpStatus: failure.httpStatus,
+                    reason: failure.reason,
                     spl,
                 });
-                setResult(cfg.suppressMockOnEmpty ? buildNoData('error') : mock);
+                canvasDebug('[canvas/tile-state] transition', {
+                    stanzaId: cfg.id,
+                    from: 'loading',
+                    to: cfg.suppressMockOnEmpty ? 'live-no-data' : 'mock',
+                    reason: failure.reason,
+                });
+                setResult(
+                    cfg.suppressMockOnEmpty
+                        ? buildNoData(failure.reason, failure)
+                        : mock
+                );
             });
 
         return () => {
             cancelled = true;
+            canvasDebug('[canvas/tile-dispatch] effect-cleanup', {
+                stanzaId: cfg.id,
+                aborted: controller.signal.aborted,
+            });
+            controller.abort();
+            setResult(mock);
         };
         // refreshToken in deps ensures the manual "refresh now" button
         // and the auto-refresh interval re-trigger every metric.
@@ -872,6 +975,8 @@ export interface KpiResult {
     spl: string;
     resolvedSavedSearch: string;
     noDataReason?: NoDataReason;
+    failureMessage?: string;
+    failureHttpStatus?: number;
     rangeLabel?: string;
 }
 
@@ -904,14 +1009,25 @@ export const useKpi = (
             setResult(mock);
             return undefined;
         }
+        const controller = new AbortController();
         let cancelled = false;
+        canvasDebug('[canvas/tile-dispatch] effect-run', {
+            stanzaId: cfg.id,
+            hook: 'useKpi',
+            refreshToken,
+        });
         setResult({ ...mock, source: 'loading' });
-        const buildKpiNoData = (reason: NoDataReason): KpiResult => ({
+        const buildKpiNoData = (
+            reason: NoDataReason,
+            failure?: SearchFailureDetail
+        ): KpiResult => ({
             value: '—',
             source: 'live',
             spl,
             resolvedSavedSearch: savedSearchName,
             noDataReason: reason,
+            failureMessage: failure?.message,
+            failureHttpStatus: failure?.httpStatus,
             rangeLabel: range.label,
         });
         debugLog(cfg.id, 'kpi dispatching', {
@@ -927,6 +1043,7 @@ export const useKpi = (
             earliestTime: range.earliest,
             latestTime: range.latest,
             tag: cfg.id,
+            signal: controller.signal,
         })
             .then((res) => {
                 if (cancelled) return;
@@ -1029,15 +1146,33 @@ export const useKpi = (
                 });
             })
             .catch((err) => {
-                if (cancelled) return;
+                if (cancelled || isAbortError(err)) return;
                 debugLog(cfg.id, 'kpi dispatch threw', {
                     error: err instanceof Error ? err.message : String(err),
                     spl,
                 });
-                setResult(cfg.suppressMockOnEmpty ? buildKpiNoData('error') : mock);
+                const failure = classifySearchDispatchError(err);
+                console.error('[useKpi] dispatch failed', {
+                    stanzaId: cfg.id,
+                    httpStatus: failure.httpStatus,
+                    reason: failure.reason,
+                    message: failure.message,
+                });
+                setResult(
+                    cfg.suppressMockOnEmpty
+                        ? buildKpiNoData(failure.reason, failure)
+                        : mock
+                );
             });
         return () => {
             cancelled = true;
+            canvasDebug('[canvas/tile-dispatch] effect-cleanup', {
+                stanzaId: cfg.id,
+                hook: 'useKpi',
+                aborted: controller.signal.aborted,
+            });
+            controller.abort();
+            setResult(initialMock);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [cfg, range.earliest, range.latest, refreshToken]);
@@ -1092,6 +1227,8 @@ export interface TableDataResult {
     spl: string;
     resolvedSavedSearch: string;
     noDataReason?: NoDataReason;
+    failureMessage?: string;
+    failureHttpStatus?: number;
     rangeLabel?: string;
 }
 
@@ -1158,10 +1295,19 @@ export const useTableData = (
             setResult(fresh);
             return undefined;
         }
+        const controller = new AbortController();
         let cancelled = false;
+        canvasDebug('[canvas/tile-dispatch] effect-run', {
+            stanzaId: cfg.id,
+            hook: 'useTableData',
+            refreshToken,
+        });
         setResult({ ...fresh, source: 'loading' });
 
-        const buildNoData = (reason: NoDataReason): TableDataResult => ({
+        const buildNoData = (
+            reason: NoDataReason,
+            failure?: SearchFailureDetail
+        ): TableDataResult => ({
             rows: [],
             columns: [],
             totalRowCount: 0,
@@ -1169,6 +1315,8 @@ export const useTableData = (
             spl,
             resolvedSavedSearch: savedSearchName,
             noDataReason: reason,
+            failureMessage: failure?.message,
+            failureHttpStatus: failure?.httpStatus,
             rangeLabel: range.label,
         });
 
@@ -1185,6 +1333,7 @@ export const useTableData = (
             earliestTime: range.earliest,
             latestTime: range.latest,
             tag: cfg.id,
+            signal: controller.signal,
         })
             .then((res) => {
                 if (cancelled) return;
@@ -1239,16 +1388,32 @@ export const useTableData = (
                 });
             })
             .catch((err) => {
-                if (cancelled) return;
+                if (cancelled || isAbortError(err)) return;
+                const failure = classifySearchDispatchError(err);
+                console.error('[useTableData] dispatch failed', {
+                    stanzaId: cfg.id,
+                    httpStatus: failure.httpStatus,
+                    reason: failure.reason,
+                    message: failure.message,
+                });
                 debugLog(cfg.id, 'table dispatch threw', {
-                    error: err instanceof Error ? err.message : String(err),
+                    error: failure.message,
+                    httpStatus: failure.httpStatus,
+                    reason: failure.reason,
                     spl,
                 });
-                setResult(buildNoData('error'));
+                setResult(buildNoData(failure.reason, failure));
             });
 
         return () => {
             cancelled = true;
+            canvasDebug('[canvas/tile-dispatch] effect-cleanup', {
+                stanzaId: cfg.id,
+                hook: 'useTableData',
+                aborted: controller.signal.aborted,
+            });
+            controller.abort();
+            setResult(fresh);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [cfg, range.earliest, range.latest, refreshToken]);

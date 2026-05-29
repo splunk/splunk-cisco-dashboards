@@ -147,9 +147,8 @@ export interface TextBoxUpdate {
 export type EdgeDirection = 'none' | 'forward' | 'backward' | 'both';
 
 /** Build 115.11 — arrow tip styles operators can pick from in the
- *  edge inspector. `closed` is the default (current behaviour), the
- *  rest are new alternatives. Mirrored in
- *  `SavedDiagramEdge.arrowStyle`. */
+ *  edge inspector. `thin` is the default; the glyphs are rendered
+ *  by AnimatedEdge so they inherit the connector colour. */
 export type ArrowStyle = 'closed' | 'open' | 'thin' | 'dot' | 'diamond';
 
 export interface EdgeUpdate {
@@ -225,6 +224,7 @@ const DEVICE_SHAPE_OPTIONS: Array<{ id: DeviceShapeId; label: string }> = [
     { id: 'modular_chassis_switch', label: 'Modular Chassis Switch' },
     { id: 'nexus_aci_fabric', label: 'Nexus / ACI Fabric' },
     { id: 'sdwan_controller', label: 'SD-WAN Controller' },
+    { id: 'custom_stencil', label: 'Custom Stencil' },
     // Security
     { id: 'firewall', label: 'Firewall' },
     { id: 'palo_alto_firewall', label: 'Palo Alto Firewall' },
@@ -268,13 +268,12 @@ const DEVICE_SHAPE_OPTIONS: Array<{ id: DeviceShapeId; label: string }> = [
     { id: 'splunk_indexer_cluster', label: 'Splunk Indexer Cluster' },
     { id: 'splunk_heavy_forwarder', label: 'Splunk Heavy Forwarder' },
     { id: 'splunk_universal_forwarder', label: 'Splunk Universal Forwarder' },
+    { id: 'splunk_intermediate_forwarder', label: 'Splunk Intermediate Forwarder' },
     { id: 'splunk_cluster_manager', label: 'Splunk Cluster Manager' },
     { id: 'splunk_deployer', label: 'Splunk SHC Deployer' },
     { id: 'splunk_license_manager', label: 'Splunk License Manager' },
     { id: 'splunk_monitoring_console', label: 'Splunk Monitoring Console' },
     { id: 'splunk_deployment_server', label: 'Splunk Deployment Server' },
-    { id: 'splunk_data_collection', label: 'Splunk Data Collection' },
-    { id: 'splunk_edge_processor', label: 'Splunk Edge Processor' },
     { id: 'splunk_sc4s', label: 'Splunk Connect for Syslog' },
     // Places
     { id: 'branch_office', label: 'Branch Office' },
@@ -1529,9 +1528,9 @@ const ARROW_STYLE_OPTIONS: Array<{
     label: string;
     hint: string;
 }> = [
-    { id: 'closed', label: 'Filled triangle', hint: 'Default — filled arrow' },
+    { id: 'thin', label: 'Thin chevron', hint: 'Default — subtle, minimal' },
     { id: 'open', label: 'Open chevron', hint: 'Lighter look' },
-    { id: 'thin', label: 'Thin chevron', hint: 'Subtle, minimal' },
+    { id: 'closed', label: 'Filled dart', hint: 'Filled directional tip' },
     { id: 'dot', label: 'Dot', hint: 'Circle terminator' },
     { id: 'diamond', label: 'Diamond', hint: 'Filled rhombus' },
 ];
@@ -1553,7 +1552,7 @@ const EdgePropertiesForm: React.FC<{
     };
     const initialKind = (data.kind ?? data.edge?.kind ?? 'physical') as EdgeUpdate['kind'];
     const initialDirection = (data.direction ?? 'none') as EdgeDirection;
-    const initialArrowStyle: ArrowStyle = (data.arrowStyle as ArrowStyle) ?? 'closed';
+    const initialArrowStyle: ArrowStyle = (data.arrowStyle as ArrowStyle) ?? 'thin';
     const initialLiveStatus = data.liveStatus === true;
     const initialLabel =
         typeof edge.label === 'string' ? edge.label : data.edge?.label ?? '';

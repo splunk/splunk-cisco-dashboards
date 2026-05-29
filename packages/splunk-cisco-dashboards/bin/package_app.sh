@@ -48,6 +48,52 @@ if [[ -f "$META_FILE" ]]; then
   echo "[package] default.meta: reverted export to 'none' for Splunkbase"
 fi
 
+# Bump [install] build in the packaged app.conf only. Source app.conf is
+# never modified. Counter climbs across runs: new = max(source_build, highest
+# build stamped in any existing dist/ tarball) + 1. The .tar.gz files in
+# dist/ act as the persistent counter — no state file needed.
+PKG_APP_CONF="${TMP_DIR}/${APP_NAME}/default/app.conf"
+source_build=$(grep -E '^\s*build\s*=' "$APP_CONF" | head -1 | sed -E 's/.*=\s*//' | tr -d '[:space:]')
+highest_prev=0
+for prev_tar in "${DIST_DIR}"/${APP_NAME}-*.tar.gz; do
+  [[ -f "$prev_tar" ]] || continue
+  b=$(tar -xzOf "$prev_tar" "${APP_NAME}/default/app.conf" 2>/dev/null \
+      | grep -E '^\s*build\s*=' | head -1 | sed -E 's/.*=\s*//' | tr -d '[:space:]')
+  if [[ "$b" =~ ^[0-9]+$ ]] && (( b > highest_prev )); then
+    highest_prev=$b
+  fi
+done
+base=$source_build
+(( highest_prev > base )) && base=$highest_prev
+new_build=$((base + 1))
+# sed -i has different syntax on macOS (BSD) vs Linux (GNU). Detect once
+# so this script keeps working in CI containers as well as on developer macs.
+if sed --version >/dev/null 2>&1; then
+  sed_i=( sed -i )
+else
+  sed_i=( sed -i '' )
+fi
+"${sed_i[@]}" -E "s/^([[:space:]]*build[[:space:]]*=[[:space:]]*)[0-9]+/\\1${new_build}/" "$PKG_APP_CONF"
+echo "[package] app.conf: bumped build ${base} -> ${new_build} (package only, source unchanged)"
+
+# Provenance comment block above [install]. Helps debug "which commit
+# produced this tarball" without untarring + diffing the whole tree.
+# Git lookups are best-effort so the build still works in a tarball
+# extracted outside a git checkout. Matches the convention used by
+# ta_cisco_common/build.sh and field-solutions-demo-data-gen/package_app.sh.
+BUILD_TS=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+GIT_SHA=$(cd "$PKG_ROOT" && git rev-parse --short=12 HEAD 2>/dev/null || echo "unknown")
+GIT_DIRTY=$(cd "$PKG_ROOT" && git diff --quiet 2>/dev/null && echo "" || echo "-dirty")
+GIT_BRANCH=$(cd "$PKG_ROOT" && git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+BUILD_USER="${USER:-unknown}@$(hostname -s 2>/dev/null || echo unknown)"
+PROVENANCE="# Built: ${BUILD_TS} commit ${GIT_SHA}${GIT_DIRTY} branch ${GIT_BRANCH} by ${BUILD_USER}"
+# Insert the provenance line immediately before the first occurrence of
+# [install]. awk is portable across BSD/GNU and avoids sed escaping headaches.
+awk -v line="$PROVENANCE" '
+  !inserted && /^\[install\]/ { print line; inserted=1 }
+  { print }
+' "$PKG_APP_CONF" > "${PKG_APP_CONF}.tmp" && mv "${PKG_APP_CONF}.tmp" "$PKG_APP_CONF"
+
 # Strip macOS extended attributes to keep archive clean
 xattr -cr "${TMP_DIR}/${APP_NAME}" 2>/dev/null || true
 

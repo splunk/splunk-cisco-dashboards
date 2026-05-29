@@ -7,6 +7,134 @@
 
 ---
 
+## 2026-05-22 — Overview priority drill-down and hidden incident feed
+
+### Goal
+
+Operator: hide the Incident Feed strip until it is truly configured,
+then make the Featured Report row feel like a customer-selected
+critical drill-down rather than a static announcement banner.
+
+### Fix
+
+The IncidentTicker now renders nothing when no saved search has been
+wired. Deployments can still pass fallback rows explicitly, but the
+Overview page's default state no longer exposes "Incident feed not
+configured" to customers.
+
+The former Featured Report strip is now a single customer-pinned
+Priority Drill-Down. The row includes an app-local dashboard picker
+backed by a curated allow-list of active views shipped with this app.
+The selected target is persisted in localStorage, the primary text and
+CTA open that selected dashboard, and Dashboard Studio targets receive
+the Overview time range through their configured token parameters.
+
+### Files changed
+
+| File | Net effect |
+|---|---|
+| `src/main/webapp/common/components/florida/IncidentTicker.tsx` | Uses an empty default fallback and returns `null` when there are no incident rows. |
+| `src/main/webapp/pages/overview/index.tsx` | Adds incident-feed and app-local priority-drilldown config constants, hides the ticker until configured, persists the selected priority target, renders the dashboard picker, and passes the current time range to compatible target dashboards. |
+| `docs/SESSION_LOG.md` | This entry. |
+
+### Verification
+
+  * `yarn --cwd packages/splunk-cisco-dashboards typecheck` — passes.
+  * `yarn --cwd packages/splunk-cisco-dashboards stylelint` — passes.
+  * `yarn --cwd packages/splunk-cisco-dashboards build` — passes with
+    only pre-existing webpack bundle-size warnings.
+  * In-app Splunk browser at
+    `/en-US/app/splunk-cisco-dashboards/overview`:
+      * "Incident feed not configured" no longer appears.
+      * "Featured Report" no longer appears.
+      * "Priority Drill-Down" and "Open dashboard" appear.
+      * The picker offers only active dashboards shipped in this app.
+      * The selected drill-down target persists in localStorage.
+      * Dashboard Studio targets receive the current time range in the
+        target URL, for example
+        `form.time_tok.earliest=-24h@h&form.time_tok.latest=now`.
+      * Document overflow remains 0px in the 1416×1054 viewport.
+
+### What's next
+
+Pick the production saved search for the incident feed, or leave it
+blank so the Overview page stays focused on measured dashboard data.
+
+---
+
+## 2026-05-22 — Overview responsive fit: measure available Splunk viewport instead of raw 100vh
+
+### Goal
+
+Operator: the Overview page worked well on a large external display,
+but on a MacBook Retina it never quite fit as one clean executive
+page, no matter how the browser window was stretched taller,
+shorter, wider, or narrower.
+
+### Root Cause
+
+The React Overview shell used `h-screen`, which is correct only when
+the React app owns the whole browser viewport. In Splunk Web the
+mount point sits below Splunk navigation and inside Simple XML row /
+panel wrappers. That meant the dashboard claimed a full viewport of
+height *after* Splunk chrome had already consumed space, so the page
+was always taller than the visible browser window on shorter screens.
+
+The layout also switched the right-side map to a stacked position at
+Tailwind's stock `xl` breakpoint. That made medium-width MacBook
+windows feel jumpy: small width changes could suddenly move the map
+under the metric rows and make the "one-page" read much harder.
+
+### Fix
+
+Overview now measures the actual remaining vertical space below
+`#scan-root` and sets the dashboard shell height from that value. The
+measurement updates on browser resize and wrapper/body resize, with a
+520px lower guard so the page still has a usable floor if Splunk
+chrome gets unusually tall.
+
+When the available dashboard height is below 720px, the page enters a
+compact-density mode:
+
+  * slightly tighter main padding;
+  * section min-height relaxes from 180px to 174px;
+  * sparkline value labels collapse from min+max to max-only unless
+    the user explicitly configured otherwise.
+
+The shared Tailwind entry also strips Simple XML row/panel padding
+around React-mounted dashboards, and adds an Overview-specific
+1120px side-by-side breakpoint so the map stays on the right through
+more MacBook-width resize states.
+
+### Files changed
+
+| File | Net effect |
+|---|---|
+| `src/main/webapp/pages/overview/index.tsx` | Added `useAvailableDashboardHeight`, compact-density wiring, measured shell height, compact sparkline marker behavior, and stable class/data hooks for the custom split breakpoint. |
+| `src/main/webapp/common/styles/tailwind.css` | Removes Simple XML wrapper padding for `#scan-root`; keeps Overview's right-side split active from 1120px upward. |
+| `docs/SESSION_LOG.md` | This entry. |
+
+### Verification
+
+  * `yarn --cwd packages/splunk-cisco-dashboards typecheck` — passes.
+  * `yarn --cwd packages/splunk-cisco-dashboards stylelint` — passes.
+  * `yarn --cwd packages/splunk-cisco-dashboards build` — passes with
+    only pre-existing webpack bundle-size warnings.
+  * Local browser harness with simulated Splunk chrome:
+      * 1512×790 viewport: document overflow is 0px, footer visible,
+        dashboard shell fits from Splunk chrome bottom to viewport
+        bottom.
+      * 1230×790 viewport: right-side map remains side-by-side,
+        document overflow is 0px, footer visible.
+
+### What's next
+
+Apply the same measured-shell pattern to `health_monitoring` if that
+page needs the same MacBook-fit treatment; it still uses
+`h-screen min-h-[720px]` plus fixed-height KPI cards and map panels.
+
+---
+
 ## 2026-05-18 (Build 1192) — Export: bake topology link <path>s into a solid static state so html2canvas can rasterise them
 
 ### Goal

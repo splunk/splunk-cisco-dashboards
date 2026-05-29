@@ -251,6 +251,11 @@ export interface SavedDiagramNode {
      *  asset_inventory row (if any). Empty string → clear the
      *  override; `undefined` → no change. */
     ipAddress?: string;
+    /** Build 115.21 — user-imported stencil artwork. Diagrams
+     *  persist the exact asset dropped onto the canvas so a saved
+     *  diagram keeps rendering even if the operator later clears
+     *  their local custom-shape library. */
+    customStencil?: CustomStencilAsset;
     /** Build 115.1: free-placement textbox styling. Only present
      *  when `type === 'textBox'`. Carries everything needed to
      *  re-hydrate the on-canvas annotation: text, fontSize, color,
@@ -269,6 +274,15 @@ export interface SavedDiagramNode {
         border?: string;
         align?: 'left' | 'center' | 'right';
     };
+}
+
+export interface CustomStencilAsset {
+    id: string;
+    label: string;
+    src: string;
+    mediaType: 'image/svg+xml' | 'image/png';
+    width?: number;
+    height?: number;
 }
 
 export interface SavedDiagramEdge {
@@ -302,17 +316,16 @@ export interface SavedDiagramEdge {
      *  hops red and the L2 trunks blue, scan in 2 seconds. */
     lineColor?: string;
     /** Build 115.11 — arrowhead glyph style. Operators asked for
-     *  alternatives to the default closed-triangle marker because
-     *  it reads heavy on dense diagrams. We expose three React
-     *  Flow built-ins plus two custom SVG markers we inject into
-     *  the canvas's <defs> at render time:
-     *    • 'closed' (default) — filled triangle, classic Visio.
+     *  alternatives to the heavy closed-triangle marker because it
+     *  reads loud on dense diagrams. AnimatedEdge renders the
+     *  arrowhead directly so it inherits the connector colour:
+     *    • 'thin' (default)   — narrow chevron, subtle.
      *    • 'open'             — open chevron, lighter look.
-     *    • 'thin'             — narrow chevron, subtle.
+     *    • 'closed'           — filled directional dart.
      *    • 'dot'              — small filled circle (terminator).
      *    • 'diamond'          — filled diamond rhombus.
      *  Older saved payloads without this field render with
-     *  'closed' for backwards compatibility. */
+     *  'thin'. */
     arrowStyle?: 'closed' | 'open' | 'thin' | 'dot' | 'diamond';
     /** Build 115.11 — when true, the edge stroke colour is driven
      *  by the live reporting status of the bound endpoints rather
@@ -339,6 +352,29 @@ export interface SavedDiagramEdge {
      *  they had before. */
     sourceHandle?: string;
     targetHandle?: string;
+    /** Build 115.20 — exact endpoint anchors inside each node,
+     *  stored as normalised 0..1 coordinates relative to the
+     *  node's current bounds. This lets diagram connectors land
+     *  anywhere on a device face (Visio-style) instead of snapping
+     *  back to one of the four named React Flow side handles. */
+    sourceAnchor?: DiagramEdgeAnchor;
+    targetAnchor?: DiagramEdgeAnchor;
+    /** Build 115.24 — optional freeform bend point in flow-space
+     *  coordinates. When present, the edge renders as a two-
+     *  segment connector through this point and exposes a small
+     *  drag handle so operators can route links around hardware
+     *  artwork instead of accepting one long diagonal. */
+    bendPoint?: DiagramEdgeWaypoint;
+}
+
+export interface DiagramEdgeAnchor {
+    x: number;
+    y: number;
+}
+
+export interface DiagramEdgeWaypoint {
+    x: number;
+    y: number;
 }
 
 /**

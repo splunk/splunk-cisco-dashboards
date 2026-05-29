@@ -22,7 +22,14 @@
  * without rippling the rest of the page.
  */
 
-import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import React, {
+    useCallback,
+    useEffect,
+    useLayoutEffect,
+    useMemo,
+    useRef,
+    useState,
+} from 'react';
 import {
     User,
     RefreshCw,
@@ -38,6 +45,14 @@ import {
     Edit3,
     Upload,
     X,
+    CheckCircle2,
+    AlertCircle,
+    Table2,
+    ClipboardCheck,
+    ArrowRight,
+    ArrowUp,
+    ArrowDown,
+    ArrowUpDown,
 } from 'lucide-react';
 import { DashboardSection } from '@/common/components/florida/DashboardSection';
 import { MetricItem } from '@/common/components/florida/MetricItem';
@@ -84,6 +99,10 @@ import {
     usePersistedMetricOverrides,
     type MetricOverride,
 } from '@/common/hooks/usePersistedMetricOverrides';
+import {
+    usePersistedSearchbaseDrilldowns,
+    type SearchbaseDrilldownMap,
+} from '@/common/hooks/usePersistedSearchbaseDrilldowns';
 import { usePersistedSectionTileCounts } from '@/common/hooks/usePersistedSectionTileCounts';
 import { usePersistedSectionTileOrder } from '@/common/hooks/usePersistedSectionTileOrder';
 import {
@@ -149,6 +168,55 @@ const splunkLocalePrefix = (): string => {
     if (typeof window === 'undefined') return '/en-US';
     const match = window.location.pathname.match(/^\/([a-z]{2}-[A-Z]{2})(?:\/|$)/);
     return `/${match ? match[1] : 'en-US'}`;
+};
+
+const MIN_DASHBOARD_HEIGHT_PX = 520;
+const COMPACT_HEIGHT_THRESHOLD_PX = 720;
+
+const useAvailableDashboardHeight = (): number | null => {
+    const [height, setHeight] = useState<number | null>(null);
+
+    useLayoutEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+
+        let animationFrame = 0;
+        let resizeObserver: ResizeObserver | null = null;
+
+        const measure = () => {
+            window.cancelAnimationFrame(animationFrame);
+            animationFrame = window.requestAnimationFrame(() => {
+                const mount = document.getElementById('scan-root');
+                const top = mount?.getBoundingClientRect().top ?? 0;
+                const next = Math.max(
+                    MIN_DASHBOARD_HEIGHT_PX,
+                    Math.floor(window.innerHeight - Math.max(top, 0))
+                );
+                setHeight((current) =>
+                    current !== null && Math.abs(current - next) < 2
+                        ? current
+                        : next
+                );
+            });
+        };
+
+        measure();
+        window.addEventListener('resize', measure);
+
+        if ('ResizeObserver' in window) {
+            resizeObserver = new ResizeObserver(measure);
+            resizeObserver.observe(document.body);
+            const mount = document.getElementById('scan-root');
+            if (mount?.parentElement) resizeObserver.observe(mount.parentElement);
+        }
+
+        return () => {
+            window.cancelAnimationFrame(animationFrame);
+            window.removeEventListener('resize', measure);
+            resizeObserver?.disconnect();
+        };
+    }, []);
+
+    return height;
 };
 
 // =============================================================================
@@ -408,18 +476,27 @@ const METRIC_CONFIG: MetricConfig[] = [
         id: 'threat_sources',
         section: 'security',
         label: 'Threat sources',
-        subLabel: 'Unique IPs blocked at firewall',
+        subLabel: 'Unique IPs blocked (with baseline)',
         description:
-            'Number of distinct external source IPs being denied by the firewall. ' +
-            'Climbing values usually indicate distributed scanning or a low-and-slow ' +
-            'campaign.',
-        // Promoted to a first-class searchbase stanza so the picker
-        // can offer it like the other 14 tiles and authors can tune
-        // viz_options + tags from the conf instead of editing this
-        // file. The underlying SPL still wraps the same Network_Traffic
-        // tstats, just resolved through searchbaseCatalogue.
-        savedSearch: 'Executive Dashboard - Threat Sources',
-        valueField: 'count',
+            'Distinct external source IPs blocked by the firewall over the ' +
+            'dispatched window. The headline is the window-wide distinct count — ' +
+            "same meaning as the original 'Threat Sources' single-value tile. " +
+            'The sparkline shows per-bucket distinct sources; the dashed line ' +
+            'is the rolling-average baseline so a sustained spike (i.e. ' +
+            'distributed scanning) stands out against normal background noise.',
+        // Bucketed timechart variant: { _time, sources, baseline, total_sources }.
+        // total_sources is broadcast (window-wide dc(src), the headline);
+        // sources is per-bucket (sparkline); baseline is window-avg
+        // (dashed overlay). Replaces the single-row Network_Traffic
+        // tstats binding, which was triggering useMetric's
+        // `isSingleRow` mock-spark fallback — the chart was synthesised
+        // RNG between sparkMin (5) and sparkMax (20), not real data.
+        // See SESSION_LOG Build 1209 for the full diagnosis.
+        savedSearch: 'Executive Dashboard - Threat Sources (with Baseline)',
+        valueField: 'total_sources',
+        sparkDataField: 'sources',
+        baselineField: 'baseline',
+        overlayLabel: 'Avg',
         // Resting/healthy color is neutral sky so the line doesn't pre-
         // tint as "alarming" when the count is fine. The status palette
         // in MetricItem flips the sparkline to amber/red when the tile
@@ -431,7 +508,8 @@ const METRIC_CONFIG: MetricConfig[] = [
             'Distinct *source* IPs, not block events. A single IP retrying 10,000 ' +
             'times still counts as one. > 100 distinct sources in a 24h window is ' +
             'the classic distributed-scan signature and warrants a look at the ' +
-            'firewall logs.',
+            'firewall logs. Compare against the baseline overlay before sounding ' +
+            'the alarm — sustained elevation matters more than a single hot bucket.',
         mock: { seed: 22, sparkMin: 5, sparkMax: 20, value: 18, change: -5 },
     },
     {
@@ -563,13 +641,24 @@ const METRIC_CONFIG: MetricConfig[] = [
         id: 'wifi_clients',
         section: 'building',
         label: 'Wi-Fi clients',
-        subLabel: 'Wireless clients on APs',
+        subLabel: 'Wireless clients on APs (with baseline)',
         description:
-            'Distinct Wi-Fi MAC addresses currently associated to access points, ' +
-            'taken from Cisco Spaces DEVICE_ASSOCIATION ASSOCIATE events.',
-        // Single row: { score }
+            'Distinct Wi-Fi MAC addresses that associated to access points across ' +
+            'the dispatched window, taken from Cisco Spaces DEVICE_ASSOCIATION ' +
+            'ASSOCIATE events. Headline is the window-wide distinct-MAC count ' +
+            "broadcast onto every row (so the executive number is stable and " +
+            "does not drift with the latest bucket's noise); sparkline is the " +
+            'per-bucket distinct count with a rolling-average baseline overlay.',
+        // Bucketed timechart: { _time, clients, baseline, total_clients, score }.
+        // score is broadcast (= total_clients, window-wide dc(mac), the
+        // headline); clients is per-bucket (sparkline); baseline is
+        // window-avg (dashed overlay). See searchbase stanza
+        // executive_dashboard_wifi_clients for the SPL.
         savedSearch: 'Executive Dashboard - Wifi Clients',
         valueField: 'score',
+        sparkDataField: 'clients',
+        baselineField: 'baseline',
+        overlayLabel: 'Avg',
         thresholdNote:
             'Trend metric — no fixed cutoff. Use this against the AP-capacity ' +
             'baseline for the campus: a sudden drop usually means an AP cluster ' +
@@ -797,9 +886,158 @@ const SECTION_META: Record<
     },
 };
 
+// Leave blank until a deployment wires a saved search returning
+// `_time, severity, source, message`. When blank, the incident ticker
+// stays hidden rather than showing customer-facing placeholder copy.
+const OVERVIEW_INCIDENT_TICKER_SAVED_SEARCH: string = '';
+
+interface AppPriorityDrilldown {
+    viewName: string;
+    title: string;
+    description: string;
+    timeToken?: string;
+}
+
+const PRIORITY_DRILLDOWN_LABEL = 'Priority Drill-Down';
+const PRIORITY_DRILLDOWN_CTA = 'Open dashboard';
+const PRIORITY_DRILLDOWN_STORAGE_KEY =
+    'splunk-cisco-dashboards.priorityDrilldown.v1';
+const DEFAULT_PRIORITY_DRILLDOWN_VIEW = 'statewide_exercise_v1';
+
+// App-local allow-list only. These are shipped views in this app, curated
+// from default/data/ui/nav/default.xml plus default/data/ui/views/*.xml.
+// Archive, overview, test, template, admin, and platform utility views are
+// intentionally excluded from the executive drill-down picker.
+const APP_PRIORITY_DRILLDOWNS: readonly AppPriorityDrilldown[] = [
+    {
+        viewName: 'statewide_exercise_v1',
+        title: 'Statewide Network Activation Report',
+        description: 'Client health, readiness, and activation signals across all sites.',
+        timeToken: 'time_tok',
+    },
+    {
+        viewName: 'it_health_v1',
+        title: 'IT Health',
+        description: 'Critical systems, network posture, device health, and compliance.',
+        timeToken: 'global_time',
+    },
+    {
+        viewName: 'security_v1',
+        title: 'Security Resilience',
+        description: 'Firewall, identity, XDR, IDS/IPS, DNS, and endpoint signals.',
+        timeToken: 'global_time',
+    },
+    {
+        viewName: 'building_v1',
+        title: 'Building Intelligence',
+        description: 'Cisco Spaces occupancy, wireless trust, and workplace telemetry.',
+        timeToken: 'global_time',
+    },
+    {
+        viewName: 'health_monitoring',
+        title: 'Health Monitoring',
+        description: 'Operational health monitoring for sites and infrastructure.',
+    },
+    {
+        viewName: 'netops_readiness_v1',
+        title: 'NetOps Readiness',
+        description: 'Readiness, site posture, and field-operation validation.',
+        timeToken: 'global_time',
+    },
+    {
+        viewName: 'spaces_intelligence_v1',
+        title: 'Spaces Intelligence',
+        description: 'Cisco Spaces intelligence for locations, devices, and activity.',
+        timeToken: 'global_time',
+    },
+    {
+        viewName: 'workplace_spog_v1',
+        title: 'Workplace Single Pane',
+        description: 'Unified workplace and collaboration operating view.',
+        timeToken: 'global_time',
+    },
+    {
+        viewName: 'asset_inventory_v1',
+        title: 'Asset Inventory',
+        description: 'Asset inventory across Cisco and Splunk-connected sources.',
+        timeToken: 'time_tok',
+    },
+    {
+        viewName: 'network_diagram',
+        title: 'Network Diagram',
+        description: 'Network diagram and topology-oriented operational context.',
+    },
+    {
+        viewName: 'topology_canvas_v1',
+        title: 'Topology Canvas',
+        description: 'Interactive network topology canvas for site and device context.',
+    },
+];
+
+const getPriorityDrilldown = (viewName: string): AppPriorityDrilldown =>
+    APP_PRIORITY_DRILLDOWNS.find((item) => item.viewName === viewName) ??
+    APP_PRIORITY_DRILLDOWNS[0];
+
+const readPriorityDrilldownView = (): string => {
+    if (typeof window === 'undefined' || !window.localStorage) {
+        return DEFAULT_PRIORITY_DRILLDOWN_VIEW;
+    }
+    try {
+        const raw = window.localStorage.getItem(PRIORITY_DRILLDOWN_STORAGE_KEY);
+        if (!raw) return DEFAULT_PRIORITY_DRILLDOWN_VIEW;
+        const parsed = JSON.parse(raw) as { viewName?: unknown };
+        const viewName = typeof parsed.viewName === 'string' ? parsed.viewName : '';
+        return getPriorityDrilldown(viewName).viewName;
+    } catch {
+        return DEFAULT_PRIORITY_DRILLDOWN_VIEW;
+    }
+};
+
+const writePriorityDrilldownView = (viewName: string): void => {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    try {
+        window.localStorage.setItem(
+            PRIORITY_DRILLDOWN_STORAGE_KEY,
+            JSON.stringify({ viewName })
+        );
+    } catch {
+        // Storage may be unavailable; the in-memory state still works
+        // for the current session.
+    }
+};
+
+const clearPriorityDrilldownView = (): void => {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    try {
+        window.localStorage.removeItem(PRIORITY_DRILLDOWN_STORAGE_KEY);
+    } catch {
+        // Storage unavailable; ignore.
+    }
+};
+
 // =============================================================================
 // Splunk Search drilldown URL builder
 // =============================================================================
+
+// Locale-aware URL builder for a sibling Splunk view inside this app
+// (e.g. statewide_exercise_v1). Mirrors splunkSearchAppUrl's locale
+// detection so the URL stays valid in non-en-US Splunk installs.
+const splunkViewAppUrl = (
+    viewName: string,
+    range?: TimeRange,
+    timeToken?: string
+): string => {
+    const path = typeof window !== 'undefined' ? window.location.pathname : '/en-US';
+    const localeMatch = path.match(/^\/([a-z]{2}-[A-Z]{2})\//);
+    const locale = localeMatch ? localeMatch[1] : 'en-US';
+    const baseUrl = `/${locale}/app/${APP_NAME}/${viewName}`;
+    if (!range || !timeToken) return baseUrl;
+
+    const params = new URLSearchParams();
+    params.set(`form.${timeToken}.earliest`, range.earliest);
+    params.set(`form.${timeToken}.latest`, range.latest);
+    return `${baseUrl}?${params.toString()}`;
+};
 
 const splunkSearchAppUrl = (spl: string, range: TimeRange): string => {
     // Open the stock Splunk search bar but *under this app's namespace*
@@ -820,6 +1058,198 @@ const splunkSearchAppUrl = (spl: string, range: TimeRange): string => {
     return `/${locale}/app/${APP_NAME}/search?${params.toString()}`;
 };
 
+type MetricDetailTableColumnKind = 'text' | 'status' | 'metric';
+
+interface MetricDetailTableColumn {
+    field: string;
+    label: string;
+    align?: 'left' | 'right';
+    kind?: MetricDetailTableColumnKind;
+    fallback?: string;
+    truncate?: boolean;
+}
+
+interface MetricDetailTableConfig {
+    title: string;
+    buttonTitle: string;
+    subtitle: (range: TimeRange) => string;
+    spl: string;
+    tag: string;
+    rowKeyField: string;
+    emptyMessage: string;
+    errorMessage: string;
+    statusField?: string;
+    availableStatus?: string;
+    unavailableStatus?: string;
+    columns: MetricDetailTableColumn[];
+}
+
+const DETAIL_TABLE_COLUMN_KINDS = new Set<MetricDetailTableColumnKind>([
+    'text',
+    'status',
+    'metric',
+]);
+
+const readDetailStringOption = (
+    options: Record<string, unknown> | undefined,
+    key: string
+): string | undefined => {
+    const raw = options?.[key];
+    if (typeof raw !== 'string') return undefined;
+    const trimmed = raw.trim();
+    return trimmed.length > 0 && trimmed.length <= 256 ? trimmed : undefined;
+};
+
+const parseDetailTableColumns = (
+    raw: unknown
+): MetricDetailTableColumn[] => {
+    if (!Array.isArray(raw)) return [];
+    const columns: MetricDetailTableColumn[] = [];
+    raw.forEach((item) => {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) return;
+        const candidate = item as Record<string, unknown>;
+        const field = typeof candidate.field === 'string' ? candidate.field.trim() : '';
+        const label =
+            typeof candidate.label === 'string' ? candidate.label.trim() : field;
+        if (!field || !label || field.length > 96 || label.length > 96) return;
+        const align =
+            candidate.align === 'right' || candidate.align === 'left'
+                ? candidate.align
+                : undefined;
+        const kind =
+            typeof candidate.kind === 'string' &&
+            DETAIL_TABLE_COLUMN_KINDS.has(candidate.kind as MetricDetailTableColumnKind)
+                ? (candidate.kind as MetricDetailTableColumnKind)
+                : undefined;
+        const fallback =
+            typeof candidate.fallback === 'string'
+                ? candidate.fallback.slice(0, 120)
+                : undefined;
+        columns.push({
+            field,
+            label,
+            align,
+            kind,
+            fallback,
+            truncate: candidate.truncate === true,
+        });
+    });
+    return columns.slice(0, 12);
+};
+
+const INFERRED_DETAIL_TABLE_SKIP_FIELDS = new Set([
+    '_raw',
+    '_serial',
+    '_si',
+    '_span',
+    'splunk_server',
+]);
+
+const humanizeDetailFieldLabel = (field: string): string =>
+    field
+        .replace(/^Test_Metrics\./, '')
+        .replace(/[_.]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+
+const isNumericLike = (value: unknown): boolean => {
+    if (typeof value === 'number') return Number.isFinite(value);
+    if (typeof value !== 'string') return false;
+    return /^-?\d+(?:\.\d+)?%?$/.test(value.trim());
+};
+
+const inferDetailTableColumns = (
+    rows: Array<Record<string, unknown>>
+): MetricDetailTableColumn[] => {
+    const fields: string[] = [];
+    const seen = new Set<string>();
+    for (const row of rows) {
+        for (const field of Object.keys(row)) {
+            if (seen.has(field)) continue;
+            if (INFERRED_DETAIL_TABLE_SKIP_FIELDS.has(field)) continue;
+            if (field.startsWith('_') && field !== '_time') continue;
+            seen.add(field);
+            fields.push(field);
+            if (fields.length >= 12) break;
+        }
+        if (fields.length >= 12) break;
+    }
+    return fields.map((field) => {
+        const sample = rows.find((row) => row[field] !== undefined)?.[field];
+        return {
+            field,
+            label: humanizeDetailFieldLabel(field),
+            align: isNumericLike(sample) ? 'right' : undefined,
+            truncate: field.length > 32,
+        };
+    });
+};
+
+const interpolateDetailSubtitle = (
+    template: string,
+    source: SearchbaseRecord,
+    detail: SearchbaseRecord,
+    range: TimeRange
+): string =>
+    template
+        .replace(/\{rangeLabel\}/g, range.label.toLowerCase())
+        .replace(/\{RangeLabel\}/g, range.label)
+        .replace(/\{searchName\}/g, source.searchName)
+        .replace(/\{drilldownSearchName\}/g, detail.searchName);
+
+const buildMetricDetailTableConfig = (
+    source: SearchbaseRecord | null,
+    searchbaseByName: Map<string, SearchbaseRecord> | null | undefined,
+    searchbaseDrilldowns: SearchbaseDrilldownMap
+): MetricDetailTableConfig | null => {
+    const userDrilldown =
+        source && Object.prototype.hasOwnProperty.call(searchbaseDrilldowns, source.searchName)
+            ? searchbaseDrilldowns[source.searchName]
+            : undefined;
+    const drilldownName =
+        userDrilldown === null
+            ? ''
+            : (userDrilldown ?? source?.drilldownSearchName)?.trim();
+    if (!source || !drilldownName || !searchbaseByName) return null;
+    const detail = searchbaseByName.get(drilldownName);
+    if (!detail?.search) return null;
+    const options = detail.vizOptions;
+    const columns = parseDetailTableColumns(options?.columns);
+    const subtitleTemplate =
+        readDetailStringOption(options, 'modalSubtitle') ??
+        'Detail table for {searchName} over {rangeLabel}.';
+    const tag = `detail_table_${detail.id || detail.searchName}`.replace(
+        /[^A-Za-z0-9_]+/g,
+        '_'
+    );
+    return {
+        title:
+            readDetailStringOption(options, 'modalTitle') ??
+            `${source.searchName} Details`,
+        buttonTitle:
+            source.drilldownButtonTitle ??
+            readDetailStringOption(options, 'buttonTitle') ??
+            `View ${source.searchName} detail table`,
+        subtitle: (range) =>
+            interpolateDetailSubtitle(subtitleTemplate, source, detail, range),
+        spl: detail.search,
+        tag,
+        rowKeyField:
+            readDetailStringOption(options, 'rowKeyField') ?? columns[0]?.field ?? '',
+        emptyMessage:
+            readDetailStringOption(options, 'emptyMessage') ??
+            'No detail rows returned for this time range.',
+        errorMessage:
+            readDetailStringOption(options, 'errorMessage') ??
+            `Unable to load ${detail.searchName}.`,
+        statusField: readDetailStringOption(options, 'statusField'),
+        availableStatus: readDetailStringOption(options, 'availableStatus'),
+        unavailableStatus: readDetailStringOption(options, 'unavailableStatus'),
+        columns,
+    };
+};
+
 // =============================================================================
 // Per-metric component (renders one MetricItem and reports its status up)
 // =============================================================================
@@ -835,12 +1265,16 @@ interface MetricCardProps {
      * overflow the card.
      */
     infoAnchor?: 'auto' | 'left' | 'right';
+    /** Tightens nonessential chart chrome when the available viewport is short. */
+    compactDensity?: boolean;
     /**
      * Optional override applied on top of the static config. When
      * present, the gear icon is rendered with a "modified" dot.
      */
     override?: MetricOverride;
     onConfigure: () => void;
+    onOpenDetailTable?: (config: MetricDetailTableConfig) => void;
+    searchbaseDrilldowns: SearchbaseDrilldownMap;
     /**
      * Lookup of `searchbase.conf` entries keyed by `search_name`.
      *
@@ -992,8 +1426,11 @@ const MetricCard: React.FC<MetricCardProps> = ({
     refreshToken,
     onStatus,
     infoAnchor = 'auto',
+    compactDensity = false,
     override,
     onConfigure,
+    onOpenDetailTable,
+    searchbaseDrilldowns,
     searchbaseByName,
 }) => {
     const effective = useMemo(() => applyOverride(cfg, override), [cfg, override]);
@@ -1037,6 +1474,20 @@ const MetricCard: React.FC<MetricCardProps> = ({
         return searchbaseByName.get(effective.savedSearch) ?? null;
     }, [effective.savedSearch, searchbaseByName]);
 
+    const detailTableConfig = useMemo(
+        () =>
+            buildMetricDetailTableConfig(
+                sbRecord,
+                searchbaseByName,
+                searchbaseDrilldowns
+            ),
+        [sbRecord, searchbaseByName, searchbaseDrilldowns]
+    );
+    const openDetailTable =
+        detailTableConfig && onOpenDetailTable
+            ? () => onOpenDetailTable(detailTableConfig)
+            : undefined;
+
     // Branch on viz type: tables and bar-breakdowns get wholly different
     // rendering paths (TableTile / BarBreakdownTile + useTableData) so we
     // never coerce categorical row distributions through the
@@ -1059,6 +1510,8 @@ const MetricCard: React.FC<MetricCardProps> = ({
                 refreshToken={refreshToken}
                 onStatus={onStatus}
                 onConfigure={onConfigure}
+                onOpenDetailTable={openDetailTable}
+                detailTableTitle={detailTableConfig?.buttonTitle}
                 infoAnchor={infoAnchor}
                 isCustomized={Boolean(override)}
             />
@@ -1087,12 +1540,15 @@ const MetricCard: React.FC<MetricCardProps> = ({
             refreshToken={refreshToken}
             onStatus={onStatus}
             onConfigure={onConfigure}
+            onOpenDetailTable={openDetailTable}
+            detailTableTitle={detailTableConfig?.buttonTitle}
             infoAnchor={infoAnchor}
             isCustomized={Boolean(override)}
             vizOverride={override?.vizOverride}
             hidePeak={override?.hidePeak}
             hideDelta={override?.hideDelta}
             hideOverlay={override?.hideOverlay}
+            compactDensity={compactDensity}
         />
     );
 };
@@ -1104,6 +1560,8 @@ interface CommonLeafProps {
     refreshToken: number;
     onStatus: (id: string, status: MetricStatus) => void;
     onConfigure: () => void;
+    onOpenDetailTable?: () => void;
+    detailTableTitle?: string;
     infoAnchor: 'auto' | 'left' | 'right';
     isCustomized: boolean;
 }
@@ -1139,6 +1597,7 @@ interface MetricCardLeafProps extends CommonLeafProps {
     hidePeak?: boolean;
     hideDelta?: boolean;
     hideOverlay?: boolean;
+    compactDensity?: boolean;
 }
 
 /**
@@ -1155,12 +1614,15 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
     refreshToken,
     onStatus,
     onConfigure,
+    onOpenDetailTable,
+    detailTableTitle,
     infoAnchor,
     isCustomized,
     vizOverride,
     hidePeak,
     hideDelta,
     hideOverlay,
+    compactDensity = false,
 }) => {
     /**
      * Tile viz variant. Resolution order (highest precedence first):
@@ -1306,10 +1768,18 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
             // supports) means we don't add a new prop — we just pin
             // the existing one regardless of what the searchbase
             // entry asked for.
-            dataValuesDisplay={hidePeak ? 'off' : dataValuesDisplay}
+            dataValuesDisplay={
+                hidePeak
+                    ? 'off'
+                    : compactDensity && dataValuesDisplay === 'minmax'
+                    ? 'maxonly'
+                    : dataValuesDisplay
+            }
             status={result.status}
             source={result.source}
             onOpenInSearch={drilldownSpl ? handleClick : undefined}
+            onOpenDetailTable={onOpenDetailTable}
+            detailTableTitle={detailTableTitle}
             onConfigure={onConfigure}
             isCustomized={isCustomized}
             sparkTitle={
@@ -1437,6 +1907,19 @@ const BarBreakdownCardLeaf: React.FC<CommonLeafProps> = ({
 const OverviewPage: React.FC = () => {
     // ------------------------------ Theme ------------------------------
     const { theme, resolvedTheme, cycle: cycleTheme } = useTheme();
+    const availableDashboardHeight = useAvailableDashboardHeight();
+    const compactDensity =
+        availableDashboardHeight !== null &&
+        availableDashboardHeight < COMPACT_HEIGHT_THRESHOLD_PX;
+    const dashboardShellStyle = useMemo<React.CSSProperties>(
+        () => ({
+            height:
+                availableDashboardHeight !== null
+                    ? `${availableDashboardHeight}px`
+                    : '100vh',
+        }),
+        [availableDashboardHeight]
+    );
 
     // ------------------------------ Branding ------------------------------
     //
@@ -1484,6 +1967,39 @@ const OverviewPage: React.FC = () => {
             TIME_RANGE_OPTIONS.find((o) => o.label === DEFAULT_TIME_RANGE_LABEL) ??
             TIME_RANGE_OPTIONS[1]
     );
+    const [selectedPriorityDrilldownView, setSelectedPriorityDrilldownView] =
+        useState<string>(readPriorityDrilldownView);
+    const configuredIncidentTickerSearch = OVERVIEW_INCIDENT_TICKER_SAVED_SEARCH.trim();
+    const selectedPriorityDrilldown = useMemo(
+        () => getPriorityDrilldown(selectedPriorityDrilldownView),
+        [selectedPriorityDrilldownView]
+    );
+    const featuredDrilldownHref = useMemo(
+        () =>
+            splunkViewAppUrl(
+                selectedPriorityDrilldown.viewName,
+                timeRange,
+                selectedPriorityDrilldown.timeToken
+            ),
+        [selectedPriorityDrilldown, timeRange]
+    );
+    const handlePriorityDrilldownChange = useCallback(
+        (viewName: string) => {
+            const next = getPriorityDrilldown(viewName);
+            setSelectedPriorityDrilldownView(next.viewName);
+            writePriorityDrilldownView(next.viewName);
+        },
+        []
+    );
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+        const onStorage = (e: StorageEvent) => {
+            if (e.key !== PRIORITY_DRILLDOWN_STORAGE_KEY) return;
+            setSelectedPriorityDrilldownView(readPriorityDrilldownView());
+        };
+        window.addEventListener('storage', onStorage);
+        return () => window.removeEventListener('storage', onStorage);
+    }, []);
     const [autoRefreshSeconds, setAutoRefreshSeconds] = useState<number>(0);
     const [refreshToken, setRefreshToken] = useState<number>(0);
     const [lastRefreshed, setLastRefreshed] = useState<Date>(() => new Date());
@@ -1636,6 +2152,9 @@ const OverviewPage: React.FC = () => {
     const [searchbaseByName, setSearchbaseByName] = useState<
         Map<string, SearchbaseRecord> | null
     >(null);
+    // `getSearchbaseCatalogue()` omits stanzas with `search_hidden = 1`
+    // (and `disabled = 1`) so the KPI picker, topology browsers, and
+    // tile dispatch never surface hidden catalogue entries on Overview.
     useEffect(() => {
         let cancelled = false;
         getSearchbaseCatalogue()
@@ -1987,7 +2506,15 @@ const OverviewPage: React.FC = () => {
         resetAll: resetAllOverrides,
         overrideCount,
     } = usePersistedMetricOverrides();
+    const {
+        drilldowns: searchbaseDrilldowns,
+        setDrilldown: setSearchbaseDrilldown,
+        clearDrilldown: clearSearchbaseDrilldown,
+        resetAll: resetAllSearchbaseDrilldowns,
+    } = usePersistedSearchbaseDrilldowns();
     const [pickerContext, setPickerContext] = useState<KpiPickerContext | null>(null);
+    const [activeDetailTable, setActiveDetailTable] =
+        useState<MetricDetailTableConfig | null>(null);
 
     // Bump this counter to force a fresh mount of <CustomerTopologyMap>.
     // localStorage `storage` events only fire across tabs, so wiping
@@ -2122,6 +2649,20 @@ const OverviewPage: React.FC = () => {
         [setOverride]
     );
 
+    const handleSearchbaseDrilldownApply = useCallback(
+        (sourceSearchName: string, drilldownSearchName: string | null) => {
+            const source = searchbaseByName?.get(sourceSearchName);
+            const defaultName = source?.drilldownSearchName?.trim() ?? '';
+            const nextName = drilldownSearchName?.trim() ?? '';
+            if (nextName === defaultName || (!nextName && !defaultName)) {
+                clearSearchbaseDrilldown(sourceSearchName);
+                return;
+            }
+            setSearchbaseDrilldown(sourceSearchName, nextName || null);
+        },
+        [clearSearchbaseDrilldown, searchbaseByName, setSearchbaseDrilldown]
+    );
+
     /**
      * Section-level "Apply these Display settings to all tiles in
      * this section" handler (Build 1203, from Atef's "global vs
@@ -2196,11 +2737,13 @@ const OverviewPage: React.FC = () => {
     //
     // What gets reset (and the localStorage key cleared):
     //   • metricOverrides.v1            — per-tile picker bindings
+    //   • searchbaseDrilldowns.v1       — picker-wired drilldown bindings
     //   • sectionTileCounts.v1          — visible tile count per section
     //   • sectionTileOrder.v1           — drag-to-reorder preference
     //   • customerTopology.v4           — Florida map customisations
     //   • scd_overview_split_pct        — tiles ↔ map splitter position
     //   • scd_overview_map_pos          — map position (right / below / above)
+    //   • priorityDrilldown.v1          — pinned app-local drill-down target
     //
     // What is intentionally NOT reset:
     //   • header branding (title / subtitle / logo) — identity, not
@@ -2214,12 +2757,15 @@ const OverviewPage: React.FC = () => {
     // through to the canonical CUSTOMER_TOPOLOGY factory.
     const handleResetAllCustomizations = useCallback(() => {
         resetAllOverrides();
+        resetAllSearchbaseDrilldowns();
         resetAllSectionTileCounts();
         resetAllSectionTileOrder();
         clearCustomerTopologyStorage();
         setTopologyResetKey((n) => n + 1);
         setLeftPct(SPLIT_DEFAULT);
         setMapPosition(MAP_POS_DEFAULT);
+        setSelectedPriorityDrilldownView(DEFAULT_PRIORITY_DRILLDOWN_VIEW);
+        clearPriorityDrilldownView();
         if (typeof window !== 'undefined' && window.localStorage) {
             try {
                 window.localStorage.removeItem(SPLIT_KEY);
@@ -2233,6 +2779,7 @@ const OverviewPage: React.FC = () => {
         setPickerContext(null);
     }, [
         resetAllOverrides,
+        resetAllSearchbaseDrilldowns,
         resetAllSectionTileCounts,
         resetAllSectionTileOrder,
         SPLIT_KEY,
@@ -2513,7 +3060,7 @@ const OverviewPage: React.FC = () => {
     // ------------------------------ Render ------------------------------
     const inputClass =
         'text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 border border-slate-200 ' +
-        'dark:border-slate-700 rounded-md px-2 py-1 text-slate-700 dark:text-slate-200 ' +
+        'dark:border-slate-700 rounded-md m-0 h-8 px-2 py-0 text-slate-700 dark:text-slate-200 ' +
         'hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 ' +
         'focus:ring-sky-500 cursor-pointer';
     const iconBtnClass =
@@ -2523,8 +3070,10 @@ const OverviewPage: React.FC = () => {
     return (
         <div
             ref={exportRef}
+            style={dashboardShellStyle}
             className={cn(
-                'h-screen flex flex-col font-sans overflow-hidden',
+                'scd-overview-page flex flex-col font-sans overflow-hidden',
+                compactDensity && 'scd-overview-compact',
                 'bg-slate-50 text-slate-900',
                 'dark:bg-slate-950 dark:text-slate-100',
                 resolvedTheme === 'dark' && 'dark'
@@ -2590,7 +3139,7 @@ const OverviewPage: React.FC = () => {
 
                 <div className="flex items-center gap-2.5 flex-shrink-0">
                     <HealthBadge statuses={statusList} />
-                    <label className="flex items-center gap-1.5">
+                    <label className="m-0 flex h-8 items-center gap-1.5">
                         <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest hidden lg:inline">
                             Range
                         </span>
@@ -2612,7 +3161,7 @@ const OverviewPage: React.FC = () => {
                             ))}
                         </select>
                     </label>
-                    <label className="flex items-center gap-1.5">
+                    <label className="m-0 flex h-8 items-center gap-1.5">
                         <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest hidden lg:inline">
                             Auto
                         </span>
@@ -2748,8 +3297,84 @@ const OverviewPage: React.FC = () => {
                 </div>
             </header>
 
-            {/* Mini incident ticker */}
-            <IncidentTicker range={timeRange} refreshToken={refreshToken} />
+            {/* Mini incident ticker: hidden until a saved search is configured. */}
+            {configuredIncidentTickerSearch ? (
+                <IncidentTicker
+                    savedSearch={configuredIncidentTickerSearch}
+                    range={timeRange}
+                    refreshToken={refreshToken}
+                />
+            ) : null}
+
+            {/* Customer-pinned, app-local drill-down. Keep this to one
+                primary path so the executive overview has a decisive
+                next step without becoming another navigation menu. */}
+            <div
+                data-testid="priority-drilldown-row"
+                className="group flex-shrink-0 relative block border-b border-sky-200 dark:border-sky-800/60 bg-white hover:bg-sky-50/80 dark:bg-slate-900 dark:hover:bg-sky-950/30 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-inset"
+            >
+                <div
+                    aria-hidden="true"
+                    className="absolute left-0 top-0 bottom-0 w-1 bg-sky-600 dark:bg-sky-500"
+                />
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 pl-5 pr-4 py-2">
+                    <a
+                        href={featuredDrilldownHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={`Open ${selectedPriorityDrilldown.title} in a new tab`}
+                        aria-label={`Open ${selectedPriorityDrilldown.title} in a new tab`}
+                        className="min-w-0 h-7 flex items-center gap-3 rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+                    >
+                        <div className="flex-shrink-0 w-7 h-7 rounded bg-sky-600 text-white flex items-center justify-center shadow-sm">
+                            <ClipboardCheck className="w-4 h-4 stroke-[2.5px]" />
+                        </div>
+                        <span className="text-[9px] font-black text-sky-700 dark:text-sky-300 uppercase tracking-[0.25em] whitespace-nowrap flex-shrink-0 hidden sm:inline w-[172px]">
+                            {PRIORITY_DRILLDOWN_LABEL}
+                        </span>
+                        <span className="text-[13px] font-bold text-slate-900 dark:text-slate-100 truncate min-w-0">
+                            {selectedPriorityDrilldown.title}
+                        </span>
+                        <span className="text-[11px] text-slate-600 dark:text-slate-400 truncate min-w-0 hidden lg:inline">
+                            {selectedPriorityDrilldown.description}
+                        </span>
+                    </a>
+                    <div className="flex items-center justify-end gap-2">
+                        <label className="hidden md:flex flex-shrink-0 items-center gap-1.5 h-7 !mb-0">
+                            <span className="sr-only">Priority drill-down dashboard</span>
+                            <Settings2
+                                className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500"
+                                aria-hidden="true"
+                            />
+                            <select
+                                value={selectedPriorityDrilldown.viewName}
+                                onChange={(e) => handlePriorityDrilldownChange(e.target.value)}
+                                title="Choose priority drill-down dashboard"
+                                aria-label="Choose priority drill-down dashboard"
+                                className="h-7 !mb-0 w-[220px] max-w-[22vw] rounded-md border border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 px-2 py-0 text-[11px] leading-none font-semibold text-slate-700 dark:text-slate-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
+                            >
+                                {APP_PRIORITY_DRILLDOWNS.map((item) => (
+                                    <option key={item.viewName} value={item.viewName}>
+                                        {item.title}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                        <a
+                            href={featuredDrilldownHref}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={`Open ${selectedPriorityDrilldown.title} in a new tab`}
+                            aria-label={`Open ${selectedPriorityDrilldown.title} in a new tab`}
+                            data-testid="featured-report-cta"
+                            className="h-7 flex-shrink-0 inline-flex items-center gap-1.5 px-3 rounded bg-sky-600 group-hover:bg-sky-500 active:bg-sky-700 text-white text-[11px] font-bold tracking-wide uppercase shadow-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+                        >
+                            {PRIORITY_DRILLDOWN_CTA}
+                            <ArrowRight className="w-3.5 h-3.5 stroke-[2.5px]" />
+                        </a>
+                    </div>
+                </div>
+            </div>
 
             {/* Edge-to-edge layout: no `max-w` clamp and only a thin
                 horizontal gutter. The previous `max-w-[1600px] mx-auto`
@@ -2760,12 +3385,20 @@ const OverviewPage: React.FC = () => {
                 cards from touching the chrome border) and the splitter
                 drives column widths from there.
                 
-                Below xl (<1280px) the layout collapses to a single
-                stacked column so the splitter never strands the map
-                or tiles in a slim phone-sized strip. */}
-            <main className="flex-1 min-h-0 px-1.5 py-2 w-full overflow-hidden">
+                Below ~1120px the layout collapses to a single stacked
+                column so the splitter never strands the map or tiles in
+                a slim phone-sized strip. The exact breakpoint lives in
+                tailwind.css because it sits between Tailwind's stock lg
+                and xl stops. */}
+            <main
+                className={cn(
+                    'flex-1 min-h-0 w-full overflow-hidden',
+                    compactDensity ? 'px-1 py-1.5' : 'px-1.5 py-2'
+                )}
+            >
                 <div
                     ref={splitContainerRef}
+                    data-map-position={mapPosition}
                     className={cn(
                         // Map placement is now operator-configurable. Three
                         // modes are wired to the segmented control in the
@@ -2783,7 +3416,7 @@ const OverviewPage: React.FC = () => {
                         //              than rearranging the JSX so the
                         //              splitter logic stays attached to
                         //              its sibling.
-                        'flex gap-2 h-full min-h-0 relative',
+                        'scd-overview-split flex gap-2 h-full min-h-0 relative',
                         mapPosition === 'right'
                             ? 'flex-col xl:flex-row'
                             : mapPosition === 'above'
@@ -2824,11 +3457,12 @@ const OverviewPage: React.FC = () => {
                         // scrollbar from showing up due to the cards'
                         // shadow bleed at narrow widths.
                         className={cn(
-                            'flex flex-col gap-2 min-h-0 min-w-0 w-full overflow-y-auto overflow-x-hidden',
+                            'scd-overview-metrics flex flex-col gap-2 min-h-0 min-w-0 w-full overflow-y-auto overflow-x-hidden',
                             mapPosition === 'right'
                                 ? 'xl:w-[var(--scd-left-pct)] xl:flex-shrink-0'
                                 : ''
                         )}
+                        data-map-position={mapPosition}
                         style={
                             isVerticalSplit
                                 ? {
@@ -2935,7 +3569,10 @@ const OverviewPage: React.FC = () => {
                                     // same model Splunk Dashboard
                                     // Studio uses for fixed-height
                                     // grid tiles.
-                                    className="flex-1 min-h-[180px]"
+                                    className={cn(
+                                        'flex-1',
+                                        compactDensity ? 'min-h-[174px]' : 'min-h-[180px]'
+                                    )}
                                     tileCount={{
                                         value: visibleCount,
                                         min: sectionTileBounds.minCount,
@@ -2978,6 +3615,13 @@ const OverviewPage: React.FC = () => {
                                                             }
                                                             override={overrides[cfg.id]}
                                                             searchbaseByName={searchbaseByName}
+                                                            searchbaseDrilldowns={
+                                                                searchbaseDrilldowns
+                                                            }
+                                                            compactDensity={compactDensity}
+                                                            onOpenDetailTable={
+                                                                setActiveDetailTable
+                                                            }
                                                             onConfigure={() =>
                                                                 openPicker(cfg.id, cfg.label, {
                                                                     savedSearch: cfg.savedSearch,
@@ -3025,7 +3669,7 @@ const OverviewPage: React.FC = () => {
                         onKeyDown={onSplitterKeyDown}
                         onDoubleClick={resetSplit}
                         className={cn(
-                            'flex flex-shrink-0 items-center justify-center group relative',
+                            'scd-overview-splitter flex flex-shrink-0 items-center justify-center group relative',
                             'rounded-full transition-colors',
                             'focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
                             // Right mode hides the splitter on sub-xl
@@ -3041,6 +3685,7 @@ const OverviewPage: React.FC = () => {
                                 ? 'bg-sky-500'
                                 : 'bg-slate-200 dark:bg-slate-700 hover:bg-sky-400 dark:hover:bg-sky-500'
                         )}
+                        data-map-position={mapPosition}
                     >
                         {/* Visible grip dots — three subtle dashes,
                             oriented perpendicular to the drag axis so
@@ -3087,9 +3732,10 @@ const OverviewPage: React.FC = () => {
                         share. */}
                     <div
                         className={cn(
-                            'flex flex-col min-h-0 min-w-0 w-full',
+                            'scd-overview-map flex flex-col min-h-0 min-w-0 w-full',
                             mapPosition === 'right' ? 'xl:flex-1' : 'flex-1'
                         )}
+                        data-map-position={mapPosition}
                     >
                         <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-3 shadow-sm flex flex-col">
                             <div className="flex items-center justify-between mb-2 flex-shrink-0">
@@ -3225,8 +3871,7 @@ const OverviewPage: React.FC = () => {
             </main>
 
             <footer className="flex-shrink-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-1 text-center text-[8.5px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] leading-none">
-                Splunk Adaptive Operations · Secure Executive Environment ©{' '}
-                {lastRefreshed.getFullYear()}
+                Splunk Field Solutions - Executive Insights
             </footer>
 
             <HelpOverlay
@@ -3244,6 +3889,8 @@ const OverviewPage: React.FC = () => {
                 onClose={closePicker}
                 onApply={handlePickerApply}
                 onApplyDisplayToSection={handleApplyDisplayToSection}
+                drilldownBindings={searchbaseDrilldowns}
+                onSetSearchDrilldown={handleSearchbaseDrilldownApply}
                 onClearOverride={(tileId) => {
                     clearOverride(tileId);
                     closePicker();
@@ -3264,6 +3911,15 @@ const OverviewPage: React.FC = () => {
                 }}
                 onResetAllCustomizations={handleResetAllCustomizations}
             />
+
+            {activeDetailTable && (
+                <MetricDetailTableModal
+                    config={activeDetailTable}
+                    onClose={() => setActiveDetailTable(null)}
+                    range={timeRange}
+                    refreshToken={refreshToken}
+                />
+            )}
 
             <BrandingEditorModal
                 isOpen={isBrandingEditorOpen}
@@ -3361,6 +4017,466 @@ const RegionalViewToggle: React.FC<RegionalViewToggleProps> = ({ value, onChange
             >
                 TABLE
             </button>
+        </div>
+    );
+};
+
+// =============================================================================
+// Metric detail-table modal
+// =============================================================================
+
+interface MetricDetailTableModalProps {
+    config: MetricDetailTableConfig;
+    onClose: () => void;
+    range: TimeRange;
+    refreshToken: number;
+}
+
+type MetricDetailSortDirection = 'asc' | 'desc';
+
+interface MetricDetailSortState {
+    field: string;
+    direction: MetricDetailSortDirection;
+}
+
+const readRowString = (
+    row: Record<string, unknown>,
+    field: string,
+    fallback = ''
+): string => {
+    const raw = row[field];
+    if (raw === null || raw === undefined) return fallback;
+    if (Array.isArray(raw)) return raw.map(String).join(', ');
+    const text = String(raw).trim();
+    if (text.toLowerCase() === 'null') return fallback;
+    return text || fallback;
+};
+
+const EMPTY_SORT_VALUES = new Set([
+    '',
+    '-',
+    'n/a',
+    'na',
+    'none',
+    'null',
+    'undefined',
+    'no current sample',
+]);
+
+const DURATION_UNIT_TO_MS: Record<string, number> = {
+    ms: 1,
+    millisecond: 1,
+    milliseconds: 1,
+    s: 1000,
+    sec: 1000,
+    secs: 1000,
+    second: 1000,
+    seconds: 1000,
+    m: 60_000,
+    min: 60_000,
+    mins: 60_000,
+    minute: 60_000,
+    minutes: 60_000,
+    h: 3_600_000,
+    hr: 3_600_000,
+    hrs: 3_600_000,
+    hour: 3_600_000,
+    hours: 3_600_000,
+    d: 86_400_000,
+    day: 86_400_000,
+    days: 86_400_000,
+};
+
+const isEmptySortValue = (value: string): boolean =>
+    EMPTY_SORT_VALUES.has(value.trim().toLowerCase());
+
+const parseSortableDetailNumber = (value: string): number | null => {
+    const normalized = value.trim().toLowerCase().replace(/,/g, '');
+    if (!normalized || isEmptySortValue(normalized)) return null;
+
+    if (/^[+-]?(?:\d+(?:\.\d+)?|\.\d+)\s*%?$/.test(normalized)) {
+        return Number.parseFloat(normalized);
+    }
+
+    const durationMatch = normalized.match(
+        /^([+-]?(?:\d+(?:\.\d+)?|\.\d+))\s*([a-z]+)(?:\s+ago)?$/
+    );
+    if (durationMatch) {
+        const unit = durationMatch[2];
+        const multiplier = DURATION_UNIT_TO_MS[unit];
+        if (multiplier !== undefined) {
+            return Number.parseFloat(durationMatch[1]) * multiplier;
+        }
+    }
+
+    return null;
+};
+
+const compareDetailCellValues = (
+    a: string,
+    b: string,
+    direction: MetricDetailSortDirection
+): number => {
+    const aEmpty = isEmptySortValue(a);
+    const bEmpty = isEmptySortValue(b);
+    if (aEmpty && bEmpty) return 0;
+    if (aEmpty) return 1;
+    if (bEmpty) return -1;
+
+    const aNumber = parseSortableDetailNumber(a);
+    const bNumber = parseSortableDetailNumber(b);
+    const base =
+        aNumber !== null && bNumber !== null
+            ? aNumber - bNumber
+            : a.localeCompare(b, undefined, {
+                  numeric: true,
+                  sensitivity: 'base',
+              });
+    return direction === 'asc' ? base : -base;
+};
+
+const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
+    config,
+    onClose,
+    range,
+    refreshToken,
+}) => {
+    const [rows, setRows] = useState<Array<Record<string, string>>>([]);
+    const [tableColumns, setTableColumns] =
+        useState<MetricDetailTableColumn[]>(config.columns);
+    const [loading, setLoading] = useState<boolean>(false);
+    const [errorMessage, setErrorMessage] = useState<string>('');
+    const [sortState, setSortState] = useState<MetricDetailSortState | null>(null);
+
+    useEffect(() => {
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [onClose]);
+
+    useEffect(() => {
+        let cancelled = false;
+        setLoading(true);
+        setRows([]);
+        setTableColumns(config.columns);
+        setErrorMessage('');
+
+        runSearch({
+            spl: config.spl,
+            earliestTime: range.earliest,
+            latestTime: range.latest,
+            tag: config.tag,
+        })
+            .then((res) => {
+                if (cancelled) return;
+                const rawRows = (res?.results ?? []) as Array<
+                    Record<string, unknown>
+                >;
+                const columns =
+                    config.columns.length > 0
+                        ? config.columns
+                        : inferDetailTableColumns(rawRows);
+                const nextRows = rawRows.map((row) => {
+                    const detailRow: Record<string, string> = {};
+                    columns.forEach((column) => {
+                        detailRow[column.field] = readRowString(
+                            row,
+                            column.field,
+                            column.fallback ?? ''
+                        );
+                    });
+                    return detailRow;
+                });
+                setTableColumns(columns);
+                setRows(nextRows);
+            })
+            .catch(() => {
+                if (!cancelled) {
+                    setRows([]);
+                    setTableColumns(config.columns);
+                    setErrorMessage(config.errorMessage);
+                }
+            })
+            .finally(() => {
+                if (!cancelled) setLoading(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [config, range.earliest, range.latest, refreshToken]);
+
+    const availableStatus = config.availableStatus ?? 'Available';
+    const unavailableStatus = config.unavailableStatus ?? 'Unavailable';
+    const titleId = `${config.tag}-title`;
+    const statusField = config.statusField;
+    const displayColumns = tableColumns.length > 0 ? tableColumns : config.columns;
+    const columnCount = Math.max(displayColumns.length, 1);
+    const sortedRows = useMemo(() => {
+        if (!sortState) return rows;
+        const columnExists = displayColumns.some(
+            (column) => column.field === sortState.field
+        );
+        if (!columnExists) return rows;
+        return rows
+            .map((row, index) => ({ row, index }))
+            .sort((a, b) => {
+                const result = compareDetailCellValues(
+                    a.row[sortState.field] ?? '',
+                    b.row[sortState.field] ?? '',
+                    sortState.direction
+                );
+                return result || a.index - b.index;
+            })
+            .map(({ row }) => row);
+    }, [displayColumns, rows, sortState]);
+    const handleSortColumn = (field: string) => {
+        setSortState((current) => {
+            if (current?.field === field) {
+                return {
+                    field,
+                    direction: current.direction === 'asc' ? 'desc' : 'asc',
+                };
+            }
+            return { field, direction: 'asc' };
+        });
+    };
+    const availableCount = statusField
+        ? rows.filter((row) => row[statusField] === availableStatus).length
+        : 0;
+    const unavailableCount = statusField ? rows.length - availableCount : 0;
+    const searchUrl = splunkSearchAppUrl(config.spl, range);
+
+    return (
+        <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            className="fixed inset-0 z-[1700] flex items-center justify-center p-4"
+            onClick={(e) => {
+                if (e.target === e.currentTarget) onClose();
+            }}
+        >
+            <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm" />
+            <div className="relative w-full max-w-6xl max-h-[88vh] overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 shadow-2xl">
+                <div className="flex items-start justify-between gap-4 px-5 py-4 border-b border-slate-200 dark:border-slate-800">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <Table2 className="w-4 h-4 text-sky-600 dark:text-sky-300" />
+                            <h2
+                                id={titleId}
+                                className="text-base font-bold text-slate-900 dark:text-slate-100"
+                            >
+                                {config.title}
+                            </h2>
+                        </div>
+                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                            {config.subtitle(range)}
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        {statusField && (
+                            <div className="hidden sm:flex items-center gap-2 text-xs font-semibold">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 px-2 py-1 text-emerald-700 dark:text-emerald-300">
+                                    <CheckCircle2 className="w-3 h-3" />
+                                    {availableCount} available
+                                </span>
+                                <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 dark:bg-rose-950/50 px-2 py-1 text-rose-700 dark:text-rose-300">
+                                    <AlertCircle className="w-3 h-3" />
+                                    {unavailableCount} unavailable
+                                </span>
+                            </div>
+                        )}
+                        <a
+                            href={searchUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={`Open ${config.title} in Search`}
+                            aria-label={`Open ${config.title} in Search`}
+                            className="inline-flex items-center gap-1.5 rounded border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-sky-700 dark:hover:text-sky-200 hover:border-sky-300 dark:hover:border-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/40 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400"
+                        >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            <span>Open in Search</span>
+                        </a>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            title="Close"
+                            aria-label={`Close ${config.title}`}
+                            className="p-1.5 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
+
+                <div className="overflow-auto max-h-[calc(88vh-90px)]">
+                    <table className="w-full min-w-[860px] text-sm">
+                        <thead className="sticky top-0 z-10 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
+                            <tr className="text-left text-xs font-bold text-slate-500 dark:text-slate-400">
+                                {displayColumns.map((column, index) => {
+                                    const isSorted = sortState?.field === column.field;
+                                    const SortIcon = isSorted
+                                        ? sortState.direction === 'asc'
+                                            ? ArrowUp
+                                            : ArrowDown
+                                        : ArrowUpDown;
+                                    return (
+                                        <th
+                                            key={column.field}
+                                            scope="col"
+                                            aria-sort={
+                                                isSorted
+                                                    ? sortState.direction === 'asc'
+                                                        ? 'ascending'
+                                                        : 'descending'
+                                                    : 'none'
+                                            }
+                                            className={cn(
+                                                index === 0 ? 'px-5' : 'px-4',
+                                                'py-3',
+                                                column.align === 'right' && 'text-right'
+                                            )}
+                                        >
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    handleSortColumn(column.field)
+                                                }
+                                                title={`Sort by ${column.label}`}
+                                                className={cn(
+                                                    'group inline-flex w-full items-center gap-1.5 rounded px-1 py-0.5 -mx-1 text-left transition-colors hover:text-sky-600 dark:hover:text-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-400',
+                                                    column.align === 'right'
+                                                        ? 'justify-end'
+                                                        : 'justify-start',
+                                                    isSorted &&
+                                                        'text-sky-600 dark:text-sky-300'
+                                                )}
+                                            >
+                                                <span>{column.label}</span>
+                                                <SortIcon
+                                                    className={cn(
+                                                        'h-3 w-3 flex-shrink-0',
+                                                        isSorted
+                                                            ? 'opacity-100'
+                                                            : 'opacity-35 group-hover:opacity-80'
+                                                    )}
+                                                    aria-hidden="true"
+                                                />
+                                            </button>
+                                        </th>
+                                    );
+                                })}
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                            {loading ? (
+                                <tr>
+                                    <td
+                                        colSpan={columnCount}
+                                        className="px-5 py-10 text-center text-sm text-slate-500 dark:text-slate-400"
+                                    >
+                                        Loading {config.title.toLowerCase()}...
+                                    </td>
+                                </tr>
+                            ) : errorMessage ? (
+                                <tr>
+                                    <td
+                                        colSpan={columnCount}
+                                        className="px-5 py-10 text-center text-sm text-rose-600 dark:text-rose-300"
+                                    >
+                                        {errorMessage}
+                                    </td>
+                                </tr>
+                            ) : rows.length === 0 ? (
+                                <tr>
+                                    <td
+                                        colSpan={columnCount}
+                                        className="px-5 py-10 text-center text-sm text-slate-500 dark:text-slate-400"
+                                    >
+                                        {config.emptyMessage}
+                                    </td>
+                                </tr>
+                            ) : (
+                                sortedRows.map((row, rowIndex) => {
+                                    const rowStatus = statusField
+                                        ? row[statusField]
+                                        : '';
+                                    const rowIsAvailable =
+                                        rowStatus === availableStatus;
+                                    const rowKey =
+                                        (config.rowKeyField &&
+                                            row[config.rowKeyField]) ||
+                                        displayColumns
+                                            .map((column) => row[column.field])
+                                            .join('|') ||
+                                        'detail-row';
+                                    return (
+                                        <tr
+                                            key={`${rowKey}-${rowIndex}`}
+                                            className="hover:bg-slate-50 dark:hover:bg-slate-900/70 transition-colors"
+                                        >
+                                            {displayColumns.map((column, index) => {
+                                                const value = row[column.field];
+                                                const isStatusColumn =
+                                                    column.kind === 'status';
+                                                const statusIsAvailable =
+                                                    value === availableStatus;
+                                                const statusIsUnavailable =
+                                                    value === unavailableStatus;
+                                                return (
+                                                    <td
+                                                        key={column.field}
+                                                        className={cn(
+                                                            index === 0
+                                                                ? 'px-5 font-medium text-slate-900 dark:text-slate-100'
+                                                                : 'px-4 text-slate-600 dark:text-slate-300',
+                                                            'py-3',
+                                                            column.align === 'right' &&
+                                                                'text-right tabular-nums',
+                                                            column.truncate &&
+                                                                'max-w-xs truncate',
+                                                            column.kind === 'metric' &&
+                                                                statusField &&
+                                                                (rowIsAvailable
+                                                                    ? 'font-medium text-emerald-600 dark:text-emerald-300'
+                                                                    : 'font-medium text-rose-600 dark:text-rose-300')
+                                                        )}
+                                                    >
+                                                        {isStatusColumn ? (
+                                                            <span
+                                                                className={cn(
+                                                                    'inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-bold',
+                                                                    statusIsAvailable
+                                                                        ? 'bg-emerald-600 text-white'
+                                                                        : statusIsUnavailable
+                                                                          ? 'bg-rose-600 text-white'
+                                                                          : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
+                                                                )}
+                                                            >
+                                                                {statusIsAvailable ? (
+                                                                    <CheckCircle2 className="w-3 h-3" />
+                                                                ) : (
+                                                                    <AlertCircle className="w-3 h-3" />
+                                                                )}
+                                                                {value}
+                                                            </span>
+                                                        ) : (
+                                                            value
+                                                        )}
+                                                    </td>
+                                                );
+                                            })}
+                                        </tr>
+                                    );
+                                })
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     );
 };

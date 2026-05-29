@@ -38,7 +38,7 @@ export const DiagramPalette: React.FC<{ className?: string }> = ({ className }) 
     return (
         <div
             className={cn(
-                'flex flex-col w-72 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900',
+                'flex h-full min-h-0 w-72 flex-col overflow-hidden border-r border-slate-200 bg-white [contain:layout_paint] dark:border-slate-800 dark:bg-slate-900',
                 className
             )}
         >
@@ -76,7 +76,7 @@ export const DiagramPalette: React.FC<{ className?: string }> = ({ className }) 
              *  Servers & Infrastructure was clipped because the
              *  wrapper hid the overflow and `ShapesTab` itself
              *  had no scroll viewport of its own. */}
-            <div className="flex-1 min-h-0 overflow-y-auto">
+            <div className="flex-1 min-h-0 overflow-y-auto [contain:layout_paint]">
                 {active === 'shapes' ? <ShapesTab /> : <InventoryTab />}
             </div>
         </div>

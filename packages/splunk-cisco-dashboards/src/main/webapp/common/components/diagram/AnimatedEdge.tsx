@@ -42,9 +42,10 @@
  *     `<animateMotion>`'s `<mpath href>` reference. RF's
  *     `BaseEdge` doesn't expose its inner path id, so wrapping it
  *     would force us to re-derive geometry ourselves anyway.
- *   • `markerStart` / `markerEnd` come in as already-resolved
- *     marker URL strings (e.g. `url(#1__type=arrowclosed&...)`),
- *     so we attach them directly as SVG attributes on the path.
+ *   • Arrowheads are rendered directly in this component instead
+ *     of using React Flow markers. That keeps the tip colour
+ *     bound to the computed connector stroke, including custom
+ *     line colours and live-status overrides.
  *   • The dot's `<animateMotion keyPoints="0;1" keyTimes="0;1">`
  *     anchors the start/end of the path; flipping `keyPoints` to
  *     `1;0` reverses direction without re-deriving the path.
@@ -56,12 +57,19 @@
 import React from 'react';
 import {
     EdgeLabelRenderer,
+    Position,
     getBezierPath,
+    getStraightPath,
+    useReactFlow,
     useStore,
     type EdgeProps,
+    type XYPosition,
 } from '@xyflow/react';
 import type { EdgeDirection } from '@/common/components/topology/PropertiesPanel';
-import type { SavedDiagramEdge } from '@/common/services/diagramPersistenceService';
+import type {
+    DiagramEdgeAnchor,
+    SavedDiagramEdge,
+} from '@/common/services/diagramPersistenceService';
 import type { HealthStatus } from '@/common/services/topologyDiscovery';
 import { useAnimationsEnabled } from '@/common/contexts/AnimationsEnabledContext';
 
@@ -84,6 +92,23 @@ const DEFAULT_DURATION_MS = 2000;
  *  shorter ones. */
 const DOT_RADIUS = 4;
 
+export type EdgeEndpoint = 'source' | 'target';
+export type EdgeEndpointDragPhase = 'start' | 'preview' | 'commit' | 'cancel';
+export type EdgeBendDragPhase = 'start' | 'preview' | 'commit' | 'cancel';
+
+export interface EdgeEndpointDragArgs {
+    edgeId: string;
+    endpoint: EdgeEndpoint;
+    phase: EdgeEndpointDragPhase;
+    point?: XYPosition;
+}
+
+export interface EdgeBendDragArgs {
+    edgeId: string;
+    phase: EdgeBendDragPhase;
+    point?: XYPosition;
+}
+
 interface AnimatedEdgeData {
     kind?: SavedDiagramEdge['kind'];
     direction?: EdgeDirection;
@@ -94,15 +119,187 @@ interface AnimatedEdgeData {
      *  marching-ants dashes mirroring the Florida overview
      *  dashboard's site connector animation. */
     liveStatus?: boolean;
-    /** Build 115.11 — arrow tip glyph the edge inspector
-     *  selected. We don't actually render the marker here (React
-     *  Flow's marker resolver does that via `markerStart` /
-     *  `markerEnd`), but we keep the field in the interface for
-     *  parity with the SavedDiagramEdge schema. */
+    /** Build 115.11 — arrow tip glyph the edge inspector selected. */
     arrowStyle?: SavedDiagramEdge['arrowStyle'];
     notes?: string;
     layer?: string;
+    sourceAnchor?: DiagramEdgeAnchor;
+    targetAnchor?: DiagramEdgeAnchor;
+    bendPoint?: XYPosition;
+    onEndpointDrag?: (args: EdgeEndpointDragArgs) => void;
+    onBendDrag?: (args: EdgeBendDragArgs) => void;
 }
+
+const isFiniteAnchor = (anchor: unknown): anchor is DiagramEdgeAnchor => {
+    if (!anchor || typeof anchor !== 'object') return false;
+    const a = anchor as Partial<DiagramEdgeAnchor>;
+    return Number.isFinite(a.x) && Number.isFinite(a.y);
+};
+
+const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
+
+const isFinitePoint = (point: unknown): point is XYPosition => {
+    if (!point || typeof point !== 'object') return false;
+    const p = point as Partial<XYPosition>;
+    return Number.isFinite(p.x) && Number.isFinite(p.y);
+};
+
+type ArrowStyleKey = NonNullable<SavedDiagramEdge['arrowStyle']>;
+
+const resolveArrowStyle = (
+    style: SavedDiagramEdge['arrowStyle'] | undefined
+): ArrowStyleKey => {
+    if (
+        style === 'closed' ||
+        style === 'open' ||
+        style === 'thin' ||
+        style === 'dot' ||
+        style === 'diamond'
+    ) {
+        return style;
+    }
+    return 'thin';
+};
+
+const angleBetween = (from: XYPosition, to: XYPosition): number =>
+    (Math.atan2(to.y - from.y, to.x - from.x) * 180) / Math.PI;
+
+const BEZIER_CURVATURE = 0.25;
+
+/** Mirrors React Flow's Bezier control-point math so arrowheads can
+ *  follow the actual endpoint tangent instead of the source→target
+ *  chord. */
+const calculateControlOffset = (distance: number, curvature: number): number =>
+    distance >= 0 ? 0.5 * distance : curvature * 25 * Math.sqrt(-distance);
+
+const getBezierControlPoint = ({
+    position,
+    point,
+    otherPoint,
+}: {
+    position: Position;
+    point: XYPosition;
+    otherPoint: XYPosition;
+}): XYPosition => {
+    switch (position) {
+        case Position.Left:
+            return {
+                x:
+                    point.x -
+                    calculateControlOffset(point.x - otherPoint.x, BEZIER_CURVATURE),
+                y: point.y,
+            };
+        case Position.Right:
+            return {
+                x:
+                    point.x +
+                    calculateControlOffset(otherPoint.x - point.x, BEZIER_CURVATURE),
+                y: point.y,
+            };
+        case Position.Top:
+            return {
+                x: point.x,
+                y:
+                    point.y -
+                    calculateControlOffset(point.y - otherPoint.y, BEZIER_CURVATURE),
+            };
+        case Position.Bottom:
+            return {
+                x: point.x,
+                y:
+                    point.y +
+                    calculateControlOffset(otherPoint.y - point.y, BEZIER_CURVATURE),
+            };
+    }
+};
+
+const getBezierControlPoints = ({
+    source,
+    target,
+    sourcePosition,
+    targetPosition,
+}: {
+    source: XYPosition;
+    target: XYPosition;
+    sourcePosition: Position;
+    targetPosition: Position;
+}): { sourceControl: XYPosition; targetControl: XYPosition } => ({
+    sourceControl: getBezierControlPoint({
+        position: sourcePosition,
+        point: source,
+        otherPoint: target,
+    }),
+    targetControl: getBezierControlPoint({
+        position: targetPosition,
+        point: target,
+        otherPoint: source,
+    }),
+});
+
+/** The dragged bend handle is an on-curve midpoint. Derive the
+ *  quadratic control point that makes the curve pass through it. */
+const getQuadraticControlThroughMidpoint = (
+    source: XYPosition,
+    midpoint: XYPosition,
+    target: XYPosition
+): XYPosition => ({
+    x: 2 * midpoint.x - (source.x + target.x) / 2,
+    y: 2 * midpoint.y - (source.y + target.y) / 2,
+});
+
+const anchorSide = (
+    anchor: DiagramEdgeAnchor | undefined,
+    fallback: Position
+): Position => {
+    if (!isFiniteAnchor(anchor)) return fallback;
+    const distances = [
+        { side: Position.Left, value: anchor.x },
+        { side: Position.Right, value: 1 - anchor.x },
+        { side: Position.Top, value: anchor.y },
+        { side: Position.Bottom, value: 1 - anchor.y },
+    ];
+    return distances.reduce((best, candidate) =>
+        candidate.value < best.value ? candidate : best
+    ).side;
+};
+
+const resolveAnchorPoint = (
+    node: unknown,
+    anchor: DiagramEdgeAnchor | undefined
+): XYPosition | null => {
+    if (!isFiniteAnchor(anchor) || !node || typeof node !== 'object') {
+        return null;
+    }
+    const n = node as {
+        internals?: { positionAbsolute?: XYPosition };
+        measured?: { width?: number; height?: number };
+        width?: number;
+        height?: number;
+        initialWidth?: number;
+        initialHeight?: number;
+    };
+    const absolute = n.internals?.positionAbsolute;
+    const width = n.measured?.width ?? n.width ?? n.initialWidth;
+    const height = n.measured?.height ?? n.height ?? n.initialHeight;
+    if (
+        !absolute ||
+        !Number.isFinite(absolute.x) ||
+        !Number.isFinite(absolute.y) ||
+        !Number.isFinite(width) ||
+        !Number.isFinite(height)
+    ) {
+        return null;
+    }
+    const resolvedWidth = width as number;
+    const resolvedHeight = height as number;
+    return {
+        x: absolute.x + resolvedWidth * clamp01(anchor.x),
+        y: absolute.y + resolvedHeight * clamp01(anchor.y),
+    };
+};
+
+const isStencilShape = (shape: unknown): boolean =>
+    shape === 'custom_stencil';
 
 /** Build 115.11 — palette for the live-status mode. Mirrors the
  *  Florida overview dashboard's site connector colours: emerald
@@ -203,21 +400,89 @@ export const AnimatedEdge: React.FC<EdgeProps> = ({
     targetPosition,
     data,
     style,
-    markerStart,
-    markerEnd,
     label,
     selected,
 }) => {
-    const [edgePath, labelX, labelY] = getBezierPath({
-        sourceX,
-        sourceY,
-        sourcePosition,
-        targetX,
-        targetY,
-        targetPosition,
-    });
-
+    const reactFlow = useReactFlow();
+    const [hovered, setHovered] = React.useState(false);
     const d = (data ?? {}) as AnimatedEdgeData;
+    const sourceAnchor = isFiniteAnchor(d.sourceAnchor)
+        ? d.sourceAnchor
+        : undefined;
+    const targetAnchor = isFiniteAnchor(d.targetAnchor)
+        ? d.targetAnchor
+        : undefined;
+    const bendPoint = isFinitePoint(d.bendPoint) ? d.bendPoint : undefined;
+    const sourceAnchorPoint = useStore((s) =>
+        resolveAnchorPoint(s.nodeLookup.get(source), sourceAnchor)
+    );
+    const targetAnchorPoint = useStore((s) =>
+        resolveAnchorPoint(s.nodeLookup.get(target), targetAnchor)
+    );
+    const anchoredSourceX = sourceAnchorPoint?.x ?? sourceX;
+    const anchoredSourceY = sourceAnchorPoint?.y ?? sourceY;
+    const anchoredTargetX = targetAnchorPoint?.x ?? targetX;
+    const anchoredTargetY = targetAnchorPoint?.y ?? targetY;
+    const sourcePoint = { x: anchoredSourceX, y: anchoredSourceY };
+    const targetPoint = { x: anchoredTargetX, y: anchoredTargetY };
+    const anchoredSourcePosition = anchorSide(sourceAnchor, sourcePosition);
+    const anchoredTargetPosition = anchorSide(targetAnchor, targetPosition);
+    const sourceShape = useStore(
+        (s) =>
+            (
+                s.nodeLookup.get(source)?.data as
+                    | { node?: { shape?: string } }
+                    | undefined
+            )?.node?.shape
+    );
+    const targetShape = useStore(
+        (s) =>
+            (
+                s.nodeLookup.get(target)?.data as
+                    | { node?: { shape?: string } }
+                    | undefined
+            )?.node?.shape
+    );
+    const shouldUseStraightPath =
+        (sourceAnchor || targetAnchor) &&
+        (isStencilShape(sourceShape) || isStencilShape(targetShape));
+    const midpointX = (anchoredSourceX + anchoredTargetX) / 2;
+    const midpointY = (anchoredSourceY + anchoredTargetY) / 2;
+    const bendControlPoint = bendPoint
+        ? getQuadraticControlThroughMidpoint(sourcePoint, bendPoint, targetPoint)
+        : undefined;
+    const bezierControlPoints =
+        !bendPoint && !shouldUseStraightPath
+            ? getBezierControlPoints({
+                  source: sourcePoint,
+                  target: targetPoint,
+                  sourcePosition: anchoredSourcePosition,
+                  targetPosition: anchoredTargetPosition,
+              })
+            : undefined;
+    const [edgePath, labelX, labelY] = bendPoint
+        ? [
+              `M ${anchoredSourceX},${anchoredSourceY} Q ${bendControlPoint?.x ?? bendPoint.x},${bendControlPoint?.y ?? bendPoint.y} ${anchoredTargetX},${anchoredTargetY}`,
+              bendPoint.x,
+              bendPoint.y,
+          ]
+        : shouldUseStraightPath
+        ? getStraightPath({
+              sourceX: anchoredSourceX,
+              sourceY: anchoredSourceY,
+              targetX: anchoredTargetX,
+              targetY: anchoredTargetY,
+          })
+        : getBezierPath({
+              sourceX: anchoredSourceX,
+              sourceY: anchoredSourceY,
+              sourcePosition: anchoredSourcePosition,
+              targetX: anchoredTargetX,
+              targetY: anchoredTargetY,
+              targetPosition: anchoredTargetPosition,
+              curvature: BEZIER_CURVATURE,
+          });
+
     const direction: EdgeDirection = d.direction ?? 'none';
     const kind = d.kind ?? 'physical';
     // Build 115.12 — page-level animations kill switch. When OFF
@@ -260,6 +525,8 @@ export const AnimatedEdge: React.FC<EdgeProps> = ({
     const liveStrokeColor = reducedStatus
         ? LIVE_STATUS_PALETTE[reducedStatus]
         : undefined;
+    const strokeColor =
+        liveStrokeColor ?? ((style?.stroke as string | undefined) ?? '#64748b');
     // When live mode is active we override the stroke colour
     // and force a marching-ants dash; otherwise keep what the
     // canvas computed (kind palette + optional lineColor).
@@ -282,6 +549,102 @@ export const AnimatedEdge: React.FC<EdgeProps> = ({
     // RF re-renders this whole component on viewport change so the
     // id stays addressable as long as the edge exists.
     const pathId = `edge-path-${id}`;
+    const arrowStyle = resolveArrowStyle(d.arrowStyle);
+    const endpointDragEnabled = typeof d.onEndpointDrag === 'function';
+    const bendDragEnabled = typeof d.onBendDrag === 'function';
+    const showEndpointGrabbers = endpointDragEnabled && (selected || hovered);
+    const showBendGrabber = bendDragEnabled && (selected || hovered);
+
+    const handleEndpointPointerDown = (
+        endpoint: EdgeEndpoint,
+        event: React.PointerEvent<Element>
+    ): void => {
+        if (!d.onEndpointDrag || event.button !== 0) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const toFlowPoint = (evt: PointerEvent): XYPosition =>
+            reactFlow.screenToFlowPosition({
+                x: evt.clientX,
+                y: evt.clientY,
+            });
+        const onMove = (evt: PointerEvent): void => {
+            d.onEndpointDrag?.({
+                edgeId: id,
+                endpoint,
+                phase: 'preview',
+                point: toFlowPoint(evt),
+            });
+        };
+        const finish =
+            (phase: EdgeEndpointDragPhase) =>
+            (evt: PointerEvent): void => {
+                window.removeEventListener('pointermove', onMove);
+                window.removeEventListener('pointerup', onUp);
+                window.removeEventListener('pointercancel', onCancel);
+                document.body.style.cursor = '';
+                d.onEndpointDrag?.({
+                    edgeId: id,
+                    endpoint,
+                    phase,
+                    point: phase === 'cancel' ? undefined : toFlowPoint(evt),
+                });
+            };
+        const onUp = finish('commit');
+        const onCancel = finish('cancel');
+        document.body.style.cursor = 'grabbing';
+        d.onEndpointDrag({
+            edgeId: id,
+            endpoint,
+            phase: 'start',
+        });
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', onUp);
+        window.addEventListener('pointercancel', onCancel);
+    };
+
+    const handleBendPointerDown = (
+        event: React.PointerEvent<Element>
+    ): void => {
+        if (!d.onBendDrag || event.button !== 0) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const toFlowPoint = (evt: PointerEvent): XYPosition =>
+            reactFlow.screenToFlowPosition({
+                x: evt.clientX,
+                y: evt.clientY,
+            });
+        const onMove = (evt: PointerEvent): void => {
+            d.onBendDrag?.({
+                edgeId: id,
+                phase: 'preview',
+                point: toFlowPoint(evt),
+            });
+        };
+        const finish =
+            (phase: EdgeBendDragPhase) =>
+            (evt: PointerEvent): void => {
+                window.removeEventListener('pointermove', onMove);
+                window.removeEventListener('pointerup', onUp);
+                window.removeEventListener('pointercancel', onCancel);
+                document.body.style.cursor = '';
+                d.onBendDrag?.({
+                    edgeId: id,
+                    phase,
+                    point: phase === 'cancel' ? undefined : toFlowPoint(evt),
+                });
+            };
+        const onUp = finish('commit');
+        const onCancel = finish('cancel');
+        document.body.style.cursor = 'grabbing';
+        d.onBendDrag({
+            edgeId: id,
+            phase: 'start',
+            point: bendPoint ?? { x: midpointX, y: midpointY },
+        });
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', onUp);
+        window.addEventListener('pointercancel', onCancel);
+    };
 
     // When the edge is selected we bump the stroke a hair so the
     // operator can confirm they grabbed the right edge — but we
@@ -299,6 +662,75 @@ export const AnimatedEdge: React.FC<EdgeProps> = ({
     const strokeWidth = liveStatusEnabled
         ? baseStrokeWidth + 0.5
         : baseStrokeWidth;
+
+    const renderArrowhead = (
+        tip: XYPosition,
+        tail: XYPosition,
+        key: string
+    ): React.ReactNode => {
+        const length = Math.hypot(tip.x - tail.x, tip.y - tail.y);
+        if (length < 0.5) return null;
+        const transform = `translate(${tip.x}, ${tip.y}) rotate(${angleBetween(
+            tail,
+            tip
+        )})`;
+        if (arrowStyle === 'dot') {
+            return (
+                <circle
+                    key={key}
+                    cx={tip.x}
+                    cy={tip.y}
+                    r={3.2}
+                    fill={strokeColor}
+                    pointerEvents="none"
+                />
+            );
+        }
+        if (arrowStyle === 'diamond') {
+            return (
+                <path
+                    key={key}
+                    d="M 0 0 L -4 -3.8 L -8 0 L -4 3.8 Z"
+                    transform={transform}
+                    fill={strokeColor}
+                    stroke={strokeColor}
+                    strokeLinejoin="round"
+                    pointerEvents="none"
+                />
+            );
+        }
+        if (arrowStyle === 'closed') {
+            return (
+                <path
+                    key={key}
+                    d="M 0 0 L -8 -4 L -6 0 L -8 4 Z"
+                    transform={transform}
+                    fill={strokeColor}
+                    stroke={strokeColor}
+                    strokeLinejoin="round"
+                    pointerEvents="none"
+                />
+            );
+        }
+        return (
+            <path
+                key={key}
+                d="M -7.5 -3.75 L 0 0 L -7.5 3.75"
+                transform={transform}
+                fill="none"
+                stroke={strokeColor}
+                strokeWidth={arrowStyle === 'open' ? 2 : 1.55}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                pointerEvents="none"
+            />
+        );
+    };
+
+    const sourceTangentPoint =
+        bendControlPoint ?? bezierControlPoints?.sourceControl ?? targetPoint;
+    const targetTangentPoint =
+        bendControlPoint ?? bezierControlPoints?.targetControl ?? sourcePoint;
 
     return (
         <>
@@ -324,15 +756,14 @@ export const AnimatedEdge: React.FC<EdgeProps> = ({
                 pointerEvents="stroke"
                 style={{ cursor: 'pointer' }}
                 className="react-flow__edge-interaction"
+                onMouseEnter={() => setHovered(true)}
+                onMouseLeave={() => setHovered(false)}
             />
             <path
                 id={pathId}
                 d={edgePath}
                 fill="none"
-                stroke={
-                    liveStrokeColor ??
-                    ((style?.stroke as string | undefined) ?? '#64748b')
-                }
+                stroke={strokeColor}
                 strokeWidth={strokeWidth}
                 strokeDasharray={
                     showLiveDashes
@@ -340,8 +771,6 @@ export const AnimatedEdge: React.FC<EdgeProps> = ({
                         : ((style?.strokeDasharray as string | undefined) ?? undefined)
                 }
                 strokeLinecap={liveStatusEnabled ? 'butt' : 'round'}
-                markerStart={markerStart}
-                markerEnd={markerEnd}
                 // The visible stroke stays out of the click path —
                 // the wide transparent path above handles selection
                 // — so this stays purely cosmetic.
@@ -396,26 +825,120 @@ export const AnimatedEdge: React.FC<EdgeProps> = ({
                     )}
                 </>
             )}
-            {label && (
+            {(direction === 'backward' || direction === 'both') &&
+                renderArrowhead(
+                    { x: anchoredSourceX, y: anchoredSourceY },
+                    sourceTangentPoint,
+                    'source-arrow'
+                )}
+            {(direction === 'forward' || direction === 'both') &&
+                renderArrowhead(
+                    { x: anchoredTargetX, y: anchoredTargetY },
+                    targetTangentPoint,
+                    'target-arrow'
+                )}
+            {(showEndpointGrabbers || showBendGrabber || label) && (
                 <EdgeLabelRenderer>
-                    <div
-                        style={{
-                            position: 'absolute',
-                            transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
-                            background: 'rgba(255, 255, 255, 0.92)',
-                            padding: '2px 6px',
-                            borderRadius: 4,
-                            fontSize: 10,
-                            fontWeight: 500,
-                            color: '#334155',
-                            border: '1px solid #e2e8f0',
-                            pointerEvents: 'all',
-                            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
-                        }}
-                        className="nodrag nopan"
-                    >
-                        {label}
-                    </div>
+                    {showBendGrabber && (
+                        <button
+                            type="button"
+                            aria-label="Move connector bend"
+                            title="Drag to bend this connector"
+                            className="nodrag nopan"
+                            onMouseEnter={() => setHovered(true)}
+                            onMouseLeave={() => setHovered(false)}
+                            onPointerDown={handleBendPointerDown}
+                            style={{
+                                position: 'absolute',
+                                transform: `translate(-50%, -50%) translate(${bendPoint?.x ?? midpointX}px, ${bendPoint?.y ?? midpointY}px)`,
+                                width: 14,
+                                height: 14,
+                                borderRadius: 999,
+                                border: '2px solid #ffffff',
+                                background: '#38bdf8',
+                                cursor: 'grab',
+                                pointerEvents: 'all',
+                                zIndex: 38,
+                                boxShadow:
+                                    '0 1px 4px rgba(14,165,233,0.45)',
+                            }}
+                        />
+                    )}
+                    {showEndpointGrabbers && (
+                        <>
+                            <button
+                                type="button"
+                                aria-label="Move connector source"
+                                title="Drag to move connector endpoint"
+                                className="nodrag nopan"
+                                onMouseEnter={() => setHovered(true)}
+                                onMouseLeave={() => setHovered(false)}
+                                onPointerDown={(event) =>
+                                    handleEndpointPointerDown('source', event)
+                                }
+                                style={{
+                                    position: 'absolute',
+                                    transform: `translate(-50%, -50%) translate(${anchoredSourceX}px, ${anchoredSourceY}px)`,
+                                    width: 12,
+                                    height: 12,
+                                    borderRadius: 999,
+                                    border: '2px solid #ffffff',
+                                    background: '#0ea5e9',
+                                    cursor: 'grab',
+                                    pointerEvents: 'all',
+                                    zIndex: 40,
+                                    boxShadow:
+                                        '0 1px 4px rgba(14,165,233,0.45)',
+                                }}
+                            />
+                            <button
+                                type="button"
+                                aria-label="Move connector target"
+                                title="Drag to move connector endpoint"
+                                className="nodrag nopan"
+                                onMouseEnter={() => setHovered(true)}
+                                onMouseLeave={() => setHovered(false)}
+                                onPointerDown={(event) =>
+                                    handleEndpointPointerDown('target', event)
+                                }
+                                style={{
+                                    position: 'absolute',
+                                    transform: `translate(-50%, -50%) translate(${anchoredTargetX}px, ${anchoredTargetY}px)`,
+                                    width: 12,
+                                    height: 12,
+                                    borderRadius: 999,
+                                    border: '2px solid #ffffff',
+                                    background: '#0ea5e9',
+                                    cursor: 'grab',
+                                    pointerEvents: 'all',
+                                    zIndex: 40,
+                                    boxShadow:
+                                        '0 1px 4px rgba(14,165,233,0.45)',
+                                }}
+                            />
+                        </>
+                    )}
+                    {label && (
+                        <div
+                            style={{
+                                position: 'absolute',
+                                transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+                                background: 'rgba(255, 255, 255, 0.92)',
+                                padding: '2px 6px',
+                                borderRadius: 4,
+                                fontSize: 10,
+                                fontWeight: 500,
+                                color: '#334155',
+                                border: '1px solid #e2e8f0',
+                                pointerEvents: 'all',
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                                zIndex: 30,
+                            }}
+                            className="nodrag nopan"
+                        >
+                            {label}
+                        </div>
+                    )}
                 </EdgeLabelRenderer>
             )}
         </>

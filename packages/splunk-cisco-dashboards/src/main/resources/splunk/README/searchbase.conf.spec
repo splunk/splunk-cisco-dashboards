@@ -118,6 +118,19 @@ search_name = <string>
 search_origin = <string>
 * Default: searchbase
 
+drilldown_search_name = <string>
+* Optional `search_name` of another searchbase stanza to use as this search's
+  contextual drilldown. Overview renders table-shaped drilldowns as a modal by
+  dispatching the target stanza's `search` over the current dashboard time range.
+* The referenced stanza should normally use `default_viz = splunk.table` and
+  provide table column metadata in `viz_options`.
+* No default.
+
+drilldown_button_title = <string>
+* Optional tooltip / accessible label for the tile-level drilldown affordance.
+* Used only when `drilldown_search_name` is set.
+* No default.
+
 search_post = <string>
 * No default.
 
@@ -168,7 +181,32 @@ default_viz = <string>
 * Default: splunk.table
 
 viz_options = <viz-options-json>
-* Specify recommend UDF viz options to use when visualizing the results of the search 
+* Specify recommended UDF viz options to use when visualizing the results of
+  the search.
+* Common tile keys:
+  * seriesColors: array of hex colors.
+  * lineWidth: number.
+  * nullValueDisplay: string.
+  * stackMode: string.
+  * legendDisplay: string.
+  * dataValuesDisplay: string.
+  * majorColor / singleValueColor / unit: single-value display hints.
+* Table drilldown modal keys, read when another stanza references this stanza
+  through `drilldown_search_name`:
+  * modalTitle: string title shown in the modal header.
+  * modalSubtitle: string subtitle. Supports `{rangeLabel}`, `{RangeLabel}`,
+    `{searchName}`, and `{drilldownSearchName}` tokens.
+  * buttonTitle: optional fallback label for the parent tile's drilldown button.
+  * rowKeyField: output field used as each table row key.
+  * statusField: output field used for status badges and available/unavailable
+    summary counts.
+  * availableStatus: string value considered available. Default: Available.
+  * unavailableStatus: string value considered unavailable. Default: Unavailable.
+  * emptyMessage: message shown when the drilldown search returns no rows.
+  * errorMessage: message shown when the drilldown search fails.
+  * columns: array of objects with `field`, `label`, optional `align`
+    (`left` or `right`), optional `kind` (`text`, `status`, or `metric`),
+    optional `fallback`, and optional `truncate`.
 
 diagnostic_searches = <string>
 * No default.

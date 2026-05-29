@@ -1,0 +1,471 @@
+#!/usr/bin/env bash
+# Package the Splunk Cisco Dashboards app into a Splunk .tar.gz.
+# By default this script ONLY builds the package -- it does not touch
+# any Splunk instance. Pass --install or --deploy (and optionally
+# --restart) to push the build into a local Splunk.
+#
+# Default workflow:
+#   ./build.sh                                                # build only; produces dist/<app>-<version>.tar.gz
+#
+# Install workflows (splunkd-managed; goes through REST mgmt port 8089):
+#   ./build.sh --install --auth admin:changeme                # build + `splunk install app` against the default Splunk
+#   SPLUNK_HOME=/opt/10 ./build.sh --install --auth admin:pw  # build + install against a non-default Splunk
+#   ./build.sh --install --auth admin:pw --restart            # build + install + restart Splunk
+#
+# Deploy workflow (filesystem swap; fast for dev iteration):
+#   ./build.sh --deploy                                       # rm -rf $SPLUNK_HOME/etc/apps/<app> + cp -R (preserves local/)
+#   SPLUNK_HOME=/opt/10 ./build.sh --deploy --restart         # same against /opt/10, then `splunk restart`
+#
+# Install/deploy WITHOUT rebuilding (re-use the most recent dist/*.tar.gz).
+# Handy when you've built once and want to fan the same artifact out to
+# multiple local Splunk instances that each have their own admin password:
+#   ./build.sh                                                                # build once
+#   ./build.sh --no-build --install --auth admin:pw1                          # -> default Splunk
+#   SPLUNK_HOME=/opt/10 ./build.sh --no-build --install --auth admin:pw2      # -> /opt/10
+#   SPLUNK_HOME=/opt/9  ./build.sh --no-build --deploy --restart --auth a:b   # -> /opt/9 (filesystem) + restart
+#
+# --install vs --deploy (mutually exclusive; mirrors ta_cisco_common/build.sh
+# and field-solutions-demo-data-gen/build.sh):
+#   --install: splunkd handles extraction. Auth required. Slower but
+#              identical to a real Splunkbase install. local/ preserved
+#              by the -update 1 contract.
+#   --deploy:  filesystem swap (cp -R). NO auth required, NO mgmt port
+#              touched. Restart still needed for Python/conf to take
+#              effect. local/ explicitly preserved by this script.
+#
+# Auth can also be supplied via the splunk-CLI-native short form (`-auth`)
+# or the single-arg form (`--auth=user:pass`). The legacy `SPLUNK_AUTH`
+# env var is still honored for back-compat.
+#
+# Useful options:
+#   ./build.sh --splunk-bin /some/custom/path/splunk          # override the Splunk CLI path directly
+#
+# Environment:
+#   SPLUNK_HOME   Splunk install root. Defaults to /Applications/Splunk on
+#                 macOS, /opt/splunk on Linux. The CLI is derived as
+#                 $SPLUNK_HOME/bin/splunk. Examples: /opt/splunk, /opt/10.
+#   SPLUNK_BIN    Full path to the Splunk CLI. Overrides the path derived
+#                 from SPLUNK_HOME. Kept for back-compat.
+#   SPLUNK_AUTH   Fallback auth in user:pass form, used only when --auth
+#                 / -auth is not on the command line.
+
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+APP_NAME="splunk-cisco-dashboards"
+APP_DIR="${ROOT_DIR}/packages/${APP_NAME}"
+DIST_DIR="${ROOT_DIR}/dist"
+
+do_install=0
+do_deploy=0
+no_build=0
+restart_after_install=0
+verbose=0
+splunk_bin_override=""
+auth_override=""
+
+# ---------------------------------------------------------------------
+# Output helpers. By default the script is QUIET: only headlines,
+# errors, and the final summary banner reach the terminal. The chatty
+# internal progress (yarn webpack noise, tar extract spam, the dozen
+# "[build] Doing X" lines, etc.) is suppressed unless --verbose is set.
+# On any captured-command failure we ALWAYS dump the captured log to
+# stderr -- silencing successful runs must never silence failures.
+# Mirrors field-solutions-demo-data-gen/build.sh and ta_cisco_common/build.sh.
+# ---------------------------------------------------------------------
+say() {
+    [[ "$verbose" -eq 1 ]] && echo "$@" || true
+}
+hdr() {
+    echo "$@"
+}
+err() {
+    echo "$@" >&2
+}
+# Lines we always strip from command output. See FSDG build.sh for the
+# rationale on the cliVerifyServerName warning.
+_NOISE_LINES=(
+    'Server Certificate Hostname Validation is disabled'
+)
+_noise_filter() {
+    if [[ ${#_NOISE_LINES[@]} -eq 0 ]]; then
+        cat
+        return
+    fi
+    local args=()
+    local p
+    for p in "${_NOISE_LINES[@]}"; do
+        args+=(-e "$p")
+    done
+    grep -v -F "${args[@]}" || true
+}
+
+run_quietly() {
+    # See FSDG build.sh for the full rationale on:
+    #  * `|| rc=$?` / PIPESTATUS to capture the real rc under set -e
+    #  * pipe (not process substitution) for synchronous filter delivery
+    #  * filtering out _NOISE_LINES in both verbose and capture-dump paths
+    local logfile rc=0
+    if [[ "$verbose" -eq 1 ]]; then
+        set +e
+        "$@" 2>&1 | _noise_filter
+        rc="${PIPESTATUS[0]}"
+        set -e
+        return "$rc"
+    fi
+    logfile="$(mktemp -t scd-build-XXXXXX.log)"
+    "$@" >"$logfile" 2>&1 || rc=$?
+    if [[ "$rc" -eq 0 ]]; then
+        rm -f "$logfile"
+        return 0
+    fi
+    err "ERROR: command failed: $*"
+    err "---- captured output ----"
+    _noise_filter <"$logfile" >&2
+    err "---- end captured output ----"
+    rm -f "$logfile"
+    return "$rc"
+}
+
+# Resolve a default SPLUNK_HOME if the caller didn't set one. Matches the
+# convention used by ta_cisco_common/build.sh and FSDG/build.sh so users
+# only have to remember one env var across our Splunk repos.
+if [[ -z "${SPLUNK_HOME:-}" ]]; then
+    if [[ "$(uname)" == "Darwin" ]]; then
+        SPLUNK_HOME="/Applications/Splunk"
+    else
+        SPLUNK_HOME="/opt/splunk"
+    fi
+fi
+
+usage() {
+    cat <<EOF
+Usage: ./build.sh [options]
+
+Default behavior: build the .tar.gz only. No Splunk install, no restart.
+
+Push-to-Splunk options (mutually exclusive):
+  --install              splunkd-managed install via REST mgmt port. Calls
+                         \`splunk install app dist/<app>.tar.gz -update 1
+                          -auth user:pass\`. Requires --auth.
+  --deploy               Filesystem swap into \$SPLUNK_HOME/etc/apps/<app>
+                         (rm -rf + cp -R, preserves local/). Faster than
+                         --install for dev iteration. No auth required.
+
+Other options:
+  --no-build             Skip the yarn package step and use the most
+                         recent dist/<app>-*.tar.gz instead. Requires
+                         --install or --deploy. Lets you fan one build
+                         out to multiple Splunk instances with different
+                         credentials without rebuilding each time.
+  --auth user:pass       Splunk CLI credentials. Passed through as
+                         '-auth user:pass'. Aliases: -auth, --auth=user:pass.
+  --restart              Restart Splunk after install/deploy.
+  --splunk-bin PATH      Use a specific Splunk CLI path. Overrides the
+                         path derived from \$SPLUNK_HOME.
+  -v, --verbose          Show full command output (yarn webpack noise,
+                         tar/cp chatter, splunk CLI messages, etc.).
+                         Default is quiet -- only phase headlines,
+                         errors, and the final summary banner.
+  -h, --help             Show this help.
+
+Examples:
+  ./build.sh                                                  # build only
+  ./build.sh --install --auth admin:changeme                  # build + splunkd install
+  SPLUNK_HOME=/opt/10 ./build.sh --install --auth admin:changeme --restart
+  ./build.sh --deploy                                         # build + filesystem swap
+  SPLUNK_HOME=/opt/10 ./build.sh --deploy --restart           # ... against /opt/10 + restart
+
+  # Build once, install to multiple instances:
+  ./build.sh
+  ./build.sh --no-build --install --auth admin:pw1
+  SPLUNK_HOME=/opt/10 ./build.sh --no-build --install --auth admin:pw2
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --install)
+            do_install=1
+            shift
+            ;;
+        --deploy)
+            do_deploy=1
+            shift
+            ;;
+        --no-build|--skip-build)
+            # --skip-build is an alias for muscle memory; both do the same
+            # thing: reuse the newest dist/<app>-*.tar.gz instead of running
+            # the yarn pipeline.
+            no_build=1
+            shift
+            ;;
+        -v|--verbose)
+            verbose=1
+            shift
+            ;;
+        --restart)
+            # --restart on its own defaults to --install (see validation
+            # block below). Matches FSDG behaviour.
+            restart_after_install=1
+            shift
+            ;;
+        --auth|-auth)
+            if [[ $# -lt 2 ]]; then
+                echo "ERROR: $1 requires a value (user:pass)" >&2
+                exit 2
+            fi
+            auth_override="$2"
+            shift 2
+            ;;
+        --auth=*)
+            auth_override="${1#--auth=}"
+            shift
+            ;;
+        --splunk-bin)
+            if [[ $# -lt 2 ]]; then
+                echo "ERROR: --splunk-bin requires a path." >&2
+                exit 2
+            fi
+            splunk_bin_override="$2"
+            shift 2
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "ERROR: Unknown option: $1" >&2
+            usage >&2
+            exit 2
+            ;;
+    esac
+done
+
+# Resolution order for the auth value:
+#   1. --auth / -auth / --auth= on the command line (preferred, matches
+#      splunk CLI conventions; what `ta_cisco_common/build.sh` does)
+#   2. SPLUNK_AUTH env var (legacy fallback)
+auth_value="${auth_override:-${SPLUNK_AUTH:-}}"
+
+# Resolution order for the Splunk CLI path:
+#   1. --splunk-bin on the command line
+#   2. SPLUNK_BIN env var
+#   3. derived from SPLUNK_HOME
+if [[ -n "$splunk_bin_override" ]]; then
+    SPLUNK_BIN="$splunk_bin_override"
+else
+    SPLUNK_BIN="${SPLUNK_BIN:-${SPLUNK_HOME}/bin/splunk}"
+fi
+
+# --install and --deploy are mutually exclusive: they're two different
+# ways to push the same package into Splunk, and combining them just
+# slows things down (and would deploy then immediately overwrite via
+# splunkd).
+if [[ "$do_install" -eq 1 && "$do_deploy" -eq 1 ]]; then
+    echo "ERROR: --install and --deploy are mutually exclusive." >&2
+    echo "       --install pushes via splunkd REST (slower, mgmt-port auth)." >&2
+    echo "       --deploy  swaps the filesystem under \$SPLUNK_HOME/etc/apps/ (fast)." >&2
+    exit 2
+fi
+
+# If the user passed --restart on its own (no --install, no --deploy),
+# default to --install. Matches FSDG.
+if [[ "$restart_after_install" -eq 1 && "$do_install" -eq 0 && "$do_deploy" -eq 0 ]]; then
+    do_install=1
+fi
+
+# --no-build only makes sense when paired with --install or --deploy.
+# On its own it would be a noop (build is already the default, and
+# we'd have nothing to push) -- catch that here rather than producing
+# a confusing "Build complete" exit message.
+if [[ "$no_build" -eq 1 && "$do_install" -eq 0 && "$do_deploy" -eq 0 ]]; then
+    echo "ERROR: --no-build requires --install or --deploy." >&2
+    echo "       Use it to reuse an existing dist/<app>-*.tar.gz on another" >&2
+    echo "       Splunk instance, e.g.:" >&2
+    echo "         SPLUNK_HOME=/opt/10 ./build.sh --no-build --install --auth admin:pw" >&2
+    exit 2
+fi
+
+# Validate install-mode prerequisites BEFORE the (potentially slow) build
+# step so users get the error in milliseconds, not minutes.
+if [[ "$do_install" -eq 1 ]]; then
+    if [[ -z "$auth_value" ]]; then
+        echo "ERROR: --install requires --auth user:pass" >&2
+        echo "       Example: ./build.sh --install --auth admin:changeme" >&2
+        echo "       (or set SPLUNK_AUTH=admin:changeme in the environment)" >&2
+        exit 2
+    fi
+    if [[ "$auth_value" != *:* ]]; then
+        echo "ERROR: auth value must be in 'user:pass' format (no colon found)" >&2
+        exit 2
+    fi
+fi
+
+# --deploy needs a writable etc/apps in SPLUNK_HOME. Catch that up front
+# too -- a multi-minute build only to discover the target dir doesn't
+# exist would be needlessly painful.
+if [[ "$do_deploy" -eq 1 ]]; then
+    if [[ ! -d "${SPLUNK_HOME}/etc/apps" ]]; then
+        echo "ERROR: --deploy needs \$SPLUNK_HOME/etc/apps to exist." >&2
+        echo "       SPLUNK_HOME is currently '${SPLUNK_HOME}'." >&2
+        echo "       Examples:" >&2
+        echo "         SPLUNK_HOME=/opt/splunk ./build.sh --deploy" >&2
+        echo "         SPLUNK_HOME=/opt/10     ./build.sh --deploy" >&2
+        exit 1
+    fi
+    # Restart needs the CLI even in --deploy mode.
+    if [[ "$restart_after_install" -eq 1 && -z "$auth_value" ]]; then
+        echo "ERROR: --deploy --restart requires --auth user:pass (Splunk CLI restart)." >&2
+        exit 2
+    fi
+fi
+
+if [[ "$no_build" -eq 1 ]]; then
+    hdr "Reusing existing tarball (--no-build)..."
+else
+    hdr "Packaging ${APP_NAME}..."
+    run_quietly bash -c "cd '$APP_DIR' && yarn run package:app"
+fi
+
+package_path="$(
+    find "$DIST_DIR" -maxdepth 1 -type f -name "${APP_NAME}-*.tar.gz" \
+        -print0 \
+        | xargs -0 ls -t 2>/dev/null \
+        | head -n 1
+)"
+
+if [[ -z "$package_path" ]]; then
+    if [[ "$no_build" -eq 1 ]]; then
+        err "ERROR: --no-build requested but no ${APP_NAME}-*.tar.gz found under ${DIST_DIR}."
+        err "       Run ./build.sh once (without --no-build) to produce a package first."
+    else
+        err "ERROR: Could not find ${APP_NAME}-*.tar.gz under ${DIST_DIR}."
+    fi
+    exit 1
+fi
+
+# Read the [install] build value stamped into the packaged app.conf so
+# we can show it at the end of the run for visibility (and so --no-build
+# clearly shows which build is being pushed). The final summary banner
+# re-reads this independently, so we only echo it here in --verbose.
+package_build="$(
+    tar -xzOf "$package_path" "${APP_NAME}/default/app.conf" 2>/dev/null \
+        | grep -E '^[[:space:]]*build[[:space:]]*=' \
+        | head -1 \
+        | sed -E 's/.*=[[:space:]]*//' \
+        | tr -d '[:space:]'
+)"
+
+if [[ "$no_build" -eq 1 ]]; then
+    say "[build] Reusing: ${package_path} ([install] build = ${package_build:-unknown})"
+else
+    say "[build] Package ready: ${package_path}"
+fi
+
+# Build-only path: nothing more to do before the summary. Don't pre-print
+# a "do --install next" tip -- it just clutters quiet mode and the summary
+# already shows the mode. Fall through.
+
+# --install path: hand the tarball to splunkd via the CLI.
+if [[ "$do_install" -eq 1 ]]; then
+    if [[ ! -x "$SPLUNK_BIN" ]]; then
+        err "ERROR: Splunk CLI not found or not executable: ${SPLUNK_BIN}"
+        err "       Either SPLUNK_HOME is wrong (currently: ${SPLUNK_HOME}) or"
+        err "       Splunk isn't installed there. The tarball at"
+        err "       ${package_path} is unaffected; install it manually if needed."
+        err ""
+        err "       Examples:"
+        err "         SPLUNK_HOME=/opt/splunk ./build.sh --install --auth user:pass"
+        err "         SPLUNK_HOME=/opt/10     ./build.sh --install --auth user:pass"
+        exit 1
+    fi
+
+    hdr "Installing into ${SPLUNK_HOME} ..."
+    run_quietly "$SPLUNK_BIN" install app "$package_path" -update 1 -auth "$auth_value"
+fi
+
+# --deploy path: rm -rf + cp -R into etc/apps. Faster than --install for
+# dev iteration because splunkd doesn't have to extract anything, and
+# (more importantly) we don't go through the REST mgmt port at all. We
+# preserve $TARGET/local/ across the swap because that's where any
+# operator-edited stanzas live.
+if [[ "$do_deploy" -eq 1 ]]; then
+    APPS_DIR="${SPLUNK_HOME}/etc/apps"
+    TARGET="${APPS_DIR}/${APP_NAME}"
+    LOCAL_BACKUP=""
+    hdr "Deploying to ${TARGET} ..."
+    if [[ -d "${TARGET}/local" ]]; then
+        LOCAL_BACKUP="$(mktemp -d)"
+        say "[build] Preserving ${TARGET}/local in ${LOCAL_BACKUP} during swap..."
+        cp -R "${TARGET}/local" "${LOCAL_BACKUP}/local"
+    fi
+
+    UNPACK_DIR="$(mktemp -d)"
+    # shellcheck disable=SC2064
+    trap "rm -rf '${UNPACK_DIR}' '${LOCAL_BACKUP}'" EXIT
+
+    say "[build] Extracting ${package_path} -> ${UNPACK_DIR} ..."
+    run_quietly tar xzf "$package_path" -C "$UNPACK_DIR"
+    if [[ ! -d "${UNPACK_DIR}/${APP_NAME}" ]]; then
+        err "ERROR: tarball did not contain expected top-level dir '${APP_NAME}'."
+        exit 1
+    fi
+
+    say "[build] Swapping ${TARGET} ..."
+    rm -rf "$TARGET"
+    cp -R "${UNPACK_DIR}/${APP_NAME}" "$TARGET"
+
+    if [[ -n "$LOCAL_BACKUP" ]]; then
+        say "[build] Restoring local/ ..."
+        cp -R "${LOCAL_BACKUP}/local" "${TARGET}/local"
+    fi
+fi
+
+if [[ "$restart_after_install" -eq 1 ]]; then
+    if [[ ! -x "$SPLUNK_BIN" ]]; then
+        err "ERROR: Splunk CLI not found, cannot --restart: ${SPLUNK_BIN}"
+        exit 1
+    fi
+    hdr "Restarting Splunk..."
+    run_quietly "$SPLUNK_BIN" restart -auth "$auth_value"
+fi
+
+# ---------------------------------------------------------------------
+# Final summary banner. Every code path through this script ends here
+# (build-only, --install, --deploy, --no-build + either), so the
+# operator always sees the app name, the version (from [id]), and the
+# stamped [install] build at a glance. The 3 sibling repos
+# (ta_cisco_common, field-solutions-demo-data-gen) print the same shape.
+# ---------------------------------------------------------------------
+pkg_app_conf="$(tar -xzOf "$package_path" "${APP_NAME}/default/app.conf" 2>/dev/null || true)"
+PKG_VERSION="$(printf '%s\n' "$pkg_app_conf" | awk -F= '
+    /^\[/ { in_id = ($0 == "[id]") ? 1 : 0; next }
+    in_id && /^[[:space:]]*version[[:space:]]*=/ {
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2; exit
+    }
+')"
+PKG_BUILD="$(printf '%s\n' "$pkg_app_conf" | awk -F= '
+    /^\[/ { in_install = ($0 == "[install]") ? 1 : 0; next }
+    in_install && /^[[:space:]]*build[[:space:]]*=/ {
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2; exit
+    }
+')"
+
+if [[ "$do_install" -eq 1 ]]; then
+    mode_label="installed via splunkd -> ${SPLUNK_HOME}/etc/apps/${APP_NAME}"
+elif [[ "$do_deploy" -eq 1 ]]; then
+    mode_label="deployed (filesystem swap) -> ${SPLUNK_HOME}/etc/apps/${APP_NAME}"
+else
+    mode_label="build only (no install / no deploy)"
+fi
+if [[ "$no_build" -eq 1 ]]; then
+    mode_label="--no-build (reused dist/) + ${mode_label}"
+fi
+
+echo ""
+echo "================================================================"
+echo "  Done: ${APP_NAME} v${PKG_VERSION:-unknown} (build ${PKG_BUILD:-unknown})"
+echo "================================================================"
+echo "  Mode:    ${mode_label}"
+echo "  Tarball: ${package_path}"

@@ -68,22 +68,20 @@ import {
     MiniMap,
     Background,
     BackgroundVariant,
-    MarkerType,
-    addEdge,
     applyNodeChanges,
     applyEdgeChanges,
-    reconnectEdge,
     useReactFlow,
     useOnViewportChange,
     type Node as RFNode,
     type Edge as RFEdge,
-    type Connection,
+    type FinalConnectionState,
+    type HandleType,
     type NodeChange,
     type EdgeChange,
     type ReactFlowInstance,
     type XYPosition,
-    type EdgeMarker,
     type Viewport,
+    type OnConnectStartParams,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { cn } from '@/common/lib/utils';
@@ -109,6 +107,8 @@ import {
     type SavedDiagramEdge,
     type SavedDiagramGroup,
     type SavedDiagramTitle,
+    type DiagramEdgeAnchor,
+    type CustomStencilAsset,
 } from '@/common/services/diagramPersistenceService';
 import { RegionGroupNode, type RegionGroupNodeData } from './RegionGroupNode';
 import { applyHierarchicalLayout } from './hierarchicalLayout';
@@ -124,128 +124,39 @@ import {
     TEXT_BOX_DEFAULTS,
     type TextBoxNodeData,
 } from './TextBoxNode';
-import { AnimatedEdge, ANIMATED_EDGE_TYPE } from './AnimatedEdge';
+import {
+    AnimatedEdge,
+    ANIMATED_EDGE_TYPE,
+    type EdgeBendDragArgs,
+    type EdgeEndpoint,
+    type EdgeEndpointDragArgs,
+} from './AnimatedEdge';
 import { type HostVisibilityIndex } from '@/common/services/hostVisibilityService';
-import { PALETTE_DND_MIME, NODE_SIZE_PRESETS, type PaletteDragPayload } from './types';
+import {
+    PALETTE_DND_MIME,
+    NODE_SIZE_PRESETS,
+    nodeSizeForCustomStencil,
+    nodeSizeForShape,
+    type PaletteDragPayload,
+} from './types';
 
 const REGION_NODE_TYPE = 'regionGroup';
 
-/** Build 113: shared marker config for `forward`/`backward`/`both`
- *  arrowheads. We use the closed (filled) variant to match the
- *  Visio aesthetic the customer's reference diagrams shipped with;
- *  the size pair is tuned to read clearly without crowding the
- *  midpoint label.
- *
- *  Build 115.11 — added arrow-style variants. `closed` is the old
- *  default; `open` / `thin` use React Flow's open chevron, `dot`
- *  and `diamond` reference custom SVG markers we inject into the
- *  canvas's <defs> via `<EdgeMarkerDefs />` below. The custom
- *  markers go through React Flow as a string `'url(#…)'` rather
- *  than an `EdgeMarker` object — the upstream React Flow type
- *  accepts both. */
+/** Build 115.25 — arrowheads are now rendered inside AnimatedEdge
+ *  itself instead of React Flow's marker registry. That keeps the
+ *  arrowhead locked to the connector's final stroke colour,
+ *  including custom line colours and live-status red/green. */
 type ArrowStyleKey = 'closed' | 'open' | 'thin' | 'dot' | 'diamond';
 
-const ARROWHEADS_BY_STYLE: Record<
-    ArrowStyleKey,
-    EdgeMarker | string
-> = {
-    closed: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
-    open: { type: MarkerType.Arrow, width: 22, height: 22 },
-    thin: { type: MarkerType.Arrow, width: 16, height: 16, strokeWidth: 1 },
-    // Custom SVG markers live in `<EdgeMarkerDefs />` as a single
-    // `<svg><defs>` overlay that React Flow's edge layer can
-    // reference by id. Keep ids URL-safe and namespaced ("ndg-")
-    // so we don't collide with marker ids the host page might
-    // also be defining.
-    dot: 'url(#ndg-arrow-dot)',
-    diamond: 'url(#ndg-arrow-diamond)',
-};
-
 const resolveArrowStyle = (style: ArrowStyleKey | undefined): ArrowStyleKey =>
-    style && style in ARROWHEADS_BY_STYLE ? style : 'closed';
-
-/** Build 113: derive React Flow `markerStart`/`markerEnd` from a
- *  saved direction value. `none` returns `undefined` for both
- *  ends — React Flow then renders a passive line.
- *
- *  Build 115.11 — second parameter selects the arrow glyph
- *  (closed / open / thin / dot / diamond). Falls back to 'closed'
- *  for older saves with no `arrowStyle` field. */
-const markersForDirection = (
-    direction: EdgeDirection | undefined,
-    arrowStyle?: ArrowStyleKey
-): { markerStart?: EdgeMarker | string; markerEnd?: EdgeMarker | string } => {
-    const head = ARROWHEADS_BY_STYLE[resolveArrowStyle(arrowStyle)];
-    switch (direction) {
-        case 'forward':
-            return { markerEnd: head };
-        case 'backward':
-            return { markerStart: head };
-        case 'both':
-            return { markerStart: head, markerEnd: head };
-        case 'none':
-        default:
-            return {};
-    }
-};
-
-/** Build 115.11 — overlay an `<svg>` with a `<defs>` block at the
- *  canvas root so edges can reference custom marker glyphs by id.
- *  React Flow's built-in marker registry only emits Arrow /
- *  ArrowClosed; anything else (dot, diamond, custom shapes) needs
- *  to live in our own marker dictionary.
- *
- *  The SVG is `position: absolute; width: 0; height: 0` so it
- *  doesn't take any layout space and never intercepts pointer
- *  events. The markers themselves use `markerUnits="strokeWidth"`
- *  so they scale a bit with the line stroke (matches how React
- *  Flow's built-ins behave) and `orient="auto"` so they rotate
- *  to follow the path direction.
- *
- *  Colours are deliberately hard-coded to slate-500 (#64748b) and
- *  the markers use `context-stroke` for fill where supported so
- *  the marker tints to the edge's stroke automatically — but we
- *  fall back to the slate fill for browsers that don't process
- *  `context-stroke` (Safari < 16). The fallback is still legible
- *  on every theme. */
-const EdgeMarkerDefs: React.FC = () => (
-    <svg
-        aria-hidden
-        style={{
-            position: 'absolute',
-            width: 0,
-            height: 0,
-            pointerEvents: 'none',
-        }}
-    >
-        <defs>
-            <marker
-                id="ndg-arrow-dot"
-                viewBox="0 0 10 10"
-                refX="5"
-                refY="5"
-                markerWidth="6"
-                markerHeight="6"
-                markerUnits="strokeWidth"
-                orient="auto"
-            >
-                <circle cx="5" cy="5" r="3.5" fill="context-stroke" />
-            </marker>
-            <marker
-                id="ndg-arrow-diamond"
-                viewBox="0 0 10 10"
-                refX="9"
-                refY="5"
-                markerWidth="9"
-                markerHeight="9"
-                markerUnits="strokeWidth"
-                orient="auto"
-            >
-                <path d="M0,5 L5,0 L10,5 L5,10 Z" fill="context-stroke" />
-            </marker>
-        </defs>
-    </svg>
-);
+    style &&
+    (style === 'closed' ||
+        style === 'open' ||
+        style === 'thin' ||
+        style === 'dot' ||
+        style === 'diamond')
+        ? style
+        : 'thin';
 
 /** Compose the React Flow node-types map. Build 110 reverted the
  *  diagram canvas back to the same light-themed device shapes the
@@ -279,7 +190,7 @@ const DIAGRAM_EDGE_TYPES = {
     [ANIMATED_EDGE_TYPE]: AnimatedEdge,
 };
 
-/** Default edge options. New connections via `handleConnect` and
+/** Default edge options. New connections via `handleConnectEnd` and
  *  legacy edges hydrated without an explicit `type` both pick up
  *  the AnimatedEdge renderer. */
 const DEFAULT_EDGE_OPTIONS = {
@@ -359,7 +270,15 @@ const buildDeviceData = (params: {
      *  `raw.management_ip` from the bound asset row at render
      *  time (see DeviceShape in shapes.tsx). */
     ipAddress?: string;
-}): { node: TopologyDiscoveredNode; notes: string; ipAddress?: string } => {
+    /** Build 115.21 — imported stencil artwork for custom shapes. */
+    customStencil?: CustomStencilAsset;
+}): {
+    node: TopologyDiscoveredNode;
+    notes: string;
+    ipAddress?: string;
+    freeformAnchors: true;
+    customStencil?: CustomStencilAsset;
+} => {
     const node: TopologyDiscoveredNode = {
         id: params.id,
         label: params.label,
@@ -372,7 +291,13 @@ const buildDeviceData = (params: {
         ipAddress: params.ipAddress,
         raw: params.raw ?? { device_type: params.shape },
     };
-    return { node, notes: params.notes ?? '', ipAddress: params.ipAddress };
+    return {
+        node,
+        notes: params.notes ?? '',
+        ipAddress: params.ipAddress,
+        freeformAnchors: true,
+        customStencil: params.customStencil,
+    };
 };
 
 /** Build 114: fold the `| metadata type=hosts` visibility result
@@ -462,12 +387,67 @@ const resolveLegacySplunkShape = (
     if (text.includes('universal forwarder') || /\bufs?\b/.test(text)) {
         return 'splunk_universal_forwarder';
     }
+    if (text.includes('intermediate forwarder') || text.includes('intermediary forwarder')) {
+        return 'splunk_intermediate_forwarder';
+    }
     if (text.includes('edge processor')) return 'splunk_edge_processor';
     if (text.includes('connect for syslog') || text.includes('sc4s')) return 'splunk_sc4s';
     if (text.includes('data collection') || text.includes('idm')) {
         return 'splunk_data_collection';
     }
     return fallback;
+};
+
+interface InferredCustomStencilHardware {
+    vendor?: string;
+    model?: string;
+}
+
+const STENCIL_VIEW_WORDS_PATTERN =
+    /\b(?:front|rear|back|left|right|top|bottom|faceplate|module|icon|svg|png)\b/gi;
+
+const stripStencilViewWords = (value: string): string =>
+    value
+        .replace(STENCIL_VIEW_WORDS_PATTERN, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+const findCiscoModelToken = (value: string): string | undefined => {
+    const stripped = stripStencilViewWords(value);
+    const candidates = [
+        stripped,
+        stripped.replace(/[_\s]+/g, '-').replace(/-+/g, '-'),
+    ];
+    const patterns = [
+        /\bWS-C\d{3,5}(?:-[A-Z0-9]+){0,5}(?:\/[A-Z])?\b/i,
+        /\bC\d{3,5}(?:-[A-Z0-9]+){1,5}(?:\/[A-Z])?\b/i,
+        /\b(?:N[3579]K|NCS|ASR|ISR|ASA|FPR|UCS|IE|CBS|SG|SF)(?:-[A-Z0-9]+){0,5}\b/i,
+        /\b(?:CATALYST|NEXUS)\s+\d{3,5}[A-Z0-9-]*\b/i,
+    ];
+    for (const candidate of candidates) {
+        for (const pattern of patterns) {
+            const match = candidate.match(pattern);
+            if (match?.[0]) {
+                return match[0].toUpperCase().replace(/\s+/g, ' ');
+            }
+        }
+    }
+    return undefined;
+};
+
+const inferCustomStencilHardware = (
+    asset: CustomStencilAsset | undefined
+): InferredCustomStencilHardware => {
+    if (!asset) return {};
+    const source = `${asset.label} ${asset.id}`;
+    const model = findCiscoModelToken(source);
+    const ciscoLike =
+        Boolean(model) ||
+        /\b(?:cisco|catalyst|nexus|aironet|meraki)\b/i.test(source);
+    return {
+        vendor: ciscoLike ? 'Cisco' : undefined,
+        model,
+    };
 };
 
 /** Convert a `SavedDiagramNode` (persisted shape) into a
@@ -546,7 +526,10 @@ const savedNodeToRF = (
         };
     }
     const savedShape = (saved.type.replace('device:', '') as DeviceShapeId) || 'generic';
-    const shape = resolveLegacySplunkShape(saved, savedShape);
+    const shape =
+        saved.customStencil !== undefined
+            ? 'custom_stencil'
+            : resolveLegacySplunkShape(saved, savedShape);
     const live = saved.assetId ? assetIndex?.get(saved.assetId) : undefined;
     const label = live?.label ?? saved.label ?? saved.id;
     const shortLabel = live?.shortLabel ?? saved.shortLabel ?? saved.id;
@@ -569,6 +552,20 @@ const savedNodeToRF = (
         candidateHosts,
         hostVisibility
     );
+    const defaultSize =
+        shape === 'custom_stencil'
+            ? nodeSizeForCustomStencil(saved.customStencil)
+            : nodeSizeForShape(shape);
+    const savedWidth =
+        typeof saved.width === 'number' ? saved.width : undefined;
+    const savedHeight =
+        typeof saved.height === 'number' ? saved.height : undefined;
+    const width = savedWidth ?? defaultSize.width;
+    const height = savedHeight ?? defaultSize.height;
+    const inferredStencilHardware =
+        shape === 'custom_stencil'
+            ? inferCustomStencilHardware(saved.customStencil)
+            : {};
     return {
         id: saved.id,
         type: `device:${shape}`,
@@ -578,8 +575,8 @@ const savedNodeToRF = (
         // `extent: 'parent'` is deliberately omitted.
         extent: undefined,
         style: {
-            width: saved.width ?? NODE_SIZE_PRESETS.device.width,
-            height: saved.height ?? NODE_SIZE_PRESETS.device.height,
+            width,
+            height,
         },
         data: buildDeviceData({
             id: saved.assetId ?? saved.id,
@@ -594,14 +591,15 @@ const savedNodeToRF = (
             // who hand-types `Cisco / N9K-C9300X-48Y4C` for a
             // device that asset_inventory has wrong (or doesn't
             // know about) keeps their override on every reload.
-            vendor: saved.vendor ?? live?.vendor,
-            model: saved.model ?? live?.model,
+            vendor: saved.vendor ?? live?.vendor ?? inferredStencilHardware.vendor,
+            model: saved.model ?? live?.model ?? inferredStencilHardware.model,
             serialNumber: live?.serialNumber,
             // Build 115.13 — IP override from the saved payload.
             // The card renders this directly when set; otherwise
             // the card pulls `raw.ip_address` / `raw.management_ip`
             // from the bound asset row.
             ipAddress: saved.ipAddress,
+            customStencil: saved.customStencil,
         }),
         zIndex: 1,
     };
@@ -612,8 +610,7 @@ const savedEdgeToRF = (saved: SavedDiagramEdge): RFEdge => {
     // `direction` field. We default them to 'none' so the visual
     // matches what was saved (no arrow), preserving back-compat.
     const direction: EdgeDirection = saved.direction ?? 'none';
-    const arrowStyle: ArrowStyleKey = (saved.arrowStyle as ArrowStyleKey) ?? 'closed';
-    const markers = markersForDirection(direction, arrowStyle);
+    const arrowStyle = resolveArrowStyle(saved.arrowStyle as ArrowStyleKey);
     return {
         id: saved.id,
         source: saved.sourceId,
@@ -638,7 +635,6 @@ const savedEdgeToRF = (saved: SavedDiagramEdge): RFEdge => {
         style: saved.lineColor
             ? { ...edgeStyleForKind(saved.kind), stroke: saved.lineColor }
             : edgeStyleForKind(saved.kind),
-        ...markers,
         data: {
             kind: saved.kind,
             direction,
@@ -652,6 +648,9 @@ const savedEdgeToRF = (saved: SavedDiagramEdge): RFEdge => {
             liveStatus: saved.liveStatus === true,
             layer: saved.layer,
             notes: saved.notes ?? '',
+            sourceAnchor: normalizeDiagramEdgeAnchor(saved.sourceAnchor),
+            targetAnchor: normalizeDiagramEdgeAnchor(saved.targetAnchor),
+            bendPoint: normalizeDiagramEdgeWaypoint(saved.bendPoint),
         },
     };
 };
@@ -816,6 +815,10 @@ const rfToSaved = (
                 typeof inner.ipAddress === 'string' && inner.ipAddress.length > 0
                     ? (inner.ipAddress as string)
                     : undefined,
+            customStencil:
+                data.customStencil && typeof data.customStencil === 'object'
+                    ? (data.customStencil as CustomStencilAsset)
+                    : undefined,
         });
     }
     const savedEdges: SavedDiagramEdge[] = edges.map((e) => {
@@ -837,12 +840,10 @@ const rfToSaved = (
                 typeof data.lineColor === 'string' ? data.lineColor : undefined,
             // Build 115.11: round-trip arrow style + live-status flag.
             // Skip emitting `arrowStyle` when it's the default
-            // ('closed') so older diagrams that never touched the
-            // field stay byte-identical on save (and `git diff` of
-            // the OOB conf doesn't churn on every regen).
+            // ('thin') so ordinary connectors avoid schema churn.
             arrowStyle:
                 typeof data.arrowStyle === 'string' &&
-                data.arrowStyle !== 'closed'
+                data.arrowStyle !== 'thin'
                     ? (data.arrowStyle as SavedDiagramEdge['arrowStyle'])
                     : undefined,
             liveStatus: data.liveStatus === true ? true : undefined,
@@ -861,6 +862,9 @@ const rfToSaved = (
                 typeof e.sourceHandle === 'string' ? e.sourceHandle : undefined,
             targetHandle:
                 typeof e.targetHandle === 'string' ? e.targetHandle : undefined,
+            sourceAnchor: normalizeDiagramEdgeAnchor(data.sourceAnchor),
+            targetAnchor: normalizeDiagramEdgeAnchor(data.targetAnchor),
+            bendPoint: normalizeDiagramEdgeWaypoint(data.bendPoint),
         };
     });
     return {
@@ -1044,19 +1048,236 @@ const getNodeWorldPosition = (nodes: RFNode[], node: RFNode): XYPosition => {
 };
 
 const getNodeSize = (node: RFNode): { width: number; height: number } => {
+    const data = (node.data ?? {}) as Record<string, unknown>;
+    const customStencil =
+        data.customStencil && typeof data.customStencil === 'object'
+            ? (data.customStencil as CustomStencilAsset)
+            : undefined;
+    const fallbackDeviceSize = nodeSizeForShape(
+        node.type?.startsWith('device:')
+            ? (node.type.replace('device:', '') as DeviceShapeId)
+            : undefined
+    );
     const width =
         typeof node.style?.width === 'number'
             ? (node.style.width as number)
             : node.type === TEXT_BOX_NODE_TYPE
             ? 120
-            : NODE_SIZE_PRESETS.device.width;
+            : node.type === 'device:custom_stencil'
+            ? nodeSizeForCustomStencil(customStencil).width
+            : fallbackDeviceSize.width;
     const height =
         typeof node.style?.height === 'number'
             ? (node.style.height as number)
             : node.type === TEXT_BOX_NODE_TYPE
             ? 40
-            : NODE_SIZE_PRESETS.device.height;
+            : node.type === 'device:custom_stencil'
+            ? nodeSizeForCustomStencil(customStencil).height
+            : fallbackDeviceSize.height;
     return { width, height };
+};
+
+const clampAnchorValue = (value: number): number => Math.min(1, Math.max(0, value));
+
+const normalizeDiagramEdgeAnchor = (
+    value: unknown
+): DiagramEdgeAnchor | undefined => {
+    if (!value || typeof value !== 'object') return undefined;
+    const anchor = value as Partial<DiagramEdgeAnchor>;
+    if (!Number.isFinite(anchor.x) || !Number.isFinite(anchor.y)) {
+        return undefined;
+    }
+    return {
+        x: clampAnchorValue(anchor.x as number),
+        y: clampAnchorValue(anchor.y as number),
+    };
+};
+
+const normalizeDiagramEdgeWaypoint = (
+    value: unknown
+): XYPosition | undefined => {
+    if (!value || typeof value !== 'object') return undefined;
+    const point = value as Partial<XYPosition>;
+    if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+        return undefined;
+    }
+    return {
+        x: point.x as number,
+        y: point.y as number,
+    };
+};
+
+const anchorFromHandleId = (
+    handleId: string | null | undefined
+): DiagramEdgeAnchor | undefined => {
+    if (!handleId) return undefined;
+    const surfacePoint = handleId.match(
+        /^surface-(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)-(?:source|target)$/
+    );
+    if (surfacePoint) {
+        return {
+            x: clampAnchorValue(Number(surfacePoint[1]) / 100),
+            y: clampAnchorValue(Number(surfacePoint[2]) / 100),
+        };
+    }
+    if (handleId.startsWith('left-')) return { x: 0, y: 0.5 };
+    if (handleId.startsWith('right-')) return { x: 1, y: 0.5 };
+    if (handleId.startsWith('top-')) return { x: 0.5, y: 0 };
+    if (handleId.startsWith('bottom-')) return { x: 0.5, y: 1 };
+    if (handleId.startsWith('surface-')) return { x: 0.5, y: 0.5 };
+    return undefined;
+};
+
+const anchorFromFlowPoint = (
+    nodes: RFNode[],
+    nodeId: string,
+    point: XYPosition
+): DiagramEdgeAnchor | undefined => {
+    const node = nodes.find((n) => n.id === nodeId);
+    if (!node) return undefined;
+    const world = getNodeWorldPosition(nodes, node);
+    const size = getNodeSize(node);
+    if (size.width <= 0 || size.height <= 0) return undefined;
+    return {
+        x: clampAnchorValue((point.x - world.x) / size.width),
+        y: clampAnchorValue((point.y - world.y) / size.height),
+    };
+};
+
+const sideForAnchor = (
+    anchor: DiagramEdgeAnchor
+): 'left' | 'right' | 'top' | 'bottom' => {
+    const distances = [
+        { side: 'left' as const, value: anchor.x },
+        { side: 'right' as const, value: 1 - anchor.x },
+        { side: 'top' as const, value: anchor.y },
+        { side: 'bottom' as const, value: 1 - anchor.y },
+    ];
+    return distances.reduce((best, candidate) =>
+        candidate.value < best.value ? candidate : best
+    ).side;
+};
+
+const handleIdForAnchor = (
+    anchor: DiagramEdgeAnchor,
+    endpoint: EdgeEndpoint
+): string => `${sideForAnchor(anchor)}-${endpoint}`;
+
+const isConnectableDiagramNode = (node: RFNode): boolean =>
+    typeof node.type === 'string' && node.type.startsWith('device:');
+
+const findConnectableNodeAtPoint = (
+    nodes: RFNode[],
+    point: XYPosition,
+    options?: { excludeId?: string }
+): RFNode | null => {
+    let bestNode: RFNode | null = null;
+    let bestZIndex = -Infinity;
+    let bestIndex = -1;
+    nodes.forEach((node, index) => {
+        if (!isConnectableDiagramNode(node)) return;
+        if (options?.excludeId && node.id === options.excludeId) return;
+        const world = getNodeWorldPosition(nodes, node);
+        const size = getNodeSize(node);
+        if (
+            point.x < world.x ||
+            point.x > world.x + size.width ||
+            point.y < world.y ||
+            point.y > world.y + size.height
+        ) {
+            return;
+        }
+        const zIndex = typeof node.zIndex === 'number' ? node.zIndex : 0;
+        if (zIndex > bestZIndex || (zIndex === bestZIndex && index > bestIndex)) {
+            bestNode = node;
+            bestZIndex = zIndex;
+            bestIndex = index;
+        }
+    });
+    return bestNode;
+};
+
+const clientPointFromConnectionEvent = (
+    event: MouseEvent | TouchEvent
+): XYPosition | null => {
+    if ('changedTouches' in event && event.changedTouches.length > 0) {
+        const touch = event.changedTouches[0];
+        return { x: touch.clientX, y: touch.clientY };
+    }
+    if ('touches' in event && event.touches.length > 0) {
+        const touch = event.touches[0];
+        return { x: touch.clientX, y: touch.clientY };
+    }
+    if ('clientX' in event && 'clientY' in event) {
+        return { x: event.clientX, y: event.clientY };
+    }
+    return null;
+};
+
+interface AnchoredConnection {
+    sourceId: string;
+    targetId: string;
+    sourceHandle?: string;
+    targetHandle?: string;
+    sourceAnchor?: DiagramEdgeAnchor;
+    targetAnchor?: DiagramEdgeAnchor;
+}
+
+const resolveAnchoredConnection = (
+    connectionState: FinalConnectionState,
+    nodes: RFNode[],
+    landingPoint: XYPosition,
+    startPoint?: XYPosition | null,
+    existingEdge?: RFEdge
+): AnchoredConnection | null => {
+    const fromHandle = connectionState.fromHandle;
+    const toHandle = connectionState.toHandle;
+    if (
+        connectionState.isValid !== true ||
+        !fromHandle ||
+        !toHandle ||
+        !fromHandle.nodeId ||
+        !toHandle.nodeId
+    ) {
+        return null;
+    }
+    const fromIsTarget = fromHandle.type === 'target';
+    const sourceId = fromIsTarget ? toHandle.nodeId : fromHandle.nodeId;
+    const targetId = fromIsTarget ? fromHandle.nodeId : toHandle.nodeId;
+    if (sourceId === targetId) return null;
+
+    const existingData = (existingEdge?.data ?? {}) as Record<string, unknown>;
+    const existingSourceAnchor = normalizeDiagramEdgeAnchor(
+        existingData.sourceAnchor
+    );
+    const existingTargetAnchor = normalizeDiagramEdgeAnchor(
+        existingData.targetAnchor
+    );
+
+    return {
+        sourceId,
+        targetId,
+        sourceHandle:
+            (fromIsTarget ? toHandle.id : fromHandle.id) ?? undefined,
+        targetHandle:
+            (fromIsTarget ? fromHandle.id : toHandle.id) ?? undefined,
+        sourceAnchor: fromIsTarget
+            ? anchorFromFlowPoint(nodes, sourceId, landingPoint) ??
+              anchorFromHandleId(toHandle.id)
+            : existingEdge
+              ? existingSourceAnchor ?? anchorFromHandleId(fromHandle.id)
+              : (startPoint
+                    ? anchorFromFlowPoint(nodes, sourceId, startPoint)
+                    : undefined) ?? anchorFromHandleId(fromHandle.id),
+        targetAnchor: fromIsTarget
+            ? existingEdge
+                ? existingTargetAnchor ?? anchorFromHandleId(fromHandle.id)
+                : (startPoint
+                      ? anchorFromFlowPoint(nodes, targetId, startPoint)
+                      : undefined) ?? anchorFromHandleId(fromHandle.id)
+            : anchorFromFlowPoint(nodes, targetId, landingPoint) ??
+              anchorFromHandleId(toHandle.id),
+    };
 };
 
 const canBelongToRegion = (node: RFNode): boolean =>
@@ -1256,6 +1477,10 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
      *  than a one-line tooltip. */
     const [helpOpen, setHelpOpen] = useState<boolean>(false);
     const wrapperRef = useRef<HTMLDivElement | null>(null);
+    const reconnectingRef = useRef<boolean>(false);
+    const endpointDragOriginalEdgeRef = useRef<RFEdge | null>(null);
+    const bendDragOriginalEdgeRef = useRef<RFEdge | null>(null);
+    const connectStartPointRef = useRef<XYPosition | null>(null);
     const reactFlow = useReactFlow();
     const initialPayloadRef = useRef<SavedDiagramPayload | null>(initialPayload);
     const onChangeRef = useRef(onChange);
@@ -1277,12 +1502,19 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
 
     useEffect(() => {
         setSelection((prev) => {
-            if (prev?.kind !== 'node') return prev;
-            const latest = nodes.find((n) => n.id === prev.node.id);
-            if (!latest) return null;
-            return latest === prev.node ? prev : { kind: 'node', node: latest };
+            if (prev?.kind === 'node') {
+                const latest = nodes.find((n) => n.id === prev.node.id);
+                if (!latest) return null;
+                return latest === prev.node ? prev : { kind: 'node', node: latest };
+            }
+            if (prev?.kind === 'edge') {
+                const latest = edges.find((e) => e.id === prev.edge.id);
+                if (!latest) return null;
+                return latest === prev.edge ? prev : { kind: 'edge', edge: latest };
+            }
+            return prev;
         });
-    }, [nodes]);
+    }, [nodes, edges]);
 
     // --- Build 115.2: undo/redo + delete confirmation state -------
     //
@@ -1579,28 +1811,19 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
         [nodes, emitChange]
     );
 
-    /** Build 114: reconnect handler. Lets the operator drag either
-     *  end of an existing edge to a different node or a different
-     *  port handle on the same node — e.g. moving a connection so
-     *  it lands on the "two dots facing each other" instead of an
-     *  arbitrary mid-card touch point.
-     *
-     *  Without this handler React Flow shows the reconnect dot
-     *  visual but the data update is dropped on release; with it,
-     *  the underlying edge's `source`/`target`/`sourceHandle`/
-     *  `targetHandle` are atomically updated and the change is
-     *  emitted to the parent like any other mutation. */
-    const handleReconnect = useCallback(
-        (oldEdge: RFEdge, newConnection: Connection) => {
-            setEdges((current) => {
-                const next = reconnectEdge(oldEdge, newConnection, current);
-                emitChange(nodes, next);
-                commitHistory(nodes, next);
-                return next;
-            });
-        },
-        [nodes, emitChange, commitHistory]
-    );
+    /** React Flow only renders edge-reconnect affordances when an
+     *  `onReconnect` prop exists, but the old callback receives
+     *  only handle ids — not the cursor point the operator dropped
+     *  on. Keep this as the opt-in hook and commit the real update
+     *  in `handleReconnectEnd`, where React Flow gives us the
+     *  native mouse/touch event. */
+    const handleReconnect = useCallback((): void => {
+        // Actual reconnect persistence happens in handleReconnectEnd.
+    }, []);
+
+    const handleReconnectStart = useCallback((): void => {
+        reconnectingRef.current = true;
+    }, []);
 
     /** Build 115.17 — apply a transient `data.dropHovering` flag
      *  to whichever region (if any) the in-flight drag is
@@ -1819,43 +2042,295 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
         [edges, emitChange, commitHistory, applyDropHover, reactFlow]
     );
 
-    const handleConnect = useCallback(
-        (connection: Connection) => {
-            if (!connection.source || !connection.target) return;
-            if (connection.source === connection.target) return; // disallow self-loops
-            const id = `e_${connection.source}__${connection.target}__${Date.now()}`;
+    const handleConnectStart = useCallback(
+        (
+            event: MouseEvent | TouchEvent,
+            _params: OnConnectStartParams
+        ): void => {
+            const clientPoint = clientPointFromConnectionEvent(event);
+            connectStartPointRef.current = clientPoint
+                ? reactFlow.screenToFlowPosition(clientPoint)
+                : null;
+        },
+        [reactFlow]
+    );
+
+    const handleConnectEnd = useCallback(
+        (event: MouseEvent | TouchEvent, connectionState: FinalConnectionState) => {
+            if (reconnectingRef.current) {
+                connectStartPointRef.current = null;
+                return;
+            }
+            const clientPoint = clientPointFromConnectionEvent(event);
+            if (!clientPoint) {
+                connectStartPointRef.current = null;
+                return;
+            }
+            const landingPoint = reactFlow.screenToFlowPosition(clientPoint);
+            const startPoint = connectStartPointRef.current;
+            connectStartPointRef.current = null;
+            const anchored = resolveAnchoredConnection(
+                connectionState,
+                nodes,
+                landingPoint,
+                startPoint
+            );
+            if (!anchored) return;
+
+            const id = `e_${anchored.sourceId}__${anchored.targetId}__${Date.now()}`;
             // Build 113: new connections default to a forward arrow
             // so the customer's intent ("X talks to Y") is captured
             // immediately. They can still flip to no-arrow / both
             // via the inspector.
             const initialDirection: EdgeDirection = 'forward';
+            const initialArrowStyle: ArrowStyleKey = 'thin';
             const newEdge: RFEdge = {
                 id,
-                source: connection.source,
-                target: connection.target,
-                sourceHandle: connection.sourceHandle ?? undefined,
-                targetHandle: connection.targetHandle ?? undefined,
+                source: anchored.sourceId,
+                target: anchored.targetId,
+                sourceHandle: anchored.sourceHandle,
+                targetHandle: anchored.targetHandle,
                 // Build 114: animated edge type so the moving dot
                 // is on by default for new directional connections.
                 type: ANIMATED_EDGE_TYPE,
                 style: edgeStyleForKind('physical'),
-                ...markersForDirection(initialDirection, 'closed'),
                 data: {
                     kind: 'physical',
                     direction: initialDirection,
-                    arrowStyle: 'closed' as ArrowStyleKey,
+                    arrowStyle: initialArrowStyle,
                     liveStatus: false,
                     notes: '',
+                    sourceAnchor: anchored.sourceAnchor,
+                    targetAnchor: anchored.targetAnchor,
                 },
             };
             setEdges((current) => {
-                const next = addEdge(newEdge, current);
+                const next = [...current, newEdge];
                 emitChange(nodes, next);
                 commitHistory(nodes, next);
                 return next;
             });
         },
-        [nodes, emitChange, commitHistory]
+        [nodes, emitChange, commitHistory, reactFlow]
+    );
+
+    const handleReconnectEnd = useCallback(
+        (
+            event: MouseEvent | TouchEvent,
+            oldEdge: RFEdge,
+            _handleType: HandleType,
+            connectionState: FinalConnectionState
+        ) => {
+            reconnectingRef.current = false;
+            const clientPoint = clientPointFromConnectionEvent(event);
+            if (!clientPoint) return;
+            const landingPoint = reactFlow.screenToFlowPosition(clientPoint);
+            const anchored = resolveAnchoredConnection(
+                connectionState,
+                nodes,
+                landingPoint,
+                null,
+                oldEdge
+            );
+            if (!anchored) return;
+
+            setEdges((current) => {
+                const next = current.map((edge) => {
+                    if (edge.id !== oldEdge.id) return edge;
+                    const existingData = (edge.data ?? {}) as Record<string, unknown>;
+                    return {
+                        ...edge,
+                        source: anchored.sourceId,
+                        target: anchored.targetId,
+                        sourceHandle: anchored.sourceHandle,
+                        targetHandle: anchored.targetHandle,
+                        data: {
+                            ...existingData,
+                            sourceAnchor: anchored.sourceAnchor,
+                            targetAnchor: anchored.targetAnchor,
+                        },
+                    };
+                });
+                emitChange(nodes, next);
+                commitHistory(nodes, next);
+                return next;
+            });
+        },
+        [nodes, emitChange, commitHistory, reactFlow]
+    );
+
+    const handleEdgeEndpointDrag = useCallback(
+        (args: EdgeEndpointDragArgs): void => {
+            if (isViewMode) return;
+
+            if (args.phase === 'start') {
+                endpointDragOriginalEdgeRef.current =
+                    edges.find((edge) => edge.id === args.edgeId) ?? null;
+                return;
+            }
+
+            if (args.phase === 'cancel') {
+                const original = endpointDragOriginalEdgeRef.current;
+                endpointDragOriginalEdgeRef.current = null;
+                if (!original) return;
+                setEdges((current) =>
+                    current.map((edge) =>
+                        edge.id === original.id ? original : edge
+                    )
+                );
+                return;
+            }
+
+            const point = args.point;
+            if (!point) return;
+
+            setEdges((current) => {
+                const edge = current.find((candidate) => candidate.id === args.edgeId);
+                if (!edge) return current;
+                const original = endpointDragOriginalEdgeRef.current;
+                const oppositeNodeId =
+                    args.endpoint === 'source' ? edge.target : edge.source;
+                const destination = findConnectableNodeAtPoint(nodes, point, {
+                    excludeId: oppositeNodeId,
+                });
+
+                if (!destination) {
+                    if (args.phase === 'commit' && original) {
+                        endpointDragOriginalEdgeRef.current = null;
+                        return current.map((candidate) =>
+                            candidate.id === original.id ? original : candidate
+                        );
+                    }
+                    return current;
+                }
+
+                const anchor = anchorFromFlowPoint(
+                    nodes,
+                    destination.id,
+                    point
+                );
+                if (!anchor) return current;
+
+                const handleId = handleIdForAnchor(anchor, args.endpoint);
+                let updatedEdge: RFEdge | null = null;
+                const next = current.map((candidate) => {
+                    if (candidate.id !== args.edgeId) return candidate;
+                    const existingData = (candidate.data ?? {}) as Record<
+                        string,
+                        unknown
+                    >;
+                    updatedEdge = {
+                        ...candidate,
+                        source:
+                            args.endpoint === 'source'
+                                ? destination.id
+                                : candidate.source,
+                        target:
+                            args.endpoint === 'target'
+                                ? destination.id
+                                : candidate.target,
+                        sourceHandle:
+                            args.endpoint === 'source'
+                                ? handleId
+                                : candidate.sourceHandle,
+                        targetHandle:
+                            args.endpoint === 'target'
+                                ? handleId
+                                : candidate.targetHandle,
+                        data: {
+                            ...existingData,
+                            sourceAnchor:
+                                args.endpoint === 'source'
+                                    ? anchor
+                                    : existingData.sourceAnchor,
+                            targetAnchor:
+                                args.endpoint === 'target'
+                                    ? anchor
+                                    : existingData.targetAnchor,
+                        },
+                    };
+                    return updatedEdge;
+                });
+
+                if (args.phase === 'commit') {
+                    endpointDragOriginalEdgeRef.current = null;
+                    emitChange(nodes, next);
+                    commitHistory(nodes, next);
+                    if (updatedEdge) {
+                        setSelection((prev) =>
+                            prev?.kind === 'edge' && prev.edge.id === args.edgeId
+                                ? { kind: 'edge', edge: updatedEdge as RFEdge }
+                                : prev
+                        );
+                    }
+                }
+
+                return next;
+            });
+        },
+        [edges, isViewMode, nodes, emitChange, commitHistory]
+    );
+
+    const handleEdgeBendDrag = useCallback(
+        (args: EdgeBendDragArgs): void => {
+            if (isViewMode) return;
+
+            if (args.phase === 'start') {
+                bendDragOriginalEdgeRef.current =
+                    edges.find((edge) => edge.id === args.edgeId) ?? null;
+                return;
+            }
+
+            if (args.phase === 'cancel') {
+                const original = bendDragOriginalEdgeRef.current;
+                bendDragOriginalEdgeRef.current = null;
+                if (!original) return;
+                setEdges((current) =>
+                    current.map((edge) =>
+                        edge.id === original.id ? original : edge
+                    )
+                );
+                return;
+            }
+
+            const point = normalizeDiagramEdgeWaypoint(args.point);
+            if (!point) return;
+
+            setEdges((current) => {
+                let updatedEdge: RFEdge | null = null;
+                const next = current.map((edge) => {
+                    if (edge.id !== args.edgeId) return edge;
+                    const existingData = (edge.data ?? {}) as Record<
+                        string,
+                        unknown
+                    >;
+                    updatedEdge = {
+                        ...edge,
+                        data: {
+                            ...existingData,
+                            bendPoint: point,
+                        },
+                    };
+                    return updatedEdge;
+                });
+
+                if (args.phase === 'commit') {
+                    bendDragOriginalEdgeRef.current = null;
+                    emitChange(nodes, next);
+                    commitHistory(nodes, next);
+                    if (updatedEdge) {
+                        setSelection((prev) =>
+                            prev?.kind === 'edge' && prev.edge.id === args.edgeId
+                                ? { kind: 'edge', edge: updatedEdge as RFEdge }
+                                : prev
+                        );
+                    }
+                }
+
+                return next;
+            });
+        },
+        [edges, isViewMode, nodes, emitChange, commitHistory]
     );
 
     /** Drop handler. Reads the palette payload off the DnD
@@ -1985,13 +2460,60 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                         },
                         zIndex: 0,
                     };
-                } else if (payload.variant === 'shape') {
-                    const topLeft = centeredTopLeft(NODE_SIZE_PRESETS.device);
+                } else if (payload.variant === 'customStencil') {
+                    const nodeSize = nodeSizeForCustomStencil(payload.asset);
+                    const inferredHardware = inferCustomStencilHardware(
+                        payload.asset
+                    );
+                    const topLeft = centeredTopLeft(nodeSize);
                     const shapeRect = {
                         x: topLeft.x,
                         y: topLeft.y,
-                        width: NODE_SIZE_PRESETS.device.width,
-                        height: NODE_SIZE_PRESETS.device.height,
+                        width: nodeSize.width,
+                        height: nodeSize.height,
+                    };
+                    const region = findRegionForRect(current, shapeRect);
+                    const localPoint = region
+                        ? {
+                              x: topLeft.x - region.position.x,
+                              y: topLeft.y - region.position.y,
+                          }
+                        : topLeft;
+                    newNode = {
+                        id: nextNodeId('custom-stencil'),
+                        type: 'device:custom_stencil',
+                        position: localPoint,
+                        parentId: region?.id,
+                        extent: undefined,
+                        style: {
+                            width: nodeSize.width,
+                            height: nodeSize.height,
+                        },
+                        data: buildDeviceData({
+                            id: payload.asset.id,
+                            label: payload.asset.label,
+                            shortLabel: payload.asset.label,
+                            shape: 'custom_stencil',
+                            customStencil: payload.asset,
+                            vendor: inferredHardware.vendor,
+                            model: inferredHardware.model,
+                            raw: {
+                                device_type: 'custom_stencil',
+                                custom_stencil_id: payload.asset.id,
+                                vendor: inferredHardware.vendor,
+                                platform_id: inferredHardware.model,
+                            },
+                        }),
+                        zIndex: 1,
+                    };
+                } else if (payload.variant === 'shape') {
+                    const nodeSize = nodeSizeForShape(payload.shape);
+                    const topLeft = centeredTopLeft(nodeSize);
+                    const shapeRect = {
+                        x: topLeft.x,
+                        y: topLeft.y,
+                        width: nodeSize.width,
+                        height: nodeSize.height,
                     };
                     const region = findRegionForRect(current, shapeRect);
                     const localPoint = region
@@ -2010,8 +2532,8 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                         // not get `extent: 'parent'`.
                         extent: undefined,
                         style: {
-                            width: NODE_SIZE_PRESETS.device.width,
-                            height: NODE_SIZE_PRESETS.device.height,
+                            width: nodeSize.width,
+                            height: nodeSize.height,
                         },
                         data: buildDeviceData({
                             id: nextNodeId('asset'),
@@ -2440,18 +2962,26 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                             : update.ipAddress.trim().length > 0
                               ? update.ipAddress.trim()
                               : undefined;
+                    const nextShape =
+                        update.shape ??
+                        ((existingNode.shape as DeviceShapeId | undefined) ??
+                            'generic');
                     const result = {
                         ...n,
                         type: newType,
                         data: {
                             ...existingData,
+                            customStencil:
+                                nextShape === 'custom_stencil'
+                                    ? (existingData.customStencil as
+                                          | CustomStencilAsset
+                                          | undefined)
+                                    : undefined,
                             node: {
                                 ...existingNode,
                                 label: update.label ?? existingNode.label,
                                 shortLabel: update.shortLabel ?? existingNode.shortLabel,
-                                shape:
-                                    update.shape ??
-                                    (existingNode.shape as string | undefined),
+                                shape: nextShape,
                                 vendor: nextVendor,
                                 model: nextModel,
                                 ipAddress: nextIpAddress,
@@ -2534,14 +3064,15 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                     // Like direction we keep the prior value when the
                     // operator's update doesn't touch the field.
                     const newArrowStyle: ArrowStyleKey =
-                        (update.arrowStyle as ArrowStyleKey | undefined) ??
-                        ((existingData.arrowStyle as ArrowStyleKey | undefined) ??
-                            'closed');
+                        update.arrowStyle !== undefined
+                            ? resolveArrowStyle(update.arrowStyle as ArrowStyleKey)
+                            : resolveArrowStyle(
+                                  existingData.arrowStyle as ArrowStyleKey
+                              );
                     const newLiveStatus: boolean =
                         update.liveStatus !== undefined
                             ? update.liveStatus
                             : existingData.liveStatus === true;
-                    const markers = markersForDirection(newDirection, newArrowStyle);
                     // Build 114: animation colour. Apply if the
                     // update specifies one; otherwise keep what
                     // was there. Empty-string is treated as
@@ -2579,12 +3110,8 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                         type: ANIMATED_EDGE_TYPE,
                         label: update.label ?? e.label,
                         style: finalStyle,
-                        // Reset both marker slots first, then apply
-                        // the new ones — otherwise switching from
-                        // 'both' to 'forward' would leave the start
-                        // marker behind.
-                        markerStart: markers.markerStart,
-                        markerEnd: markers.markerEnd,
+                        markerStart: undefined,
+                        markerEnd: undefined,
                         data: {
                             ...existingData,
                             kind: newKind,
@@ -3013,6 +3540,18 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
     }, [nodes.length]);
 
     const proOptions = useMemo(() => ({ hideAttribution: true }), []);
+    const runtimeEdges = useMemo(
+        () =>
+            edges.map((edge) => ({
+                ...edge,
+                data: {
+                    ...(edge.data ?? {}),
+                    onEndpointDrag: isViewMode ? undefined : handleEdgeEndpointDrag,
+                    onBendDrag: isViewMode ? undefined : handleEdgeBendDrag,
+                },
+            })),
+        [edges, handleEdgeBendDrag, handleEdgeEndpointDrag, isViewMode]
+    );
 
     return (
         <div
@@ -3066,22 +3605,19 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
             onDragOver={isViewMode ? undefined : handleDragOver}
             onDragLeave={isViewMode ? undefined : handleDragLeave}
         >
-            {/* Build 115.11 — custom SVG marker dictionary. Has to
-             *  live inside the same DOM subtree as the React Flow
-             *  edge layer so the `url(#ndg-arrow-*)` references on
-             *  individual edges resolve. Sized to zero so it
-             *  doesn't influence layout / hit-testing. */}
-            <EdgeMarkerDefs />
             <ReactFlow
                 nodes={nodes}
-                edges={edges}
+                edges={runtimeEdges}
                 nodeTypes={DIAGRAM_NODE_TYPES}
                 edgeTypes={DIAGRAM_EDGE_TYPES}
                 defaultEdgeOptions={DEFAULT_EDGE_OPTIONS}
                 onNodesChange={handleNodesChange}
                 onEdgesChange={handleEdgesChange}
-                onConnect={handleConnect}
+                onConnectStart={handleConnectStart}
+                onConnectEnd={handleConnectEnd}
                 onReconnect={handleReconnect}
+                onReconnectStart={handleReconnectStart}
+                onReconnectEnd={handleReconnectEnd}
                 // Build 115: re-parent devices when their drag-stop
                 // lands inside (or leaves) a region. View mode
                 // disables dragging so the handler is a no-op there;
@@ -3096,7 +3632,7 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                 defaultViewport={{ x: 0, y: 0, zoom: 1 }}
                 proOptions={proOptions}
                 minZoom={0.2}
-                maxZoom={2.5}
+                maxZoom={10}
                 connectOnClick={false}
                 // Build 113: gate every editing affordance on `mode`.
                 // View mode preserves pan + zoom (so the operator can
@@ -3105,6 +3641,7 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                 nodesDraggable={!isViewMode}
                 nodesConnectable={!isViewMode}
                 edgesReconnectable={!isViewMode}
+                reconnectRadius={16}
                 elementsSelectable={!isViewMode}
                 selectNodesOnDrag={false}
                 snapToGrid={!isViewMode}
@@ -3215,14 +3752,11 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                 <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
                     <div className="px-4 py-3 rounded-xl bg-white/85 dark:bg-slate-900/85 backdrop-blur-sm border border-dashed border-slate-300 dark:border-slate-700 text-center max-w-md">
                         <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                            Drop devices, shapes, or regions onto the canvas
+                            Start your diagram
                         </p>
                         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                            Use the <span className="font-medium">Shapes</span> tab on the left
-                            for generic Cisco icons and Regions, or the{' '}
-                            <span className="font-medium">Inventory</span> tab to drag real
-                            devices from <code className="font-mono">asset_inventory</code>.
-                            Hover any device to reveal port handles and drag to draw a link.
+                            Drag from Shapes, Inventory, or imported stencils. Connect
+                            devices from their port handles.
                         </p>
                     </div>
                 </div>

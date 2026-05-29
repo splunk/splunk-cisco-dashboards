@@ -82,7 +82,7 @@ const cities: City[] = [
         status: 'stable',
         importance: 'primary',
         metrics: { events: 1240, alerts: 0, latency: 28 },
-        savedSearch: 'Overview - site_tlh',
+        savedSearch: 'Overview - Site Tallahassee Health',
     },
     {
         id: 'mco',
@@ -92,7 +92,7 @@ const cities: City[] = [
         status: 'warning',
         importance: 'primary',
         metrics: { events: 4100, alerts: 12, latency: 145 },
-        savedSearch: 'Overview - site_mco',
+        savedSearch: 'Overview - Site Demo (Warning)',
     },
     {
         id: 'aub',
@@ -102,7 +102,7 @@ const cities: City[] = [
         status: 'critical',
         importance: 'primary',
         metrics: { events: 8200, alerts: 42, latency: 310 },
-        savedSearch: 'Overview - site_aub',
+        savedSearch: 'Overview - Site Auburndale Health',
     },
 ];
 

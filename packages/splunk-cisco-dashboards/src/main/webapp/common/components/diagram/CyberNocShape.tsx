@@ -104,6 +104,7 @@ const SHAPE_TO_ICON: Record<DeviceShapeId, keyof typeof CISCO_ICONS> = {
     modular_chassis_switch: 'modular_chassis_switch',
     nexus_aci_fabric: 'nexus_aci_fabric',
     sdwan_controller: 'sdwan_controller',
+    custom_stencil: 'custom_stencil',
     // Security
     firewall: 'firewall',
     palo_alto_firewall: 'palo_alto_firewall',
@@ -147,6 +148,7 @@ const SHAPE_TO_ICON: Record<DeviceShapeId, keyof typeof CISCO_ICONS> = {
     splunk_indexer_cluster: 'splunk_indexer_cluster',
     splunk_heavy_forwarder: 'splunk_heavy_forwarder',
     splunk_universal_forwarder: 'splunk_universal_forwarder',
+    splunk_intermediate_forwarder: 'splunk_intermediate_forwarder',
     splunk_cluster_manager: 'splunk_cluster_manager',
     splunk_deployer: 'splunk_deployer',
     splunk_license_manager: 'splunk_license_manager',

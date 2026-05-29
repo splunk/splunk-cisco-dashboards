@@ -80,7 +80,7 @@ L.Icon.Default.mergeOptions({
 
 export const CUSTOMER_TOPOLOGY: CustomerTopology = {
     id: 'customer-site-connectivity',
-    name: 'Florida Site Connectivity',
+    name: 'Customer Site Connectivity',
     subtitle: 'Editable customer site connectivity',
     telemetrySearchName: 'Overview - Topology Overview',
     map: {
@@ -757,6 +757,32 @@ const topologyAnimationCss = `
         70% { transform: scale(1.55); opacity: 0; }
         100% { transform: scale(1.55); opacity: 0; }
     }
+    @keyframes customer-topology-site-wave {
+        0% {
+            transform: scale(0.62);
+            opacity: 0.58;
+        }
+        70% {
+            transform: scale(1.55);
+            opacity: 0;
+        }
+        100% {
+            transform: scale(1.55);
+            opacity: 0;
+        }
+    }
+    @keyframes customer-topology-site-orbit {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    @keyframes customer-topology-site-core {
+        0%, 100% {
+            filter: drop-shadow(0 0 5px var(--site-health-soft));
+        }
+        50% {
+            filter: drop-shadow(0 0 12px var(--site-health));
+        }
+    }
     @keyframes customer-topology-marker-enter {
         0%   { transform: scale(0) translateY(-12px); opacity: 0; }
         70%  { transform: scale(1.18) translateY(0); opacity: 1; }
@@ -769,6 +795,25 @@ const topologyAnimationCss = `
     .customer-topology-link-hitbox {
         cursor: pointer;
     }
+    .customer-topology-link-shadow {
+        filter: blur(2px);
+        mix-blend-mode: multiply;
+    }
+    .customer-topology-link-halo {
+        filter: drop-shadow(0 0 8px currentColor);
+    }
+    .customer-topology-link-highlight {
+        filter: drop-shadow(0 1px 2px rgba(15, 23, 42, 0.18));
+    }
+    .customer-topology-link-core {
+        filter:
+            drop-shadow(0 0 4px currentColor)
+            drop-shadow(0 0 12px currentColor);
+    }
+    .customer-topology-link--critical { color: #ef4444; }
+    .customer-topology-link--warning  { color: #f59e0b; }
+    .customer-topology-link--stable   { color: #22c55e; }
+    .customer-topology-link--unknown  { color: #94a3b8; }
     .customer-topology-alert-ring {
         animation: customer-topology-pulse 2.6s ease-in-out infinite;
     }
@@ -790,6 +835,195 @@ const topologyAnimationCss = `
     }
     .customer-topology-radiate--critical {
         animation-duration: 0.95s;
+    }
+    .customer-topology-site-beacon {
+        --site-wave-speed: 3.2s;
+        position: relative;
+        display: flex;
+        width: 50px;
+        height: 50px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 9999px;
+        isolation: isolate;
+    }
+    .customer-topology-site-wave {
+        position: absolute;
+        inset: 5px;
+        border-radius: 9999px;
+        border: 1.5px solid var(--site-health);
+        background:
+            radial-gradient(circle, var(--site-health-soft) 0%, transparent 62%);
+        box-shadow:
+            0 0 0 1px rgba(255, 255, 255, 0.42) inset,
+            0 0 20px var(--site-health-soft);
+        animation:
+            customer-topology-site-wave
+            var(--site-wave-speed)
+            cubic-bezier(0.22, 0.85, 0.3, 1)
+            infinite;
+        transform-origin: center;
+        z-index: 0;
+    }
+    .customer-topology-site-beacon--dark .customer-topology-site-wave {
+        inset: 7px;
+        border-width: 1.25px;
+        border-color: var(--site-accent);
+        background:
+            radial-gradient(circle, var(--site-accent-soft) 0%, transparent 54%);
+        box-shadow:
+            0 0 0 1px rgba(248, 250, 252, 0.32) inset,
+            0 0 14px var(--site-accent-soft);
+    }
+    .customer-topology-site-beacon--light .customer-topology-site-wave {
+        inset: 4px;
+        border-width: 2px;
+        border-color: var(--site-accent);
+        background:
+            radial-gradient(circle, var(--site-accent-soft) 0%, transparent 58%);
+        box-shadow:
+            0 0 0 1px rgba(15, 23, 42, 0.16) inset,
+            0 0 24px var(--site-accent-soft);
+    }
+    .customer-topology-site-wave--2 {
+        animation-delay: -0.95s;
+    }
+    .customer-topology-site-wave--3 {
+        animation-delay: -1.9s;
+        opacity: 0.34;
+    }
+    .customer-topology-site-core {
+        position: relative;
+        z-index: 4;
+        display: flex;
+        width: 38px;
+        height: 38px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 9999px;
+        border: 2px solid var(--site-health);
+        background:
+            radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.98), var(--site-surface) 43%, rgba(255, 255, 255, 0.72) 74%),
+            linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(226, 232, 240, 0.58));
+        box-shadow:
+            0 10px 20px rgba(15, 23, 42, 0.24),
+            0 0 0 5px var(--site-health-soft),
+            0 0 26px var(--site-health-soft);
+        animation:
+            customer-topology-site-core
+            calc(var(--site-wave-speed) * 1.25)
+            ease-in-out
+            infinite;
+    }
+    .customer-topology-site-beacon--dark .customer-topology-site-core {
+        border-width: 3px;
+        border-color: var(--site-accent);
+        box-shadow:
+            0 10px 22px rgba(2, 6, 23, 0.55),
+            0 0 0 4px var(--site-accent-soft),
+            0 0 18px var(--site-accent-soft),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.9);
+    }
+    .customer-topology-site-beacon--light .customer-topology-site-core {
+        border-width: 3px;
+        border-color: #ffffff;
+        background:
+            radial-gradient(circle at 28% 22%, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.26) 30%, transparent 48%),
+            linear-gradient(145deg, var(--site-surface), var(--site-surface));
+        box-shadow:
+            0 12px 24px rgba(15, 23, 42, 0.34),
+            0 0 0 2px rgba(15, 23, 42, 0.2),
+            0 0 0 7px var(--site-accent-soft),
+            0 0 28px var(--site-accent-soft);
+    }
+    .customer-topology-site-core::before {
+        content: '';
+        position: absolute;
+        inset: -7px;
+        border-radius: inherit;
+        background:
+            conic-gradient(
+                from 0deg,
+                transparent 0deg,
+                var(--site-health) 44deg,
+                transparent 82deg,
+                transparent 180deg,
+                var(--site-health) 224deg,
+                transparent 270deg,
+                transparent 360deg
+            );
+        opacity: 0.52;
+        z-index: -1;
+        animation:
+            customer-topology-site-orbit
+            calc(var(--site-wave-speed) * 2.6)
+            linear
+            infinite;
+    }
+    .customer-topology-site-beacon--light .customer-topology-site-core::before {
+        background:
+            conic-gradient(
+                from 0deg,
+                transparent 0deg,
+                var(--site-accent) 44deg,
+                transparent 82deg,
+                transparent 180deg,
+                var(--site-accent) 224deg,
+                transparent 270deg,
+                transparent 360deg
+            );
+        opacity: 0.72;
+    }
+    .customer-topology-site-beacon--dark .customer-topology-site-core::before {
+        background:
+            conic-gradient(
+                from 0deg,
+                transparent 0deg,
+                var(--site-accent) 44deg,
+                transparent 82deg,
+                transparent 180deg,
+                var(--site-accent) 224deg,
+                transparent 270deg,
+                transparent 360deg
+            );
+        opacity: 0.62;
+    }
+    .customer-topology-site-core::after {
+        content: '';
+        position: absolute;
+        inset: 6px;
+        border-radius: inherit;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    }
+    .customer-topology-site-beacon--light .customer-topology-site-core::after {
+        border-color: rgba(255, 255, 255, 0.24);
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.55),
+            inset 0 -10px 18px rgba(15, 23, 42, 0.08);
+    }
+    .customer-topology-site-code {
+        position: relative;
+        z-index: 2;
+        color: var(--site-text);
+        font-size: 11px;
+        font-weight: 950;
+        letter-spacing: 0;
+        text-shadow: var(--site-text-shadow);
+    }
+    .customer-topology-site-led {
+        position: absolute;
+        right: 2px;
+        top: 3px;
+        z-index: 7;
+        width: 10px;
+        height: 10px;
+        border: 2px solid #ffffff;
+        border-radius: 9999px;
+        background: var(--site-health);
+        box-shadow:
+            0 0 0 2px var(--site-health-soft),
+            0 0 12px var(--site-health);
     }
     /* Marker entrance — staggered via inline --customer-topology-marker-delay */
     .customer-topology-marker-enter {
@@ -814,7 +1048,8 @@ const topologyAnimationCss = `
     }
     .customer-topology-packet--critical { color: #ef4444; }
     .customer-topology-packet--warning  { color: #f59e0b; }
-    .customer-topology-packet--stable   { color: #38bdf8; }
+    .customer-topology-packet--stable   { color: #22c55e; }
+    .customer-topology-packet--unknown  { color: #94a3b8; }
     /* Subtle level: slow the packet glow but keep packets visible */
     .customer-topology-anim--subtle .customer-topology-packet {
         animation-duration: 2.6s;
@@ -824,14 +1059,20 @@ const topologyAnimationCss = `
     .customer-topology-anim--off .customer-topology-radiate,
     .customer-topology-anim--off .customer-topology-alert-ring,
     .customer-topology-anim--off .customer-topology-marker-enter,
-    .customer-topology-anim--off .customer-topology-packet {
+    .customer-topology-anim--off .customer-topology-packet,
+    .customer-topology-anim--off .customer-topology-site-wave,
+    .customer-topology-anim--off .customer-topology-site-core,
+    .customer-topology-anim--off .customer-topology-site-core::before {
         animation: none !important;
     }
     @media (prefers-reduced-motion: reduce) {
         .customer-topology-radiate,
         .customer-topology-alert-ring,
         .customer-topology-marker-enter,
-        .customer-topology-packet {
+        .customer-topology-packet,
+        .customer-topology-site-wave,
+        .customer-topology-site-core,
+        .customer-topology-site-core::before {
             animation: none !important;
         }
     }
@@ -1595,33 +1836,45 @@ interface LinkFlowProfile {
     breathe: boolean;
     weight: number;
     opacity: number;
+    haloWeight: number;
+    haloOpacity: number;
+    highlightWeight: number;
 }
 
 const linkFlowProfile = (link: TopologyLink): LinkFlowProfile => {
     switch (link.status) {
         case 'critical':
             return {
-                dashArray: '6 6',
-                flowSeconds: 0.7,
+                dashArray: '8 7',
+                flowSeconds: 0.85,
                 breathe: true,
-                weight: 3.6,
+                weight: 4.2,
                 opacity: 0.95,
+                haloWeight: 13,
+                haloOpacity: 0.24,
+                highlightWeight: 7,
             };
         case 'warning':
             return {
-                dashArray: '8 6',
-                flowSeconds: 1.6,
+                dashArray: '10 8',
+                flowSeconds: 1.8,
                 breathe: false,
-                weight: 3.0,
+                weight: 3.8,
                 opacity: 0.9,
+                haloWeight: 11,
+                haloOpacity: 0.2,
+                highlightWeight: 6,
             };
         case 'stable':
             return {
                 dashArray: null,
                 flowSeconds: null,
                 breathe: false,
-                weight: 2.4,
-                opacity: 0.7,
+                weight: 3.4,
+                opacity: 0.86,
+                haloWeight: 10,
+                haloOpacity: 0.18,
+                highlightWeight: 5.4,
             };
         case 'unknown':
         default:
@@ -1629,8 +1882,11 @@ const linkFlowProfile = (link: TopologyLink): LinkFlowProfile => {
                 dashArray: '2 6',
                 flowSeconds: null,
                 breathe: false,
-                weight: 1.8,
-                opacity: 0.45,
+                weight: 2.2,
+                opacity: 0.52,
+                haloWeight: 8,
+                haloOpacity: 0.12,
+                highlightWeight: 4.2,
             };
     }
 };
@@ -1655,11 +1911,18 @@ const STATUS_HALO_RGBA: Record<TopologyStatus, string> = {
     unknown: 'rgba(148, 163, 184, 0.28)',
 };
 
-const STATUS_RADIATE_CLASS: Record<TopologyStatus, string> = {
-    critical: 'customer-topology-radiate customer-topology-radiate--critical',
-    warning: 'customer-topology-radiate customer-topology-radiate--warning',
-    stable: 'customer-topology-radiate customer-topology-radiate--stable',
-    unknown: 'customer-topology-radiate customer-topology-radiate--unknown',
+const STATUS_MARKER_SPEED: Record<TopologyStatus, string> = {
+    critical: '1.1s',
+    warning: '1.75s',
+    stable: '3.35s',
+    unknown: '4.6s',
+};
+
+const STATUS_DARK_CORE_SURFACE: Record<TopologyStatus, string> = {
+    critical: '#fff1f2',
+    warning: '#fff7ed',
+    stable: '#ecfdf5',
+    unknown: '#f8fafc',
 };
 
 const createSiteIcon = (
@@ -1675,8 +1938,7 @@ const createSiteIcon = (
     const roleChrome = ROLE_BEACON_CHROME[site.role];
     const ringColor = STATUS_RING_COLOR[site.status];
     const haloColor = STATUS_HALO_RGBA[site.status];
-    const radiateClass = STATUS_RADIATE_CLASS[site.status];
-    const ringWidth = site.status === 'critical' ? 2.5 : 2;
+    const waveSpeed = STATUS_MARKER_SPEED[site.status];
     const selectionScale = isSelected
         ? 'scale-110'
         : isSpotlight
@@ -1690,56 +1952,55 @@ const createSiteIcon = (
     const labelChrome = isDark
         ? 'bg-slate-900/90 backdrop-blur-sm border-slate-700 text-slate-100'
         : 'bg-white/90 backdrop-blur-sm border-slate-200 text-slate-800';
-    const pillBg = isDark ? '#0f172a' : '#ffffff';
-    const showAlertDot =
-        site.status === 'critical' || site.status === 'warning';
+    const markerAccentColor =
+        site.status === 'unknown' ? roleChrome.fill : ringColor;
+    const markerAccentHalo =
+        site.status === 'unknown' ? roleChrome.halo : haloColor;
+    const pillBg = isDark
+        ? STATUS_DARK_CORE_SURFACE[site.status]
+        : markerAccentColor;
+    const siteTextColor = isDark ? '#0f172a' : '#ffffff';
+    const siteTextShadow = isDark
+        ? '0 1px 0 rgba(255, 255, 255, 0.72)'
+        : '0 1px 2px rgba(15, 23, 42, 0.36)';
+    const beaconModeClass = isDark
+        ? 'customer-topology-site-beacon--dark'
+        : 'customer-topology-site-beacon--light';
     const entranceClass = animateEntrance
         ? 'customer-topology-marker-enter'
         : '';
     const entranceStyle = animateEntrance
         ? `--customer-topology-marker-delay:${entranceDelayMs}ms;`
         : '';
+    const healthStyle =
+        `--site-health:${ringColor};` +
+        `--site-health-soft:${haloColor};` +
+        `--site-accent:${markerAccentColor};` +
+        `--site-accent-soft:${markerAccentHalo};` +
+        `--site-surface:${pillBg};` +
+        `--site-text:${siteTextColor};` +
+        `--site-text-shadow:${siteTextShadow};` +
+        `--site-wave-speed:${waveSpeed};`;
     return L.divIcon({
         className: 'custom-div-icon',
         html: `
-      <div class="relative flex flex-col items-center group w-[200px] ${entranceClass}" style="${entranceStyle}">
-        <div class="relative flex items-center justify-center w-9 h-9 ${selectionScale} transition-transform duration-200">
-          <span
-            class="absolute inset-0 rounded-full ${radiateClass}"
-            style="background:${haloColor};"
-            aria-hidden="true"
-          ></span>
-          <span
-            class="absolute inset-0 rounded-full"
-            style="background:${pillBg}; border:${ringWidth}px solid ${ringColor}; ${selectionRing}"
-            aria-hidden="true"
-          ></span>
-          <span
-            class="relative z-10 font-black text-[12px] tracking-tight"
-            style="color:${roleChrome.fill};"
-          >${safeShortName}</span>
-          ${
-              showAlertDot
-                  ? `
-            <span class="absolute -top-0.5 -right-0.5 z-20 flex h-3 w-3">
-              <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                  site.status === 'critical' ? 'bg-red-400' : 'bg-amber-400'
-              }"></span>
-              <span class="relative inline-flex rounded-full h-3 w-3 border border-white ${
-                  site.status === 'critical' ? 'bg-red-500' : 'bg-amber-500'
-              }"></span>
-            </span>
-          `
-                  : ''
-          }
+      <div class="relative flex flex-col items-center group w-[220px] ${entranceClass}" style="${entranceStyle}${healthStyle}">
+        <div class="customer-topology-site-beacon ${beaconModeClass} ${selectionScale} transition-transform duration-200" style="${selectionRing}">
+          <span class="customer-topology-site-wave" aria-hidden="true"></span>
+          <span class="customer-topology-site-wave customer-topology-site-wave--2" aria-hidden="true"></span>
+          <span class="customer-topology-site-wave customer-topology-site-wave--3" aria-hidden="true"></span>
+          <span class="customer-topology-site-core" aria-hidden="true">
+            <span class="customer-topology-site-code">${safeShortName}</span>
+          </span>
+          <span class="customer-topology-site-led" aria-hidden="true"></span>
         </div>
-        <div class="mt-1 whitespace-nowrap font-semibold px-2.5 py-0.5 rounded-md shadow-sm border text-[11px] ${labelChrome} ${roleChrome.label}">
+        <div class="mt-1 whitespace-nowrap font-semibold px-2.5 py-0.5 rounded-md shadow-sm border text-[11px] ${labelChrome} ${roleChrome.label}" style="border-color:${ringColor}66;">
           ${safeName}
         </div>
       </div>
     `,
-        iconSize: [200, 70],
-        iconAnchor: [100, 18],
+        iconSize: [220, 82],
+        iconAnchor: [110, 25],
     });
 };
 
@@ -1790,6 +2051,7 @@ const TopologyLinkPath: React.FC<TopologyLinkPathProps> = ({
     );
     const profile = useMemo(() => linkFlowProfile(link), [link]);
     const color = STATUS_STROKE[link.status];
+    const statusClass = `customer-topology-link--${link.status}`;
     const polylineRef = useRef<L.Polyline | null>(null);
 
     // Subtle level: slow the marching dashes and breathing roughly 70% to keep
@@ -1879,6 +2141,43 @@ const TopologyLinkPath: React.FC<TopologyLinkPathProps> = ({
                 eventHandlers={{ click: handleClick }}
             />
             <Polyline
+                positions={positions}
+                pathOptions={{
+                    color: '#0f172a',
+                    weight: profile.haloWeight + 2,
+                    opacity: 0.12,
+                    lineCap: 'round',
+                    lineJoin: 'round',
+                    className: 'customer-topology-link-shadow',
+                }}
+            />
+            <Polyline
+                positions={positions}
+                pathOptions={{
+                    color,
+                    weight: isSelected ? profile.haloWeight + 2 : profile.haloWeight,
+                    opacity: isSelected
+                        ? Math.min(0.36, profile.haloOpacity + 0.12)
+                        : profile.haloOpacity,
+                    lineCap: 'round',
+                    lineJoin: 'round',
+                    className: `customer-topology-link-halo ${statusClass}`,
+                }}
+            />
+            <Polyline
+                positions={positions}
+                pathOptions={{
+                    color: '#ffffff',
+                    weight: isSelected
+                        ? profile.highlightWeight + 1
+                        : profile.highlightWeight,
+                    opacity: link.status === 'unknown' ? 0.28 : 0.42,
+                    lineCap: 'round',
+                    lineJoin: 'round',
+                    className: 'customer-topology-link-highlight',
+                }}
+            />
+            <Polyline
                 ref={polylineRef}
                 positions={positions}
                 pathOptions={{
@@ -1888,7 +2187,7 @@ const TopologyLinkPath: React.FC<TopologyLinkPathProps> = ({
                     dashArray: profile.dashArray ?? undefined,
                     lineCap: 'round',
                     lineJoin: 'round',
-                    className: 'customer-topology-link-shell',
+                    className: `customer-topology-link-shell customer-topology-link-core ${statusClass}`,
                 }}
                 eventHandlers={{ click: handleClick }}
             />
@@ -1933,7 +2232,7 @@ const packetProfile = (
             durationSeconds: subtle ? 8.0 : 6.5,
             radius: subtle ? 2.2 : 2.4,
             fill: '#94a3b8',
-            statusClass: 'customer-topology-packet--stable',
+            statusClass: 'customer-topology-packet--unknown',
             opacity: subtle ? 0.35 : 0.45,
         };
     }
@@ -1965,7 +2264,7 @@ const packetProfile = (
                 count: subtle ? 3 : 5,
                 durationSeconds: subtle ? 5.5 : 4.5,
                 radius: subtle ? 2.8 : 3.2,
-                fill: '#38bdf8',
+                fill: '#22c55e',
                 statusClass: 'customer-topology-packet--stable',
                 opacity: subtle ? 0.85 : 0.95,
             };
@@ -2134,11 +2433,15 @@ const LinkPacketLayer: React.FC<LinkPacketLayerProps> = ({
             path.setAttribute('fill', 'none');
             defs.appendChild(path);
 
+            // Round-trip motion: one packet now travels source → target → source.
+            // Doubling duration preserves the one-way speed operators already
+            // reviewed while making the bidirectional circuit intent obvious.
+            const roundTripSeconds = profile.durationSeconds * 2;
+
             for (let i = 0; i < profile.count; i++) {
                 // Stagger packet starts so they appear evenly distributed
                 // along the path rather than clumping at the origin.
-                const beginOffset =
-                    (i / profile.count) * profile.durationSeconds;
+                const beginOffset = (i / profile.count) * roundTripSeconds;
                 const circle = document.createElementNS(SVG_NS, 'circle');
                 circle.setAttribute('r', String(profile.radius));
                 circle.setAttribute('cx', '0');
@@ -2151,9 +2454,12 @@ const LinkPacketLayer: React.FC<LinkPacketLayerProps> = ({
                 );
 
                 const motion = document.createElementNS(SVG_NS, 'animateMotion');
-                motion.setAttribute('dur', `${profile.durationSeconds}s`);
+                motion.setAttribute('dur', `${roundTripSeconds}s`);
                 motion.setAttribute('repeatCount', 'indefinite');
                 motion.setAttribute('rotate', 'auto');
+                motion.setAttribute('keyPoints', '0;1;0');
+                motion.setAttribute('keyTimes', '0;0.5;1');
+                motion.setAttribute('calcMode', 'linear');
                 motion.setAttribute('begin', `-${beginOffset}s`);
 
                 const mpath = document.createElementNS(SVG_NS, 'mpath');

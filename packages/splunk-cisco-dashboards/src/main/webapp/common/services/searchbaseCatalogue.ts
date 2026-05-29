@@ -22,9 +22,24 @@
  * hundred stanzas, so still within reason).
  *
  * The stable external key is `search_name`.
+ *
+ * Visibility: stanzas with `search_hidden = 1` (or `true` / `yes`) are
+ * omitted from the default catalogue. All current consumers (Overview
+ * dashboard, KPI picker, topology search browsers, and the Searchbase
+ * Canvas) call `getSearchbaseCatalogue()` with that default so hidden
+ * entries never surface in the UI. Pass `{ includeHidden: true }` to
+ * opt back in (e.g. for one-off auditing tools).
  */
 
 import { getSearchAppContext } from './splunkSearchService';
+
+export interface SearchbaseCatalogueOptions {
+    /**
+     * When true, include stanzas marked `search_hidden`. Default false.
+     * Overview and picker consumers should omit this flag.
+     */
+    includeHidden?: boolean;
+}
 
 export interface SearchbaseRecord {
     /** Stanza id in searchbase.conf (lowercase, snake_case). */
@@ -41,8 +56,26 @@ export interface SearchbaseRecord {
     dispatchContext: string;
     /** HTML description (carries inline tags from the conf). */
     description: string;
+    /**
+     * Optional richer "what does this measure" prose, sourced from
+     * the conf's `explanation` field. Many stanzas author the short
+     * one-liner in `description` and a fuller paragraph in
+     * `explanation`; the Searchbase Canvas chrome uses
+     * `explanation || description` for the meaning-subtitle row.
+     * Empty string when the stanza omits the field.
+     */
+    explanation: string;
     /** SPL body — useful for the picker's preview pane. */
     search: string;
+    /**
+     * Optional relationship to another searchbase stanza that should
+     * open as this search's contextual drilldown. The Overview page
+     * currently renders table-shaped drilldowns in a modal, using the
+     * target stanza's SPL and `viz_options` column metadata.
+     */
+    drilldownSearchName?: string;
+    /** Optional label for the tile-level drilldown affordance. */
+    drilldownButtonTitle?: string;
     /**
      * Optional Splunk visualization id (e.g. `splunk.column`,
      * `splunk.line`, `splunk.area`, `splunk.singlevalue`). Mirrors the
@@ -71,7 +104,10 @@ interface SearchbaseEntry {
         tags?: string;
         dispatch_context?: string;
         description?: string;
+        explanation?: string;
         search?: string;
+        drilldown_search_name?: string;
+        drilldown_button_title?: string;
         disabled?: string;
         search_hidden?: string;
         default_viz?: string;
@@ -115,6 +151,24 @@ interface SearchbaseResponse {
 
 const APP_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_\-.]{0,127}$/;
 
+/**
+ * Builds the REST URL for fetching `searchbase.conf` entries, restricted
+ * to stanzas owned by the given app via the `eai:acl.app` filter.
+ *
+ * Why `/servicesNS/-/-/` (wildcard user + wildcard app) instead of
+ * `/servicesNS/-/<app>/`: the app-scoped namespace is INCLUSIVE, not
+ * exclusive — Splunk returns stanzas from `<app>` plus any other app
+ * that ships `searchbase.conf` with `global` sharing. The picker then
+ * sees stanzas from upstream TAs (ThousandEyes, ISE, etc.) bleeding in.
+ *
+ * Equivalent SPL one-liner for hand-testing:
+ *   | rest splunk_server=local /servicesNS/-/-/configs/conf-searchbase
+ *       search="eai:acl.app=splunk-cisco-dashboards"
+ *
+ * The `search` query parameter pushes the ACL filter to splunkd so the
+ * client never has to dedupe foreign-app stanzas, and the cache stays
+ * small.
+ */
 const buildUrl = (appName: string): string => {
     if (!APP_NAME_PATTERN.test(appName)) {
         throw new Error('Invalid Splunk app name.');
@@ -122,8 +176,9 @@ const buildUrl = (appName: string): string => {
     const params = new URLSearchParams({
         output_mode: 'json',
         count: '0',
+        search: `eai:acl.app=${appName}`,
     });
-    return `/en-US/splunkd/__raw/servicesNS/-/${encodeURIComponent(appName)}/configs/conf-searchbase?${params.toString()}`;
+    return `/en-US/splunkd/__raw/servicesNS/-/-/configs/conf-searchbase?${params.toString()}`;
 };
 
 const isInSplunkRuntime = (): boolean => {
@@ -148,8 +203,28 @@ const splitTags = (raw: string | undefined): string[] => {
         .slice(0, 20);
 };
 
-const isTruthyConfValue = (raw: string | undefined): boolean =>
+export const isTruthyConfValue = (raw: string | undefined): boolean =>
     typeof raw === 'string' && /^(1|true|yes)$/i.test(raw.trim());
+
+/** True when a conf-searchbase entry should be omitted from a catalogue fetch. */
+export const isSearchbaseStanzaExcluded = (
+    content: Pick<NonNullable<SearchbaseEntry['content']>, 'disabled' | 'search_hidden'> | undefined,
+    options?: SearchbaseCatalogueOptions
+): boolean => {
+    const stanza = content ?? {};
+    if (isTruthyConfValue(stanza.disabled)) return true;
+    if (!options?.includeHidden && isTruthyConfValue(stanza.search_hidden)) return true;
+    return false;
+};
+
+const sanitizeConfText = (
+    raw: string | undefined,
+    maxLength: number
+): string | undefined => {
+    if (typeof raw !== 'string') return undefined;
+    const trimmed = raw.trim();
+    return trimmed.length > 0 && trimmed.length <= maxLength ? trimmed : undefined;
+};
 
 /**
  * Splunk can hand back conf-searchbase `search` values with app macro
@@ -165,9 +240,14 @@ const collapseExpandedIndexMacro = (spl: string): string =>
         '$1'
     );
 
-let CACHED_PROMISE: Promise<SearchbaseRecord[]> | null = null;
+const catalogueCacheKey = (options?: SearchbaseCatalogueOptions): string =>
+    options?.includeHidden ? 'includeHidden' : 'visible';
 
-const fetchSearchbase = async (): Promise<SearchbaseRecord[]> => {
+const CACHED_PROMISES = new Map<string, Promise<SearchbaseRecord[]>>();
+
+const fetchSearchbase = async (
+    options?: SearchbaseCatalogueOptions
+): Promise<SearchbaseRecord[]> => {
     if (!isInSplunkRuntime()) return [];
     const appName = getSearchAppContext();
     const headers: Record<string, string> = { Accept: 'application/json' };
@@ -186,9 +266,16 @@ const fetchSearchbase = async (): Promise<SearchbaseRecord[]> => {
     const out: SearchbaseRecord[] = [];
     for (const e of entries) {
         const content = e.content ?? {};
-        if (isTruthyConfValue(content.disabled) || isTruthyConfValue(content.search_hidden)) {
+        if (isSearchbaseStanzaExcluded(content, options)) {
             continue;
         }
+        // Belt-and-suspenders: the URL already filters on
+        // `eai:acl.app=<appName>`, but the response is the source of
+        // truth — if splunkd ever returns a foreign-app stanza
+        // (older Splunk versions don't honour the filter param on
+        // every endpoint), drop it here too.
+        const aclApp = typeof e.acl?.app === 'string' ? e.acl.app : '';
+        if (aclApp && aclApp !== appName) continue;
         const searchName = typeof content.search_name === 'string' ? content.search_name.trim() : '';
         if (searchName.length === 0) continue; // Without a join key we can't enrich anything.
         out.push({
@@ -197,13 +284,21 @@ const fetchSearchbase = async (): Promise<SearchbaseRecord[]> => {
             category: typeof content.category === 'string' ? content.category : '',
             subCategory: typeof content.sub_category === 'string' ? content.sub_category : '',
             tags: splitTags(content.tags),
-            dispatchContext:
-                typeof content.dispatch_context === 'string' ? content.dispatch_context : appName,
+            // Source the App-filter value from `acl.app` (the actual
+            // owning app) instead of the stanza-author-supplied
+            // `dispatch_context` field, which is semantically about
+            // "what app should dispatch this search" and is often
+            // hard-coded to splunk-cisco-dashboards even when the
+            // stanza lives in another app.
+            dispatchContext: aclApp || appName,
             description: typeof content.description === 'string' ? content.description : '',
+            explanation: typeof content.explanation === 'string' ? content.explanation : '',
             search:
                 typeof content.search === 'string'
                     ? collapseExpandedIndexMacro(content.search)
                     : '',
+            drilldownSearchName: sanitizeConfText(content.drilldown_search_name, 256),
+            drilldownButtonTitle: sanitizeConfText(content.drilldown_button_title, 120),
             defaultViz: sanitizeDefaultViz(content.default_viz),
             vizOptions: parseVizOptions(content.viz_options),
         });
@@ -216,14 +311,19 @@ const fetchSearchbase = async (): Promise<SearchbaseRecord[]> => {
  * call kicks off the REST request; subsequent calls reuse the same
  * promise. On error the cache resets so the next call retries.
  */
-export const getSearchbaseCatalogue = async (): Promise<SearchbaseRecord[]> => {
-    if (!CACHED_PROMISE) {
-        CACHED_PROMISE = fetchSearchbase().catch((err) => {
-            CACHED_PROMISE = null;
+export const getSearchbaseCatalogue = async (
+    options?: SearchbaseCatalogueOptions
+): Promise<SearchbaseRecord[]> => {
+    const cacheKey = catalogueCacheKey(options);
+    let cached = CACHED_PROMISES.get(cacheKey);
+    if (!cached) {
+        cached = fetchSearchbase(options).catch((err) => {
+            CACHED_PROMISES.delete(cacheKey);
             throw err;
         });
+        CACHED_PROMISES.set(cacheKey, cached);
     }
-    return CACHED_PROMISE;
+    return cached;
 };
 
 /**
@@ -249,5 +349,5 @@ export const plainTextFromHtml = (html: string): string => {
 
 /** Force the next call to re-fetch from Splunk. */
 export const clearSearchbaseCache = (): void => {
-    CACHED_PROMISE = null;
+    CACHED_PROMISES.clear();
 };

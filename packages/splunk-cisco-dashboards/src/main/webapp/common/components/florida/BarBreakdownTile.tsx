@@ -68,13 +68,19 @@ const DEFAULT_VISIBLE_ROW_CAP = 5;
  * `dimensionPriority` to look up case-insensitively means TE orgs
  * that emit "Critical" / "CRITICAL" / "critical" all land in the
  * same slot.
+ *
+ * The Cisco_ThousandEyes data model emits CRITICAL/MAJOR/MINOR/INFO;
+ * legacy / non-TE sources still use the high/medium/low/warning
+ * vocabulary, so both vocabularies are mapped here.
  */
 const SEVERITY_PRIORITY: Record<string, number> = {
     critical: 0,
     error: 0,
+    major: 1,
     high: 1,
     warning: 2,
     medium: 2,
+    minor: 2,
     moderate: 2,
     low: 3,
     notice: 4,
@@ -85,12 +91,13 @@ const SEVERITY_PRIORITY: Record<string, number> = {
 /**
  * Severity-aware bar colors. Lower-cased substring match against the
  * dimension value so "Critical (P1)" and "critical" both light up red.
- * Order matters: more specific terms win over generic ones.
+ * Order matters: more specific terms win over generic ones. MAJOR/MINOR
+ * are the Cisco_ThousandEyes enum equivalents of high/medium.
  */
 const SEVERITY_COLOR_MAP: Array<{ match: RegExp; tw: string }> = [
     { match: /critical|fatal|p1\b/i, tw: 'bg-rose-500' },
-    { match: /error|high|p2\b/i, tw: 'bg-orange-500' },
-    { match: /warn|medium|moderate|p3\b/i, tw: 'bg-amber-500' },
+    { match: /error|high|major|p2\b/i, tw: 'bg-orange-500' },
+    { match: /warn|medium|moderate|minor|p3\b/i, tw: 'bg-amber-500' },
     { match: /low|p4\b/i, tw: 'bg-yellow-500' },
     { match: /notice|info|p5\b/i, tw: 'bg-emerald-500' },
 ];
@@ -245,7 +252,16 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                 />
             )}
 
-            <div className="flex flex-col mb-0.5">
+            <div
+                // `data-tile-control` so the title/header row
+                // suppresses the SortableMetricCard drag handle
+                // while the cursor is over the tile name. See
+                // the matching block in MetricItem.tsx for the
+                // full rationale (label-clip from the grip chip
+                // at top-0.5 left-0.5).
+                data-tile-control="true"
+                className="flex flex-col mb-0.5"
+            >
                 <span className="text-[12px] font-bold text-slate-800 dark:text-slate-100 tracking-tight leading-tight uppercase flex items-center gap-1">
                     <span className="flex items-center gap-1 min-w-0 truncate">
                         {label}

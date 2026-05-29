@@ -14,14 +14,19 @@
  * column derivation, and row-cap logic lives in the hook.
  */
 
-import React from 'react';
-import { ExternalLink, Settings2 } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ArrowDown, ArrowUp, ArrowUpDown, ExternalLink, Settings2 } from 'lucide-react';
 import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
 import { cn } from '@/common/lib/utils';
 import type {
     DataSource,
     NoDataReason,
 } from '@/common/hooks/useMetric';
+import {
+    detectColumnSortKind,
+    sortTableRows,
+    type TableSortDirection,
+} from './tableSort';
 
 interface TableTileProps {
     label: string;
@@ -56,6 +61,11 @@ interface TableTileProps {
      */
     visibleRowCap?: number;
     className?: string;
+}
+
+interface TableTileSortState {
+    column: string | null;
+    direction: TableSortDirection | null;
 }
 
 const DEFAULT_VISIBLE_ROW_CAP = 5;
@@ -163,11 +173,50 @@ export const TableTile: React.FC<TableTileProps> = ({
     visibleRowCap = DEFAULT_VISIBLE_ROW_CAP,
     className,
 }) => {
+    const [sortState, setSortState] = useState<TableTileSortState>({
+        column: null,
+        direction: null,
+    });
+
+    useEffect(() => {
+        if (
+            sortState.column &&
+            !columns.includes(sortState.column)
+        ) {
+            setSortState({ column: null, direction: null });
+        }
+    }, [columns, sortState.column]);
+
+    const cycleSort = useCallback((column: string) => {
+        setSortState((current) => {
+            if (current.column !== column) {
+                return { column, direction: 'asc' };
+            }
+            if (current.direction === 'asc') {
+                return { column, direction: 'desc' };
+            }
+            return { column: null, direction: null };
+        });
+    }, []);
+
     const hasRows = rows.length > 0 && columns.length > 0;
-    const numericColumnFlags = React.useMemo(
+    const numericColumnFlags = useMemo(
         () => columns.map((c) => isNumericColumn(c, rows)),
         [columns, rows]
     );
+
+    const sortKind = useMemo(() => {
+        if (!sortState.column || !sortState.direction) return null;
+        return detectColumnSortKind(sortState.column, rows);
+    }, [rows, sortState.column, sortState.direction]);
+
+    const displayRows = useMemo(() => {
+        const { column, direction } = sortState;
+        if (!column || !direction || !sortKind) return rows;
+        if (!columns.includes(column)) return rows;
+        return sortTableRows(rows, column, direction, sortKind);
+    }, [columns, rows, sortKind, sortState]);
+
     const reportedTotal = totalRowCount ?? rows.length;
     const truncated = reportedTotal > rows.length;
     // Body height matches MetricItem (headline 28px + spark 112px ≈ 140px)
@@ -205,7 +254,16 @@ export const TableTile: React.FC<TableTileProps> = ({
                 />
             )}
 
-            <div className="flex flex-col mb-1">
+            <div
+                // `data-tile-control` so the title/header row
+                // suppresses the SortableMetricCard drag handle
+                // while the cursor is over the tile name. See
+                // the matching block in MetricItem.tsx for the
+                // full rationale (label-clip from the grip chip
+                // at top-0.5 left-0.5).
+                data-tile-control="true"
+                className="flex flex-col mb-1"
+            >
                 <span className="text-[12px] font-bold text-slate-800 dark:text-slate-100 tracking-tight leading-tight uppercase flex items-center gap-1">
                     <span className="flex items-center gap-1 min-w-0 truncate">
                         {label}
@@ -282,23 +340,68 @@ export const TableTile: React.FC<TableTileProps> = ({
                         <table className="w-full text-[11px] leading-tight border-collapse">
                             <thead className="bg-slate-50/80 dark:bg-slate-800/40 sticky top-0 z-10">
                                 <tr>
-                                    {columns.map((col, idx) => (
-                                        <th
-                                            key={col}
-                                            className={cn(
-                                                'px-2 py-1 font-semibold text-[9px] uppercase tracking-wide text-slate-500 dark:text-slate-400 whitespace-nowrap border-b border-slate-200 dark:border-slate-700',
-                                                numericColumnFlags[idx]
-                                                    ? 'text-right'
-                                                    : 'text-left'
-                                            )}
-                                        >
-                                            {col}
-                                        </th>
-                                    ))}
+                                    {columns.map((col, idx) => {
+                                        const isSorted =
+                                            sortState.column === col &&
+                                            sortState.direction !== null;
+                                        const SortIcon = isSorted
+                                            ? sortState.direction === 'asc'
+                                                ? ArrowUp
+                                                : ArrowDown
+                                            : ArrowUpDown;
+                                        const alignRight = numericColumnFlags[idx];
+                                        return (
+                                            <th
+                                                key={col}
+                                                scope="col"
+                                                aria-sort={
+                                                    isSorted
+                                                        ? sortState.direction === 'asc'
+                                                            ? 'ascending'
+                                                            : 'descending'
+                                                        : 'none'
+                                                }
+                                                className={cn(
+                                                    'p-0 font-semibold text-[9px] uppercase tracking-wide text-slate-500 dark:text-slate-400 whitespace-nowrap border-b border-slate-200 dark:border-slate-700',
+                                                    alignRight
+                                                        ? 'text-right'
+                                                        : 'text-left'
+                                                )}
+                                            >
+                                                <button
+                                                    type="button"
+                                                    data-tile-control="true"
+                                                    onClick={() => cycleSort(col)}
+                                                    title={`Sort by ${col}`}
+                                                    className={cn(
+                                                        'group inline-flex w-full items-center gap-0.5 px-2 py-1 transition-colors rounded-sm',
+                                                        'hover:bg-slate-100/90 dark:hover:bg-slate-700/50',
+                                                        'focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-0',
+                                                        alignRight
+                                                            ? 'justify-end'
+                                                            : 'justify-start',
+                                                        isSorted &&
+                                                            'text-sky-700 dark:text-sky-300'
+                                                    )}
+                                                >
+                                                    <span>{col}</span>
+                                                    <SortIcon
+                                                        className={cn(
+                                                            'h-2.5 w-2.5 flex-shrink-0 stroke-[2.5px]',
+                                                            isSorted
+                                                                ? 'opacity-100'
+                                                                : 'opacity-0 group-hover:opacity-40'
+                                                        )}
+                                                        aria-hidden="true"
+                                                    />
+                                                </button>
+                                            </th>
+                                        );
+                                    })}
                                 </tr>
                             </thead>
                             <tbody>
-                                {rows.map((row, rowIdx) => (
+                                {displayRows.map((row, rowIdx) => (
                                     <tr
                                         key={rowIdx}
                                         className="border-t border-slate-100 dark:border-slate-800 hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors"

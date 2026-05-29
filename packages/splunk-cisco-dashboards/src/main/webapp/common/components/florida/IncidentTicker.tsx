@@ -5,9 +5,10 @@
  *
  *     _time, severity, source, message
  *
- * Falls back to a non-data configured state if the search isn't wired or
- * returns no rows. Each row is shown for `intervalMs` (default 5 s) and
- * the ticker pauses on hover so executives can read.
+ * Renders nothing until a saved search is wired. Deployments that want an
+ * explicit empty state can pass `fallback` rows. Each row is shown for
+ * `intervalMs` (default 5 s) and the ticker pauses on hover so executives
+ * can read.
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
@@ -35,14 +36,7 @@ interface IncidentTickerProps {
     fallback?: IncidentRow[];
 }
 
-const FALLBACK_INCIDENTS: IncidentRow[] = [
-    {
-        severity: 'medium',
-        source: 'Catalyst Center',
-        message: 'Incident feed not configured.',
-        when: '—',
-    },
-];
+const DEFAULT_FALLBACK_INCIDENTS: IncidentRow[] = [];
 
 const ICON: Record<IncidentSeverity, React.ComponentType<{ className?: string }>> = {
     critical: AlertCircle,
@@ -81,9 +75,9 @@ export const IncidentTicker: React.FC<IncidentTickerProps> = ({
     range,
     refreshToken,
     intervalMs = 5000,
-    fallback = FALLBACK_INCIDENTS,
+    fallback = DEFAULT_FALLBACK_INCIDENTS,
 }) => {
-    const [rows, setRows] = useState<IncidentRow[]>(fallback);
+    const [rows, setRows] = useState<IncidentRow[]>(DEFAULT_FALLBACK_INCIDENTS);
     const [paused, setPaused] = useState(false);
     const [index, setIndex] = useState(0);
 
@@ -133,7 +127,9 @@ export const IncidentTicker: React.FC<IncidentTickerProps> = ({
         return () => window.clearInterval(id);
     }, [paused, rows.length, intervalMs]);
 
-    const current = rows[index] ?? fallback[0];
+    const current = rows[index];
+    if (!current) return null;
+
     const Icon = ICON[current.severity];
     const colorClass = COLOR[current.severity];
 

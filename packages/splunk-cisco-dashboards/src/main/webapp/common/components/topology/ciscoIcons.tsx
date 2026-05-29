@@ -345,41 +345,41 @@ export const CiscoOfficialDataCenterIcon = ciscoLineIcon(
     </>
 );
 
-// Build 1201 — compact load-balancer glyph. Operators preferred the
-// simple square service icon style: an outlined box with a small
-// internal splitter mark. Keep it blue and restrained so it reads
-// clearly in the picker and does not compete with device-card chrome.
+// Build 1222 — generic load balancer. The previous boxed glyph read
+// like an abstract badge at canvas size. Use the more familiar
+// "one VIP/input distributes to multiple backends" topology mark.
 const LoadBalancerSVG: React.FC<IconProps> = ({ className, title }) => (
     <svg
         viewBox="0 0 64 64"
         className={cn(COLOR.BLUE, className)}
         fill="none"
         stroke="currentColor"
-        strokeWidth={3}
+        strokeWidth={3.2}
         strokeLinecap="round"
         strokeLinejoin="round"
         aria-label={title ?? 'Load balancer'}
         role="img"
     >
         {title ? <title>{title}</title> : null}
+        <circle cx={32} cy={9} r={4} fill="currentColor" stroke="none" />
+        <path d="M32 13 V20" />
         <rect
-            x={18}
-            y={12}
-            width={28}
-            height={28}
-            rx={2.5}
-            strokeWidth={2.6}
+            x={15}
+            y={20}
+            width={34}
+            height={22}
+            rx={6}
+            fill="white"
+            fillOpacity={0.18}
         />
-        <rect x={24} y={19} width={4.5} height={4.5} rx={0.7} fill="currentColor" stroke="none" />
-        <rect x={30} y={19} width={4.5} height={4.5} rx={0.7} fill="currentColor" stroke="none" />
-        <rect x={36} y={19} width={4.5} height={4.5} rx={0.7} fill="currentColor" stroke="none" />
-        <path d="M26.25 23.5 V28.5" />
-        <path d="M32.25 23.5 V32" />
-        <path d="M38.25 23.5 V28.5" />
-        <path d="M26.25 28.5 C26.25 31.5 30.2 31.5 30.2 35" />
-        <path d="M38.25 28.5 C38.25 31.5 34.3 31.5 34.3 35" />
-        <path d="M32.25 32 V36" />
-        <path d="M29.8 35.4 H34.7" />
+        <path d="M23 30 H41" />
+        <path d="M25 36 H39" opacity={0.75} />
+        <path d="M32 42 V49" />
+        <path d="M32 49 H18" />
+        <path d="M32 49 H46" />
+        <circle cx={18} cy={54} r={4} fill="currentColor" stroke="none" />
+        <circle cx={32} cy={54} r={4} fill="currentColor" stroke="none" />
+        <circle cx={46} cy={54} r={4} fill="currentColor" stroke="none" />
     </svg>
 );
 LoadBalancerSVG.displayName = 'DeviceIcon(LoadBalancer)';
@@ -581,299 +581,192 @@ export const CiscoUsersIcon = wrap(Users, COLOR.PINK);
 export const CiscoGenericIcon = wrap(Box, COLOR.SLATE);
 
 // Splunk platform
-const SvaDocument: React.FC<{
-    children?: React.ReactNode;
-    className?: string;
-    stacked?: boolean;
-    title?: string;
-}> = ({ children, className, stacked = false, title }) => (
-    <svg
-        viewBox="0 0 64 64"
-        className={cn(COLOR.SLATE, className)}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2.4}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-label={title ?? 'Splunk architecture icon'}
-        role="img"
-    >
-        {title ? <title>{title}</title> : null}
-        {stacked ? (
+const SPLUNK_SVA_ICON_BASE =
+    '/static/app/splunk-cisco-dashboards/images/splunk_sva';
+
+const svaRasterIcon = (
+    filename: string,
+    fallbackTitle: string
+): React.FC<IconProps> => {
+    const Icon: React.FC<IconProps> = ({ className, title }) => {
+        const label = title ?? fallbackTitle;
+        return (
+            <img
+                src={`${SPLUNK_SVA_ICON_BASE}/${filename}`}
+                className={cn('block h-full w-full object-contain', className)}
+                alt={label}
+                title={label}
+                draggable={false}
+            />
+        );
+    };
+    Icon.displayName = `DeviceIcon(${fallbackTitle})`;
+    return Icon;
+};
+
+export const SplunkDeploymentServerIcon = svaRasterIcon(
+    'agent-management.png',
+    'Splunk Agent Management'
+);
+export const SplunkLicenseManagerIcon = svaRasterIcon(
+    'license-manager.png',
+    'Splunk License Manager'
+);
+export const SplunkMonitoringConsoleIcon = svaRasterIcon(
+    'monitoring-console.png',
+    'Splunk Monitoring Console'
+);
+export const SplunkClusterManagerIcon = svaRasterIcon(
+    'cluster-manager.png',
+    'Splunk Cluster Manager'
+);
+export const SplunkDeployerIcon = svaRasterIcon(
+    'shc-deployer.png',
+    'Splunk Search Head Cluster Deployer'
+);
+export const SplunkSearchHeadIcon = svaRasterIcon(
+    'search-head.png',
+    'Splunk Search Head'
+);
+export const SplunkSearchHeadClusterIcon = svaRasterIcon(
+    'search-head-cluster.png',
+    'Splunk Search Head Cluster'
+);
+export const SplunkIndexerIcon = svaRasterIcon('indexer.png', 'Splunk Indexer');
+export const SplunkIndexerClusterIcon = svaRasterIcon(
+    'indexer.png',
+    'Splunk Indexer Cluster'
+);
+export const SplunkDataCollectionIcon = svaRasterIcon(
+    'data-collection.png',
+    'Splunk Data Collection'
+);
+
+type ForwarderVariant = 'universal' | 'heavy' | 'intermediate';
+
+const FORWARDER_ICON_CONFIG: Record<
+    ForwarderVariant,
+    { className: string; title: string }
+> = {
+    universal: {
+        className: COLOR.EMERALD,
+        title: 'Splunk Universal Forwarder',
+    },
+    heavy: {
+        className: COLOR.AMBER,
+        title: 'Splunk Heavy Forwarder',
+    },
+    intermediate: {
+        className: COLOR.RED,
+        title: 'Splunk Intermediate Forwarder',
+    },
+};
+
+const ForwarderSignal: React.FC<{ variant: ForwarderVariant }> = ({
+    variant,
+}) => {
+    if (variant === 'universal') {
+        return (
             <>
-                <rect x={20} y={12} width={30} height={38} rx={3} opacity={0.45} />
-                <rect x={15} y={17} width={30} height={38} rx={3} opacity={0.7} />
+                <path d="M22 25 H43" />
+                <path d="M20 33 H47" />
+                <path d="M22 41 H43" />
+                <path d="M25 49 H38" />
+                <path d="M45 22 L60 37 L45 52" />
             </>
-        ) : null}
-        <rect x={10} y={8} width={34} height={44} rx={3} fill="white" fillOpacity={0.2} />
-        <circle cx={15} cy={48} r={1.1} fill="currentColor" stroke="none" opacity={0.65} />
-        {children}
-    </svg>
-);
+        );
+    }
 
-export const SplunkSearchHeadIcon: React.FC<IconProps> = ({ className, title }) => (
-    <SvaDocument className={className} title={title ?? 'Splunk Search Head'}>
-        <circle cx={24} cy={25} r={7} />
-        <path d="M29 30 L36 37" />
-        <path d="M16 37 H37" />
-        <path d="M16 42 H33" />
-        <path d="M17 20 H14" />
-        <path d="M17 27 H14" />
-        <path d="M32 20 H38" />
-        <path d="M35 25 H40" />
-    </SvaDocument>
-);
-SplunkSearchHeadIcon.displayName = 'DeviceIcon(SplunkSearchHead)';
+    return (
+        <>
+            <path d="M21 24 H30 M36 24 H41" />
+            <path d="M21 32 H28 M35 32 H44" />
+            <path d="M21 40 H31 M38 40 H45" />
+            <path d="M21 48 H28 M35 48 H40" />
+            <path d="M43 24 L52 33" />
+            <path d="M45 50 L52 42" />
+            <path d="M50 22 L64 37 L50 52" />
+        </>
+    );
+};
 
-export const SplunkSearchHeadClusterIcon: React.FC<IconProps> = ({
-    className,
-    title,
-}) => (
-    <SvaDocument
-        className={className}
-        stacked
-        title={title ?? 'Splunk Search Head Cluster'}
-    >
-        <circle cx={23} cy={25} r={6} />
-        <path d="M27.5 29.5 L34 36" />
-        <path d="M16 39 H36" />
-        <path d="M16 43 H31" />
-    </SvaDocument>
-);
-SplunkSearchHeadClusterIcon.displayName =
-    'DeviceIcon(SplunkSearchHeadCluster)';
+const forwarderIcon = (
+    variant: ForwarderVariant
+): React.FC<IconProps> => {
+    const ForwarderIcon: React.FC<IconProps> = ({ className, title }) => {
+        const config = FORWARDER_ICON_CONFIG[variant];
+        const label = title ?? config.title;
+        const stacked = variant === 'intermediate';
+        return (
+            <svg
+                viewBox="0 0 80 80"
+                className={cn(config.className, className)}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={3.4}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-label={label}
+                role="img"
+            >
+                <title>{label}</title>
+                {stacked ? (
+                    <>
+                        <rect
+                            x={19}
+                            y={8}
+                            width={46}
+                            height={58}
+                            rx={8}
+                            fill="white"
+                            fillOpacity={0.92}
+                            opacity={0.65}
+                        />
+                        <rect
+                            x={15}
+                            y={12}
+                            width={46}
+                            height={58}
+                            rx={8}
+                            fill="white"
+                            fillOpacity={0.96}
+                            opacity={0.82}
+                        />
+                    </>
+                ) : null}
+                <rect
+                    x={10}
+                    y={16}
+                    width={50}
+                    height={58}
+                    rx={8}
+                    fill="white"
+                    fillOpacity={0.98}
+                />
+                <path d="M10 58 H60" />
+                <circle cx={18} cy={66} r={2.3} fill="currentColor" stroke="none" />
+                <g transform="translate(0 -2)">
+                    <ForwarderSignal variant={variant} />
+                </g>
+            </svg>
+        );
+    };
+    ForwarderIcon.displayName = `DeviceIcon(${FORWARDER_ICON_CONFIG[variant].title})`;
+    return ForwarderIcon;
+};
 
-const IndexerGlyph: React.FC = () => (
-    <>
-        <path d="M21 18 L34 23.5 V38.5 L21 44 L8 38.5 V23.5 Z" />
-        <path d="M8 23.5 L21 29 L34 23.5" />
-        <path d="M21 29 V44" />
-        <path d="M14 34 H19" />
-        <path d="M23 34 H28" />
-        <path d="M14 38 H19" />
-        <path d="M23 38 H28" />
-    </>
+export const SplunkUniversalForwarderIcon = forwarderIcon('universal');
+export const SplunkHeavyForwarderIcon = forwarderIcon('heavy');
+export const SplunkIntermediateForwarderIcon =
+    forwarderIcon('intermediate');
+export const SplunkEdgeProcessorIcon = svaRasterIcon(
+    'data-collection.png',
+    'Splunk Edge Processor'
 );
-
-export const SplunkIndexerIcon: React.FC<IconProps> = ({ className, title }) => (
-    <SvaDocument className={cn(COLOR.SLATE, className)} title={title ?? 'Splunk Indexer'}>
-        <IndexerGlyph />
-    </SvaDocument>
+export const SplunkSc4sIcon = svaRasterIcon(
+    'sc4s.png',
+    'Splunk Connect for Syslog'
 );
-SplunkIndexerIcon.displayName = 'DeviceIcon(SplunkIndexer)';
-
-export const SplunkIndexerClusterIcon: React.FC<IconProps> = ({
-    className,
-    title,
-}) => (
-    <SvaDocument
-        className={cn(COLOR.SLATE, className)}
-        stacked
-        title={title ?? 'Splunk Indexer Cluster'}
-    >
-        <IndexerGlyph />
-    </SvaDocument>
-);
-SplunkIndexerClusterIcon.displayName = 'DeviceIcon(SplunkIndexerCluster)';
-
-const ForwarderGlyph: React.FC<{ heavy?: boolean }> = ({ heavy = false }) => (
-    <>
-        <path d="M16 20 H30" />
-        <path d="M16 27 H35" />
-        <path d="M16 34 H31" />
-        <path d="M30 18 L39 27 L30 36" strokeWidth={heavy ? 3.2 : 2.4} />
-        {heavy ? <path d="M21 41 H36" /> : null}
-    </>
-);
-
-export const SplunkHeavyForwarderIcon: React.FC<IconProps> = ({
-    className,
-    title,
-}) => (
-    <SvaDocument className={className} title={title ?? 'Splunk Heavy Forwarder'}>
-        <ForwarderGlyph heavy />
-    </SvaDocument>
-);
-SplunkHeavyForwarderIcon.displayName = 'DeviceIcon(SplunkHeavyForwarder)';
-
-export const SplunkUniversalForwarderIcon: React.FC<IconProps> = ({
-    className,
-    title,
-}) => (
-    <SvaDocument
-        className={className}
-        title={title ?? 'Splunk Universal Forwarder'}
-    >
-        <ForwarderGlyph />
-    </SvaDocument>
-);
-SplunkUniversalForwarderIcon.displayName =
-    'DeviceIcon(SplunkUniversalForwarder)';
-
-export const SplunkClusterManagerIcon: React.FC<IconProps> = ({
-    className,
-    title,
-}) => (
-    <SvaDocument className={className} title={title ?? 'Splunk Cluster Manager'}>
-        <path d="M18 21 H36" />
-        <circle cx={24} cy={21} r={2.3} fill="currentColor" stroke="none" />
-        <path d="M18 31 H36" />
-        <circle cx={31} cy={31} r={2.3} fill="currentColor" stroke="none" />
-        <path d="M18 41 H36" />
-        <circle cx={22} cy={41} r={2.3} fill="currentColor" stroke="none" />
-    </SvaDocument>
-);
-SplunkClusterManagerIcon.displayName = 'DeviceIcon(SplunkClusterManager)';
-
-export const SplunkDeployerIcon: React.FC<IconProps> = ({ className, title }) => (
-    <SvaDocument className={className} title={title ?? 'Splunk Deployer'}>
-        <rect x={20} y={18} width={14} height={10} rx={1.5} />
-        <path d="M27 28 V36" />
-        <path d="M16 43 L27 36 L38 43" />
-        <circle cx={16} cy={43} r={3} />
-        <circle cx={27} cy={36} r={3} />
-        <circle cx={38} cy={43} r={3} />
-    </SvaDocument>
-);
-SplunkDeployerIcon.displayName = 'DeviceIcon(SplunkDeployer)';
-
-export const SplunkLicenseManagerIcon: React.FC<IconProps> = ({
-    className,
-    title,
-}) => (
-    <SvaDocument className={className} title={title ?? 'Splunk License Manager'}>
-        <rect x={17} y={18} width={20} height={14} rx={2} />
-        <path d="M21 25 H31" />
-        <path d="M22 39 L27 43 L37 34" />
-    </SvaDocument>
-);
-SplunkLicenseManagerIcon.displayName = 'DeviceIcon(SplunkLicenseManager)';
-
-export const SplunkMonitoringConsoleIcon: React.FC<IconProps> = ({
-    className,
-    title,
-}) => (
-    <svg
-        viewBox="0 0 64 64"
-        className={cn(COLOR.SLATE, className)}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2.4}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-label={title ?? 'Splunk Monitoring Console'}
-        role="img"
-    >
-        {title ? <title>{title}</title> : null}
-        <rect x={12} y={14} width={40} height={28} rx={3} fill="white" fillOpacity={0.2} />
-        <path d="M28 48 H36" />
-        <path d="M32 42 V48" />
-        <rect x={20} y={26} width={4} height={8} rx={0.8} fill="currentColor" stroke="none" />
-        <rect x={30} y={22} width={4} height={12} rx={0.8} fill="currentColor" stroke="none" />
-        <rect x={40} y={18} width={4} height={16} rx={0.8} fill="currentColor" stroke="none" />
-    </svg>
-);
-SplunkMonitoringConsoleIcon.displayName =
-    'DeviceIcon(SplunkMonitoringConsole)';
-
-export const SplunkDeploymentServerIcon: React.FC<IconProps> = ({
-    className,
-    title,
-}) => (
-    <SvaDocument
-        className={className}
-        title={title ?? 'Splunk Deployment Server'}
-    >
-        <path d="M18 20 H30" />
-        <path d="M18 42 H30" />
-        <path d="M30 20 L39 31 L30 42" />
-        <circle cx={39} cy={31} r={3} />
-        <circle cx={18} cy={20} r={2.4} fill="currentColor" stroke="none" />
-        <circle cx={18} cy={42} r={2.4} fill="currentColor" stroke="none" />
-    </SvaDocument>
-);
-SplunkDeploymentServerIcon.displayName = 'DeviceIcon(SplunkDeploymentServer)';
-
-export const SplunkDataCollectionIcon: React.FC<IconProps> = ({
-    className,
-    title,
-}) => (
-    <SvaDocument
-        className={cn(COLOR.ROSE, className)}
-        title={title ?? 'Splunk Data Collection'}
-    >
-        <path d="M20 17 V35" />
-        <path d="M20 35 H34" />
-        <path d="M34 35 L29 30" />
-        <path d="M34 35 L29 40" />
-        <path d="M16 22 H28" />
-        <path d="M16 28 H31" />
-        <path d="M16 42 H26" />
-    </SvaDocument>
-);
-SplunkDataCollectionIcon.displayName = 'DeviceIcon(SplunkDataCollection)';
-
-export const SplunkEdgeProcessorIcon: React.FC<IconProps> = ({
-    className,
-    title,
-}) => (
-    <svg
-        viewBox="0 0 64 64"
-        className={cn(COLOR.SLATE, className)}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2.4}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-label={title ?? 'Splunk Edge Processor'}
-        role="img"
-    >
-        {title ? <title>{title}</title> : null}
-        <path d="M20 42 Q10 42 10 34 Q10 26 19 26 Q21 16 33 16 Q43 16 47 26 Q55 27 55 35 Q55 42 46 42 Z" />
-        <circle cx={24} cy={34} r={3} />
-        <circle cx={34} cy={28} r={3} />
-        <circle cx={43} cy={35} r={3} />
-        <path d="M27 33 L31 29" />
-        <path d="M37 29 L41 34" />
-    </svg>
-);
-SplunkEdgeProcessorIcon.displayName = 'DeviceIcon(SplunkEdgeProcessor)';
-
-export const SplunkSc4sIcon: React.FC<IconProps> = ({ className, title }) => (
-    <svg
-        viewBox="0 0 64 64"
-        className={cn(COLOR.SLATE, className)}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2.4}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-label={title ?? 'Splunk Connect for Syslog'}
-        role="img"
-    >
-        {title ? <title>{title}</title> : null}
-        <rect x={10} y={12} width={38} height={34} rx={3} fill="white" fillOpacity={0.2} />
-        <path d="M10 26 H48" />
-        <text
-            x={29}
-            y={22}
-            textAnchor="middle"
-            fontSize={9}
-            fontWeight={700}
-            fill="currentColor"
-            stroke="none"
-        >
-            SC4S
-        </text>
-        <path d="M18 37 H38" />
-        <circle cx={49} cy={45} r={9} fill="white" stroke="currentColor" />
-        <path d="M45 49 Q49 42 53 49" />
-        <path d="M45 44 Q49 39 53 44" />
-        <circle cx={46.5} cy={45} r={1} fill="currentColor" stroke="none" />
-        <circle cx={51.5} cy={45} r={1} fill="currentColor" stroke="none" />
-    </svg>
-);
-SplunkSc4sIcon.displayName = 'DeviceIcon(SplunkSc4s)';
 
 // =================================================================
 // Build 115.5 — 24 new shapes. Each is grouped by section to match
@@ -951,6 +844,7 @@ export const CISCO_ICONS = {
     modular_chassis_switch: CiscoModularChassisIcon,
     nexus_aci_fabric: CiscoNexusAciFabricIcon,
     sdwan_controller: CiscoSdwanControllerIcon,
+    custom_stencil: CiscoGenericIcon,
 
     // Security
     firewall: CiscoFirewallIcon,
@@ -1002,6 +896,7 @@ export const CISCO_ICONS = {
     splunk_indexer_cluster: SplunkIndexerClusterIcon,
     splunk_heavy_forwarder: SplunkHeavyForwarderIcon,
     splunk_universal_forwarder: SplunkUniversalForwarderIcon,
+    splunk_intermediate_forwarder: SplunkIntermediateForwarderIcon,
     splunk_cluster_manager: SplunkClusterManagerIcon,
     splunk_deployer: SplunkDeployerIcon,
     splunk_license_manager: SplunkLicenseManagerIcon,

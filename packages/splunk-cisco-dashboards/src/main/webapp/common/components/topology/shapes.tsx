@@ -23,6 +23,9 @@
  *   - Handles on all four sides (Top / Right / Bottom / Left).
  *   - Handles are visually small at rest and grow on node hover so
  *     operators discover the connection points without clutter.
+ *   - Invisible full-surface end handles let an in-flight connector
+ *     land anywhere on the device face; the canvas persists that
+ *     cursor point as a normalised edge anchor.
  *   - `isConnectable={true}` so dragging from any handle creates a
  *     new edge — wired to the canvas's `onConnect` handler which
  *     opens the Build 105 properties panel for the new edge.
@@ -39,6 +42,7 @@ import type {
     TopologyDiscoveredNode,
     DeviceShapeId,
 } from '@/common/services/topologyDiscovery';
+import type { CustomStencilAsset } from '@/common/services/diagramPersistenceService';
 import { ShapeSilhouette } from './silhouettes';
 import { useIpAddressVisibility } from '@/common/contexts/IpAddressVisibilityContext';
 import {
@@ -53,6 +57,14 @@ interface ShapeData {
      *  the saved payload (`SavedDiagramNode.ipAddress`) stay in
      *  sync via a single field name. */
     node: TopologyDiscoveredNode;
+    /** Network Diagram authoring surface only: allow connectors
+     *  to land anywhere on the node face and persist exact edge
+     *  anchors. The live topology canvas keeps its classic four
+     *  port handles. */
+    freeformAnchors?: boolean;
+    /** User-imported SVG/PNG stencil artwork. Present only for
+     *  `device:custom_stencil` nodes in the Network Diagram. */
+    customStencil?: CustomStencilAsset;
 }
 
 /**
@@ -128,6 +140,28 @@ const STATUS_PRESETS: Record<
  *  `CISCO_ICONS[shape]` from `ciscoIcons.tsx` is the canonical
  *  source — the keys are 1:1 with `DeviceShapeId`. */
 
+const SURFACE_HANDLE_STYLE: React.CSSProperties = {
+    left: 0,
+    top: 0,
+    width: '100%',
+    height: '100%',
+    transform: 'none',
+    borderRadius: 0,
+    border: 0,
+    background: 'transparent',
+    zIndex: 10,
+};
+
+const CUSTOM_STENCIL_PORT_ANCHORS = [22, 36, 50, 64, 78].flatMap((y) =>
+    Array.from({ length: 19 }, (_, index) => ({
+        x: 5 + index * 5,
+        y,
+    }))
+);
+
+const isCustomStencilGuideAnchor = (anchor: { x: number; y: number }): boolean =>
+    anchor.y === 50 && (anchor.x - 5) % 15 === 0;
+
 /** Connection handles on all four sides. Each side gets BOTH a
  *  `source` and `target` handle so React Flow can attach edges in
  *  either direction. They share an id-prefix per side so the
@@ -151,7 +185,54 @@ const STATUS_PRESETS: Record<
  *  bug ("arrow points the wrong way") survived 115.5 because
  *  the swap landed in the wrong file. Fixing it here is the
  *  actual fix. */
-const NodeHandles: React.FC = () => {
+const CustomStencilPortHandles: React.FC<{ selected?: boolean }> = ({
+    selected,
+}) => (
+    <>
+        {CUSTOM_STENCIL_PORT_ANCHORS.map((anchor) => {
+            const idBase = `surface-${anchor.x}-${anchor.y}`;
+            const guideAnchor = isCustomStencilGuideAnchor(anchor);
+            const style: React.CSSProperties = {
+                left: `${anchor.x}%`,
+                top: `${anchor.y}%`,
+                transform: 'translate(-50%, -50%)',
+                zIndex: 20,
+            };
+            const className = cn(
+                guideAnchor ? '!h-1.5 !w-1.5' : '!h-1 !w-1',
+                '!min-h-0 !min-w-0 !rounded-full',
+                '!border !border-white !bg-sky-500',
+                'transition-opacity',
+                selected && guideAnchor ? 'opacity-70' : 'opacity-0',
+                guideAnchor ? 'group-hover:opacity-80' : 'group-hover:opacity-40'
+            );
+            return (
+                <React.Fragment key={idBase}>
+                    <Handle
+                        type="target"
+                        position={Position.Top}
+                        id={`${idBase}-target`}
+                        className={className}
+                        style={style}
+                    />
+                    <Handle
+                        type="source"
+                        position={Position.Top}
+                        id={`${idBase}-source`}
+                        className={className}
+                        style={style}
+                    />
+                </React.Fragment>
+            );
+        })}
+    </>
+);
+
+const NodeHandles: React.FC<{
+    freeform?: boolean;
+    customStencil?: boolean;
+    selected?: boolean;
+}> = ({ freeform, customStencil, selected }) => {
     const sides: Array<{ pos: Position; id: string; style: React.CSSProperties }> = [
         { pos: Position.Top, id: 'top', style: { top: -4 } },
         { pos: Position.Right, id: 'right', style: { right: -4 } },
@@ -160,24 +241,50 @@ const NodeHandles: React.FC = () => {
     ];
     return (
         <>
-            {sides.map((s) => (
-                <React.Fragment key={s.id}>
+            {freeform && (
+                <>
                     <Handle
                         type="target"
-                        position={s.pos}
-                        id={`${s.id}-target`}
-                        className="!w-2.5 !h-2.5 !bg-sky-400 !border-2 !border-white dark:!border-slate-900 opacity-0 group-hover:opacity-100 transition-opacity"
-                        style={s.style}
+                        position={Position.Top}
+                        id="surface-target"
+                        isConnectableStart={false}
+                        isConnectableEnd
+                        className="!min-w-0 !min-h-0 !opacity-0"
+                        style={SURFACE_HANDLE_STYLE}
                     />
                     <Handle
                         type="source"
-                        position={s.pos}
-                        id={`${s.id}-source`}
-                        className="!w-2.5 !h-2.5 !bg-sky-500 !border-2 !border-white dark:!border-slate-900 opacity-0 group-hover:opacity-100 transition-opacity"
-                        style={s.style}
+                        position={Position.Top}
+                        id="surface-source"
+                        isConnectableStart={false}
+                        isConnectableEnd
+                        className="!min-w-0 !min-h-0 !opacity-0"
+                        style={SURFACE_HANDLE_STYLE}
                     />
-                </React.Fragment>
-            ))}
+                </>
+            )}
+            {freeform && customStencil && (
+                <CustomStencilPortHandles selected={selected} />
+            )}
+            {!customStencil &&
+                sides.map((s) => (
+                    <React.Fragment key={s.id}>
+                        <Handle
+                            type="target"
+                            position={s.pos}
+                            id={`${s.id}-target`}
+                            className="!w-2.5 !h-2.5 !bg-sky-400 !border-2 !border-white dark:!border-slate-900 opacity-0 group-hover:opacity-100 transition-opacity"
+                            style={s.style}
+                        />
+                        <Handle
+                            type="source"
+                            position={s.pos}
+                            id={`${s.id}-source`}
+                            className="!w-2.5 !h-2.5 !bg-sky-500 !border-2 !border-white dark:!border-slate-900 opacity-0 group-hover:opacity-100 transition-opacity"
+                            style={s.style}
+                        />
+                    </React.Fragment>
+                ))}
         </>
     );
 };
@@ -246,6 +353,80 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
         const spl = buildMetadataHostSpl(candidateHost);
         openSplunkSearch(spl);
     };
+    const customStencil = data.customStencil;
+    const title = `${node.label}\nStatus: ${status.label}${
+        node.healthScore !== undefined ? ` (${node.healthScore})` : ''
+    }${node.managementSource ? `\nSource: ${node.managementSource}` : ''}${
+        vendorModelLine ? `\nHardware: ${vendorModelLine}` : ''
+    }${showIp ? `\nIP: ${ipAddress}` : ''}${
+        node.serialNumber ? `\nSerial: ${node.serialNumber}` : ''
+    }`;
+
+    if (customStencil) {
+        return (
+            <div
+                className="group relative flex h-full w-full items-center justify-center overflow-visible bg-transparent"
+                style={{ width: '100%', height: '100%' }}
+                title={title}
+            >
+                <NodeResizer
+                    isVisible={selected === true}
+                    minWidth={180}
+                    minHeight={20}
+                    lineClassName="!border-sky-500/55"
+                    handleClassName="!bg-sky-500 !border-white !w-2 !h-2"
+                />
+                <NodeHandles
+                    freeform={data.freeformAnchors === true}
+                    customStencil
+                    selected={selected}
+                />
+                <img
+                    src={customStencil.src}
+                    alt={customStencil.label}
+                    className="pointer-events-none block h-full w-full object-contain"
+                    draggable={false}
+                />
+                <div className="pointer-events-none absolute left-0 top-full mt-1 min-w-28 max-w-72 rounded-md border border-slate-200 bg-white/95 px-1.5 py-1 leading-tight shadow-sm backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/95">
+                    <div className="flex items-center gap-1">
+                        <span
+                            className={cn(
+                                'h-1.5 w-1.5 shrink-0 rounded-full',
+                                status.dot,
+                                status.dotGlow
+                            )}
+                            aria-hidden
+                        />
+                        <span className="truncate text-[10px] font-semibold text-slate-900 dark:text-slate-100">
+                            {node.shortLabel}
+                        </span>
+                    </div>
+                    <div
+                        className={cn(
+                            'truncate text-[8px] font-mono tracking-tight',
+                            vendorModelLine
+                                ? 'text-slate-600 dark:text-slate-300'
+                                : 'text-transparent'
+                        )}
+                        title={vendorModelLine ?? undefined}
+                    >
+                        {vendorModelLine ?? '-'}
+                    </div>
+                    <div
+                        className={cn(
+                            'truncate text-[8px] font-mono tracking-tight',
+                            showIp
+                                ? 'text-sky-600 dark:text-sky-400'
+                                : 'text-transparent'
+                        )}
+                        title={showIp ? ipAddress : undefined}
+                    >
+                        {showIp ? ipAddress : '-'}
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div
@@ -286,11 +467,7 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
             // resizer enforces a 90×100 floor so a panicked drag
             // can't collapse the card to an unreadable nub.
             style={{ width: '100%', height: '100%' }}
-            title={`${node.label}\nStatus: ${status.label}${
-                node.healthScore !== undefined ? ` (${node.healthScore})` : ''
-            }${node.managementSource ? `\nSource: ${node.managementSource}` : ''}${
-                vendorModelLine ? `\nHardware: ${vendorModelLine}` : ''
-            }${node.serialNumber ? `\nSerial: ${node.serialNumber}` : ''}`}
+            title={title}
         >
             {/* Build 115.11 — eight resize handles (4 corners + 4
              *  edges) appear when the card is selected. Min sizes
@@ -311,7 +488,7 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
                 lineClassName="!border-sky-500/50"
                 handleClassName="!bg-sky-500 !border-white !w-2 !h-2"
             />
-            <NodeHandles />
+            <NodeHandles freeform={data.freeformAnchors === true} />
             {/* Silhouette area — top 2/3.
 
                 Build 115.13 replaces the previous "centred lucide
@@ -466,6 +643,7 @@ export const F5LoadBalancerShape = DeviceShape;
 export const ModularChassisSwitchShape = DeviceShape;
 export const NexusAciFabricShape = DeviceShape;
 export const SdwanControllerShape = DeviceShape;
+export const CustomStencilShape = DeviceShape;
 export const VpnConcentratorShape = DeviceShape;
 export const IdsIpsShape = DeviceShape;
 export const PaloAltoFirewallShape = DeviceShape;
@@ -510,6 +688,7 @@ export const SplunkIndexerShape = DeviceShape;
 export const SplunkIndexerClusterShape = DeviceShape;
 export const SplunkHeavyForwarderShape = DeviceShape;
 export const SplunkUniversalForwarderShape = DeviceShape;
+export const SplunkIntermediateForwarderShape = DeviceShape;
 export const SplunkClusterManagerShape = DeviceShape;
 export const SplunkDeployerShape = DeviceShape;
 export const SplunkLicenseManagerShape = DeviceShape;
@@ -573,6 +752,7 @@ export const TOPOLOGY_NODE_TYPES = {
     'device:modular_chassis_switch': ModularChassisSwitchShape,
     'device:nexus_aci_fabric': NexusAciFabricShape,
     'device:sdwan_controller': SdwanControllerShape,
+    'device:custom_stencil': CustomStencilShape,
     // Security
     'device:firewall': FirewallShape,
     'device:palo_alto_firewall': PaloAltoFirewallShape,
@@ -616,6 +796,7 @@ export const TOPOLOGY_NODE_TYPES = {
     'device:splunk_indexer_cluster': SplunkIndexerClusterShape,
     'device:splunk_heavy_forwarder': SplunkHeavyForwarderShape,
     'device:splunk_universal_forwarder': SplunkUniversalForwarderShape,
+    'device:splunk_intermediate_forwarder': SplunkIntermediateForwarderShape,
     'device:splunk_cluster_manager': SplunkClusterManagerShape,
     'device:splunk_deployer': SplunkDeployerShape,
     'device:splunk_license_manager': SplunkLicenseManagerShape,

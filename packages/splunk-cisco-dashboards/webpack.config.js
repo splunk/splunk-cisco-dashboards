@@ -82,6 +82,10 @@ const stageRoot = path.join(__dirname, 'stage');
 const commonConfig = webpackMerge(baseConfig, {
     entry: {
         overview: path.join(webappRoot, 'pages/overview/render.tsx'),
+        health_monitoring: path.join(
+            webappRoot,
+            'pages/health_monitoring/render.tsx'
+        ),
         topology_canvas_v1: path.join(
             webappRoot,
             'pages/topology_canvas_v1/render.tsx'
@@ -89,6 +93,14 @@ const commonConfig = webpackMerge(baseConfig, {
         network_diagram: path.join(
             webappRoot,
             'pages/network_diagram/render.tsx'
+        ),
+        searchbase_canvas: path.join(
+            webappRoot,
+            'pages/searchbase_canvas/render.tsx'
+        ),
+        m365_activity_monitoring: path.join(
+            webappRoot,
+            'pages/m365_activity_monitoring/render.tsx'
         ),
     },
     output: {

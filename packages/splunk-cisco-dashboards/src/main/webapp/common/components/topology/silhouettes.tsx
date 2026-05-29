@@ -69,6 +69,7 @@ export const SHAPE_FAMILY: Record<DeviceShapeId, SilhouetteFamily> = {
     modular_chassis_switch: 'card',
     nexus_aci_fabric: 'card',
     sdwan_controller: 'card',
+    custom_stencil: 'card',
     firewall: 'rack',
     palo_alto_firewall: 'card',
     fortinet_firewall: 'card',
@@ -106,6 +107,7 @@ export const SHAPE_FAMILY: Record<DeviceShapeId, SilhouetteFamily> = {
     splunk_indexer_cluster: 'card',
     splunk_heavy_forwarder: 'card',
     splunk_universal_forwarder: 'card',
+    splunk_intermediate_forwarder: 'card',
     splunk_cluster_manager: 'card',
     splunk_deployer: 'card',
     splunk_license_manager: 'card',
@@ -1264,10 +1266,10 @@ export const ShapeSilhouette: React.FC<{
     shape: DeviceShapeId;
     className?: string;
 }> = ({ shape, className }) => {
-    const family = resolveSilhouetteFamily(shape);
     const Icon = (CISCO_ICONS[shape] ?? CISCO_ICONS.generic) as React.ComponentType<{
         className?: string;
     }>;
+    const family = resolveSilhouetteFamily(shape);
     if (family === 'rack') {
         const Specialised = SPECIALISED_RACK[shape];
         if (Specialised) {

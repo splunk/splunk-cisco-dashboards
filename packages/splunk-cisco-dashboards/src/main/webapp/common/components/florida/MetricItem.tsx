@@ -7,6 +7,7 @@ import {
     CheckCircle2,
     ExternalLink,
     Settings2,
+    Table2,
 } from 'lucide-react';
 import {
     Sparkline,
@@ -87,6 +88,10 @@ interface MetricItemProps {
      * sparkline area. When omitted, both affordances are hidden.
      */
     onOpenInSearch?: () => void;
+    /** Optional secondary action for contextual detail, distinct from Search. */
+    onOpenDetailTable?: () => void;
+    /** Tooltip / accessible label for the detail-table action. */
+    detailTableTitle?: string;
     /**
      * Click → opens the KPI picker for this tile. When omitted, the
      * gear icon is hidden — useful for tiles that aren't user-editable.
@@ -187,6 +192,34 @@ const STATUS_VIZ_COLOR: Partial<Record<MetricStatus, string>> = {
     critical: '#dc2626',
 };
 
+const MOCK_VIZ_COLOR = '#94a3b8';
+const MOCK_HEADLINE_COLOR = 'text-slate-500 dark:text-slate-400';
+const MOCK_DATA_HELP =
+    'Sample data shown until live results are available. Bind this tile to a Splunk search to see real values.';
+
+const DemoDataChip: React.FC = () => (
+    <span
+        data-tile-control="true"
+        className="relative inline-flex group/demo"
+        title={MOCK_DATA_HELP}
+    >
+        <button
+            type="button"
+            aria-label={MOCK_DATA_HELP}
+            data-tile-control="true"
+            className="px-1.5 py-0.5 rounded-full border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 text-[9px] font-extrabold tracking-normal text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-400"
+        >
+            Demo data
+        </button>
+        <span
+            role="tooltip"
+            className="pointer-events-none absolute right-0 top-full z-50 mt-1 w-56 rounded-md bg-slate-900 px-2 py-1.5 text-[11px] leading-snug text-slate-100 shadow-lg ring-1 ring-slate-700 opacity-0 transition-opacity group-hover/demo:opacity-100 group-focus-within/demo:opacity-100"
+        >
+            {MOCK_DATA_HELP}
+        </span>
+    </span>
+);
+
 const COMPACT_SUFFIXES = [
     { value: 1_000_000_000_000, suffix: 't' },
     { value: 1_000_000_000, suffix: 'b' },
@@ -246,6 +279,8 @@ export const MetricItem: React.FC<MetricItemProps> = ({
     status = 'unknown',
     source,
     onOpenInSearch,
+    onOpenDetailTable,
+    detailTableTitle,
     onConfigure,
     isCustomized = false,
     sparkTitle,
@@ -257,6 +292,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
     dataValuesDisplay,
     className,
 }) => {
+    const isMock = source === 'mock';
     const numericValue = toFiniteNumber(value);
     const displayValue =
         abbreviateMajorValue &&
@@ -287,36 +323,41 @@ export const MetricItem: React.FC<MetricItemProps> = ({
         <div
             className={cn(
                 'flex flex-col flex-1 basis-0 min-w-[108px] px-1.5 py-1 relative',
+                isMock &&
+                    'rounded-md border border-dashed border-slate-300 dark:border-slate-600',
                 className
             )}
         >
-            {source && (
+            {source === 'loading' && (
                 <span
-                    className={cn(
-                        'absolute top-1 right-2 w-1.5 h-1.5 rounded-full',
-                        source === 'live'
-                            ? 'bg-emerald-500'
-                            : source === 'loading'
-                            ? 'bg-amber-400 animate-pulse'
-                            : 'bg-slate-300'
-                    )}
-                    title={
-                        source === 'live'
-                            ? 'Wired to saved search (live)'
-                            : source === 'loading'
-                            ? 'Loading saved search…'
-                            : 'No saved search assigned (mock data)'
-                    }
+                    className="absolute top-1 right-2 w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"
+                    title="Loading saved search…"
                 />
             )}
 
-            <div className="flex flex-col mb-0.5">
+            <div
+                // `data-tile-control` so the title/header row
+                // suppresses the SortableMetricCard drag handle
+                // while the cursor is over the tile name (or its
+                // inline controls). Without this, the GripVertical
+                // chip at `top-0.5 left-0.5` pops in on any tile
+                // hover and visibly clips the first character of
+                // the uppercase label (e.g. the "N" in "NETWORK
+                // HEALTH"). The grip still appears when the
+                // cursor is over the empty top-left corner of the
+                // sortable wrapper — i.e. the actual drag zone —
+                // so the affordance isn't lost, just no longer
+                // floating over the label text.
+                data-tile-control="true"
+                className="flex flex-col mb-0.5"
+            >
                 <span className="text-[12px] font-bold text-slate-800 dark:text-slate-100 tracking-tight leading-tight uppercase flex items-center gap-1">
                     <span className="flex items-center gap-1 min-w-0 truncate">
                         {label}
                         {status !== 'unknown' && <StatusIcon status={status} />}
                     </span>
                     <span className="ml-auto flex items-center gap-0.5 flex-shrink-0">
+                        {isMock && <DemoDataChip />}
                         {description && (
                             <InfoTooltip
                                 title={label}
@@ -339,9 +380,21 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                                 // this button is hovered (see
                                 // SortableMetricCard.tsx for the rule).
                                 data-tile-control="true"
-                                className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
+                                className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-400 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
                             >
                                 <ExternalLink className="w-3 h-3 stroke-[2.5px]" />
+                            </button>
+                        )}
+                        {onOpenDetailTable && (
+                            <button
+                                type="button"
+                                onClick={onOpenDetailTable}
+                                title={detailTableTitle ?? 'View detail table'}
+                                aria-label={detailTableTitle ?? `View ${label} detail table`}
+                                data-tile-control="true"
+                                className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-400 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
+                            >
+                                <Table2 className="w-3 h-3 stroke-[2.5px]" />
                             </button>
                         )}
                         {onConfigure && (
@@ -355,7 +408,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                                 }
                                 aria-label={`Configure ${label} tile`}
                                 data-tile-control="true"
-                                className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400 relative"
+                                className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-400 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400 relative"
                             >
                                 <Settings2 className="w-3 h-3 stroke-[2.5px]" />
                                 {isCustomized && (
@@ -366,7 +419,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                     </span>
                 </span>
                 {subLabel && (
-                    <span className="text-[9.5px] text-slate-400 dark:text-slate-500 font-medium tracking-tight leading-tight line-clamp-1 min-h-[12px]">
+                    <span className="text-[9.5px] text-slate-400 dark:text-slate-400 font-medium tracking-tight leading-tight line-clamp-1 min-h-[12px]">
                         {subLabel}
                     </span>
                 )}
@@ -425,7 +478,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                     );
                 }
                 const showChange =
-                    change !== undefined && Number.isFinite(change);
+                    !isMock && change !== undefined && Number.isFinite(change);
                 // Auto-shrink the headline font when the search emits a
                 // long string headline (e.g. "17 of 18 available") so
                 // it fits inside the tile at typical section widths
@@ -444,7 +497,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                             className={cn(
                                 'font-black tracking-tighter leading-none transition-colors',
                                 headlineSizeClass,
-                                STATUS_TEXT_COLOR[status]
+                                isMock ? MOCK_HEADLINE_COLOR : STATUS_TEXT_COLOR[status]
                             )}
                         >
                             {displayValue}
@@ -523,7 +576,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                         clickable wrapper is gone. */}
                     <Sparkline
                         data={sparkData}
-                        color={STATUS_VIZ_COLOR[status] ?? color}
+                        color={isMock ? MOCK_VIZ_COLOR : STATUS_VIZ_COLOR[status] ?? color}
                         vizType={vizType}
                         dataValuesDisplay={dataValuesDisplay}
                         previousData={previousData}
