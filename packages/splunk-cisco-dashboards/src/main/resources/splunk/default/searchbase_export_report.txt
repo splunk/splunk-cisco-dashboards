@@ -1,5 +1,5 @@
-Total source stanzas: 522
-Kept: 444
+Total source stanzas: 606
+Kept: 528
 Dropped: 78
 Drop reasons:
   admin_internal: 5
@@ -9,12 +9,13 @@ Drop reasons:
   hardcoded_site_search: 1
   lookup_dependent: 35
 By category (kept):
+  Asset: 2
   Building: 33
   Executive: 18
-  Identity: 33
-  Monitoring: 135
-  Network: 157
-  Security: 67
+  Identity: 38
+  Monitoring: 150
+  Network: 171
+  Security: 115
   Shared: 1
 Index macro prose normalizations (<code>index_*</code>): 185
 

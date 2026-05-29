@@ -160,7 +160,22 @@ export interface MetricConfig {
     spl?: string;
     /** Field name in the search results to read the headline + sparkline from. */
     valueField?: string;
-    /** Optional explicit signed % change field; if missing, auto-computed. */
+    /**
+     * Optional explicit delta column.
+     *
+     * Historically the column was assumed to carry a signed *percent*
+     * change between the first and last bucket; if missing, the hook
+     * auto-computes that percent. As of Build 1224 the column may
+     * also carry an *absolute* signed delta — interpretation now
+     * happens at the renderer layer (e.g. `SingleValueRadialTile`'s
+     * `viz_options.deltaFormat`), so the hook no longer rescales the
+     * column it reads. Authors that want the radial's DS-style `↑4`
+     * absolute delta should emit a raw signed integer here and set
+     * `viz_options.deltaFormat = "absolute"` (the default).
+     *
+     * Wired from `viz_options.deltaField` on the Searchbase Canvas
+     * (see `searchbase_canvas/index.tsx`).
+     */
     changeField?: string;
     /**
      * When set, the headline string is pulled from this column instead

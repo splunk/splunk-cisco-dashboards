@@ -2,6 +2,36 @@
  * Shared `viz_options` parsing for Searchbase Canvas scalar/gauge tiles.
  * Mirrors Splunk Dashboard Studio keys where practical; falls back to
  * safe defaults when a stanza omits `viz_options`.
+ *
+ * Additional radial-specific keys (consumed by `SingleValueRadialTile`):
+ *
+ *   - `arcDegrees` (number, 0 < x ≤ 360, default `180`) — arc sweep in
+ *     degrees. `180` is the Dashboard Studio scoreboard look; `360`
+ *     reverts to the legacy donut.
+ *   - `min`, `max` (number, defaults `0` / `100`) — flat aliases for
+ *     the existing `gaugeMin` / `gaugeMax` / `range.min` / `range.max`
+ *     and `minValue` / `maxValue` keys. Authors may use whichever
+ *     spelling is clearest.
+ *   - `showDelta` (boolean, default `true`) — toggles the inline
+ *     delta indicator next to the headline value.
+ *   - `deltaFormat` (`"absolute"` | `"percent"`, default `"absolute"`)
+ *     — chooses the delta rendering. `"absolute"` matches the DS
+ *     scoreboard style (`↑4`); `"percent"` appends `%`.
+ *   - `deltaField` (string | null, default `null`) — names the SPL
+ *     column carrying the delta value. The Searchbase Canvas wires
+ *     this into `MetricConfig.changeField`; an empty / null value
+ *     falls back to whatever `useMetric` already produces (typically
+ *     auto-computed % change between first and last bucket).
+ *   - `decimals` (number, 0 ≤ n ≤ 4, default `0`) — decimal places
+ *     for the headline value.
+ *   - `valueSuffix` (string, default `""`) — appended verbatim after
+ *     the headline (e.g. `"%"`, `" Mbps"`).
+ *   - `trackColor` (string, hex) — overrides the radial track colour.
+ *   - `fillColor` (string, hex) — overrides the radial fill colour
+ *     (takes precedence over `seriesColors[0]` / `accentColor`).
+ *
+ * Bad input (wrong type, NaN, malformed hex) is silently dropped so
+ * one bad stanza never throws inside a tile body.
  */
 
 export interface GaugeRange {
@@ -14,6 +44,8 @@ export interface ColorBand {
     to?: number;
     value: string;
 }
+
+const HEX_COLOR_PATTERN = /^#[0-9a-f]{3,8}$/i;
 
 const coerceFinite = (raw: unknown, fallback: number): number => {
     if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
@@ -45,16 +77,109 @@ export const resolveGaugeRange = (
         if (max > min) return { min, max };
     }
     const min = coerceFinite(
-        options?.gaugeMin ?? options?.minValue,
+        // Honor flat `min` / `max` aliases used by the radial-specific
+        // schema, then fall through to the legacy nested aliases.
+        options?.min ?? options?.gaugeMin ?? options?.minValue,
         DEFAULT_GAUGE_RANGE.min
     );
     const max = coerceFinite(
-        options?.gaugeMax ?? options?.maxValue,
+        options?.max ?? options?.gaugeMax ?? options?.maxValue,
         DEFAULT_GAUGE_RANGE.max
     );
     if (max > min) return { min, max };
     return DEFAULT_GAUGE_RANGE;
 };
+
+// ---------------------------------------------------------------------------
+// Radial-specific viz_options resolvers
+// ---------------------------------------------------------------------------
+
+/** Default scoreboard arc sweep — matches Splunk Dashboard Studio. */
+export const DEFAULT_RADIAL_ARC_DEGREES = 180;
+
+export const resolveArcDegrees = (
+    options: Record<string, unknown> | undefined
+): number => {
+    const raw = options?.arcDegrees;
+    const candidate = coerceFinite(raw, Number.NaN);
+    if (!Number.isFinite(candidate)) return DEFAULT_RADIAL_ARC_DEGREES;
+    if (candidate <= 0 || candidate > 360) return DEFAULT_RADIAL_ARC_DEGREES;
+    return candidate;
+};
+
+export const resolveShowDelta = (
+    options: Record<string, unknown> | undefined
+): boolean => {
+    const raw = options?.showDelta;
+    if (raw === false) return false;
+    if (typeof raw === 'string' && /^(false|0|no|off)$/i.test(raw.trim())) {
+        return false;
+    }
+    return true;
+};
+
+export type DeltaFormat = 'absolute' | 'percent';
+
+export const resolveDeltaFormat = (
+    options: Record<string, unknown> | undefined
+): DeltaFormat => {
+    const raw = options?.deltaFormat;
+    if (typeof raw === 'string' && raw.trim().toLowerCase() === 'percent') {
+        return 'percent';
+    }
+    return 'absolute';
+};
+
+const SAFE_FIELD_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_.:]{0,127}$/;
+
+/**
+ * Resolve a SPL column name from `viz_options.deltaField`. Returns
+ * `null` for empty / non-string / unsafe values so the caller falls
+ * back to whatever `useMetric.change` already produces.
+ */
+export const resolveDeltaField = (
+    options: Record<string, unknown> | undefined
+): string | null => {
+    const raw = options?.deltaField;
+    if (typeof raw !== 'string') return null;
+    const trimmed = raw.trim();
+    if (trimmed.length === 0) return null;
+    return SAFE_FIELD_NAME_PATTERN.test(trimmed) ? trimmed : null;
+};
+
+export const resolveDecimals = (
+    options: Record<string, unknown> | undefined
+): number => {
+    const raw = options?.decimals;
+    const n = coerceFinite(raw, 0);
+    if (!Number.isFinite(n)) return 0;
+    const clamped = Math.max(0, Math.min(4, Math.floor(n)));
+    return clamped;
+};
+
+export const resolveValueSuffix = (
+    options: Record<string, unknown> | undefined
+): string => {
+    const raw = options?.valueSuffix;
+    if (typeof raw !== 'string') return '';
+    if (raw.length > 16) return '';
+    return raw;
+};
+
+const resolveHexColor = (raw: unknown): string | null => {
+    if (typeof raw !== 'string') return null;
+    const trimmed = raw.trim();
+    if (trimmed.length === 0 || trimmed.length > 9) return null;
+    return HEX_COLOR_PATTERN.test(trimmed) ? trimmed : null;
+};
+
+export const resolveTrackColor = (
+    options: Record<string, unknown> | undefined
+): string | null => resolveHexColor(options?.trackColor);
+
+export const resolveFillColorOverride = (
+    options: Record<string, unknown> | undefined
+): string | null => resolveHexColor(options?.fillColor);
 
 const normalizeBandList = (raw: unknown): ColorBand[] => {
     if (!Array.isArray(raw)) return [];

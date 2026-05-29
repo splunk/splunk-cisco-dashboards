@@ -56,6 +56,15 @@ export interface SearchbaseRecord {
     dispatchContext: string;
     /** HTML description (carries inline tags from the conf). */
     description: string;
+    /**
+     * Optional richer "what does this measure" prose, sourced from
+     * the conf's `explanation` field. Many stanzas author the short
+     * one-liner in `description` and a fuller paragraph in
+     * `explanation`; the Searchbase Canvas chrome uses
+     * `explanation || description` for the meaning-subtitle row.
+     * Empty string when the stanza omits the field.
+     */
+    explanation: string;
     /** SPL body — useful for the picker's preview pane. */
     search: string;
     /**
@@ -95,6 +104,7 @@ interface SearchbaseEntry {
         tags?: string;
         dispatch_context?: string;
         description?: string;
+        explanation?: string;
         search?: string;
         drilldown_search_name?: string;
         drilldown_button_title?: string;
@@ -282,6 +292,7 @@ const fetchSearchbase = async (
             // stanza lives in another app.
             dispatchContext: aclApp || appName,
             description: typeof content.description === 'string' ? content.description : '',
+            explanation: typeof content.explanation === 'string' ? content.explanation : '',
             search:
                 typeof content.search === 'string'
                     ? collapseExpandedIndexMacro(content.search)

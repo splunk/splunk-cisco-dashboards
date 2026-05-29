@@ -1,5 +1,17 @@
 /**
  * Shared header chrome for Searchbase Canvas scalar/gauge tiles.
+ *
+ * The header renders up to three rows in this fixed order:
+ *
+ *   1. TITLE — bold uppercase tile label plus the action buttons
+ *      (info, open-in-search, drilldown, configure).
+ *   2. MEANING SUBTITLE (optional) — a short "what does this measure"
+ *      sentence sourced upstream from `record.explanation` (with
+ *      `record.description` as fallback). Single-line with ellipsis
+ *      overflow; omitted entirely when the upstream record provides
+ *      neither field, so existing tiles render unchanged.
+ *   3. CATEGORY BREADCRUMB (optional) — the existing `subLabel` line
+ *      ("Security / GenAI Protection", etc.).
  */
 
 import React from 'react';
@@ -10,7 +22,17 @@ import type { DataSource } from '@/common/hooks/useMetric';
 
 export interface CanvasScalarTileChromeProps {
     label: string;
+    /** Category / sub-category breadcrumb; rendered as the bottom header row. */
     subLabel?: string;
+    /**
+     * Short "what does this measure" sentence shown directly under the
+     * title. App-wide chrome change introduced in Build 1224: every
+     * scalar/gauge tile now renders this row when the upstream
+     * searchbase record carries an `explanation` (or, as a fallback,
+     * a `description`). Truncated to one line with ellipsis overflow;
+     * omitted when neither field is present.
+     */
+    meaningSubtitle?: string;
     description?: string;
     descriptionFootnote?: string;
     thresholdNote?: string;
@@ -28,6 +50,7 @@ export interface CanvasScalarTileChromeProps {
 export const CanvasScalarTileChrome: React.FC<CanvasScalarTileChromeProps> = ({
     label,
     subLabel,
+    meaningSubtitle,
     description,
     descriptionFootnote,
     thresholdNote,
@@ -119,6 +142,14 @@ export const CanvasScalarTileChrome: React.FC<CanvasScalarTileChromeProps> = ({
                     )}
                 </span>
             </span>
+            {meaningSubtitle && (
+                <span
+                    className="text-[10.5px] text-slate-500 dark:text-slate-400 font-medium tracking-tight leading-snug truncate"
+                    title={meaningSubtitle}
+                >
+                    {meaningSubtitle}
+                </span>
+            )}
             {subLabel && (
                 <span className="text-[9.5px] text-slate-400 dark:text-slate-500 font-medium tracking-tight leading-tight line-clamp-1 min-h-[12px]">
                     {subLabel}

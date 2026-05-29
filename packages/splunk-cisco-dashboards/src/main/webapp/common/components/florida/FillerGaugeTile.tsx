@@ -18,6 +18,8 @@ import type { DataSource, NoDataReason } from '@/common/hooks/useMetric';
 export interface FillerGaugeTileProps {
     label: string;
     subLabel?: string;
+    /** Plumbed through to the chrome's meaning-subtitle row. */
+    meaningSubtitle?: string;
     description?: string;
     descriptionFootnote?: string;
     thresholdNote?: string;
@@ -74,6 +76,7 @@ const NoDataBody: React.FC<{
 export const FillerGaugeTile: React.FC<FillerGaugeTileProps> = ({
     label,
     subLabel,
+    meaningSubtitle,
     description,
     descriptionFootnote,
     thresholdNote,
@@ -108,6 +111,7 @@ export const FillerGaugeTile: React.FC<FillerGaugeTileProps> = ({
         <CanvasScalarTileChrome
             label={label}
             subLabel={subLabel}
+            meaningSubtitle={meaningSubtitle}
             description={description}
             descriptionFootnote={descriptionFootnote}
             thresholdNote={thresholdNote}

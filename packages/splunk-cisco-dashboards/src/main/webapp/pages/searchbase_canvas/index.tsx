@@ -47,6 +47,7 @@ import {
     sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
 import { BarBreakdownTile } from '@/common/components/florida/BarBreakdownTile';
+import { resolveDeltaField } from '@/common/components/florida/canvasVizOptions';
 import {
     isFillerGaugeViz,
     isMarkerGaugeViz,
@@ -494,6 +495,20 @@ const buildObservedNoDataReportSearch = (
 const recordPlainText = (record: SearchbaseRecord): string =>
     plainTextFromHtml(record.description).slice(0, 220);
 
+/**
+ * Short, single-line "what does this measure" sentence for a tile's
+ * meaning-subtitle row. Prefers the conf's richer `explanation` field
+ * and falls back to `description` when explanation is empty (existing
+ * stanzas often only have description authored). The result is always
+ * plain text — HTML tags from the conf are stripped — and capped to
+ * a single panel-header-width-friendly length.
+ */
+const recordMeaningSubtitle = (record: SearchbaseRecord): string => {
+    const source = record.explanation || record.description;
+    if (!source) return '';
+    return plainTextFromHtml(source).slice(0, 160);
+};
+
 interface SearchbaseDetailTableColumn {
     field: string;
     label: string;
@@ -934,6 +949,13 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
     drilldownTitle,
     onNoDataObservation,
 }) => {
+    // `viz_options.deltaField` (new in Build 1224) names the SPL
+    // column carrying the delta value the radial / gauge tiles render
+    // inline with the headline. Maps directly onto MetricConfig's
+    // `changeField`, which `useMetric` already supports — the only
+    // new wiring is the resolver call.
+    const deltaFieldOverride = resolveDeltaField(record.vizOptions) ?? undefined;
+
     const metricConfig = useMemo<MetricConfig>(
         () => ({
             id: tile.id,
@@ -945,6 +967,7 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
             description,
             spl: record.search,
             color,
+            changeField: deltaFieldOverride,
             thresholdNote: 'Searchbase canvas tile.',
             suppressMockOnEmpty: true,
             mock: {
@@ -957,6 +980,7 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
         }),
         [
             color,
+            deltaFieldOverride,
             description,
             record.category,
             record.id,
@@ -1003,9 +1027,12 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
         );
     }
 
+    const meaningSubtitle = recordMeaningSubtitle(record);
+
     const scalarTileProps = {
         label: record.searchName,
         subLabel: [record.category, record.subCategory].filter(Boolean).join(' / '),
+        meaningSubtitle: meaningSubtitle || undefined,
         description,
         descriptionFootnote: record.id,
         thresholdNote: 'Searchbase canvas tile.',
@@ -1024,7 +1051,17 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
     };
 
     if (isSingleValueRadialViz(viz)) {
-        return <SingleValueRadialTile {...scalarTileProps} />;
+        // Only the radial currently surfaces an inline delta; pass
+        // `change` separately so other scalar tiles aren't forced to
+        // accept a prop they don't render.
+        return (
+            <SingleValueRadialTile
+                {...scalarTileProps}
+                change={
+                    Number.isFinite(metric.change) ? (metric.change as number) : undefined
+                }
+            />
+        );
     }
     if (isFillerGaugeViz(viz)) {
         return <FillerGaugeTile {...scalarTileProps} />;
