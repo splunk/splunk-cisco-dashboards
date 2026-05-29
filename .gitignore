@@ -99,3 +99,4 @@ FDEM.gif
 # Playwright MCP — local browser session state (per-machine, contains cookies)
 .cursor/playwright-state.json
 .cursor/playwright-output/
+/.tmp
