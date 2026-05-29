@@ -6,18 +6,15 @@
         "packages/*"
     ],
     "scripts": {
-        "build": "lerna run build",
-        "setup": "yarn && lerna run build",
+        "build": "yarn workspaces run build",
+        "setup": "yarn && yarn workspaces run build",
         "start": "cd packages/splunk-cisco-dashboards && yarn start",
-        "lint": "lerna run lint",
-        "clean": "lerna run clean --parallel",
-        "clean:build": "lerna run clean:build",
+        "lint": "yarn workspaces run lint",
+        "clean": "yarn workspaces run clean",
+        "clean:build": "yarn workspaces run clean:build",
         "package:app": "cd packages/splunk-cisco-dashboards && yarn package:app",
         "regen:diagrams": "node scripts/generate_oob_diagrams.mjs",
         "ship": "yarn regen:diagrams && yarn package:app"
-    },
-    "devDependencies": {
-        "lerna": "^4.0.0"
     },
     "resolutions": {
         "qs": "^6.15.2",
