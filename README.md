@@ -10,7 +10,6 @@ data inside Splunk Web.
 ```
 splunk-cisco-dashboards/
 ├── package.json          # workspace root
-├── lerna.json
 └── packages/
     └── splunk-cisco-dashboards/   # the actual Splunk app + React UI
 ```
