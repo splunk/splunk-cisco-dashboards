@@ -3365,17 +3365,6 @@ const SearchbaseCanvasPage: React.FC = () => {
                                             type="button"
                                             onClick={() => {
                                                 setMoreMenuOpen(false);
-                                                setNoDataReportOpen(true);
-                                            }}
-                                            className="flex h-8 w-full items-center gap-2 rounded px-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
-                                        >
-                                            <Table2 className="h-3.5 w-3.5" />
-                                            No data report
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setMoreMenuOpen(false);
                                                 void deleteActiveCanvas();
                                             }}
                                             disabled={savingCanvas || !activeSavedCanvasName}
@@ -3470,6 +3459,30 @@ const SearchbaseCanvasPage: React.FC = () => {
                             >
                                 <Square className="h-3.5 w-3.5" />
                                 Stop
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setNoDataReportOpen(true)}
+                                title={`Show ${observedNoDataRows.length.toLocaleString()} observed no-data ${
+                                    observedNoDataRows.length === 1
+                                        ? 'search'
+                                        : 'searches'
+                                }`}
+                                aria-label="Show no data report"
+                                className={cn(
+                                    'inline-flex h-9 items-center gap-1.5 rounded-sm border px-3 text-sm font-bold transition focus:outline-none focus:ring-2',
+                                    observedNoDataRows.length > 0
+                                        ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 focus:ring-amber-300 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200 dark:hover:bg-amber-900'
+                                        : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100 focus:ring-slate-300 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus:ring-slate-700'
+                                )}
+                            >
+                                <Table2 className="h-3.5 w-3.5" />
+                                No data report
+                                {observedNoDataRows.length > 0 && (
+                                    <span className="ml-0.5 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-sm bg-amber-200 px-1 text-xs font-bold leading-none text-amber-900 dark:bg-amber-800 dark:text-amber-100">
+                                        {observedNoDataRows.length.toLocaleString()}
+                                    </span>
+                                )}
                             </button>
                             <button
                                 type="button"
