@@ -113,7 +113,7 @@ const cities: City[] = [
  * stanza is what actually runs.
  */
 const buildSiteDispatchSpl = (savedSearch: string): string =>
-    `| savedsearch "${savedSearch.replace(/"/g, '\\"')}"`;
+    `| savedsearch "${savedSearch.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 
 const STATUS_RANK: Record<City['status'], number> = {
     critical: 3,
