@@ -1348,7 +1348,7 @@ def main() -> int:
         return 0
     print(
         f"Dispatching {len(sourcetypes)} oneshot searches against "
-        f"{env['base_url']} ({env['app']} as {env['username']}) "
+        f"the configured Splunk endpoint for app {env['app']} "
         f"with {args.workers} workers ..."
     )
     print()

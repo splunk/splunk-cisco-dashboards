@@ -57,6 +57,7 @@ import {
 import { cn } from '@/common/lib/utils';
 import {
     getSearchbaseCatalogue,
+    plainTextFromHtml,
     type SearchbaseRecord,
 } from '@/common/services/searchbaseCatalogue';
 import { runSearch } from '@/common/services/splunkSearchService';
@@ -4135,9 +4136,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                                 )}
                                 title={
                                     entry.description
-                                        ? entry.description
-                                              .replace(/<[^>]+>/g, '')
-                                              .slice(0, 240)
+                                        ? plainTextFromHtml(entry.description).slice(0, 240)
                                         : entry.searchName
                                 }
                             >

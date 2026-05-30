@@ -245,6 +245,27 @@ const catalogueCacheKey = (options?: SearchbaseCatalogueOptions): string =>
 
 const CACHED_PROMISES = new Map<string, Promise<SearchbaseRecord[]>>();
 
+const collapsePlainTextWhitespace = (value: string): string =>
+    value.replace(/\s+/g, ' ').trim();
+
+const stripHtmlTagsForPlainText = (html: string): string => {
+    let text = '';
+    let insideTag = false;
+    for (let index = 0; index < html.length; index += 1) {
+        const ch = html[index];
+        if (ch === '<') {
+            insideTag = true;
+            text += ' ';
+        } else if (ch === '>') {
+            insideTag = false;
+            text += ' ';
+        } else if (!insideTag) {
+            text += ch;
+        }
+    }
+    return text;
+};
+
 const fetchSearchbase = async (
     options?: SearchbaseCatalogueOptions
 ): Promise<SearchbaseRecord[]> => {
@@ -332,19 +353,14 @@ export const getSearchbaseCatalogue = async (
  * markup. Whitespace is collapsed for compact preview.
  */
 export const plainTextFromHtml = (html: string): string => {
-    if (typeof html !== 'string' || html.length === 0) return '';
-    return html
-        .replace(/<[^>]*>/g, ' ')
-        .replace(/&nbsp;/gi, ' ')
-        .replace(/&amp;/gi, '&')
-        .replace(/&lt;/gi, '<')
-        .replace(/&gt;/gi, '>')
-        .replace(/&quot;/gi, '"')
-        .replace(/&#39;/gi, "'")
-        .replace(/&mdash;/gi, '—')
-        .replace(/&ndash;/gi, '–')
-        .replace(/\s+/g, ' ')
-        .trim();
+    if (typeof html !== 'string' || html.length === 0) {
+        return '';
+    }
+    if (typeof DOMParser !== 'undefined') {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        return collapsePlainTextWhitespace(doc.body.textContent ?? '');
+    }
+    return collapsePlainTextWhitespace(stripHtmlTagsForPlainText(html));
 };
 
 /** Force the next call to re-fetch from Splunk. */
