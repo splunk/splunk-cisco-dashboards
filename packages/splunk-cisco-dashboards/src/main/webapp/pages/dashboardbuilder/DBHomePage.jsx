@@ -36,7 +36,6 @@ import Tooltip from '@splunk/react-ui/Tooltip';
 import CollapsiblePanel from '@splunk/react-ui/CollapsiblePanel';
 import Multiselect from '@splunk/react-ui/Multiselect';
 import CustomTooltip from '../../common/components/CustomTooltip/CustomTooltip';
-import ManagerHeaderTabs from '../../common/components/ManagerHeaderTabs';
 import ManagerPreviewModal from '../../common/components/ManagerPreviewModal';
 import { actionMenus } from '../../common/udf/presets';
 import createIS4SIconRegistry from '../../common/udf/IconProviders/createIS4SIconRegistry';
@@ -1125,7 +1124,6 @@ export default function DBHomePage() {
                                             setOpenCreateDashboard(true);
                                         }}
                                     ></Button>
-                                    <ManagerHeaderTabs activeManager="dashboardbuilder" />
                                 </div>
                             </div>
                         </div>

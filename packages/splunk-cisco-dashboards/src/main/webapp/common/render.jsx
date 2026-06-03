@@ -41,7 +41,9 @@ export default function mountPage(PageComponent) {
     tryMount();
 }
 
-export function renderAsPage(pageElement) {
+export function renderAsPage(pageElement, options = {}) {
+    const { hideAppBar = false } = options;
+
     getUserTheme()
         .then((theme) => {
             layout(
@@ -49,7 +51,7 @@ export function renderAsPage(pageElement) {
                     {pageElement}
                 </SplunkThemeProvider>,
                 {
-                    hideAppBar: true,
+                    hideAppBar,
                     theme,
                 }
             );
