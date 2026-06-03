@@ -453,7 +453,15 @@ export default function DBHomePage() {
         navigate(`/${dash.title}/edit`);
     };
 
-    const handleOpenDashboardMetadataEditor = (dash) => {
+    const handleOpenDashboardMetadataEditor = (dash, { closePreview = false } = {}) => {
+        if (!dash) {
+            return;
+        }
+
+        if (closePreview) {
+            setPreviewOpen(false);
+        }
+
         setDashboardMetadataTarget(dash);
         setDashboardMetadataTitle(dash.label || dash.title || '');
         setDashboardMetadataDescription(dash.description || '');
@@ -1033,7 +1041,9 @@ export default function DBHomePage() {
                                 appearance="secondary"
                                 icon={<Tag />}
                                 onClick={() => {
-                                    handleOpenDashboardMetadataEditor(selectedDash);
+                                    handleOpenDashboardMetadataEditor(selectedDash, {
+                                        closePreview: true,
+                                    });
                                 }}
                             />
                         )}
