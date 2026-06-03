@@ -1,0 +1,1506 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import ColumnLayout from '@splunk/react-ui/ColumnLayout';
+
+import '../../common/styles/commonstyles.css';
+import { default as SplunkControlGroup } from '@splunk/react-ui/ControlGroup';
+import Text from '@splunk/react-ui/Text';
+import Card from '@splunk/react-ui/Card';
+import CardLayout from '@splunk/react-ui/CardLayout';
+import Button from '@splunk/react-ui/Button';
+import Pencil from '@splunk/react-icons/Pencil';
+import MagnifierPlus from '@splunk/react-icons/MagnifierPlus';
+import TrashCanCross from '@splunk/react-icons/TrashCanCross';
+import { getDashboards, deleteDashboard, updateDashMetadata } from '../../common/lib/splunk';
+import { DashboardContextProvider } from '@splunk/dashboard-context';
+import { DashboardCore } from '@splunk/dashboard-core';
+import EnterprisePreset from '@splunk/dashboard-presets/EnterprisePreset';
+import SearchBaseDataSource from './SearchBaseDataSource';
+import SimpleTimePicker from './custominput/SimpleTimePicker';
+import VizKpi from '../../common/components/templatewizard/viz-kpi/VizKpi';
+import VizOther from '../../common/components/templatewizard/viz-other/VizOther';
+import Modal from '@splunk/react-ui/Modal';
+import { useNavigate } from 'react-router-dom';
+import DashboardStudioEditor from './DashboardStudioEditor';
+import { GridSVG, AbsolutSVG } from './DashboardStudioEditor';
+import { addDash } from '../../common/lib/splunk';
+
+import { cloneDeep } from 'lodash-es';
+import Trash from '@splunk/react-icons/enterprise/Trash';
+import Toaster, { makeCreateToast } from '@splunk/react-toast-notifications/Toaster';
+import { TOAST_TYPES } from '@splunk/react-toast-notifications/ToastConstants';
+import ToastMessages from '@splunk/react-toast-notifications/ToastMessages';
+import TabLayout from '@splunk/react-ui/TabLayout';
+import TextArea from '@splunk/react-ui/TextArea';
+import Select from '@splunk/react-ui/Select';
+import Tooltip from '@splunk/react-ui/Tooltip';
+import CollapsiblePanel from '@splunk/react-ui/CollapsiblePanel';
+import Multiselect from '@splunk/react-ui/Multiselect';
+import CustomTooltip from '../../common/components/CustomTooltip/CustomTooltip';
+import ManagerHeaderTabs from '../../common/components/ManagerHeaderTabs';
+import ManagerPreviewModal from '../../common/components/ManagerPreviewModal';
+import { actionMenus } from '../../common/udf/presets';
+import createIS4SIconRegistry from '../../common/udf/IconProviders/createIS4SIconRegistry';
+import Paginator from '@splunk/react-ui/Paginator';
+import Message from '@splunk/react-ui/Message';
+import Table from '@splunk/react-ui/Table';
+import WaitSpinner from '@splunk/react-ui/WaitSpinner';
+
+import FileCharts from '@splunk/react-icons/FileCharts';
+import QuestionCircle from '@splunk/react-icons/QuestionCircle';
+import Tag from '@splunk/react-icons/Tag';
+import Plus from '@splunk/react-icons/Plus';
+import { initialDefinition } from './DashboardStudioEditor';
+
+const featureFlags = {
+    enableCollapsibleToolbar: true,
+    enableGridLayoutCssScaling: false,
+    enableSmartSourceDS: true,
+    enableShowHide: true,
+    visualizations_enableEventsViewerTags: true,
+};
+
+export const customPresets = {
+    ...EnterprisePreset,
+    dataSources: {
+        ...EnterprisePreset.dataSources,
+        'ds.searchbase': SearchBaseDataSource,
+    },
+    inputs: {
+        ...EnterprisePreset.inputs,
+        'input.simpleTimePicker': SimpleTimePicker,
+    },
+    visualizations: {
+        ...EnterprisePreset.visualizations,
+        'splunk.template_kpi': VizKpi,
+        'splunk.template_other': VizOther,
+    },
+};
+
+const initialTemplateDefinition = {
+    visualizations: {},
+    dataSources: {},
+    defaults: {
+        dataSources: {
+            'ds.search': {
+                options: {
+                    queryParameters: {
+                        latest: '$global_time.latest$',
+                        earliest: '$global_time.earliest$',
+                    },
+                },
+            },
+        },
+    },
+    inputs: {
+        input_global_trp: {
+            type: 'input.timerange',
+            options: {
+                token: 'global_time',
+                defaultValue: '-24h@h,now',
+            },
+            title: 'Global Time Range',
+        },
+    },
+    layout: {
+        type: 'absolute',
+        options: {
+            width: 2000,
+            height: 960,
+            display: 'auto',
+        },
+        structure: [],
+        globalInputs: ['input_global_trp'],
+    },
+    description: '',
+    title: '',
+    template: true,
+};
+
+// Normalize saved dashboard tag values so legacy metadata can still be filtered and displayed.
+const parseDashboardTags = (tagValue) =>
+    (tagValue || '')
+        .split(',')
+        .map((tag) => tag.trim())
+        .filter(Boolean);
+
+const serializeDashboardTags = (tags) =>
+    tags
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+        .join(',');
+
+const DASHBOARD_PAGE_SIZE = 20;
+const DASHBOARD_CARD_TITLE_LIMIT = 35;
+const DASHBOARD_CARD_DESCRIPTION_LIMIT = 140;
+const MANAGER_SUBTITLE_LIMIT = 140;
+
+const truncateManagerSubtitle = (subtitle) => {
+    if (!subtitle || subtitle.length <= MANAGER_SUBTITLE_LIMIT) {
+        return subtitle;
+    }
+
+    return `${subtitle.slice(0, MANAGER_SUBTITLE_LIMIT - 3).trimEnd()}...`;
+};
+
+const truncateDashboardTitle = (title) => {
+    const normalizedTitle = title || '';
+
+    if (normalizedTitle.length <= DASHBOARD_CARD_TITLE_LIMIT) {
+        return normalizedTitle;
+    }
+
+    return `${normalizedTitle.slice(0, DASHBOARD_CARD_TITLE_LIMIT).trimEnd()}...`;
+};
+
+const truncateDashboardDescription = (description) => {
+    const normalizedDescription = description || 'No description provided.';
+
+    if (normalizedDescription.length <= DASHBOARD_CARD_DESCRIPTION_LIMIT) {
+        return normalizedDescription;
+    }
+
+    return `${normalizedDescription.slice(0, DASHBOARD_CARD_DESCRIPTION_LIMIT).trimEnd()}...`;
+};
+
+const buildDashboardSearchText = (dashboard) =>
+    [dashboard.title, dashboard.label, dashboard.description]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+export default function DBHomePage() {
+    const iconRegistry = useMemo(() => createIS4SIconRegistry(), []);
+    const [dashboards, setDashboards] = useState([]);
+    const [dashboardToImport, setDashboardToImport] = useState();
+    const [previewOpen, setPreviewOpen] = useState(false);
+    const [selectedDash, setSelectedDash] = useState();
+    const [searchText, setSearchText] = useState('');
+    const [openCreateDashboard, setOpenCreateDashboard] = useState(false);
+    const [activeModeId, setActiveModeId] = useState('create');
+    const [dashboardTitle, setDashboardTitle] = useState('');
+    const [dashboardDescription, setDashboardDescription] = useState('');
+    const [gridLayout, setGridLayout] = useState('absolute');
+    const [openDeleteDashboard, setOpenDeleteDashboard] = useState(false);
+    const [DashboardToDelete, setDashboardToDelete] = useState();
+    const [jsonDefinition, setJsonDefinition] = useState('');
+    const [currMode, setCurrMode] = useState('create');
+    const [pageNum, setPageNum] = useState(1);
+    const [openPreview, setOpenPreview] = useState(false);
+    const [previewTemplate, setPreviewTemplate] = useState();
+    const [selectedOpenTemplate, setSelectedOpenTemplate] = useState('');
+    const [dashboardFilterTags, setDashboardFilterTags] = useState([]);
+    const [dashboardLibraryView, setDashboardLibraryView] = useState('cards');
+    const [openDashboardMetadataEditor, setOpenDashboardMetadataEditor] = useState(false);
+    const [dashboardMetadataTarget, setDashboardMetadataTarget] = useState();
+    const [dashboardMetadataTitle, setDashboardMetadataTitle] = useState('');
+    const [dashboardMetadataDescription, setDashboardMetadataDescription] = useState('');
+    const [dashboardMetadataTags, setDashboardMetadataTags] = useState([]);
+    const [isSavingDashboardMetadata, setIsSavingDashboardMetadata] = useState(false);
+
+    const dashboardManagerSubtitle =
+        'Turn predefined Cisco KPIs into actionable insights in seconds using the custom dashboard manager.';
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        document.title = 'Dashboard Builder';
+    }, []);
+
+    const handlePageChange = (event, { page }) => {
+        setPageNum(page);
+    };
+
+    const filteredDashboards = useMemo(() => {
+        const normalizedSearchText = searchText.trim().toLowerCase();
+
+        return dashboards
+            .filter((ds) => !ds.template)
+            .filter(
+                (ds) =>
+                    normalizedSearchText === '' ||
+                    ds.searchText.includes(normalizedSearchText),
+            )
+            .filter(
+                (ds) =>
+                    dashboardFilterTags.length === 0 ||
+                    ds.tags.some((tag) => dashboardFilterTags.includes(tag)),
+            );
+    }, [dashboards, dashboardFilterTags, searchText]);
+
+    const totalDashboardPages = Math.max(
+        1,
+        Math.ceil(filteredDashboards.length / DASHBOARD_PAGE_SIZE),
+    );
+
+    const visibleDashboards = useMemo(
+        () =>
+            filteredDashboards.slice(
+                (pageNum - 1) * DASHBOARD_PAGE_SIZE,
+                (pageNum - 1) * DASHBOARD_PAGE_SIZE + DASHBOARD_PAGE_SIZE,
+            ),
+        [filteredDashboards, pageNum],
+    );
+
+    const availableDashboardTags = useMemo(
+        () =>
+            Array.from(new Set(dashboards.flatMap((dashboard) => dashboard.tags))).sort((left, right) =>
+                left.localeCompare(right),
+            ),
+        [dashboards],
+    );
+
+    const templateDashboards = useMemo(
+        () => dashboards.filter((dashboard) => dashboard.template === true),
+        [dashboards],
+    );
+
+    useEffect(() => {
+        if (pageNum > totalDashboardPages) {
+            setPageNum(totalDashboardPages);
+        }
+    }, [pageNum, totalDashboardPages]);
+
+    const handleOpenClick = () => {
+        const serializedTags = '';
+
+        if (activeModeId == 'create') {
+            // create a new dashboard and then open it
+
+            const dashid = `is4s_${dashboardTitle.replaceAll(' ', '_').replaceAll('#', '')}`;
+            let jsonDefinition = cloneDeep(initialDefinition);
+            jsonDefinition.title = dashboardTitle;
+            jsonDefinition.description = dashboardDescription;
+            jsonDefinition.tag = serializedTags;
+            jsonDefinition.layout.type = gridLayout;
+
+            addDash(
+                dashid,
+                JSON.stringify(jsonDefinition),
+                dashboardTitle,
+                dashboardDescription,
+                serializedTags,
+            ).then((response) => {
+                if (response.status >= 200 && response.status <= 299) {
+                    console.log(response);
+                    setOpenCreateDashboard(false);
+                    setTimeout(() => {
+                        //navigate(`/${dashid}/edit`, { replace: true });
+                        window.open(
+                            `/app/splunk-cisco-dashboards/dashboardbuilder#/${dashid}/edit`,
+                            '_self',
+                        );
+                    }, 500);
+                } else {
+                    console.log(response);
+                    makeCreateToast(Toaster)({
+                        message: `An error occured while creating the new dashboard... ${JSON.stringify(
+                            response,
+                        )}`,
+                        type: TOAST_TYPES.ERROR,
+                    });
+                }
+            });
+        } else if (activeModeId == 'fromtemplate') {
+            // create a new dashboard and then open it
+
+            const dashid = `is4s_${dashboardTitle.replaceAll(' ', '_').replaceAll('#', '')}`;
+
+            let jsonDefinition = cloneDeep(
+                dashboards.find((c) => c.title == selectedOpenTemplate).definition,
+            );
+
+            jsonDefinition.title = dashboardTitle;
+            jsonDefinition.description = dashboardDescription;
+            jsonDefinition.tag = serializedTags;
+            delete jsonDefinition.template;
+            for (const [key, viz] of Object.entries(jsonDefinition.visualizations)) {
+                if (
+                    viz.type === 'splunk.template_kpi' &&
+                    viz.options &&
+                    'readonly' in viz.options
+                ) {
+                    delete viz.options.readonly;
+                }
+            }
+
+            addDash(
+                dashid,
+                JSON.stringify(jsonDefinition),
+                dashboardTitle,
+                dashboardDescription,
+                serializedTags,
+            ).then((response) => {
+                if (response.status >= 200 && response.status <= 299) {
+                    setOpenCreateDashboard(false);
+                    setTimeout(() => {
+                        //navigate(`/${dashid}/edit`, { replace: true });
+                        window.open(
+                            `/app/splunk-cisco-dashboards/dashboardbuilder#/${dashid}/edit`,
+                            '_self',
+                        );
+                    }, 500);
+                } else {
+                    makeCreateToast(Toaster)({
+                        message: `An error occured while creating the new dashboard... ${JSON.stringify(
+                            response,
+                        )}`,
+                        type: TOAST_TYPES.ERROR,
+                    });
+                }
+            });
+        }
+    };
+
+    const refreshDashboards = () => {
+        getDashboards().then((response) => {
+            if (response.status >= 200 && response.status <= 299) {
+                const { XMLParser } = require('fast-xml-parser');
+                const parser = new XMLParser();
+
+                const insightDash = response.entry
+                    .filter((c) => c.content.isDashboard && c.content.version == '2')
+                    .map((r) => {
+                        try {
+                            let jObj = parser.parse(r.content['eai:data']);
+                            const data = JSON.parse(
+                                jObj.dashboard.definition.replace(/\n/g, '').startsWith('{{')
+                                    ? jObj.dashboard.definition.replace(/\n/g, '').replace('{', '')
+                                    : jObj.dashboard.definition.replace(/\n/g, ''),
+                            );
+
+                            const description = jObj.dashboard.description || '';
+                            const tag = jObj.dashboard.tag || '';
+                            const tags = parseDashboardTags(tag);
+
+                            return {
+                                data: r.content['eai:data'],
+                                definition: data,
+                                author: r.content['eai:userName'],
+                                app: r.content['eai:appName'],
+                                owner: r.acl?.owner || r.content['eai:userName'],
+                                sharing: r.acl?.sharing || 'app',
+                                deleteLink: r.links?.remove || r.links?.edit,
+                                title: r.name,
+                                label: r.content['label'],
+                                // kh 2026-05-16 23:32:45 EDT: Normalize dashboard metadata once during load so library filters and tag rendering reuse stable parsed values instead of recomputing them on every render.
+                                description,
+                                tag,
+                                tags,
+                                searchText: buildDashboardSearchText({
+                                    title: r.name,
+                                    label: r.content['label'],
+                                    description,
+                                }),
+                                template: data.template ? data.template : false,
+                            };
+                        } catch (error) {
+                            return undefined;
+                        }
+                    })
+                    .filter((c) => c != undefined);
+
+                setDashboards(insightDash);
+            } else {
+            }
+        });
+    };
+
+    useEffect(() => {
+        refreshDashboards();
+    }, []);
+
+    const handleRequestClosePreview = () => {
+        setPreviewOpen(false);
+    };
+
+    const handleCloseCreateDashboard = () => {
+        // kh 2026-05-10: Reset builder metadata and mode-specific state so the next modal session starts from a clean default configuration.
+        setOpenCreateDashboard(false);
+        setDashboardTitle('');
+        setDashboardDescription('');
+        setGridLayout('absolute');
+        setActiveModeId('create');
+        setSelectedOpenTemplate('');
+    };
+
+    const handleDashboardFilterTagsChange = (e, { values }) => {
+        setDashboardFilterTags(values);
+        setPageNum(1);
+    };
+
+    const stopDashboardPanelAction = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+    };
+
+    const handleDashboardLibraryViewChange = (viewMode) => (event) => {
+        stopDashboardPanelAction(event);
+        setDashboardLibraryView(viewMode);
+    };
+
+    const handleDashboardLibraryViewKeyDown = (viewMode) => (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            stopDashboardPanelAction(event);
+            setDashboardLibraryView(viewMode);
+        }
+    };
+
+    const handlePreviewDashboard = (dash) => {
+        setPreviewOpen(true);
+        setSelectedDash(dash);
+    };
+
+    const handleEditDashboard = (dash) => {
+        navigate(`/${dash.title}/edit`);
+    };
+
+    const handleOpenDashboardMetadataEditor = (dash) => {
+        setDashboardMetadataTarget(dash);
+        setDashboardMetadataTitle(dash.label || dash.title || '');
+        setDashboardMetadataDescription(dash.description || '');
+        setDashboardMetadataTags(parseDashboardTags(dash.tag));
+        setOpenDashboardMetadataEditor(true);
+    };
+
+    const handleCloseDashboardMetadataEditor = () => {
+        setOpenDashboardMetadataEditor(false);
+        setDashboardMetadataTarget(undefined);
+        setDashboardMetadataTitle('');
+        setDashboardMetadataDescription('');
+        setDashboardMetadataTags([]);
+        setIsSavingDashboardMetadata(false);
+    };
+
+    const handleSaveDashboardMetadata = () => {
+        if (!dashboardMetadataTarget || !dashboardMetadataTitle.trim()) {
+            makeCreateToast(Toaster)({
+                message: 'Title is required before saving dashboard metadata.',
+                type: TOAST_TYPES.ERROR,
+            });
+            return;
+        }
+
+        setIsSavingDashboardMetadata(true);
+
+        const serializedTags = serializeDashboardTags(dashboardMetadataTags);
+
+        updateDashMetadata(
+            dashboardMetadataTarget.title,
+            dashboardMetadataTarget.definition,
+            dashboardMetadataTitle.trim(),
+            dashboardMetadataDescription.trim(),
+            serializedTags,
+        ).then((response) => {
+            if (response.status >= 200 && response.status <= 299) {
+                makeCreateToast(Toaster)({
+                    message: `Metadata for ${dashboardMetadataTitle.trim()} was updated successfully.`,
+                    type: TOAST_TYPES.SUCCESS,
+                });
+
+                refreshDashboards();
+
+                if (selectedDash?.title === dashboardMetadataTarget.title) {
+                    setSelectedDash((prev) =>
+                        prev
+                            ? {
+                                  ...prev,
+                                  label: dashboardMetadataTitle.trim(),
+                                  description: dashboardMetadataDescription.trim(),
+                                  tag: serializedTags,
+                                  definition: {
+                                      ...prev.definition,
+                                      title: dashboardMetadataTitle.trim(),
+                                      description: dashboardMetadataDescription.trim(),
+                                      tag: serializedTags,
+                                  },
+                              }
+                            : prev,
+                    );
+                }
+
+                handleCloseDashboardMetadataEditor();
+            } else {
+                setIsSavingDashboardMetadata(false);
+                makeCreateToast(Toaster)({
+                    message: `An error occured while updating dashboard metadata... ${JSON.stringify(
+                        response,
+                    )}`,
+                    type: TOAST_TYPES.ERROR,
+                });
+            }
+        });
+    };
+
+    const handleRequestDeleteDashboard = (dash) => {
+        setDashboardToDelete(dash);
+        setOpenDeleteDashboard(true);
+    };
+
+    const handleCloseDeleteTemplate = () => {
+        setOpenDeleteDashboard(false);
+    };
+
+    const handleCreateTemplate = () => {
+        const dashid = `is4s_${dashboardTitle.replaceAll(' ', '_').replaceAll('#', '')}`;
+        let jDefinition = cloneDeep(initialTemplateDefinition);
+        jDefinition.title = dashboardTitle;
+        jDefinition.layout.type = gridLayout;
+
+        if (currMode == 'json') {
+            jDefinition = JSON.parse(jsonDefinition);
+            jDefinition.template = true;
+        }
+
+        if (currMode == 'convert') {
+            jDefinition = dashboards.find((d) => d.title == dashboardToImport).definition;
+            jDefinition.template = true;
+        }
+
+        // remove data sources
+        jDefinition.dataSources = {};
+        // clean json definition and remove Vizs
+        const whitelist = [
+            'viz.singlevalue',
+            'viz.table',
+            'viz.line',
+            'viz.bar',
+            'viz.area',
+            'viz.pie',
+            'viz.map',
+            'viz.bubble',
+            'viz.image',
+            'viz.column',
+            'splunk.singlevalue',
+            'splunk.table',
+            'splunk.line',
+            'splunk.bar',
+            'splunk.pie',
+            'splunk.column',
+            'splunk.markergauge',
+            'splunk.events',
+            'splunk.singlevalueradial',
+            'splunk.area',
+            'splunk.timeline',
+            'splunk.bubble',
+            'splunk.parallelcoordinates',
+            'splunk.punchcard',
+            'splunk.scatter',
+            'splunk.fillergauge',
+            'splunk.linkgraph',
+            'splunk.sankey',
+        ];
+
+        Object.entries(jDefinition.visualizations || {}).forEach(([vizId, viz]) => {
+            if (whitelist.includes(viz.type)) {
+                viz.type = 'splunk.template_kpi'; //Math.random() > 0.5 ? 'splunk.template_kpi' : 'splunk.template_other';
+                viz.options = { ...viz.options, readonly: true };
+            }
+
+            // Replace title with placeholder
+            viz.title = `TEMP_TITLE_${vizId.toUpperCase()}`;
+
+            // Replace markdown content
+            if ((viz.type === 'viz.markdown' || viz.type === 'splunk.markdown') && viz.options) {
+                viz.options.markdown = 'TEMP';
+            }
+
+            // remove data source
+            viz.dataSources = {};
+        });
+
+        addDash(dashid, JSON.stringify(jDefinition), dashboardTitle).then((response) => {
+            if (response.status >= 200 && response.status <= 299) {
+                refreshDashboards();
+                setOpenCreateDashboard(false);
+                if (currMode == 'create')
+                    setTimeout(() => {
+                        navigate(`/edit/${dashid}`);
+                    }, 500);
+            } else {
+                makeCreateToast(Toaster)({
+                    message: `An error occured while creating the new template... ${JSON.stringify(
+                        response,
+                    )}`,
+                    type: TOAST_TYPES.ERROR,
+                });
+            }
+        });
+    };
+
+    const handleDeleteTemplate = () => {
+        if (DashboardToDelete)
+            deleteDashboard(
+                DashboardToDelete.title,
+                DashboardToDelete.app,
+                DashboardToDelete.owner,
+                DashboardToDelete.sharing,
+                DashboardToDelete.deleteLink,
+            ).then((response) => {
+                if (response.status >= 200 && response.status <= 299) {
+                    makeCreateToast(Toaster)({
+                        message: `Dashboard deleted successfully...`,
+                        type: TOAST_TYPES.SUCCESS,
+                    });
+                    setDashboards((prev) =>
+                        prev.filter((dashboard) => dashboard.title !== DashboardToDelete.title),
+                    );
+                    setSelectedDash((prev) =>
+                        prev?.title === DashboardToDelete.title ? undefined : prev,
+                    );
+                    setPreviewOpen((prev) =>
+                        selectedDash?.title === DashboardToDelete.title ? false : prev,
+                    );
+                    setOpenDeleteDashboard(false);
+                    setDashboardToDelete(undefined);
+                    refreshDashboards();
+                } else {
+                    makeCreateToast(Toaster)({
+                        message: `An error occured while deleting the dashboard... ${JSON.stringify(
+                            response,
+                        )}`,
+                        type: TOAST_TYPES.ERROR,
+                    });
+                    setOpenDeleteDashboard(false);
+                    setDashboardToDelete(undefined);
+                }
+            });
+    };
+
+    return (
+        <>
+            <ToastMessages></ToastMessages>
+            <Modal
+                open={openCreateDashboard}
+                className="dashboard-builder-create-modal"
+                onRequestClose={handleCloseCreateDashboard}
+            >
+                <Modal.Header
+                    title="Cisco Dashboard Builder"
+                    //subtitle="Create a new dashboard or select an existing one to edit..."
+                    subtitle="Create a new dashboard or start using a template..."
+                    icon={<FileCharts className="dashboard-builder-modal-icon" />}
+                />
+
+                <Modal.Body className="dashboard-builder-modal-body">
+                    <div className="dashboard-builder-modal-content">
+                        {/* The Cisco builder only needs a title to create a dashboard; description remains optional metadata. */}
+                        <div className="dashboard-builder-form-grid">
+                            <div className="dashboard-builder-form-group dashboard-builder-title-group">
+                                <SplunkControlGroup
+                                    label={
+                                        <span className="dashboard-builder-field-label">
+                                            <span>
+                                                Title
+                                                <span className="dashboard-builder-required-marker">*</span>
+                                            </span>
+                                            <Tooltip content="Enter the dashboard title.">
+                                                <span className="dashboard-builder-field-tooltip-trigger">?</span>
+                                            </Tooltip>
+                                        </span>
+                                    }
+                                    labelPosition="top"
+                                >
+                                    <Text
+                                        value={dashboardTitle}
+                                        onChange={(e, { value }) => {
+                                            setDashboardTitle(value);
+                                        }}
+                                    />
+                                </SplunkControlGroup>
+                            </div>
+                        </div>
+                        <div className="dashboard-builder-description-group">
+                            <SplunkControlGroup
+                                label={
+                                    <span className="dashboard-builder-field-label">
+                                        <span>Description</span>
+                                        <Tooltip content="Optionally enter a short description for the dashboard.">
+                                            <span className="dashboard-builder-field-tooltip-trigger">?</span>
+                                        </Tooltip>
+                                    </span>
+                                }
+                                labelPosition="top"
+                            >
+                                <TextArea
+                                    value={dashboardDescription}
+                                    onChange={(e, { value }) => {
+                                        setDashboardDescription(value);
+                                    }}
+                                ></TextArea>
+                            </SplunkControlGroup>
+                        </div>
+                        <SplunkControlGroup
+                            className="dashboard-builder-mode-group"
+                            label="How do you want to build your dashboard?"
+                            labelPosition="top"
+                        >
+                            <TabLayout
+                                className="dashboard-builder-tablayout"
+                                defaultActivePanelId="create"
+                                onChange={(e, { activePanelId: panelId }) => {
+                                    setActiveModeId(panelId);
+                                }}
+                            >
+                                <TabLayout.Panel
+                                    label={
+                                        <span className="dashboard-builder-tab-label">
+                                            <span>From Scratch</span>
+                                            <Tooltip content="Start with a blank dashboard layout.">
+                                                <span className="dashboard-builder-tab-tooltip-trigger">
+                                                    ?
+                                                </span>
+                                            </Tooltip>
+                                        </span>
+                                    }
+                                    panelId="create"
+                                >
+                                    <SplunkControlGroup label="Layout Mode">
+                                        <div className="dashboard-builder-layout-options">
+                                            <Card
+                                                className="dashboard-builder-layout-card"
+                                                onClick={() => {
+                                                    setGridLayout('absolute');
+                                                }}
+                                                selected={gridLayout == 'absolute'}
+                                            >
+                                                <Card.Body className="dashboard-builder-layout-card-body">
+                                                    <div className="dashboard-builder-layout-card-content">
+                                                        <div>
+                                                            <b>Absolute</b>
+                                                            <p className="dashboard-builder-layout-card-copy">
+                                                                Full layout control
+                                                            </p>
+                                                        </div>
+                                                        <AbsolutSVG></AbsolutSVG>
+                                                    </div>
+                                                </Card.Body>
+                                            </Card>
+                                            <Card
+                                                className="dashboard-builder-layout-card"
+                                                onClick={() => {
+                                                    setGridLayout('grid');
+                                                }}
+                                                selected={gridLayout == 'grid'}
+                                            >
+                                                <Card.Body className="dashboard-builder-layout-card-body">
+                                                    <div className="dashboard-builder-layout-card-content">
+                                                        <div>
+                                                            <b>Grid</b>
+                                                            <p className="dashboard-builder-layout-card-copy">
+                                                                Quick organization
+                                                            </p>
+                                                        </div>
+                                                        <GridSVG></GridSVG>
+                                                    </div>
+                                                </Card.Body>
+                                            </Card>
+                                        </div>
+                                    </SplunkControlGroup>
+                                </TabLayout.Panel>
+                                <TabLayout.Panel
+                                    label={
+                                        <span className="dashboard-builder-tab-label">
+                                            <span>From Template</span>
+                                            <Tooltip content="Use a saved template as the starting point.">
+                                                <span className="dashboard-builder-tab-tooltip-trigger">
+                                                    ?
+                                                </span>
+                                            </Tooltip>
+                                        </span>
+                                    }
+                                    panelId="fromtemplate"
+                                >
+                                    <Message
+                                        type="info"
+                                        appearance="fill"
+                                        className="dashboard-builder-template-message"
+                                    >
+                                        Templates are Dashboard Studio definitions saved from this
+                                        manager.
+                                    </Message>
+                                    <ManagerPreviewModal
+                                        open={openPreview}
+                                        onRequestClose={handleRequestClosePreview}
+                                        title="Template Preview"
+                                        initialWidth={900}
+                                        initialHeight={620}
+                                    >
+                                        {previewTemplate && (
+                                            <DashboardContextProvider
+                                                //preset={EnterpriseViewOnlyPreset}
+                                                preset={customPresets}
+                                                featureFlags={featureFlags}
+                                                initialDefinition={previewTemplate}
+                                                iconRegistry={iconRegistry}
+                                            >
+                                                <DashboardCore width="100%" height="100%" />
+                                            </DashboardContextProvider>
+                                        )}
+                                    </ManagerPreviewModal>
+                                    <CardLayout
+                                        alignCards="left"
+                                        gutterSize={10}
+                                        cardWidth={200}
+                                        cardMinWidth={200}
+                                        cardMaxWidth={200}
+                                        wrapCards
+                                        className="dashboard-builder-template-layout"
+                                    >
+                                        {templateDashboards.map((template) => (
+                                                <Card
+                                                    onClick={() => {
+                                                        setPreviewTemplate(template.definition);
+                                                        setSelectedOpenTemplate(template.title);
+                                                    }}
+                                                >
+                                                    <Card.Body className="dashboard-builder-template-card-body">
+                                                        <DashboardContextProvider
+                                                            //preset={EnterpriseViewOnlyPreset}
+                                                            preset={customPresets}
+                                                            featureFlags={featureFlags}
+                                                            initialDefinition={template.definition}
+                                                            iconRegistry={iconRegistry}
+                                                        >
+                                                            <DashboardCore
+                                                                width="100%"
+                                                                height="100%"
+                                                            />
+                                                        </DashboardContextProvider>
+                                                    </Card.Body>
+                                                    <Card.Footer>
+                                                        <div className="dashboard-builder-template-card-footer">
+                                                            <span>
+                                                                <b>{template.label}</b>
+                                                            </span>
+                                                            <Button
+                                                                appearance="subtle"
+                                                                icon={<MagnifierPlus></MagnifierPlus>}
+                                                                onClick={() => {
+                                                                    setOpenPreview(true);
+                                                                }}
+                                                            ></Button>
+                                                        </div>
+                                                    </Card.Footer>
+                                                </Card>
+                                            ))}
+                                    </CardLayout>
+                                </TabLayout.Panel>
+                            </TabLayout>
+                        </SplunkControlGroup>
+                    </div>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button
+                        appearance="primary"
+                        label={activeModeId == 'create' ? 'Create' : 'Open'}
+                        disabled={
+                            !dashboardTitle.trim() ||
+                            (activeModeId == 'fromtemplate' && selectedOpenTemplate == '')
+                        }
+                        onClick={handleOpenClick}
+                    />
+
+                    <Button
+                        appearance="secondary"
+                        label="Cancel"
+                        onClick={handleCloseCreateDashboard}
+                    />
+                </Modal.Footer>
+            </Modal>
+            <Modal
+                open={openDeleteDashboard}
+                style={{ width: '500px', zIndex: 99999 }}
+                onRequestClose={handleCloseDeleteTemplate}
+            >
+                <Modal.Header
+                    title="Delete Confirmation"
+                    icon={<Trash style={{ width: 30, height: 30 }}></Trash>}
+                />
+
+                <Modal.Body>
+                    Are you sure you want to delete the dashboard :{' '}
+                    <b>{DashboardToDelete?.label}</b> ?
+                    <br />
+                    This action cannot be undone.
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button
+                        label="Delete"
+                        appearance="primary"
+                        onClick={() => {
+                            handleDeleteTemplate();
+                        }}
+                    ></Button>
+                    <Button
+                        label="Cancel"
+                        onClick={() => {
+                            setOpenDeleteDashboard(false);
+                        }}
+                    ></Button>
+                </Modal.Footer>
+            </Modal>
+
+            <Modal
+                open={openDashboardMetadataEditor}
+                className="dashboard-builder-metadata-modal"
+                onRequestClose={handleCloseDashboardMetadataEditor}
+            >
+                <Modal.Header
+                    title="Edit Dashboard Metadata"
+                    subtitle="Update the dashboard title and optional description without opening Dashboard Studio."
+                    icon={<Tag className="dashboard-builder-modal-icon" />}
+                />
+                <Modal.Body className="dashboard-builder-modal-body">
+                    <div className="dashboard-builder-modal-content">
+                        <div className="dashboard-builder-form-grid">
+                            <div className="dashboard-builder-form-group dashboard-builder-title-group">
+                                <SplunkControlGroup
+                                    label={
+                                        <span className="dashboard-builder-field-label">
+                                            <span>
+                                                Title
+                                                <span className="dashboard-builder-required-marker">*</span>
+                                            </span>
+                                            <Tooltip content="Enter the dashboard title.">
+                                                <span className="dashboard-builder-field-tooltip-trigger">?</span>
+                                            </Tooltip>
+                                        </span>
+                                    }
+                                    labelPosition="top"
+                                >
+                                    <Text
+                                        value={dashboardMetadataTitle}
+                                        onChange={(e, { value }) => {
+                                            setDashboardMetadataTitle(value);
+                                        }}
+                                    />
+                                </SplunkControlGroup>
+                            </div>
+                        </div>
+                        <div className="dashboard-builder-description-group">
+                            <SplunkControlGroup
+                                label={
+                                    <span className="dashboard-builder-field-label">
+                                        <span>Description</span>
+                                        <Tooltip content="Optionally enter a short description for the dashboard.">
+                                            <span className="dashboard-builder-field-tooltip-trigger">?</span>
+                                        </Tooltip>
+                                    </span>
+                                }
+                                labelPosition="top"
+                            >
+                                <TextArea
+                                    value={dashboardMetadataDescription}
+                                    onChange={(e, { value }) => {
+                                        setDashboardMetadataDescription(value);
+                                    }}
+                                ></TextArea>
+                            </SplunkControlGroup>
+                        </div>
+                        <div className="dashboard-builder-metadata-note">
+                            This matches the metadata editor pattern used in Presentation Manager.
+                        </div>
+                    </div>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button
+                        appearance="primary"
+                        label={isSavingDashboardMetadata ? 'Saving...' : 'Save Metadata'}
+                        onClick={handleSaveDashboardMetadata}
+                        disabled={
+                            isSavingDashboardMetadata ||
+                            !dashboardMetadataTitle.trim()
+                        }
+                    />
+                    <Button
+                        appearance="secondary"
+                        label="Cancel"
+                        onClick={handleCloseDashboardMetadataEditor}
+                    />
+                </Modal.Footer>
+            </Modal>
+
+            <ManagerPreviewModal
+                open={previewOpen}
+                onRequestClose={handleRequestClosePreview}
+                title="Dashboard Preview"
+                initialWidth={1100}
+                initialHeight={720}
+                footerContent={
+                    <>
+                        {selectedDash && (
+                            <Button
+                                label="Edit Metadata"
+                                appearance="secondary"
+                                icon={<Tag />}
+                                onClick={() => {
+                                    handleOpenDashboardMetadataEditor(selectedDash);
+                                }}
+                            />
+                        )}
+                        <Button
+                            label="Close"
+                            appearance="destructive"
+                            onClick={handleRequestClosePreview}
+                        />
+                    </>
+                }
+            >
+                {selectedDash && (
+                    <DashboardContextProvider
+                        //preset={EnterpriseViewOnlyPreset}
+                        preset={customPresets}
+                        featureFlags={featureFlags}
+                        initialDefinition={selectedDash.definition}
+                        iconRegistry={iconRegistry}
+                    >
+                        <DashboardStudioEditor
+                            openID={selectedDash.title}
+                            actionMenus={actionMenus}
+                            preset={customPresets}
+                            embededMode={true}
+                            readOnly={true}
+                        />
+                    </DashboardContextProvider>
+                )}
+            </ManagerPreviewModal>
+            <ColumnLayout id="collection_container">
+                <ColumnLayout.Row className="fix-margin">
+                    <ColumnLayout.Column span={12}>
+                        <div id="hdr_block">
+                            <div id="custom_collection_header">
+                                <div className="col2">
+                                    <div className="float-l">
+                                        <div className="title">Dashboard Manager</div>
+                                        <div className="tooltip-description float-l">
+                                            <Tooltip
+                                                id="collection_description"
+                                                content={
+                                                    <div className="default-tooltip-content">
+                                                        <p>
+                                                            The <strong>Dashboard Manager</strong>{' '}
+                                                            helps you create, preview, organize,
+                                                            and edit the dashboards you build in
+                                                            Cisco Executive Insights.
+                                                        </p>
+                                                        <p>
+                                                            It is a <strong>custom component</strong>{' '}
+                                                            integrated into <strong>Dashboard Studio</strong>,
+                                                            giving you a guided way to turn your
+                                                            KPIs into dashboards while still using
+                                                            the flexibility of Splunk Dashboard
+                                                            Studio.
+                                                        </p>
+                                                        <p>
+                                                            Any dashboard you create here remains a
+                                                            normal Dashboard Studio definition in
+                                                            this Splunk app.
+                                                        </p>
+                                                    </div>
+                                                }
+                                            ></Tooltip>
+                                        </div>
+                                    </div>
+                                    <div
+                                        className="sub-title"
+                                        title={dashboardManagerSubtitle}
+                                    >
+                                        {truncateManagerSubtitle(dashboardManagerSubtitle)}
+                                    </div>
+                                </div>
+                                <div className="col3">
+                                    <img
+                                        className="icn-collection"
+                                        alt="Splunk Executive Insights"
+                                        src="/static/app/splunk-cisco-dashboards/appIcon_2x.png"
+                                    />
+                                </div>
+                                <div className="manager-header-actions">
+                                    <Button
+                                        className="manager-header-primary-button"
+                                        label={'Create New'}
+                                        appearance="primary"
+                                        icon={<Plus></Plus>}
+                                        onClick={() => {
+                                            setOpenCreateDashboard(true);
+                                        }}
+                                    ></Button>
+                                    <ManagerHeaderTabs activeManager="dashboardbuilder" />
+                                </div>
+                            </div>
+                        </div>
+                    </ColumnLayout.Column>
+                </ColumnLayout.Row>
+
+                <div className="dashboard-manager-panel-shell">
+                    <div className="dashboard-manager-panel-switcher-slot">
+                        <div
+                            className="dashboard-manager-view-switcher"
+                            onMouseDown={stopDashboardPanelAction}
+                            onClick={stopDashboardPanelAction}
+                        >
+                            <span
+                                role="button"
+                                tabIndex={0}
+                                className={`dashboard-manager-view-switcher-option ${
+                                    dashboardLibraryView === 'cards'
+                                        ? 'dashboard-manager-view-switcher-option-active'
+                                        : ''
+                                }`}
+                                onClick={handleDashboardLibraryViewChange('cards')}
+                                onKeyDown={handleDashboardLibraryViewKeyDown('cards')}
+                            >
+                                Card View
+                            </span>
+                            <span
+                                role="button"
+                                tabIndex={0}
+                                className={`dashboard-manager-view-switcher-option ${
+                                    dashboardLibraryView === 'table'
+                                        ? 'dashboard-manager-view-switcher-option-active'
+                                        : ''
+                                }`}
+                                onClick={handleDashboardLibraryViewChange('table')}
+                                onKeyDown={handleDashboardLibraryViewKeyDown('table')}
+                            >
+                                Table View
+                            </span>
+                        </div>
+                    </div>
+                    <CollapsiblePanel
+                        defaultOpen
+                        open={true}
+                        id="template_manager_templates"
+                        title={
+                            <div className="dashboard-manager-panel-title">
+                                <div className="dashboard-manager-panel-title-main">
+                                    <span>{`Dashboards (${filteredDashboards.length})`}</span>
+                                    <div className="dashboard-manager-panel-tooltip">
+                                        <CustomTooltip
+                                            width={450}
+                                            height={430}
+                                            delay="300"
+                                            placement="right"
+                                            persistent
+                                            type="card"
+                                            title="How Do I Use The Dashboard Manager?"
+                                            description={
+                                                <span>
+                                                    <p>
+                                                        Use Dashboard Manager to create, find, edit, and
+                                                        refine Cisco dashboards.
+                                                    </p>
+                                                    <ul>
+                                                        <li>
+                                                            Click <strong>Create New</strong>, enter a
+                                                            <strong> Dashboard Title</strong>, then choose
+                                                            <strong> From Scratch</strong> or
+                                                            <strong> From template</strong>.
+                                                        </li>
+                                                        <li>
+                                                            Use the <strong>Search</strong> and
+                                                            <strong> tag</strong> filters to narrow the
+                                                            list. Keep the existing cards for visual browsing,
+                                                            or switch to <strong>Table View</strong> when you
+                                                            need more list density.
+                                                        </li>
+                                                        <li>
+                                                            In Dashboard Studio, use the
+                                                            <strong> Cisco KPI Picker</strong> in the tools
+                                                            menu. It is the <strong>eyeball icon</strong>,
+                                                            and it lets you add Cisco KPI-based content to
+                                                            your dashboard.
+                                                        </li>
+                                                        <li>
+                                                            You can use KPIs shipped with Splunk, plus
+                                                            custom KPIs backed by your own Searchbase
+                                                            searches. If you want to build from custom
+                                                            KPIs, you will need Searchbase:{' '}
+                                                            <a
+                                                                href="https://splunkbase.splunk.com/app/7188"
+                                                                target="_blank"
+                                                            >
+                                                                Searchbase on Splunkbase
+                                                            </a>
+                                                            .
+                                                        </li>
+                                                        <li>
+                                                            You can also style dashboards with
+                                                            <strong> custom Splunk icons</strong> and
+                                                            <strong> backgrounds</strong>. These options
+                                                            appear as additional tools in the Dashboard
+                                                            Studio ribbon.
+                                                        </li>
+                                                    </ul>
+                                                </span>
+                                            }
+                                        >
+                                            <span className="custom-tooltip-block dashboard-manager-tooltip-trigger">
+                                                <QuestionCircle
+                                                    className="icn-tooltip"
+                                                    variant="filled"
+                                                />
+                                            </span>
+                                        </CustomTooltip>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    >
+                    <ColumnLayout.Row className="dashboard-manager-library-row">
+                        <ColumnLayout.Column
+                            className="manager-search-dialog-container"
+                            span={12}
+                        >
+                            <div className="dashboard-manager-library-filters">
+                                <div className="dashboard-manager-library-search-field">
+                                    <Text
+                                        className="dashboard-manager-library-search"
+                                        canClear
+                                        value={searchText}
+                                        onChange={(e, { value }) => {
+                                            setSearchText(value);
+                                            setPageNum(1);
+                                        }}
+                                        endAdornment={<MagnifierPlus className="dashboard-manager-search-icon" />}
+                                        inline
+                                    ></Text>
+                                </div>
+                                <div className="dashboard-manager-library-tag-filter-field">
+                                    <Multiselect
+                                        className="dashboard-manager-library-tag-filter"
+                                        values={dashboardFilterTags}
+                                        onChange={handleDashboardFilterTagsChange}
+                                        placeholder="Filter by tags"
+                                        inline
+                                    >
+                                        {availableDashboardTags.map((tag) => (
+                                            <Multiselect.Option key={tag} label={tag} value={tag} />
+                                        ))}
+                                    </Multiselect>
+                                </div>
+                            </div>
+                        </ColumnLayout.Column>
+                    </ColumnLayout.Row>
+
+                    <ColumnLayout.Row>
+                        <ColumnLayout.Column span={12}>
+                            <Paginator
+                                className="dashboard-manager-paginator"
+                                onChange={handlePageChange}
+                                current={pageNum}
+                                alwaysShowLastPageLink
+                                totalPages={totalDashboardPages}
+                            />
+                        </ColumnLayout.Column>
+                    </ColumnLayout.Row>
+
+                    <ColumnLayout.Row>
+                        <ColumnLayout.Column>
+                            {dashboards.length == 0 && (
+                                <WaitSpinner size="large" style={{ margin: 30 }}></WaitSpinner>
+                            )}
+                            {dashboardLibraryView === 'cards' ? (
+                                <CardLayout
+                                    gutterSize={20}
+                                    cardMaxWidth={350}
+                                    cardMinWidth={350}
+                                    cardWidth={350}
+                                >
+                                    {visibleDashboards.map((dash) => (
+                                        <Card
+                                            key={dash.title}
+                                            className="dashboard-manager-library-card"
+                                            onClick={() => {
+                                                handlePreviewDashboard(dash);
+                                            }}
+                                        >
+                                            <Card.Header className="dashboard-manager-library-card-header">
+                                                <div className="dashboard-manager-library-card-header-copy">
+                                                    <div className="dashboard-manager-library-card-title-row">
+                                                        <span
+                                                            className="dashboard-manager-library-card-title"
+                                                            title={dash.label || dash.title}
+                                                        >
+                                                            {truncateDashboardTitle(
+                                                                dash.label || dash.title,
+                                                            )}
+                                                        </span>
+                                                        <FileCharts className="dashboard-manager-library-card-title-icon" />
+                                                    </div>
+                                                    <div
+                                                        className="dashboard-manager-library-card-name"
+                                                        title={dash.title}
+                                                    >
+                                                        {dash.title}
+                                                    </div>
+                                                </div>
+                                            </Card.Header>
+                                            <Card.Body className="dashboard-manager-library-card-body">
+                                                <b>Author:</b>{' '}
+                                                {dash.author || 'Unknown'}
+                                                <br />
+                                                <b>Description:</b>{' '}
+                                                <div
+                                                    className="dashboard-manager-library-card-description"
+                                                    title={dash.description || 'No description provided.'}
+                                                >
+                                                    {truncateDashboardDescription(dash.description)}
+                                                </div>
+                                                {dash.tags.length > 0 && (
+                                                    <div className="manager-card-tag-pills dashboard-manager-card-tag-pills">
+                                                        {dash.tags.map((tag) => (
+                                                            <span
+                                                                key={`${dash.title}-${tag}`}
+                                                                className="manager-card-tag-pill dashboard-manager-card-tag-pill"
+                                                            >
+                                                                {tag}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </Card.Body>
+
+                                            <Card.Footer className="dashboard-manager-library-card-footer">
+                                                <div className="dashboard-manager-card-footer-content">
+                                                    <div className="dashboard-manager-card-footer-row">
+                                                        <div className="dashboard-manager-library-card-actions">
+                                                            <Tooltip content="Edit dashboard metadata">
+                                                                <Button
+                                                                    appearance="subtle"
+                                                                    icon={<Tag />}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleOpenDashboardMetadataEditor(dash);
+                                                                    }}
+                                                                />
+                                                            </Tooltip>
+                                                            <Tooltip content="Edit dashboard">
+                                                                <Button
+                                                                    appearance="subtle"
+                                                                    icon={<Pencil />}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleEditDashboard(dash);
+                                                                    }}
+                                                                />
+                                                            </Tooltip>
+
+                                                            <Tooltip content="Delete dashboard">
+                                                                <Button
+                                                                    appearance="subtle"
+                                                                    icon={<TrashCanCross />}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleRequestDeleteDashboard(dash);
+                                                                    }}
+                                                                />
+                                                            </Tooltip>
+                                                            <Tooltip content="Preview Dashboard">
+                                                                <Button
+                                                                    appearance="subtle"
+                                                                    icon={<MagnifierPlus />}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handlePreviewDashboard(dash);
+                                                                    }}
+                                                                />
+                                                            </Tooltip>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </Card.Footer>
+                                        </Card>
+                                    ))}
+                                </CardLayout>
+                            ) : (
+                                <div className="dashboard-manager-library-table-wrapper">
+                                    <Table className="dashboard-manager-library-table">
+                                        <Table.Head>
+                                            <Table.HeadCell width={220}>Label</Table.HeadCell>
+                                            <Table.HeadCell width={220}>Name</Table.HeadCell>
+                                            <Table.HeadCell width={140}>Author</Table.HeadCell>
+                                            <Table.HeadCell width={140}>App</Table.HeadCell>
+                                            <Table.HeadCell>Description</Table.HeadCell>
+                                            <Table.HeadCell width={220}>Tags</Table.HeadCell>
+                                            <Table.HeadCell width={220}>Actions</Table.HeadCell>
+                                        </Table.Head>
+                                        <Table.Body>
+                                            {visibleDashboards.map((dash) => (
+                                                <Table.Row key={`${dash.title}-table-row`}>
+                                                    <Table.Cell>{dash.label}</Table.Cell>
+                                                    <Table.Cell>{dash.title}</Table.Cell>
+                                                    <Table.Cell>{dash.author}</Table.Cell>
+                                                    <Table.Cell>{dash.app}</Table.Cell>
+                                                    <Table.Cell>
+                                                        <span
+                                                            className="dashboard-manager-library-table-description"
+                                                            title={dash.description || ''}
+                                                        >
+                                                            {dash.description}
+                                                        </span>
+                                                    </Table.Cell>
+                                                    <Table.Cell>
+                                                        {dash.tags.length > 0 ? (
+                                                            <div className="manager-card-tag-pills dashboard-manager-library-table-tags">
+                                                                {dash.tags.map((tag) => (
+                                                                    <span
+                                                                        key={`${dash.title}-table-${tag}`}
+                                                                        className="manager-card-tag-pill dashboard-manager-card-tag-pill"
+                                                                    >
+                                                                        {tag}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="dashboard-manager-library-table-empty">
+                                                                No tags
+                                                            </span>
+                                                        )}
+                                                    </Table.Cell>
+                                                    <Table.Cell>
+                                                        <div className="dashboard-manager-library-table-actions">
+                                                            <Button
+                                                                appearance="subtle"
+                                                                icon={<MagnifierPlus />}
+                                                                label="Preview"
+                                                                onClick={() => handlePreviewDashboard(dash)}
+                                                            />
+                                                            <Button
+                                                                appearance="secondary"
+                                                                icon={<Tag />}
+                                                                label="Metadata"
+                                                                onClick={() =>
+                                                                    handleOpenDashboardMetadataEditor(dash)
+                                                                }
+                                                            />
+                                                            <Button
+                                                                appearance="secondary"
+                                                                icon={<Pencil />}
+                                                                label="Edit"
+                                                                onClick={() => handleEditDashboard(dash)}
+                                                            />
+                                                            <Button
+                                                                appearance="subtle"
+                                                                icon={<TrashCanCross />}
+                                                                label="Delete"
+                                                                onClick={() =>
+                                                                    handleRequestDeleteDashboard(dash)
+                                                                }
+                                                            />
+                                                        </div>
+                                                    </Table.Cell>
+                                                </Table.Row>
+                                            ))}
+                                        </Table.Body>
+                                    </Table>
+                                </div>
+                            )}
+                        </ColumnLayout.Column>
+                    </ColumnLayout.Row>
+                    </CollapsiblePanel>
+                </div>
+            </ColumnLayout>
+        </>
+    );
+}

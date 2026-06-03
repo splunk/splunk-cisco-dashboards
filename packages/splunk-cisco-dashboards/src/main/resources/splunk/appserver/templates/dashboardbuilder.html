@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html class="no-js" lang="">
+    <head>
+        <meta charset="utf-8" />
+        <meta http-equiv="x-ua-compatible" content="ie=edge" />
+        <title>Cisco Dashboard Builder</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <style>
+            body {
+                background: #fcfcfc;
+            }
+
+            div[data-test='DashboardLayoutContainer'] {
+                height: calc(100%);
+                padding: 0 !important;
+            }
+        </style>
+    </head>
+
+    <body>
+        <script src="${make_url('/config?autoload=1')}" crossorigin="use-credentials"></script>
+        <script src="${make_url('/static/js/i18n.js')}"></script>
+        <script src="${make_url('/i18ncatalog?autoload=1')}"></script>
+        <script>
+            __splunkd_partials__ = ${json_decode(splunkd)};
+        </script>
+
+        <script src="${make_url('/static/app/splunk-cisco-dashboards/pages/dashboardbuilder.js')}"></script>
+    </body>
+</html>

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" width="900" height="600" role="img" aria-label="Browser window showing checkerboard transparency" opacity="0.6">
+  
+  <!-- Content area border -->
+  <rect x="0" y="0" width="895" height="595" rx="6" fill="#ffffff" stroke="#cfd8e3" stroke-width="5" />
+
+  <!-- Checkerboard pattern definition (white + grey squares) -->
+  <defs>
+    <pattern id="checker" patternUnits="userSpaceOnUse" width="40" height="40">
+      <!-- Light square -->
+      <rect x="0" y="0" width="20" height="20" fill="#ffffff" />
+      <rect x="20" y="20" width="20" height="20" fill="#ffffff" />
+      <!-- Grey squares -->
+      <rect x="20" y="0" width="20" height="20" fill="#d0d6dd" />
+      <rect x="0" y="20" width="20" height="20" fill="#d0d6dd" />
+    </pattern>
+
+    <!-- A slightly darker overlay to simulate shadow where PNG would sit -->
+    <linearGradient id="shadow" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#000" stop-opacity="0.06"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.00"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Checkerboard background inside the content area -->
+  <rect x="5" y="5" width="890" height="590" rx="4" fill="url(#checker)" />
+
+</svg>

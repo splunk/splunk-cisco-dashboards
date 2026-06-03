@@ -1,6 +1,8 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { SplunkThemeProvider } from '@splunk/themes';
+import layout from '@splunk/react-page';
+import { getUserTheme } from '@splunk/splunk-utils/themes';
 
 /**
  * Shared mount helper used by every page entrypoint.
@@ -37,4 +39,24 @@ export default function mountPage(PageComponent) {
     };
 
     tryMount();
+}
+
+export function renderAsPage(pageElement) {
+    getUserTheme()
+        .then((theme) => {
+            layout(
+                <SplunkThemeProvider family="prisma" colorScheme="light" density="comfortable">
+                    {pageElement}
+                </SplunkThemeProvider>,
+                {
+                    hideAppBar: true,
+                    theme,
+                }
+            );
+        })
+        .catch((e) => {
+            const errorEl = document.createElement('span');
+            errorEl.innerHTML = e;
+            document.body.appendChild(errorEl);
+        });
 }
