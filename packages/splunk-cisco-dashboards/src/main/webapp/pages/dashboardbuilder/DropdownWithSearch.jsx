@@ -1,9 +1,9 @@
-import React, { useState, cloneElement } from 'react';
+import React, { useState } from 'react';
 import '../../common/styles/commonstyles.css';
 import Button from '@splunk/react-ui/Button';
 import Select from '@splunk/react-ui/Select';
+import Multiselect from '@splunk/react-ui/Multiselect';
 import Checkbox from '@splunk/react-ui/Checkbox';
-import Search from '@splunk/react-ui/Search';
 import Text from '@splunk/react-ui/Text';
 import ChartSingleValue from '@splunk/react-icons/ChartSingleValue';
 import ChartPie from '@splunk/react-icons/ChartPie';
@@ -13,9 +13,13 @@ import ChartBar from '@splunk/react-icons/ChartBar';
 import TableList from '@splunk/react-icons/TableList';
 import ChartSingleValueRadial from '@splunk/react-icons/ChartSingleValueRadial';
 import ChartColumn from '@splunk/react-icons/ChartColumn';
-import TooltipWithTheme from '@splunk/react-ui/Tooltip';
-import Link from '@splunk/react-ui/Link';
 import Modal from '@splunk/react-ui/Modal';
+import { plainTextFromHtml } from '../../common/services/searchbaseCatalogue';
+
+const ALL_APPS = '__all_apps__';
+const ALL_CATEGORIES = '__all_categories__';
+const ALL_SUB_CATEGORIES = '__all_sub_categories__';
+const DEFAULT_APP_SCOPE = 'splunk-cisco-dashboards';
 
 const equalArrays = (a, b) => {
     if (a.length !== b.length) return false;
@@ -31,38 +35,134 @@ const equalArrays = (a, b) => {
     return true;
 };
 
+const sortedUnique = (values) =>
+    [...new Set(values.filter(Boolean))].sort((left, right) => left.localeCompare(right));
+
+const getVizIcon = (defaultViz) => {
+    if (!defaultViz) return <TableList width={20} height={20} />;
+    if (defaultViz.includes('table')) return <TableList width={20} height={20} />;
+    if (defaultViz.includes('bar')) return <ChartBar width={20} height={20} />;
+    if (defaultViz.includes('line')) return <ChartLine width={20} height={20} />;
+    if (defaultViz.includes('area')) return <ChartArea width={20} height={20} />;
+    if (defaultViz.includes('column')) return <ChartColumn width={20} height={20} />;
+    if (defaultViz.includes('pie')) return <ChartPie width={20} height={20} />;
+    if (defaultViz.includes('singlevalueradial')) {
+        return <ChartSingleValueRadial width={20} height={20} />;
+    }
+    return <ChartSingleValue width={20} height={20} />;
+};
+
 export default function DropdownWithSearch({
     label,
     icon,
     appearance,
     style,
-    children,
     onSelect,
-    tags,
     searches,
 }) {
     const [searchTerm, setSearchTerm] = useState('');
-    const [searchTag, setSearchTag] = useState(undefined);
+    const [selectedApp, setSelectedApp] = useState(DEFAULT_APP_SCOPE);
+    const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES);
+    const [selectedSubCategory, setSelectedSubCategory] = useState(ALL_SUB_CATEGORIES);
+    const [selectedTags, setSelectedTags] = useState([]);
     const [isOpen, setIsOpen] = useState(false);
     const [selection, setSelection] = useState([]);
     const [confirmationOpen, setConfirmationOpen] = useState(false);
 
     const updateSelection = (item) => {
-        if (selection.includes(item)) setSelection((prev) => prev.filter((it) => it != item));
+        if (selection.includes(item)) setSelection((prev) => prev.filter((it) => it !== item));
         else setSelection((prev) => [...prev, item]);
     };
+
+    const resetFilters = () => {
+        setSearchTerm('');
+        setSelectedApp(DEFAULT_APP_SCOPE);
+        setSelectedCategory(ALL_CATEGORIES);
+        setSelectedSubCategory(ALL_SUB_CATEGORIES);
+        setSelectedTags([]);
+    };
+
+    const clearSelectionAndClose = () => {
+        resetFilters();
+        setSelection([]);
+        setIsOpen(false);
+    };
+
+    const apps = sortedUnique(searches.map((search) => search.dispatchContext));
+
+    const appScopedSearches = searches.filter(
+        (search) => selectedApp === ALL_APPS || search.dispatchContext === selectedApp,
+    );
+
+    const categories = sortedUnique(appScopedSearches.map((search) => search.category));
+
+    const subCategories =
+        selectedCategory === ALL_CATEGORIES
+            ? []
+            : sortedUnique(
+                  appScopedSearches
+                      .filter((search) => search.category === selectedCategory)
+                      .map((search) => search.subCategory),
+              );
+
+    const facetFilteredSearches = appScopedSearches.filter((search) => {
+        if (selectedCategory !== ALL_CATEGORIES && search.category !== selectedCategory)
+            return false;
+        if (
+            selectedSubCategory !== ALL_SUB_CATEGORIES &&
+            search.subCategory !== selectedSubCategory
+        )
+            return false;
+        return true;
+    });
+
+    const availableTags = sortedUnique(
+        facetFilteredSearches.flatMap((search) => search.tags || []),
+    );
+
+    const filteredSearches = facetFilteredSearches.filter((search) => {
+        if (selectedTags.some((tag) => !(search.tags || []).includes(tag))) return false;
+
+        const query = searchTerm.trim().toLowerCase();
+        if (!query) return true;
+
+        const haystack = [
+            search.searchName,
+            search.id,
+            search.category,
+            search.subCategory,
+            search.dispatchContext,
+            plainTextFromHtml(search.description || ''),
+            ...(search.tags || []),
+        ]
+            .join('\n')
+            .toLowerCase();
+
+        return haystack.includes(query);
+    });
+
+    const sortedSearches = [...filteredSearches].sort((left, right) =>
+        left.searchName.localeCompare(right.searchName, undefined, { sensitivity: 'base' }),
+    );
+
+    const selectedFilteredSearches = sortedSearches.map((search) => search.id);
+    const hasActiveFilters =
+        searchTerm.trim() ||
+        selectedApp !== DEFAULT_APP_SCOPE ||
+        selectedCategory !== ALL_CATEGORIES ||
+        selectedSubCategory !== ALL_SUB_CATEGORIES ||
+        selectedTags.length > 0;
 
     return (
         <>
             <Modal open={confirmationOpen}>
-                <Modal.Header title="Large KPI Selection – Confirmation Required" />
+                <Modal.Header title="Large KPI Selection - Confirmation Required" />
                 <Modal.Body>
                     <div>
                         You are about to add <b>{selection.length} KPIs</b>.
                         <br />
                         This is a large number and may cause performance issues due to loading all
-                        KPI's searches and visualizations at the same time.
-                        <br />
+                        KPI searches and visualizations at the same time.
                         <br />
                         <br />
                         <b>Confirmation is required before proceeding.</b>
@@ -79,241 +179,196 @@ export default function DropdownWithSearch({
                                 setConfirmationOpen(false);
                             }}
                             style={{ maxWidth: 125, marginLeft: 10, marginRight: 20 }}
-                        ></Button>
+                        />
                         <Button
                             appearance="primary"
                             label="Yes"
                             style={{ maxWidth: 125 }}
                             onClick={() => {
-                                setConfirmationOpen(true);
-                                setSearchTag(undefined);
-                                setSearchTerm('');
+                                setConfirmationOpen(false);
+                                resetFilters();
                                 onSelect(selection);
                                 setSelection([]);
                                 setIsOpen(false);
                             }}
-                        ></Button>
+                        />
                     </div>
                 </Modal.Footer>
             </Modal>
             <div className="dropdown" style={style}>
-                {/* Dropdown Button */}
                 <Button
                     appearance={appearance}
                     onClick={() => setIsOpen(!isOpen)}
                     label={label}
                     icon={icon}
-                ></Button>
+                />
 
                 {isOpen && (
-                    <div className="dropdown-menu">
-                        {/* Search Input */}
-                        <div
-                            style={{
-                                padding: 10,
-                                borderBottom: '1px solid #dcdcdc',
-                                display: 'flex',
-                                alignContent: 'flex-end',
-                            }}
-                        >
+                    <div className="dropdown-menu dropdown-kpi-menu">
+                        <div className="dropdown-kpi-filter-shell">
                             <Text
-                                className="dropdown-search"
-                                placeholder="Search..."
+                                className="dropdown-search dropdown-kpi-search"
+                                placeholder={`Search ${searches.length} KPIs by name, category, sub-category, app, or tag...`}
                                 value={searchTerm}
                                 onChange={(e, { value }) => setSearchTerm(value)}
                             />
-                            <Select
-                                placeholder="Select a tag"
-                                value={searchTag}
-                                onChange={(e, { value }) => {
-                                    setSearchTag(value);
-                                }}
-                                style={{ maxHeight: 30, marginTop: 10, minWidth: 120 }}
-                            >
-                                {tags.map((tag) => (
-                                    <Select.Option label={tag} value={tag}></Select.Option>
-                                ))}
-                            </Select>
-                        </div>
 
-                        {searchTag &&
-                            searches.filter((search) => {
-                                let filter = true;
-                                if (searchTag) filter = search.content.tags.includes(searchTag);
-                                if (searchTerm)
-                                    filter = search.content.search_name
-                                        .toLowerCase()
-                                        .includes(searchTerm.toLowerCase());
-
-                                return filter;
-                            }).length > 0 && (
-                                <div
-                                    style={{
-                                        padding: 5,
-                                        borderBottom: '1px solid #dcdcdc',
+                            <div className="dropdown-kpi-filters">
+                                <Select
+                                    value={selectedApp}
+                                    onChange={(e, { value }) => {
+                                        setSelectedApp(value);
+                                        setSelectedCategory(ALL_CATEGORIES);
+                                        setSelectedSubCategory(ALL_SUB_CATEGORIES);
+                                        setSelectedTags([]);
                                     }}
                                 >
-                                    <a
-                                        style={{
-                                            marginLeft: 10,
-                                            cursor: 'pointer',
-                                            color: '#0064d7',
-                                        }}
-                                        onClick={() => {
-                                            const selected = searches
-                                                .filter((search) => {
-                                                    let filter = true;
-                                                    if (searchTag)
-                                                        filter =
-                                                            search.content.tags.includes(searchTag);
-                                                    if (searchTerm)
-                                                        filter = search.content.search_name
-                                                            .toLowerCase()
-                                                            .includes(searchTerm.toLowerCase());
+                                    <Select.Option
+                                        label={`All apps (${apps.length})`}
+                                        value={ALL_APPS}
+                                    />
+                                    {apps.map((app) => (
+                                        <Select.Option key={app} label={app} value={app} />
+                                    ))}
+                                    {!apps.includes(DEFAULT_APP_SCOPE) && (
+                                        <Select.Option
+                                            label={DEFAULT_APP_SCOPE}
+                                            value={DEFAULT_APP_SCOPE}
+                                        />
+                                    )}
+                                </Select>
 
-                                                    return filter;
-                                                })
-                                                .map((s) => s.name);
-                                            if (!equalArrays(selected, selection)) {
-                                                setSelection(selected);
-                                            } else {
-                                                setSelection([]);
-                                            }
-                                        }}
+                                <Select
+                                    value={selectedCategory}
+                                    onChange={(e, { value }) => {
+                                        setSelectedCategory(value);
+                                        setSelectedSubCategory(ALL_SUB_CATEGORIES);
+                                        setSelectedTags([]);
+                                    }}
+                                >
+                                    <Select.Option label="All categories" value={ALL_CATEGORIES} />
+                                    {categories.map((category) => (
+                                        <Select.Option
+                                            key={category}
+                                            label={category}
+                                            value={category}
+                                        />
+                                    ))}
+                                </Select>
+
+                                <Select
+                                    disabled={selectedCategory === ALL_CATEGORIES}
+                                    value={selectedSubCategory}
+                                    onChange={(e, { value }) => {
+                                        setSelectedSubCategory(value);
+                                        setSelectedTags([]);
+                                    }}
+                                >
+                                    <Select.Option
+                                        label={
+                                            selectedCategory === ALL_CATEGORIES
+                                                ? 'Select category first'
+                                                : `All sub-categories (${subCategories.length})`
+                                        }
+                                        value={ALL_SUB_CATEGORIES}
+                                    />
+                                    {subCategories.map((subCategory) => (
+                                        <Select.Option
+                                            key={subCategory}
+                                            label={subCategory}
+                                            value={subCategory}
+                                        />
+                                    ))}
+                                </Select>
+
+                                <Multiselect
+                                    values={selectedTags}
+                                    onChange={(e, { values }) => {
+                                        setSelectedTags(values || []);
+                                    }}
+                                    placeholder="Filter by tags"
+                                    inline
+                                >
+                                    {availableTags.map((tag) => (
+                                        <Multiselect.Option key={tag} label={tag} value={tag} />
+                                    ))}
+                                </Multiselect>
+                            </div>
+
+                            <div className="dropdown-kpi-filter-summary">
+                                <span>
+                                    {sortedSearches.length} of {searches.length} KPIs
+                                </span>
+                                {hasActiveFilters && (
+                                    <button
+                                        type="button"
+                                        className="dropdown-kpi-clear-button"
+                                        onClick={resetFilters}
                                     >
-                                        {equalArrays(
-                                            selection,
-                                            searches
-                                                .filter((search) => {
-                                                    let filter = true;
-                                                    if (searchTag)
-                                                        filter =
-                                                            search.content.tags.includes(searchTag);
-                                                    if (searchTerm)
-                                                        filter = search.content.search_name
-                                                            .toLowerCase()
-                                                            .includes(searchTerm.toLowerCase());
+                                        Clear filters
+                                    </button>
+                                )}
+                            </div>
+                        </div>
 
-                                                    return filter;
-                                                })
-                                                .map((s) => s.name),
-                                        )
-                                            ? 'Unselect all'
-                                            : 'Select all'}
-                                    </a>
-                                </div>
-                            )}
-                        {/* Filtered Items */}
+                        {sortedSearches.length > 0 && (
+                            <div className="dropdown-kpi-select-all">
+                                <button
+                                    type="button"
+                                    className="dropdown-kpi-select-all-button"
+                                    onClick={() => {
+                                        if (!equalArrays(selectedFilteredSearches, selection)) {
+                                            setSelection(selectedFilteredSearches);
+                                        } else {
+                                            setSelection([]);
+                                        }
+                                    }}
+                                >
+                                    {equalArrays(selection, selectedFilteredSearches)
+                                        ? 'Unselect all'
+                                        : 'Select all'}
+                                </button>
+                            </div>
+                        )}
+
                         <div style={{ maxHeight: 500, overflowY: 'auto' }}>
                             <ul className="dropdown-list">
-                                {searches
-                                    .filter((search) => {
-                                        let filter = true;
-                                        if (searchTag)
-                                            filter = search.content.tags.includes(searchTag);
-                                        if (searchTerm)
-                                            filter = search.content.search_name
-                                                .toLowerCase()
-                                                .includes(searchTerm.toLowerCase());
-
-                                        return filter;
-                                    })
-                                    .map((search) => (
-                                        <DropdownItem
-                                            label={search.content.search_name}
-                                            value={search.name}
-                                            tags={
-                                                search.content.tags
-                                                    ? search.content.tags.split(',')
-                                                    : []
-                                            }
-                                            icon={
-                                                search.content.default_viz ? (
-                                                    search.content.default_viz.includes('table') ? (
-                                                        <TableList
-                                                            width={20}
-                                                            height={20}
-                                                        ></TableList>
-                                                    ) : search.content.default_viz.includes(
-                                                          'bar',
-                                                      ) ? (
-                                                        <ChartBar width={20} height={20}></ChartBar>
-                                                    ) : search.content.default_viz.includes(
-                                                          'line',
-                                                      ) ? (
-                                                        <ChartLine
-                                                            width={20}
-                                                            height={20}
-                                                        ></ChartLine>
-                                                    ) : search.content.default_viz.includes(
-                                                          'area',
-                                                      ) ? (
-                                                        <ChartArea
-                                                            width={20}
-                                                            height={20}
-                                                        ></ChartArea>
-                                                    ) : search.content.default_viz.includes(
-                                                          'column',
-                                                      ) ? (
-                                                        <ChartColumn
-                                                            width={20}
-                                                            height={20}
-                                                        ></ChartColumn>
-                                                    ) : search.content.default_viz.includes(
-                                                          'pie',
-                                                      ) ? (
-                                                        <ChartPie width={20} height={20}></ChartPie>
-                                                    ) : search.content.default_viz.includes(
-                                                          'singlevalueradial',
-                                                      ) ? (
-                                                        <ChartSingleValueRadial
-                                                            width={20}
-                                                            height={20}
-                                                        ></ChartSingleValueRadial>
-                                                    ) : (
-                                                        <ChartSingleValue
-                                                            width={20}
-                                                            height={20}
-                                                        ></ChartSingleValue>
-                                                    )
-                                                ) : (
-                                                    <TableList width={20} height={20}></TableList>
-                                                )
-                                            }
-                                            updateSelection={updateSelection}
-                                            selection={selection}
-                                        ></DropdownItem>
-                                    ))}
+                                {sortedSearches.map((search) => (
+                                    <DropdownItem
+                                        key={search.id}
+                                        label={search.searchName}
+                                        value={search.id}
+                                        category={search.category}
+                                        subCategory={search.subCategory}
+                                        app={search.dispatchContext}
+                                        tags={search.tags || []}
+                                        icon={getVizIcon(search.defaultViz)}
+                                        updateSelection={updateSelection}
+                                        selection={selection}
+                                    />
+                                ))}
+                                {sortedSearches.length === 0 && (
+                                    <li className="dropdown-empty">
+                                        No KPIs match the current filters.
+                                    </li>
+                                )}
                             </ul>
                         </div>
-                        <div
-                            style={{
-                                padding: 10,
-                                borderTop: '1px solid #dcdcdc',
-                                display: 'flex',
-                                alignContent: 'flex-end',
-                            }}
-                        >
+                        <div className="dropdown-kpi-footer">
                             <Button
                                 style={{ minWidth: 80, marginRight: 10 }}
                                 label="Cancel"
                                 appearance="default"
-                                onClick={() => {
-                                    setSearchTag(undefined);
-                                    setSearchTerm('');
-                                    setSelection([]);
-                                    setIsOpen(false);
-                                }}
-                            ></Button>
+                                onClick={clearSelectionAndClose}
+                            />
                             <Button
-                                disabled={selection.length == 0}
+                                disabled={selection.length === 0}
                                 style={{ minWidth: 80 }}
                                 label="Add"
                                 appearance="primary"
                                 onClick={() => {
                                     if (selection.length < 20) {
-                                        setSearchTag(undefined);
-                                        setSearchTerm('');
+                                        resetFilters();
                                         onSelect(selection);
                                         setSelection([]);
                                         setIsOpen(false);
@@ -321,7 +376,7 @@ export default function DropdownWithSearch({
                                         setConfirmationOpen(true);
                                     }
                                 }}
-                            ></Button>
+                            />
                         </div>
                     </div>
                 )}
@@ -330,24 +385,42 @@ export default function DropdownWithSearch({
     );
 }
 
-// Dropdown Item Component
-export function DropdownItem({ label, value, icon, updateSelection, selection }) {
+export function DropdownItem({
+    label,
+    value,
+    icon,
+    updateSelection,
+    selection,
+    category,
+    subCategory,
+    app,
+    tags = [],
+}) {
     return (
         <li
-            className="dropdown-item"
+            className="dropdown-item dropdown-kpi-item"
             onClick={() => {
                 updateSelection(value);
             }}
         >
             <div style={{ display: 'flex' }}>
-                <Checkbox
-                    checked={selection.includes(value)}
-                    style={{ marginRight: 10 }}
-                ></Checkbox>
+                <Checkbox checked={selection.includes(value)} style={{ marginRight: 10 }} />
                 {icon && <span className="dropdown-icon">{icon}</span>}
-                <div style={{ display: 'grid' }}>
-                    <span style={{ fontWeight: 'bold' }}>{label}</span>
-                    <span style={{ fontSize: 11, color: 'gray' }}>{value}</span>
+                <div className="dropdown-kpi-item-copy">
+                    <span className="dropdown-kpi-item-title">{label}</span>
+                    <span className="dropdown-kpi-item-id">{value}</span>
+                    <span className="dropdown-kpi-item-meta">
+                        {[category, subCategory, app].filter(Boolean).join(' / ')}
+                    </span>
+                    {tags.length > 0 && (
+                        <span className="dropdown-kpi-row-tags">
+                            {tags.slice(0, 4).map((tag) => (
+                                <span key={`${value}-${tag}`} className="dropdown-kpi-row-tag">
+                                    {tag}
+                                </span>
+                            ))}
+                        </span>
+                    )}
                 </div>
             </div>
         </li>

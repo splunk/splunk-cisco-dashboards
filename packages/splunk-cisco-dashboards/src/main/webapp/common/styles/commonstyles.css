@@ -2986,11 +2986,77 @@ div.card-trend-footer [data-test='button'] {
     margin-left: -11px;
 }
 
+.dropdown-kpi-menu {
+    width: 560px;
+    max-width: calc(100vw - 48px);
+}
+
+.dropdown-kpi-filter-shell {
+    padding: 10px;
+    border-bottom: 1px solid #dcdcdc;
+}
+
 .dropdown-search {
     width: calc(100% - 30px);
     margin: 10px;
     padding: 5px;
     border: 1px solid #ccc;
+}
+
+.dropdown-kpi-search {
+    width: 100%;
+    margin: 0 0 8px 0;
+}
+
+.dropdown-kpi-filters {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.dropdown-kpi-filters [data-test='select'],
+.dropdown-kpi-filters [data-test='multiselect'],
+.dropdown-kpi-filters [data-test='textbox'] {
+    width: 100%;
+    background: #ffffff;
+}
+
+.dropdown-kpi-filter-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 8px;
+    color: #5f6b7a;
+    font-size: 11px;
+}
+
+.dropdown-kpi-clear-button,
+.dropdown-kpi-select-all-button {
+    border: 0;
+    background: transparent;
+    color: #0064d7;
+    cursor: pointer;
+    font: inherit;
+    padding: 0;
+}
+
+.dropdown-kpi-clear-button:hover,
+.dropdown-kpi-select-all-button:hover {
+    color: #004999;
+    text-decoration: underline;
+}
+
+.dropdown-kpi-select-all {
+    padding: 7px 10px;
+    border-bottom: 1px solid #dcdcdc;
+}
+
+.dropdown-kpi-footer {
+    padding: 10px;
+    border-top: 1px solid #dcdcdc;
+    display: flex;
+    align-content: flex-end;
 }
 
 .dropdown-list {
@@ -3010,6 +3076,43 @@ div.card-trend-footer [data-test='button'] {
 
 .dropdown-item:hover {
     background: #f0f0f0;
+}
+
+.dropdown-kpi-item {
+    align-items: flex-start;
+}
+
+.dropdown-kpi-item-copy {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.dropdown-kpi-item-title {
+    font-weight: 700;
+}
+
+.dropdown-kpi-item-id,
+.dropdown-kpi-item-meta {
+    color: #5f6b7a;
+    font-size: 11px;
+}
+
+.dropdown-kpi-row-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 2px;
+}
+
+.dropdown-kpi-row-tag {
+    border: 1px solid #d7dde5;
+    border-radius: 999px;
+    background: #f6f8fa;
+    color: #4f5f70;
+    font-size: 10px;
+    line-height: 1;
+    padding: 3px 6px;
 }
 
 .dropdown-icon {

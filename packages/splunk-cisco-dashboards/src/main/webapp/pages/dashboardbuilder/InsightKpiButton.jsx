@@ -1,22 +1,11 @@
-import React, { useCallback, useState, useEffect } from 'react';
-import { IconButton, PopoverItemButton } from '@splunk/dashboard-toolbar';
+import React, { useState, useEffect } from 'react';
+import { IconButton } from '@splunk/dashboard-toolbar';
 import Eye from '@splunk/react-icons/Eye';
-import Dropdown from '@splunk/react-ui/Dropdown';
-import Menu from '@splunk/react-ui/Menu';
-import Button from '@splunk/react-ui/Button';
-import { getSearches } from '../../common/lib/searchbase';
-import Search from '@splunk/react-ui/Search';
-import Text from '@splunk/react-ui/Text';
-import ChartSingleValue from '@splunk/react-icons/ChartSingleValue';
-import ChartPie from '@splunk/react-icons/ChartPie';
-import ChartLine from '@splunk/react-icons/ChartLine';
-import ChartArea from '@splunk/react-icons/ChartArea';
-import ChartBar from '@splunk/react-icons/ChartBar';
-import TableList from '@splunk/react-icons/TableList';
-import ChartSingleValueRadial from '@splunk/react-icons/ChartSingleValueRadial';
-import ChartColumn from '@splunk/react-icons/ChartColumn';
-import TooltipWithTheme from '@splunk/react-ui/Tooltip';
-import DropdownWithSearch, { DropdownItem } from './DropdownWithSearch';
+import {
+    getSearchbaseCatalogue,
+    plainTextFromHtml,
+} from '../../common/services/searchbaseCatalogue';
+import DropdownWithSearch from './DropdownWithSearch';
 
 const generateRandomString = (length = 10) => {
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -27,63 +16,37 @@ const generateRandomString = (length = 10) => {
     return result;
 };
 
+const createDataSourceName = (search) => {
+    const rawName = search.id || search.searchName || generateRandomString();
+    const safeName = rawName.replace(/[^A-Za-z0-9_]/g, '_').replace(/^_+/, '');
+    return `ds_${safeName || generateRandomString()}`;
+};
+
 const newInsightKpiVizConfig = (search, searchKey) => {
-    var vizOptions = {};
-    try {
-        vizOptions = search.content.viz_options ? JSON.parse(search.content.viz_options) : {};
-    } catch (error) {
-        vizOptions = {};
-        console.log(error);
-    }
     return {
         visualizationId: `viz_insightKpi_${generateRandomString()}`,
         visualizationDefinition: {
-            type: search.content.default_viz ? search.content.default_viz : 'splunk.table',
-            title: search.content.search_name,
-            description: search.content.description.replace(/(<([^>]+)>)/gi, ''),
+            type: search.defaultViz ? search.defaultViz : 'splunk.table',
+            title: search.searchName,
+            description: plainTextFromHtml(search.description || ''),
             dataSources: {
                 primary: searchKey,
             },
-            options: vizOptions,
+            options: search.vizOptions || {},
         },
     };
 };
-
-const newCustomInsightKpiVizConfig = () => {
-    return {
-        visualizationId: `viz_insightKpi_${generateRandomString()}`,
-        visualizationDefinition: {
-            type: 'custom.insightKpi',
-            options: {
-                groupName: '',
-            },
-        },
-    };
-};
-
-const buttonToggle = (
-    <Button
-        label=""
-        appearance="subtle"
-        icon={<Eye style={{ width: 24, height: 24 }} />}
-        isMenu
-        style={{ maxWidth: 40 }}
-    />
-);
 
 const InsightKpiButton = (props) => {
     // get all searches
     const [searches, setSearches] = useState([]);
     const [selectedKpis, setSelectedKpis] = useState([]);
-    const [searchText, setSearchText] = useState('');
 
     useEffect(() => {
         if (searches.length == 0) {
             const getSearchesList = async () => {
-                const data = await getSearches();
-                if (data.entry)
-                    setSearches(data.entry.filter((s) => s.content.search_hidden == '0'));
-                else setSearches([]);
+                const data = await getSearchbaseCatalogue();
+                setSearches(data.filter((search) => search.id && search.searchName));
             };
             getSearchesList();
         }
@@ -93,8 +56,8 @@ const InsightKpiButton = (props) => {
         if (selectedKpis && selectedKpis.length > 0) {
             const { dashboardApi } = props;
 
-            selectedKpis.map((selectedKpi) => {
-                const searchName = `ds_${selectedKpi.name.replaceAll('#', '').replace(' ', '_')}`;
+            selectedKpis.forEach((selectedKpi) => {
+                const searchName = createDataSourceName(selectedKpi);
                 var searchKey = findKeyForDsName(
                     dashboardApi.coreApi.getDefinition().dataSources,
                     searchName,
@@ -103,7 +66,7 @@ const InsightKpiButton = (props) => {
                     dashboardApi.createDataSource({
                         type: 'ds.searchbase',
                         options: {
-                            ref: selectedKpi.name,
+                            ref: selectedKpi.id,
                         },
                         name: searchName,
                     });
@@ -124,16 +87,6 @@ const InsightKpiButton = (props) => {
         }
     }, [selectedKpis]);
 
-    const handleAddInsightKpi = useCallback(() => {
-        const { dashboardApi } = props;
-
-        dashboardApi.coreApi.createVisualization(newCustomInsightKpiVizConfig());
-    }, [props]);
-
-    const handleSearchChange = (e, { value }) => {
-        setSearchText(value);
-    };
-
     const findKeyForDsName = (data, targetName) => {
         for (const key in data) {
             if (data[key].name === targetName) {
@@ -149,38 +102,14 @@ const InsightKpiButton = (props) => {
                 onSelect={(selection) => {
                     if (selection) {
                         setSelectedKpis((prev) => {
-                            return searches.filter((s) => selection.includes(s.name));
+                            return searches.filter((s) => selection.includes(s.id));
                         });
                     }
                 }}
                 appearance="subtle"
                 icon={<Eye style={{ width: 24, height: 24 }} />}
                 style={{ maxWidth: 40, marginLeft: 10 }}
-                tags={[
-                    ...new Set(
-                        searches
-                            .map((search) => search.content.tags)
-                            .join(',')
-                            .split(','),
-                    ),
-                ]}
-                searches={searches
-                    .filter(
-                        (s) =>
-                            s.content.search_name != undefined &&
-                            s.content.search_name != undefined &&
-                            s.content.search_hidden != '1',
-                    )
-                    .filter((s) => {
-                        if (searchText == '') return s;
-                        else if (
-                            s.content.search_name
-                                .toLowerCase()
-                                .includes(searchText.toLowerCase()) ||
-                            s.name.toLowerCase().includes(searchText.toLowerCase())
-                        )
-                            return s;
-                    })}
+                searches={searches.filter((s) => s.searchName != undefined && s.id != undefined)}
             ></DropdownWithSearch>
         </>
     );
