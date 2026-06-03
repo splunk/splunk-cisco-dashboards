@@ -47,19 +47,27 @@ FIELD_ORDER = [
     "search",
 ]
 
-INDEX_MACROS = [
-    "index_catalyst",
-    "index_meraki",
-    "index_thousandeyes",
-    "index_spaces",
-    "index_firewall",
-    "index_network",
-    "index_identity",
-    "index_security",
-    "index_windows",
-    "index_dhcp",
-    "index_sdwan",
-]
+INDEX_TOKEN = 'index="<<index>>"'
+
+# Any index_* macro should collapse to the portable export token.
+INDEX_MACRO_CALL = re.compile(r"`index_[A-Za-z0-9_]+(?:\([^`]*\))?`")
+
+# Generic backtick macro usage in SPL (non-index macros are app dependencies
+# unless explicitly expanded during export).
+MACRO_CALL = re.compile(r"`([A-Za-z_][\w-]*)(?:\([^`]*\))?`")
+
+# Safe, no-argument macros we can inline during export.
+KNOWN_EXPANDABLE_MACROS = {
+    "summariesonly": "summariesonly=false allow_old_summaries=false fillnull_value=null",
+}
+
+# Detect explicit index assignments and collapse customer-specific index names
+# to the same portable token used for index_* macro replacement.
+INDEX_ASSIGN_RE = re.compile(
+    r'(?<![\w.])index\s*=\s*(?:"([^"]+)"|([A-Za-z0-9_*.\-]+))', re.I
+)
+
+SAVEDSEARCH_CMD = re.compile(r"\|\s*savedsearch\b", re.I)
 
 EXPLICIT_DROP_IDS = {
     "overview_site_tallahassee_health",
@@ -133,9 +141,9 @@ PROSE_FIELDS = ("description", "explanation", "solution", "related_info")
 
 HEADER = """# searchbase_export.conf — curated saved-search export for the standalone Searchbase app.
 # Sourced from splunk-cisco-dashboards searchbase.conf (broad_curated scope).
-# Index macros are replaced with index="<<index>>" for per-customer substitution.
+# Index macros and hardcoded index assignments are normalized to index="<<index>>".
 # Omitted: Demo stanzas, customer-specific overview/topology, lookup-dependent searches,
-# admin/internal plumbing, and SPL with hardcoded site names.
+# admin/internal plumbing, savedsearch/macro dependencies, and SPL with hardcoded site names.
 """
 
 
@@ -191,9 +199,37 @@ def parse_stanzas(text: str) -> list[tuple[str, dict[str, str]]]:
 
 
 def replace_index_macros(text: str) -> str:
+    return INDEX_MACRO_CALL.sub(INDEX_TOKEN, text)
+
+
+def expand_known_macros(text: str) -> str:
     out = text
-    for macro in INDEX_MACROS:
-        out = out.replace(f"`{macro}`", 'index="<<index>>"')
+    for macro_name, definition in KNOWN_EXPANDABLE_MACROS.items():
+        out = out.replace(f"`{macro_name}`", definition)
+    return out
+
+
+def replace_hardcoded_indexes(text: str) -> str:
+    def repl(match: re.Match[str]) -> str:
+        value = (match.group(1) or match.group(2) or "").strip()
+        value_lc = value.lower()
+        if value in {"<<index>>", "*"}:
+            return match.group(0)
+        if value_lc in {"_internal", "_audit", "_introspection"}:
+            return match.group(0)
+        if (value.startswith("$") and value.endswith("$")) or (
+            value.startswith("<<") and value.endswith(">>")
+        ):
+            return match.group(0)
+        return INDEX_TOKEN
+
+    return INDEX_ASSIGN_RE.sub(repl, text)
+
+
+def normalize_search_for_export(search: str) -> str:
+    out = replace_index_macros(search)
+    out = expand_known_macros(out)
+    out = replace_hardcoded_indexes(out)
     return out
 
 
@@ -211,6 +247,21 @@ def has_lookup_in_search(search: str) -> bool:
     return bool(LOOKUP_CMD.search(search))
 
 
+def has_savedsearch_in_search(search: str) -> bool:
+    return bool(SAVEDSEARCH_CMD.search(search))
+
+
+def unresolved_macros(search: str) -> list[str]:
+    unresolved: set[str] = set()
+    for macro_name in MACRO_CALL.findall(search):
+        if macro_name.startswith("index_"):
+            continue
+        if macro_name in KNOWN_EXPANDABLE_MACROS:
+            continue
+        unresolved.add(macro_name)
+    return sorted(unresolved)
+
+
 def has_hardcoded_site_in_search(search: str) -> bool:
     for s in SITE_STRINGS_SEARCH:
         if s in search:
@@ -218,30 +269,41 @@ def has_hardcoded_site_in_search(search: str) -> bool:
     return False
 
 
-def classify_drop(stanza_id: str, fields: dict[str, str]) -> tuple[bool, str]:
+def classify_drop(stanza_id: str, fields: dict[str, str]) -> tuple[bool, str, str]:
     category = fields.get("category", "")
     search = fields.get("search", "")
 
     if category == "Demo" or stanza_id in DEMO_STANZA_IDS:
-        return True, "demo"
+        return True, "demo", ""
 
     if stanza_id.startswith("admin_") or stanza_id in INTERNAL_PLUMBING_IDS:
-        return True, "admin_internal"
+        return True, "admin_internal", ""
 
     if has_lookup_in_search(search):
-        return True, "lookup_dependent"
+        return True, "lookup_dependent", ""
+
+    if has_savedsearch_in_search(search):
+        return True, "savedsearch_dependency", "uses | savedsearch"
+
+    unresolved = unresolved_macros(search)
+    if unresolved:
+        return (
+            True,
+            "macro_dependency",
+            "unresolved macro(s): " + ", ".join(unresolved),
+        )
 
     if has_hardcoded_site_in_search(search):
-        return True, "hardcoded_site_search"
+        return True, "hardcoded_site_search", ""
 
     if stanza_id.startswith("overview_") and re.search(
         r"(tallahassee|auburndale|tlh|aub|seoc|betty|orlando|mco|polk|warehouse|florida|demo)",
         stanza_id,
         re.I,
     ):
-        return True, "customer_overview"
+        return True, "customer_overview", ""
 
-    return False, ""
+    return False, "", ""
 
 
 def pick_spl_duplicate_winner(ids: list[str]) -> str:
@@ -264,16 +326,11 @@ def normalize_search(search: str) -> str:
 
 def normalize_index_macro_prose(text: str) -> tuple[str, int]:
     """Replace <code>index_FOO</code> in prose with the export index token."""
-    out = text
-    count = 0
-    for macro in INDEX_MACROS:
-        old = f"<code>{macro}</code>"
-        new = '<code>index="<<index>>"</code>'
-        if old in out:
-            n = out.count(old)
-            out = out.replace(old, new)
-            count += n
-    return out, count
+    return re.subn(
+        r"<code>index_[A-Za-z0-9_]+(?:\([^<]*\))?</code>",
+        '<code>index="<<index>>"</code>',
+        text,
+    )
 
 
 def fix_dropped_stanza_refs(text: str, dropped_stanza_ids: set[str]) -> str:
@@ -316,7 +373,10 @@ def transform_fields(
     export_fields = {k: v for k, v in fields.items() if k not in DROP_FIELDS}
     index_prose_hits = 0
     for key, val in list(export_fields.items()):
-        export_fields[key] = replace_index_macros(val)
+        if key == "search":
+            export_fields[key] = normalize_search_for_export(val)
+        else:
+            export_fields[key] = replace_index_macros(val)
     for pf in PROSE_FIELDS:
         if pf not in export_fields:
             continue
@@ -334,16 +394,20 @@ def main() -> int:
     text = SOURCE.read_text(encoding="utf-8")
     stanzas = parse_stanzas(text)
     drop_reasons: Counter[str] = Counter()
-    dropped_ids: list[tuple[str, str]] = []
+    dropped_ids: list[tuple[str, str, str]] = []
 
     candidates: list[tuple[str, dict[str, str]]] = []
     for sid, fields in stanzas:
-        drop, reason = classify_drop(sid, fields)
+        prepared = dict(fields)
+        if "search" in prepared:
+            prepared["search"] = normalize_search_for_export(prepared["search"])
+
+        drop, reason, detail = classify_drop(sid, prepared)
         if drop:
             drop_reasons[reason] += 1
-            dropped_ids.append((sid, reason))
+            dropped_ids.append((sid, reason, detail))
             continue
-        candidates.append((sid, fields))
+        candidates.append((sid, prepared))
 
     # SPL-exact duplicate dedup (prefer non-_ds_, non-executive_summary)
     by_search: dict[str, list[str]] = defaultdict(list)
@@ -359,7 +423,7 @@ def main() -> int:
             if sid != winner:
                 spl_drop.add(sid)
                 drop_reasons["duplicate_spl"] += 1
-                dropped_ids.append((sid, "duplicate_spl"))
+                dropped_ids.append((sid, "duplicate_spl", ""))
 
     candidates = [(s, f) for s, f in candidates if s not in spl_drop]
 
@@ -372,7 +436,7 @@ def main() -> int:
         if norm in seen_norm:
             name_drops.add(sid)
             drop_reasons["duplicate_search_name"] += 1
-            dropped_ids.append((sid, "duplicate_search_name"))
+            dropped_ids.append((sid, "duplicate_search_name", ""))
         else:
             seen_norm[norm] = sid
     candidates = [(s, f) for s, f in candidates if s not in name_drops]
@@ -406,7 +470,10 @@ def main() -> int:
         f"Index macro prose normalizations (<code>index_*</code>): {index_prose_total}",
         "",
         "Dropped stanza IDs (first 40):",
-        *[f"  {sid} ({reason})" for sid, reason in dropped_ids[:40]],
+        *[
+            f"  {sid} ({reason}){': ' + detail if detail else ''}"
+            for sid, reason, detail in dropped_ids[:40]
+        ],
     ]
     REPORT.write_text("\n".join(report_lines) + "\n", encoding="utf-8")
     print("\n".join(report_lines[:20]))
