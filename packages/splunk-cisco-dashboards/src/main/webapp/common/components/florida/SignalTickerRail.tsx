@@ -22,6 +22,7 @@ import {
     useMetric,
     type MetricConfig,
     type MetricStatus,
+    type MetricThresholds,
     type TimeRange,
 } from '@/common/hooks/useMetric';
 import {
@@ -30,6 +31,7 @@ import {
     type SignalTickerItem,
     type SignalTickerRows,
     type SignalTickerSpeed,
+    type SignalTickerThresholdDirection,
 } from '@/common/hooks/usePersistedSignalTicker';
 
 const signalTickerCss = `
@@ -66,8 +68,8 @@ const SPEED_SECONDS: Record<SignalTickerSpeed, number> = {
 
 const STATUS_ACCENT_CLASS = {
     healthy: 'border-emerald-300/80 dark:border-emerald-400/50',
-    warning: 'border-amber-300/90 dark:border-amber-400/60',
-    critical: 'border-red-300/90 dark:border-red-400/60',
+    warning: 'border-amber-300/90 dark:border-amber-400/70',
+    critical: 'border-red-300/90 dark:border-red-400/70',
     unknown: 'border-slate-300/80 dark:border-slate-600/80',
 };
 
@@ -78,33 +80,132 @@ const STATUS_DOT_CLASS = {
     unknown: 'bg-slate-400',
 };
 
-const formatTickerNumber = (value: number): string => {
+const STATUS_BG_CLASS = {
+    healthy: 'bg-white/94 hover:bg-white dark:bg-slate-950/88 dark:hover:bg-slate-950',
+    warning: 'bg-amber-50/95 hover:bg-amber-50 dark:bg-amber-950/38 dark:hover:bg-amber-950/48',
+    critical: 'bg-red-50/95 hover:bg-red-50 dark:bg-red-950/40 dark:hover:bg-red-950/52',
+    unknown: 'bg-white/92 hover:bg-white dark:bg-slate-950/88 dark:hover:bg-slate-950',
+};
+
+const STATUS_TEXT_CLASS = {
+    healthy: 'text-slate-900 dark:text-white',
+    warning: 'text-amber-700 dark:text-amber-200',
+    critical: 'text-red-600 dark:text-red-200',
+    unknown: 'text-slate-900 dark:text-white',
+};
+
+const STATUS_PILL_CLASS = {
+    healthy: 'bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-200',
+    warning: 'bg-amber-500/12 text-amber-700 dark:bg-amber-400/15 dark:text-amber-200',
+    critical: 'bg-red-500/12 text-red-700 dark:bg-red-400/15 dark:text-red-200',
+    unknown: 'bg-slate-500/10 text-slate-500 dark:bg-slate-400/10 dark:text-slate-300',
+};
+
+const STATUS_LABEL: Record<MetricStatus, string> = {
+    healthy: 'Healthy',
+    warning: 'Warning',
+    critical: 'Critical',
+    unknown: 'Watching',
+};
+
+export interface SignalTickerMetricDefaults {
+    label?: string;
+    subLabel?: string;
+    description?: string;
+    valueField?: string;
+    displayField?: string;
+    sparkDataField?: string;
+    baselineField?: string;
+    overlayLabel?: string;
+    changeField?: string;
+    comparePeriod?: boolean;
+    unit?: string;
+    color?: string;
+    thresholds?: MetricThresholds;
+}
+
+const formatTickerNumber = (value: number, unit?: string): string => {
     if (!Number.isFinite(value)) return '--';
     const abs = Math.abs(value);
     const format = (divisor: number, suffix: string) => {
         const n = value / divisor;
         return `${n >= 10 ? n.toFixed(0) : n.toFixed(1)}${suffix}`;
     };
-    if (abs >= 1_000_000_000) return format(1_000_000_000, 'B');
-    if (abs >= 1_000_000) return format(1_000_000, 'M');
-    if (abs >= 100_000) return `${Math.round(value / 1000)}K`;
-    if (abs >= 1_000) return format(1_000, 'K');
-    if (Number.isInteger(value)) return value.toLocaleString();
-    return value.toLocaleString(undefined, { maximumFractionDigits: 1 });
+    const body =
+        abs >= 1_000_000_000
+            ? format(1_000_000_000, 'B')
+            : abs >= 1_000_000
+            ? format(1_000_000, 'M')
+            : abs >= 100_000
+            ? `${Math.round(value / 1000)}K`
+            : abs >= 1_000
+            ? format(1_000, 'K')
+            : Number.isInteger(value)
+            ? value.toLocaleString()
+            : value.toLocaleString(undefined, { maximumFractionDigits: 1 });
+    return unit ? `${body}${unit}` : body;
 };
 
 const labelForRecord = (
     item: SignalTickerItem,
-    record: SearchbaseRecord | undefined
-): string => item.label?.trim() || record?.searchName || item.searchName;
+    record: SearchbaseRecord | undefined,
+    metricDefault?: SignalTickerMetricDefaults
+): string =>
+    item.label?.trim() ||
+    metricDefault?.label ||
+    record?.searchName ||
+    item.searchName;
 
-const subtitleForRecord = (record: SearchbaseRecord | undefined): string => {
+const subtitleForRecord = (
+    record: SearchbaseRecord | undefined,
+    metricDefault?: SignalTickerMetricDefaults
+): string => {
+    if (metricDefault?.subLabel) return metricDefault.subLabel;
     if (!record) return 'Awaiting searchbase';
     if (record.category && record.subCategory) {
         return `${record.category} / ${record.subCategory}`;
     }
     return record.category || record.subCategory || 'Searchbase KPI';
 };
+
+const descriptionForRecord = (
+    record: SearchbaseRecord | undefined,
+    metricDefault?: SignalTickerMetricDefaults
+): string | undefined =>
+    metricDefault?.description ||
+    (record ? plainTextFromHtml(record.explanation || record.description) : undefined);
+
+const resolveThresholds = (
+    item: SignalTickerItem,
+    metricDefault?: SignalTickerMetricDefaults
+): MetricThresholds | undefined => {
+    const hasItemThreshold =
+        item.thresholdWarning !== undefined ||
+        item.thresholdCritical !== undefined ||
+        item.thresholdDirection !== undefined;
+    if (!hasItemThreshold) return metricDefault?.thresholds;
+    const warning = item.thresholdWarning ?? metricDefault?.thresholds?.warning;
+    const critical = item.thresholdCritical ?? metricDefault?.thresholds?.critical;
+    if (warning === undefined && critical === undefined) return undefined;
+    return {
+        warning,
+        critical,
+        direction:
+            item.thresholdDirection ??
+            metricDefault?.thresholds?.direction ??
+            'higher_is_better',
+    };
+};
+
+const resolveUnit = (
+    item: SignalTickerItem,
+    metricDefault?: SignalTickerMetricDefaults
+): string | undefined => item.thresholdUnit ?? metricDefault?.unit;
+
+const directionLabel = (
+    direction: SignalTickerThresholdDirection | undefined
+): string =>
+    direction === 'lower_is_better' ? 'lower is better' : 'higher is better';
 
 interface SignalTickerTileVisualState {
     label: string;
@@ -117,10 +218,11 @@ interface SignalTickerTileVisualState {
 const makePendingVisual = (
     item: SignalTickerItem,
     record: SearchbaseRecord | undefined,
-    catalogueLoading: boolean
+    catalogueLoading: boolean,
+    metricDefault?: SignalTickerMetricDefaults
 ): SignalTickerTileVisualState => ({
-    label: labelForRecord(item, record),
-    subtitle: subtitleForRecord(record),
+    label: labelForRecord(item, record, metricDefault),
+    subtitle: subtitleForRecord(record, metricDefault),
     valueText: catalogueLoading ? 'Loading' : '--',
     status: 'unknown',
     canOpen: Boolean(record?.search),
@@ -149,8 +251,8 @@ const SignalTickerTileChrome: React.FC<SignalTickerTileChromeProps> = ({
     duplicate = false,
 }) => {
     const className = cn(
-        'group relative h-[76px] min-w-[235px] max-w-[235px] overflow-hidden rounded-lg border px-4 py-3 text-left shadow-sm transition-all',
-        'bg-white/92 hover:bg-white dark:bg-slate-950/88 dark:hover:bg-slate-950',
+        'group relative h-[82px] min-w-[265px] max-w-[265px] overflow-hidden rounded-lg border px-4 py-3 text-left shadow-sm transition-all',
+        STATUS_BG_CLASS[visual.status],
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
         !visual.canOpen && 'cursor-default',
         STATUS_ACCENT_CLASS[visual.status]
@@ -170,7 +272,12 @@ const SignalTickerTileChrome: React.FC<SignalTickerTileChromeProps> = ({
             />
             <span className="flex items-start justify-between gap-3">
                 <span className="min-w-0">
-                    <span className="block truncate text-[25px] font-black leading-none tracking-normal text-slate-900 dark:text-white">
+                    <span
+                        className={cn(
+                            'block truncate text-[26px] font-black leading-none tracking-normal',
+                            STATUS_TEXT_CLASS[visual.status]
+                        )}
+                    >
                         {visual.valueText}
                     </span>
                     <span className="mt-2 block line-clamp-2 text-[10px] font-black uppercase leading-tight tracking-[0.08em] text-slate-600 dark:text-slate-300">
@@ -180,10 +287,12 @@ const SignalTickerTileChrome: React.FC<SignalTickerTileChromeProps> = ({
                 <span className="flex flex-col items-end gap-1">
                     <span
                         className={cn(
-                            'mt-0.5 h-2 w-2 rounded-full',
-                            STATUS_DOT_CLASS[visual.status]
+                            'rounded-full px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.12em]',
+                            STATUS_PILL_CLASS[visual.status]
                         )}
-                    />
+                    >
+                        {STATUS_LABEL[visual.status]}
+                    </span>
                     {visual.canOpen && (
                         <ExternalLink className="h-3 w-3 text-slate-300 opacity-0 transition-opacity group-hover:opacity-100 dark:text-slate-500" />
                     )}
@@ -219,6 +328,7 @@ const SignalTickerTileChrome: React.FC<SignalTickerTileChromeProps> = ({
 interface SignalTickerTileProps {
     item: SignalTickerItem;
     record?: SearchbaseRecord;
+    metricDefault?: SignalTickerMetricDefaults;
     catalogueLoading: boolean;
     range: TimeRange;
     refreshToken: number;
@@ -229,25 +339,42 @@ interface SignalTickerTileProps {
 const SignalTickerTile: React.FC<SignalTickerTileProps> = ({
     item,
     record,
+    metricDefault,
     catalogueLoading,
     range,
     refreshToken,
     index,
     onVisualState,
 }) => {
-    const label = labelForRecord(item, record);
+    const label = labelForRecord(item, record, metricDefault);
+    const thresholds = useMemo(
+        () => resolveThresholds(item, metricDefault),
+        [
+            item.thresholdCritical,
+            item.thresholdDirection,
+            item.thresholdWarning,
+            metricDefault,
+        ]
+    );
+    const unit = resolveUnit(item, metricDefault);
     const cfg = useMemo<MetricConfig>(
         () => ({
             id: `signal_ticker_${item.id}`,
             section: 'it_health',
             label,
-            subLabel: subtitleForRecord(record),
-            description: record
-                ? plainTextFromHtml(record.explanation || record.description)
-                : undefined,
+            subLabel: subtitleForRecord(record, metricDefault),
+            description: descriptionForRecord(record, metricDefault),
             spl: record?.search,
-            valueField: item.valueField,
-            color: '#0ea5e9',
+            valueField: item.valueField ?? metricDefault?.valueField,
+            displayField: metricDefault?.displayField,
+            sparkDataField: metricDefault?.sparkDataField,
+            baselineField: metricDefault?.baselineField,
+            overlayLabel: metricDefault?.overlayLabel,
+            changeField: metricDefault?.changeField,
+            comparePeriod: metricDefault?.comparePeriod,
+            unit,
+            thresholds,
+            color: metricDefault?.color ?? '#0ea5e9',
             suppressMockOnEmpty: true,
             mock: {
                 seed: 700 + index,
@@ -257,15 +384,15 @@ const SignalTickerTile: React.FC<SignalTickerTileProps> = ({
                 change: 0,
             },
         }),
-        [index, item.id, item.valueField, label, record]
+        [index, item.id, item.valueField, label, metricDefault, record, thresholds, unit]
     );
     const result = useMetric(cfg, range, refreshToken);
     const loading = catalogueLoading || result.source === 'loading';
     const valueText = loading
         ? 'Loading'
-        : result.displayValue ?? formatTickerNumber(result.value);
+        : result.displayValue ?? formatTickerNumber(result.value, unit);
     const status: MetricStatus = loading ? 'unknown' : result.status;
-    const subtitle = subtitleForRecord(record);
+    const subtitle = subtitleForRecord(record, metricDefault);
     const visual = useMemo<SignalTickerTileVisualState>(
         () => ({
             label,
@@ -294,6 +421,7 @@ const SignalTickerTile: React.FC<SignalTickerTileProps> = ({
 interface SignalTickerRailProps {
     config: SignalTickerConfig;
     catalogueByName: Map<string, SearchbaseRecord> | null;
+    metricDefaultsBySearchName?: Map<string, SignalTickerMetricDefaults>;
     range: TimeRange;
     refreshToken: number;
     onOpenEditor: () => void;
@@ -302,6 +430,7 @@ interface SignalTickerRailProps {
 export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
     config,
     catalogueByName,
+    metricDefaultsBySearchName,
     range,
     refreshToken,
     onOpenEditor,
@@ -336,7 +465,7 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
     return (
         <section className="scd-signal-ticker-rail flex-shrink-0 border-b border-slate-200 bg-slate-50/95 px-1.5 py-1.5 dark:border-slate-800 dark:bg-slate-950/95">
             <style>{signalTickerCss}</style>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
                 <div className="hidden shrink-0 items-center gap-2 rounded-lg border border-sky-200 bg-white px-3 py-2 shadow-sm dark:border-sky-900/70 dark:bg-slate-900 lg:flex">
                     <Sparkles className="h-4 w-4 text-sky-500" />
                     <div className="leading-tight">
@@ -356,11 +485,11 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
                         return (
                             <div
                                 key={`ticker-row-${rowIndex}`}
-                                className="overflow-hidden"
+                                className="overflow-hidden py-0.5"
                             >
                                 <div
                                     className={cn(
-                                        'scd-signal-ticker-track flex gap-2',
+                                        'scd-signal-ticker-track flex gap-4',
                                         animate &&
                                             'scd-signal-ticker-track--animate'
                                     )}
@@ -374,15 +503,19 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
                                         <div
                                             key={`pass-${pass}`}
                                             className={cn(
-                                                'flex gap-2',
+                                                'flex gap-4',
                                                 pass === 1 &&
                                                     'scd-signal-ticker-duplicate'
                                             )}
-                                                aria-hidden={pass === 1}
+                                            aria-hidden={pass === 1}
                                         >
                                             {rowItems.map((item, idx) => {
                                                 const record =
                                                     catalogueByName?.get(
+                                                        item.searchName
+                                                    );
+                                                const metricDefault =
+                                                    metricDefaultsBySearchName?.get(
                                                         item.searchName
                                                     );
                                                 const catalogueLoading =
@@ -396,7 +529,8 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
                                                                 makePendingVisual(
                                                                     item,
                                                                     record,
-                                                                    catalogueLoading
+                                                                    catalogueLoading,
+                                                                    metricDefault
                                                                 )
                                                             }
                                                             duplicate
@@ -408,6 +542,9 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
                                                         key={`${pass}-${item.id}`}
                                                         item={item}
                                                         record={record}
+                                                        metricDefault={
+                                                            metricDefault
+                                                        }
                                                         catalogueLoading={
                                                             catalogueLoading
                                                         }
@@ -444,6 +581,7 @@ interface SignalTickerEditorProps {
     open: boolean;
     config: SignalTickerConfig;
     catalogue: SearchbaseRecord[];
+    metricDefaultsBySearchName?: Map<string, SignalTickerMetricDefaults>;
     catalogueLoading: boolean;
     onChange: (config: SignalTickerConfig) => void;
     onReset: () => void;
@@ -456,10 +594,26 @@ const SPEED_LABELS: Record<SignalTickerSpeed, string> = {
     fast: 'Fast',
 };
 
+const optionalNumberFromInput = (value: string): number | undefined => {
+    const trimmed = value.trim();
+    if (!trimmed) return undefined;
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const thresholdPlaceholder = (
+    value: number | undefined,
+    label: string
+): string =>
+    value === undefined
+        ? label
+        : `Default ${Number.isInteger(value) ? value : value.toFixed(1)}`;
+
 export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
     open,
     config,
     catalogue,
+    metricDefaultsBySearchName,
     catalogueLoading,
     onChange,
     onReset,
@@ -505,13 +659,14 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
         if (selectedNames.has(entry.searchName) || config.items.length >= 24) {
             return;
         }
+        const metricDefault = metricDefaultsBySearchName?.get(entry.searchName);
         const nextItem: SignalTickerItem = {
             id: makeSignalTickerItemId(
                 entry.searchName,
                 config.items.map((item) => item.id)
             ),
             searchName: entry.searchName,
-            label: entry.searchName,
+            label: metricDefault?.label ?? entry.searchName,
         };
         updateConfig({ items: [...config.items, nextItem], enabled: true });
     };
@@ -651,75 +806,215 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                     Add KPIs from the catalogue to start the rail.
                                 </div>
                             )}
-                            {config.items.map((item, idx) => (
-                                <div
-                                    key={item.id}
-                                    className="rounded-lg border border-slate-200 bg-slate-50 p-2 dark:border-slate-800 dark:bg-slate-900/70"
-                                >
-                                    <div className="flex items-center gap-2">
-                                        <GripVertical className="h-4 w-4 shrink-0 text-slate-300 dark:text-slate-600" />
-                                        <input
-                                            value={item.label ?? item.searchName}
-                                            onChange={(event) =>
-                                                updateItem(item.id, {
-                                                    label: event.target.value,
-                                                })
-                                            }
-                                            className="min-w-0 flex-1 rounded border border-slate-200 bg-white px-2 py-1 text-xs font-bold text-slate-700 outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-                                            aria-label={`Ticker label for ${item.searchName}`}
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => moveItem(item.id, -1)}
-                                            disabled={idx === 0}
-                                            className="rounded p-1.5 text-slate-500 transition-colors hover:bg-white hover:text-slate-900 disabled:opacity-30 dark:hover:bg-slate-800 dark:hover:text-white"
-                                            title="Move up"
-                                        >
-                                            <ArrowUp className="h-3.5 w-3.5" />
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => moveItem(item.id, 1)}
-                                            disabled={idx === config.items.length - 1}
-                                            className="rounded p-1.5 text-slate-500 transition-colors hover:bg-white hover:text-slate-900 disabled:opacity-30 dark:hover:bg-slate-800 dark:hover:text-white"
-                                            title="Move down"
-                                        >
-                                            <ArrowDown className="h-3.5 w-3.5" />
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => removeItem(item.id)}
-                                            className="rounded p-1.5 text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-950/40"
-                                            title="Remove KPI"
-                                        >
-                                            <Trash2 className="h-3.5 w-3.5" />
-                                        </button>
+                            {config.items.map((item, idx) => {
+                                const metricDefault =
+                                    metricDefaultsBySearchName?.get(
+                                        item.searchName
+                                    );
+                                const inheritedDirection =
+                                    item.thresholdDirection ??
+                                    metricDefault?.thresholds?.direction;
+                                return (
+                                    <div
+                                        key={item.id}
+                                        className="rounded-lg border border-slate-200 bg-slate-50 p-2 dark:border-slate-800 dark:bg-slate-900/70"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <GripVertical className="h-4 w-4 shrink-0 text-slate-300 dark:text-slate-600" />
+                                            <input
+                                                value={
+                                                    item.label ??
+                                                    metricDefault?.label ??
+                                                    item.searchName
+                                                }
+                                                onChange={(event) =>
+                                                    updateItem(item.id, {
+                                                        label: event.target.value,
+                                                    })
+                                                }
+                                                className="min-w-0 flex-1 rounded border border-slate-200 bg-white px-2 py-1 text-xs font-bold text-slate-700 outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                                                aria-label={`Ticker label for ${item.searchName}`}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    moveItem(item.id, -1)
+                                                }
+                                                disabled={idx === 0}
+                                                className="rounded p-1.5 text-slate-500 transition-colors hover:bg-white hover:text-slate-900 disabled:opacity-30 dark:hover:bg-slate-800 dark:hover:text-white"
+                                                title="Move up"
+                                            >
+                                                <ArrowUp className="h-3.5 w-3.5" />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    moveItem(item.id, 1)
+                                                }
+                                                disabled={
+                                                    idx ===
+                                                    config.items.length - 1
+                                                }
+                                                className="rounded p-1.5 text-slate-500 transition-colors hover:bg-white hover:text-slate-900 disabled:opacity-30 dark:hover:bg-slate-800 dark:hover:text-white"
+                                                title="Move down"
+                                            >
+                                                <ArrowDown className="h-3.5 w-3.5" />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    removeItem(item.id)
+                                                }
+                                                className="rounded p-1.5 text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-950/40"
+                                                title="Remove KPI"
+                                            >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                            </button>
+                                        </div>
+                                        <p className="mt-1 truncate pl-6 text-[10px] font-semibold text-slate-400">
+                                            {item.searchName}
+                                        </p>
+                                        <div className="mt-2 grid grid-cols-2 gap-2 pl-6">
+                                            <label className="block">
+                                                <span className="block text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
+                                                    Value field
+                                                </span>
+                                                <input
+                                                    value={item.valueField ?? ''}
+                                                    onChange={(event) => {
+                                                        const next =
+                                                            event.target.value.trim();
+                                                        updateItem(item.id, {
+                                                            valueField:
+                                                                next.length > 0
+                                                                    ? next
+                                                                    : undefined,
+                                                        });
+                                                    }}
+                                                    placeholder={
+                                                        metricDefault?.valueField ??
+                                                        'Auto'
+                                                    }
+                                                    className="mt-1 w-full rounded border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                                                />
+                                            </label>
+                                            <label className="block">
+                                                <span className="block text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
+                                                    Unit
+                                                </span>
+                                                <input
+                                                    value={item.thresholdUnit ?? ''}
+                                                    onChange={(event) => {
+                                                        const next =
+                                                            event.target.value.trim();
+                                                        updateItem(item.id, {
+                                                            thresholdUnit:
+                                                                next.length > 0
+                                                                    ? next
+                                                                    : undefined,
+                                                        });
+                                                    }}
+                                                    placeholder={
+                                                        metricDefault?.unit || 'None'
+                                                    }
+                                                    className="mt-1 w-full rounded border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                                                />
+                                            </label>
+                                        </div>
+                                        <div className="mt-2 grid grid-cols-3 gap-2 pl-6">
+                                            <label className="block">
+                                                <span className="block text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
+                                                    Warning
+                                                </span>
+                                                <input
+                                                    type="number"
+                                                    value={
+                                                        item.thresholdWarning ??
+                                                        ''
+                                                    }
+                                                    onChange={(event) =>
+                                                        updateItem(item.id, {
+                                                            thresholdWarning:
+                                                                optionalNumberFromInput(
+                                                                    event.target
+                                                                        .value
+                                                                ),
+                                                        })
+                                                    }
+                                                    placeholder={thresholdPlaceholder(
+                                                        metricDefault?.thresholds
+                                                            ?.warning,
+                                                        'Warn'
+                                                    )}
+                                                    className="mt-1 w-full rounded border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                                                />
+                                            </label>
+                                            <label className="block">
+                                                <span className="block text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
+                                                    Critical
+                                                </span>
+                                                <input
+                                                    type="number"
+                                                    value={
+                                                        item.thresholdCritical ??
+                                                        ''
+                                                    }
+                                                    onChange={(event) =>
+                                                        updateItem(item.id, {
+                                                            thresholdCritical:
+                                                                optionalNumberFromInput(
+                                                                    event.target
+                                                                        .value
+                                                                ),
+                                                        })
+                                                    }
+                                                    placeholder={thresholdPlaceholder(
+                                                        metricDefault?.thresholds
+                                                            ?.critical,
+                                                        'Crit'
+                                                    )}
+                                                    className="mt-1 w-full rounded border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                                                />
+                                            </label>
+                                            <label className="block">
+                                                <span className="block text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
+                                                    Direction
+                                                </span>
+                                                <select
+                                                    value={
+                                                        item.thresholdDirection ??
+                                                        ''
+                                                    }
+                                                    onChange={(event) =>
+                                                        updateItem(item.id, {
+                                                            thresholdDirection:
+                                                                event.target.value ===
+                                                                ''
+                                                                    ? undefined
+                                                                    : (event.target
+                                                                          .value as SignalTickerThresholdDirection),
+                                                        })
+                                                    }
+                                                    title={directionLabel(
+                                                        inheritedDirection
+                                                    )}
+                                                    className="mt-1 w-full rounded border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                                                >
+                                                    <option value="">
+                                                        Inherit
+                                                    </option>
+                                                    <option value="higher_is_better">
+                                                        High good
+                                                    </option>
+                                                    <option value="lower_is_better">
+                                                        Low good
+                                                    </option>
+                                                </select>
+                                            </label>
+                                        </div>
                                     </div>
-                                    <p className="mt-1 truncate pl-6 text-[10px] font-semibold text-slate-400">
-                                        {item.searchName}
-                                    </p>
-                                    <label className="mt-2 block pl-6">
-                                        <span className="block text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
-                                            Value field
-                                        </span>
-                                        <input
-                                            value={item.valueField ?? ''}
-                                            onChange={(event) => {
-                                                const next =
-                                                    event.target.value.trim();
-                                                updateItem(item.id, {
-                                                    valueField:
-                                                        next.length > 0
-                                                            ? next
-                                                            : undefined,
-                                                });
-                                            }}
-                                            placeholder="Auto"
-                                            className="mt-1 w-full rounded border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-                                        />
-                                    </label>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </section>
 

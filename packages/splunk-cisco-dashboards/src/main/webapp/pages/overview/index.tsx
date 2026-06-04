@@ -80,6 +80,7 @@ import { IncidentTicker } from '@/common/components/florida/IncidentTicker';
 import {
     SignalTickerEditor,
     SignalTickerRail,
+    type SignalTickerMetricDefaults,
 } from '@/common/components/florida/SignalTickerRail';
 import { HelpOverlay } from '@/common/components/florida/HelpOverlay';
 import { InfoTooltip } from '@/common/components/florida/InfoTooltip';
@@ -2548,6 +2549,32 @@ const OverviewPage: React.FC = () => {
         resetAll: resetAllOverrides,
         overrideCount,
     } = usePersistedMetricOverrides();
+    const signalTickerMetricDefaults = useMemo(() => {
+        const toDefault = (cfg: MetricConfig): SignalTickerMetricDefaults => ({
+            label: cfg.label,
+            subLabel: cfg.subLabel,
+            description: cfg.description,
+            valueField: cfg.valueField,
+            displayField: cfg.displayField,
+            sparkDataField: cfg.sparkDataField,
+            baselineField: cfg.baselineField,
+            overlayLabel: cfg.overlayLabel,
+            changeField: cfg.changeField,
+            comparePeriod: cfg.comparePeriod,
+            unit: cfg.unit,
+            color: cfg.color,
+            thresholds: cfg.thresholds,
+        });
+        const map = new Map<string, SignalTickerMetricDefaults>();
+        for (const cfg of METRIC_CONFIG) {
+            if (cfg.savedSearch) map.set(cfg.savedSearch, toDefault(cfg));
+            const effective = applyOverride(cfg, overrides[cfg.id]);
+            if (effective.savedSearch) {
+                map.set(effective.savedSearch, toDefault(effective));
+            }
+        }
+        return map;
+    }, [overrides]);
     const {
         drilldowns: searchbaseDrilldowns,
         setDrilldown: setSearchbaseDrilldown,
@@ -3397,6 +3424,7 @@ const OverviewPage: React.FC = () => {
             <SignalTickerRail
                 config={signalTickerConfig}
                 catalogueByName={searchbaseByName}
+                metricDefaultsBySearchName={signalTickerMetricDefaults}
                 range={timeRange}
                 refreshToken={refreshToken}
                 onOpenEditor={() => setSignalTickerEditorOpen(true)}
@@ -4013,6 +4041,7 @@ const OverviewPage: React.FC = () => {
                 open={signalTickerEditorOpen}
                 config={signalTickerConfig}
                 catalogue={searchbaseCatalogue}
+                metricDefaultsBySearchName={signalTickerMetricDefaults}
                 catalogueLoading={searchbaseByName === null}
                 onChange={setSignalTickerConfig}
                 onReset={resetSignalTickerConfig}

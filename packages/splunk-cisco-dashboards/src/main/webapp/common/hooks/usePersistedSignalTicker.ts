@@ -2,12 +2,19 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 export type SignalTickerSpeed = 'slow' | 'normal' | 'fast';
 export type SignalTickerRows = 1 | 2;
+export type SignalTickerThresholdDirection =
+    | 'higher_is_better'
+    | 'lower_is_better';
 
 export interface SignalTickerItem {
     id: string;
     searchName: string;
     label?: string;
     valueField?: string;
+    thresholdWarning?: number;
+    thresholdCritical?: number;
+    thresholdDirection?: SignalTickerThresholdDirection;
+    thresholdUnit?: string;
 }
 
 export interface SignalTickerConfig {
@@ -23,6 +30,7 @@ const STORAGE_VERSION = 1;
 const ID_PATTERN = /^[a-z0-9_]{1,80}$/;
 const SEARCH_NAME_PATTERN = /^[\w\s\-.:()<>/&]+$/;
 const FIELD_NAME_PATTERN = /^[A-Za-z_][\w.]{0,63}$/;
+const UNIT_PATTERN = /^[%A-Za-z0-9_./ -]{1,16}$/;
 
 const DEFAULT_SIGNAL_TICKER_CONFIG: SignalTickerConfig = {
     enabled: true,
@@ -116,6 +124,30 @@ const sanitizeItem = (raw: unknown): SignalTickerItem | null => {
         FIELD_NAME_PATTERN.test(source.valueField.trim())
     ) {
         item.valueField = source.valueField.trim();
+    }
+    if (
+        typeof source.thresholdWarning === 'number' &&
+        Number.isFinite(source.thresholdWarning)
+    ) {
+        item.thresholdWarning = source.thresholdWarning;
+    }
+    if (
+        typeof source.thresholdCritical === 'number' &&
+        Number.isFinite(source.thresholdCritical)
+    ) {
+        item.thresholdCritical = source.thresholdCritical;
+    }
+    if (
+        source.thresholdDirection === 'higher_is_better' ||
+        source.thresholdDirection === 'lower_is_better'
+    ) {
+        item.thresholdDirection = source.thresholdDirection;
+    }
+    if (
+        typeof source.thresholdUnit === 'string' &&
+        UNIT_PATTERN.test(source.thresholdUnit.trim())
+    ) {
+        item.thresholdUnit = source.thresholdUnit.trim();
     }
     return item;
 };
