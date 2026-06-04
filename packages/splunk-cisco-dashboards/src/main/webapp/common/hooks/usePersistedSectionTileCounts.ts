@@ -2,8 +2,8 @@
  * usePersistedSectionTileCounts — per-user, per-section "how many
  * tiles do I want to see" preference, mirrored to localStorage.
  *
- * Each section on the Overview page (it_health, security, building)
- * ships with up to N tiles. The user can dial the visible count down
+ * Each section on the Overview page ships with up to N tiles. The user
+ * can dial the visible count down
  * to a configurable minimum (3 by default) when they want a cleaner
  * read, or back up to the section's natural size when they want
  * everything. The trailing tiles in METRIC_CONFIG are the ones that
@@ -18,7 +18,8 @@
  *     counts: {
  *       "it_health": 5,
  *       "security": 3,
- *       "building": 4
+ *       "building": 4,
+ *       "custom": 3
  *     }
  *   }
  *
@@ -31,13 +32,13 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { SectionId } from '@/common/hooks/useMetric';
+import { ALL_SECTION_IDS } from '@/common/hooks/usePersistedSectionLayout';
 
 const STORAGE_KEY = 'splunk-cisco-dashboards.sectionTileCounts.v1';
 const STORAGE_VERSION = 1;
 
-const SECTION_IDS: readonly SectionId[] = ['it_health', 'security', 'building'] as const;
 const isSectionId = (raw: unknown): raw is SectionId =>
-    typeof raw === 'string' && (SECTION_IDS as readonly string[]).includes(raw);
+    typeof raw === 'string' && (ALL_SECTION_IDS as readonly string[]).includes(raw);
 
 export interface SectionTileCountBounds {
     /** Lowest count the user is allowed to dial down to. */
@@ -48,9 +49,8 @@ export interface SectionTileCountBounds {
      * Initial visible tile count when nothing is in localStorage yet.
      * Either a single number (every section starts at the same value)
      * or a partial per-section map (sections not listed fall back to
-     * `fallbackDefault`). Used so the IT Health section can default to
-     * 3 visible tiles per Alan's 2026-05-11 review while Security and
-     * Building stay at 5.
+     * `fallbackDefault`). Used when individual sections need a
+     * different first-paint density without changing the global default.
      */
     defaultCount: number | Partial<Record<SectionId, number>>;
     /**
@@ -89,6 +89,7 @@ const buildDefaults = (bounds: SectionTileCountBounds): SectionTileCountMap => (
     it_health: resolveSectionDefault('it_health', bounds),
     security: resolveSectionDefault('security', bounds),
     building: resolveSectionDefault('building', bounds),
+    custom: resolveSectionDefault('custom', bounds),
 });
 
 const readFromStorage = (bounds: SectionTileCountBounds): SectionTileCountMap => {
@@ -136,7 +137,7 @@ export interface UsePersistedSectionTileCountsResult {
 export const usePersistedSectionTileCounts = (
     bounds: SectionTileCountBounds = {
         minCount: 3,
-        maxCount: 5,
+        maxCount: 9,
         defaultCount: 5,
     }
 ): UsePersistedSectionTileCountsResult => {

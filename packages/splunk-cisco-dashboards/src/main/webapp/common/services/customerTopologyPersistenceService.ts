@@ -32,6 +32,7 @@ export const CUSTOMER_TOPOLOGY_SECTION_IDS = [
     'it_health',
     'security',
     'building',
+    'custom',
 ] as const;
 
 export type CustomerTopologySectionId =
@@ -46,6 +47,7 @@ export const DEFAULT_CUSTOMER_TOPOLOGY_SECTION_TITLES: CustomerTopologySectionTi
     it_health: 'IT Health',
     security: 'Security',
     building: 'Building Intelligence',
+    custom: 'Executive Signals',
 };
 
 export interface SavedCustomerTopologyPayload {

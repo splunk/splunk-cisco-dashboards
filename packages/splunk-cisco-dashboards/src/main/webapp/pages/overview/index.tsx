@@ -54,6 +54,9 @@ import {
     ArrowDown,
     ArrowUpDown,
     Sparkles,
+    Plus,
+    Eye,
+    EyeOff,
 } from 'lucide-react';
 import { DashboardSection } from '@/common/components/florida/DashboardSection';
 import { MetricItem } from '@/common/components/florida/MetricItem';
@@ -114,6 +117,7 @@ import {
     type SearchbaseDrilldownMap,
 } from '@/common/hooks/usePersistedSearchbaseDrilldowns';
 import { usePersistedSectionTileCounts } from '@/common/hooks/usePersistedSectionTileCounts';
+import { usePersistedSectionLayout } from '@/common/hooks/usePersistedSectionLayout';
 import { usePersistedSectionTileOrder } from '@/common/hooks/usePersistedSectionTileOrder';
 import { usePersistedSignalTicker } from '@/common/hooks/usePersistedSignalTicker';
 import {
@@ -281,11 +285,10 @@ const METRIC_CONFIG: MetricConfig[] = [
     // with named, countable signals: Active TE alerts (Critical+High)
     // and Sites < 90%. The composite searchbase entries themselves
     // stay in the catalogue so anyone who wants them back can re-bind
-    // via the KPI picker. As of 2026-05-12 every section defaults to
-    // 6 visible tiles (the `usePersistedSectionTileCounts` cap) so
-    // the executive view surfaces the whole catalogue at first paint
-    // and the operator dials *down* with the count pill if they want
-    // a tighter focus. Drag-to-reorder stays in place.
+    // via the KPI picker. As of 2026-06-04 every section ships with
+    // nine factory candidates but still defaults to three visible
+    // tiles, so the executive view stays tight while operators can
+    // dial up breadth with the count pill. Drag-to-reorder stays in place.
     {
         id: 'critical_website_availability',
         section: 'it_health',
@@ -451,6 +454,62 @@ const METRIC_CONFIG: MetricConfig[] = [
             'network has a different normal.',
         mock: { seed: 15, sparkMin: 0, sparkMax: 1, value: 0, change: 0 },
     },
+    {
+        id: 'it_domain_score',
+        section: 'it_health',
+        label: 'IT domain score',
+        subLabel: 'Network + device + compliance',
+        description:
+            'Composite IT score blending Catalyst Center network health, device ' +
+            'readiness, and compliance pass rate into a single executive signal.',
+        savedSearch: 'Executive Dashboard - IT Domain Score',
+        valueField: 'score',
+        unit: '%',
+        color: '#2563eb',
+        thresholds: { warning: 90, critical: 70, direction: 'higher_is_better' },
+        thresholdNote:
+            'Same three-pillar posture used by the executive rollup. Drops should ' +
+            'be decomposed into network, device, and compliance contributors before ' +
+            'declaring a broad IT incident.',
+        mock: { seed: 16, sparkMin: 70, sparkMax: 100, value: 92, change: 0 },
+    },
+    {
+        id: 'thousandeyes_health',
+        section: 'it_health',
+        label: 'ThousandEyes health',
+        subLabel: 'Synthetic monitoring composite',
+        description:
+            'Synthetic monitoring health across packet loss, latency, HTTP ' +
+            'availability, and page-load completion from ThousandEyes data model ' +
+            'summaries.',
+        savedSearch: 'Executive Dashboard - ThousandEyes Health Score',
+        valueField: 'score',
+        unit: '%',
+        color: '#0ea5e9',
+        thresholds: { warning: 90, critical: 70, direction: 'higher_is_better' },
+        thresholdNote:
+            'A directional experience score: use the ThousandEyes drilldown to ' +
+            'separate transport, HTTP, and page-load contributors when the score moves.',
+        mock: { seed: 17, sparkMin: 70, sparkMax: 100, value: 94, change: 0 },
+    },
+    {
+        id: 'compliance_rate',
+        section: 'it_health',
+        label: 'Compliance rate',
+        subLabel: 'Catalyst checks passing',
+        description:
+            'Percentage of Catalyst Center compliance checks passing, excluding ' +
+            'not-applicable checks from the denominator.',
+        savedSearch: 'IT - Critical Systems - Compliance Rate',
+        valueField: 'pct',
+        unit: '%',
+        color: '#14b8a6',
+        thresholds: { warning: 95, critical: 70, direction: 'higher_is_better' },
+        thresholdNote:
+            'This is check-level compliance, not percent of devices fully compliant. ' +
+            'A sharp fall usually indicates new failing checks or assessment scope drift.',
+        mock: { seed: 18, sparkMin: 70, sparkMax: 100, value: 96, change: 0 },
+    },
     // ----- Security -----
     {
         id: 'fw_blocked',
@@ -594,8 +653,7 @@ const METRIC_CONFIG: MetricConfig[] = [
             '"failed auth" tile next to this one is the natural companion drilldown.',
         mock: { seed: 25, sparkMin: 80, sparkMax: 100, value: 98, change: 0 },
     },
-    // 6th Security tile (added 2026-05-12 to unlock the section's + button
-    // up to its 6-tile cap). Narrows XDR Incidents to severity=Critical
+    // Narrows XDR Incidents to severity=Critical
     // only — answers "how many incidents need a war-room right now?"
     // separately from the broader xdr_incidents trend.
     {
@@ -618,6 +676,57 @@ const METRIC_CONFIG: MetricConfig[] = [
             'consideration; > 5 simultaneously open exceeds the routing capacity ' +
             'of a single SOC shift on most SecOps teams.',
         mock: { seed: 26, sparkMin: 0, sparkMax: 2, value: 0, change: 0 },
+    },
+    {
+        id: 'dns_blocked_queries',
+        section: 'security',
+        label: 'DNS blocks',
+        subLabel: 'Unique policy-blocked queries',
+        description:
+            'Unique blocked DNS resolutions from Cisco Cloud Security / Umbrella, ' +
+            'deduplicated by source and queried domain.',
+        savedSearch: 'Security Resilience - DNS Blocked Queries',
+        valueField: 'blocked',
+        color: '#0ea5e9',
+        thresholds: { warning: 5000, critical: 50000, direction: 'lower_is_better' },
+        thresholdNote:
+            'Unique client-domain blocks, not raw DNS log lines. Sustained spikes ' +
+            'usually point to a campaign, new policy, or a noisy internal source.',
+        mock: { seed: 27, sparkMin: 0, sparkMax: 400, value: 120, change: 0 },
+    },
+    {
+        id: 'ids_ips_alerts',
+        section: 'security',
+        label: 'IDS/IPS alerts',
+        subLabel: 'Secure Firewall intrusion events',
+        description:
+            'Accelerated count of Secure Firewall intrusion events from the Cisco ' +
+            'Security data model.',
+        savedSearch: 'Security Resilience - IDS/IPS Alert Count',
+        valueField: 'count',
+        color: '#0ea5e9',
+        thresholds: { warning: 10000, critical: 100000, direction: 'lower_is_better' },
+        thresholdNote:
+            'IPS volume is environment-sensitive. Treat sudden increases or sudden ' +
+            'zeros as the actionable signal, then pivot to classifications.',
+        mock: { seed: 28, sparkMin: 0, sparkMax: 1000, value: 240, change: 0 },
+    },
+    {
+        id: 'email_threat_count',
+        section: 'security',
+        label: 'Email threats',
+        subLabel: 'AMP + spam + content scanner',
+        description:
+            'High-risk Cisco Email Security verdict count across AMP, antispam, ' +
+            'and content scanner telemetry.',
+        savedSearch: 'Security Resilience - Email Threat Count',
+        valueField: 'count',
+        color: '#0ea5e9',
+        thresholds: { warning: 1000, critical: 5000, direction: 'lower_is_better' },
+        thresholdNote:
+            'This is a blended intensity signal. Use the email breakdown drilldown ' +
+            'to determine whether AMP, spam, or content scanning drove the change.',
+        mock: { seed: 29, sparkMin: 0, sparkMax: 600, value: 80, change: 0 },
     },
     // ----- Building Intelligence -----
     //
@@ -739,8 +848,7 @@ const METRIC_CONFIG: MetricConfig[] = [
             'stalled, not that devices were physically removed.',
         mock: { seed: 35, sparkMin: 5, sparkMax: 50, value: 32, change: 0 },
     },
-    // 6th Building tile (added 2026-05-12 to unlock the section's + button
-    // up to its 6-tile cap). Catalyst Center AP reachability % — the
+    // Catalyst Center AP reachability % — the
     // obvious complement to "Wi-Fi clients" and "Active devices": if APs
     // are unreachable, the rest of the building section is fiction.
     {
@@ -765,6 +873,211 @@ const METRIC_CONFIG: MetricConfig[] = [
             'some campuses normally run at 97-98% because of permanently-offline ' +
             'spare-pool APs.',
         mock: { seed: 36, sparkMin: 90, sparkMax: 100, value: 99, change: 0 },
+    },
+    {
+        id: 'environmental_health',
+        section: 'building',
+        label: 'Environmental health',
+        subLabel: 'Temperature + humidity index',
+        description:
+            'Percentage of environmental sensor readings inside normal temperature ' +
+            'and humidity ranges across Meraki and Cisco Spaces telemetry.',
+        savedSearch: 'Building Resilience - Environmental Health Index',
+        valueField: 'score',
+        unit: '%',
+        color: '#10b981',
+        thresholds: { warning: 75, critical: 60, direction: 'higher_is_better' },
+        thresholdNote:
+            'Facility comfort signal. Persistent drops usually mean HVAC, sensor ' +
+            'placement, or localized environmental issues rather than a network problem.',
+        mock: { seed: 37, sparkMin: 60, sparkMax: 100, value: 91, change: 0 },
+    },
+    {
+        id: 'rooms_occupied',
+        section: 'building',
+        label: 'Rooms occupied',
+        subLabel: 'ROOM spaces with presence',
+        description:
+            'Time series of the percent of room-type spaces with people present ' +
+            'from Cisco Spaces occupancy events.',
+        savedSearch: 'Building Resilience - Rooms Occupied Trend',
+        valueField: 'Rooms Occupied',
+        unit: '%',
+        color: '#0ea5e9',
+        thresholdNote:
+            'Space-utilization signal, not pass/fail. Compare this against meeting ' +
+            'room inventory and business-hour expectations before acting.',
+        mock: { seed: 38, sparkMin: 15, sparkMax: 85, value: 62, change: 0 },
+    },
+    {
+        id: 'water_leaks',
+        section: 'building',
+        label: 'Water leaks',
+        subLabel: 'Active Meraki leak detections',
+        description:
+            'Count of active Meraki sensor readings reporting water present.',
+        savedSearch: 'Building Resilience - Water Leak Detection',
+        valueField: 'leaks',
+        color: '#0ea5e9',
+        thresholds: { warning: 1, critical: 2, direction: 'lower_is_better' },
+        thresholdNote:
+            'Water is a safety-critical signal. Any positive value should be ' +
+            'validated quickly by facilities staff.',
+        mock: { seed: 39, sparkMin: 0, sparkMax: 1, value: 0, change: 0 },
+    },
+    // ----- Optional Executive Signals -----
+    //
+    // Hidden by default. The section editor can reveal this fourth
+    // section when a user wants a broader command-center rollup without
+    // replacing the three shipped domain sections.
+    {
+        id: 'executive_ux_score',
+        section: 'custom',
+        label: 'UX score',
+        subLabel: 'Client + infrastructure health',
+        description:
+            'User-experience domain score combining Catalyst Center client health ' +
+            'and infrastructure readiness.',
+        savedSearch: 'Executive Dashboard - User Experience Domain Score',
+        valueField: 'score',
+        unit: '%',
+        color: '#0ea5e9',
+        thresholds: { warning: 90, critical: 70, direction: 'higher_is_better' },
+        thresholdNote:
+            'Blends client health and device readiness. Drops often need both RF ' +
+            'and infrastructure review.',
+        mock: { seed: 41, sparkMin: 70, sparkMax: 100, value: 93, change: 0 },
+    },
+    {
+        id: 'executive_it_score',
+        section: 'custom',
+        label: 'IT score',
+        subLabel: 'IT domain rollup',
+        description: 'Executive IT domain score for command-center layouts.',
+        savedSearch: 'Executive Dashboard - IT Domain Score',
+        valueField: 'score',
+        unit: '%',
+        color: '#2563eb',
+        thresholds: { warning: 90, critical: 70, direction: 'higher_is_better' },
+        thresholdNote:
+            'Composite IT health. Use the default IT section for contributor-level context.',
+        mock: { seed: 42, sparkMin: 70, sparkMax: 100, value: 92, change: 0 },
+    },
+    {
+        id: 'executive_security_score',
+        section: 'custom',
+        label: 'Security score',
+        subLabel: 'Identity trust rollup',
+        description:
+            'Executive security-domain score built from ISE and Active Directory ' +
+            'authentication success rates.',
+        savedSearch: 'Executive Dashboard - Security Domain Score',
+        valueField: 'score',
+        unit: '%',
+        color: '#10b981',
+        thresholds: { warning: 95, critical: 80, direction: 'higher_is_better' },
+        thresholdNote:
+            'Authentication success-rate composite. Pair with failed-auth and ' +
+            'threat-source counts when explaining movement.',
+        mock: { seed: 43, sparkMin: 80, sparkMax: 100, value: 98, change: 0 },
+    },
+    {
+        id: 'executive_building_score',
+        section: 'custom',
+        label: 'Building score',
+        subLabel: 'Facility domain rollup',
+        description:
+            'Executive building-domain score across AP health, presence, occupancy, ' +
+            'and compliance pillars.',
+        savedSearch: 'Executive Dashboard - Building Domain Score',
+        valueField: 'score',
+        unit: '%',
+        color: '#10b981',
+        thresholds: { warning: 85, critical: 55, direction: 'higher_is_better' },
+        thresholdNote:
+            'Building composite. Drops should be decomposed into AP, presence, ' +
+            'occupancy, and compliance contributors.',
+        mock: { seed: 44, sparkMin: 55, sparkMax: 100, value: 87, change: 0 },
+    },
+    {
+        id: 'executive_active_clients',
+        section: 'custom',
+        label: 'Active clients',
+        subLabel: 'Catalyst endpoint count',
+        description:
+            'Active Catalyst Center clients by connection type. Useful as an ' +
+            'occupancy and capacity proxy.',
+        savedSearch: 'Executive Dashboard - Active Clients',
+        valueField: 'count',
+        color: '#0ea5e9',
+        thresholdNote:
+            'Environment-specific capacity signal. Watch for sharp drops versus ' +
+            'the same business-hour baseline.',
+        mock: { seed: 45, sparkMin: 100, sparkMax: 1000, value: 420, change: 0 },
+    },
+    {
+        id: 'executive_active_alerts',
+        section: 'custom',
+        label: 'Active alerts',
+        subLabel: 'Critical ThousandEyes alerts',
+        description:
+            'Count of currently-active critical or error severity ThousandEyes alerts.',
+        savedSearch: 'Overview - Active Critical Alerts',
+        valueField: 'value',
+        color: '#0ea5e9',
+        thresholds: { warning: 1, critical: 5, direction: 'lower_is_better' },
+        thresholdNote:
+            'Pressure gauge. Any positive value deserves a quick incident review; ' +
+            'sustained growth means the issue is not clearing.',
+        mock: { seed: 46, sparkMin: 1, sparkMax: 20, value: 12, change: 0 },
+    },
+    {
+        id: 'executive_ai_defense_blocks',
+        section: 'custom',
+        label: 'AI blocks',
+        subLabel: 'Cisco AI Defense block rate',
+        description:
+            'Percent of GenAI prompts or responses denied by Cisco AI Defense policy.',
+        savedSearch: 'Security - GenAI Protection - Cisco AI Defense Block Rate',
+        valueField: 'block_pct',
+        unit: '%',
+        color: '#0ea5e9',
+        thresholds: { warning: 20, critical: 50, direction: 'lower_is_better' },
+        thresholdNote:
+            'High block rates can mean active probing or a policy/model change. ' +
+            'Review top blocked policies for context.',
+        mock: { seed: 47, sparkMin: 0, sparkMax: 30, value: 4, change: 0 },
+    },
+    {
+        id: 'executive_duo_users',
+        section: 'custom',
+        label: 'Duo users',
+        subLabel: 'Tenant snapshot users',
+        description:
+            'Latest Duo tenant user count from the tenant KPI snapshot.',
+        savedSearch: 'Identity - Duo MFA - Tenant KPI Snapshot',
+        valueField: 'Users',
+        color: '#8b5cf6',
+        thresholdNote:
+            'Inventory signal. Treat unexpected drops as a tenant, API, or parsing ' +
+            'issue until confirmed.',
+        mock: { seed: 48, sparkMin: 500, sparkMax: 5000, value: 1280, change: 0 },
+    },
+    {
+        id: 'executive_issue_pressure',
+        section: 'custom',
+        label: 'Issue pressure',
+        subLabel: 'Active Catalyst Center issues',
+        description:
+            'Active Catalyst Center issue volume with P1/P2 and footprint context.',
+        savedSearch: 'Executive Dashboard - Issue Summary KPIs',
+        valueField: 'total',
+        color: '#0ea5e9',
+        thresholds: { warning: 50, critical: 250, direction: 'lower_is_better' },
+        thresholdNote:
+            'Broad issue pressure gauge. P1/P2 counts and affected-site footprint ' +
+            'matter more than total volume alone.',
+        mock: { seed: 49, sparkMin: 0, sparkMax: 200, value: 36, change: 0 },
     },
 ];
 
@@ -902,6 +1215,11 @@ const SECTION_META: Record<
         title: DEFAULT_CUSTOMER_TOPOLOGY_SECTION_TITLES.building,
         linkText: 'Open building intelligence',
         href: 'building_v1',
+    },
+    custom: {
+        title: DEFAULT_CUSTOMER_TOPOLOGY_SECTION_TITLES.custom,
+        linkText: 'Open executive signals',
+        href: 'home_launchpad_v1',
     },
 };
 
@@ -2029,6 +2347,19 @@ const OverviewPage: React.FC = () => {
         setLastRefreshed(new Date());
     }, []);
 
+    // ------------------------------ Section layout preference ------------------------------
+    //
+    // Factory shows the original three executive sections. Users can
+    // hide sections they do not care about or reveal the fourth
+    // optional section for a broader command-center layout.
+    const {
+        sections: visibleSections,
+        availableSections,
+        maxSections: maxVisibleSections,
+        setSections: setVisibleSections,
+        resetAll: resetAllSectionLayout,
+    } = usePersistedSectionLayout();
+
     // ------------------------------ Section tile-count preference ------------------------------
     //
     // Per-user, per-section "how many tiles do I want visible". The
@@ -2039,19 +2370,15 @@ const OverviewPage: React.FC = () => {
     // who customises tile #5, dials down to 3, then back up to 5,
     // gets their customisation back unchanged.
     //
-    // Bounds: 3..6 with per-section defaults. Cap is 6 so the IT
-    // Health section (six catalogue entries today —
-    // critical_website_availability, network_health, device_health,
-    // open_issues, active_te_alerts, sites_below_threshold) can show
-    // every tile. Security and Building have five catalogue entries
-    // each, so 6 is just headroom for future additions; today they
-    // simply show what they have.
+    // Bounds: 3..9 with per-section defaults. Cap is 9 so every
+    // shipped section can expose the full factory catalogue while
+    // still booting at a tight three-tile executive summary.
     //
     // *Default* count is 3 across every section (Build 83). The exec
     // view boots with a tight, three-headline-per-row layout that
     // fits cleanly into the new 2/3-tiles / 1/3-map split. Operators
     // who want more breadth dial up via the `−  N  +` pill on each
-    // section header (cap is 6).
+    // section header (cap is 9).
     //
     // History: earlier revisions defaulted to 3 (Alan's original
     // "show me the three I asked for"), then bumped to 6 on
@@ -2073,7 +2400,7 @@ const OverviewPage: React.FC = () => {
         resetAll: resetAllSectionTileCounts,
     } = usePersistedSectionTileCounts({
         minCount: 3,
-        maxCount: 6,
+        maxCount: 9,
         defaultCount: {},
         fallbackDefault: 3,
     });
@@ -2127,7 +2454,7 @@ const OverviewPage: React.FC = () => {
     // both for the badge and (below) for the section render.
     const visibleMetricIds = useMemo(() => {
         const out = new Set<string>();
-        for (const section of ['it_health', 'security', 'building'] as const) {
+        for (const section of visibleSections) {
             // Same pipeline the render below uses: canonical ids ->
             // apply user reorder -> slice to visible count. Keeping
             // the badge filter and the render in lockstep means a
@@ -2142,7 +2469,7 @@ const OverviewPage: React.FC = () => {
             for (const id of visible) out.add(id);
         }
         return out;
-    }, [sectionTileCounts, getSectionTileOrder]);
+    }, [visibleSections, sectionTileCounts, getSectionTileOrder]);
 
     const statusList = useMemo(
         () =>
@@ -2629,6 +2956,12 @@ const OverviewPage: React.FC = () => {
                         sectionTitles.building ||
                         SECTION_META.building.title,
                 },
+                custom: {
+                    ...SECTION_META.custom,
+                    title:
+                        sectionTitles.custom ||
+                        SECTION_META.custom.title,
+                },
             } as Record<
                 SectionId,
                 { title: string; linkText: string; href: string }
@@ -2836,6 +3169,7 @@ const OverviewPage: React.FC = () => {
     // What gets reset (and the localStorage keys cleared):
     //   • metricOverrides.v1            — per-tile picker bindings
     //   • searchbaseDrilldowns.v1       — picker-wired drilldown bindings
+    //   • sectionLayout.v1              — visible section roster
     //   • sectionTileCounts.v1          — visible tile count per section
     //   • sectionTileOrder.v1           — drag-to-reorder preference
     //   • customerTopology.v4           — retired per-browser map payload
@@ -2856,6 +3190,7 @@ const OverviewPage: React.FC = () => {
     const handleResetAllCustomizations = useCallback(() => {
         resetAllOverrides();
         resetAllSearchbaseDrilldowns();
+        resetAllSectionLayout();
         resetAllSectionTileCounts();
         resetAllSectionTileOrder();
         resetSignalTickerConfig();
@@ -2879,6 +3214,7 @@ const OverviewPage: React.FC = () => {
     }, [
         resetAllOverrides,
         resetAllSearchbaseDrilldowns,
+        resetAllSectionLayout,
         resetAllSectionTileCounts,
         resetAllSectionTileOrder,
         resetSignalTickerConfig,
@@ -3553,7 +3889,7 @@ const OverviewPage: React.FC = () => {
                         } as React.CSSProperties
                     }
                 >
-                    {/* Left column — three sections.
+                    {/* Left column — configurable metric sections.
                         In right mode at xl+ widths the column width is
                         driven by the --scd-left-pct CSS variable, which
                         the splitter updates on drag. In below/above modes
@@ -3568,8 +3904,8 @@ const OverviewPage: React.FC = () => {
                         horizontally. */}
                     <div
                         // overflow-y-auto: when the viewport is too short
-                        // to fit all three sections at their min-h-[180px]
-                        // floor (≈ 540px content, plus ticker + header +
+                        // to fit visible sections at their min-h-[180px]
+                        // floor (plus ticker + header +
                         // gap), the metric column scrolls vertically
                         // instead of squishing the chart canvases below
                         // readability. The map column keeps its own
@@ -3597,7 +3933,7 @@ const OverviewPage: React.FC = () => {
                                 : undefined
                         }
                     >
-                        {(['it_health', 'security', 'building'] as const).map((section) => {
+                        {visibleSections.map((section) => {
                             const meta = effectiveSectionMeta[section];
                             const allSectionMetrics = METRIC_CONFIG.filter(
                                 (m) => m.section === section
@@ -3605,9 +3941,8 @@ const OverviewPage: React.FC = () => {
                             // The pill's max is whichever is smaller —
                             // the global cap (sectionTileBounds.maxCount)
                             // or what METRIC_CONFIG actually offers for
-                            // this section. Today both are 5 across the
-                            // board, but this keeps the UI honest if
-                            // someone trims a section to 4 tiles in
+                            // this section. This keeps the UI honest if
+                            // someone trims a section to fewer tiles in
                             // METRIC_CONFIG without touching this code.
                             const sectionMaxAvailable = Math.min(
                                 sectionTileBounds.maxCount,
@@ -3655,7 +3990,7 @@ const OverviewPage: React.FC = () => {
                                     linkText={meta.linkText}
                                     href={meta.href}
                                     // `flex-1` distributes column height
-                                    // proportionally across the three
+                                    // proportionally across visible
                                     // sections when the viewport has the
                                     // room, which matches what the design
                                     // expects on a tall window.
@@ -3681,13 +4016,11 @@ const OverviewPage: React.FC = () => {
                                     // link into the section title and
                                     // dropped the footer entirely,
                                     // reclaiming ~36px per section
-                                    // (~108px across the three) and
+                                    // (~108px across the original three) and
                                     // letting the floor relax to 180px
                                     // while preserving the same chart
-                                    // legibility. With this floor,
-                                    // three sections demand ≥540px of
-                                    // column content (down from 660px);
-                                    // shorter viewports trigger the
+                                    // legibility. With this floor, shorter
+                                    // viewports trigger the
                                     // metrics column's
                                     // `overflow-y-auto` instead — the
                                     // same model Splunk Dashboard
@@ -4076,6 +4409,9 @@ const OverviewPage: React.FC = () => {
                 onClose={() => setSectionTitlesEditorOpen(false)}
                 values={sectionTitles}
                 defaults={DEFAULT_CUSTOMER_TOPOLOGY_SECTION_TITLES}
+                visibleSections={visibleSections}
+                availableSections={availableSections}
+                maxSections={maxVisibleSections}
                 onSave={async (next) => {
                     await saveSectionTitles(next);
                     setSectionTitlesEditorOpen(false);
@@ -4084,6 +4420,8 @@ const OverviewPage: React.FC = () => {
                     await saveSectionTitles(DEFAULT_CUSTOMER_TOPOLOGY_SECTION_TITLES);
                     setSectionTitlesEditorOpen(false);
                 }}
+                onLayoutChange={setVisibleSections}
+                onResetLayout={resetAllSectionLayout}
             />
         </div>
     );
@@ -4647,8 +4985,13 @@ interface SectionTitlesEditorModalProps {
     onClose: () => void;
     values: CustomerTopologySectionTitles;
     defaults: CustomerTopologySectionTitles;
+    visibleSections: SectionId[];
+    availableSections: readonly SectionId[];
+    maxSections: number;
     onSave: (next: CustomerTopologySectionTitles) => Promise<void>;
     onResetToDefaults: () => Promise<void>;
+    onLayoutChange: (next: SectionId[]) => void;
+    onResetLayout: () => void;
 }
 
 const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
@@ -4656,20 +4999,28 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
     onClose,
     values,
     defaults,
+    visibleSections,
+    availableSections,
+    maxSections,
     onSave,
     onResetToDefaults,
+    onLayoutChange,
+    onResetLayout,
 }) => {
     const [draft, setDraft] =
         useState<CustomerTopologySectionTitles>(values);
+    const [layoutDraft, setLayoutDraft] =
+        useState<SectionId[]>(visibleSections);
     const [isSaving, setIsSaving] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
 
     useEffect(() => {
         if (!isOpen) return;
         setDraft(values);
+        setLayoutDraft(visibleSections);
         setErrorMessage('');
         setIsSaving(false);
-    }, [isOpen, values]);
+    }, [isOpen, values, visibleSections]);
 
     useEffect(() => {
         if (!isOpen) return undefined;
@@ -4682,11 +5033,38 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
 
     if (!isOpen) return null;
 
-    const setTitle = (key: keyof CustomerTopologySectionTitles, value: string) => {
+    const setTitle = (key: SectionId, value: string) => {
         setDraft((current) => ({
             ...current,
             [key]: value,
         }));
+    };
+
+    const activeSet = new Set(layoutDraft);
+    const hiddenSections = availableSections.filter((section) => !activeSet.has(section));
+    const canAddSection = layoutDraft.length < maxSections && hiddenSections.length > 0;
+
+    const addSection = () => {
+        if (!canAddSection) return;
+        setLayoutDraft((current) => {
+            const next = availableSections.find((section) => !current.includes(section));
+            if (!next) return current;
+            return [...current, next].slice(0, maxSections);
+        });
+    };
+
+    const showSection = (section: SectionId) => {
+        setLayoutDraft((current) => {
+            if (current.includes(section) || current.length >= maxSections) return current;
+            return [...current, section];
+        });
+    };
+
+    const hideSection = (section: SectionId) => {
+        setLayoutDraft((current) => {
+            if (!current.includes(section) || current.length <= 1) return current;
+            return current.filter((candidate) => candidate !== section);
+        });
     };
 
     const save = async () => {
@@ -4697,7 +5075,9 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
                 it_health: draft.it_health.trim() || defaults.it_health,
                 security: draft.security.trim() || defaults.security,
                 building: draft.building.trim() || defaults.building,
+                custom: draft.custom.trim() || defaults.custom,
             });
+            onLayoutChange(layoutDraft);
         } catch (err) {
             setErrorMessage(err instanceof Error ? err.message : String(err));
             setIsSaving(false);
@@ -4709,6 +5089,7 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
         setErrorMessage('');
         try {
             await onResetToDefaults();
+            onResetLayout();
         } catch (err) {
             setErrorMessage(err instanceof Error ? err.message : String(err));
             setIsSaving(false);
@@ -4735,13 +5116,13 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
             }}
         >
             <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
-            <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl w-full max-w-2xl mx-4">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
                     <h2
                         id="section-titles-editor-title"
                         className="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider"
                     >
-                        Edit section titles
+                        Edit sections
                     </h2>
                     <button
                         type="button"
@@ -4761,47 +5142,102 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
                 </div>
 
                 <div className="px-4 py-4 space-y-4">
-                    <div>
-                        <label htmlFor="section-title-it-health" className={labelClass}>
-                            Section 1
-                        </label>
-                        <input
-                            id="section-title-it-health"
-                            type="text"
-                            value={draft.it_health}
-                            onChange={(e) => setTitle('it_health', e.target.value)}
-                            placeholder={defaults.it_health}
-                            maxLength={48}
-                            className={inputClass}
-                        />
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                            {layoutDraft.length} of {maxSections} visible
+                        </div>
+                        <button
+                            type="button"
+                            onClick={addSection}
+                            disabled={!canAddSection || isSaving}
+                            className={cn(
+                                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded',
+                                'border border-sky-200 bg-sky-50 text-xs font-bold',
+                                'text-sky-700 hover:bg-sky-100 dark:border-sky-900/60',
+                                'dark:bg-sky-950/40 dark:text-sky-200',
+                                (!canAddSection || isSaving) &&
+                                    'cursor-not-allowed opacity-50'
+                            )}
+                        >
+                            <Plus className="w-3.5 h-3.5" />
+                            Add section
+                        </button>
                     </div>
-                    <div>
-                        <label htmlFor="section-title-security" className={labelClass}>
-                            Section 2
-                        </label>
-                        <input
-                            id="section-title-security"
-                            type="text"
-                            value={draft.security}
-                            onChange={(e) => setTitle('security', e.target.value)}
-                            placeholder={defaults.security}
-                            maxLength={48}
-                            className={inputClass}
-                        />
-                    </div>
-                    <div>
-                        <label htmlFor="section-title-building" className={labelClass}>
-                            Section 3
-                        </label>
-                        <input
-                            id="section-title-building"
-                            type="text"
-                            value={draft.building}
-                            onChange={(e) => setTitle('building', e.target.value)}
-                            placeholder={defaults.building}
-                            maxLength={48}
-                            className={inputClass}
-                        />
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                        {availableSections.map((section, idx) => {
+                            const isVisible = activeSet.has(section);
+                            const canShow = !isVisible && layoutDraft.length < maxSections;
+                            const canHide = isVisible && layoutDraft.length > 1;
+                            return (
+                                <div
+                                    key={section}
+                                    className={cn(
+                                        'rounded-lg border p-3 transition-colors',
+                                        isVisible
+                                            ? 'border-sky-200 bg-sky-50/60 dark:border-sky-900/60 dark:bg-sky-950/20'
+                                            : 'border-slate-200 bg-slate-50/80 dark:border-slate-700 dark:bg-slate-800/40'
+                                    )}
+                                >
+                                    <div className="mb-2 flex items-center justify-between gap-2">
+                                        <label
+                                            htmlFor={`section-title-${section}`}
+                                            className={cn(labelClass, 'mb-0')}
+                                        >
+                                            Section {idx + 1}
+                                        </label>
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                isVisible
+                                                    ? hideSection(section)
+                                                    : showSection(section)
+                                            }
+                                            disabled={
+                                                isSaving ||
+                                                (isVisible ? !canHide : !canShow)
+                                            }
+                                            title={
+                                                isVisible
+                                                    ? 'Hide section'
+                                                    : 'Show section'
+                                            }
+                                            aria-label={
+                                                isVisible
+                                                    ? `Hide ${draft[section] || defaults[section]}`
+                                                    : `Show ${draft[section] || defaults[section]}`
+                                            }
+                                            className={cn(
+                                                'inline-flex h-8 items-center gap-1.5 rounded px-2',
+                                                'text-xs font-bold transition-colors',
+                                                isVisible
+                                                    ? 'bg-white text-slate-600 hover:text-slate-900 dark:bg-slate-900 dark:text-slate-300'
+                                                    : 'bg-sky-600 text-white hover:bg-sky-500',
+                                                (isSaving ||
+                                                    (isVisible ? !canHide : !canShow)) &&
+                                                    'cursor-not-allowed opacity-50'
+                                            )}
+                                        >
+                                            {isVisible ? (
+                                                <EyeOff className="h-3.5 w-3.5" />
+                                            ) : (
+                                                <Eye className="h-3.5 w-3.5" />
+                                            )}
+                                            {isVisible ? 'Hide' : 'Show'}
+                                        </button>
+                                    </div>
+                                    <input
+                                        id={`section-title-${section}`}
+                                        type="text"
+                                        value={draft[section]}
+                                        onChange={(e) => setTitle(section, e.target.value)}
+                                        placeholder={defaults[section]}
+                                        maxLength={48}
+                                        className={inputClass}
+                                    />
+                                </div>
+                            );
+                        })}
                     </div>
 
                     {errorMessage && (
