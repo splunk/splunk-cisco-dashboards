@@ -1222,6 +1222,30 @@ const TOPOLOGY_ANIMATION_LEVEL_LABELS: Record<TopologyAnimationLevel, string> =
         off: 'Animations: Off',
     };
 
+type TopologyRoleLegendMode = 'compact' | 'expanded';
+
+const TOPOLOGY_ROLE_LEGEND_KEY = 'florida-topology-role-legend.v1';
+
+const readStoredRoleLegendMode = (): TopologyRoleLegendMode => {
+    if (typeof window === 'undefined') return 'compact';
+    try {
+        const stored = window.localStorage.getItem(TOPOLOGY_ROLE_LEGEND_KEY);
+        if (stored === 'compact' || stored === 'expanded') return stored;
+    } catch {
+        /* localStorage may be unavailable (private mode etc.) */
+    }
+    return 'compact';
+};
+
+const writeStoredRoleLegendMode = (mode: TopologyRoleLegendMode): void => {
+    if (typeof window === 'undefined') return;
+    try {
+        window.localStorage.setItem(TOPOLOGY_ROLE_LEGEND_KEY, mode);
+    } catch {
+        /* swallow */
+    }
+};
+
 const topologyAnimationCss = `
     @keyframes customer-topology-pulse {
         0%, 100% { stroke-opacity: 0.55; }
@@ -3200,6 +3224,8 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         cloneTopology(storedTopology)
     );
     const [pickSiteId, setPickSiteId] = useState<string | null>(null);
+    const [roleLegendMode, setRoleLegendMode] =
+        useState<TopologyRoleLegendMode>(readStoredRoleLegendMode);
     const [tilePresetId, setTilePresetId] = useState<TileLayerPreset['id']>(
         TILE_LAYER_PRESETS[0].id
     );
@@ -3240,6 +3266,12 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     const visualAnimationLevel: TopologyAnimationLevel = isEditorOpen
         ? 'off'
         : animationLevel;
+
+    const setRoleLegendExpanded = useCallback((expanded: boolean) => {
+        const next: TopologyRoleLegendMode = expanded ? 'expanded' : 'compact';
+        setRoleLegendMode(next);
+        writeStoredRoleLegendMode(next);
+    }, []);
 
     // Track which sites we've already shown the entrance animation for so a
     // later toggle of animation level doesn't restart drop-in for everyone.
@@ -3926,9 +3958,11 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         resolvedTopology.map.bounds[0],
         resolvedTopology.map.bounds[1]
     );
+    const roleLegendExpanded = roleLegendMode === 'expanded';
+    const roleLegendPreviewSites = resolvedTopology.sites.slice(0, 6);
     const overlayChrome = isDark
-        ? 'bg-slate-900/90 border-slate-700 text-slate-200 backdrop-blur-md'
-        : 'bg-white/95 border-slate-200 text-slate-700 backdrop-blur-md';
+        ? 'bg-slate-900/75 border-slate-700/80 text-slate-200 backdrop-blur-md'
+        : 'bg-white/78 border-sky-200/80 text-slate-700 backdrop-blur-md';
     const buttonChrome = isDark
         ? 'bg-slate-900/90 border-slate-700 hover:bg-slate-800 text-slate-200'
         : 'bg-white/95 border-slate-200 hover:bg-slate-50 text-slate-600';
@@ -4213,27 +4247,79 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
             />
 
             <div className="absolute bottom-6 left-4 z-[1000] space-y-3 pointer-events-auto">
-                <div
-                    className={cn(
-                        'border p-3 rounded-lg shadow-lg max-w-[170px]',
-                        overlayChrome
-                    )}
-                >
-                    <h5 className="text-[10px] font-black uppercase tracking-[0.2em] mb-3 text-slate-400">
-                        Site Roles
-                    </h5>
-                    <div className="space-y-2">
-                        {resolvedTopology.sites.map((site) => (
-                            <LegendRow
-                                key={site.id}
-                                color={topologyRoleDotClass(site.role)}
-                                label={topologyRoleLabel(site.role)}
-                                id={site.shortName}
-                                isDark={isDark}
-                            />
-                        ))}
+                {roleLegendExpanded ? (
+                    <div
+                        className={cn(
+                            'border p-3 rounded-xl shadow-xl max-w-[190px] transition-all',
+                            overlayChrome
+                        )}
+                    >
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                            <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                                Site Roles
+                            </h5>
+                            <button
+                                type="button"
+                                onClick={() => setRoleLegendExpanded(false)}
+                                title="Collapse site roles"
+                                aria-label="Collapse site roles"
+                                className={cn(
+                                    'rounded-md p-1 transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                                    isDark
+                                        ? 'hover:bg-slate-800 text-slate-400 hover:text-slate-100'
+                                        : 'hover:bg-sky-50 text-slate-400 hover:text-sky-700'
+                                )}
+                            >
+                                <ChevronRight className="h-3.5 w-3.5 rotate-180" />
+                            </button>
+                        </div>
+                        <div className="space-y-2">
+                            {resolvedTopology.sites.map((site) => (
+                                <LegendRow
+                                    key={site.id}
+                                    color={topologyRoleDotClass(site.role)}
+                                    label={topologyRoleLabel(site.role)}
+                                    id={site.shortName}
+                                    isDark={isDark}
+                                />
+                            ))}
+                        </div>
                     </div>
-                </div>
+                ) : (
+                    <button
+                        type="button"
+                        onClick={() => setRoleLegendExpanded(true)}
+                        title="Show site roles"
+                        aria-label="Show site roles"
+                        aria-expanded={false}
+                        className={cn(
+                            'group flex max-w-[190px] items-center gap-2 rounded-full border px-2.5 py-2 shadow-lg transition-all focus:outline-none focus:ring-1 focus:ring-sky-400',
+                            overlayChrome
+                        )}
+                    >
+                        <span className="text-[9px] font-black uppercase tracking-[0.18em] text-sky-700 dark:text-sky-300">
+                            Roles
+                        </span>
+                        <span className="flex -space-x-1">
+                            {roleLegendPreviewSites.map((site) => (
+                                <span
+                                    key={site.id}
+                                    className={cn(
+                                        'h-2.5 w-2.5 rounded-full border border-white shadow-sm dark:border-slate-900',
+                                        topologyRoleDotClass(site.role)
+                                    )}
+                                    title={`${site.shortName}: ${topologyRoleLabel(
+                                        site.role
+                                    )}`}
+                                />
+                            ))}
+                        </span>
+                        <span className="rounded-full bg-sky-500/12 px-1.5 py-0.5 text-[9px] font-black text-sky-700 dark:bg-sky-400/15 dark:text-sky-200">
+                            {resolvedTopology.sites.length}
+                        </span>
+                        <ChevronRight className="h-3.5 w-3.5 text-slate-400 transition-transform group-hover:translate-x-0.5" />
+                    </button>
+                )}
 
                 <button
                     type="button"
