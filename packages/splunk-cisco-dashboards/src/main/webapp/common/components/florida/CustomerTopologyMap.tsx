@@ -173,7 +173,48 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
             telemetrySource: 'Configured topology item',
         },
     ],
-    links: [],
+    links: [
+        {
+            id: 'nyc-chicago',
+            name: 'New York City to Chicago',
+            sourceSiteId: 'nyc',
+            targetSiteId: 'chicago',
+            status: 'unknown',
+            telemetrySource: 'Configured topology item',
+        },
+        {
+            id: 'chicago-austin',
+            name: 'Chicago to Austin',
+            sourceSiteId: 'chicago',
+            targetSiteId: 'austin',
+            status: 'unknown',
+            telemetrySource: 'Configured topology item',
+        },
+        {
+            id: 'austin-san-francisco',
+            name: 'Austin to San Francisco',
+            sourceSiteId: 'austin',
+            targetSiteId: 'san-francisco',
+            status: 'unknown',
+            telemetrySource: 'Configured topology item',
+        },
+        {
+            id: 'san-francisco-seattle',
+            name: 'San Francisco to Seattle',
+            sourceSiteId: 'san-francisco',
+            targetSiteId: 'seattle',
+            status: 'unknown',
+            telemetrySource: 'Configured topology item',
+        },
+        {
+            id: 'seattle-chicago',
+            name: 'Seattle to Chicago',
+            sourceSiteId: 'seattle',
+            targetSiteId: 'chicago',
+            status: 'unknown',
+            telemetrySource: 'Configured topology item',
+        },
+    ],
 };
 
 const STATUS_RANK: Record<TopologyStatus, number> = {

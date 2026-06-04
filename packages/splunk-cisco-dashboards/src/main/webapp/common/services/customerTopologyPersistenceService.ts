@@ -15,6 +15,8 @@
  * so every user with read access to the app sees the same site/link layout.
  */
 
+import { createFetchInit } from '@splunk/splunk-utils/fetch';
+
 import type { CustomerTopology } from '@/common/types';
 
 import { getSearchAppContext } from './splunkSearchService';
@@ -134,9 +136,45 @@ const isInSplunkRuntime = (): boolean => {
 };
 
 const getCsrfToken = (): string | null => {
-    if (typeof document === 'undefined') return null;
-    const match = document.cookie.match(/(?:^|;\s*)splunkweb_csrf_token_\w+=([^;]+)/);
+    if (typeof document === 'undefined' || typeof window === 'undefined') {
+        return null;
+    }
+    const runtime = window as unknown as { $C?: Record<string, unknown> };
+    const bootstrapToken =
+        runtime.$C?.FORM_KEY ??
+        runtime.$C?.form_key ??
+        runtime.$C?.SPLUNKWEB_CSRF_TOKEN ??
+        runtime.$C?.csrf_token;
+    if (typeof bootstrapToken === 'string' && bootstrapToken.trim()) {
+        return bootstrapToken.trim();
+    }
+    const match = document.cookie.match(
+        /(?:^|;\s*)splunkweb_csrf_token(?:_[^=;]+)?=([^;]+)/
+    );
     return match ? decodeURIComponent(match[1]) : null;
+};
+
+const buildMutationInit = (body: URLSearchParams): RequestInit => {
+    const init = createFetchInit({
+        method: 'POST',
+        body: body.toString(),
+        headers: {
+            Accept: 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+    });
+    const headers = new Headers(init.headers);
+    headers.set('Accept', 'application/json');
+    headers.set('Content-Type', 'application/x-www-form-urlencoded');
+    headers.set('X-Requested-With', 'XMLHttpRequest');
+    const csrf = getCsrfToken();
+    if (csrf && !headers.has('X-Splunk-Form-Key')) {
+        headers.set('X-Splunk-Form-Key', csrf);
+    }
+    return {
+        ...init,
+        headers,
+    };
 };
 
 const getCurrentUser = (): string => {
@@ -172,6 +210,14 @@ const friendlyMessage = (
         .filter(Boolean)
         .join('; ');
     if (status === 401 || status === 403) {
+        const looksLikeCsrf =
+            /csrf/i.test(detail) ||
+            (status === 401 && getCsrfToken() === null);
+        if (looksLikeCsrf) {
+            return `Couldn't ${verb}: Splunk session token is stale or missing${
+                detail ? ` - ${detail}` : ''
+            }. Reload the page to refresh the CSRF cookie, then try again.`;
+        }
         return `Couldn't ${verb}: authentication or authorization failed${
             detail ? ` - ${detail}` : ''
         }. Check write access to customer_topology.conf.`;
@@ -350,13 +396,7 @@ export const saveCustomerTopologyConfig = async (
         payload_json: payloadJson,
         output_mode: 'json',
     });
-    const headers: Record<string, string> = {
-        Accept: 'application/json',
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'X-Requested-With': 'XMLHttpRequest',
-    };
-    const csrf = getCsrfToken();
-    if (csrf) headers['X-Splunk-Form-Key'] = csrf;
+    const postInit = buildMutationInit(body);
 
     const updateUrl = `${buildBaseUrl(appName, true)}/${encodeURIComponent(
         STANZA_NAME
@@ -364,12 +404,7 @@ export const saveCustomerTopologyConfig = async (
     let response: Response;
     try {
         response = await withRetry(() =>
-            fetch(updateUrl, {
-                method: 'POST',
-                credentials: 'include',
-                headers,
-                body: body.toString(),
-            })
+            fetch(updateUrl, postInit)
         );
     } catch (error) {
         throw new CustomerTopologyPersistenceError(
@@ -383,13 +418,9 @@ export const saveCustomerTopologyConfig = async (
     if (response.status === 404) {
         const createBody = new URLSearchParams(body);
         createBody.set('name', STANZA_NAME);
+        const createInit = buildMutationInit(createBody);
         const createResponse = await withRetry(() =>
-            fetch(buildBaseUrl(appName, true), {
-                method: 'POST',
-                credentials: 'include',
-                headers,
-                body: createBody.toString(),
-            })
+            fetch(buildBaseUrl(appName, true), createInit)
         );
         if (createResponse.ok) return;
         let createError: unknown = null;
