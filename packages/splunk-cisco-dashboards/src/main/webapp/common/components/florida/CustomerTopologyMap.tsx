@@ -1497,7 +1497,7 @@ const topologyAnimationCss = `
 `;
 
 interface TileLayerPreset {
-    id: 'street' | 'satellite';
+    id: 'street' | 'satellite' | 'terrain';
     label: string;
     light: string;
     dark: string;
@@ -1520,6 +1520,15 @@ const TILE_LAYER_PRESETS: TileLayerPreset[] = [
             'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
         dark:
             'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        attribution: 'Tiles &copy; Esri',
+    },
+    {
+        id: 'terrain',
+        label: 'Terrain',
+        light:
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+        dark:
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
         attribution: 'Tiles &copy; Esri',
     },
 ];
