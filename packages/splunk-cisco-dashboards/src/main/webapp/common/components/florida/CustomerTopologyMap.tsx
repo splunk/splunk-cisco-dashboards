@@ -1205,16 +1205,20 @@ const topologyAnimationCss = `
     }
     .customer-topology-link-hitbox {
         cursor: pointer;
+        pointer-events: stroke;
     }
     .customer-topology-link-shadow {
         filter: blur(2px);
         mix-blend-mode: multiply;
+        pointer-events: none;
     }
     .customer-topology-link-halo {
         filter: drop-shadow(0 0 8px currentColor);
+        pointer-events: none;
     }
     .customer-topology-link-highlight {
         filter: drop-shadow(0 1px 2px rgba(15, 23, 42, 0.18));
+        pointer-events: none;
     }
     .customer-topology-link-core {
         filter:
@@ -2634,13 +2638,16 @@ const TopologyLinkPath: React.FC<TopologyLinkPathProps> = ({
                 positions={positions}
                 pathOptions={{
                     color: '#ffffff',
-                    weight: 16,
+                    weight: 24,
                     opacity: 0.01,
+                    lineCap: 'round',
+                    lineJoin: 'round',
                     className: 'customer-topology-link-hitbox',
                 }}
                 eventHandlers={{ click: handleClick }}
             />
             <Polyline
+                interactive={false}
                 positions={positions}
                 pathOptions={{
                     color: '#0f172a',
@@ -2652,6 +2659,7 @@ const TopologyLinkPath: React.FC<TopologyLinkPathProps> = ({
                 }}
             />
             <Polyline
+                interactive={false}
                 positions={positions}
                 pathOptions={{
                     color,
@@ -2665,6 +2673,7 @@ const TopologyLinkPath: React.FC<TopologyLinkPathProps> = ({
                 }}
             />
             <Polyline
+                interactive={false}
                 positions={positions}
                 pathOptions={{
                     color: '#ffffff',
