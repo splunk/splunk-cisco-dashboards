@@ -27,13 +27,15 @@ export interface SearchResult {
 
 export type TopologyStatus = 'critical' | 'warning' | 'stable' | 'unknown';
 
-export type TopologyRole =
+export type KnownTopologyRole =
     | 'state_hq'
     | 'regional_hub'
     | 'logistics'
     | 'branch'
     | 'datacenter'
     | 'internet_edge';
+
+export type TopologyRole = KnownTopologyRole | (string & {});
 
 export interface TopologySite {
     id: string;

@@ -70,6 +70,7 @@ import {
 import { runSearch } from '@/common/services/splunkSearchService';
 import type {
     CustomerTopology,
+    KnownTopologyRole,
     TopologyLink,
     TopologyRole,
     TopologySite,
@@ -224,13 +225,68 @@ const STATUS_RANK: Record<TopologyStatus, number> = {
     stable: 1,
 };
 
-const ROLE_LABEL: Record<TopologyRole, string> = {
-    state_hq: 'State HQ',
+const TOPOLOGY_ROLES: KnownTopologyRole[] = [
+    'state_hq',
+    'regional_hub',
+    'logistics',
+    'branch',
+    'datacenter',
+    'internet_edge',
+];
+
+const TOPOLOGY_ROLE_SET = new Set<string>(TOPOLOGY_ROLES);
+
+const isKnownTopologyRole = (value: unknown): value is KnownTopologyRole =>
+    typeof value === 'string' && TOPOLOGY_ROLE_SET.has(value);
+
+const ROLE_LABEL: Record<KnownTopologyRole, string> = {
+    state_hq: 'HQ',
     regional_hub: 'Regional Hub',
     logistics: 'Logistics',
     branch: 'Branch',
     datacenter: 'Data Center',
     internet_edge: 'Internet Edge',
+};
+
+const roleInputValue = (role: TopologyRole): string =>
+    isKnownTopologyRole(role) ? ROLE_LABEL[role] : role;
+
+const topologyRoleLabel = (role: TopologyRole | undefined): string => {
+    const value = typeof role === 'string' ? role.trim() : '';
+    if (!value) return 'Role';
+    if (isKnownTopologyRole(value)) return ROLE_LABEL[value];
+
+    const spaced = value.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!spaced) return 'Role';
+    if (spaced === spaced.toLowerCase()) {
+        return spaced.replace(/\b[a-z0-9]/g, (match) => match.toUpperCase());
+    }
+    return spaced;
+};
+
+const normalizeTopologyRoleInput = (
+    value: unknown,
+    fallback: TopologyRole = 'branch'
+): TopologyRole => {
+    if (typeof value !== 'string') return fallback;
+    const trimmed = value.trim();
+    if (!trimmed) return fallback;
+    const lower = trimmed.toLowerCase();
+    const compact = lower.replace(/[\s_-]+/g, '');
+    for (const role of TOPOLOGY_ROLES) {
+        if (
+            lower === role ||
+            lower === ROLE_LABEL[role].toLowerCase() ||
+            compact === role.replace(/_/g, '')
+        ) {
+            return role;
+        }
+    }
+    if (compact === 'hq' || compact === 'headquarters') return 'state_hq';
+    if (compact === 'datacenter' || compact === 'datacentre') {
+        return 'datacenter';
+    }
+    return trimmed;
 };
 
 const STATUS_DOT_CLASS: Record<TopologyStatus, string> = {
@@ -247,7 +303,7 @@ const STATUS_STROKE: Record<TopologyStatus, string> = {
     unknown: '#94a3b8',
 };
 
-const ROLE_DOT_CLASS: Record<TopologyRole, string> = {
+const ROLE_DOT_CLASS: Record<KnownTopologyRole, string> = {
     state_hq: 'bg-sky-500',
     regional_hub: 'bg-amber-500',
     logistics: 'bg-red-500',
@@ -256,8 +312,13 @@ const ROLE_DOT_CLASS: Record<TopologyRole, string> = {
     internet_edge: 'bg-slate-500',
 };
 
+const CUSTOM_ROLE_DOT_CLASS = 'bg-slate-500';
+
+const topologyRoleDotClass = (role: TopologyRole): string =>
+    isKnownTopologyRole(role) ? ROLE_DOT_CLASS[role] : CUSTOM_ROLE_DOT_CLASS;
+
 const ROLE_BEACON_CHROME: Record<
-    TopologyRole,
+    KnownTopologyRole,
     { fill: string; halo: string; label: string }
 > = {
     state_hq: {
@@ -292,17 +353,20 @@ const ROLE_BEACON_CHROME: Record<
     },
 };
 
+const CUSTOM_ROLE_BEACON_CHROME = {
+    fill: '#64748b',
+    halo: 'rgba(100, 116, 139, 0.22)',
+    label: 'border-slate-200',
+};
+
+const topologyRoleBeaconChrome = (role: TopologyRole) =>
+    isKnownTopologyRole(role)
+        ? ROLE_BEACON_CHROME[role]
+        : CUSTOM_ROLE_BEACON_CHROME;
+
 const LEGACY_TOPOLOGY_STORAGE_KEY = 'splunk-cisco-dashboards.customerTopology.v4';
 const TOPOLOGY_CONFIG_EVENT = 'splunk-cisco-dashboards:customer-topology-config';
 const TOPOLOGY_STORAGE_VERSION = 4;
-const TOPOLOGY_ROLES: TopologyRole[] = [
-    'state_hq',
-    'regional_hub',
-    'logistics',
-    'branch',
-    'datacenter',
-    'internet_edge',
-];
 const TOPOLOGY_STATUSES: TopologyStatus[] = [
     'unknown',
     'stable',
@@ -488,9 +552,6 @@ const uniqueId = (base: string, used: Set<string>): string => {
     return candidate;
 };
 
-const isTopologyRole = (value: unknown): value is TopologyRole =>
-    TOPOLOGY_ROLES.includes(value as TopologyRole);
-
 const isTopologyStatus = (value: unknown): value is TopologyStatus =>
     TOPOLOGY_STATUSES.includes(value as TopologyStatus);
 
@@ -547,7 +608,10 @@ const sanitizeTopology = (
             id,
             name: textValue(site.name, fallbackSite?.name ?? shortName),
             shortName: shortName.toUpperCase(),
-            role: isTopologyRole(site.role) ? site.role : fallbackSite?.role ?? 'branch',
+            role: normalizeTopologyRoleInput(
+                site.role,
+                fallbackSite?.role ?? 'branch'
+            ),
             lat: numberValue(site.lat, fallbackSite?.lat ?? 39.2, -85, 85),
             lng: numberValue(site.lng, fallbackSite?.lng ?? -96.5, -180, 180),
             status: isTopologyStatus(site.status)
@@ -2065,9 +2129,6 @@ const inferRoleFromName = (name: string): TopologyRole => {
     return 'branch';
 };
 
-const isTopologyRoleValue = (value: unknown): value is TopologyRole =>
-    typeof value === 'string' && (TOPOLOGY_ROLES as readonly string[]).includes(value);
-
 const buildShortName = (name: string): string => {
     const trimmed = name.trim();
     if (!trimmed) return '?';
@@ -2097,9 +2158,7 @@ const parseSiteRowAsDiscovered = (
     const name =
         textFromRow(row, ['siteName', 'site_name', 'name', 'displayName']) ?? siteId;
     const rawRole = textFromRow(row, ['role', 'siteRole', 'site_role']);
-    const role: TopologyRole = isTopologyRoleValue(rawRole)
-        ? rawRole
-        : inferRoleFromName(name);
+    const role = normalizeTopologyRoleInput(rawRole, inferRoleFromName(name));
     const shortName = (
         textFromRow(row, ['shortName', 'short_name', 'siteCode', 'site_code']) ??
         buildShortName(name)
@@ -2366,7 +2425,7 @@ const createSiteIcon = (
 ) => {
     const safeName = escapeHtml(site.name);
     const safeShortName = escapeHtml(site.shortName);
-    const roleChrome = ROLE_BEACON_CHROME[site.role];
+    const roleChrome = topologyRoleBeaconChrome(site.role);
     const ringColor = STATUS_RING_COLOR[site.status];
     const haloColor = STATUS_HALO_RGBA[site.status];
     const waveSpeed = STATUS_MARKER_SPEED[site.status];
@@ -4167,8 +4226,8 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                         {resolvedTopology.sites.map((site) => (
                             <LegendRow
                                 key={site.id}
-                                color={ROLE_DOT_CLASS[site.role]}
-                                label={ROLE_LABEL[site.role]}
+                                color={topologyRoleDotClass(site.role)}
+                                label={topologyRoleLabel(site.role)}
                                 id={site.shortName}
                                 isDark={isDark}
                             />
@@ -4994,7 +5053,7 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
             : '';
     const subtitle =
         selected?.kind === 'site'
-            ? ROLE_LABEL[selected.site.role]
+            ? topologyRoleLabel(selected.site.role)
             : selected
             ? `${siteById[selected.link.sourceSiteId]?.shortName ?? '?'} to ${
                   siteById[selected.link.targetSiteId]?.shortName ?? '?'
@@ -6104,22 +6163,30 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                 >
                                                     Role
                                                 </span>
-                                                <select
+                                                <input
+                                                    list={`topology-role-options-${site.id}`}
                                                     className={editorInputClass(isDark)}
-                                                    value={site.role}
+                                                    value={roleInputValue(site.role)}
                                                     onChange={(event) =>
                                                         updateSite(site.id, {
-                                                            role: event.target
-                                                                .value as TopologyRole,
+                                                            role: normalizeTopologyRoleInput(
+                                                                event.target.value,
+                                                                ''
+                                                            ),
                                                         })
                                                     }
+                                                    placeholder="HQ, Branch, Campus..."
+                                                />
+                                                <datalist
+                                                    id={`topology-role-options-${site.id}`}
                                                 >
                                                     {TOPOLOGY_ROLES.map((role) => (
-                                                        <option key={role} value={role}>
-                                                            {ROLE_LABEL[role]}
-                                                        </option>
+                                                        <option
+                                                            key={role}
+                                                            value={ROLE_LABEL[role]}
+                                                        />
                                                     ))}
-                                                </select>
+                                                </datalist>
                                             </label>
                                             <label className="space-y-1">
                                                 <span
@@ -7372,7 +7439,7 @@ export const TopologySiteTable: React.FC<TopologySiteTableProps> = ({
                                     </div>
                                 </td>
                                 <td className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                                    {ROLE_LABEL[site.role]}
+                                    {topologyRoleLabel(site.role)}
                                 </td>
                                 <td className="px-3 py-1.5 text-right font-mono text-slate-700 dark:text-slate-200">
                                     {formatPercent(site.metrics.healthPct)}
