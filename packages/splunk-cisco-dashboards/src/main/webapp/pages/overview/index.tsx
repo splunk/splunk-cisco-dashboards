@@ -53,6 +53,7 @@ import {
     ArrowUp,
     ArrowDown,
     ArrowUpDown,
+    Sparkles,
 } from 'lucide-react';
 import { DashboardSection } from '@/common/components/florida/DashboardSection';
 import { MetricItem } from '@/common/components/florida/MetricItem';
@@ -76,6 +77,10 @@ import {
 } from '@/common/services/customerTopologyPersistenceService';
 import { HealthBadge } from '@/common/components/florida/HealthBadge';
 import { IncidentTicker } from '@/common/components/florida/IncidentTicker';
+import {
+    SignalTickerEditor,
+    SignalTickerRail,
+} from '@/common/components/florida/SignalTickerRail';
 import { HelpOverlay } from '@/common/components/florida/HelpOverlay';
 import { InfoTooltip } from '@/common/components/florida/InfoTooltip';
 import {
@@ -109,6 +114,7 @@ import {
 } from '@/common/hooks/usePersistedSearchbaseDrilldowns';
 import { usePersistedSectionTileCounts } from '@/common/hooks/usePersistedSectionTileCounts';
 import { usePersistedSectionTileOrder } from '@/common/hooks/usePersistedSectionTileOrder';
+import { usePersistedSignalTicker } from '@/common/hooks/usePersistedSignalTicker';
 import {
     useBrandingOverride,
     readImageAsDataUri,
@@ -2188,6 +2194,28 @@ const OverviewPage: React.FC = () => {
         };
     }, []);
 
+    // ------------------------------ Signal rail ------------------------------
+    // A configurable, moving executive KPI rail. This first slice follows the
+    // page's existing per-browser customization model for KPI bindings; the
+    // selected entries still come from `searchbase.conf` so the content model
+    // stays app-owned and familiar to operators.
+    const {
+        config: signalTickerConfig,
+        setConfig: setSignalTickerConfig,
+        resetAll: resetSignalTickerConfig,
+        itemCount: signalTickerItemCount,
+    } = usePersistedSignalTicker();
+    const [signalTickerEditorOpen, setSignalTickerEditorOpen] = useState(false);
+    const searchbaseCatalogue = useMemo(
+        () =>
+            searchbaseByName
+                ? Array.from(searchbaseByName.values()).sort((a, b) =>
+                      a.searchName.localeCompare(b.searchName)
+                  )
+                : [],
+        [searchbaseByName]
+    );
+
     // ------------------------------ Regional view (map | table) ------------------------------
     const [regionalView, setRegionalView] = useState<RegionalView>('map');
     const [topologySummaryById, setTopologySummaryById] =
@@ -2787,6 +2815,7 @@ const OverviewPage: React.FC = () => {
     //   • scd_overview_split_pct        — tiles ↔ map splitter position
     //   • scd_overview_map_pos          — map position (right / below / above)
     //   • priorityDrilldown.v1          — pinned app-local drill-down target
+    //   • signalTicker.v1               — moving KPI rail selection
     //
     // What is intentionally NOT reset:
     //   • header branding (title / subtitle / logo) — identity, not
@@ -2802,6 +2831,7 @@ const OverviewPage: React.FC = () => {
         resetAllSearchbaseDrilldowns();
         resetAllSectionTileCounts();
         resetAllSectionTileOrder();
+        resetSignalTickerConfig();
         clearCustomerTopologyStorage();
         setTopologyResetKey((n) => n + 1);
         setLeftPct(SPLIT_DEFAULT);
@@ -2824,6 +2854,7 @@ const OverviewPage: React.FC = () => {
         resetAllSearchbaseDrilldowns,
         resetAllSectionTileCounts,
         resetAllSectionTileOrder,
+        resetSignalTickerConfig,
         SPLIT_KEY,
         SPLIT_DEFAULT,
         setLeftPct,
@@ -3298,6 +3329,21 @@ const OverviewPage: React.FC = () => {
                             </span>
                         </button>
                     )}
+                    <button
+                        type="button"
+                        onClick={() => setSignalTickerEditorOpen(true)}
+                        title={`Configure signal rail (${signalTickerItemCount} KPI${
+                            signalTickerItemCount === 1 ? '' : 's'
+                        })`}
+                        className={cn(
+                            iconBtnClass,
+                            signalTickerConfig.enabled
+                                ? 'text-sky-600 dark:text-sky-300'
+                                : 'text-slate-400 dark:text-slate-500'
+                        )}
+                    >
+                        <Sparkles className="w-4 h-4" />
+                    </button>
                     <ThemeToggle theme={theme} onCycle={cycleTheme} />
                     <button
                         type="button"
@@ -3347,6 +3393,14 @@ const OverviewPage: React.FC = () => {
                     refreshToken={refreshToken}
                 />
             ) : null}
+
+            <SignalTickerRail
+                config={signalTickerConfig}
+                catalogueByName={searchbaseByName}
+                range={timeRange}
+                refreshToken={refreshToken}
+                onOpenEditor={() => setSignalTickerEditorOpen(true)}
+            />
 
             {/* Customer-pinned, app-local drill-down. Keep this to one
                 primary path so the executive overview has a decisive
@@ -3953,6 +4007,16 @@ const OverviewPage: React.FC = () => {
                     }
                 }}
                 onResetAllCustomizations={handleResetAllCustomizations}
+            />
+
+            <SignalTickerEditor
+                open={signalTickerEditorOpen}
+                config={signalTickerConfig}
+                catalogue={searchbaseCatalogue}
+                catalogueLoading={searchbaseByName === null}
+                onChange={setSignalTickerConfig}
+                onReset={resetSignalTickerConfig}
+                onClose={() => setSignalTickerEditorOpen(false)}
             />
 
             {activeDetailTable && (
