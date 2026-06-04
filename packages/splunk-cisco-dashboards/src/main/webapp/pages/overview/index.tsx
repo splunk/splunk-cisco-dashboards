@@ -4312,12 +4312,15 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
-            className="fixed inset-0 z-[1700] flex items-center justify-center p-4"
+            className="fixed inset-0 z-[1900] flex items-center justify-center p-4"
             onClick={(e) => {
                 if (e.target === e.currentTarget) onClose();
             }}
         >
-            <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm" />
+            <div
+                className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
+                onClick={onClose}
+            />
             <div className="relative w-full max-w-6xl max-h-[88vh] overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 shadow-2xl">
                 <div className="flex items-start justify-between gap-4 px-5 py-4 border-b border-slate-200 dark:border-slate-800">
                     <div>

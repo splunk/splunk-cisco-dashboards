@@ -342,6 +342,11 @@ export const MetricItem: React.FC<MetricItemProps> = ({
         return () => window.removeEventListener('keydown', onKeyDown);
     }, [isFocusOpen]);
 
+    const openDetailFromFocus = React.useCallback(() => {
+        setIsFocusOpen(false);
+        onOpenDetailTable?.();
+    }, [onOpenDetailTable]);
+
     return (
         // flex-1 + basis-0 makes every tile grab an equal share of the
         // section's free width — without it the tiles sat at their
@@ -709,7 +714,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                                 {onOpenDetailTable && (
                                     <button
                                         type="button"
-                                        onClick={onOpenDetailTable}
+                                        onClick={openDetailFromFocus}
                                         title={detailTableTitle ?? 'View detail table'}
                                         aria-label={detailTableTitle ?? `View ${label} detail table`}
                                         className="inline-flex items-center gap-1.5 rounded border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-slate-600 transition-colors hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:border-slate-700 dark:text-slate-300 dark:hover:border-sky-600 dark:hover:bg-sky-950/40 dark:hover:text-sky-200"
