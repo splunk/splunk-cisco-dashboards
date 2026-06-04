@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 export type SignalTickerSpeed = 'slow' | 'normal' | 'fast';
 export type SignalTickerRows = 1 | 2;
+export type SignalTickerDensity = 'compact' | 'comfortable';
 export type SignalTickerThresholdDirection =
     | 'higher_is_better'
     | 'lower_is_better';
@@ -21,6 +22,7 @@ export interface SignalTickerConfig {
     enabled: boolean;
     rows: SignalTickerRows;
     speed: SignalTickerSpeed;
+    density: SignalTickerDensity;
     items: SignalTickerItem[];
 }
 
@@ -36,6 +38,7 @@ const DEFAULT_SIGNAL_TICKER_CONFIG: SignalTickerConfig = {
     enabled: true,
     rows: 1,
     speed: 'normal',
+    density: 'compact',
     items: [
         {
             id: 'critical_sites_available',
@@ -164,6 +167,8 @@ const sanitizeConfig = (raw: unknown): SignalTickerConfig | null => {
         source.speed === 'slow' || source.speed === 'fast'
             ? source.speed
             : 'normal';
+    const density: SignalTickerDensity =
+        source.density === 'comfortable' ? 'comfortable' : 'compact';
     const rawItems = Array.isArray(source.items) ? source.items : [];
     const seen = new Set<string>();
     const items: SignalTickerItem[] = [];
@@ -174,7 +179,7 @@ const sanitizeConfig = (raw: unknown): SignalTickerConfig | null => {
         items.push(item);
         if (items.length >= 24) break;
     }
-    return { enabled, rows, speed, items };
+    return { enabled, rows, speed, density, items };
 };
 
 const readFromStorage = (): SignalTickerConfig => {
