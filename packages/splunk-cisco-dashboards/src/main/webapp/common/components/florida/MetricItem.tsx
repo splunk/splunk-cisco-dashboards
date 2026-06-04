@@ -343,7 +343,6 @@ export const MetricItem: React.FC<MetricItemProps> = ({
     }, [isFocusOpen]);
 
     const openDetailFromFocus = React.useCallback(() => {
-        setIsFocusOpen(false);
         onOpenDetailTable?.();
     }, [onOpenDetailTable]);
 

@@ -4208,10 +4208,13 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
 
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose();
+            if (e.key !== 'Escape') return;
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            onClose();
         };
-        window.addEventListener('keydown', onKeyDown);
-        return () => window.removeEventListener('keydown', onKeyDown);
+        window.addEventListener('keydown', onKeyDown, true);
+        return () => window.removeEventListener('keydown', onKeyDown, true);
     }, [onClose]);
 
     useEffect(() => {
