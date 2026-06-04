@@ -264,7 +264,7 @@ export default function DBHomePage() {
         if (activeModeId == 'create') {
             // create a new dashboard and then open it
 
-            const dashid = `is4s_${dashboardTitle.replaceAll(' ', '_').replaceAll('#', '')}`;
+            const dashid = `scd_${dashboardTitle.replaceAll(' ', '_').replaceAll('#', '')}`;
             let jsonDefinition = cloneDeep(initialDefinition);
             jsonDefinition.title = dashboardTitle;
             jsonDefinition.description = dashboardDescription;
@@ -301,7 +301,7 @@ export default function DBHomePage() {
         } else if (activeModeId == 'fromtemplate') {
             // create a new dashboard and then open it
 
-            const dashid = `is4s_${dashboardTitle.replaceAll(' ', '_').replaceAll('#', '')}`;
+            const dashid = `scd_${dashboardTitle.replaceAll(' ', '_').replaceAll('#', '')}`;
 
             let jsonDefinition = cloneDeep(
                 dashboards.find((c) => c.title == selectedOpenTemplate).definition,
@@ -548,7 +548,7 @@ export default function DBHomePage() {
     };
 
     const handleCreateTemplate = () => {
-        const dashid = `is4s_${dashboardTitle.replaceAll(' ', '_').replaceAll('#', '')}`;
+        const dashid = `scd_${dashboardTitle.replaceAll(' ', '_').replaceAll('#', '')}`;
         let jDefinition = cloneDeep(initialTemplateDefinition);
         jDefinition.title = dashboardTitle;
         jDefinition.layout.type = gridLayout;
