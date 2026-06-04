@@ -5820,6 +5820,11 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                         expandedCardKeys.has(cardKey);
                                     const boundSearch =
                                         site.searchName?.trim() || '';
+                                    const searchCardKey = `site-search:${site.id}`;
+                                    const isSearchPickerOpen =
+                                        expandedCardKeys.has(searchCardKey);
+                                    const shouldShowSearchPicker =
+                                        isSearchPickerOpen || !boundSearch;
                                     return (
                                     <div
                                         key={site.id}
@@ -6034,36 +6039,6 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                 </span>
                                             )}
                                         </div>
-                                        {/*
-                                            Data-source picker. Lives at the
-                                            top of the expanded body because
-                                            "which search powers this
-                                            marker?" is the most-asked
-                                            question once the site exists in
-                                            the topology. The header above
-                                            already shows the bound search
-                                            name + an "Open in Search"
-                                            button so an operator can
-                                            sanity-check before expanding
-                                            the picker.
-                                        */}
-                                        <div className="pt-2">
-                                            <TopologySearchBrowser
-                                                catalogue={editorSearchOptions}
-                                                currentSearchName={
-                                                    site.searchName ?? ''
-                                                }
-                                                preferredTags={['Topology_Site']}
-                                                label="site"
-                                                onPick={(searchName) =>
-                                                    updateSite(site.id, {
-                                                        searchName,
-                                                    })
-                                                }
-                                                isDark={isDark}
-                                                showFreeFormInput
-                                            />
-                                        </div>
                                         <div className="grid grid-cols-2 gap-2">
                                             <label className="space-y-1">
                                                 <span
@@ -6264,6 +6239,94 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                 confirmed yet.
                                             </span>
                                         </label>
+                                        <div
+                                            className={cn(
+                                                'rounded-md border px-2.5 py-2',
+                                                isDark
+                                                    ? 'border-slate-800 bg-slate-950/50'
+                                                    : 'border-slate-200 bg-white'
+                                            )}
+                                        >
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="min-w-0">
+                                                    <span
+                                                        className={cn(
+                                                            editorLabelClass,
+                                                            isDark
+                                                                ? 'text-slate-500'
+                                                                : 'text-slate-400'
+                                                        )}
+                                                    >
+                                                        Search binding
+                                                    </span>
+                                                    <div
+                                                        className={cn(
+                                                            'mt-1 truncate text-[11px] font-semibold',
+                                                            isDark
+                                                                ? boundSearch
+                                                                    ? 'text-slate-200'
+                                                                    : 'text-slate-500'
+                                                                : boundSearch
+                                                                ? 'text-slate-700'
+                                                                : 'text-slate-400'
+                                                        )}
+                                                        title={
+                                                            boundSearch ||
+                                                            'No search bound'
+                                                        }
+                                                    >
+                                                        {boundSearch ||
+                                                            'No search bound'}
+                                                    </div>
+                                                </div>
+                                                {boundSearch && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            toggleCardExpanded(
+                                                                searchCardKey
+                                                            )
+                                                        }
+                                                        aria-expanded={
+                                                            shouldShowSearchPicker
+                                                        }
+                                                        className={cn(
+                                                            'inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[9px] font-black uppercase tracking-wider transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                                                            isDark
+                                                                ? 'border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800'
+                                                                : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+                                                        )}
+                                                    >
+                                                        {shouldShowSearchPicker
+                                                            ? 'Hide'
+                                                            : 'Change'}
+                                                    </button>
+                                                )}
+                                            </div>
+                                            {shouldShowSearchPicker && (
+                                                <div className="mt-2">
+                                                    <TopologySearchBrowser
+                                                        catalogue={
+                                                            editorSearchOptions
+                                                        }
+                                                        currentSearchName={
+                                                            site.searchName ?? ''
+                                                        }
+                                                        preferredTags={[
+                                                            'Topology_Site',
+                                                        ]}
+                                                        label="site"
+                                                        onPick={(searchName) =>
+                                                            updateSite(site.id, {
+                                                                searchName,
+                                                            })
+                                                        }
+                                                        isDark={isDark}
+                                                        showFreeFormInput
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
                                         </div>
                                         )}
                                     </div>
