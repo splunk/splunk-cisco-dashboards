@@ -90,22 +90,14 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
     id: 'customer-site-connectivity',
     name: 'Customer Site Connectivity',
     subtitle: 'Editable customer site connectivity',
-    telemetrySearchName: 'Overview - Topology Overview',
     map: {
-        // Center re-derived for the TLH+AUB-only topology (David call,
-        // 2026-05-12): MCO/Orlando was never an customer site and has been
-        // removed. The midpoint between TLH (30.4383, -84.2807) and
-        // AUB (28.0653, -81.7876) sits at ~(29.25, -83.03), which
-        // keeps both markers visible at the default zoom without
-        // needing to pan. Bounds are kept permissive so the user can
-        // still pan to neighbouring states for context.
-        center: [29.25, -83.0],
-        zoom: 6.55,
-        minZoom: 5,
+        center: [39.5, -98.35],
+        zoom: 4.2,
+        minZoom: 3,
         maxZoom: 11,
         bounds: [
-            [22.5, -90.0],
-            [32.5, -77.0],
+            [24.0, -126.0],
+            [50.5, -66.0],
         ],
     },
     // `internetEdgeMbps` is intentionally left undefined on every site.
@@ -126,60 +118,62 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
     // will override them at runtime.
     sites: [
         {
-            id: 'tlh',
-            name: 'Tallahassee (State EOC)',
-            shortName: 'TLH',
+            id: 'nyc',
+            name: 'New York City',
+            shortName: 'NYC',
             role: 'state_hq',
-            lat: 30.4383,
-            lng: -84.2807,
+            lat: 40.7128,
+            lng: -74.006,
             status: 'unknown',
             metrics: {},
-            telemetrySource: 'Awaiting normalized site telemetry',
-            searchName: 'Overview - Site Tallahassee Health',
+            telemetrySource: 'Configured topology item',
         },
         {
-            id: 'aub',
-            name: 'Auburndale (Logistics)',
-            shortName: 'AUB',
-            role: 'logistics',
-            lat: 28.0653,
-            lng: -81.7876,
+            id: 'chicago',
+            name: 'Chicago',
+            shortName: 'CHI',
+            role: 'regional_hub',
+            lat: 41.8781,
+            lng: -87.6298,
             status: 'unknown',
             metrics: {},
-            telemetrySource: 'Awaiting normalized site telemetry',
-            searchName: 'Overview - Site Auburndale Health',
+            telemetrySource: 'Configured topology item',
         },
-    ],
-    links: [
-        // Single TLH<->AUB inter-site link. The TLH<->MCO and
-        // MCO<->AUB legs were removed alongside the MCO site (David
-        // call, 2026-05-12). A ThousandEyes agent-to-agent test does
-        // exist for this pair, but as of the call the Tallahassee
-        // enterprise agent (`demt-te01-va`) is unresponsive to probes,
-        // so the link popup will read "Awaiting" until either the
-        // agent recovers or the SPL stanza is rewired to consume the
-        // A2A `Test_Metrics` data once it's trustworthy.
         {
-            id: 'aub-tlh',
-            name: 'Auburndale to Tallahassee',
-            sourceSiteId: 'aub',
-            targetSiteId: 'tlh',
+            id: 'austin',
+            name: 'Austin',
+            shortName: 'AUS',
+            role: 'branch',
+            lat: 30.2672,
+            lng: -97.7431,
             status: 'unknown',
-            telemetrySource: 'Awaiting topology link telemetry',
-            // OOB default is the dedicated TE A2A stanza
-            // `[overview_link_te_a2a_health]` (added 2026-05-12). It
-            // returns one normalized row per A2A test path between the
-            // two cities with all three network metrics (latency, loss,
-            // jitter) plus geo-enriched agent identity and the TE
-            // permalink. The multi-source umbrella stanza
-            // `Overview - Link Auburndale to Tallahassee Health` is
-            // still in the catalogue for customers running SD-WAN who
-            // want SD-WAN > TE > Catalyst Center prioritization;
-            // operators can swap back to it via the in-popup catalogue
-            // browser.
-            searchName: 'Overview - Link ThousandEyes A2A Health',
+            metrics: {},
+            telemetrySource: 'Configured topology item',
+        },
+        {
+            id: 'san-francisco',
+            name: 'San Francisco',
+            shortName: 'SFO',
+            role: 'datacenter',
+            lat: 37.7749,
+            lng: -122.4194,
+            status: 'unknown',
+            metrics: {},
+            telemetrySource: 'Configured topology item',
+        },
+        {
+            id: 'seattle',
+            name: 'Seattle',
+            shortName: 'SEA',
+            role: 'branch',
+            lat: 47.6062,
+            lng: -122.3321,
+            status: 'unknown',
+            metrics: {},
+            telemetrySource: 'Configured topology item',
         },
     ],
+    links: [],
 };
 
 const STATUS_RANK: Record<TopologyStatus, number> = {
@@ -311,6 +305,33 @@ const SITE_PLACEMENT_PRESETS: Array<{
         lng: -87.6298,
     },
     {
+        aliases: ['aus', 'austin', 'austin tx', 'austin, tx'],
+        name: 'Austin',
+        shortName: 'AUS',
+        lat: 30.2672,
+        lng: -97.7431,
+    },
+    {
+        aliases: [
+            'sf',
+            'sfo',
+            'san francisco',
+            'san francisco ca',
+            'san francisco, ca',
+        ],
+        name: 'San Francisco',
+        shortName: 'SFO',
+        lat: 37.7749,
+        lng: -122.4194,
+    },
+    {
+        aliases: ['sea', 'seattle', 'seattle wa', 'seattle, wa'],
+        name: 'Seattle',
+        shortName: 'SEA',
+        lat: 47.6062,
+        lng: -122.3321,
+    },
+    {
         aliases: ['dal', 'dallas', 'dallas, tx'],
         name: 'Dallas',
         shortName: 'DAL',
@@ -365,7 +386,7 @@ export type TopologySummaryMetricMap = Record<string, TopologySummaryMetric>;
 /**
  * Site-level metadata sourced from `cisco:dnac:site:topology` via the
  * `Site Topology - Map Marker Enrichment (Buildings with GPS)` searchbase
- * stanza. Keyed by the building's short name (e.g. "TLH", "AUB")
+ * stanza. Keyed by the building's short name (e.g. "NYC", "CHI")
  * which matches the `shortName` of `TopologySite` entries in
  * `CUSTOMER_TOPOLOGY`. Sites that DNAC isn't currently managing simply
  * have no entry; consumers MUST treat the lookup as optional.
@@ -4750,7 +4771,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                                     onPick(customDraft.trim());
                                 }
                             }}
-                            placeholder="e.g. Overview - Site Tallahassee Health"
+                            placeholder="e.g. Overview - Site Health"
                             className={cn(
                                 'flex-1 rounded-md border px-2 py-1.5 text-[11px] outline-none transition-colors focus:ring-2 focus:ring-sky-400',
                                 isDark
