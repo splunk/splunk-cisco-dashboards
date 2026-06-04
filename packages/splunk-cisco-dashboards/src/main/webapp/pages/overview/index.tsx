@@ -70,6 +70,10 @@ import {
     TopologySiteTable,
     usePersistedTopology,
 } from '@/common/components/florida/CustomerTopologyMap';
+import {
+    DEFAULT_CUSTOMER_TOPOLOGY_SECTION_TITLES,
+    type CustomerTopologySectionTitles,
+} from '@/common/services/customerTopologyPersistenceService';
 import { HealthBadge } from '@/common/components/florida/HealthBadge';
 import { IncidentTicker } from '@/common/components/florida/IncidentTicker';
 import { HelpOverlay } from '@/common/components/florida/HelpOverlay';
@@ -877,10 +881,18 @@ const SECTION_META: Record<
     SectionId,
     { title: string; linkText: string; href: string }
 > = {
-    it_health: { title: 'IT Health', linkText: 'Open IT health', href: 'it_health_v1' },
-    security: { title: 'Security', linkText: 'Open security', href: 'security_v1' },
+    it_health: {
+        title: DEFAULT_CUSTOMER_TOPOLOGY_SECTION_TITLES.it_health,
+        linkText: 'Open IT health',
+        href: 'it_health_v1',
+    },
+    security: {
+        title: DEFAULT_CUSTOMER_TOPOLOGY_SECTION_TITLES.security,
+        linkText: 'Open security',
+        href: 'security_v1',
+    },
     building: {
-        title: 'Building Intelligence',
+        title: DEFAULT_CUSTOMER_TOPOLOGY_SECTION_TITLES.building,
         linkText: 'Open building intelligence',
         href: 'building_v1',
     },
@@ -1948,6 +1960,8 @@ const OverviewPage: React.FC = () => {
         resetAll: resetBrandingOverride,
     } = useBrandingOverride();
     const [isBrandingEditorOpen, setBrandingEditorOpen] = useState<boolean>(false);
+    const [isSectionTitlesEditorOpen, setSectionTitlesEditorOpen] =
+        useState<boolean>(false);
 
     const effectiveTitle =
         brandingOverride.title ||
@@ -2529,14 +2543,43 @@ const OverviewPage: React.FC = () => {
     // hardcoded "Network Topology" / "Site connectivity and path
     // health"). The same hook the map uses; same localStorage key, so
     // edits land here without any manual sync.
-    const { topology: persistedTopology } = usePersistedTopology(
-        CUSTOMER_TOPOLOGY
-    );
+    const {
+        topology: persistedTopology,
+        sectionTitles,
+        saveSectionTitles,
+    } = usePersistedTopology(CUSTOMER_TOPOLOGY);
     const topologyHeaderName =
         persistedTopology.name?.trim() || 'Network Topology';
     const topologyHeaderSubtitle =
         persistedTopology.subtitle?.trim() ||
         'Site connectivity and path health';
+    const effectiveSectionMeta = useMemo(
+        () =>
+            ({
+                it_health: {
+                    ...SECTION_META.it_health,
+                    title:
+                        sectionTitles.it_health ||
+                        SECTION_META.it_health.title,
+                },
+                security: {
+                    ...SECTION_META.security,
+                    title:
+                        sectionTitles.security ||
+                        SECTION_META.security.title,
+                },
+                building: {
+                    ...SECTION_META.building,
+                    title:
+                        sectionTitles.building ||
+                        SECTION_META.building.title,
+                },
+            } as Record<
+                SectionId,
+                { title: string; linkText: string; href: string }
+            >),
+        [sectionTitles]
+    );
 
     // Saved-search names already bound across the dashboard, so the
     // picker can flag duplicates with an "in use" badge.
@@ -2632,11 +2675,11 @@ const OverviewPage: React.FC = () => {
                 currentHideOverlay: ov?.hideOverlay,
                 sectionId: current?.section,
                 sectionLabel: current?.section
-                    ? SECTION_META[current.section]?.title
+                    ? effectiveSectionMeta[current.section]?.title
                     : undefined,
             });
         },
-        [overrides, usedSavedSearches]
+        [effectiveSectionMeta, overrides, usedSavedSearches]
     );
 
     const closePicker = useCallback(() => setPickerContext(null), []);
@@ -2735,12 +2778,12 @@ const OverviewPage: React.FC = () => {
     // calling this, so misclicks are caught at the UI layer; we only
     // get here if the user has explicitly agreed.
     //
-    // What gets reset (and the localStorage key cleared):
+    // What gets reset (and the localStorage keys cleared):
     //   • metricOverrides.v1            — per-tile picker bindings
     //   • searchbaseDrilldowns.v1       — picker-wired drilldown bindings
     //   • sectionTileCounts.v1          — visible tile count per section
     //   • sectionTileOrder.v1           — drag-to-reorder preference
-    //   • customerTopology.v4           — Florida map customisations
+    //   • customerTopology.v4           — retired per-browser map payload
     //   • scd_overview_split_pct        — tiles ↔ map splitter position
     //   • scd_overview_map_pos          — map position (right / below / above)
     //   • priorityDrilldown.v1          — pinned app-local drill-down target
@@ -2749,12 +2792,11 @@ const OverviewPage: React.FC = () => {
     //   • header branding (title / subtitle / logo) — identity, not
     //     dashboard layout or tile state
     //   • theme (light / dark) — UI preference, not layout
-    //   • Splunk-side preferences (saved searches, scheduled jobs) —
-    //     those don't live in this dashboard's localStorage
+    //   • shared customer_topology.conf — site/link and section-title
+    //     edits are global app state, not per-user layout preference
     //
-    // After reset, we close the picker and bump `topologyResetKey` so
-    // the map re-mounts with its now-empty persisted state and falls
-    // through to the canonical CUSTOMER_TOPOLOGY factory.
+    // After reset, we close the picker and bump `topologyResetKey` to
+    // clear any retired in-browser topology payload from old builds.
     const handleResetAllCustomizations = useCallback(() => {
         resetAllOverrides();
         resetAllSearchbaseDrilldowns();
@@ -3019,18 +3061,18 @@ const OverviewPage: React.FC = () => {
     const SHORTCUTS: { keys: string; description: string; handler: () => void }[] = [
         {
             keys: 'g i',
-            description: 'Open IT Health dashboard (new tab)',
-            handler: () => openDrilldown(SECTION_META.it_health.href),
+            description: `Open ${effectiveSectionMeta.it_health.title} dashboard (new tab)`,
+            handler: () => openDrilldown(effectiveSectionMeta.it_health.href),
         },
         {
             keys: 'g s',
-            description: 'Open Security dashboard (new tab)',
-            handler: () => openDrilldown(SECTION_META.security.href),
+            description: `Open ${effectiveSectionMeta.security.title} dashboard (new tab)`,
+            handler: () => openDrilldown(effectiveSectionMeta.security.href),
         },
         {
             keys: 'g b',
-            description: 'Open Building Intelligence (new tab)',
-            handler: () => openDrilldown(SECTION_META.building.href),
+            description: `Open ${effectiveSectionMeta.building.title} (new tab)`,
+            handler: () => openDrilldown(effectiveSectionMeta.building.href),
         },
         { keys: 't', description: 'Cycle time range', handler: cycleTimeRange },
         { keys: 'r', description: 'Refresh all data now', handler: refreshNow },
@@ -3474,7 +3516,7 @@ const OverviewPage: React.FC = () => {
                         }
                     >
                         {(['it_health', 'security', 'building'] as const).map((section) => {
-                            const meta = SECTION_META[section];
+                            const meta = effectiveSectionMeta[section];
                             const allSectionMetrics = METRIC_CONFIG.filter(
                                 (m) => m.section === section
                             );
@@ -3580,6 +3622,7 @@ const OverviewPage: React.FC = () => {
                                         onChange: (next) => setSectionTileCount(section, next),
                                         label: `${meta.title} tiles`,
                                     }}
+                                    onEditTitle={() => setSectionTitlesEditorOpen(true)}
                                 >
                                     <DndContext
                                         sensors={dndSensors}
@@ -3932,6 +3975,21 @@ const OverviewPage: React.FC = () => {
                 onResetToDefaults={() => {
                     resetBrandingOverride();
                     setBrandingEditorOpen(false);
+                }}
+            />
+
+            <SectionTitlesEditorModal
+                isOpen={isSectionTitlesEditorOpen}
+                onClose={() => setSectionTitlesEditorOpen(false)}
+                values={sectionTitles}
+                defaults={DEFAULT_CUSTOMER_TOPOLOGY_SECTION_TITLES}
+                onSave={async (next) => {
+                    await saveSectionTitles(next);
+                    setSectionTitlesEditorOpen(false);
+                }}
+                onResetToDefaults={async () => {
+                    await saveSectionTitles(DEFAULT_CUSTOMER_TOPOLOGY_SECTION_TITLES);
+                    setSectionTitlesEditorOpen(false);
                 }}
             />
         </div>
@@ -4475,6 +4533,232 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
                             )}
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// =============================================================================
+// Section title editor
+// =============================================================================
+
+interface SectionTitlesEditorModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    values: CustomerTopologySectionTitles;
+    defaults: CustomerTopologySectionTitles;
+    onSave: (next: CustomerTopologySectionTitles) => Promise<void>;
+    onResetToDefaults: () => Promise<void>;
+}
+
+const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
+    isOpen,
+    onClose,
+    values,
+    defaults,
+    onSave,
+    onResetToDefaults,
+}) => {
+    const [draft, setDraft] =
+        useState<CustomerTopologySectionTitles>(values);
+    const [isSaving, setIsSaving] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+
+    useEffect(() => {
+        if (!isOpen) return;
+        setDraft(values);
+        setErrorMessage('');
+        setIsSaving(false);
+    }, [isOpen, values]);
+
+    useEffect(() => {
+        if (!isOpen) return undefined;
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && !isSaving) onClose();
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [isOpen, isSaving, onClose]);
+
+    if (!isOpen) return null;
+
+    const setTitle = (key: keyof CustomerTopologySectionTitles, value: string) => {
+        setDraft((current) => ({
+            ...current,
+            [key]: value,
+        }));
+    };
+
+    const save = async () => {
+        setIsSaving(true);
+        setErrorMessage('');
+        try {
+            await onSave({
+                it_health: draft.it_health.trim() || defaults.it_health,
+                security: draft.security.trim() || defaults.security,
+                building: draft.building.trim() || defaults.building,
+            });
+        } catch (err) {
+            setErrorMessage(err instanceof Error ? err.message : String(err));
+            setIsSaving(false);
+        }
+    };
+
+    const reset = async () => {
+        setIsSaving(true);
+        setErrorMessage('');
+        try {
+            await onResetToDefaults();
+        } catch (err) {
+            setErrorMessage(err instanceof Error ? err.message : String(err));
+            setIsSaving(false);
+        }
+    };
+
+    const inputClass =
+        'w-full px-2 py-1.5 text-sm bg-white dark:bg-slate-800 border ' +
+        'border-slate-300 dark:border-slate-600 rounded text-slate-900 ' +
+        'dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 ' +
+        'focus:outline-none focus:ring-1 focus:ring-sky-400';
+    const labelClass =
+        'block text-[10px] font-bold text-slate-600 dark:text-slate-400 ' +
+        'uppercase tracking-wider mb-1';
+
+    return (
+        <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="section-titles-editor-title"
+            className="fixed inset-0 z-[60] flex items-center justify-center"
+            onClick={(e) => {
+                if (!isSaving && e.target === e.currentTarget) onClose();
+            }}
+        >
+            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
+            <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl w-full max-w-md mx-4">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+                    <h2
+                        id="section-titles-editor-title"
+                        className="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider"
+                    >
+                        Edit section titles
+                    </h2>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        disabled={isSaving}
+                        title="Close"
+                        aria-label="Close"
+                        className={cn(
+                            'p-1 rounded text-slate-400 hover:text-slate-600',
+                            'dark:hover:text-slate-300 hover:bg-slate-100',
+                            'dark:hover:bg-slate-800 transition-colors',
+                            isSaving && 'cursor-not-allowed opacity-50'
+                        )}
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+
+                <div className="px-4 py-4 space-y-4">
+                    <div>
+                        <label htmlFor="section-title-it-health" className={labelClass}>
+                            Section 1
+                        </label>
+                        <input
+                            id="section-title-it-health"
+                            type="text"
+                            value={draft.it_health}
+                            onChange={(e) => setTitle('it_health', e.target.value)}
+                            placeholder={defaults.it_health}
+                            maxLength={48}
+                            className={inputClass}
+                        />
+                    </div>
+                    <div>
+                        <label htmlFor="section-title-security" className={labelClass}>
+                            Section 2
+                        </label>
+                        <input
+                            id="section-title-security"
+                            type="text"
+                            value={draft.security}
+                            onChange={(e) => setTitle('security', e.target.value)}
+                            placeholder={defaults.security}
+                            maxLength={48}
+                            className={inputClass}
+                        />
+                    </div>
+                    <div>
+                        <label htmlFor="section-title-building" className={labelClass}>
+                            Section 3
+                        </label>
+                        <input
+                            id="section-title-building"
+                            type="text"
+                            value={draft.building}
+                            onChange={(e) => setTitle('building', e.target.value)}
+                            placeholder={defaults.building}
+                            maxLength={48}
+                            className={inputClass}
+                        />
+                    </div>
+
+                    {errorMessage && (
+                        <div className="flex items-start gap-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200">
+                            <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+                            <span className="min-w-0 break-words">{errorMessage}</span>
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex items-center justify-between gap-2 px-4 py-3 border-t border-slate-200 dark:border-slate-700">
+                    <button
+                        type="button"
+                        onClick={reset}
+                        disabled={isSaving}
+                        className={cn(
+                            'inline-flex items-center gap-1.5 px-3 py-1.5 rounded border',
+                            'border-slate-300 dark:border-slate-600 text-xs font-bold',
+                            'text-slate-700 dark:text-slate-200 hover:bg-slate-50',
+                            'dark:hover:bg-slate-800 transition-colors',
+                            isSaving && 'cursor-not-allowed opacity-50'
+                        )}
+                    >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        Reset
+                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            disabled={isSaving}
+                            className={cn(
+                                'px-3 py-1.5 rounded border border-slate-300',
+                                'dark:border-slate-600 text-xs font-bold text-slate-700',
+                                'dark:text-slate-200 hover:bg-slate-50',
+                                'dark:hover:bg-slate-800 transition-colors',
+                                isSaving && 'cursor-not-allowed opacity-50'
+                            )}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            onClick={save}
+                            disabled={isSaving}
+                            className={cn(
+                                'inline-flex items-center gap-1.5 px-3 py-1.5',
+                                'rounded bg-sky-600 text-xs font-bold text-white',
+                                'hover:bg-sky-500 transition-colors',
+                                isSaving && 'cursor-not-allowed opacity-60'
+                            )}
+                        >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Save
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

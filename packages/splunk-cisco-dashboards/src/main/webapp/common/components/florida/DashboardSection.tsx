@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronRight, ArrowUpRight, Minus, Plus } from 'lucide-react';
+import { ChevronRight, ArrowUpRight, Minus, Pencil, Plus } from 'lucide-react';
 import { cn } from '@/common/lib/utils';
 
 interface TileCountControlConfig {
@@ -35,6 +35,7 @@ interface DashboardSectionProps {
      * callers continue to work unchanged).
      */
     tileCount?: TileCountControlConfig;
+    onEditTitle?: () => void;
 }
 
 const TileCountPill: React.FC<TileCountControlConfig> = ({
@@ -114,6 +115,7 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
     children,
     className,
     tileCount,
+    onEditTitle,
 }) => {
     // Build 101 (2026-05-13): the drill-down link moved from a
     // bottom footer row up onto the section title itself. On short
@@ -197,9 +199,28 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
         >
             <div className="absolute top-0 left-0 w-1.5 h-full bg-sky-100 dark:bg-sky-900/40 group-hover:bg-sky-600 dark:group-hover:bg-sky-500 transition-colors" />
 
-            <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center justify-between gap-2 mb-1.5">
                 {titleNode}
-                {tileCount && <TileCountPill {...tileCount} />}
+                <div className="flex items-center gap-1.5">
+                    {onEditTitle && (
+                        <button
+                            type="button"
+                            onClick={onEditTitle}
+                            title="Edit section titles"
+                            aria-label="Edit section titles"
+                            className={cn(
+                                'flex items-center justify-center w-6 h-6 rounded-md',
+                                'text-slate-400 hover:text-sky-600 dark:hover:text-sky-300',
+                                'hover:bg-slate-100 dark:hover:bg-slate-800',
+                                'opacity-0 group-hover:opacity-100 focus-visible:opacity-100',
+                                'transition focus:outline-none focus-visible:ring-1 focus-visible:ring-sky-400'
+                            )}
+                        >
+                            <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                    )}
+                    {tileCount && <TileCountPill {...tileCount} />}
+                </div>
             </div>
 
             {/*

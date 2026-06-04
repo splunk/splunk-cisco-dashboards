@@ -60,6 +60,13 @@ import {
     plainTextFromHtml,
     type SearchbaseRecord,
 } from '@/common/services/searchbaseCatalogue';
+import {
+    DEFAULT_CUSTOMER_TOPOLOGY_SECTION_TITLES,
+    loadCustomerTopologyConfig,
+    saveCustomerTopologyConfig,
+    sanitizeCustomerTopologySectionTitles,
+    type CustomerTopologySectionTitles,
+} from '@/common/services/customerTopologyPersistenceService';
 import { runSearch } from '@/common/services/splunkSearchService';
 import type {
     CustomerTopology,
@@ -112,12 +119,11 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
     // popup's "Awaiting"-pattern for empty fields. Customers who want
     // to surface a real number can enter it through the existing
     // topology editor pencil-tool ("Internet edge Mbps" field), which
-    // writes to the persisted localStorage payload
-    // (`splunk-cisco-dashboards.customerTopology.v4`) and immediately
-    // repopulates the popup. If the customer's network team ever confirms
-    // actual circuit bandwidths, the values can be restored here as a
-    // packaged default and the editor entry will override them
-    // per-user as before.
+    // writes to the shared customer_topology.conf payload and immediately
+    // repopulates the popup for every user. If the customer's network
+    // team ever confirms actual circuit bandwidths, the values can be
+    // restored here as a packaged default and the shared config entry
+    // will override them at runtime.
     sites: [
         {
             id: 'tlh',
@@ -251,7 +257,8 @@ const ROLE_BEACON_CHROME: Record<
     },
 };
 
-const TOPOLOGY_STORAGE_KEY = 'splunk-cisco-dashboards.customerTopology.v4';
+const LEGACY_TOPOLOGY_STORAGE_KEY = 'splunk-cisco-dashboards.customerTopology.v4';
+const TOPOLOGY_CONFIG_EVENT = 'splunk-cisco-dashboards:customer-topology-config';
 const TOPOLOGY_STORAGE_VERSION = 4;
 const TOPOLOGY_ROLES: TopologyRole[] = [
     'state_hq',
@@ -343,6 +350,7 @@ const SITE_PLACEMENT_PRESETS: Array<{
 type PersistedTopologyPayload = {
     version: number;
     topology: CustomerTopology;
+    sectionTitles: CustomerTopologySectionTitles;
 };
 
 export interface TopologySummaryMetric {
@@ -726,85 +734,242 @@ const expandMapForPlacement = (
     };
 };
 
-const readPersistedTopology = (fallback: CustomerTopology): CustomerTopology => {
-    if (typeof window === 'undefined') return cloneTopology(fallback);
+const readLegacyPersistedTopology = (
+    fallback: CustomerTopology
+): CustomerTopology | null => {
+    if (typeof window === 'undefined') return null;
     try {
-        const raw = window.localStorage.getItem(TOPOLOGY_STORAGE_KEY);
-        if (!raw) return cloneTopology(fallback);
+        const raw = window.localStorage.getItem(LEGACY_TOPOLOGY_STORAGE_KEY);
+        if (!raw) return null;
         const parsed = JSON.parse(raw) as Partial<PersistedTopologyPayload>;
         return sanitizeTopology(parsed.topology ?? parsed, fallback);
     } catch {
-        return cloneTopology(fallback);
+        return null;
     }
 };
 
-const writePersistedTopology = (topology: CustomerTopology): void => {
+const clearLegacyPersistedTopology = (): void => {
     if (typeof window === 'undefined') return;
-    window.localStorage.setItem(
-        TOPOLOGY_STORAGE_KEY,
-        JSON.stringify({
-            version: TOPOLOGY_STORAGE_VERSION,
-            topology,
-        })
-    );
+    window.localStorage.removeItem(LEGACY_TOPOLOGY_STORAGE_KEY);
 };
 
-const clearPersistedTopology = (): void => {
+const emitTopologyConfigChanged = (): void => {
     if (typeof window === 'undefined') return;
-    window.localStorage.removeItem(TOPOLOGY_STORAGE_KEY);
+    window.dispatchEvent(new CustomEvent(TOPOLOGY_CONFIG_EVENT));
+};
+
+const errorMessage = (error: unknown): string =>
+    error instanceof Error ? error.message : String(error);
+
+interface PersistedTopologyState {
+    topology: CustomerTopology;
+    sectionTitles: CustomerTopologySectionTitles;
+    isLoading: boolean;
+    error: string | null;
+    saveTopology: (next: CustomerTopology) => Promise<void>;
+    resetTopology: () => Promise<void>;
+    saveSectionTitles: (next: CustomerTopologySectionTitles) => Promise<void>;
+    reload: () => Promise<void>;
+}
+
+const buildTopologyPayload = (
+    topology: CustomerTopology,
+    sectionTitles: CustomerTopologySectionTitles
+): PersistedTopologyPayload => ({
+    version: TOPOLOGY_STORAGE_VERSION,
+    topology,
+    sectionTitles,
+});
+
+const sanitizeTopologyPayload = (
+    payload: Partial<PersistedTopologyPayload> | null | undefined,
+    fallback: CustomerTopology,
+    sectionTitleFallback: CustomerTopologySectionTitles
+): {
+    topology: CustomerTopology;
+    sectionTitles: CustomerTopologySectionTitles;
+} => ({
+    topology: sanitizeTopology(payload?.topology, fallback),
+    sectionTitles: sanitizeCustomerTopologySectionTitles(
+        payload?.sectionTitles,
+        sectionTitleFallback
+    ),
+});
+
+const writeSharedTopologyConfig = async (
+    topology: CustomerTopology,
+    sectionTitles: CustomerTopologySectionTitles
+): Promise<void> => {
+    await saveCustomerTopologyConfig(
+        buildTopologyPayload(topology, sectionTitles)
+    );
 };
 
 /**
  * Public-facing helper for the "Reset all customisations" flow on
- * the Overview page. Wipes the persisted topology so the next mount
- * of `<CustomerTopologyMap />` reads `null` from localStorage and
- * falls through to the default `CUSTOMER_TOPOLOGY` factory.
- *
- * NOTE: in-tab callers must also force a remount of the map (e.g.
- * by bumping its `key` prop) — `localStorage` `storage` events only
- * fire across tabs, not in the originating tab, so the existing
- * mounted map won't reseed itself just because storage was cleared.
+ * the Overview page. As of the shared `customer_topology.conf`
+ * migration, the canonical topology is global app state, so this
+ * helper only removes the retired per-browser localStorage payload.
+ * The Topology Editor's Factory button is the explicit global reset.
  */
 export const clearCustomerTopologyStorage = (): void => {
-    clearPersistedTopology();
+    clearLegacyPersistedTopology();
 };
 
-export const usePersistedTopology = (fallback: CustomerTopology) => {
+export const usePersistedTopology = (
+    fallback: CustomerTopology,
+    sectionTitleFallback: CustomerTopologySectionTitles =
+        DEFAULT_CUSTOMER_TOPOLOGY_SECTION_TITLES
+): PersistedTopologyState => {
+    const defaultSectionTitles = useMemo(
+        () => sanitizeCustomerTopologySectionTitles(sectionTitleFallback),
+        [sectionTitleFallback]
+    );
     const [topology, setTopology] = useState<CustomerTopology>(() =>
-        readPersistedTopology(fallback)
+        cloneTopology(fallback)
+    );
+    const [sectionTitles, setSectionTitles] =
+        useState<CustomerTopologySectionTitles>(() => defaultSectionTitles);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const applyPayload = useCallback(
+        (payload: Partial<PersistedTopologyPayload> | null | undefined) => {
+            const sanitized = sanitizeTopologyPayload(
+                payload,
+                fallback,
+                defaultSectionTitles
+            );
+            setTopology(sanitized.topology);
+            setSectionTitles(sanitized.sectionTitles);
+        },
+        [defaultSectionTitles, fallback]
     );
 
+    const reload = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const payload = await loadCustomerTopologyConfig();
+            if (payload) {
+                applyPayload(payload);
+            } else {
+                const legacyTopology = readLegacyPersistedTopology(fallback);
+                applyPayload(
+                    legacyTopology
+                        ? {
+                              version: TOPOLOGY_STORAGE_VERSION,
+                              topology: legacyTopology,
+                              sectionTitles: defaultSectionTitles,
+                          }
+                        : {
+                              version: TOPOLOGY_STORAGE_VERSION,
+                              topology: fallback,
+                              sectionTitles: defaultSectionTitles,
+                          }
+                );
+            }
+            setError(null);
+        } catch (err) {
+            const legacyTopology = readLegacyPersistedTopology(fallback);
+            applyPayload(
+                legacyTopology
+                    ? {
+                          version: TOPOLOGY_STORAGE_VERSION,
+                          topology: legacyTopology,
+                          sectionTitles: defaultSectionTitles,
+                      }
+                    : {
+                          version: TOPOLOGY_STORAGE_VERSION,
+                          topology: fallback,
+                          sectionTitles: defaultSectionTitles,
+                      }
+            );
+            setError(errorMessage(err));
+        } finally {
+            setIsLoading(false);
+        }
+    }, [applyPayload, defaultSectionTitles, fallback]);
+
     useEffect(() => {
-        setTopology(readPersistedTopology(fallback));
-    }, [fallback]);
+        void reload();
+    }, [reload]);
 
     useEffect(() => {
         if (typeof window === 'undefined') return undefined;
-        const onStorage = (event: StorageEvent) => {
-            if (event.key === TOPOLOGY_STORAGE_KEY) {
-                setTopology(readPersistedTopology(fallback));
-            }
+        const onConfigChanged = () => {
+            void reload();
         };
-        window.addEventListener('storage', onStorage);
-        return () => window.removeEventListener('storage', onStorage);
-    }, [fallback]);
+        window.addEventListener(TOPOLOGY_CONFIG_EVENT, onConfigChanged);
+        return () =>
+            window.removeEventListener(TOPOLOGY_CONFIG_EVENT, onConfigChanged);
+    }, [reload]);
 
     const saveTopology = useCallback(
-        (next: CustomerTopology) => {
+        async (next: CustomerTopology) => {
             const sanitized = sanitizeTopology(next, fallback);
+            const previousTopology = topology;
             setTopology(sanitized);
-            writePersistedTopology(sanitized);
+            setError(null);
+            try {
+                await writeSharedTopologyConfig(sanitized, sectionTitles);
+                clearLegacyPersistedTopology();
+                emitTopologyConfigChanged();
+            } catch (err) {
+                setTopology(previousTopology);
+                setError(errorMessage(err));
+                throw err;
+            }
         },
-        [fallback]
+        [fallback, sectionTitles, topology]
     );
 
-    const resetTopology = useCallback(() => {
+    const resetTopology = useCallback(async () => {
         const factory = cloneTopology(fallback);
-        clearPersistedTopology();
+        const previousTopology = topology;
         setTopology(factory);
-    }, [fallback]);
+        setError(null);
+        try {
+            await writeSharedTopologyConfig(factory, sectionTitles);
+            clearLegacyPersistedTopology();
+            emitTopologyConfigChanged();
+        } catch (err) {
+            setTopology(previousTopology);
+            setError(errorMessage(err));
+            throw err;
+        }
+    }, [fallback, sectionTitles, topology]);
 
-    return { topology, saveTopology, resetTopology };
+    const saveSectionTitles = useCallback(
+        async (next: CustomerTopologySectionTitles) => {
+            const sanitized = sanitizeCustomerTopologySectionTitles(
+                next,
+                defaultSectionTitles
+            );
+            const previousSectionTitles = sectionTitles;
+            setSectionTitles(sanitized);
+            setError(null);
+            try {
+                await writeSharedTopologyConfig(topology, sanitized);
+                emitTopologyConfigChanged();
+            } catch (err) {
+                setSectionTitles(previousSectionTitles);
+                setError(errorMessage(err));
+                throw err;
+            }
+        },
+        [defaultSectionTitles, sectionTitles, topology]
+    );
+
+    return {
+        topology,
+        sectionTitles,
+        isLoading,
+        error,
+        saveTopology,
+        resetTopology,
+        saveSectionTitles,
+        reload,
+    };
 };
 
 /**
@@ -2888,6 +3053,10 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     const { topology: storedTopology, saveTopology, resetTopology } =
         usePersistedTopology(topology);
     const [isEditorOpen, setIsEditorOpen] = useState(false);
+    const [isEditorSaving, setIsEditorSaving] = useState(false);
+    const [editorPersistenceError, setEditorPersistenceError] = useState<
+        string | null
+    >(null);
     const [draftTopology, setDraftTopology] = useState<CustomerTopology>(() =>
         cloneTopology(storedTopology)
     );
@@ -3686,19 +3855,36 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         pauseUntilRef.current = 0;
         setSelected(null);
         setDraftTopology(cloneTopology(storedTopology));
+        setEditorPersistenceError(null);
         setIsEditorOpen(true);
     };
 
-    const saveEditor = () => {
-        saveTopology(draftTopology);
-        setPickSiteId(null);
-        setIsEditorOpen(false);
+    const saveEditor = async () => {
+        setIsEditorSaving(true);
+        setEditorPersistenceError(null);
+        try {
+            await saveTopology(draftTopology);
+            setPickSiteId(null);
+            setIsEditorOpen(false);
+        } catch (err) {
+            setEditorPersistenceError(errorMessage(err));
+        } finally {
+            setIsEditorSaving(false);
+        }
     };
 
-    const resetEditor = () => {
-        resetTopology();
-        setPickSiteId(null);
-        setIsEditorOpen(false);
+    const resetEditor = async () => {
+        setIsEditorSaving(true);
+        setEditorPersistenceError(null);
+        try {
+            await resetTopology();
+            setPickSiteId(null);
+            setIsEditorOpen(false);
+        } catch (err) {
+            setEditorPersistenceError(errorMessage(err));
+        } finally {
+            setIsEditorSaving(false);
+        }
     };
 
     const applyMapPick = (lat: number, lng: number) => {
@@ -3876,8 +4062,11 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 onTopologyChange={setDraftTopology}
                 onSave={saveEditor}
                 onResetFactory={resetEditor}
+                isSaving={isEditorSaving}
+                saveError={editorPersistenceError}
                 onClose={() => {
                     setPickSiteId(null);
+                    setEditorPersistenceError(null);
                     setIsEditorOpen(false);
                 }}
                 catalogueByName={catalogueByName}
@@ -4987,8 +5176,10 @@ interface TopologyEditorPanelProps {
     pickSiteId: string | null;
     onPickSite: (siteId: string | null) => void;
     onTopologyChange: React.Dispatch<React.SetStateAction<CustomerTopology>>;
-    onSave: () => void;
-    onResetFactory: () => void;
+    onSave: () => void | Promise<void>;
+    onResetFactory: () => void | Promise<void>;
+    isSaving?: boolean;
+    saveError?: string | null;
     onClose: () => void;
     /**
      * Searchbase catalogue keyed by `searchName`. Used to populate the
@@ -5044,6 +5235,8 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
     onTopologyChange,
     onSave,
     onResetFactory,
+    isSaving = false,
+    saveError,
     onClose,
     catalogueByName,
     onOpenInSearch,
@@ -6399,25 +6592,47 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                             isDark ? 'border-slate-800' : 'border-slate-200'
                         )}
                     >
+                        <div className="min-w-0 flex-1">
+                            {saveError && (
+                                <p className="truncate text-[10px] font-semibold text-red-500" title={saveError}>
+                                    {saveError}
+                                </p>
+                            )}
+                        </div>
                         <button
                             type="button"
                             onClick={onResetFactory}
+                            disabled={isSaving}
                             className={cn(
                                 'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[10px] font-black transition-colors focus:outline-none focus:ring-1 focus:ring-red-400',
-                                isDark
+                                isSaving
+                                    ? 'cursor-not-allowed opacity-50'
+                                    : isDark
                                     ? 'bg-slate-900 text-red-300 hover:bg-red-950/70'
                                     : 'bg-red-50 text-red-600 hover:bg-red-100'
                             )}
                         >
-                            <RotateCcw className="w-3.5 h-3.5" />
+                            {isSaving ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                                <RotateCcw className="w-3.5 h-3.5" />
+                            )}
                             Factory
                         </button>
                         <button
                             type="button"
                             onClick={onSave}
-                            className="inline-flex items-center gap-1.5 rounded-md bg-sky-500 px-3 py-1.5 text-[10px] font-black text-white hover:bg-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-300"
+                            disabled={isSaving}
+                            className={cn(
+                                'inline-flex items-center gap-1.5 rounded-md bg-sky-500 px-3 py-1.5 text-[10px] font-black text-white hover:bg-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-300',
+                                isSaving && 'cursor-not-allowed opacity-60'
+                            )}
                         >
-                            <Save className="w-3.5 h-3.5" />
+                            {isSaving ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                                <Save className="w-3.5 h-3.5" />
+                            )}
                             Save
                         </button>
                     </div>
