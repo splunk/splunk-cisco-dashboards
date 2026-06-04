@@ -1397,7 +1397,7 @@ const DashboardStudioEditor = ({
         if (activeModeId == 'create') {
             // create a new dashboard and then open it
 
-            const dashid = `is4s_${dashboardTitle.replaceAll(' ', '_').replaceAll('#', '')}`;
+            const dashid = `scd_${dashboardTitle.replaceAll(' ', '_').replaceAll('#', '')}`;
             let jsonDefinition = cloneDeep(initialDefinition);
             jsonDefinition.title = dashboardTitle;
             jsonDefinition.layout.type = gridLayout;
@@ -1426,7 +1426,7 @@ const DashboardStudioEditor = ({
         } else if (activeModeId == 'fromtemplate') {
             // create a new dashboard and then open it
 
-            const dashid = `is4s_${dashboardTitle.replaceAll(' ', '_').replaceAll('#', '')}`;
+            const dashid = `scd_${dashboardTitle.replaceAll(' ', '_').replaceAll('#', '')}`;
 
             let jsonDefinition = cloneDeep(
                 dashboards.find((c) => c.title == selectedOpenTemplate).definition,
