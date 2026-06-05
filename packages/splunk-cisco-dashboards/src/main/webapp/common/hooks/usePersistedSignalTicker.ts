@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-export type SignalTickerSpeed = 'slow' | 'normal' | 'fast';
+export type SignalTickerSpeed = number;
 export type SignalTickerRows = 1 | 2;
 export type SignalTickerDensity = 'compact' | 'comfortable';
 export type SignalTickerThresholdDirection =
@@ -37,7 +37,7 @@ const UNIT_PATTERN = /^[%A-Za-z0-9_./ -]{1,16}$/;
 const DEFAULT_SIGNAL_TICKER_CONFIG: SignalTickerConfig = {
     enabled: true,
     rows: 1,
-    speed: 'normal',
+    speed: 5,
     density: 'compact',
     items: [
         {
@@ -71,6 +71,32 @@ const DEFAULT_SIGNAL_TICKER_CONFIG: SignalTickerConfig = {
             label: 'Occupancy',
         },
     ],
+};
+
+const LEGACY_SPEED_MAP: Record<string, SignalTickerSpeed> = {
+    slow: 3,
+    normal: 5,
+    fast: 8,
+};
+
+const clampSpeed = (value: number): SignalTickerSpeed =>
+    Math.min(10, Math.max(0, Math.round(value)));
+
+const sanitizeSpeed = (raw: unknown): SignalTickerSpeed => {
+    if (typeof raw === 'number' && Number.isFinite(raw)) {
+        return clampSpeed(raw);
+    }
+    if (typeof raw === 'string') {
+        const legacy = LEGACY_SPEED_MAP[raw.trim().toLowerCase()];
+        if (legacy !== undefined) {
+            return legacy;
+        }
+        const parsed = Number(raw);
+        if (Number.isFinite(parsed)) {
+            return clampSpeed(parsed);
+        }
+    }
+    return DEFAULT_SIGNAL_TICKER_CONFIG.speed;
 };
 
 interface PersistedShape {
@@ -163,10 +189,7 @@ const sanitizeConfig = (raw: unknown): SignalTickerConfig | null => {
             ? source.enabled
             : DEFAULT_SIGNAL_TICKER_CONFIG.enabled;
     const rows: SignalTickerRows = source.rows === 2 ? 2 : 1;
-    const speed: SignalTickerSpeed =
-        source.speed === 'slow' || source.speed === 'fast'
-            ? source.speed
-            : 'normal';
+    const speed = sanitizeSpeed(source.speed);
     const density: SignalTickerDensity =
         source.density === 'comfortable' ? 'comfortable' : 'compact';
     const rawItems = Array.isArray(source.items) ? source.items : [];

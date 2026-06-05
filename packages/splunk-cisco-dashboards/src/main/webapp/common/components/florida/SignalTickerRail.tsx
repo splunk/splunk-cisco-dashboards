@@ -33,46 +33,42 @@ import {
     type SignalTickerDensity,
     type SignalTickerItem,
     type SignalTickerRows,
-    type SignalTickerSpeed,
     type SignalTickerThresholdDirection,
 } from '@/common/hooks/usePersistedSignalTicker';
 
 const signalTickerCss = `
-@keyframes scd-signal-ticker-scroll {
-    from { transform: translate3d(0, 0, 0); }
-    to { transform: translate3d(-50%, 0, 0); }
-}
 .scd-signal-ticker-track {
     width: max-content;
     transform: translate3d(0, 0, 0);
     will-change: transform;
 }
-.scd-signal-ticker-track--animate {
-    animation: scd-signal-ticker-scroll var(--scd-signal-duration, 60s) linear infinite;
-}
-.scd-signal-ticker-rail:hover .scd-signal-ticker-track--animate,
-.scd-signal-ticker-rail:focus-within .scd-signal-ticker-track--animate {
-    animation-play-state: paused;
-}
-@media (prefers-reduced-motion: reduce) {
-    .scd-signal-ticker-track--animate {
-        animation: none !important;
-    }
-    .scd-signal-ticker-duplicate {
-        display: none !important;
-    }
-}
 `;
 
-const SPEED_PIXELS_PER_SECOND: Record<SignalTickerSpeed, number> = {
-    slow: 18,
-    normal: 32,
-    fast: 58,
-};
+const MIN_SIGNAL_SPEED = 0;
+const MAX_SIGNAL_SPEED = 10;
+const MAX_SIGNAL_PIXELS_PER_SECOND = 92;
+const DRAG_CLICK_THRESHOLD_PX = 5;
 
 const TICKER_TRAVEL_PX_PER_ITEM: Record<SignalTickerDensity, number> = {
     compact: 252,
     comfortable: 285,
+};
+
+const speedToPixelsPerSecond = (speed: number): number => {
+    const clamped = Math.min(MAX_SIGNAL_SPEED, Math.max(MIN_SIGNAL_SPEED, speed));
+    if (clamped <= 0) {
+        return 0;
+    }
+    const eased = (clamped / MAX_SIGNAL_SPEED) ** 1.2;
+    return Math.max(8, Math.round(eased * MAX_SIGNAL_PIXELS_PER_SECOND));
+};
+
+const wrapOffset = (offset: number, loopWidth: number): number => {
+    if (!Number.isFinite(loopWidth) || loopWidth <= 0) {
+        return 0;
+    }
+    const wrapped = offset % loopWidth;
+    return wrapped < 0 ? wrapped + loopWidth : wrapped;
 };
 
 const ALL_CATEGORIES = '__all__';
@@ -502,6 +498,21 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
     const [visualById, setVisualById] = useState<
         Record<string, SignalTickerTileVisualState>
     >({});
+    const trackRefs = useRef<Array<HTMLDivElement | null>>([]);
+    const offsetsRef = useRef<number[]>([]);
+    const dragRef = useRef<{
+        active: boolean;
+        pointerId: number | null;
+        lastX: number;
+        totalMovement: number;
+    }>({
+        active: false,
+        pointerId: null,
+        lastX: 0,
+        totalMovement: 0,
+    });
+    const suppressNextClickRef = useRef(false);
+    const [isDragging, setIsDragging] = useState(false);
     const handleVisualState = useCallback(
         (id: string, visual: SignalTickerTileVisualState) => {
             setVisualById((current) => {
@@ -522,12 +533,166 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
         return [items];
     }, [config.items, config.rows]);
 
+    const density = config.density ?? 'compact';
+    const getLoopWidth = useCallback(
+        (rowIndex: number, rowItemCount: number): number => {
+            const track = trackRefs.current[rowIndex];
+            if (!track) {
+                return rowItemCount * TICKER_TRAVEL_PX_PER_ITEM[density];
+            }
+            return track.scrollWidth / 2;
+        },
+        [density]
+    );
+    const applyTrackTransform = useCallback(
+        (rowIndex: number, rowItemCount: number) => {
+            const track = trackRefs.current[rowIndex];
+            if (!track) {
+                return;
+            }
+            const loopWidth = getLoopWidth(rowIndex, rowItemCount);
+            const offset = wrapOffset(offsetsRef.current[rowIndex] ?? 0, loopWidth);
+            offsetsRef.current[rowIndex] = offset;
+            track.style.transform = `translate3d(${-offset}px, 0, 0)`;
+        },
+        [getLoopWidth]
+    );
+    const moveRowsBy = useCallback(
+        (deltaX: number) => {
+            rows.forEach((rowItems, rowIndex) => {
+                if (rowItems.length <= 1) {
+                    return;
+                }
+                const loopWidth = getLoopWidth(rowIndex, rowItems.length);
+                offsetsRef.current[rowIndex] = wrapOffset(
+                    (offsetsRef.current[rowIndex] ?? 0) - deltaX,
+                    loopWidth
+                );
+                applyTrackTransform(rowIndex, rowItems.length);
+            });
+        },
+        [applyTrackTransform, getLoopWidth, rows]
+    );
+
+    useEffect(() => {
+        offsetsRef.current = rows.map(
+            (_, rowIndex) => offsetsRef.current[rowIndex] ?? 0
+        );
+        rows.forEach((rowItems, rowIndex) =>
+            applyTrackTransform(rowIndex, rowItems.length)
+        );
+    }, [applyTrackTransform, rows]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return undefined;
+        }
+        const reduceMotion = window.matchMedia?.(
+            '(prefers-reduced-motion: reduce)'
+        ).matches;
+        const pixelsPerSecond = reduceMotion ? 0 : speedToPixelsPerSecond(config.speed);
+        if (pixelsPerSecond <= 0) {
+            return undefined;
+        }
+
+        let animationFrame = 0;
+        let lastTimestamp = window.performance.now();
+        const tick = (timestamp: number) => {
+            const deltaSeconds = Math.min(
+                0.1,
+                Math.max(0, (timestamp - lastTimestamp) / 1000)
+            );
+            lastTimestamp = timestamp;
+            if (!dragRef.current.active) {
+                rows.forEach((rowItems, rowIndex) => {
+                    if (rowItems.length <= 1) {
+                        return;
+                    }
+                    const loopWidth = getLoopWidth(rowIndex, rowItems.length);
+                    offsetsRef.current[rowIndex] = wrapOffset(
+                        (offsetsRef.current[rowIndex] ?? 0) +
+                            deltaSeconds * pixelsPerSecond,
+                        loopWidth
+                    );
+                    applyTrackTransform(rowIndex, rowItems.length);
+                });
+            }
+            animationFrame = window.requestAnimationFrame(tick);
+        };
+        animationFrame = window.requestAnimationFrame(tick);
+        return () => window.cancelAnimationFrame(animationFrame);
+    }, [applyTrackTransform, config.speed, getLoopWidth, rows]);
+
+    const handleRailPointerDown = useCallback(
+        (event: React.PointerEvent<HTMLDivElement>) => {
+            if (event.button !== 0) {
+                return;
+            }
+            dragRef.current = {
+                active: true,
+                pointerId: event.pointerId,
+                lastX: event.clientX,
+                totalMovement: 0,
+            };
+            setIsDragging(true);
+            event.currentTarget.setPointerCapture(event.pointerId);
+        },
+        []
+    );
+    const handleRailPointerMove = useCallback(
+        (event: React.PointerEvent<HTMLDivElement>) => {
+            const drag = dragRef.current;
+            if (!drag.active || drag.pointerId !== event.pointerId) {
+                return;
+            }
+            const deltaX = event.clientX - drag.lastX;
+            if (deltaX === 0) {
+                return;
+            }
+            drag.lastX = event.clientX;
+            drag.totalMovement += Math.abs(deltaX);
+            moveRowsBy(deltaX);
+            event.preventDefault();
+        },
+        [moveRowsBy]
+    );
+    const finishRailDrag = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+        const drag = dragRef.current;
+        if (!drag.active || drag.pointerId !== event.pointerId) {
+            return;
+        }
+        if (drag.totalMovement >= DRAG_CLICK_THRESHOLD_PX) {
+            suppressNextClickRef.current = true;
+            window.setTimeout(() => {
+                suppressNextClickRef.current = false;
+            }, 0);
+        }
+        dragRef.current = {
+            active: false,
+            pointerId: null,
+            lastX: 0,
+            totalMovement: 0,
+        };
+        setIsDragging(false);
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+    }, []);
+    const handleRailClickCapture = useCallback(
+        (event: React.MouseEvent<HTMLDivElement>) => {
+            if (!suppressNextClickRef.current) {
+                return;
+            }
+            suppressNextClickRef.current = false;
+            event.preventDefault();
+            event.stopPropagation();
+        },
+        []
+    );
+
     if (!config.enabled || config.items.length === 0) return null;
 
-    const density = config.density ?? 'compact';
     const trackGap = density === 'compact' ? 'gap-3' : 'gap-4';
-    const pixelsPerSecond = SPEED_PIXELS_PER_SECOND[config.speed];
-    const travelPxPerItem = TICKER_TRAVEL_PX_PER_ITEM[density];
     const labelCopy =
         density === 'compact'
             ? `${config.items.length} KPIs`
@@ -555,20 +720,18 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
                 </div>
                 <div
                     className={cn(
-                        'min-w-0 flex-1 overflow-hidden',
+                        'min-w-0 flex-1 overflow-hidden select-none touch-pan-y',
+                        isDragging ? 'cursor-grabbing' : 'cursor-grab',
                         density === 'compact' ? 'space-y-0.5' : 'space-y-1'
                     )}
+                    onPointerDown={handleRailPointerDown}
+                    onPointerMove={handleRailPointerMove}
+                    onPointerUp={finishRailDrag}
+                    onPointerCancel={finishRailDrag}
+                    onClickCapture={handleRailClickCapture}
+                    title="Drag left or right to browse Signal Rail"
                 >
                     {rows.map((rowItems, rowIndex) => {
-                        const animate = rowItems.length > 1;
-                        const duration = Math.max(
-                            12,
-                            Math.round(
-                                (rowItems.length * travelPxPerItem) /
-                                    pixelsPerSecond +
-                                    rowIndex * 6
-                            )
-                        );
                         const rowKey = rowItems.map((item) => item.id).join('-');
                         return (
                             <div
@@ -576,18 +739,11 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
                                 className="overflow-hidden py-0.5"
                             >
                                 <div
-                                    key={`ticker-track-${rowIndex}-${config.speed}-${density}-${duration}-${rowKey}`}
-                                    className={cn(
-                                        'scd-signal-ticker-track flex',
-                                        trackGap,
-                                        animate &&
-                                            'scd-signal-ticker-track--animate'
-                                    )}
-                                    style={
-                                        {
-                                            '--scd-signal-duration': `${duration}s`,
-                                        } as React.CSSProperties
-                                    }
+                                    key={`ticker-track-${rowIndex}-${density}-${rowKey}`}
+                                    ref={(node) => {
+                                        trackRefs.current[rowIndex] = node;
+                                    }}
+                                    className={cn('scd-signal-ticker-track flex', trackGap)}
                                 >
                                     {[0, 1].map((pass) => (
                                         <div
@@ -622,12 +778,15 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
                                                                     record,
                                                                     catalogueLoading,
                                                                     metricDefault
-                                                                    )
+                                                                )
                                                             }
                                                             density={density}
                                                             onOpen={() => {
                                                                 if (record?.search) {
-                                                                    openSplunkSearch(record.search, range);
+                                                                    openSplunkSearch(
+                                                                        record.search,
+                                                                        range
+                                                                    );
                                                                 }
                                                             }}
                                                             duplicate
@@ -688,12 +847,6 @@ interface SignalTickerEditorProps {
     onReset: () => void;
     onClose: () => void;
 }
-
-const SPEED_LABELS: Record<SignalTickerSpeed, string> = {
-    slow: 'Slow',
-    normal: 'Normal',
-    fast: 'Fast',
-};
 
 const DENSITY_LABELS: Record<SignalTickerDensity, string> = {
     compact: 'Compact',
@@ -1078,27 +1231,35 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                         </div>
 
                         <div className="mt-4">
-                            <span className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
-                                Speed
-                            </span>
-                            <div className="mt-2 grid grid-cols-3 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
-                                {(['slow', 'normal', 'fast'] as const).map(
-                                    (speed) => (
-                                        <button
-                                            key={speed}
-                                            type="button"
-                                            onClick={() => updateConfig({ speed })}
-                                            className={cn(
-                                                'px-3 py-2 text-xs font-black uppercase tracking-wide transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
-                                                config.speed === speed
-                                                    ? 'bg-sky-500 text-white'
-                                                    : 'bg-white text-slate-500 hover:bg-slate-50 dark:bg-slate-950 dark:text-slate-400 dark:hover:bg-slate-900'
-                                            )}
-                                        >
-                                            {SPEED_LABELS[speed]}
-                                        </button>
-                                    )
-                                )}
+                            <div className="flex items-center justify-between gap-3">
+                                <span className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                                    Speed
+                                </span>
+                                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] text-slate-500 dark:bg-slate-900 dark:text-slate-300">
+                                    {config.speed === 0
+                                        ? 'Paused'
+                                        : `${config.speed}/10`}
+                                </span>
+                            </div>
+                            <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-800 dark:bg-slate-950">
+                                <input
+                                    type="range"
+                                    min={MIN_SIGNAL_SPEED}
+                                    max={MAX_SIGNAL_SPEED}
+                                    step={1}
+                                    value={config.speed}
+                                    onChange={(event) =>
+                                        updateConfig({
+                                            speed: Number(event.currentTarget.value),
+                                        })
+                                    }
+                                    className="w-full accent-sky-500"
+                                    aria-label="Signal rail speed"
+                                />
+                                <div className="mt-1 flex justify-between text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
+                                    <span>0</span>
+                                    <span>10</span>
+                                </div>
                             </div>
                         </div>
 
