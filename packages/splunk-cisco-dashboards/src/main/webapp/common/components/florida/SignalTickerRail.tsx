@@ -42,6 +42,44 @@ const signalTickerCss = `
     transform: translate3d(0, 0, 0);
     will-change: transform;
 }
+.dark .scd-signal-ticker-rail {
+    background: linear-gradient(90deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.94));
+    border-color: rgba(30, 41, 59, 0.95);
+}
+.dark .scd-signal-ticker-label-card,
+.dark .scd-signal-ticker-settings {
+    background: rgba(15, 23, 42, 0.92);
+    border-color: rgba(14, 165, 233, 0.22);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 24px rgba(2, 6, 23, 0.18);
+}
+.dark .scd-signal-ticker-tile {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045), 0 10px 24px rgba(2, 6, 23, 0.16);
+}
+.dark .scd-signal-ticker-tile[data-status='healthy'] {
+    background: linear-gradient(90deg, rgba(6, 78, 59, 0.58), rgba(15, 23, 42, 0.93));
+    border-color: rgba(52, 211, 153, 0.36);
+}
+.dark .scd-signal-ticker-tile[data-status='warning'] {
+    background: linear-gradient(90deg, rgba(120, 53, 15, 0.6), rgba(15, 23, 42, 0.93));
+    border-color: rgba(251, 191, 36, 0.4);
+}
+.dark .scd-signal-ticker-tile[data-status='critical'] {
+    background: linear-gradient(90deg, rgba(127, 29, 29, 0.64), rgba(15, 23, 42, 0.92));
+    border-color: rgba(248, 113, 113, 0.42);
+}
+.dark .scd-signal-ticker-tile[data-status='unknown'] {
+    background: linear-gradient(90deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.92));
+    border-color: rgba(100, 116, 139, 0.44);
+}
+.dark .scd-signal-ticker-tile .scd-signal-ticker-label {
+    color: rgb(203, 213, 225);
+}
+.dark .scd-signal-ticker-tile .scd-signal-ticker-subtitle {
+    color: rgb(148, 163, 184);
+}
+.dark .scd-signal-ticker-shine {
+    background-image: linear-gradient(90deg, transparent, rgba(125, 211, 252, 0.18), transparent);
+}
 `;
 
 const MIN_SIGNAL_SPEED = 0;
@@ -112,10 +150,10 @@ const STATUS_DOT_CLASS = {
 };
 
 const STATUS_BG_CLASS = {
-    healthy: 'bg-white/94 hover:bg-white dark:bg-slate-950/88 dark:hover:bg-slate-950',
-    warning: 'bg-amber-50/95 hover:bg-amber-50 dark:bg-amber-950/38 dark:hover:bg-amber-950/48',
-    critical: 'bg-red-50/95 hover:bg-red-50 dark:bg-red-950/40 dark:hover:bg-red-950/52',
-    unknown: 'bg-white/92 hover:bg-white dark:bg-slate-950/88 dark:hover:bg-slate-950',
+    healthy: 'bg-white/94 hover:bg-white dark:bg-emerald-950/55 dark:hover:bg-emerald-950/70',
+    warning: 'bg-amber-50/95 hover:bg-amber-50 dark:bg-amber-950/55 dark:hover:bg-amber-950/70',
+    critical: 'bg-red-50/95 hover:bg-red-50 dark:bg-red-950/60 dark:hover:bg-red-950/75',
+    unknown: 'bg-white/92 hover:bg-white dark:bg-slate-900/95 dark:hover:bg-slate-900',
 };
 
 const STATUS_TEXT_CLASS = {
@@ -285,6 +323,7 @@ const SignalTickerTileChrome: React.FC<SignalTickerTileChromeProps> = ({
 }) => {
     const className = cn(
         'group relative overflow-hidden rounded-lg border text-left shadow-sm transition-all',
+        'scd-signal-ticker-tile',
         TILE_SIZE_CLASS[density],
         STATUS_BG_CLASS[visual.status],
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
@@ -301,7 +340,7 @@ const SignalTickerTileChrome: React.FC<SignalTickerTileChromeProps> = ({
                 aria-hidden="true"
             />
             <span
-                className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent dark:via-sky-300/30"
+                className="scd-signal-ticker-shine absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent dark:via-sky-300/30"
                 aria-hidden="true"
             />
             <span className="flex items-start justify-between gap-3">
@@ -317,7 +356,7 @@ const SignalTickerTileChrome: React.FC<SignalTickerTileChromeProps> = ({
                     </span>
                     <span
                         className={cn(
-                            'block line-clamp-2 font-black uppercase tracking-[0.08em] text-slate-600 dark:text-slate-300',
+                            'scd-signal-ticker-label block line-clamp-2 font-black uppercase tracking-[0.08em] text-slate-600 dark:text-slate-300',
                             TILE_LABEL_CLASS[density]
                         )}
                     >
@@ -340,7 +379,7 @@ const SignalTickerTileChrome: React.FC<SignalTickerTileChromeProps> = ({
             </span>
             <span
                 className={cn(
-                    'block truncate font-semibold text-slate-400 dark:text-slate-500',
+                    'scd-signal-ticker-subtitle block truncate font-semibold text-slate-400 dark:text-slate-500',
                     TILE_SUBTITLE_CLASS[density]
                 )}
             >
@@ -353,6 +392,7 @@ const SignalTickerTileChrome: React.FC<SignalTickerTileChromeProps> = ({
         return (
             <div
                 className={className}
+                data-status={visual.status}
                 aria-hidden="true"
                 title={visual.canOpen ? `Open ${visual.label} in Search` : visual.label}
                 onClick={
@@ -374,6 +414,7 @@ const SignalTickerTileChrome: React.FC<SignalTickerTileChromeProps> = ({
             type="button"
             onClick={visual.canOpen ? onOpen : undefined}
             disabled={!visual.canOpen}
+            data-status={visual.status}
             title={visual.canOpen ? `Open ${visual.label} in Search` : visual.label}
             className={className}
         >
@@ -699,12 +740,12 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
             : `${config.items.length} live KPIs`;
 
     return (
-        <section className="scd-signal-ticker-rail flex-shrink-0 border-b border-slate-200 bg-white/82 px-1.5 py-1 dark:border-slate-800 dark:bg-slate-950/92">
+        <section className="scd-signal-ticker-rail flex-shrink-0 border-b border-slate-200 bg-white/82 px-1.5 py-1 dark:border-slate-800 dark:bg-slate-950/95">
             <style>{signalTickerCss}</style>
             <div className={cn('flex items-center', density === 'compact' ? 'gap-2' : 'gap-3')}>
                 <div
                     className={cn(
-                        'hidden shrink-0 items-center gap-2 rounded-lg border border-sky-100 bg-white/90 shadow-sm dark:border-sky-900/70 dark:bg-slate-900/90 lg:flex',
+                        'scd-signal-ticker-label-card hidden shrink-0 items-center gap-2 rounded-lg border border-sky-100 bg-white/90 shadow-sm dark:border-sky-900/70 dark:bg-slate-900/95 lg:flex',
                         density === 'compact' ? 'px-2.5 py-1.5' : 'px-3 py-2'
                     )}
                 >
@@ -826,7 +867,7 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
                     onClick={onOpenEditor}
                     title="Configure signal rail"
                     className={cn(
-                        'flex shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-sky-50 hover:text-sky-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-sky-950/50 dark:hover:text-sky-200',
+                        'scd-signal-ticker-settings flex shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-sky-50 hover:text-sky-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:border-slate-800 dark:bg-slate-900/95 dark:text-slate-300 dark:hover:bg-sky-950/50 dark:hover:text-sky-200',
                         density === 'compact' ? 'h-9 w-9' : 'h-10 w-10'
                     )}
                 >
