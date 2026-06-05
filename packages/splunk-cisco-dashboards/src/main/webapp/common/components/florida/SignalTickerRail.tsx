@@ -292,7 +292,7 @@ const SignalTickerTileChrome: React.FC<SignalTickerTileChromeProps> = ({
         TILE_SIZE_CLASS[density],
         STATUS_BG_CLASS[visual.status],
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
-        !visual.canOpen && 'cursor-default',
+        visual.canOpen ? 'cursor-pointer' : 'cursor-default',
         STATUS_ACCENT_CLASS[visual.status]
     );
     const content = (
@@ -355,7 +355,19 @@ const SignalTickerTileChrome: React.FC<SignalTickerTileChromeProps> = ({
 
     if (duplicate) {
         return (
-            <div className={className} aria-hidden="true">
+            <div
+                className={className}
+                aria-hidden="true"
+                title={visual.canOpen ? `Open ${visual.label} in Search` : visual.label}
+                onClick={
+                    visual.canOpen && onOpen
+                        ? (event) => {
+                              event.preventDefault();
+                              onOpen();
+                          }
+                        : undefined
+                }
+            >
                 {content}
             </div>
         );
@@ -613,6 +625,11 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
                                                                     )
                                                             }
                                                             density={density}
+                                                            onOpen={() => {
+                                                                if (record?.search) {
+                                                                    openSplunkSearch(record.search, range);
+                                                                }
+                                                            }}
                                                             duplicate
                                                         />
                                                     );
