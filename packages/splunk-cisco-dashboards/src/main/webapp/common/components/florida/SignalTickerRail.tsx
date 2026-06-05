@@ -45,6 +45,7 @@ const signalTickerCss = `
 .scd-signal-ticker-track {
     width: max-content;
     transform: translate3d(0, 0, 0);
+    will-change: transform;
 }
 .scd-signal-ticker-track--animate {
     animation: scd-signal-ticker-scroll var(--scd-signal-duration, 60s) linear infinite;
@@ -63,10 +64,15 @@ const signalTickerCss = `
 }
 `;
 
-const SPEED_SECONDS: Record<SignalTickerSpeed, number> = {
-    slow: 86,
-    normal: 58,
-    fast: 38,
+const SPEED_PIXELS_PER_SECOND: Record<SignalTickerSpeed, number> = {
+    slow: 18,
+    normal: 32,
+    fast: 58,
+};
+
+const TICKER_TRAVEL_PX_PER_ITEM: Record<SignalTickerDensity, number> = {
+    compact: 252,
+    comfortable: 285,
 };
 
 const ALL_CATEGORIES = '__all__';
@@ -506,9 +512,10 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
 
     if (!config.enabled || config.items.length === 0) return null;
 
-    const baseDuration = SPEED_SECONDS[config.speed];
     const density = config.density ?? 'compact';
     const trackGap = density === 'compact' ? 'gap-3' : 'gap-4';
+    const pixelsPerSecond = SPEED_PIXELS_PER_SECOND[config.speed];
+    const travelPxPerItem = TICKER_TRAVEL_PX_PER_ITEM[density];
     const labelCopy =
         density === 'compact'
             ? `${config.items.length} KPIs`
@@ -542,14 +549,22 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
                 >
                     {rows.map((rowItems, rowIndex) => {
                         const animate = rowItems.length > 1;
-                        const duration =
-                            baseDuration + rowItems.length * 3 + rowIndex * 9;
+                        const duration = Math.max(
+                            12,
+                            Math.round(
+                                (rowItems.length * travelPxPerItem) /
+                                    pixelsPerSecond +
+                                    rowIndex * 6
+                            )
+                        );
+                        const rowKey = rowItems.map((item) => item.id).join('-');
                         return (
                             <div
-                                key={`ticker-row-${rowIndex}`}
+                                key={`ticker-row-${rowIndex}-${rowKey}`}
                                 className="overflow-hidden py-0.5"
                             >
                                 <div
+                                    key={`ticker-track-${rowIndex}-${config.speed}-${density}-${duration}-${rowKey}`}
                                     className={cn(
                                         'scd-signal-ticker-track flex',
                                         trackGap,
