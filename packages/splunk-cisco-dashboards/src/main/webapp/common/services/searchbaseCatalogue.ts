@@ -24,11 +24,10 @@
  * The stable external key is `search_name`.
  *
  * Visibility: stanzas with `search_hidden = 1` (or `true` / `yes`) are
- * omitted from the default catalogue. All current consumers (Overview
- * dashboard, KPI picker, topology search browsers, and the Searchbase
- * Canvas) call `getSearchbaseCatalogue()` with that default so hidden
- * entries never surface in the UI. Pass `{ includeHidden: true }` to
- * opt back in (e.g. for one-off auditing tools).
+ * omitted from the default catalogue so picker/search-browse UI never
+ * surfaces hidden support entries. Pass `{ includeHidden: true }` when
+ * a runtime dispatch map needs to resolve app-owned hidden support SPL
+ * without falling back to savedsearches.conf indirection.
  */
 
 import { getSearchAppContext } from './splunkSearchService';
@@ -36,7 +35,7 @@ import { getSearchAppContext } from './splunkSearchService';
 export interface SearchbaseCatalogueOptions {
     /**
      * When true, include stanzas marked `search_hidden`. Default false.
-     * Overview and picker consumers should omit this flag.
+     * UI picker/search-browser consumers should omit this flag.
      */
     includeHidden?: boolean;
 }

@@ -119,6 +119,7 @@ import {
 import { usePersistedSectionTileCounts } from '@/common/hooks/usePersistedSectionTileCounts';
 import { usePersistedSectionLayout } from '@/common/hooks/usePersistedSectionLayout';
 import { usePersistedSectionTileOrder } from '@/common/hooks/usePersistedSectionTileOrder';
+import { usePersistedSectionHeights } from '@/common/hooks/usePersistedSectionHeights';
 import { usePersistedSignalTicker } from '@/common/hooks/usePersistedSignalTicker';
 import {
     useBrandingOverride,
@@ -187,6 +188,9 @@ const splunkLocalePrefix = (): string => {
 
 const MIN_DASHBOARD_HEIGHT_PX = 520;
 const COMPACT_HEIGHT_THRESHOLD_PX = 720;
+const SECTION_HEIGHT_BASE_PX = 180;
+const SECTION_HEIGHT_COMPACT_BASE_PX = 174;
+const SECTION_HEIGHT_STEP_PX = 88;
 
 const useAvailableDashboardHeight = (): number | null => {
     const [height, setHeight] = useState<number | null>(null);
@@ -2405,6 +2409,24 @@ const OverviewPage: React.FC = () => {
         fallbackDefault: 3,
     });
 
+    // ------------------------------ Section height preference ------------------------------
+    //
+    // A companion to tile count and tile order. Some teams want one
+    // section to act as the primary work surface for the day; the
+    // height pill lets them give that section a taller chart canvas
+    // without changing global topology config or removing other
+    // sections.
+    const {
+        heights: sectionHeights,
+        bounds: sectionHeightBounds,
+        setHeight: setSectionHeight,
+        resetAll: resetAllSectionHeights,
+    } = usePersistedSectionHeights({
+        minLevel: 1,
+        maxLevel: 4,
+        defaultLevel: 1,
+    });
+
     // ------------------------------ Section tile-order preference ------------------------------
     //
     // Companion to the count preference: the user can drag tiles
@@ -2500,12 +2522,18 @@ const OverviewPage: React.FC = () => {
     const [searchbaseByName, setSearchbaseByName] = useState<
         Map<string, SearchbaseRecord> | null
     >(null);
-    // `getSearchbaseCatalogue()` omits stanzas with `search_hidden = 1`
-    // (and `disabled = 1`) so the KPI picker, topology browsers, and
-    // tile dispatch never surface hidden catalogue entries on Overview.
+    // Runtime dispatch intentionally includes `search_hidden = 1`
+    // stanzas. A few factory tiles bind to hidden support searches in
+    // `searchbase.conf`; if those are omitted here, the tile falls
+    // back to `| savedsearch "..."` and Splunk returns 400 because
+    // the hidden searchbase stanza is not a savedsearches.conf entry.
+    //
+    // UI browsers/pickers still fetch the default visible-only
+    // catalogue below so hidden support stanzas never surface as
+    // selectable KPI options.
     useEffect(() => {
         let cancelled = false;
-        getSearchbaseCatalogue()
+        getSearchbaseCatalogue({ includeHidden: true })
             .then((list) => {
                 if (cancelled) return;
                 const map = new Map<string, SearchbaseRecord>();
@@ -2516,6 +2544,24 @@ const OverviewPage: React.FC = () => {
             })
             .catch(() => {
                 if (!cancelled) setSearchbaseByName(new Map());
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    const [visibleSearchbaseCatalogue, setVisibleSearchbaseCatalogue] = useState<
+        SearchbaseRecord[] | null
+    >(null);
+    useEffect(() => {
+        let cancelled = false;
+        getSearchbaseCatalogue()
+            .then((list) => {
+                if (cancelled) return;
+                setVisibleSearchbaseCatalogue(list);
+            })
+            .catch(() => {
+                if (!cancelled) setVisibleSearchbaseCatalogue([]);
             });
         return () => {
             cancelled = true;
@@ -2536,12 +2582,12 @@ const OverviewPage: React.FC = () => {
     const [signalTickerEditorOpen, setSignalTickerEditorOpen] = useState(false);
     const searchbaseCatalogue = useMemo(
         () =>
-            searchbaseByName
-                ? Array.from(searchbaseByName.values()).sort((a, b) =>
+            visibleSearchbaseCatalogue
+                ? [...visibleSearchbaseCatalogue].sort((a, b) =>
                       a.searchName.localeCompare(b.searchName)
                   )
                 : [],
-        [searchbaseByName]
+        [visibleSearchbaseCatalogue]
     );
 
     // ------------------------------ Regional view (map | table) ------------------------------
@@ -3171,6 +3217,7 @@ const OverviewPage: React.FC = () => {
     //   • searchbaseDrilldowns.v1       — picker-wired drilldown bindings
     //   • sectionLayout.v1              — visible section roster
     //   • sectionTileCounts.v1          — visible tile count per section
+    //   • sectionHeights.v1             — vertical room per section
     //   • sectionTileOrder.v1           — drag-to-reorder preference
     //   • customerTopology.v4           — retired per-browser map payload
     //   • scd_overview_split_pct        — tiles ↔ map splitter position
@@ -3192,6 +3239,7 @@ const OverviewPage: React.FC = () => {
         resetAllSearchbaseDrilldowns();
         resetAllSectionLayout();
         resetAllSectionTileCounts();
+        resetAllSectionHeights();
         resetAllSectionTileOrder();
         resetSignalTickerConfig();
         clearCustomerTopologyStorage();
@@ -3216,6 +3264,7 @@ const OverviewPage: React.FC = () => {
         resetAllSearchbaseDrilldowns,
         resetAllSectionLayout,
         resetAllSectionTileCounts,
+        resetAllSectionHeights,
         resetAllSectionTileOrder,
         resetSignalTickerConfig,
         SPLIT_KEY,
@@ -3952,6 +4001,15 @@ const OverviewPage: React.FC = () => {
                                 sectionTileCounts[section],
                                 sectionMaxAvailable
                             );
+                            const heightLevel =
+                                sectionHeights[section] ?? sectionHeightBounds.defaultLevel;
+                            const baseMinHeight = compactDensity
+                                ? SECTION_HEIGHT_COMPACT_BASE_PX
+                                : SECTION_HEIGHT_BASE_PX;
+                            const sectionMinHeight =
+                                baseMinHeight +
+                                (heightLevel - sectionHeightBounds.minLevel) *
+                                    SECTION_HEIGHT_STEP_PX;
 
                             // Apply the user's drag-reorder
                             // preference (if any) to the canonical
@@ -3989,47 +4047,23 @@ const OverviewPage: React.FC = () => {
                                     title={meta.title}
                                     linkText={meta.linkText}
                                     href={meta.href}
-                                    // `flex-1` distributes column height
-                                    // proportionally across visible
-                                    // sections when the viewport has the
-                                    // room, which matches what the design
-                                    // expects on a tall window.
-                                    //
-                                    // `min-h-[180px]` re-asserts
-                                    // DashboardSection's own
-                                    // floor — without it, `cn()` /
-                                    // `tailwind-merge` lets the prop's
-                                    // class win, so an earlier `min-h-0`
-                                    // here silently overrode the
-                                    // section's intended floor. That
-                                    // collapsed each section toward 0
-                                    // on short viewports and squished
-                                    // the sparkline canvas to a ~30px
-                                    // strip (Alan flagged on
-                                    // 2026-05-13 with before/after
-                                    // viewport-height screenshots).
-                                    //
-                                    // The floor was 220px in Build 95
-                                    // when each section also rendered a
-                                    // bottom drill-down footer (~36px
-                                    // chrome). Build 101 promoted that
-                                    // link into the section title and
-                                    // dropped the footer entirely,
-                                    // reclaiming ~36px per section
-                                    // (~108px across the original three) and
-                                    // letting the floor relax to 180px
-                                    // while preserving the same chart
-                                    // legibility. With this floor, shorter
-                                    // viewports trigger the
-                                    // metrics column's
-                                    // `overflow-y-auto` instead — the
-                                    // same model Splunk Dashboard
-                                    // Studio uses for fixed-height
-                                    // grid tiles.
-                                    className={cn(
-                                        'flex-1',
-                                        compactDensity ? 'min-h-[174px]' : 'min-h-[180px]'
-                                    )}
+                                    // Height level influences both
+                                    // proportional growth on roomy
+                                    // screens and the hard min-height
+                                    // floor that triggers metric-column
+                                    // scrolling on short screens.
+                                    className="flex-1"
+                                    style={{
+                                        flexGrow: heightLevel,
+                                        minHeight: sectionMinHeight,
+                                    }}
+                                    height={{
+                                        value: heightLevel,
+                                        min: sectionHeightBounds.minLevel,
+                                        max: sectionHeightBounds.maxLevel,
+                                        onChange: (next) => setSectionHeight(section, next),
+                                        label: `${meta.title} height`,
+                                    }}
                                     tileCount={{
                                         value: visibleCount,
                                         min: sectionTileBounds.minCount,
@@ -4375,7 +4409,7 @@ const OverviewPage: React.FC = () => {
                 config={signalTickerConfig}
                 catalogue={searchbaseCatalogue}
                 metricDefaultsBySearchName={signalTickerMetricDefaults}
-                catalogueLoading={searchbaseByName === null}
+                catalogueLoading={visibleSearchbaseCatalogue === null}
                 onChange={setSignalTickerConfig}
                 onReset={resetSignalTickerConfig}
                 onClose={() => setSignalTickerEditorOpen(false)}

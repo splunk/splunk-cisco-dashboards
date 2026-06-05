@@ -1,5 +1,12 @@
 import React from 'react';
-import { ChevronRight, ArrowUpRight, Minus, Pencil, Plus } from 'lucide-react';
+import {
+    ChevronRight,
+    ArrowUpRight,
+    ArrowUpDown,
+    Minus,
+    Pencil,
+    Plus,
+} from 'lucide-react';
 import { cn } from '@/common/lib/utils';
 
 interface TileCountControlConfig {
@@ -16,6 +23,19 @@ interface TileCountControlConfig {
     label?: string;
 }
 
+interface HeightControlConfig {
+    /** Current height level. */
+    value: number;
+    /** Lower bound (inclusive). Buttons disable when value === min. */
+    min: number;
+    /** Upper bound (inclusive). Buttons disable when value === max. */
+    max: number;
+    /** Called with the new height level. */
+    onChange: (next: number) => void;
+    /** Optional aria/title prefix, e.g. "IT Health height". */
+    label?: string;
+}
+
 interface DashboardSectionProps {
     title: string;
     linkText: string;
@@ -28,6 +48,7 @@ interface DashboardSectionProps {
     href?: string;
     children: React.ReactNode;
     className?: string;
+    style?: React.CSSProperties;
     /**
      * When provided, renders a small `−  N  +` pill at the right of
      * the section header so the user can dial the visible tile count
@@ -35,6 +56,12 @@ interface DashboardSectionProps {
      * callers continue to work unchanged).
      */
     tileCount?: TileCountControlConfig;
+    /**
+     * When provided, renders a compact height control so the user can
+     * give a section more vertical chart room without changing how
+     * many tiles are visible.
+     */
+    height?: HeightControlConfig;
     onEditTitle?: () => void;
 }
 
@@ -108,13 +135,80 @@ const TileCountPill: React.FC<TileCountControlConfig> = ({
     );
 };
 
+const HeightPill: React.FC<HeightControlConfig> = ({
+    value,
+    min,
+    max,
+    onChange,
+    label = 'Section height',
+}) => {
+    const atMin = value <= min;
+    const atMax = value >= max;
+    return (
+        <div
+            className={cn(
+                'inline-flex items-center gap-0.5 rounded-md',
+                'border border-sky-100 dark:border-sky-800/80',
+                'bg-sky-50/70 dark:bg-sky-950/40',
+                'text-sky-700 dark:text-sky-200',
+                'select-none'
+            )}
+            role="group"
+            aria-label={`${label}: level ${value} of ${max}`}
+            title={`${label}: level ${value} of ${max}`}
+        >
+            <button
+                type="button"
+                onClick={() => !atMin && onChange(value - 1)}
+                disabled={atMin}
+                aria-label={`Make ${label.toLowerCase()} shorter`}
+                title={atMin ? `Minimum ${label.toLowerCase()}` : `Make ${label.toLowerCase()} shorter`}
+                className={cn(
+                    'flex items-center justify-center w-5 h-5 rounded-l-md',
+                    'transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-sky-400',
+                    atMin
+                        ? 'opacity-40 cursor-not-allowed'
+                        : 'hover:bg-sky-100 dark:hover:bg-sky-900 cursor-pointer'
+                )}
+            >
+                <Minus className="w-3 h-3" />
+            </button>
+            <span
+                className="inline-flex items-center justify-center gap-0.5 text-[11px] font-semibold tabular-nums leading-none w-8"
+                aria-hidden="true"
+            >
+                <ArrowUpDown className="w-3 h-3" />
+                {value}
+            </span>
+            <button
+                type="button"
+                onClick={() => !atMax && onChange(value + 1)}
+                disabled={atMax}
+                aria-label={`Make ${label.toLowerCase()} taller`}
+                title={atMax ? `Maximum ${label.toLowerCase()}` : `Make ${label.toLowerCase()} taller`}
+                className={cn(
+                    'flex items-center justify-center w-5 h-5 rounded-r-md',
+                    'transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-sky-400',
+                    atMax
+                        ? 'opacity-40 cursor-not-allowed'
+                        : 'hover:bg-sky-100 dark:hover:bg-sky-900 cursor-pointer'
+                )}
+            >
+                <Plus className="w-3 h-3" />
+            </button>
+        </div>
+    );
+};
+
 export const DashboardSection: React.FC<DashboardSectionProps> = ({
     title,
     linkText,
     href,
     children,
     className,
+    style,
     tileCount,
+    height,
     onEditTitle,
 }) => {
     // Build 101 (2026-05-13): the drill-down link moved from a
@@ -196,6 +290,7 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
                 'bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-2.5 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_20px_-10px_rgba(0,0,0,0.45)] relative overflow-hidden group flex flex-col flex-shrink-0 min-h-[180px]',
                 className
             )}
+            style={style}
         >
             <div className="absolute top-0 left-0 w-1.5 h-full bg-sky-100 dark:bg-sky-900/40 group-hover:bg-sky-600 dark:group-hover:bg-sky-500 transition-colors" />
 
@@ -219,6 +314,7 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
                             <Pencil className="w-3.5 h-3.5" />
                         </button>
                     )}
+                    {height && <HeightPill {...height} />}
                     {tileCount && <TileCountPill {...tileCount} />}
                 </div>
             </div>
