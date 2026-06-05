@@ -62,6 +62,8 @@ interface DashboardSectionProps {
      * many tiles are visible.
      */
     height?: HeightControlConfig;
+    /** True when a dense tile section should flow into multiple rows. */
+    wrapTiles?: boolean;
     onEditTitle?: () => void;
 }
 
@@ -174,11 +176,11 @@ const HeightPill: React.FC<HeightControlConfig> = ({
                 <Minus className="w-3 h-3" />
             </button>
             <span
-                className="inline-flex items-center justify-center gap-0.5 text-[11px] font-semibold tabular-nums leading-none w-8"
+                className="inline-flex items-center justify-center gap-0.5 text-[11px] font-semibold tabular-nums leading-none w-9"
                 aria-hidden="true"
             >
                 <ArrowUpDown className="w-3 h-3" />
-                {value}
+                H{value}
             </span>
             <button
                 type="button"
@@ -209,6 +211,7 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
     style,
     tileCount,
     height,
+    wrapTiles = false,
     onEditTitle,
 }) => {
     // Build 101 (2026-05-13): the drill-down link moved from a
@@ -335,7 +338,14 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
               * `document.body`, which is a separate belt-and-braces
               * defense against any future ancestor clipping pattern.
               */}
-            <div className="flex flex-wrap md:flex-nowrap gap-0 divide-x divide-slate-100 dark:divide-slate-800 flex-1 min-h-0">
+            <div
+                className={cn(
+                    'flex flex-1 min-h-0',
+                    wrapTiles
+                        ? 'flex-wrap content-stretch items-stretch gap-2'
+                        : 'flex-wrap md:flex-nowrap gap-0 divide-x divide-slate-100 dark:divide-slate-800'
+                )}
+            >
                 {children}
             </div>
         </div>

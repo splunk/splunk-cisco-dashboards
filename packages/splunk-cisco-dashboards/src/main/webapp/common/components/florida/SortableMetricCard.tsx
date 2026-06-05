@@ -51,12 +51,15 @@ interface SortableMetricCardProps {
     ariaLabel?: string;
     /** The tile component itself (MetricCard, MetricItem, TableTile, …). */
     children: React.ReactNode;
+    /** Optional layout override from the containing section. */
+    className?: string;
 }
 
 export const SortableMetricCard: React.FC<SortableMetricCardProps> = ({
     id,
     ariaLabel,
     children,
+    className,
 }) => {
     const {
         setNodeRef,
@@ -86,6 +89,7 @@ export const SortableMetricCard: React.FC<SortableMetricCardProps> = ({
                 // <MetricCard /></SortableMetricCard> doesn't change
                 // section layout.
                 'flex flex-col flex-1 basis-0 min-w-[108px] relative group/sortable',
+                className,
                 // Reorder feedback: lift the dragged tile above its
                 // neighbours and drop opacity so the user can still
                 // read the source/destination context behind it.

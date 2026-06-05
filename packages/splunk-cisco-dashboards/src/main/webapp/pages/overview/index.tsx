@@ -143,6 +143,7 @@ import {
     sortableKeyboardCoordinates,
     arrayMove,
     horizontalListSortingStrategy,
+    rectSortingStrategy,
 } from '@dnd-kit/sortable';
 import { ThemeToggle } from '@/common/components/florida/ThemeToggle';
 import { runSearch } from '@/common/services/splunkSearchService';
@@ -190,7 +191,10 @@ const MIN_DASHBOARD_HEIGHT_PX = 520;
 const COMPACT_HEIGHT_THRESHOLD_PX = 720;
 const SECTION_HEIGHT_BASE_PX = 180;
 const SECTION_HEIGHT_COMPACT_BASE_PX = 174;
-const SECTION_HEIGHT_STEP_PX = 88;
+const SECTION_HEIGHT_STEP_PX = 120;
+const SECTION_WRAPPED_TILE_ROW_STEP_PX = 152;
+const SECTION_WRAP_TILE_COUNT = 5;
+const SECTION_WRAPPED_TILE_COLUMNS = 3;
 
 const useAvailableDashboardHeight = (): number | null => {
     const [height, setHeight] = useState<number | null>(null);
@@ -2423,7 +2427,7 @@ const OverviewPage: React.FC = () => {
         resetAll: resetAllSectionHeights,
     } = usePersistedSectionHeights({
         minLevel: 1,
-        maxLevel: 4,
+        maxLevel: 5,
         defaultLevel: 1,
     });
 
@@ -4001,6 +4005,12 @@ const OverviewPage: React.FC = () => {
                                 sectionTileCounts[section],
                                 sectionMaxAvailable
                             );
+                            const wrapTiles = visibleCount >= SECTION_WRAP_TILE_COUNT;
+                            const estimatedTileRows = wrapTiles
+                                ? Math.ceil(
+                                      visibleCount / SECTION_WRAPPED_TILE_COLUMNS
+                                  )
+                                : 1;
                             const heightLevel =
                                 sectionHeights[section] ?? sectionHeightBounds.defaultLevel;
                             const baseMinHeight = compactDensity
@@ -4009,7 +4019,9 @@ const OverviewPage: React.FC = () => {
                             const sectionMinHeight =
                                 baseMinHeight +
                                 (heightLevel - sectionHeightBounds.minLevel) *
-                                    SECTION_HEIGHT_STEP_PX;
+                                    SECTION_HEIGHT_STEP_PX +
+                                (estimatedTileRows - 1) *
+                                    SECTION_WRAPPED_TILE_ROW_STEP_PX;
 
                             // Apply the user's drag-reorder
                             // preference (if any) to the canonical
@@ -4064,6 +4076,7 @@ const OverviewPage: React.FC = () => {
                                         onChange: (next) => setSectionHeight(section, next),
                                         label: `${meta.title} height`,
                                     }}
+                                    wrapTiles={wrapTiles}
                                     tileCount={{
                                         value: visibleCount,
                                         min: sectionTileBounds.minCount,
@@ -4080,7 +4093,11 @@ const OverviewPage: React.FC = () => {
                                     >
                                         <SortableContext
                                             items={visibleIds}
-                                            strategy={horizontalListSortingStrategy}
+                                            strategy={
+                                                wrapTiles
+                                                    ? rectSortingStrategy
+                                                    : horizontalListSortingStrategy
+                                            }
                                         >
                                             {visibleIds.map((id, idx) => {
                                                 const cfg = byId.get(id);
@@ -4090,6 +4107,11 @@ const OverviewPage: React.FC = () => {
                                                         key={cfg.id}
                                                         id={cfg.id}
                                                         ariaLabel={cfg.label}
+                                                        className={
+                                                            wrapTiles
+                                                                ? 'min-w-[240px] md:min-w-[250px] min-h-[148px]'
+                                                                : undefined
+                                                        }
                                                     >
                                                         <MetricCard
                                                             cfg={cfg}
