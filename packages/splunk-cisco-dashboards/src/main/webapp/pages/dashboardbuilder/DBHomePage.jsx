@@ -181,6 +181,7 @@ const buildDashboardSearchText = (dashboard) =>
         dashboard.label,
         dashboard.description,
         dashboard.app,
+        dashboard.contentApp,
         dashboard.owner,
         dashboard.author,
         dashboard.sharing,
@@ -196,6 +197,28 @@ const isTruthyFavoriteValue = (value) =>
     ['1', 'true', 'yes', 'favorite', 'favourite'].includes(
         normalizeDashboardFilterValue(value),
     );
+
+const getDashboardAppFromServiceUri = (uri) => {
+    if (!uri || typeof uri !== 'string') {
+        return '';
+    }
+
+    try {
+        const pathname = /^https?:\/\//i.test(uri) ? new URL(uri).pathname : uri;
+        const match = pathname.match(/\/servicesNS\/[^/]+\/([^/]+)\//);
+        return match?.[1] ? decodeURIComponent(match[1]) : '';
+    } catch (error) {
+        return '';
+    }
+};
+
+const getDashboardNamespaceApp = (entry) =>
+    entry?.acl?.app ||
+    entry?.content?.['eai:acl.app'] ||
+    getDashboardAppFromServiceUri(entry?.id) ||
+    getDashboardAppFromServiceUri(entry?.links?.alternate) ||
+    entry?.content?.['eai:appName'] ||
+    '';
 
 const getBootstrapSplunkUsername = () => {
     if (typeof window === 'undefined') {
@@ -325,12 +348,13 @@ export default function DBHomePage() {
     const filteredDashboards = useMemo(() => {
         const normalizedSearchText = searchText.trim().toLowerCase();
         const normalizedCurrentUser = normalizeDashboardFilterValue(currentSplunkUser);
+        const normalizedAppId = normalizeDashboardFilterValue(INSIGHTS_APP_ID);
 
         return dashboards
             .filter((ds) => !ds.template)
             .filter((ds) => {
                 if (dashboardScope === 'app') {
-                    return ds.app === INSIGHTS_APP_ID;
+                    return normalizeDashboardFilterValue(ds.app) === normalizedAppId;
                 }
 
                 if (dashboardScope === 'yours') {
@@ -503,7 +527,8 @@ export default function DBHomePage() {
                             const description = jObj.dashboard.description || '';
                             const tag = jObj.dashboard.tag || '';
                             const tags = parseDashboardTags(tag);
-                            const app = r.content['eai:appName'];
+                            const app = getDashboardNamespaceApp(r);
+                            const contentApp = r.content['eai:appName'];
                             const author = r.content['eai:userName'];
                             const owner = r.acl?.owner || author;
                             const sharing = r.acl?.sharing || 'app';
@@ -519,6 +544,7 @@ export default function DBHomePage() {
                                 definition: data,
                                 author,
                                 app,
+                                contentApp,
                                 owner,
                                 sharing,
                                 deleteLink: r.links?.remove || r.links?.edit,
@@ -534,6 +560,7 @@ export default function DBHomePage() {
                                     label: r.content['label'],
                                     description,
                                     app,
+                                    contentApp,
                                     owner,
                                     author,
                                     sharing,
