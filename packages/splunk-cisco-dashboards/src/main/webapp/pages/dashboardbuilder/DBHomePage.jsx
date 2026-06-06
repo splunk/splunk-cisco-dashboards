@@ -35,6 +35,7 @@ import Select from '@splunk/react-ui/Select';
 import Tooltip from '@splunk/react-ui/Tooltip';
 import CollapsiblePanel from '@splunk/react-ui/CollapsiblePanel';
 import Multiselect from '@splunk/react-ui/Multiselect';
+import Checkbox from '@splunk/react-ui/Checkbox';
 import CustomTooltip from '../../common/components/CustomTooltip/CustomTooltip';
 import ManagerPreviewModal from '../../common/components/ManagerPreviewModal';
 import { actionMenus } from '../../common/udf/presets';
@@ -49,7 +50,9 @@ import QuestionCircle from '@splunk/react-icons/QuestionCircle';
 import Tag from '@splunk/react-icons/Tag';
 import Plus from '@splunk/react-icons/Plus';
 import ArrowSquareTopRight from '@splunk/react-icons/ArrowSquareTopRight';
+import Magnifier from '@splunk/react-icons/Magnifier';
 import { initialDefinition } from './DashboardStudioEditor';
+import { INSIGHTS_APP_ID } from '../../common/lib/constants';
 
 const featureFlags = {
     enableCollapsibleToolbar: true,
@@ -133,6 +136,11 @@ const DASHBOARD_PAGE_SIZE = 20;
 const DASHBOARD_CARD_TITLE_LIMIT = 35;
 const DASHBOARD_CARD_DESCRIPTION_LIMIT = 140;
 const MANAGER_SUBTITLE_LIMIT = 140;
+const DASHBOARD_SCOPE_OPTIONS = [
+    { id: 'all', label: 'All' },
+    { id: 'yours', label: 'Yours' },
+    { id: 'app', label: "This App's" },
+];
 
 const truncateManagerSubtitle = (subtitle) => {
     if (!subtitle || subtitle.length <= MANAGER_SUBTITLE_LIMIT) {
@@ -162,11 +170,59 @@ const truncateDashboardDescription = (description) => {
     return `${normalizedDescription.slice(0, DASHBOARD_CARD_DESCRIPTION_LIMIT).trimEnd()}...`;
 };
 
+const normalizeDashboardFilterValue = (value) =>
+    String(value || '')
+        .trim()
+        .toLowerCase();
+
 const buildDashboardSearchText = (dashboard) =>
-    [dashboard.title, dashboard.label, dashboard.description]
+    [
+        dashboard.title,
+        dashboard.label,
+        dashboard.description,
+        dashboard.app,
+        dashboard.owner,
+        dashboard.author,
+        dashboard.sharing,
+        ...(dashboard.tags || []),
+    ]
         .filter(Boolean)
         .join(' ')
         .toLowerCase();
+
+const isTruthyFavoriteValue = (value) =>
+    value === true ||
+    value === 1 ||
+    ['1', 'true', 'yes', 'favorite', 'favourite'].includes(
+        normalizeDashboardFilterValue(value),
+    );
+
+const getBootstrapSplunkUsername = () => {
+    if (typeof window === 'undefined') {
+        return '';
+    }
+
+    const bootstrap = window.$C || {};
+    const rawUsername =
+        bootstrap.USERNAME ||
+        bootstrap.username ||
+        bootstrap.USER?.username ||
+        bootstrap.USER?.name ||
+        bootstrap.user?.username ||
+        bootstrap.user?.name ||
+        '';
+
+    return typeof rawUsername === 'string' ? rawUsername.trim() : '';
+};
+
+const getSplunkLocalePrefix = () => {
+    if (typeof window === 'undefined') {
+        return '/en-US';
+    }
+
+    const match = window.location.pathname.match(/^\/[^/]+/);
+    return match?.[0] || '/en-US';
+};
 
 const buildDashboardStudioPath = (dashboardId, mode = 'view') => {
     const encodedDashboardId = encodeURIComponent(dashboardId);
@@ -201,6 +257,8 @@ export default function DBHomePage() {
     const [previewTemplate, setPreviewTemplate] = useState();
     const [selectedOpenTemplate, setSelectedOpenTemplate] = useState('');
     const [dashboardFilterTags, setDashboardFilterTags] = useState([]);
+    const [dashboardScope, setDashboardScope] = useState('all');
+    const [showOnlyFavoriteDashboards, setShowOnlyFavoriteDashboards] = useState(false);
     const [dashboardLibraryView, setDashboardLibraryView] = useState('cards');
     const [openDashboardMetadataEditor, setOpenDashboardMetadataEditor] = useState(false);
     const [dashboardMetadataTarget, setDashboardMetadataTarget] = useState();
@@ -208,6 +266,7 @@ export default function DBHomePage() {
     const [dashboardMetadataDescription, setDashboardMetadataDescription] = useState('');
     const [dashboardMetadataTags, setDashboardMetadataTags] = useState([]);
     const [isSavingDashboardMetadata, setIsSavingDashboardMetadata] = useState(false);
+    const [currentSplunkUser, setCurrentSplunkUser] = useState(getBootstrapSplunkUsername());
 
     const dashboardManagerSubtitle =
         'Turn predefined Cisco KPIs into actionable insights in seconds using the custom dashboard manager.';
@@ -217,15 +276,76 @@ export default function DBHomePage() {
         document.title = 'Dashboard Builder';
     }, []);
 
+    useEffect(() => {
+        let cancelled = false;
+        const bootstrapUsername = getBootstrapSplunkUsername();
+
+        fetch(
+            `${getSplunkLocalePrefix()}/splunkd/__raw/services/authentication/current-context?output_mode=json`,
+            {
+                credentials: 'include',
+                headers: { Accept: 'application/json' },
+            },
+        )
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                return response.json();
+            })
+            .then((json) => {
+                if (cancelled) {
+                    return;
+                }
+
+                const content = json.entry?.[0]?.content || {};
+                const rawUsername =
+                    content.username ||
+                    content.user ||
+                    content.name ||
+                    bootstrapUsername;
+                const username = typeof rawUsername === 'string' ? rawUsername.trim() : '';
+                setCurrentSplunkUser(username);
+            })
+            .catch(() => {
+                if (!cancelled) {
+                    setCurrentSplunkUser(bootstrapUsername);
+                }
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
     const handlePageChange = (event, { page }) => {
         setPageNum(page);
     };
 
     const filteredDashboards = useMemo(() => {
         const normalizedSearchText = searchText.trim().toLowerCase();
+        const normalizedCurrentUser = normalizeDashboardFilterValue(currentSplunkUser);
 
         return dashboards
             .filter((ds) => !ds.template)
+            .filter((ds) => {
+                if (dashboardScope === 'app') {
+                    return ds.app === INSIGHTS_APP_ID;
+                }
+
+                if (dashboardScope === 'yours') {
+                    if (!normalizedCurrentUser) {
+                        return true;
+                    }
+
+                    return [ds.owner, ds.author]
+                        .map(normalizeDashboardFilterValue)
+                        .some((owner) => owner === normalizedCurrentUser);
+                }
+
+                return true;
+            })
+            .filter((ds) => !showOnlyFavoriteDashboards || ds.isFavorite)
             .filter(
                 (ds) =>
                     normalizedSearchText === '' ||
@@ -236,7 +356,14 @@ export default function DBHomePage() {
                     dashboardFilterTags.length === 0 ||
                     ds.tags.some((tag) => dashboardFilterTags.includes(tag)),
             );
-    }, [dashboards, dashboardFilterTags, searchText]);
+    }, [
+        currentSplunkUser,
+        dashboards,
+        dashboardFilterTags,
+        dashboardScope,
+        searchText,
+        showOnlyFavoriteDashboards,
+    ]);
 
     const totalDashboardPages = Math.max(
         1,
@@ -376,14 +503,24 @@ export default function DBHomePage() {
                             const description = jObj.dashboard.description || '';
                             const tag = jObj.dashboard.tag || '';
                             const tags = parseDashboardTags(tag);
+                            const app = r.content['eai:appName'];
+                            const author = r.content['eai:userName'];
+                            const owner = r.acl?.owner || author;
+                            const sharing = r.acl?.sharing || 'app';
+                            const isFavorite = [
+                                r.content.isFavorite,
+                                r.content.is_favorite,
+                                r.content.favorite,
+                                r.content['eai:favorite'],
+                            ].some(isTruthyFavoriteValue);
 
                             return {
                                 data: r.content['eai:data'],
                                 definition: data,
-                                author: r.content['eai:userName'],
-                                app: r.content['eai:appName'],
-                                owner: r.acl?.owner || r.content['eai:userName'],
-                                sharing: r.acl?.sharing || 'app',
+                                author,
+                                app,
+                                owner,
+                                sharing,
                                 deleteLink: r.links?.remove || r.links?.edit,
                                 title: r.name,
                                 label: r.content['label'],
@@ -391,10 +528,16 @@ export default function DBHomePage() {
                                 description,
                                 tag,
                                 tags,
+                                isFavorite,
                                 searchText: buildDashboardSearchText({
                                     title: r.name,
                                     label: r.content['label'],
                                     description,
+                                    app,
+                                    owner,
+                                    author,
+                                    sharing,
+                                    tags,
                                 }),
                                 template: data.template ? data.template : false,
                             };
@@ -430,6 +573,23 @@ export default function DBHomePage() {
 
     const handleDashboardFilterTagsChange = (e, { values }) => {
         setDashboardFilterTags(values);
+        setPageNum(1);
+    };
+
+    const handleDashboardScopeChange = (scope) => (event) => {
+        stopDashboardPanelAction(event);
+        setDashboardScope(scope);
+        setPageNum(1);
+    };
+
+    const handleDashboardScopeKeyDown = (scope) => (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            handleDashboardScopeChange(scope)(event);
+        }
+    };
+
+    const handleFavoriteDashboardFilterChange = (event, { checked }) => {
+        setShowOnlyFavoriteDashboards(checked);
         setPageNum(1);
     };
 
@@ -1286,16 +1446,47 @@ export default function DBHomePage() {
                             span={12}
                         >
                             <div className="dashboard-manager-library-filters">
+                                <Checkbox
+                                    className="dashboard-manager-favorite-filter"
+                                    checked={showOnlyFavoriteDashboards}
+                                    onChange={handleFavoriteDashboardFilterChange}
+                                >
+                                    Show only favorites
+                                </Checkbox>
+                                <div
+                                    className="dashboard-manager-scope-filter"
+                                    role="tablist"
+                                    aria-label="Dashboard ownership filter"
+                                >
+                                    {DASHBOARD_SCOPE_OPTIONS.map((option) => (
+                                        <span
+                                            key={option.id}
+                                            role="tab"
+                                            tabIndex={0}
+                                            aria-selected={dashboardScope === option.id}
+                                            className={`dashboard-manager-scope-filter-option ${
+                                                dashboardScope === option.id
+                                                    ? 'dashboard-manager-scope-filter-option-active'
+                                                    : ''
+                                            }`}
+                                            onClick={handleDashboardScopeChange(option.id)}
+                                            onKeyDown={handleDashboardScopeKeyDown(option.id)}
+                                        >
+                                            {option.label}
+                                        </span>
+                                    ))}
+                                </div>
                                 <div className="dashboard-manager-library-search-field">
                                     <Text
                                         className="dashboard-manager-library-search"
                                         canClear
+                                        placeholder="Filter dashboards, owners, apps, or tags"
                                         value={searchText}
                                         onChange={(e, { value }) => {
                                             setSearchText(value);
                                             setPageNum(1);
                                         }}
-                                        endAdornment={<MagnifierPlus className="dashboard-manager-search-icon" />}
+                                        endAdornment={<Magnifier className="dashboard-manager-search-icon" />}
                                         inline
                                     ></Text>
                                 </div>
@@ -1304,7 +1495,7 @@ export default function DBHomePage() {
                                         className="dashboard-manager-library-tag-filter"
                                         values={dashboardFilterTags}
                                         onChange={handleDashboardFilterTagsChange}
-                                        placeholder="Filter by tags"
+                                        placeholder="Tags"
                                         inline
                                     >
                                         {availableDashboardTags.map((tag) => (

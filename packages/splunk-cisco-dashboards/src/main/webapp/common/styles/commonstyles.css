@@ -5824,29 +5824,72 @@ div[class^='adv-form-inputs-r'] div[class^='ColumnStyles__Styled'] {
     }
 }
 .dashboard-manager-library-row {
-    background: #f8f8f8;
-    border-bottom: 1px solid #e8e8e8;
+    background: linear-gradient(180deg, #f8fafc 0%, #eef3f8 100%);
+    border-bottom: 1px solid #dfe7ef;
 }
 .dashboard-manager-library-filters {
     display: flex;
     align-items: center;
-    flex-wrap: nowrap;
-    gap: 15px;
-    /* padding: 10px 0px 10px 20px; */
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 14px 18px;
+}
+.dashboard-manager-favorite-filter {
+    display: inline-flex;
+    align-items: center;
+    min-height: 42px;
+    padding-right: 4px;
+    color: #1f2a37;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.dashboard-manager-scope-filter {
+    display: inline-flex;
+    align-items: stretch;
+    overflow: hidden;
+    border: 1px solid #aeb8c4;
+    border-radius: 4px;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+.dashboard-manager-scope-filter-option {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    min-width: 78px;
+    padding: 0 16px;
+    border-right: 1px solid #aeb8c4;
+    background: #ffffff;
+    color: #283645;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    user-select: none;
+}
+.dashboard-manager-scope-filter-option:last-child {
+    border-right: 0;
+}
+.dashboard-manager-scope-filter-option-active {
+    background: #334155;
+    color: #ffffff;
 }
 .dashboard-manager-library-search-field {
-    width: 300px;
-    max-width: 300px;
-    flex: 0 0 300px;
+    flex: 1 1 420px;
+    min-width: 280px;
+    max-width: 620px;
 }
 .dashboard-manager-library-tag-filter-field {
-    width: 200px;
-    max-width: 200px;
-    flex: 0 0 200px;
+    width: 240px;
+    max-width: 280px;
+    flex: 0 1 240px;
 }
 .dashboard-manager-library-search {
-    max-width: 295px !important;
-    min-width: 295px !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
     background: #ffffff;
 }
 .dashboard-manager-library-tag-filter {
