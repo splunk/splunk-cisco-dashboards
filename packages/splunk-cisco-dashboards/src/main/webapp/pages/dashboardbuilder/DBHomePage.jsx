@@ -648,7 +648,7 @@ export default function DBHomePage() {
             return;
         }
 
-        navigate(buildDashboardStudioPath(dash.title));
+        window.open(buildDashboardStudioUrl(dash.title), '_blank', 'noopener,noreferrer');
     };
 
     const handleEditDashboard = (dash) => {
