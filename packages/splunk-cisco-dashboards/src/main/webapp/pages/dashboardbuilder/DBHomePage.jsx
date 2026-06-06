@@ -48,6 +48,7 @@ import FileCharts from '@splunk/react-icons/FileCharts';
 import QuestionCircle from '@splunk/react-icons/QuestionCircle';
 import Tag from '@splunk/react-icons/Tag';
 import Plus from '@splunk/react-icons/Plus';
+import ArrowSquareTopRight from '@splunk/react-icons/ArrowSquareTopRight';
 import { initialDefinition } from './DashboardStudioEditor';
 
 const featureFlags = {
@@ -167,6 +168,18 @@ const buildDashboardSearchText = (dashboard) =>
         .join(' ')
         .toLowerCase();
 
+const buildDashboardStudioPath = (dashboardId, mode = 'view') => {
+    const encodedDashboardId = encodeURIComponent(dashboardId);
+
+    return mode === 'edit' ? `/${encodedDashboardId}/edit` : `/${encodedDashboardId}`;
+};
+
+const buildDashboardStudioUrl = (dashboardId, mode = 'view') =>
+    `/app/splunk-cisco-dashboards/dashboardbuilder#${buildDashboardStudioPath(
+        dashboardId,
+        mode,
+    )}`;
+
 export default function DBHomePage() {
     const iconRegistry = useMemo(() => createIS4SIconRegistry(), []);
     const [dashboards, setDashboards] = useState([]);
@@ -283,10 +296,7 @@ export default function DBHomePage() {
                     setOpenCreateDashboard(false);
                     setTimeout(() => {
                         //navigate(`/${dashid}/edit`, { replace: true });
-                        window.open(
-                            `/app/splunk-cisco-dashboards/dashboardbuilder#/${dashid}/edit`,
-                            '_self',
-                        );
+                        window.open(buildDashboardStudioUrl(dashid, 'edit'), '_self');
                     }, 500);
                 } else {
                     console.log(response);
@@ -332,10 +342,7 @@ export default function DBHomePage() {
                     setOpenCreateDashboard(false);
                     setTimeout(() => {
                         //navigate(`/${dashid}/edit`, { replace: true });
-                        window.open(
-                            `/app/splunk-cisco-dashboards/dashboardbuilder#/${dashid}/edit`,
-                            '_self',
-                        );
+                        window.open(buildDashboardStudioUrl(dashid, 'edit'), '_self');
                     }, 500);
                 } else {
                     makeCreateToast(Toaster)({
@@ -449,8 +456,16 @@ export default function DBHomePage() {
         setSelectedDash(dash);
     };
 
+    const handleOpenDashboard = (dash) => {
+        if (!dash?.title) {
+            return;
+        }
+
+        navigate(buildDashboardStudioPath(dash.title));
+    };
+
     const handleEditDashboard = (dash) => {
-        navigate(`/${dash.title}/edit`);
+        navigate(buildDashboardStudioPath(dash.title, 'edit'));
     };
 
     const handleOpenDashboardMetadataEditor = (dash, { closePreview = false } = {}) => {
@@ -1037,6 +1052,16 @@ export default function DBHomePage() {
                     <>
                         {selectedDash && (
                             <Button
+                                label="Open Dashboard"
+                                appearance="primary"
+                                icon={<ArrowSquareTopRight />}
+                                onClick={() => {
+                                    handleOpenDashboard(selectedDash);
+                                }}
+                            />
+                        )}
+                        {selectedDash && (
+                            <Button
                                 label="Edit Metadata"
                                 appearance="secondary"
                                 icon={<Tag />}
@@ -1414,6 +1439,16 @@ export default function DBHomePage() {
                                                                     }}
                                                                 />
                                                             </Tooltip>
+                                                            <Tooltip content="Open dashboard">
+                                                                <Button
+                                                                    appearance="subtle"
+                                                                    icon={<ArrowSquareTopRight />}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleOpenDashboard(dash);
+                                                                    }}
+                                                                />
+                                                            </Tooltip>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1431,7 +1466,7 @@ export default function DBHomePage() {
                                             <Table.HeadCell width={140}>App</Table.HeadCell>
                                             <Table.HeadCell>Description</Table.HeadCell>
                                             <Table.HeadCell width={220}>Tags</Table.HeadCell>
-                                            <Table.HeadCell width={220}>Actions</Table.HeadCell>
+                                            <Table.HeadCell width={320}>Actions</Table.HeadCell>
                                         </Table.Head>
                                         <Table.Body>
                                             {visibleDashboards.map((dash) => (
@@ -1468,6 +1503,12 @@ export default function DBHomePage() {
                                                     </Table.Cell>
                                                     <Table.Cell>
                                                         <div className="dashboard-manager-library-table-actions">
+                                                            <Button
+                                                                appearance="primary"
+                                                                icon={<ArrowSquareTopRight />}
+                                                                label="Open"
+                                                                onClick={() => handleOpenDashboard(dash)}
+                                                            />
                                                             <Button
                                                                 appearance="subtle"
                                                                 icon={<MagnifierPlus />}

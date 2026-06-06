@@ -6067,6 +6067,7 @@ div[class^='adv-form-inputs-r'] div[class^='ColumnStyles__Styled'] {
 .dashboard-manager-library-table-actions {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
 }
 
