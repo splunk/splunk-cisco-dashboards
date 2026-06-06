@@ -34,4 +34,7 @@
         <view name="dashboards"/>
         <a href="search" target="_blank" rel="noopener">Search</a>
     </collection>
+    <collection label="My Views">
+		<view source="all" match="sei_" />
+	</collection>
 </nav>
