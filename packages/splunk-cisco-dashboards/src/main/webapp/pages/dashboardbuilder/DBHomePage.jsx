@@ -34,7 +34,6 @@ import TextArea from '@splunk/react-ui/TextArea';
 import Select from '@splunk/react-ui/Select';
 import Tooltip from '@splunk/react-ui/Tooltip';
 import CollapsiblePanel from '@splunk/react-ui/CollapsiblePanel';
-import Multiselect from '@splunk/react-ui/Multiselect';
 import Checkbox from '@splunk/react-ui/Checkbox';
 import CustomTooltip from '../../common/components/CustomTooltip/CustomTooltip';
 import ManagerPreviewModal from '../../common/components/ManagerPreviewModal';
@@ -47,7 +46,6 @@ import WaitSpinner from '@splunk/react-ui/WaitSpinner';
 
 import FileCharts from '@splunk/react-icons/FileCharts';
 import QuestionCircle from '@splunk/react-icons/QuestionCircle';
-import Tag from '@splunk/react-icons/Tag';
 import Plus from '@splunk/react-icons/Plus';
 import ArrowSquareTopRight from '@splunk/react-icons/ArrowSquareTopRight';
 import Magnifier from '@splunk/react-icons/Magnifier';
@@ -119,19 +117,6 @@ const initialTemplateDefinition = {
     template: true,
 };
 
-// Normalize saved dashboard tag values so legacy metadata can still be filtered and displayed.
-const parseDashboardTags = (tagValue) =>
-    (tagValue || '')
-        .split(',')
-        .map((tag) => tag.trim())
-        .filter(Boolean);
-
-const serializeDashboardTags = (tags) =>
-    tags
-        .map((tag) => tag.trim())
-        .filter(Boolean)
-        .join(',');
-
 const DASHBOARD_PAGE_SIZE = 20;
 const DASHBOARD_CARD_TITLE_LIMIT = 35;
 const DASHBOARD_CARD_DESCRIPTION_LIMIT = 140;
@@ -185,7 +170,6 @@ const buildDashboardSearchText = (dashboard) =>
         dashboard.owner,
         dashboard.author,
         dashboard.sharing,
-        ...(dashboard.tags || []),
     ]
         .filter(Boolean)
         .join(' ')
@@ -279,7 +263,6 @@ export default function DBHomePage() {
     const [openPreview, setOpenPreview] = useState(false);
     const [previewTemplate, setPreviewTemplate] = useState();
     const [selectedOpenTemplate, setSelectedOpenTemplate] = useState('');
-    const [dashboardFilterTags, setDashboardFilterTags] = useState([]);
     const [dashboardScope, setDashboardScope] = useState('all');
     const [showOnlyFavoriteDashboards, setShowOnlyFavoriteDashboards] = useState(false);
     const [dashboardLibraryView, setDashboardLibraryView] = useState('cards');
@@ -287,7 +270,6 @@ export default function DBHomePage() {
     const [dashboardMetadataTarget, setDashboardMetadataTarget] = useState();
     const [dashboardMetadataTitle, setDashboardMetadataTitle] = useState('');
     const [dashboardMetadataDescription, setDashboardMetadataDescription] = useState('');
-    const [dashboardMetadataTags, setDashboardMetadataTags] = useState([]);
     const [isSavingDashboardMetadata, setIsSavingDashboardMetadata] = useState(false);
     const [currentSplunkUser, setCurrentSplunkUser] = useState(getBootstrapSplunkUsername());
 
@@ -374,16 +356,10 @@ export default function DBHomePage() {
                 (ds) =>
                     normalizedSearchText === '' ||
                     ds.searchText.includes(normalizedSearchText),
-            )
-            .filter(
-                (ds) =>
-                    dashboardFilterTags.length === 0 ||
-                    ds.tags.some((tag) => dashboardFilterTags.includes(tag)),
             );
     }, [
         currentSplunkUser,
         dashboards,
-        dashboardFilterTags,
         dashboardScope,
         searchText,
         showOnlyFavoriteDashboards,
@@ -403,14 +379,6 @@ export default function DBHomePage() {
         [filteredDashboards, pageNum],
     );
 
-    const availableDashboardTags = useMemo(
-        () =>
-            Array.from(new Set(dashboards.flatMap((dashboard) => dashboard.tags))).sort((left, right) =>
-                left.localeCompare(right),
-            ),
-        [dashboards],
-    );
-
     const templateDashboards = useMemo(
         () => dashboards.filter((dashboard) => dashboard.template === true),
         [dashboards],
@@ -423,8 +391,6 @@ export default function DBHomePage() {
     }, [pageNum, totalDashboardPages]);
 
     const handleOpenClick = () => {
-        const serializedTags = '';
-
         if (activeModeId == 'create') {
             // create a new dashboard and then open it
 
@@ -432,7 +398,6 @@ export default function DBHomePage() {
             let jsonDefinition = cloneDeep(initialDefinition);
             jsonDefinition.title = dashboardTitle;
             jsonDefinition.description = dashboardDescription;
-            jsonDefinition.tag = serializedTags;
             jsonDefinition.layout.type = gridLayout;
 
             addDash(
@@ -440,7 +405,6 @@ export default function DBHomePage() {
                 JSON.stringify(jsonDefinition),
                 dashboardTitle,
                 dashboardDescription,
-                serializedTags,
             ).then((response) => {
                 if (response.status >= 200 && response.status <= 299) {
                     console.log(response);
@@ -470,7 +434,7 @@ export default function DBHomePage() {
 
             jsonDefinition.title = dashboardTitle;
             jsonDefinition.description = dashboardDescription;
-            jsonDefinition.tag = serializedTags;
+            delete jsonDefinition.tag;
             delete jsonDefinition.template;
             for (const [key, viz] of Object.entries(jsonDefinition.visualizations)) {
                 if (
@@ -487,7 +451,6 @@ export default function DBHomePage() {
                 JSON.stringify(jsonDefinition),
                 dashboardTitle,
                 dashboardDescription,
-                serializedTags,
             ).then((response) => {
                 if (response.status >= 200 && response.status <= 299) {
                     setOpenCreateDashboard(false);
@@ -525,8 +488,6 @@ export default function DBHomePage() {
                             );
 
                             const description = jObj.dashboard.description || '';
-                            const tag = jObj.dashboard.tag || '';
-                            const tags = parseDashboardTags(tag);
                             const app = getDashboardNamespaceApp(r);
                             const contentApp = r.content['eai:appName'];
                             const author = r.content['eai:userName'];
@@ -550,10 +511,7 @@ export default function DBHomePage() {
                                 deleteLink: r.links?.remove || r.links?.edit,
                                 title: r.name,
                                 label: r.content['label'],
-                                // kh 2026-05-16 23:32:45 EDT: Normalize dashboard metadata once during load so library filters and tag rendering reuse stable parsed values instead of recomputing them on every render.
                                 description,
-                                tag,
-                                tags,
                                 isFavorite,
                                 searchText: buildDashboardSearchText({
                                     title: r.name,
@@ -564,7 +522,6 @@ export default function DBHomePage() {
                                     owner,
                                     author,
                                     sharing,
-                                    tags,
                                 }),
                                 template: data.template ? data.template : false,
                             };
@@ -596,11 +553,6 @@ export default function DBHomePage() {
         setGridLayout('absolute');
         setActiveModeId('create');
         setSelectedOpenTemplate('');
-    };
-
-    const handleDashboardFilterTagsChange = (e, { values }) => {
-        setDashboardFilterTags(values);
-        setPageNum(1);
     };
 
     const handleDashboardScopeChange = (scope) => (event) => {
@@ -667,7 +619,6 @@ export default function DBHomePage() {
         setDashboardMetadataTarget(dash);
         setDashboardMetadataTitle(dash.label || dash.title || '');
         setDashboardMetadataDescription(dash.description || '');
-        setDashboardMetadataTags(parseDashboardTags(dash.tag));
         setOpenDashboardMetadataEditor(true);
     };
 
@@ -676,7 +627,6 @@ export default function DBHomePage() {
         setDashboardMetadataTarget(undefined);
         setDashboardMetadataTitle('');
         setDashboardMetadataDescription('');
-        setDashboardMetadataTags([]);
         setIsSavingDashboardMetadata(false);
     };
 
@@ -691,14 +641,11 @@ export default function DBHomePage() {
 
         setIsSavingDashboardMetadata(true);
 
-        const serializedTags = serializeDashboardTags(dashboardMetadataTags);
-
         updateDashMetadata(
             dashboardMetadataTarget.title,
             dashboardMetadataTarget.definition,
             dashboardMetadataTitle.trim(),
             dashboardMetadataDescription.trim(),
-            serializedTags,
         ).then((response) => {
             if (response.status >= 200 && response.status <= 299) {
                 makeCreateToast(Toaster)({
@@ -715,12 +662,10 @@ export default function DBHomePage() {
                                   ...prev,
                                   label: dashboardMetadataTitle.trim(),
                                   description: dashboardMetadataDescription.trim(),
-                                  tag: serializedTags,
                                   definition: {
                                       ...prev.definition,
                                       title: dashboardMetadataTitle.trim(),
                                       description: dashboardMetadataDescription.trim(),
-                                      tag: serializedTags,
                                   },
                               }
                             : prev,
@@ -1157,7 +1102,7 @@ export default function DBHomePage() {
                 <Modal.Header
                     title="Edit Dashboard Metadata"
                     subtitle="Update the dashboard title and optional description without opening Dashboard Studio."
-                    icon={<Tag className="dashboard-builder-modal-icon" />}
+                    icon={<FileCharts className="dashboard-builder-modal-icon" />}
                 />
                 <Modal.Body className="dashboard-builder-modal-body">
                     <div className="dashboard-builder-modal-content">
@@ -1251,7 +1196,7 @@ export default function DBHomePage() {
                             <Button
                                 label="Edit Metadata"
                                 appearance="secondary"
-                                icon={<Tag />}
+                                icon={<FileCharts />}
                                 onClick={() => {
                                     handleOpenDashboardMetadataEditor(selectedDash, {
                                         closePreview: true,
@@ -1418,11 +1363,11 @@ export default function DBHomePage() {
                                                             <strong> From template</strong>.
                                                         </li>
                                                         <li>
-                                                            Use the <strong>Search</strong> and
-                                                            <strong> tag</strong> filters to narrow the
-                                                            list. Keep the existing cards for visual browsing,
-                                                            or switch to <strong>Table View</strong> when you
-                                                            need more list density.
+                                                            Use the <strong>Search</strong>, favorites,
+                                                            and ownership filters to narrow the list. Keep the
+                                                            existing cards for visual browsing, or switch to
+                                                            <strong> Table View</strong> when you need more
+                                                            list density.
                                                         </li>
                                                         <li>
                                                             In Dashboard Studio, use the
@@ -1507,7 +1452,7 @@ export default function DBHomePage() {
                                     <Text
                                         className="dashboard-manager-library-search"
                                         canClear
-                                        placeholder="Filter dashboards, owners, apps, or tags"
+                                        placeholder="Filter dashboards, owners, or apps"
                                         value={searchText}
                                         onChange={(e, { value }) => {
                                             setSearchText(value);
@@ -1516,19 +1461,6 @@ export default function DBHomePage() {
                                         endAdornment={<Magnifier className="dashboard-manager-search-icon" />}
                                         inline
                                     ></Text>
-                                </div>
-                                <div className="dashboard-manager-library-tag-filter-field">
-                                    <Multiselect
-                                        className="dashboard-manager-library-tag-filter"
-                                        values={dashboardFilterTags}
-                                        onChange={handleDashboardFilterTagsChange}
-                                        placeholder="Tags"
-                                        inline
-                                    >
-                                        {availableDashboardTags.map((tag) => (
-                                            <Multiselect.Option key={tag} label={tag} value={tag} />
-                                        ))}
-                                    </Multiselect>
                                 </div>
                             </div>
                         </ColumnLayout.Column>
@@ -1598,18 +1530,6 @@ export default function DBHomePage() {
                                                 >
                                                     {truncateDashboardDescription(dash.description)}
                                                 </div>
-                                                {dash.tags.length > 0 && (
-                                                    <div className="manager-card-tag-pills dashboard-manager-card-tag-pills">
-                                                        {dash.tags.map((tag) => (
-                                                            <span
-                                                                key={`${dash.title}-${tag}`}
-                                                                className="manager-card-tag-pill dashboard-manager-card-tag-pill"
-                                                            >
-                                                                {tag}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                )}
                                             </Card.Body>
 
                                             <Card.Footer className="dashboard-manager-library-card-footer">
@@ -1619,7 +1539,7 @@ export default function DBHomePage() {
                                                             <Tooltip content="Edit dashboard metadata">
                                                                 <Button
                                                                     appearance="subtle"
-                                                                    icon={<Tag />}
+                                                                    icon={<FileCharts />}
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         handleOpenDashboardMetadataEditor(dash);
@@ -1683,7 +1603,6 @@ export default function DBHomePage() {
                                             <Table.HeadCell width={140}>Author</Table.HeadCell>
                                             <Table.HeadCell width={140}>App</Table.HeadCell>
                                             <Table.HeadCell>Description</Table.HeadCell>
-                                            <Table.HeadCell width={220}>Tags</Table.HeadCell>
                                             <Table.HeadCell width={320}>Actions</Table.HeadCell>
                                         </Table.Head>
                                         <Table.Body>
@@ -1702,24 +1621,6 @@ export default function DBHomePage() {
                                                         </span>
                                                     </Table.Cell>
                                                     <Table.Cell>
-                                                        {dash.tags.length > 0 ? (
-                                                            <div className="manager-card-tag-pills dashboard-manager-library-table-tags">
-                                                                {dash.tags.map((tag) => (
-                                                                    <span
-                                                                        key={`${dash.title}-table-${tag}`}
-                                                                        className="manager-card-tag-pill dashboard-manager-card-tag-pill"
-                                                                    >
-                                                                        {tag}
-                                                                    </span>
-                                                                ))}
-                                                            </div>
-                                                        ) : (
-                                                            <span className="dashboard-manager-library-table-empty">
-                                                                No tags
-                                                            </span>
-                                                        )}
-                                                    </Table.Cell>
-                                                    <Table.Cell>
                                                         <div className="dashboard-manager-library-table-actions">
                                                             <Button
                                                                 appearance="primary"
@@ -1735,7 +1636,7 @@ export default function DBHomePage() {
                                                             />
                                                             <Button
                                                                 appearance="secondary"
-                                                                icon={<Tag />}
+                                                                icon={<FileCharts />}
                                                                 label="Metadata"
                                                                 onClick={() =>
                                                                     handleOpenDashboardMetadataEditor(dash)
