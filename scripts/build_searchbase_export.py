@@ -68,6 +68,7 @@ INDEX_ASSIGN_RE = re.compile(
 )
 
 SAVEDSEARCH_CMD = re.compile(r"\|\s*savedsearch\b", re.I)
+MAKERESULTS_CMD = re.compile(r"\|\s*makeresults\b", re.I)
 
 EXPLICIT_DROP_IDS = {
     "overview_site_tallahassee_health",
@@ -143,7 +144,8 @@ HEADER = """# searchbase_export.conf — curated saved-search export for the sta
 # Sourced from splunk-cisco-dashboards searchbase.conf (broad_curated scope).
 # Index macros and hardcoded index assignments are normalized to index="<<index>>".
 # Omitted: Demo stanzas, customer-specific overview/topology, lookup-dependent searches,
-# admin/internal plumbing, savedsearch/macro dependencies, and SPL with hardcoded site names.
+# admin/internal plumbing, savedsearch/macro dependencies, makeresults placeholders,
+# and SPL with hardcoded site names.
 """
 
 
@@ -247,6 +249,10 @@ def has_lookup_in_search(search: str) -> bool:
     return bool(LOOKUP_CMD.search(search))
 
 
+def has_makeresults_in_search(search: str) -> bool:
+    return bool(MAKERESULTS_CMD.search(search))
+
+
 def has_savedsearch_in_search(search: str) -> bool:
     return bool(SAVEDSEARCH_CMD.search(search))
 
@@ -284,6 +290,9 @@ def classify_drop(stanza_id: str, fields: dict[str, str]) -> tuple[bool, str, st
 
     if has_savedsearch_in_search(search):
         return True, "savedsearch_dependency", "uses | savedsearch"
+
+    if has_makeresults_in_search(search):
+        return True, "makeresults_placeholder", "uses | makeresults (synthetic/disabled stub)"
 
     unresolved = unresolved_macros(search)
     if unresolved:
