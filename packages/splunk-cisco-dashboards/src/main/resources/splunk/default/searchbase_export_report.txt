@@ -1,5 +1,5 @@
-Total source stanzas: 676
-Kept: 587
+Total source stanzas: 677
+Kept: 588
 Dropped: 89
 Drop reasons:
   admin_internal: 5
@@ -11,14 +11,14 @@ Drop reasons:
   makeresults_placeholder: 6
 By category (kept):
   Asset: 2
-  Building: 32
+  Building: 33
   Executive: 17
   Identity: 41
   Monitoring: 143
   Network: 188
   Security: 163
   Shared: 1
-Index macro prose normalizations (<code>index_*</code>): 176
+Index macro prose normalizations (<code>index_*</code>): 178
 
 Dropped stanza IDs (first 40):
   building_resilience_compliance_detail (lookup_dependent)
