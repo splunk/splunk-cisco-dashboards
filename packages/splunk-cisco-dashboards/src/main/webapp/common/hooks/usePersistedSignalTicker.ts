@@ -41,6 +41,11 @@ const DEFAULT_SIGNAL_TICKER_CONFIG: SignalTickerConfig = {
     density: 'compact',
     items: [
         {
+            id: 'asset_inventory_firewall_gap',
+            searchName: 'Asset Inventory - Firewall Gap',
+            label: 'Asset inventory',
+        },
+        {
             id: 'critical_sites_available',
             searchName: 'Executive Dashboard - Critical Website Availability',
             label: 'Critical sites available',
@@ -64,11 +69,6 @@ const DEFAULT_SIGNAL_TICKER_CONFIG: SignalTickerConfig = {
             id: 'active_devices',
             searchName: 'Executive Dashboard - Active Devices',
             label: 'Active devices',
-        },
-        {
-            id: 'occupancy',
-            searchName: 'Executive Dashboard - Building Occupancy (Dashboard Tile)',
-            label: 'Occupancy',
         },
     ],
 };

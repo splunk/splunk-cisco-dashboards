@@ -234,6 +234,11 @@ const SHAPE_SEARCH_ALIASES: Partial<
 const CUSTOM_STENCIL_STORAGE_KEY = 'scd.networkDiagram.customStencils.v1';
 const CUSTOM_STENCIL_IMPORT_LIMIT = 120;
 const CUSTOM_STENCIL_BYTE_BUDGET = 4_000_000;
+const VISIO_PACKAGE_PATTERN = /\.(vssx|vsdx|vstx)$/i;
+const LEGACY_VISIO_PATTERN = /\.(vss|vsd|vst)$/i;
+const SUPPORTED_STENCIL_IMAGE_PATTERN = /\.(svg|png)$/i;
+const UNSUPPORTED_VISIO_IMAGE_PATTERN = /\.(emf|wmf)$/i;
+const MAX_NESTED_VISIO_PACKAGES = 12;
 const CISCO_VISIO_STENCIL_LIBRARY_URL =
     'https://www.cisco.com/c/en/us/products/visio-stencil-listing.html';
 
@@ -303,6 +308,20 @@ const dataUrlFor = (
     mediaType: CustomStencilAsset['mediaType']
 ): string => `data:${mediaType};base64,${bytesToBase64(bytes)}`;
 
+const stencilImageMediaType = (
+    fileName: string,
+    declaredType?: string
+): CustomStencilAsset['mediaType'] | undefined => {
+    const lower = fileName.toLowerCase();
+    if (lower.endsWith('.svg') || declaredType === 'image/svg+xml') {
+        return 'image/svg+xml';
+    }
+    if (lower.endsWith('.png') || declaredType === 'image/png') {
+        return 'image/png';
+    }
+    return undefined;
+};
+
 const cleanStencilLabel = (path: string): string => {
     const name = path.split('/').pop() ?? path;
     return name
@@ -311,6 +330,72 @@ const cleanStencilLabel = (path: string): string => {
         .replace(/[_-]+/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
+};
+
+const normalizeZipPath = (path: string): string =>
+    path.replace(/\\/g, '/').replace(/^\/+/, '');
+
+const joinZipPath = (prefix: string, path: string): string =>
+    [prefix, normalizeZipPath(path)].filter(Boolean).join('/');
+
+const attrValue = (tag: string, name: string): string | undefined => {
+    const match = tag.match(new RegExp(`${name}=(["'])(.*?)\\1`));
+    return match?.[2];
+};
+
+const resolveZipTarget = (sourcePath: string, target: string): string => {
+    const parts = normalizeZipPath(sourcePath).split('/').slice(0, -1);
+    for (const part of normalizeZipPath(target).split('/')) {
+        if (!part || part === '.') continue;
+        if (part === '..') {
+            parts.pop();
+        } else {
+            parts.push(part);
+        }
+    }
+    return parts.join('/');
+};
+
+const visioImageLabels = (entries: Record<string, Uint8Array>): Map<string, string> => {
+    const masters = entries['visio/masters/masters.xml'];
+    const masterRels = entries['visio/masters/_rels/masters.xml.rels'];
+    if (!masters || !masterRels) return new Map();
+
+    const masterLabels = Array.from(
+        strFromU8(masters).matchAll(/<Master\b[^>]*>/g)
+    )
+        .map((match) => {
+            const tag = match[0];
+            return attrValue(tag, 'Name') ?? attrValue(tag, 'NameU') ?? '';
+        })
+        .filter((label) => label.trim().length > 0);
+
+    const masterFiles = Array.from(
+        strFromU8(masterRels).matchAll(/<Relationship\b[^>]*>/g)
+    )
+        .map((match) => attrValue(match[0], 'Target') ?? '')
+        .filter((target) => target.toLowerCase().endsWith('.xml'));
+
+    const labels = new Map<string, string>();
+    masterFiles.forEach((target, index) => {
+        const label = masterLabels[index];
+        if (!label) return;
+        const masterPath = joinZipPath('visio/masters', target);
+        const relPath = joinZipPath(
+            'visio/masters/_rels',
+            target.replace(/\.xml$/i, '.xml.rels')
+        );
+        const rels = entries[relPath];
+        if (!rels) return;
+        const imageRel = Array.from(
+            strFromU8(rels).matchAll(/<Relationship\b[^>]*>/g)
+        )
+            .map((match) => attrValue(match[0], 'Target') ?? '')
+            .find((imageTarget) => /\.(svg|png|emf|wmf)$/i.test(imageTarget));
+        if (!imageRel) return;
+        labels.set(resolveZipTarget(masterPath, imageRel), label);
+    });
+    return labels;
 };
 
 const parseCsv = (text: string): Array<Record<string, string>> => {
@@ -404,23 +489,86 @@ interface ImportedStencilResult {
     assets: CustomStencilAsset[];
     skipped: number;
     containsVisioStencil: boolean;
+    containsUnsupportedVisioMedia: boolean;
+    failedVisioPackages: number;
 }
+
+interface StencilImportInventory {
+    entries: Map<string, { bytes: Uint8Array; label?: string }>;
+    containsVisioStencil: boolean;
+    containsUnsupportedVisioMedia: boolean;
+    failedVisioPackages: number;
+    nestedVisioPackages: number;
+}
+
+const collectStencilEntries = (
+    entries: Record<string, Uint8Array>,
+    prefix = '',
+    inventory: StencilImportInventory = {
+        entries: new Map(),
+        containsVisioStencil: false,
+        containsUnsupportedVisioMedia: false,
+        failedVisioPackages: 0,
+        nestedVisioPackages: 0,
+    }
+): StencilImportInventory => {
+    const labelByPath = visioImageLabels(entries);
+    if (labelByPath.size > 0) {
+        inventory.containsVisioStencil = true;
+    }
+
+    for (const [rawPath, file] of Object.entries(entries)) {
+        const path = normalizeZipPath(rawPath);
+        const nestedPath = joinZipPath(prefix, path);
+        const lower = path.toLowerCase();
+
+        if (LEGACY_VISIO_PATTERN.test(lower)) {
+            inventory.containsVisioStencil = true;
+            continue;
+        }
+
+        if (VISIO_PACKAGE_PATTERN.test(lower)) {
+            inventory.containsVisioStencil = true;
+            if (inventory.nestedVisioPackages >= MAX_NESTED_VISIO_PACKAGES) {
+                inventory.failedVisioPackages += 1;
+                continue;
+            }
+            try {
+                inventory.nestedVisioPackages += 1;
+                collectStencilEntries(unzipSync(file), nestedPath, inventory);
+            } catch {
+                inventory.failedVisioPackages += 1;
+            }
+            continue;
+        }
+
+        if (UNSUPPORTED_VISIO_IMAGE_PATTERN.test(lower)) {
+            inventory.containsUnsupportedVisioMedia = true;
+        }
+
+        inventory.entries.set(nestedPath, {
+            bytes: file,
+            label: labelByPath.get(path),
+        });
+    }
+
+    return inventory;
+};
 
 const importCustomStencilsFromZip = (
     bytes: Uint8Array
 ): ImportedStencilResult => {
-    const entries = unzipSync(bytes);
-    const entryPaths = Object.keys(entries);
-    const containsVisioStencil = entryPaths.some((path) =>
-        /\.(vss|vssx)$/i.test(path)
-    );
+    const inventory = collectStencilEntries(unzipSync(bytes));
+    const entries = inventory.entries;
+    const entryPaths = Array.from(entries.keys());
     const byLowerPath = new Map<string, string>();
     entryPaths.forEach((path) => byLowerPath.set(path.toLowerCase(), path));
     const manifestPath = byLowerPath.get('manifest.csv');
     const candidates: Array<{ path: string; label: string }> = [];
 
     if (manifestPath) {
-        const rows = parseCsv(strFromU8(entries[manifestPath]));
+        const manifest = entries.get(manifestPath);
+        const rows = manifest ? parseCsv(strFromU8(manifest.bytes)) : [];
         for (const row of rows) {
             const label = row.name || cleanStencilLabel(row.svg || row.png || '');
             const svgPath = row.svg ? `svg/${row.svg}` : '';
@@ -440,8 +588,8 @@ const importCustomStencilsFromZip = (
         const grouped = new Map<string, { png?: string; svg?: string; label: string }>();
         for (const path of entryPaths) {
             const lower = path.toLowerCase();
-            if (!lower.endsWith('.svg') && !lower.endsWith('.png')) continue;
-            const label = cleanStencilLabel(path);
+            if (!SUPPORTED_STENCIL_IMAGE_PATTERN.test(lower)) continue;
+            const label = entries.get(path)?.label ?? cleanStencilLabel(path);
             const key = slugify(label);
             const current = grouped.get(key) ?? { label };
             if (lower.endsWith('.png')) current.png = path;
@@ -461,7 +609,7 @@ const importCustomStencilsFromZip = (
             skipped += 1;
             continue;
         }
-        const file = entries[candidate.path];
+        const file = entries.get(candidate.path)?.bytes;
         if (!file) continue;
         const lower = candidate.path.toLowerCase();
         const mediaType: CustomStencilAsset['mediaType'] = lower.endsWith('.svg')
@@ -485,8 +633,75 @@ const importCustomStencilsFromZip = (
             ...dimensions,
         });
     }
-    return { assets, skipped, containsVisioStencil };
+    return {
+        assets,
+        skipped,
+        containsVisioStencil: inventory.containsVisioStencil,
+        containsUnsupportedVisioMedia: inventory.containsUnsupportedVisioMedia,
+        failedVisioPackages: inventory.failedVisioPackages,
+    };
 };
+
+const importCustomStencilImage = (
+    bytes: Uint8Array,
+    fileName: string,
+    mediaType: CustomStencilAsset['mediaType']
+): ImportedStencilResult => {
+    const label = cleanStencilLabel(fileName);
+    const src = dataUrlFor(bytes, mediaType);
+    const dimensions =
+        mediaType === 'image/svg+xml' ? svgDimensions(bytes) : pngDimensions(bytes);
+
+    return {
+        assets:
+            src.length > CUSTOM_STENCIL_BYTE_BUDGET
+                ? []
+                : [
+                      {
+                          id: `custom-${slugify(label)}-${hashString(
+                              `${fileName}:${bytes.length}`
+                          )}`,
+                          label,
+                          src,
+                          mediaType,
+                          ...dimensions,
+                      },
+                  ],
+        skipped: src.length > CUSTOM_STENCIL_BYTE_BUDGET ? 1 : 0,
+        containsVisioStencil: false,
+        containsUnsupportedVisioMedia: false,
+        failedVisioPackages: 0,
+    };
+};
+
+const importFailureMessage = (result: ImportedStencilResult): string => {
+    if (result.containsUnsupportedVisioMedia) {
+        return [
+            'That Visio ZIP only exposes EMF/WMF artwork, which the browser',
+            'cannot render. Export SVG/PNG first, then import that ZIP.',
+        ].join(' ');
+    }
+    if (result.failedVisioPackages) {
+        return 'Could not unpack the nested Visio stencil package in that ZIP.';
+    }
+    if (result.containsVisioStencil) {
+        return [
+            'That Visio ZIP did not include SVG/PNG artwork.',
+            'Export SVG/PNG first, then import that ZIP.',
+        ].join(' ');
+    }
+    return 'No SVG or PNG stencils found in that zip.';
+};
+
+const importSuccessMessage = (
+    result: ImportedStencilResult,
+    stored: boolean
+): string =>
+    `${result.assets.length} imported${
+        result.skipped ? `, ${result.skipped} skipped` : ''
+    }${
+        result.containsUnsupportedVisioMedia ? ', EMF/WMF artwork skipped' : ''
+    }${stored ? '' : ' (not saved; browser storage is full)'}`;
 
 const customStencilMatchesQuery = (
     asset: CustomStencilAsset,
@@ -823,14 +1038,16 @@ export const ShapesTab: React.FC = () => {
         event.target.value = '';
         if (!file) return;
         try {
-            const result = importCustomStencilsFromZip(
-                new Uint8Array(await file.arrayBuffer())
-            );
+            const bytes = new Uint8Array(await file.arrayBuffer());
+            const directImageMediaType = stencilImageMediaType(file.name, file.type);
+            const result = directImageMediaType
+                ? importCustomStencilImage(bytes, file.name, directImageMediaType)
+                : importCustomStencilsFromZip(bytes);
             if (result.assets.length === 0) {
                 setImportMessage(
-                    result.containsVisioStencil
-                        ? 'That Cisco ZIP contains Visio .vss files. Import an SVG/PNG icon ZIP after conversion.'
-                        : 'No SVG or PNG stencils found in that zip.'
+                    directImageMediaType
+                        ? 'That image is too large to save as a custom stencil.'
+                        : importFailureMessage(result)
                 );
                 return;
             }
@@ -843,13 +1060,11 @@ export const ShapesTab: React.FC = () => {
             ];
             const stored = saveCustomStencils(merged);
             setCustomStencils(merged);
-            setImportMessage(
-                `${result.assets.length} imported${
-                    result.skipped ? `, ${result.skipped} skipped` : ''
-                }${stored ? '' : ' (not saved; browser storage is full)'}`
-            );
+            setImportMessage(importSuccessMessage(result, stored));
         } catch {
-            setImportMessage('Could not read that zip file.');
+            setImportMessage(
+                'Could not read that file. Import a ZIP, SVG, PNG, or browser-readable .vssx/.vsdx package.'
+            );
         }
     };
 
@@ -911,7 +1126,7 @@ export const ShapesTab: React.FC = () => {
                 <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".zip,application/zip"
+                    accept=".zip,.svg,.png,.vssx,.vsdx,.vstx,application/zip,image/svg+xml,image/png"
                     className="hidden"
                     onChange={(event) => {
                         void handleImportFile(event);
@@ -920,7 +1135,7 @@ export const ShapesTab: React.FC = () => {
                 <button
                     type="button"
                     onClick={handleImportClick}
-                    title="Import stencil zip"
+                    title="Import stencil ZIP, SVG, PNG, or Visio package"
                     className="flex h-8 items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2 text-xs font-medium text-slate-600 hover:border-sky-400 hover:text-sky-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
                 >
                     <Upload className="h-3.5 w-3.5" />
@@ -953,7 +1168,8 @@ export const ShapesTab: React.FC = () => {
                     Cisco&apos;s Visio stencil library
                     <ExternalLink className="h-3 w-3" />
                 </a>
-                . Import a ZIP with SVG or PNG exports; raw .vss downloads need
+                . Import a ZIP, SVG/PNG export, or .vssx package that includes
+                browser-readable SVG/PNG media. EMF/WMF-only stencils need
                 conversion first.
             </div>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">

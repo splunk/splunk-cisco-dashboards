@@ -774,6 +774,18 @@ const fdemDevice = (
     vendor = 'FDEM'
 ) => device(id, type, parentId, x, y, label, shortLabel, model, vendor);
 
+const ciscoDevice = (
+    id,
+    type,
+    parentId,
+    x,
+    y,
+    label,
+    shortLabel,
+    model,
+    vendor = 'Cisco'
+) => device(id, type, parentId, x, y, label, shortLabel, model, vendor);
+
 const shapeGallerySections = [
     {
         id: 'g_gallery_core',
@@ -1120,6 +1132,722 @@ const fdemNetworkDiagram = {
             edge('e_dc_core_fw_switch', 'dc_core', 'dc_firewall_switch', H.BottomSrc, H.TopTgt, { label: '2G L2' }),
             edge('e_dc_public_fw_web', 'dc_public_fw', 'dc_web_vdi_email', H.BottomSrc, H.TopTgt),
             edge('e_dc_fw_switch_web', 'dc_firewall_switch', 'dc_web_vdi_email', H.BottomSrc, H.TopTgt),
+        ],
+    },
+};
+
+/** Cisco Live 2026 — high-level event architecture supplied by the
+ *  event team: WAN edge, Core HA, DC pair, Rack 6 observability, and
+ *  Splunk Executive Briefing. The active payload intentionally keeps
+ *  this as a clean topology view rather than a per-device rack map. */
+const buildCiscoLive2026EventArchitecturePayload = () => ({
+    version: 1,
+    title: title('Cisco Live 2026 Event Architecture', 40, -50, '#1d4ed8'),
+    groups: [
+        region('g_wan', 'Rack 3 — WAN Edge', 20, 80, 280, 330, ACCENT.collection),
+        region(
+            'g_core',
+            'Racks 1 & 2 — CORE 1 (HA pair)',
+            330,
+            80,
+            320,
+            330,
+            ACCENT.indexing
+        ),
+        region('g_dc', 'Racks 4 & 5 — DC 1 & 2', 20, 470, 630, 260, ACCENT.search),
+        region('g_obs', 'Rack 6 — Observability', 680, 80, 280, 330, ACCENT.management),
+    ],
+    nodes: [
+        ciscoDevice(
+            'wan_edge_rtr',
+            'device:router',
+            'g_wan',
+            40,
+            50,
+            'C8500-20XGC / 20X6C',
+            'C8500 Edge',
+            '20XGC / 20X6C'
+        ),
+        ciscoDevice(
+            'wan_edge_fw',
+            'device:firewall',
+            'g_wan',
+            145,
+            155,
+            'FTD 3110',
+            'FTD 3110',
+            'WAN edge firewall'
+        ),
+        ciscoDevice(
+            'wan_wlc',
+            'device:wlc',
+            'g_wan',
+            40,
+            210,
+            '9800 WLCs',
+            '9800 WLCs',
+            'Wireless controllers'
+        ),
+
+        ciscoDevice(
+            'core_switching',
+            'device:modular_chassis_switch',
+            'g_core',
+            40,
+            50,
+            '9500X + 9606R',
+            '9500X + 9606R',
+            'Core HA pair'
+        ),
+        ciscoDevice(
+            'core_wlc',
+            'device:wlc',
+            'g_core',
+            195,
+            50,
+            '9800-40 / 9800-80 WLC',
+            '9800 WLCs',
+            '9800-40 / 9800-80'
+        ),
+        ciscoDevice(
+            'core_perim_fw',
+            'device:firewall',
+            'g_core',
+            115,
+            185,
+            'FMC + FTD 4245',
+            'FMC + FTD',
+            'Perimeter firewall HA'
+        ),
+
+        ciscoDevice(
+            'dc_fw',
+            'device:firewall',
+            'g_dc',
+            40,
+            65,
+            'FTD 4245',
+            'FTD 4245',
+            'DC firewalls'
+        ),
+        ciscoDevice(
+            'dc_nexus',
+            'device:nexus_aci_fabric',
+            'g_dc',
+            185,
+            65,
+            'Nexus 9504 / 9336C',
+            'Nexus Fabric',
+            '9504 / 9336C'
+        ),
+        ciscoDevice(
+            'dc_ucs',
+            'device:server',
+            'g_dc',
+            350,
+            65,
+            'UCS X-Series + FI 6536',
+            'UCS + FI',
+            'X-Series + FI 6536'
+        ),
+        ciscoDevice(
+            'dc_storage',
+            'device:storage',
+            'g_dc',
+            500,
+            65,
+            'NetApp / FlexPod AI',
+            'FlexPod AI',
+            'NetApp / FlexPod AI'
+        ),
+
+        ciscoDevice(
+            'obs_edge_hub',
+            'device:splunk_edge_processor',
+            'g_obs',
+            90,
+            50,
+            'Splunk Edge Hub',
+            'Edge Hub',
+            'Telemetry aggregation',
+            'Splunk'
+        ),
+        ciscoDevice(
+            'obs_cat_center',
+            'device:app_server',
+            'g_obs',
+            40,
+            180,
+            'Catalyst Center',
+            'Cat Center',
+            'Network assurance'
+        ),
+        ciscoDevice(
+            'obs_ndb',
+            'device:hub',
+            'g_obs',
+            170,
+            180,
+            'Nexus Dashboard Data Broker',
+            'Nexus DB',
+            'Data Broker'
+        ),
+        device(
+            'splunk_briefing',
+            'device:splunk_monitoring_console',
+            undefined,
+            745,
+            560,
+            'Splunk + Executive Briefing',
+            'Splunk + Briefing',
+            'Splunk Executive Insights',
+            'Splunk'
+        ),
+    ],
+    edges: [
+        edge('e_wan_rtr_fw', 'wan_edge_rtr', 'wan_edge_fw', H.BottomSrc, H.TopTgt),
+        edge('e_wan_wlc_fw', 'wan_wlc', 'wan_edge_fw', H.RightSrc, H.LeftTgt, {
+            kind: 'logical',
+            label: 'Wireless control',
+        }),
+        edge('e_wan_core', 'wan_edge_fw', 'core_switching', H.RightSrc, H.LeftTgt, {
+            label: 'WAN to Core',
+        }),
+        edge('e_core_wlc_switch', 'core_wlc', 'core_switching', H.LeftSrc, H.RightTgt, {
+            kind: 'logical',
+        }),
+        edge('e_core_switch_fw', 'core_switching', 'core_perim_fw', H.BottomSrc, H.TopTgt),
+        edge('e_core_dc', 'core_perim_fw', 'dc_fw', H.BottomSrc, H.TopTgt, {
+            label: 'DC path',
+        }),
+        edge('e_dc_fw_nexus', 'dc_fw', 'dc_nexus', H.RightSrc, H.LeftTgt),
+        edge('e_dc_nexus_ucs', 'dc_nexus', 'dc_ucs', H.RightSrc, H.LeftTgt),
+        edge('e_dc_ucs_storage', 'dc_ucs', 'dc_storage', H.RightSrc, H.LeftTgt),
+        edge('e_core_obs', 'core_switching', 'obs_cat_center', H.RightSrc, H.LeftTgt, {
+            kind: 'logical',
+            label: 'Core telemetry',
+        }),
+        edge('e_wan_obs', 'wan_edge_fw', 'obs_edge_hub', H.RightSrc, H.LeftTgt, {
+            kind: 'logical',
+            label: 'WAN telemetry',
+        }),
+        edge('e_dc_obs', 'dc_nexus', 'obs_ndb', H.RightSrc, H.LeftTgt, {
+            kind: 'logical',
+            label: 'Fabric telemetry',
+        }),
+        edge('e_cat_center_edge_hub', 'obs_cat_center', 'obs_edge_hub', H.TopSrc, H.BottomTgt, {
+            kind: 'logical',
+            label: 'Assurance API',
+        }),
+        edge('e_ndb_edge_hub', 'obs_ndb', 'obs_edge_hub', H.LeftSrc, H.RightTgt, {
+            kind: 'logical',
+            label: 'Brokered telemetry',
+        }),
+        edge('e_obs_splunk', 'obs_edge_hub', 'splunk_briefing', H.BottomSrc, H.TopTgt, {
+            kind: 'logical',
+            label: 'Splunk telemetry',
+        }),
+    ],
+});
+
+const ciscoLive2026EventArchitecture = {
+    name: 'Cisco Live 2026 Event Architecture',
+    description:
+        'Cisco Live 2026 event topology — WAN edge, Core HA, DC pair, Rack 6 observability, and Splunk Executive Briefing.',
+    payload: buildCiscoLive2026EventArchitecturePayload(),
+    legacyDetailedPayload: {
+        version: 1,
+        title: title('Cisco Live 2026 Event Architecture', 40, -50, '#1d4ed8'),
+        groups: [
+            region('g_wan', 'RACK 3 — WAN Edge', 20, 80, 480, 420, ACCENT.collection),
+            region(
+                'g_core',
+                'RACKS 1 & 2 — CORE (redundant pair)',
+                540,
+                80,
+                520,
+                480,
+                ACCENT.indexing
+            ),
+            region('g_dc1', 'RACK 4 — Data Center 1', 20, 560, 500, 420, ACCENT.search),
+            region('g_dc2', 'RACK 5 — Data Center 2 (mirror)', 560, 560, 500, 420, ACCENT.search),
+            region(
+                'g_mgmt',
+                'RACK 6 — Observability / Management',
+                1100,
+                80,
+                440,
+                900,
+                ACCENT.management
+            ),
+        ],
+        nodes: [
+            // WAN edge
+            ciscoDevice(
+                'wan_internet',
+                'device:internet',
+                'g_wan',
+                40,
+                40,
+                'Internet / Carrier',
+                'Internet',
+                'WAN uplink'
+            ),
+            ciscoDevice(
+                'wan_c8500_xgc',
+                'device:router',
+                'g_wan',
+                40,
+                180,
+                'Catalyst C8500-20XGC',
+                'C8500-XGC',
+                'Edge platform'
+            ),
+            ciscoDevice(
+                'wan_c8500_x6c',
+                'device:router',
+                'g_wan',
+                240,
+                180,
+                'Catalyst C8500-20X6C',
+                'C8500-X6C',
+                'Edge platform'
+            ),
+            ciscoDevice(
+                'wan_fw3110',
+                'device:firewall',
+                'g_wan',
+                140,
+                300,
+                'Secure Firewall 3110',
+                'FW 3110',
+                'WAN firewall'
+            ),
+            ciscoDevice(
+                'wan_wlc40',
+                'device:wlc',
+                'g_wan',
+                40,
+                300,
+                'Catalyst 9800-40 WLC',
+                '9800-40',
+                'Wireless controller'
+            ),
+            ciscoDevice(
+                'wan_wlc80',
+                'device:wlc',
+                'g_wan',
+                300,
+                300,
+                'Catalyst 9800-80 WLC',
+                '9800-80',
+                'Wireless controller'
+            ),
+            ciscoDevice(
+                'venue_aps',
+                'device:access_point',
+                'g_wan',
+                140,
+                40,
+                'Venue Wireless APs',
+                'Venue APs',
+                'Inherited AP fleet'
+            ),
+
+            // Core (redundant pair)
+            ciscoDevice(
+                'core_9606r',
+                'device:modular_chassis_switch',
+                'g_core',
+                40,
+                60,
+                'Catalyst 9606R (C9600X-SUP-2)',
+                '9606R',
+                'Core chassis'
+            ),
+            ciscoDevice(
+                'core_9500x',
+                'device:l3_switch',
+                'g_core',
+                280,
+                60,
+                'Catalyst 9500X-60L4D',
+                '9500X',
+                'Core switch'
+            ),
+            ciscoDevice(
+                'core_fw4245',
+                'device:firewall',
+                'g_core',
+                160,
+                220,
+                'Secure Firewall 4245',
+                'FW 4245',
+                'Core firewall pair'
+            ),
+            ciscoDevice(
+                'core_fmc',
+                'device:server',
+                'g_core',
+                40,
+                220,
+                'Secure Firewall FMC',
+                'FMC',
+                'Firewall management'
+            ),
+            ciscoDevice(
+                'core_wlc40',
+                'device:wlc',
+                'g_core',
+                40,
+                360,
+                'Catalyst 9800-40 WLC',
+                '9800-40',
+                'Wireless controller'
+            ),
+            ciscoDevice(
+                'core_wlc80',
+                'device:wlc',
+                'g_core',
+                280,
+                360,
+                'Catalyst 9800-80 WLC',
+                '9800-80',
+                'Wireless controller'
+            ),
+
+            // Data Center 1
+            ciscoDevice(
+                'dc1_fw4245',
+                'device:firewall',
+                'g_dc1',
+                40,
+                40,
+                'Secure Firewall 4245',
+                'FW 4245',
+                'DC edge firewall'
+            ),
+            ciscoDevice(
+                'dc1_n9504',
+                'device:modular_chassis_switch',
+                'g_dc1',
+                240,
+                40,
+                'Nexus 9504 Switch',
+                'N9504',
+                'DC spine'
+            ),
+            ciscoDevice(
+                'dc1_n9336',
+                'device:nexus_aci_fabric',
+                'g_dc1',
+                40,
+                180,
+                'Nexus 9336C-FX2',
+                'N9336C',
+                'Leaf switch'
+            ),
+            ciscoDevice(
+                'dc1_ucs_fi',
+                'device:server',
+                'g_dc1',
+                240,
+                180,
+                'UCS 6536 Fabric Interconnect',
+                'UCS FI',
+                'Fabric interconnect'
+            ),
+            ciscoDevice(
+                'dc1_ucs_x',
+                'device:server',
+                'g_dc1',
+                40,
+                300,
+                'UCS X-Series (X440p PCIe Node)',
+                'UCS X440p',
+                'Compute node'
+            ),
+            ciscoDevice(
+                'dc1_netapp',
+                'device:storage',
+                'g_dc1',
+                240,
+                300,
+                'NetApp Storage',
+                'NetApp',
+                'Shared storage'
+            ),
+            ciscoDevice(
+                'dc1_flexpod_ai',
+                'device:container',
+                'g_dc1',
+                140,
+                300,
+                'FlexPod AI',
+                'FlexPod AI',
+                'AI workload stack'
+            ),
+
+            // Data Center 2 (mirror)
+            ciscoDevice(
+                'dc2_fw4245',
+                'device:firewall',
+                'g_dc2',
+                40,
+                40,
+                'Secure Firewall 4245',
+                'FW 4245',
+                'DC edge firewall'
+            ),
+            ciscoDevice(
+                'dc2_n9504',
+                'device:modular_chassis_switch',
+                'g_dc2',
+                240,
+                40,
+                'Nexus 9504 Switch',
+                'N9504',
+                'DC spine'
+            ),
+            ciscoDevice(
+                'dc2_n9336',
+                'device:nexus_aci_fabric',
+                'g_dc2',
+                40,
+                180,
+                'Nexus 9336C-FX2',
+                'N9336C',
+                'Leaf switch'
+            ),
+            ciscoDevice(
+                'dc2_ucs_fi',
+                'device:server',
+                'g_dc2',
+                240,
+                180,
+                'UCS 6536 Fabric Interconnect',
+                'UCS FI',
+                'Fabric interconnect'
+            ),
+            ciscoDevice(
+                'dc2_ucs_x',
+                'device:server',
+                'g_dc2',
+                40,
+                300,
+                'UCS X-Series (X440p PCIe Node)',
+                'UCS X440p',
+                'Compute node'
+            ),
+            ciscoDevice(
+                'dc2_netapp',
+                'device:storage',
+                'g_dc2',
+                240,
+                300,
+                'NetApp Storage',
+                'NetApp',
+                'Shared storage'
+            ),
+            ciscoDevice(
+                'dc2_flexpod_ai',
+                'device:container',
+                'g_dc2',
+                140,
+                300,
+                'FlexPod AI',
+                'FlexPod AI',
+                'AI workload stack'
+            ),
+
+            // Observability / Management
+            ciscoDevice(
+                'mgmt_n93180',
+                'device:l3_switch',
+                'g_mgmt',
+                40,
+                40,
+                'Nexus 93180YC-FX',
+                'N93180',
+                'Mgmt fabric'
+            ),
+            ciscoDevice(
+                'mgmt_splunk_edge',
+                'device:splunk_edge_processor',
+                'g_mgmt',
+                40,
+                200,
+                'Splunk Edge Hub',
+                'Edge Hub',
+                'Telemetry aggregation',
+                'Splunk'
+            ),
+            ciscoDevice(
+                'mgmt_c220_1',
+                'device:server',
+                'g_mgmt',
+                240,
+                200,
+                'UCS C220 M5 Rack Server',
+                'C220 #1',
+                'App server'
+            ),
+            ciscoDevice(
+                'mgmt_c220_2',
+                'device:server',
+                'g_mgmt',
+                240,
+                340,
+                'UCS C220 M5 Rack Server',
+                'C220 #2',
+                'App server'
+            ),
+            ciscoDevice(
+                'mgmt_catalyst_center',
+                'device:app_server',
+                'g_mgmt',
+                40,
+                340,
+                'Catalyst Center Appliance',
+                'Cat Center',
+                'Network assurance'
+            ),
+            ciscoDevice(
+                'mgmt_fw3110',
+                'device:firewall',
+                'g_mgmt',
+                40,
+                480,
+                'Secure Firewall 3110',
+                'FW 3110',
+                'Mgmt perimeter'
+            ),
+            ciscoDevice(
+                'mgmt_nexus_dash',
+                'device:hub',
+                'g_mgmt',
+                240,
+                480,
+                'Nexus Dashboard Data Broker',
+                'NDDB',
+                'Streaming telemetry broker'
+            ),
+            {
+                id: 'venue_wireless_note',
+                type: 'textBox',
+                parentId: 'g_wan',
+                x: 300,
+                y: 40,
+                textBox: {
+                    text: 'Venue wireless\n(inherited APs)',
+                    fontSize: 11,
+                    color: '#475569',
+                    bold: false,
+                    italic: true,
+                    background: '#f8fafc',
+                    border: '1px dashed #94a3b8',
+                    align: 'center',
+                },
+            },
+        ],
+        edges: [
+            // WAN ingress
+            edge('e_inet_c8500_xgc', 'wan_internet', 'wan_c8500_xgc', H.BottomSrc, H.TopTgt),
+            edge('e_inet_c8500_x6c', 'wan_internet', 'wan_c8500_x6c', H.BottomSrc, H.TopTgt),
+            edge('e_c8500_xgc_fw', 'wan_c8500_xgc', 'wan_fw3110', H.BottomSrc, H.TopTgt),
+            edge('e_c8500_x6c_fw', 'wan_c8500_x6c', 'wan_fw3110', H.BottomSrc, H.TopTgt),
+            edge('e_wan_fw_core', 'wan_fw3110', 'core_9606r', H.RightSrc, H.LeftTgt, {
+                label: 'Core uplink',
+            }),
+            edge('e_wan_fw_core2', 'wan_fw3110', 'core_9500x', H.RightSrc, H.LeftTgt),
+
+            // Core fabric
+            edge('e_core_stack', 'core_9606r', 'core_9500x', H.RightSrc, H.LeftTgt, {
+                kind: 'synthetic_a2a',
+                direction: 'both',
+                label: 'Redundant core',
+            }),
+            edge('e_core_fw4245', 'core_9606r', 'core_fw4245', H.BottomSrc, H.TopTgt),
+            edge('e_core_fmc_fw', 'core_fmc', 'core_fw4245', H.RightSrc, H.LeftTgt, {
+                kind: 'logical',
+                label: 'Policy mgmt',
+            }),
+            edge('e_core_to_dc1', 'core_fw4245', 'dc1_fw4245', H.BottomSrc, H.TopTgt, {
+                label: 'DC1 path',
+            }),
+            edge('e_core_to_dc2', 'core_fw4245', 'dc2_fw4245', H.BottomSrc, H.TopTgt, {
+                label: 'DC2 path',
+            }),
+
+            // Wireless (venue APs → WLCs, dashed logical)
+            edge('e_aps_wan_wlc40', 'venue_aps', 'wan_wlc40', H.BottomSrc, H.TopTgt, {
+                kind: 'logical',
+                label: 'CAPWAP',
+            }),
+            edge('e_aps_wan_wlc80', 'venue_aps', 'wan_wlc80', H.BottomSrc, H.TopTgt, {
+                kind: 'logical',
+            }),
+            edge('e_aps_core_wlc40', 'venue_aps', 'core_wlc40', H.RightSrc, H.LeftTgt, {
+                kind: 'logical',
+            }),
+            edge('e_aps_core_wlc80', 'venue_aps', 'core_wlc80', H.RightSrc, H.LeftTgt, {
+                kind: 'logical',
+            }),
+
+            // DC1 fabric
+            edge('e_dc1_fw_spine', 'dc1_fw4245', 'dc1_n9504', H.RightSrc, H.LeftTgt),
+            edge('e_dc1_spine_leaf', 'dc1_n9504', 'dc1_n9336', H.BottomSrc, H.TopTgt),
+            edge('e_dc1_leaf_fi', 'dc1_n9336', 'dc1_ucs_fi', H.RightSrc, H.LeftTgt),
+            edge('e_dc1_fi_compute', 'dc1_ucs_fi', 'dc1_ucs_x', H.BottomSrc, H.TopTgt),
+            edge('e_dc1_fi_storage', 'dc1_ucs_fi', 'dc1_netapp', H.BottomSrc, H.TopTgt),
+            edge('e_dc1_compute_ai', 'dc1_ucs_x', 'dc1_flexpod_ai', H.RightSrc, H.LeftTgt, {
+                kind: 'logical',
+            }),
+
+            // DC2 fabric (mirror)
+            edge('e_dc2_fw_spine', 'dc2_fw4245', 'dc2_n9504', H.RightSrc, H.LeftTgt),
+            edge('e_dc2_spine_leaf', 'dc2_n9504', 'dc2_n9336', H.BottomSrc, H.TopTgt),
+            edge('e_dc2_leaf_fi', 'dc2_n9336', 'dc2_ucs_fi', H.RightSrc, H.LeftTgt),
+            edge('e_dc2_fi_compute', 'dc2_ucs_fi', 'dc2_ucs_x', H.BottomSrc, H.TopTgt),
+            edge('e_dc2_fi_storage', 'dc2_ucs_fi', 'dc2_netapp', H.BottomSrc, H.TopTgt),
+            edge('e_dc2_compute_ai', 'dc2_ucs_x', 'dc2_flexpod_ai', H.RightSrc, H.LeftTgt, {
+                kind: 'logical',
+            }),
+
+            // DC replication
+            edge('e_dc1_dc2_mirror', 'dc1_n9504', 'dc2_n9504', H.RightSrc, H.LeftTgt, {
+                kind: 'synthetic_a2a',
+                direction: 'both',
+                label: 'DC mirror',
+            }),
+
+            // Observability telemetry spine
+            edge('e_mgmt_fabric_edge', 'mgmt_n93180', 'mgmt_splunk_edge', H.BottomSrc, H.TopTgt, {
+                kind: 'logical',
+                label: 'Telemetry',
+            }),
+            edge('e_catcenter_edge', 'mgmt_catalyst_center', 'mgmt_splunk_edge', H.TopSrc, H.BottomTgt, {
+                kind: 'logical',
+                label: 'Assurance API',
+            }),
+            edge('e_nddb_edge', 'mgmt_nexus_dash', 'mgmt_splunk_edge', H.LeftSrc, H.RightTgt, {
+                kind: 'logical',
+                label: 'Streaming',
+            }),
+            edge('e_core_catcenter', 'core_9606r', 'mgmt_catalyst_center', H.RightSrc, H.LeftTgt, {
+                kind: 'logical',
+                label: 'SNMP / syslog',
+            }),
+            edge('e_dc1_nddb', 'dc1_n9336', 'mgmt_nexus_dash', H.RightSrc, H.LeftTgt, {
+                kind: 'logical',
+            }),
+            edge('e_dc2_nddb', 'dc2_n9336', 'mgmt_nexus_dash', H.RightSrc, H.LeftTgt, {
+                kind: 'logical',
+            }),
+            edge('e_mgmt_fw_spine', 'mgmt_fw3110', 'mgmt_n93180', H.TopSrc, H.BottomTgt),
+            edge('e_c220_edge', 'mgmt_c220_1', 'mgmt_splunk_edge', H.LeftSrc, H.RightTgt, {
+                kind: 'logical',
+            }),
         ],
     },
 };
@@ -1635,6 +2363,7 @@ const dataCollectionOverview = {
 const OOB_DIAGRAMS = [
     splunkCloudDeployment,
     fdemNetworkDiagram,
+    ciscoLive2026EventArchitecture,
     shapeGalleryDiagram,
     singleServerDeployment,
     distributedClusteredC1,
@@ -1840,7 +2569,10 @@ const minimumGroupWidthForLabel = (label = '') =>
     Math.min(620, Math.max(REGION_MIN_WIDTH, label.length * 9 + 140));
 
 const spreadRegionContents = (diagram) => {
-    if (diagram.name === 'Splunk Cloud Deployment Architecture') {
+    if (
+        diagram.name === 'Splunk Cloud Deployment Architecture' ||
+        diagram.name === 'Cisco Live 2026 Event Architecture'
+    ) {
         return;
     }
 

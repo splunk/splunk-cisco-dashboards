@@ -144,6 +144,7 @@ const CURRENT_SCHEMA_VERSION = 2;
  *  including capitalisation and punctuation. */
 const FACTORY_DIAGRAM_NAMES: ReadonlySet<string> = new Set<string>([
     'Splunk Cloud Deployment Architecture',
+    'Cisco Live 2026 Event Architecture',
     'Single Server Deployment - S1',
     'Distributed Clustered Single Site - C1 C11',
     'Distributed Clustered with SHC Single Site - C3 C13',
