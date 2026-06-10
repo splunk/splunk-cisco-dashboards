@@ -4,13 +4,13 @@ import {
     StandardIconProvider,
 } from '@splunk/dashboard-context';
 
-import IS4SIconProvider from './IS4SIconProvider';
+import SEIIconProvider from './SEIIconProvider';
 
-export default function createIS4SIconRegistry() {
+export default function createSEIIconRegistry() {
     const iconRegistry = IconRegistry.create();
 
     iconRegistry.addDefaultProvider(new LocalIconProvider());
-    iconRegistry.addProvider(new IS4SIconProvider());
+    iconRegistry.addProvider(new SEIIconProvider());
     iconRegistry.addProvider(new StandardIconProvider());
 
     return iconRegistry;

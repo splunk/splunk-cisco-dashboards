@@ -73,19 +73,15 @@ import CollapsiblePanel from '@splunk/react-ui/CollapsiblePanel';
 import DOMPurify from 'dompurify';
 import Link from '@splunk/react-ui/Link';
 import ButtonGroup from '@splunk/react-ui/ButtonGroup';
-import CardLayout from '@splunk/react-ui/CardLayout';
 import styled from 'styled-components';
 import { variables } from '@splunk/themes';
 import SplunkThemeProvider from '@splunk/themes/SplunkThemeProvider';
 import { isVersionLower, getServerInfo } from '../../common/lib/splunk';
 import Paintbrush from '@splunk/react-icons/Paintbrush';
-import TemplateVizButton from './templateVizButton';
 import BackgroundButton from './BackgroundButton';
-import MagnifierPlus from '@splunk/react-icons/MagnifierPlus';
-import { DashboardCore } from '@splunk/dashboard-core';
-import Message from '@splunk/react-ui/Message';
 import useDashboardStore from '../../common/state/dashboardStore';
-import createIS4SIconRegistry from '../../common/udf/IconProviders/createIS4SIconRegistry';
+import createSEIIconRegistry from '../../common/udf/IconProviders/createSEIIconRegistry';
+import { resolveSearchbaseDefinitionForNativeStudio } from './searchbaseDefinitionUtils';
 
 const StyledCardContent = styled.div`
     height: 160px;
@@ -683,9 +679,7 @@ const DashboardStudioEditor = ({
     const [activeModeId, setActiveModeId] = useState('create');
     const [gridLayout, setGridLayout] = useState('absolute');
     const [dashboardTitle, setDashboardTitle] = useState('');
-    const [templateTitle, setTemplateTitle] = useState('');
     const [selectedOpenDashboard, setSelectedOpenDashboard] = useState('');
-    const [selectedOpenTemplate, setSelectedOpenTemplate] = useState('');
 
     const [dashboards, setDashboards] = useState([]);
     const [currentDashboard, setCurrentDashboard] = useState(() =>
@@ -694,8 +688,6 @@ const DashboardStudioEditor = ({
     const [dashID, setDashID] = useState(openID);
     const [dashMode, setDashMode] = useState(readOnly ? 'view' : openID ? 'edit' : 'view');
     const [serverInfo, setServerInfo] = useState();
-    const [openPreview, setOpenPreview] = useState(false);
-    const [previewTemplate, setPreviewTemplate] = useState();
 
     // This fix was provided by UDF team.
     delete self.requirejs;
@@ -844,26 +836,40 @@ const DashboardStudioEditor = ({
     );
 
     const handleSaveClick = useCallback(() => {
-        //saveDefinition(editedDefinition);
-        updateDash(
-            dashID,
-            JSON.stringify(editedDefinition, null, 4),
-            currentDashboard.app,
-            currentDashboard.author,
-            currentDashboard.description,
-            currentDashboard.label,
-            currentDashboard.tag,
-        ).then((response) => {
+        const saveDashboard = async () => {
+            const {
+                definition: definitionToSave,
+                convertedDataSources,
+                convertedInputs,
+            } = await resolveSearchbaseDefinitionForNativeStudio(editedDefinition);
+
+            const response = await updateDash(
+                dashID,
+                JSON.stringify(definitionToSave, null, 4),
+                currentDashboard.app,
+                currentDashboard.author,
+                currentDashboard.description,
+                currentDashboard.label,
+                currentDashboard.tag,
+            );
+
             if (response.status >= 200 && response.status <= 299) {
                 console.log(response);
+                if (convertedDataSources > 0 || convertedInputs > 0) {
+                    dashboardApiElem.current?.updateDefinition(definitionToSave);
+                    setEditedDefinition(definitionToSave);
+                }
                 makeCreateToast(Toaster)({
-                    message: `Dashboard saved successfully...`,
+                    message:
+                        convertedDataSources > 0
+                            ? `Dashboard saved successfully. Searchbase data sources were converted for menu launch.`
+                            : `Dashboard saved successfully...`,
                     type: TOAST_TYPES.SUCCESS,
                 });
                 setUnsavedDefinition(false);
                 setCurrentDashboard((prev) => {
                     let newDs = cloneDeep(prev);
-                    newDs.data = JSON.stringify(editedDefinition);
+                    newDs.data = JSON.stringify(definitionToSave);
                     return newDs;
                 });
                 if (onDashboardSaved) onDashboardSaved();
@@ -876,8 +882,16 @@ const DashboardStudioEditor = ({
                     type: TOAST_TYPES.ERROR,
                 });
             }
+        };
+
+        saveDashboard().catch((error) => {
+            console.error(error);
+            makeCreateToast(Toaster)({
+                message: `An error occured while resolving searchbase data sources... ${error.message}`,
+                type: TOAST_TYPES.ERROR,
+            });
         });
-    }, [editedDefinition]);
+    }, [currentDashboard, dashID, editedDefinition, onDashboardSaved]);
 
     const handleModeChange = useCallback(
         (newMode) => {
@@ -989,7 +1003,7 @@ const DashboardStudioEditor = ({
         setIsCodeEditable(false);
     }, [validEditorJson, definitionInSourceEditor, setEditedDefinition, setIsCodeEditable]);
 
-    const iconRegistry = useMemo(() => createIS4SIconRegistry(), []);
+    const iconRegistry = useMemo(() => createSEIIconRegistry(), []);
 
     useEffect(() => {
         // Handler to call on window resize
@@ -1098,22 +1112,6 @@ const DashboardStudioEditor = ({
                         appearance="destructive"
                         onClick={() => navigate('/')}
                     ></Button>
-                </ItemGroup>,
-            ],
-            createtemplate: [
-                <HistoryGroup key="historyGroup" />,
-                <ItemGroup key="toolsToolbar">
-                    <TemplateVizButton key="templateViz"></TemplateVizButton>
-                    <BackgroundButton key="backgroundButton"></BackgroundButton>
-                    <Image key="image"></Image>
-                    <Shapes key="shapes"></Shapes>
-                    <IconGallery key="iconGallery"></IconGallery>
-                    <Markdown key="markdown"></Markdown>
-                </ItemGroup>,
-                <GridLineSwitch key="gridLine"></GridLineSwitch>,
-                <ItemGroup key="sideToolbar" align="right" borders={false}>
-                    <ModeSwitch key="modeSwitch" />
-                    <SaveButton key="save" onClick={handleSaveClick} isDirty={isDirty} />
                 </ItemGroup>,
             ],
         }),
@@ -1325,13 +1323,7 @@ const DashboardStudioEditor = ({
 
     const uiEditorPanel = useMemo(() => {
         return isCodeEditable ? null : (
-            <div
-                className={
-                    dashboardApiElem.current && dashboardApiElem.current.getDefinition().template
-                        ? 'templatemode'
-                        : ''
-                }
-            >
+            <div>
                 <Dashboard
                     key="DashboardStudioEditorUi"
                     width="100%"
@@ -1341,18 +1333,16 @@ const DashboardStudioEditor = ({
                             ? []
                             : toolbarMenus[
                                   dashMode
-                                      ? dashboardApiElem.current
-                                          ? Object.values(
-                                                dashboardApiElem.current.getDefinition()
-                                                    .dataSources,
-                                            ).some((ds) => ds.type === 'ds.searchbase')
-                                              ? `editconvert`
-                                              : dashboardApiElem.current.getDefinition().template
-                                                ? `createtemplate`
-                                                : dashMode
-                                          : dashMode
-                                      : 'view'
-                              ]
+	                                      ? dashboardApiElem.current
+	                                          ? Object.values(
+	                                                dashboardApiElem.current.getDefinition()
+	                                                    .dataSources,
+	                                            ).some((ds) => ds.type === 'ds.searchbase')
+	                                              ? `editconvert`
+	                                              : dashMode
+	                                          : dashMode
+	                                      : 'view'
+	                              ]
                     }
                     actionMenus={actionMenus[dashMode ? dashMode : 'view']}
                     dashboardApiRef={(apiRef) => {
@@ -1423,46 +1413,6 @@ const DashboardStudioEditor = ({
                     });
                 }
             });
-        } else if (activeModeId == 'fromtemplate') {
-            // create a new dashboard and then open it
-
-            const dashid = `scd_${dashboardTitle.replaceAll(' ', '_').replaceAll('#', '')}`;
-
-            let jsonDefinition = cloneDeep(
-                dashboards.find((c) => c.title == selectedOpenTemplate).definition,
-            );
-
-            jsonDefinition.title = dashboardTitle;
-            delete jsonDefinition.template;
-            for (const [key, viz] of Object.entries(jsonDefinition.visualizations)) {
-                if (
-                    viz.type === 'splunk.template_kpi' &&
-                    viz.options &&
-                    'readonly' in viz.options
-                ) {
-                    delete viz.options.readonly;
-                }
-            }
-
-            addDash(dashid, JSON.stringify(jsonDefinition)).then((response) => {
-                if (response.status >= 200 && response.status <= 299) {
-                    setOpenDashboardModal(false);
-                    setTimeout(() => {
-                        //navigate(`/${dashid}/edit`, { replace: true });
-                        window.open(
-                            `/app/splunk-cisco-dashboards/dashboardbuilder#/${dashid}/edit`,
-                            '_self',
-                        );
-                    }, 500);
-                } else {
-                    makeCreateToast(Toaster)({
-                        message: `An error occured while creating the new dashboard... ${JSON.stringify(
-                            response,
-                        )}`,
-                        type: TOAST_TYPES.ERROR,
-                    });
-                }
-            });
         } else {
             // open existing dashboard
             setOpenDashboardModal(false);
@@ -1475,67 +1425,25 @@ const DashboardStudioEditor = ({
     };
 
     const convertDashboard = async () => {
-        let def = cloneDeep(dashboardApiElem.current.getDefinition());
+        try {
+            const { definition: def } = await resolveSearchbaseDefinitionForNativeStudio(
+                dashboardApiElem.current.getDefinition(),
+            );
 
-        // Function to get search definition
-        const getSearchDefinition = async (name) => {
-            const data = await getSearchBaseConfStanza(name);
-            return data.entry[0];
-        };
+            dashboardApiElem.current.updateDefinition(def);
 
-        // Get all search definitions concurrently
-        const dsUpdates = await Promise.all(
-            Object.entries(def.dataSources)
-                .filter(([, value]) => value.type === 'ds.searchbase')
-                .map(async ([key, value]) => {
-                    const search = await getSearchDefinition(value.options.ref);
-                    return {
-                        key,
-                        newDataSource: {
-                            ...value,
-                            type: 'ds.search',
-                            options: { ...value.options, query: search.content.search },
-                        },
-                    };
-                }),
-        );
-
-        // Apply the updates
-        dsUpdates.forEach(({ key, newDataSource }) => {
-            delete newDataSource.options.ref; // Remove ref
-            def.dataSources[key] = newDataSource;
-        });
-
-        const inputUpdates = Object.entries(def.inputs)
-            .filter(([, value]) => value.type === 'input.simpleTimePicker')
-            .map(([key, value]) => {
-                return {
-                    key,
-                    newInput: {
-                        ...value,
-                        type: 'input.timerange',
-                        options: {
-                            ...value.options,
-                            defaultValue: '-24h@h,now',
-                        },
-                    },
-                };
+            setOpenConvertModal(false);
+            makeCreateToast(Toaster)({
+                message: `The dashboard has been migrated, and all custom items have been converted to standard Splunk Studio items. Please review the changes and save the dashboard to apply them.`,
+                type: TOAST_TYPES.SUCCESS,
             });
-
-        // Apply the updates
-        inputUpdates.forEach(({ key, newInput }) => {
-            delete newInput.options.selections; // Remove ref
-            def.inputs[key] = newInput;
-        });
-
-        // Update the dashboard definition
-        dashboardApiElem.current.updateDefinition(def);
-
-        setOpenConvertModal(false);
-        makeCreateToast(Toaster)({
-            message: `The dashboard has been migrated, and all custom items have been converted to standard Splunk Studio items. Please review the changes and save the dashboard to apply them.`,
-            type: TOAST_TYPES.SUCCESS,
-        });
+        } catch (error) {
+            console.error(error);
+            makeCreateToast(Toaster)({
+                message: `An error occured while converting the dashboard... ${error.message}`,
+                type: TOAST_TYPES.ERROR,
+            });
+        }
     };
 
     const goBackOrClose = () => {
@@ -1546,9 +1454,6 @@ const DashboardStudioEditor = ({
         }
     };
 
-    const handleRequestClosePreview = () => {
-        setOpenPreview(false);
-    };
     return (
         <>
             <ToastMessages />
@@ -1586,8 +1491,7 @@ const DashboardStudioEditor = ({
             >
                 <Modal.Header
                     title="Cisco Dashboard Builder"
-                    //subtitle="Create a new dashboard or select an existing one to edit..."
-                    subtitle="Create a new dashboard, select an existing one to edit or craft a new template..."
+                    subtitle="Create a new dashboard or select an existing one to edit..."
                     icon={<FileCharts width="30px" style={{ width: 30 }} />}
                 />
 
@@ -1610,189 +1514,84 @@ const DashboardStudioEditor = ({
                                 />
                             </SplunkControlGroup>
                             <SplunkControlGroup
-                                label="How do you want to build your dashboard?"
+                                label="Layout Mode"
                                 style={{ marginTop: 60 }}
                             >
-                                <TabLayout
-                                    defaultActivePanelId="create"
-                                    onChange={(e, { activePanelId: panelId }) => {
-                                        setActiveModeId(panelId);
+                                <div
+                                    style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
                                     }}
                                 >
-                                    <TabLayout.Panel label="From Scratch" panelId="create">
-                                        <SplunkControlGroup label="Layout Mode">
+                                    <Card
+                                        onClick={() => {
+                                            setGridLayout('absolute');
+                                        }}
+                                        selected={gridLayout == 'absolute'}
+                                        style={{
+                                            marginRight: 10,
+                                            borderRadius: 4,
+                                            maxHeight: 130,
+                                        }}
+                                    >
+                                        <Card.Body style={{ padding: 10 }}>
                                             <div
                                                 style={{
-                                                    display: 'flex',
-                                                    justifyContent: 'space-between',
+                                                    width: 150,
+                                                    display: 'grid',
+                                                    placeItems: 'center',
                                                 }}
                                             >
-                                                <Card
-                                                    onClick={() => {
-                                                        setGridLayout('absolute');
-                                                    }}
-                                                    selected={gridLayout == 'absolute'}
-                                                    style={{
-                                                        marginRight: 10,
-                                                        borderRadius: 4,
-                                                        maxHeight: 130,
-                                                    }}
-                                                >
-                                                    <Card.Body style={{ padding: 10 }}>
-                                                        <div
-                                                            style={{
-                                                                width: 150,
-                                                                display: 'grid',
-                                                                placeItems: 'center',
-                                                            }}
-                                                        >
-                                                            <div>
-                                                                <b>Absolute</b>
-                                                                <p
-                                                                    style={{
-                                                                        fontSize: 12,
-                                                                        marginTop: 0,
-                                                                    }}
-                                                                >
-                                                                    Full layout control
-                                                                </p>
-                                                            </div>
-                                                            <AbsolutSVG></AbsolutSVG>
-                                                        </div>
-                                                    </Card.Body>
-                                                </Card>
-                                                <Card
-                                                    onClick={() => {
-                                                        setGridLayout('grid');
-                                                    }}
-                                                    selected={gridLayout == 'grid'}
-                                                    style={{
-                                                        marginLeft: 10,
-                                                        borderRadius: 4,
-                                                        maxHeight: 130,
-                                                    }}
-                                                >
-                                                    <Card.Body style={{ padding: 10 }}>
-                                                        <div
-                                                            style={{
-                                                                width: 150,
-                                                                display: 'grid',
-                                                                placeItems: 'center',
-                                                            }}
-                                                        >
-                                                            <div>
-                                                                <b>Grid</b>
-                                                                <p
-                                                                    style={{
-                                                                        fontSize: 12,
-                                                                        marginTop: 0,
-                                                                    }}
-                                                                >
-                                                                    Quick organization
-                                                                </p>
-                                                            </div>
-                                                            <GridSVG></GridSVG>
-                                                        </div>
-                                                    </Card.Body>
-                                                </Card>
-                                            </div>
-                                        </SplunkControlGroup>
-                                    </TabLayout.Panel>
-                                    <TabLayout.Panel label="From template" panelId="fromtemplate">
-                                        <Message
-                                            type="info"
-                                            appearance="fill"
-                                            style={{ marginTop: 15, marginBottom: 15 }}
-                                        >
-                                            Templates are Dashboard Studio definitions saved from
-                                            this manager.
-                                        </Message>
-                                        <Modal
-                                            open={openPreview}
-                                            onRequestClose={handleRequestClosePreview}
-                                        >
-                                            <Modal.Header title="Template Preview" />
-                                            <Modal.Body style={{ minWidth: 800 }}>
-                                                {previewTemplate && (
-                                                    <DashboardContextProvider
-                                                        //preset={EnterpriseViewOnlyPreset}
-                                                        preset={preset}
-                                                        featureFlags={featureFlags}
-                                                        initialDefinition={previewTemplate}
-                                                        iconRegistry={iconRegistry}
-                                                    >
-                                                        <DashboardCore width="100%" height="100%" />
-                                                    </DashboardContextProvider>
-                                                )}
-                                            </Modal.Body>
-                                            <Modal.Footer>
-                                                <Button
-                                                    label="Close"
-                                                    onClick={handleRequestClosePreview}
-                                                />
-                                            </Modal.Footer>
-                                        </Modal>
-                                        <CardLayout
-                                            alignCards="left"
-                                            gutterSize={10}
-                                            cardWidth={200}
-                                            cardMinWidth={200}
-                                            cardMaxWidth={200}
-                                            wrapCards
-                                            style={{ minWidth: 640 }}
-                                        >
-                                            {dashboards
-                                                .filter((c) => c.template == true)
-                                                .map((template) => (
-                                                    <Card
-                                                        onClick={() => {
-                                                            setPreviewTemplate(template.definition);
-                                                            setSelectedOpenTemplate(template.title);
+                                                <div>
+                                                    <b>Absolute</b>
+                                                    <p
+                                                        style={{
+                                                            fontSize: 12,
+                                                            marginTop: 0,
                                                         }}
                                                     >
-                                                        <Card.Body style={{ padding: 5 }}>
-                                                            <DashboardContextProvider
-                                                                //preset={EnterpriseViewOnlyPreset}
-                                                                preset={preset}
-                                                                featureFlags={featureFlags}
-                                                                initialDefinition={
-                                                                    template.definition
-                                                                }
-                                                                iconRegistry={iconRegistry}
-                                                            >
-                                                                <DashboardCore
-                                                                    width="100%"
-                                                                    height="100%"
-                                                                />
-                                                            </DashboardContextProvider>
-                                                        </Card.Body>
-                                                        <Card.Footer>
-                                                            <div
-                                                                style={{
-                                                                    display: 'flex',
-                                                                    alignContent: 'space-between',
-                                                                    alignItems: 'center',
-                                                                }}
-                                                            >
-                                                                <span>
-                                                                    <b>{template.label}</b>
-                                                                </span>
-                                                                <Button
-                                                                    appearance="subtle"
-                                                                    icon={
-                                                                        <MagnifierPlus></MagnifierPlus>
-                                                                    }
-                                                                    onClick={() => {
-                                                                        setOpenPreview(true);
-                                                                    }}
-                                                                ></Button>
-                                                            </div>
-                                                        </Card.Footer>
-                                                    </Card>
-                                                ))}
-                                        </CardLayout>
-                                    </TabLayout.Panel>
-                                </TabLayout>
+                                                        Full layout control
+                                                    </p>
+                                                </div>
+                                                <AbsolutSVG></AbsolutSVG>
+                                            </div>
+                                        </Card.Body>
+                                    </Card>
+                                    <Card
+                                        onClick={() => {
+                                            setGridLayout('grid');
+                                        }}
+                                        selected={gridLayout == 'grid'}
+                                        style={{
+                                            marginLeft: 10,
+                                            borderRadius: 4,
+                                            maxHeight: 130,
+                                        }}
+                                    >
+                                        <Card.Body style={{ padding: 10 }}>
+                                            <div
+                                                style={{
+                                                    width: 150,
+                                                    display: 'grid',
+                                                    placeItems: 'center',
+                                                }}
+                                            >
+                                                <div>
+                                                    <b>Grid</b>
+                                                    <p
+                                                        style={{
+                                                            fontSize: 12,
+                                                            marginTop: 0,
+                                                        }}
+                                                    >
+                                                        Quick organization
+                                                    </p>
+                                                </div>
+                                                <GridSVG></GridSVG>
+                                            </div>
+                                        </Card.Body>
+                                    </Card>
+                                </div>
                             </SplunkControlGroup>
                         </TabLayout.Panel>
                         <TabLayout.Panel

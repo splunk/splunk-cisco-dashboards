@@ -240,7 +240,7 @@ const createConfiguredIcon = (icon: Icon): Icon => {
 /**
  * a local icon provider
  */
-class IS4SIconProvider extends Provider {
+class SEIIconProvider extends Provider {
     iconList: IconMap;
 
     constructor({ iconList }: { iconList?: IconMap } = {}) {
@@ -262,7 +262,7 @@ class IS4SIconProvider extends Provider {
      * @return {String} 'splunk-default'
      */
     getType(): string {
-        return 'is4s-default';
+        return 'sei-default';
     }
 
     /**
@@ -330,4 +330,4 @@ class IS4SIconProvider extends Provider {
     }
 }
 
-export default IS4SIconProvider;
+export default SEIIconProvider;

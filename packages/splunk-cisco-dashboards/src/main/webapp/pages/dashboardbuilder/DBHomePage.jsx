@@ -12,7 +12,6 @@ import MagnifierPlus from '@splunk/react-icons/MagnifierPlus';
 import TrashCanCross from '@splunk/react-icons/TrashCanCross';
 import { getDashboards, deleteDashboard, updateDashMetadata } from '../../common/lib/splunk';
 import { DashboardContextProvider } from '@splunk/dashboard-context';
-import { DashboardCore } from '@splunk/dashboard-core';
 import EnterprisePreset from '@splunk/dashboard-presets/EnterprisePreset';
 import SearchBaseDataSource from './SearchBaseDataSource';
 import SimpleTimePicker from './custominput/SimpleTimePicker';
@@ -29,18 +28,15 @@ import Trash from '@splunk/react-icons/enterprise/Trash';
 import Toaster, { makeCreateToast } from '@splunk/react-toast-notifications/Toaster';
 import { TOAST_TYPES } from '@splunk/react-toast-notifications/ToastConstants';
 import ToastMessages from '@splunk/react-toast-notifications/ToastMessages';
-import TabLayout from '@splunk/react-ui/TabLayout';
 import TextArea from '@splunk/react-ui/TextArea';
-import Select from '@splunk/react-ui/Select';
 import Tooltip from '@splunk/react-ui/Tooltip';
 import CollapsiblePanel from '@splunk/react-ui/CollapsiblePanel';
 import Checkbox from '@splunk/react-ui/Checkbox';
 import CustomTooltip from '../../common/components/CustomTooltip/CustomTooltip';
 import ManagerPreviewModal from '../../common/components/ManagerPreviewModal';
 import { actionMenus } from '../../common/udf/presets';
-import createIS4SIconRegistry from '../../common/udf/IconProviders/createIS4SIconRegistry';
+import createSEIIconRegistry from '../../common/udf/IconProviders/createSEIIconRegistry';
 import Paginator from '@splunk/react-ui/Paginator';
-import Message from '@splunk/react-ui/Message';
 import Table from '@splunk/react-ui/Table';
 import WaitSpinner from '@splunk/react-ui/WaitSpinner';
 
@@ -75,46 +71,6 @@ export const customPresets = {
         'splunk.template_kpi': VizKpi,
         'splunk.template_other': VizOther,
     },
-};
-
-const initialTemplateDefinition = {
-    visualizations: {},
-    dataSources: {},
-    defaults: {
-        dataSources: {
-            'ds.search': {
-                options: {
-                    queryParameters: {
-                        latest: '$global_time.latest$',
-                        earliest: '$global_time.earliest$',
-                    },
-                },
-            },
-        },
-    },
-    inputs: {
-        input_global_trp: {
-            type: 'input.timerange',
-            options: {
-                token: 'global_time',
-                defaultValue: '-24h@h,now',
-            },
-            title: 'Global Time Range',
-        },
-    },
-    layout: {
-        type: 'absolute',
-        options: {
-            width: 2000,
-            height: 960,
-            display: 'auto',
-        },
-        structure: [],
-        globalInputs: ['input_global_trp'],
-    },
-    description: '',
-    title: '',
-    template: true,
 };
 
 const DASHBOARD_PAGE_SIZE = 20;
@@ -244,25 +200,18 @@ const buildDashboardStudioUrl = (dashboardId, mode = 'view') =>
     )}`;
 
 export default function DBHomePage() {
-    const iconRegistry = useMemo(() => createIS4SIconRegistry(), []);
+    const iconRegistry = useMemo(() => createSEIIconRegistry(), []);
     const [dashboards, setDashboards] = useState([]);
-    const [dashboardToImport, setDashboardToImport] = useState();
     const [previewOpen, setPreviewOpen] = useState(false);
     const [selectedDash, setSelectedDash] = useState();
     const [searchText, setSearchText] = useState('');
     const [openCreateDashboard, setOpenCreateDashboard] = useState(false);
-    const [activeModeId, setActiveModeId] = useState('create');
     const [dashboardTitle, setDashboardTitle] = useState('');
     const [dashboardDescription, setDashboardDescription] = useState('');
     const [gridLayout, setGridLayout] = useState('absolute');
     const [openDeleteDashboard, setOpenDeleteDashboard] = useState(false);
     const [DashboardToDelete, setDashboardToDelete] = useState();
-    const [jsonDefinition, setJsonDefinition] = useState('');
-    const [currMode, setCurrMode] = useState('create');
     const [pageNum, setPageNum] = useState(1);
-    const [openPreview, setOpenPreview] = useState(false);
-    const [previewTemplate, setPreviewTemplate] = useState();
-    const [selectedOpenTemplate, setSelectedOpenTemplate] = useState('');
     const [dashboardScope, setDashboardScope] = useState('all');
     const [showOnlyFavoriteDashboards, setShowOnlyFavoriteDashboards] = useState(false);
     const [dashboardLibraryView, setDashboardLibraryView] = useState('cards');
@@ -379,11 +328,6 @@ export default function DBHomePage() {
         [filteredDashboards, pageNum],
     );
 
-    const templateDashboards = useMemo(
-        () => dashboards.filter((dashboard) => dashboard.template === true),
-        [dashboards],
-    );
-
     useEffect(() => {
         if (pageNum > totalDashboardPages) {
             setPageNum(totalDashboardPages);
@@ -391,83 +335,35 @@ export default function DBHomePage() {
     }, [pageNum, totalDashboardPages]);
 
     const handleOpenClick = () => {
-        if (activeModeId == 'create') {
-            // create a new dashboard and then open it
+        const dashid = `scd_${dashboardTitle.replaceAll(' ', '_').replaceAll('#', '')}`;
+        const jsonDefinition = cloneDeep(initialDefinition);
+        jsonDefinition.title = dashboardTitle;
+        jsonDefinition.description = dashboardDescription;
+        jsonDefinition.layout.type = gridLayout;
 
-            const dashid = `scd_${dashboardTitle.replaceAll(' ', '_').replaceAll('#', '')}`;
-            let jsonDefinition = cloneDeep(initialDefinition);
-            jsonDefinition.title = dashboardTitle;
-            jsonDefinition.description = dashboardDescription;
-            jsonDefinition.layout.type = gridLayout;
-
-            addDash(
-                dashid,
-                JSON.stringify(jsonDefinition),
-                dashboardTitle,
-                dashboardDescription,
-            ).then((response) => {
-                if (response.status >= 200 && response.status <= 299) {
-                    console.log(response);
-                    setOpenCreateDashboard(false);
-                    setTimeout(() => {
-                        //navigate(`/${dashid}/edit`, { replace: true });
-                        window.open(buildDashboardStudioUrl(dashid, 'edit'), '_self');
-                    }, 500);
-                } else {
-                    console.log(response);
-                    makeCreateToast(Toaster)({
-                        message: `An error occured while creating the new dashboard... ${JSON.stringify(
-                            response,
-                        )}`,
-                        type: TOAST_TYPES.ERROR,
-                    });
-                }
-            });
-        } else if (activeModeId == 'fromtemplate') {
-            // create a new dashboard and then open it
-
-            const dashid = `scd_${dashboardTitle.replaceAll(' ', '_').replaceAll('#', '')}`;
-
-            let jsonDefinition = cloneDeep(
-                dashboards.find((c) => c.title == selectedOpenTemplate).definition,
-            );
-
-            jsonDefinition.title = dashboardTitle;
-            jsonDefinition.description = dashboardDescription;
-            delete jsonDefinition.tag;
-            delete jsonDefinition.template;
-            for (const [key, viz] of Object.entries(jsonDefinition.visualizations)) {
-                if (
-                    viz.type === 'splunk.template_kpi' &&
-                    viz.options &&
-                    'readonly' in viz.options
-                ) {
-                    delete viz.options.readonly;
-                }
+        addDash(
+            dashid,
+            JSON.stringify(jsonDefinition),
+            dashboardTitle,
+            dashboardDescription,
+        ).then((response) => {
+            if (response.status >= 200 && response.status <= 299) {
+                console.log(response);
+                setOpenCreateDashboard(false);
+                setTimeout(() => {
+                    //navigate(`/${dashid}/edit`, { replace: true });
+                    window.open(buildDashboardStudioUrl(dashid, 'edit'), '_self');
+                }, 500);
+            } else {
+                console.log(response);
+                makeCreateToast(Toaster)({
+                    message: `An error occured while creating the new dashboard... ${JSON.stringify(
+                        response,
+                    )}`,
+                    type: TOAST_TYPES.ERROR,
+                });
             }
-
-            addDash(
-                dashid,
-                JSON.stringify(jsonDefinition),
-                dashboardTitle,
-                dashboardDescription,
-            ).then((response) => {
-                if (response.status >= 200 && response.status <= 299) {
-                    setOpenCreateDashboard(false);
-                    setTimeout(() => {
-                        //navigate(`/${dashid}/edit`, { replace: true });
-                        window.open(buildDashboardStudioUrl(dashid, 'edit'), '_self');
-                    }, 500);
-                } else {
-                    makeCreateToast(Toaster)({
-                        message: `An error occured while creating the new dashboard... ${JSON.stringify(
-                            response,
-                        )}`,
-                        type: TOAST_TYPES.ERROR,
-                    });
-                }
-            });
-        }
+        });
     };
 
     const refreshDashboards = () => {
@@ -551,8 +447,6 @@ export default function DBHomePage() {
         setDashboardTitle('');
         setDashboardDescription('');
         setGridLayout('absolute');
-        setActiveModeId('create');
-        setSelectedOpenTemplate('');
     };
 
     const handleDashboardScopeChange = (scope) => (event) => {
@@ -690,98 +584,11 @@ export default function DBHomePage() {
         setOpenDeleteDashboard(true);
     };
 
-    const handleCloseDeleteTemplate = () => {
+    const handleCloseDeleteDashboard = () => {
         setOpenDeleteDashboard(false);
     };
 
-    const handleCreateTemplate = () => {
-        const dashid = `scd_${dashboardTitle.replaceAll(' ', '_').replaceAll('#', '')}`;
-        let jDefinition = cloneDeep(initialTemplateDefinition);
-        jDefinition.title = dashboardTitle;
-        jDefinition.layout.type = gridLayout;
-
-        if (currMode == 'json') {
-            jDefinition = JSON.parse(jsonDefinition);
-            jDefinition.template = true;
-        }
-
-        if (currMode == 'convert') {
-            jDefinition = dashboards.find((d) => d.title == dashboardToImport).definition;
-            jDefinition.template = true;
-        }
-
-        // remove data sources
-        jDefinition.dataSources = {};
-        // clean json definition and remove Vizs
-        const whitelist = [
-            'viz.singlevalue',
-            'viz.table',
-            'viz.line',
-            'viz.bar',
-            'viz.area',
-            'viz.pie',
-            'viz.map',
-            'viz.bubble',
-            'viz.image',
-            'viz.column',
-            'splunk.singlevalue',
-            'splunk.table',
-            'splunk.line',
-            'splunk.bar',
-            'splunk.pie',
-            'splunk.column',
-            'splunk.markergauge',
-            'splunk.events',
-            'splunk.singlevalueradial',
-            'splunk.area',
-            'splunk.timeline',
-            'splunk.bubble',
-            'splunk.parallelcoordinates',
-            'splunk.punchcard',
-            'splunk.scatter',
-            'splunk.fillergauge',
-            'splunk.linkgraph',
-            'splunk.sankey',
-        ];
-
-        Object.entries(jDefinition.visualizations || {}).forEach(([vizId, viz]) => {
-            if (whitelist.includes(viz.type)) {
-                viz.type = 'splunk.template_kpi'; //Math.random() > 0.5 ? 'splunk.template_kpi' : 'splunk.template_other';
-                viz.options = { ...viz.options, readonly: true };
-            }
-
-            // Replace title with placeholder
-            viz.title = `TEMP_TITLE_${vizId.toUpperCase()}`;
-
-            // Replace markdown content
-            if ((viz.type === 'viz.markdown' || viz.type === 'splunk.markdown') && viz.options) {
-                viz.options.markdown = 'TEMP';
-            }
-
-            // remove data source
-            viz.dataSources = {};
-        });
-
-        addDash(dashid, JSON.stringify(jDefinition), dashboardTitle).then((response) => {
-            if (response.status >= 200 && response.status <= 299) {
-                refreshDashboards();
-                setOpenCreateDashboard(false);
-                if (currMode == 'create')
-                    setTimeout(() => {
-                        navigate(`/edit/${dashid}`);
-                    }, 500);
-            } else {
-                makeCreateToast(Toaster)({
-                    message: `An error occured while creating the new template... ${JSON.stringify(
-                        response,
-                    )}`,
-                    type: TOAST_TYPES.ERROR,
-                });
-            }
-        });
-    };
-
-    const handleDeleteTemplate = () => {
+    const handleDeleteDashboard = () => {
         if (DashboardToDelete)
             deleteDashboard(
                 DashboardToDelete.title,
@@ -830,8 +637,7 @@ export default function DBHomePage() {
             >
                 <Modal.Header
                     title="Cisco Dashboard Builder"
-                    //subtitle="Create a new dashboard or select an existing one to edit..."
-                    subtitle="Create a new dashboard or start using a template..."
+                    subtitle="Create a new dashboard."
                     icon={<FileCharts className="dashboard-builder-modal-icon" />}
                 />
 
@@ -885,172 +691,64 @@ export default function DBHomePage() {
                         </div>
                         <SplunkControlGroup
                             className="dashboard-builder-mode-group"
-                            label="How do you want to build your dashboard?"
+                            label={
+                                <span className="dashboard-builder-field-label">
+                                    <span>Layout Mode</span>
+                                    <Tooltip content="Choose the starting layout for the new dashboard.">
+                                        <span className="dashboard-builder-field-tooltip-trigger">?</span>
+                                    </Tooltip>
+                                </span>
+                            }
                             labelPosition="top"
                         >
-                            <TabLayout
-                                className="dashboard-builder-tablayout"
-                                defaultActivePanelId="create"
-                                onChange={(e, { activePanelId: panelId }) => {
-                                    setActiveModeId(panelId);
-                                }}
-                            >
-                                <TabLayout.Panel
-                                    label={
-                                        <span className="dashboard-builder-tab-label">
-                                            <span>From Scratch</span>
-                                            <Tooltip content="Start with a blank dashboard layout.">
-                                                <span className="dashboard-builder-tab-tooltip-trigger">
-                                                    ?
-                                                </span>
-                                            </Tooltip>
-                                        </span>
-                                    }
-                                    panelId="create"
+                            <div className="dashboard-builder-layout-options">
+                                <Card
+                                    className="dashboard-builder-layout-card"
+                                    onClick={() => {
+                                        setGridLayout('absolute');
+                                    }}
+                                    selected={gridLayout == 'absolute'}
                                 >
-                                    <SplunkControlGroup label="Layout Mode">
-                                        <div className="dashboard-builder-layout-options">
-                                            <Card
-                                                className="dashboard-builder-layout-card"
-                                                onClick={() => {
-                                                    setGridLayout('absolute');
-                                                }}
-                                                selected={gridLayout == 'absolute'}
-                                            >
-                                                <Card.Body className="dashboard-builder-layout-card-body">
-                                                    <div className="dashboard-builder-layout-card-content">
-                                                        <div>
-                                                            <b>Absolute</b>
-                                                            <p className="dashboard-builder-layout-card-copy">
-                                                                Full layout control
-                                                            </p>
-                                                        </div>
-                                                        <AbsolutSVG></AbsolutSVG>
-                                                    </div>
-                                                </Card.Body>
-                                            </Card>
-                                            <Card
-                                                className="dashboard-builder-layout-card"
-                                                onClick={() => {
-                                                    setGridLayout('grid');
-                                                }}
-                                                selected={gridLayout == 'grid'}
-                                            >
-                                                <Card.Body className="dashboard-builder-layout-card-body">
-                                                    <div className="dashboard-builder-layout-card-content">
-                                                        <div>
-                                                            <b>Grid</b>
-                                                            <p className="dashboard-builder-layout-card-copy">
-                                                                Quick organization
-                                                            </p>
-                                                        </div>
-                                                        <GridSVG></GridSVG>
-                                                    </div>
-                                                </Card.Body>
-                                            </Card>
+                                    <Card.Body className="dashboard-builder-layout-card-body">
+                                        <div className="dashboard-builder-layout-card-content">
+                                            <div>
+                                                <b>Absolute</b>
+                                                <p className="dashboard-builder-layout-card-copy">
+                                                    Full layout control
+                                                </p>
+                                            </div>
+                                            <AbsolutSVG></AbsolutSVG>
                                         </div>
-                                    </SplunkControlGroup>
-                                </TabLayout.Panel>
-                                <TabLayout.Panel
-                                    label={
-                                        <span className="dashboard-builder-tab-label">
-                                            <span>From Template</span>
-                                            <Tooltip content="Use a saved template as the starting point.">
-                                                <span className="dashboard-builder-tab-tooltip-trigger">
-                                                    ?
-                                                </span>
-                                            </Tooltip>
-                                        </span>
-                                    }
-                                    panelId="fromtemplate"
+                                    </Card.Body>
+                                </Card>
+                                <Card
+                                    className="dashboard-builder-layout-card"
+                                    onClick={() => {
+                                        setGridLayout('grid');
+                                    }}
+                                    selected={gridLayout == 'grid'}
                                 >
-                                    <Message
-                                        type="info"
-                                        appearance="fill"
-                                        className="dashboard-builder-template-message"
-                                    >
-                                        Templates are Dashboard Studio definitions saved from this
-                                        manager.
-                                    </Message>
-                                    <ManagerPreviewModal
-                                        open={openPreview}
-                                        onRequestClose={handleRequestClosePreview}
-                                        title="Template Preview"
-                                        initialWidth={900}
-                                        initialHeight={620}
-                                    >
-                                        {previewTemplate && (
-                                            <DashboardContextProvider
-                                                //preset={EnterpriseViewOnlyPreset}
-                                                preset={customPresets}
-                                                featureFlags={featureFlags}
-                                                initialDefinition={previewTemplate}
-                                                iconRegistry={iconRegistry}
-                                            >
-                                                <DashboardCore width="100%" height="100%" />
-                                            </DashboardContextProvider>
-                                        )}
-                                    </ManagerPreviewModal>
-                                    <CardLayout
-                                        alignCards="left"
-                                        gutterSize={10}
-                                        cardWidth={200}
-                                        cardMinWidth={200}
-                                        cardMaxWidth={200}
-                                        wrapCards
-                                        className="dashboard-builder-template-layout"
-                                    >
-                                        {templateDashboards.map((template) => (
-                                                <Card
-                                                    onClick={() => {
-                                                        setPreviewTemplate(template.definition);
-                                                        setSelectedOpenTemplate(template.title);
-                                                    }}
-                                                >
-                                                    <Card.Body className="dashboard-builder-template-card-body">
-                                                        <DashboardContextProvider
-                                                            //preset={EnterpriseViewOnlyPreset}
-                                                            preset={customPresets}
-                                                            featureFlags={featureFlags}
-                                                            initialDefinition={template.definition}
-                                                            iconRegistry={iconRegistry}
-                                                        >
-                                                            <DashboardCore
-                                                                width="100%"
-                                                                height="100%"
-                                                            />
-                                                        </DashboardContextProvider>
-                                                    </Card.Body>
-                                                    <Card.Footer>
-                                                        <div className="dashboard-builder-template-card-footer">
-                                                            <span>
-                                                                <b>{template.label}</b>
-                                                            </span>
-                                                            <Button
-                                                                appearance="subtle"
-                                                                icon={<MagnifierPlus></MagnifierPlus>}
-                                                                onClick={() => {
-                                                                    setOpenPreview(true);
-                                                                }}
-                                                            ></Button>
-                                                        </div>
-                                                    </Card.Footer>
-                                                </Card>
-                                            ))}
-                                    </CardLayout>
-                                </TabLayout.Panel>
-                            </TabLayout>
+                                    <Card.Body className="dashboard-builder-layout-card-body">
+                                        <div className="dashboard-builder-layout-card-content">
+                                            <div>
+                                                <b>Grid</b>
+                                                <p className="dashboard-builder-layout-card-copy">
+                                                    Quick organization
+                                                </p>
+                                            </div>
+                                            <GridSVG></GridSVG>
+                                        </div>
+                                    </Card.Body>
+                                </Card>
+                            </div>
                         </SplunkControlGroup>
                     </div>
                 </Modal.Body>
                 <Modal.Footer>
                     <Button
                         appearance="primary"
-                        label={activeModeId == 'create' ? 'Create' : 'Open'}
-                        disabled={
-                            !dashboardTitle.trim() ||
-                            (activeModeId == 'fromtemplate' && selectedOpenTemplate == '')
-                        }
+                        label="Create"
+                        disabled={!dashboardTitle.trim()}
                         onClick={handleOpenClick}
                     />
 
@@ -1064,7 +762,7 @@ export default function DBHomePage() {
             <Modal
                 open={openDeleteDashboard}
                 style={{ width: '500px', zIndex: 99999 }}
-                onRequestClose={handleCloseDeleteTemplate}
+                onRequestClose={handleCloseDeleteDashboard}
             >
                 <Modal.Header
                     title="Delete Confirmation"
@@ -1082,7 +780,7 @@ export default function DBHomePage() {
                         label="Delete"
                         appearance="primary"
                         onClick={() => {
-                            handleDeleteTemplate();
+                            handleDeleteDashboard();
                         }}
                     ></Button>
                     <Button
@@ -1335,7 +1033,7 @@ export default function DBHomePage() {
                     <CollapsiblePanel
                         defaultOpen
                         open={true}
-                        id="template_manager_templates"
+                        id="dashboard_manager_dashboards"
                         title={
                             <div className="dashboard-manager-panel-title">
                                 <div className="dashboard-manager-panel-title-main">
@@ -1358,9 +1056,8 @@ export default function DBHomePage() {
                                                     <ul>
                                                         <li>
                                                             Click <strong>Create New</strong>, enter a
-                                                            <strong> Dashboard Title</strong>, then choose
-                                                            <strong> From Scratch</strong> or
-                                                            <strong> From template</strong>.
+                                                            <strong> Dashboard Title</strong>, then choose a
+                                                            layout mode.
                                                         </li>
                                                         <li>
                                                             Use the <strong>Search</strong>, favorites,

@@ -2872,16 +2872,37 @@ interface LinkPacketLayerProps {
     animationLevel: TopologyAnimationLevel;
 }
 
+const linkPacketPathD = (
+    map: L.Map,
+    source: TopologySite,
+    target: TopologySite
+): string | null => {
+    const points = computeBezierLine(
+        [source.lat, source.lng],
+        [target.lat, target.lng]
+    );
+    if (points.length < 2) return null;
+    const layerPoints = points.map(([lat, lng]) =>
+        map.latLngToLayerPoint([lat, lng])
+    );
+    const head = layerPoints[0];
+    const tail = layerPoints
+        .slice(1)
+        .map((p) => `L${p.x},${p.y}`)
+        .join(' ');
+    return `M${head.x},${head.y} ${tail}`;
+};
+
 /**
  * Renders bright "packets" (small SVG circles) traveling end-to-end along
  * each link's bezier curve, color-coded by health status and density-tuned
  * by the active animation level.
  *
- * The implementation lives inside a custom Leaflet pane (zIndex 410, between
- * Leaflet's default overlayPane=400 and markerPane=600) so packets appear
- * above the polyline shells but below the site markers and popups. Custom
- * panes are translated by Leaflet automatically on pan, so we only need to
- * recompute path geometry on `zoomend` and `viewreset` — pan is free.
+ * The implementation lives inside Leaflet's overlay SVG so packets appear
+ * above the polyline shells but below the site markers and popups. Leaflet
+ * moves the SVG during pan, then re-anchors it after drag end; we update the
+ * referenced path geometry in place on those map events so packet animations
+ * keep running without a visible restart.
  *
  * Animation itself uses SVG <animateMotion> + <mpath> for two reasons:
  *   1. Consistency with the existing SMIL approach used by TopologyLinkPath
@@ -2920,8 +2941,9 @@ const LinkPacketLayer: React.FC<LinkPacketLayerProps> = ({
     const map = useMap();
     const groupRef = useRef<SVGGElement | null>(null);
     // version is bumped any time we want the imperative re-render effect
-    // below to run again — i.e. on the very first attach AND on every
-    // map zoomend / viewreset / moveend / resize event.
+    // below to run again, i.e. on the very first attach. Map movement
+    // updates the existing hidden path geometry in-place so SMIL packet
+    // animations continue smoothly instead of restarting after a drag.
     const [version, bumpVersion] = useReducer((n: number) => n + 1, 0);
 
     // Step 1: find Leaflet's existing overlay <svg> and append our <g>.
@@ -2963,24 +2985,50 @@ const LinkPacketLayer: React.FC<LinkPacketLayerProps> = ({
         };
     }, [map]);
 
-    // Step 2: re-render packets whenever the map's world↔pixel mapping
-    // could have changed. Pan moves the overlay SVG via a CSS transform
-    // (no re-render needed for that), but `viewreset` fires when Leaflet
-    // re-anchors the SVG and `zoomend` fires after each zoom completes —
-    // both times we need to recompute layer-point coords.
+    // Step 2: update packet path geometry whenever Leaflet re-anchors
+    // the SVG frame. This preserves the existing <animateMotion> nodes,
+    // avoiding the visible flicker caused by tearing them down on every
+    // pan / resize.
     useEffect(() => {
-        const handler = () => bumpVersion();
-        map.on('zoomend', handler);
-        map.on('viewreset', handler);
-        map.on('moveend', handler);
-        map.on('resize', handler);
-        return () => {
-            map.off('zoomend', handler);
-            map.off('viewreset', handler);
-            map.off('moveend', handler);
-            map.off('resize', handler);
+        let animationFrame = 0;
+        const updateGeometry = () => {
+            animationFrame = 0;
+            const group = groupRef.current;
+            if (!group || animationLevel === 'off') return;
+            const paths = new Map(
+                Array.from(
+                    group.querySelectorAll<SVGPathElement>(
+                        'path[data-customer-topology-packet-link-id]'
+                    )
+                ).map((path) => [
+                    path.getAttribute('data-customer-topology-packet-link-id'),
+                    path,
+                ])
+            );
+            for (const { link, source, target } of linkSegments) {
+                const path = paths.get(link.id);
+                if (!path) continue;
+                const nextD = linkPacketPathD(map, source, target);
+                if (nextD) path.setAttribute('d', nextD);
+            }
         };
-    }, [map]);
+        const scheduleGeometryUpdate = () => {
+            if (animationFrame) return;
+            animationFrame = window.requestAnimationFrame(updateGeometry);
+        };
+
+        map.on('moveend', scheduleGeometryUpdate);
+        map.on('zoomend', scheduleGeometryUpdate);
+        map.on('viewreset', scheduleGeometryUpdate);
+        map.on('resize', scheduleGeometryUpdate);
+        return () => {
+            if (animationFrame) window.cancelAnimationFrame(animationFrame);
+            map.off('moveend', scheduleGeometryUpdate);
+            map.off('zoomend', scheduleGeometryUpdate);
+            map.off('viewreset', scheduleGeometryUpdate);
+            map.off('resize', scheduleGeometryUpdate);
+        };
+    }, [animationLevel, linkSegments, map]);
 
     // Step 3: imperatively rebuild the packet DOM whenever inputs change.
     // We blow away the previous children and rebuild — `<animateMotion>`
@@ -3003,26 +3051,15 @@ const LinkPacketLayer: React.FC<LinkPacketLayerProps> = ({
         for (const { link, source, target } of linkSegments) {
             const profile = packetProfile(link.status, animationLevel);
             if (!profile) continue;
-            const points = computeBezierLine(
-                [source.lat, source.lng],
-                [target.lat, target.lng]
-            );
-            if (points.length < 2) continue;
-            const layerPoints = points.map(([lat, lng]) =>
-                map.latLngToLayerPoint([lat, lng])
-            );
-            const head = layerPoints[0];
-            const tail = layerPoints
-                .slice(1)
-                .map((p) => `L${p.x},${p.y}`)
-                .join(' ');
-            const d = `M${head.x},${head.y} ${tail}`;
+            const d = linkPacketPathD(map, source, target);
+            if (!d) continue;
 
             const pathId = `customer-topology-packet-path-${link.id}`;
             const path = document.createElementNS(SVG_NS, 'path');
             path.setAttribute('id', pathId);
             path.setAttribute('d', d);
             path.setAttribute('fill', 'none');
+            path.setAttribute('data-customer-topology-packet-link-id', link.id);
             defs.appendChild(path);
 
             // Round-trip motion: one packet now travels source → target → source.
@@ -3102,29 +3139,56 @@ const MapFrame: React.FC<MapFrameProps> = ({ topology, autoFitSites }) => {
     } | null>(null);
 
     useEffect(() => {
-        const apply = () => {
-            map.invalidateSize();
-            const last = lastAppliedViewRef.current;
-            if (
-                !last ||
-                last.lat !== centerLat ||
-                last.lng !== centerLng ||
-                last.zoom !== zoom
-            ) {
-                map.setView([centerLat, centerLng], zoom, { animate: false });
-                lastAppliedViewRef.current = {
-                    lat: centerLat,
-                    lng: centerLng,
-                    zoom,
-                };
-            }
-        };
-        apply();
-        const container = map.getContainer();
-        const observer = new ResizeObserver(() => apply());
-        observer.observe(container);
-        return () => observer.disconnect();
+        const last = lastAppliedViewRef.current;
+        if (
+            !last ||
+            last.lat !== centerLat ||
+            last.lng !== centerLng ||
+            last.zoom !== zoom
+        ) {
+            map.setView([centerLat, centerLng], zoom, { animate: false });
+            lastAppliedViewRef.current = {
+                lat: centerLat,
+                lng: centerLng,
+                zoom,
+            };
+        }
     }, [centerLat, centerLng, map, zoom]);
+
+    useEffect(() => {
+        const container = map.getContainer();
+        let animationFrame = 0;
+        let lastWidth = 0;
+        let lastHeight = 0;
+
+        const invalidate = () => {
+            animationFrame = 0;
+            const rect = container.getBoundingClientRect();
+            const width = Math.round(rect.width);
+            const height = Math.round(rect.height);
+            if (width === lastWidth && height === lastHeight) return;
+            lastWidth = width;
+            lastHeight = height;
+            map.invalidateSize({
+                animate: false,
+                pan: false,
+                debounceMoveend: true,
+            });
+        };
+
+        const scheduleInvalidate = () => {
+            if (animationFrame) return;
+            animationFrame = window.requestAnimationFrame(invalidate);
+        };
+
+        scheduleInvalidate();
+        const observer = new ResizeObserver(scheduleInvalidate);
+        observer.observe(container);
+        return () => {
+            if (animationFrame) window.cancelAnimationFrame(animationFrame);
+            observer.disconnect();
+        };
+    }, [map]);
 
     useEffect(() => {
         const nextBounds = L.latLngBounds([minLat, minLng], [maxLat, maxLng]);
