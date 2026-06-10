@@ -18,8 +18,14 @@ from format_searchbase_conf import format_search, emit_search_field
 SOURCE = Path(__file__).resolve().parents[1] / (
     "packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf"
 )
-EXPORT = SOURCE.parent / "searchbase_export.conf"
-REPORT = SOURCE.parent / "searchbase_export_report.txt"
+# Export artifacts live outside the Splunk app's default/ tree so they are
+# never bundled into the shipped package (webpack copies the whole
+# src/main/resources/splunk/ directory). They are repo-only deliverables.
+EXPORT_DIR = Path(__file__).resolve().parents[1] / (
+    "packages/splunk-cisco-dashboards/exports"
+)
+EXPORT = EXPORT_DIR / "searchbase_export.conf"
+REPORT = EXPORT_DIR / "searchbase_export_report.txt"
 
 DROP_FIELDS = {
     "dispatch_context",
@@ -465,6 +471,7 @@ def main() -> int:
     for sid, fields in kept:
         export_blocks.append(format_stanza(sid, fields))
 
+    EXPORT_DIR.mkdir(parents=True, exist_ok=True)
     EXPORT.write_text("\n\n".join(export_blocks) + "\n", encoding="utf-8")
 
     by_cat = Counter(f.get("category", "?") for _, f in kept)

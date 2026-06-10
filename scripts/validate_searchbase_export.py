@@ -12,13 +12,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build_searchbase_export import parse_stanzas, format_stanza
 from audit_searchbase_quality import split_spl_commands
 
-CONF_DIR = (
+# Export artifacts live outside the Splunk app's default/ tree so they are
+# never bundled into the shipped package; this validator reads/writes them in
+# the repo-only exports/ directory produced by build_searchbase_export.py.
+EXPORT_DIR = (
     Path(__file__).resolve().parents[1]
-    / "packages/splunk-cisco-dashboards/src/main/resources/splunk/default"
+    / "packages/splunk-cisco-dashboards/exports"
 )
-EXPORT = CONF_DIR / "searchbase_export.conf"
-PASS_OUT = CONF_DIR / "searchbase_export_pass.conf"
-FAIL_OUT = CONF_DIR / "searchbase_export_fail.conf"
+EXPORT = EXPORT_DIR / "searchbase_export.conf"
+PASS_OUT = EXPORT_DIR / "searchbase_export_pass.conf"
+FAIL_OUT = EXPORT_DIR / "searchbase_export_fail.conf"
 
 MACRO_CALL = re.compile(r"`([A-Za-z_][\w-]*)(?:\([^`]*\))?`")
 LOOKUP_CMD = re.compile(r"(?:^|\|)\s*(?:lookup|inputlookup|outputlookup)\b", re.I | re.M)
@@ -425,6 +428,7 @@ def main() -> int:
     for sid, fields, failures in fail_stanzas:
         fail_blocks.append(format_fail_stanza(sid, fields, failures))
 
+    EXPORT_DIR.mkdir(parents=True, exist_ok=True)
     PASS_OUT.write_text("\n\n".join(pass_blocks) + "\n", encoding="utf-8")
     FAIL_OUT.write_text("\n\n".join(fail_blocks) + "\n", encoding="utf-8")
 
