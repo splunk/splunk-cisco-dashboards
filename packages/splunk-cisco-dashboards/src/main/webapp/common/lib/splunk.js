@@ -114,6 +114,7 @@ const buildDashboardManagerNavXml = (dashboards = []) => {
     <collection label="Admin &amp; Tools">
         <a href="admin_guide_v1">Admin Guide</a>
         <a href="dashboardbuilder">Dashboard Manager</a>
+        <a href="macro_index_tuning">Macro Index Tuning</a>
         <a href="template">Customer Template</a>
         <divider/>
         <view name="reports"/>
