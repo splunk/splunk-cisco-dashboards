@@ -55,7 +55,7 @@ import {
 import Cog from '@splunk/react-icons/Cog';
 
 import Card from '@splunk/react-ui/Card';
-import { getDashboards } from '../../common/lib/splunk';
+import { getDashboards, syncDashboardManagerNavigation } from '../../common/lib/splunk';
 import { defaultFetchInit } from '@splunk/splunk-utils/fetch';
 import { INSIGHTS_APP_ID } from '../../common/lib/constants';
 import { getDashboard } from '../../common/lib/splunk';
@@ -214,7 +214,7 @@ async function updateDash(dashName, jsonDefinition, app, owner, description, lab
    
    <meta type="hiddenElements"><![CDATA[
         {
-        "hideEdit": false,
+        "hideEdit": true,
         "hideOpenInSearch": false,
         "hideExport": false
         }
@@ -742,6 +742,9 @@ const DashboardStudioEditor = ({
                         .filter((c) => c != undefined);
 
                     setDashboards(insightDash);
+                    syncDashboardManagerNavigation(insightDash).catch((error) => {
+                        console.warn('Unable to sync Dashboard Manager navigation.', error);
+                    });
                 } else {
                 }
             });
@@ -1395,6 +1398,18 @@ const DashboardStudioEditor = ({
             addDash(dashid, JSON.stringify(jsonDefinition)).then((response) => {
                 if (response.status >= 200 && response.status <= 299) {
                     console.log(response);
+                    syncDashboardManagerNavigation([
+                        ...dashboards,
+                        {
+                            title: dashid,
+                            label: dashboardTitle,
+                            definition: {
+                                title: dashboardTitle,
+                            },
+                        },
+                    ]).catch((error) => {
+                        console.warn('Unable to sync Dashboard Manager navigation.', error);
+                    });
                     setOpenDashboardModal(false);
                     setTimeout(() => {
                         //navigate(`/${dashid}/edit`, { replace: true });

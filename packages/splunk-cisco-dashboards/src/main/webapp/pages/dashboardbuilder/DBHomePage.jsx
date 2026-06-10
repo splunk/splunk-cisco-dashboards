@@ -10,7 +10,12 @@ import Button from '@splunk/react-ui/Button';
 import Pencil from '@splunk/react-icons/Pencil';
 import MagnifierPlus from '@splunk/react-icons/MagnifierPlus';
 import TrashCanCross from '@splunk/react-icons/TrashCanCross';
-import { getDashboards, deleteDashboard, updateDashMetadata } from '../../common/lib/splunk';
+import {
+    getDashboards,
+    deleteDashboard,
+    updateDashMetadata,
+    syncDashboardManagerNavigation,
+} from '../../common/lib/splunk';
 import { DashboardContextProvider } from '@splunk/dashboard-context';
 import EnterprisePreset from '@splunk/dashboard-presets/EnterprisePreset';
 import SearchBaseDataSource from './SearchBaseDataSource';
@@ -349,6 +354,18 @@ export default function DBHomePage() {
         ).then((response) => {
             if (response.status >= 200 && response.status <= 299) {
                 console.log(response);
+                syncDashboardManagerNavigation([
+                    ...dashboards,
+                    {
+                        title: dashid,
+                        label: dashboardTitle,
+                        definition: {
+                            title: dashboardTitle,
+                        },
+                    },
+                ]).catch((error) => {
+                    console.warn('Unable to sync Dashboard Manager navigation.', error);
+                });
                 setOpenCreateDashboard(false);
                 setTimeout(() => {
                     //navigate(`/${dashid}/edit`, { replace: true });
@@ -428,6 +445,9 @@ export default function DBHomePage() {
                     .filter((c) => c != undefined);
 
                 setDashboards(insightDash);
+                syncDashboardManagerNavigation(insightDash).catch((error) => {
+                    console.warn('Unable to sync Dashboard Manager navigation.', error);
+                });
             } else {
             }
         });

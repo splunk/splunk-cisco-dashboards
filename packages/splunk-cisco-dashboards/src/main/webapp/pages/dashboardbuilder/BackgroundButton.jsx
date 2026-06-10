@@ -11,43 +11,6 @@ import CardLayout from '@splunk/react-ui/CardLayout';
 import Card from '@splunk/react-ui/Card';
 import { cloneDeep, isEqual } from 'lodash-es';
 
-const STATIC_APP_ROOT = '/static/app/splunk-cisco-dashboards';
-
-const DEFAULT_BACKGROUND_THEMES = [
-    { id: 'sei-generic-1', name: 'SEI Generic Bkd 1', file: 'bkd-sei-generic-1.svg' },
-    { id: 'sei-generic-3', name: 'SEI Generic Bkd 3', file: 'bkd-sei-generic-3.svg' },
-    { id: 'sei-generic-4', name: 'SEI Generic Bkd 4', file: 'bkd-sei-generic-4.svg' },
-    { id: 'sei-generic-7', name: 'SEI Generic Bkd 7', file: 'bkd-sei-generic-7.svg' },
-    { id: 'sei-generic-8', name: 'SEI Generic Bkd 8', file: 'bkd-sei-generic-8.svg' },
-    { id: 'sei-generic-9', name: 'SEI Generic Bkd 9', file: 'bkd-sei-generic-9.svg' },
-    { id: 'sei-generic-10', name: 'SEI Generic Bkd 10', file: 'bkd-sei-generic-10.svg' },
-    { id: 'sei-generic-11', name: 'SEI Generic Bkd 11', file: 'bkd-sei-generic-11.svg' },
-    { id: 'sei-generic-12', name: 'SEI Generic Bkd 12', file: 'bkd-sei-generic-12.svg' },
-    {
-        id: 'sei-needs-activation',
-        name: 'SEI Needs Activation',
-        file: 'bkd-sei-needs-activation.svg',
-    },
-].map(({ id, name, file }) => ({
-    name: `background://${id}`,
-    content: {
-        name,
-        data: `${STATIC_APP_ROOT}/${file}`,
-    },
-}));
-
-const mergeBackgroundThemes = (entries = []) => {
-    const themesByName = new Map(DEFAULT_BACKGROUND_THEMES.map((theme) => [theme.name, theme]));
-
-    entries.forEach((entry) => {
-        if (entry?.name) {
-            themesByName.set(entry.name, entry);
-        }
-    });
-
-    return Array.from(themesByName.values());
-};
-
 export function ImageBase64Encoder({ setNewBG }) {
     const [base64, setBase64] = useState(undefined);
     const [dragActive, setDragActive] = useState(false);
@@ -130,10 +93,9 @@ const BackgroundButton = (props) => {
     const refreshBackgrounds = () => {
         getBackgrounds().then((response) => {
             if (response.status >= 200 && response.status <= 299) {
-                setBackgrounds(mergeBackgroundThemes(response.entry));
+                setBackgrounds(response.entry);
             } else {
                 console.error(response);
-                setBackgrounds(mergeBackgroundThemes());
             }
         });
     };

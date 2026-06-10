@@ -46,6 +46,6 @@
         <a href="search" target="_blank" rel="noopener">Search</a>
     </collection>
     <collection label="My Views">
-		<view source="all" match="scd_" />
+        <a href="dashboardbuilder">Dashboard Manager</a>
 	</collection>
 </nav>

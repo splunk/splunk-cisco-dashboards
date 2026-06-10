@@ -23,6 +23,11 @@ const dashboardUrl = (dashboardId = '') =>
         INSIGHTS_APP_ID,
     )}/data/ui/views${dashboardId ? `/${encodeURIComponent(dashboardId)}` : ''}`;
 
+const navigationUrl = (navId = '') =>
+    `/en-US/splunkd/__raw/servicesNS/nobody/${encodeURIComponent(
+        INSIGHTS_APP_ID,
+    )}/data/ui/nav${navId ? `/${encodeURIComponent(navId)}` : ''}`;
+
 export async function getDashboards() {
     return requestJson(`${dashboardUrl()}?${jsonCountParams.toString()}`, {
         method: 'GET',
@@ -43,6 +48,85 @@ const escapeXml = (value = '') =>
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&apos;');
 
+const getDashboardMenuLabel = (dashboard) =>
+    dashboard?.label || dashboard?.definition?.title || dashboard?.title || '';
+
+const getDashboardManagerHref = (dashboardId) =>
+    `dashboardbuilder#/${encodeURIComponent(dashboardId)}/edit`;
+
+const buildDashboardManagerNavXml = (dashboards = []) => {
+    const dashboardLinks = dashboards
+        .filter((dashboard) => dashboard?.title?.startsWith('scd_'))
+        .sort((left, right) =>
+            getDashboardMenuLabel(left).localeCompare(getDashboardMenuLabel(right), undefined, {
+                sensitivity: 'base',
+            }),
+        )
+        .map(
+            (dashboard) =>
+                `        <a href="${escapeXml(getDashboardManagerHref(dashboard.title))}">${escapeXml(
+                    getDashboardMenuLabel(dashboard),
+                )}</a>`,
+        );
+
+    const myViewsContent = dashboardLinks.length
+        ? dashboardLinks.join('\n')
+        : '        <a href="dashboardbuilder">Dashboard Manager</a>';
+
+    return `<nav color="#049fd9">
+    <!-- Core dashboards: keep top-level journey simple -->
+    <collection label="Core Dashboards">
+        <view name="overview" default="true" label="Executive Briefing"/>
+        <a href="it_health_v1">IT Health</a>
+        <a href="security_v1">Security</a>
+        <a href="building_v1">Building Intelligence</a>
+    </collection>
+
+    <!-- Operational monitoring and readiness -->
+    <collection label="Operations">
+        <view name="health_monitoring" label="Health Monitoring"/>
+        <a href="netops_readiness_v1">NetOps Readiness</a>
+        <a href="asset_inventory_v1">Asset Inventory</a>
+    </collection>
+
+    <!-- Workplace and collaboration-focused dashboards -->
+    <collection label="Workplace &amp; Collaboration">
+        <view name="spaces_intelligence_v1"/>
+        <view name="workplace_spog_v1"/>
+        <a href="m365_activity_monitoring">M365 Activity Monitoring</a>
+    </collection>
+
+    <!-- Cisco Live and related event operations dashboards -->
+    <collection label="Cisco Live Event Ops">
+        <a href="statewide_exercise_v1">Network Activation Report</a>
+        <a href="statewide_exercise_v1_studio_modern">Statewide Exercise - Modern Dashboard Studio</a>
+    </collection>
+
+    <!-- Concepts only: experimental or test dashboards -->
+    <collection label="Concepts (Beta)">
+        <!-- <a href="home_launchpad_v1">Executive Launchpad</a> -->
+        <a href="network_diagram">Network Diagram</a>
+        <a href="topology_canvas_v1">Topology Canvas</a>
+        <a href="searchbase_canvas">Searchbase Canvas</a>
+    </collection>
+
+    <!-- Admin utilities, dashboard tooling, and built-in Splunk views -->
+    <collection label="Admin &amp; Tools">
+        <a href="admin_guide_v1">Admin Guide</a>
+        <a href="dashboardbuilder">Dashboard Manager</a>
+        <a href="template">Customer Template</a>
+        <divider/>
+        <view name="reports"/>
+        <view name="dashboards"/>
+        <a href="search" target="_blank" rel="noopener">Search</a>
+    </collection>
+
+    <collection label="My Views">
+${myViewsContent}
+    </collection>
+</nav>`;
+};
+
 export async function addDash(
     dashName,
     jsonDefinition,
@@ -57,7 +141,7 @@ export async function addDash(
    <tag>${escapeXml(dashTag)}</tag>
    <meta type="hiddenElements"><![CDATA[
         {
-        "hideEdit": false,
+        "hideEdit": true,
         "hideOpenInSearch": false,
         "hideExport": false
         }
@@ -81,6 +165,17 @@ export async function addDash(
     return requestJson(`${dashboardUrl(dashName)}?${jsonParams.toString()}`, {
         method: 'POST',
         body: new URLSearchParams({ 'eai:data': definition }).toString(),
+    });
+}
+
+export async function syncDashboardManagerNavigation(dashboards = []) {
+    const body = new URLSearchParams({
+        'eai:data': buildDashboardManagerNavXml(dashboards),
+    });
+
+    return requestJson(`${navigationUrl('default')}?${jsonParams.toString()}`, {
+        method: 'POST',
+        body: body.toString(),
     });
 }
 

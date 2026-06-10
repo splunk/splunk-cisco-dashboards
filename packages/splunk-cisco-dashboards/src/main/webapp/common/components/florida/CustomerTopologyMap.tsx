@@ -1625,6 +1625,8 @@ const TILE_LAYER_PRESETS: TileLayerPreset[] = [
     },
 ];
 
+const DEFAULT_TILE_LAYER_PRESET_ID: TileLayerPreset['id'] = 'terrain';
+
 const escapeHtml = (value: string): string =>
     value.replace(/[&<>"']/g, (ch) => {
         switch (ch) {
@@ -3291,7 +3293,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     const [roleLegendMode, setRoleLegendMode] =
         useState<TopologyRoleLegendMode>(readStoredRoleLegendMode);
     const [tilePresetId, setTilePresetId] = useState<TileLayerPreset['id']>(
-        TILE_LAYER_PRESETS[0].id
+        DEFAULT_TILE_LAYER_PRESET_ID
     );
     const [catalogueByName, setCatalogueByName] = useState<Record<
         string,
@@ -4016,6 +4018,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
 
     const tilePreset =
         TILE_LAYER_PRESETS.find((preset) => preset.id === tilePresetId) ??
+        TILE_LAYER_PRESETS.find((preset) => preset.id === DEFAULT_TILE_LAYER_PRESET_ID) ??
         TILE_LAYER_PRESETS[0];
     const tileUrl = isDark ? tilePreset.dark : tilePreset.light;
     const bounds = L.latLngBounds(
