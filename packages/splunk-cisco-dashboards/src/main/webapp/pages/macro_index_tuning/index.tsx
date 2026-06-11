@@ -20,14 +20,38 @@ import {
 import { getSearchbaseCatalogue } from '@/common/services/searchbaseCatalogue';
 import { splunkSearchAppUrl } from '@/common/lib/splunkSearchUrl';
 
+const APP_NAME = 'splunk-cisco-dashboards';
 const TUNING_SEARCHBASE_ID = 'admin_macro_index_tuning';
 const TUNING_SEARCH_NAME = 'Admin - Macro Index Tuning';
 const ADHOC_MACRO_NAME = 'summariesonly';
 const DEFAULT_SUMMARIESONLY_DEFINITION =
     'summariesonly=false allow_old_summaries=false fillnull_value=null';
+const DEFAULT_INDEX_DEFINITION = 'index IN (*)';
+const INDEX_MACRO_NAMES = [
+    'index_catalyst',
+    'index_firewall',
+    'index_identity',
+    'index_windows',
+    'index_network',
+    'index_zeek',
+    'index_meraki',
+    'index_spaces',
+    'index_security',
+    'index_dhcp',
+    'index_thousandeyes',
+    'index_f5',
+    'index_duo',
+    'index_cybervision',
+    'index_ucs',
+    'index_sdwan',
+    'index_dc',
+    'index_nvm',
+] as const;
+const INDEX_MACRO_NAME_SET = new Set<string>(INDEX_MACRO_NAMES);
 
 type ScanState = 'idle' | 'loading' | 'ready' | 'error';
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
+type CopyState = 'idle' | 'copied' | 'selected' | 'error';
 
 interface MacroRow {
     macro: string;
@@ -98,9 +122,44 @@ const parseSearchResult = (row: Record<string, unknown>): MacroRow | null => {
 const formatNumber = (value: number): string =>
     new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value);
 
+const getSplunkLocale = (): string => {
+    if (typeof window === 'undefined') return 'en-US';
+    const localeMatch = window.location.pathname.match(/^\/([a-z]{2}-[A-Z]{2})\//);
+    return localeMatch ? localeMatch[1] : 'en-US';
+};
+
+const splunkManagerUrl = (managerPage: string): string =>
+    `/${getSplunkLocale()}/manager/${APP_NAME}/${managerPage}`;
+
+const cleanIndexToken = (value: string): string =>
+    value.trim().replace(/^["']|["']$/g, '').trim();
+
+const extractIndexTokens = (definition: string): string[] => {
+    const tokens = new Set<string>();
+    const inMatch = definition.match(/\bindex\s+IN\s*\(([^)]*)\)/i);
+
+    if (inMatch) {
+        inMatch[1]
+            .split(',')
+            .map(cleanIndexToken)
+            .filter(Boolean)
+            .forEach((token) => tokens.add(token));
+    }
+
+    const equalityPattern = /\bindex\s*=\s*("[^"]+"|'[^']+'|[^\s|,)]+)/gi;
+    let match = equalityPattern.exec(definition);
+    while (match) {
+        const token = cleanIndexToken(match[1]);
+        if (token) tokens.add(token);
+        match = equalityPattern.exec(definition);
+    }
+
+    return Array.from(tokens);
+};
+
 const buildMacroStanzas = (rows: EditableMacroRow[]): string =>
     rows
-        .filter((row) => row.macro !== 'unknown' && row.draftDefinition.trim())
+        .filter((row) => INDEX_MACRO_NAME_SET.has(row.macro) && row.draftDefinition.trim())
         .map((row) => `[${row.macro}]\ndefinition = ${row.draftDefinition.trim()}\niseval = 0`)
         .join('\n\n');
 
@@ -173,31 +232,108 @@ const loadMacroDefinition = async (macro: string): Promise<string> => {
     return typeof definition === 'string' ? definition : '';
 };
 
-function CopyButton({ text, label }: { text: string; label: string }): JSX.Element {
-    const [copied, setCopied] = useState(false);
+const loadMacroDefinitions = async (macros: readonly string[]): Promise<Record<string, string>> => {
+    const pairs = await Promise.all(
+        macros.map(async (macro) => {
+            try {
+                return [macro, await loadMacroDefinition(macro)] as const;
+            } catch {
+                return [macro, ''] as const;
+            }
+        })
+    );
+
+    return Object.fromEntries(pairs);
+};
+
+const copyTextToClipboard = async (text: string): Promise<void> => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        try {
+            await navigator.clipboard.writeText(text);
+            return;
+        } catch {
+            // Fall through to execCommand for plain-http Splunk Web sessions.
+        }
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    textarea.style.top = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    textarea.setSelectionRange(0, text.length);
+
+    const copied = document.execCommand('copy');
+    document.body.removeChild(textarea);
+
+    if (!copied) {
+        throw new Error('Clipboard copy was blocked by the browser.');
+    }
+};
+
+function CopyButton({
+    text,
+    label,
+    targetRef,
+}: {
+    text: string;
+    label: string;
+    targetRef?: React.RefObject<HTMLTextAreaElement | null>;
+}): JSX.Element {
+    const [copyState, setCopyState] = useState<CopyState>('idle');
 
     const onCopy = useCallback(() => {
         if (!text) return;
-        navigator.clipboard
-            .writeText(text)
+        copyTextToClipboard(text)
             .then(() => {
-                setCopied(true);
-                window.setTimeout(() => setCopied(false), 1400);
+                setCopyState('copied');
+                window.setTimeout(() => setCopyState('idle'), 1400);
             })
             .catch(() => {
-                setCopied(false);
+                const target = targetRef?.current;
+                if (target) {
+                    target.focus();
+                    target.select();
+                    target.setSelectionRange(0, target.value.length);
+                    setCopyState('selected');
+                    window.setTimeout(() => setCopyState('idle'), 2600);
+                    return;
+                }
+                setCopyState('error');
+                window.setTimeout(() => setCopyState('idle'), 2600);
             });
-    }, [text]);
+    }, [targetRef, text]);
+
+    const icon = copyState === 'copied' ? <Check size={16} /> : <ClipboardCopy size={16} />;
+    const buttonLabel =
+        copyState === 'copied'
+            ? 'Copied'
+            : copyState === 'selected'
+              ? 'Selected'
+              : copyState === 'error'
+                ? 'Copy failed'
+                : label;
 
     return (
         <button
             type="button"
             onClick={onCopy}
             disabled={!text}
+            title={
+                copyState === 'selected'
+                    ? 'Clipboard access was blocked, so the preview text was selected. Press Command-C or Ctrl-C.'
+                    : copyState === 'error'
+                      ? 'Clipboard access was blocked by the browser.'
+                      : undefined
+            }
             className={`${lightButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
         >
-            {copied ? <Check size={16} /> : <ClipboardCopy size={16} />}
-            {copied ? 'Copied' : label}
+            {icon}
+            {buttonLabel}
         </button>
     );
 }
@@ -241,6 +377,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
     const [adhocStatus, setAdhocStatus] = useState<SaveStatus>({ state: 'idle' });
     const abortRef = useRef<AbortController | null>(null);
     const searchSplRef = useRef<string>('');
+    const macroPreviewRef = useRef<HTMLTextAreaElement>(null);
 
     const generatedMacroStanzas = useMemo(() => buildMacroStanzas(rows), [rows]);
     const macroStanzas = useMemo(
@@ -254,14 +391,19 @@ export default function MacroIndexTuningPage(): JSX.Element {
         [adhocDefinition, generatedMacroStanzas]
     );
     const hasUnknown = rows.some((row) => row.macro === 'unknown');
-    const rowsToSave = rows.filter((row) => row.macro !== 'unknown' && row.draftDefinition.trim());
+    const indexMacroRows = rows.filter((row) => INDEX_MACRO_NAME_SET.has(row.macro));
+    const rowsToSave = indexMacroRows.filter((row) => row.draftDefinition.trim());
     const totalEvents = rows.reduce((sum, row) => sum + row.events, 0);
-    const totalIndexes = new Set(rows.flatMap((row) => row.indexes)).size;
+    const totalIndexValues = indexMacroRows.reduce(
+        (sum, row) => sum + extractIndexTokens(row.draftDefinition).length,
+        0
+    );
     const isLoading = scanState === 'loading';
     const isSavingAll = Object.values(saveStatuses).some((status) => status.state === 'saving');
     const openSearchUrl = searchSpl
         ? splunkSearchAppUrl(searchSpl, { earliest: timeRange, latest: 'now' })
         : '';
+    const macrosManagerUrl = splunkManagerUrl('data/macros');
 
     const loadTuningSearch = useCallback(async (): Promise<string> => {
         if (searchSplRef.current) return searchSplRef.current;
@@ -295,6 +437,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 tag: TUNING_SEARCHBASE_ID,
                 signal: controller.signal,
             });
+            const currentDefinitions = await loadMacroDefinitions(INDEX_MACRO_NAMES);
             const parsed = ((result.results || []) as Record<string, unknown>[])
                 .map(parseSearchResult)
                 .filter((row): row is MacroRow => Boolean(row))
@@ -307,7 +450,32 @@ export default function MacroIndexTuningPage(): JSX.Element {
                     ...row,
                     draftDefinition: row.definition,
                 }));
-            setRows(parsed);
+            const scannedByMacro = new Map(parsed.map((row) => [row.macro, row]));
+            const expectedRows = INDEX_MACRO_NAMES.map((macro) => {
+                const scanned = scannedByMacro.get(macro);
+                const fallbackDefinition =
+                    currentDefinitions[macro] || scanned?.definition || DEFAULT_INDEX_DEFINITION;
+                const draftDefinition = scanned?.definition || fallbackDefinition;
+
+                return {
+                    macro,
+                    definition: draftDefinition,
+                    indexes: scanned?.indexes?.length
+                        ? scanned.indexes
+                        : extractIndexTokens(fallbackDefinition),
+                    sourcetypes: scanned?.sourcetypes || [],
+                    sourcetypeCount: scanned?.sourcetypeCount || 0,
+                    events: scanned?.events || 0,
+                    draftDefinition,
+                };
+            });
+            const extraRows = parsed
+                .filter((row) => !INDEX_MACRO_NAME_SET.has(row.macro))
+                .map((row) => ({
+                    ...row,
+                    draftDefinition: row.definition,
+                }));
+            setRows([...expectedRows, ...extraRows]);
             setScanState('ready');
         } catch (err) {
             if (isAbortError(err)) return;
@@ -546,21 +714,29 @@ export default function MacroIndexTuningPage(): JSX.Element {
             <section className="mb-4 grid gap-3 md:grid-cols-4">
                 <div className="border border-slate-200 bg-white px-4 py-3">
                     <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Macros</div>
-                    <div className="mt-1 text-2xl font-bold text-slate-900">{formatNumber(rows.length)}</div>
+                    <div className="mt-1 text-2xl font-bold text-slate-900">
+                        {formatNumber(indexMacroRows.length)}
+                    </div>
+                    <div className="mt-1 text-xs text-slate-500">default index macros</div>
                 </div>
                 <div className="border border-slate-200 bg-white px-4 py-3">
-                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Indexes</div>
-                    <div className="mt-1 text-2xl font-bold text-slate-900">{formatNumber(totalIndexes)}</div>
+                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Index values</div>
+                    <div className="mt-1 text-2xl font-bold text-slate-900">
+                        {formatNumber(totalIndexValues)}
+                    </div>
+                    <div className="mt-1 text-xs text-slate-500">across macro definitions</div>
                 </div>
                 <div className="border border-slate-200 bg-white px-4 py-3">
                     <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Events</div>
                     <div className="mt-1 text-2xl font-bold text-slate-900">{formatNumber(totalEvents)}</div>
+                    <div className="mt-1 text-xs text-slate-500">matched by the scan</div>
                 </div>
                 <div className="border border-slate-200 bg-white px-4 py-3">
                     <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Unknown</div>
                     <div className={`mt-1 text-2xl font-bold ${hasUnknown ? 'text-amber-700' : 'text-emerald-700'}`}>
                         {formatNumber(rows.filter((row) => row.macro === 'unknown').length)}
                     </div>
+                    <div className="mt-1 text-xs text-slate-500">unmapped sourcetype groups</div>
                 </div>
             </section>
 
@@ -591,9 +767,13 @@ export default function MacroIndexTuningPage(): JSX.Element {
                         <h2 className="m-0 text-base font-bold text-slate-900">Generated macro definitions</h2>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                        <CopyButton text={macroStanzas} label="Copy macros.conf" />
+                        <CopyButton
+                            text={macroStanzas}
+                            label="Copy macros.conf"
+                            targetRef={macroPreviewRef}
+                        />
                         <a
-                            href="/en-US/manager/splunk-cisco-dashboards/admin/macros"
+                            href={macrosManagerUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                             className={`${lightButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
@@ -642,7 +822,9 @@ export default function MacroIndexTuningPage(): JSX.Element {
                                                     {row.macro}
                                                 </div>
                                                 <div className="mt-1 text-xs text-slate-500">
-                                                    {formatNumber(row.sourcetypeCount)} sourcetypes
+                                                    {row.sourcetypeCount
+                                                        ? `${formatNumber(row.sourcetypeCount)} sourcetypes`
+                                                        : 'No matching sourcetypes'}
                                                 </div>
                                             </td>
                                             <td className="px-4 py-3">
@@ -701,9 +883,13 @@ export default function MacroIndexTuningPage(): JSX.Element {
                     <div className="border-b border-slate-200 px-4 py-3">
                         <h2 className="m-0 text-base font-bold text-slate-900">macros.conf preview</h2>
                     </div>
-                    <pre className="m-0 max-h-[320px] overflow-auto whitespace-pre-wrap break-words p-4 font-mono text-xs leading-relaxed text-slate-800">
-                        {macroStanzas || '# Run the scan to populate macro definitions.'}
-                    </pre>
+                    <textarea
+                        ref={macroPreviewRef}
+                        readOnly
+                        value={macroStanzas || '# Run the scan to populate macro definitions.'}
+                        aria-label="macros.conf preview"
+                        className="m-0 h-[320px] w-full resize-y overflow-auto border-0 bg-white p-4 font-mono text-xs leading-relaxed text-slate-800 outline-none"
+                    />
                 </div>
 
                 <details className="border border-slate-200 bg-white">
