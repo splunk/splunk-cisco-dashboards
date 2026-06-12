@@ -73,18 +73,18 @@ const ALL_SUB_CATEGORIES = '__all_sub__';
 const ALL_APPS = '__all_apps__';
 
 // Default app scope for the picker. The catalogue REST endpoint pulls
-// from any app namespace (`/servicesNS/-/<app>/configs/conf-searchbase`),
+// from every app namespace (`/servicesNS/-/-/configs/conf-searchbase`),
 // so on a Splunk stack with multiple apps that ship their own
 // `searchbase.conf` the catalogue can grow beyond what this app vetted.
 // To keep the picker scoped to dashboard-pack searches by default, the
 // App facet starts at this value and only shows entries whose
-// `dispatch_context` matches it. Users can switch to "All apps" or pick
-// a specific other app from the same dropdown to browse wider — same UX
+// owning app matches it. Users can switch to "All apps" or pick a
+// specific other app from the same dropdown to browse wider — same UX
 // as the Category facet.
 //
-// The underlying searchbase field is still `dispatch_context` (Splunk
-// conf semantics); the UI just labels it "App" because that's what
-// operators recognise.
+// The UI stores a normalised `dispatchContext` sourced from the stanza's
+// owning ACL app; the UI labels it "App" because that's what operators
+// recognise.
 //
 // Every stanza shipped in this app's `default/searchbase.conf` carries
 // `dispatch_context = splunk-cisco-dashboards` (with
@@ -425,6 +425,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     const [selectedApp, setSelectedApp] = useState<string>(
         DEFAULT_APP_SCOPE
     );
+    const [includeHiddenSearches, setIncludeHiddenSearches] = useState(false);
     const [activeTags, setActiveTags] = useState<Set<string>>(() => new Set());
     // Free-text input that powers the tag multi-select dropdown. As
     // the user types, the dropdown narrows to substring matches and
@@ -611,7 +612,10 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         };
 
         const expectedKey = context?.currentSavedSearch?.trim();
-        getSearchbaseCatalogue()
+        const catalogueOptions = includeHiddenSearches
+            ? { allApps: true, includeHidden: true }
+            : { allApps: true };
+        getSearchbaseCatalogue(catalogueOptions)
             .then((list) => {
                 if (cancelled) return;
                 const sorted = sortAlphabetical(list);
@@ -632,7 +636,9 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                 // refetch so a freshly-deployed stanza shows up without
                 // the user having to reload the whole page.
                 clearSearchbaseCache();
-                getSearchbaseCatalogue().then(applyList).catch(handleError);
+                getSearchbaseCatalogue(catalogueOptions)
+                    .then(applyList)
+                    .catch(handleError);
             })
             .catch(handleError);
 
@@ -642,7 +648,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         // `context?.currentSavedSearch` participates so re-opening the
         // picker for a different tile re-evaluates whether its bound
         // search is in the cache.
-    }, [open, context?.currentSavedSearch]);
+    }, [open, context?.currentSavedSearch, includeHiddenSearches]);
 
     // Reset transient form state when the panel opens for a new tile.
     // Sub-category and tag selections start cleared every time so the
@@ -656,6 +662,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         setSelectedCategory(ALL_CATEGORIES);
         setSelectedSubCategory(ALL_SUB_CATEGORIES);
         setSelectedApp(DEFAULT_APP_SCOPE);
+        setIncludeHiddenSearches(false);
         setActiveTags(new Set());
         setTagFilter('');
         setTagDropdownOpen(false);
@@ -779,13 +786,20 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     useEffect(() => {
         if (
             selectedApp !== DEFAULT_APP_SCOPE ||
+            includeHiddenSearches ||
             selectedCategory !== ALL_CATEGORIES ||
             selectedSubCategory !== ALL_SUB_CATEGORIES ||
             activeTags.size > 0
         ) {
             setFiltersOpen(true);
         }
-    }, [selectedApp, selectedCategory, selectedSubCategory, activeTags]);
+    }, [
+        selectedApp,
+        includeHiddenSearches,
+        selectedCategory,
+        selectedSubCategory,
+        activeTags,
+    ]);
 
     useEffect(() => {
         if (
@@ -1432,6 +1446,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     // button visibility.
     const activeFilterCount =
         (selectedApp !== DEFAULT_APP_SCOPE ? 1 : 0) +
+        (includeHiddenSearches ? 1 : 0) +
         (selectedCategory !== ALL_CATEGORIES ? 1 : 0) +
         (selectedSubCategory !== ALL_SUB_CATEGORIES ? 1 : 0) +
         activeTags.size;
@@ -1612,6 +1627,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
 
     const handleClearFacets = () => {
         setSelectedApp(DEFAULT_APP_SCOPE);
+        setIncludeHiddenSearches(false);
         setSelectedCategory(ALL_CATEGORIES);
         setSelectedSubCategory(ALL_SUB_CATEGORIES);
         setActiveTags(new Set());
@@ -1739,7 +1755,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             <div className="flex items-center gap-2">
                                 <span
                                     className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex-shrink-0 w-16"
-                                    title="Splunk app the search belongs to (the searchbase entry's dispatch_context)"
+                                    title="Splunk app the search belongs to"
                                 >
                                     App
                                 </span>
@@ -1770,6 +1786,23 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     )}
                                 </select>
                             </div>
+
+                            <label className="flex items-center gap-2">
+                                <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex-shrink-0 w-16">
+                                    Hidden
+                                </span>
+                                <span className="flex flex-1 items-center gap-2 rounded border border-slate-200 bg-white px-2 py-1.5 text-[11px] font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
+                                    <input
+                                        type="checkbox"
+                                        checked={includeHiddenSearches}
+                                        onChange={(e) =>
+                                            setIncludeHiddenSearches(e.target.checked)
+                                        }
+                                        className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-600 dark:bg-slate-900"
+                                    />
+                                    <span>Show hidden searches</span>
+                                </span>
+                            </label>
 
                             {categories.length > 1 && (
                                 <div className="flex items-center gap-2">

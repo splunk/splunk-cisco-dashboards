@@ -45,7 +45,7 @@ const InsightKpiButton = (props) => {
     useEffect(() => {
         if (searches.length == 0) {
             const getSearchesList = async () => {
-                const data = await getSearchbaseCatalogue();
+                const data = await getSearchbaseCatalogue({ allApps: true });
                 setSearches(data.filter((search) => search.id && search.searchName));
             };
             getSearchesList();

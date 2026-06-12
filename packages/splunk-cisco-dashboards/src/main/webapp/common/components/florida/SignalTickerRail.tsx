@@ -884,6 +884,8 @@ interface SignalTickerEditorProps {
     catalogue: SearchbaseRecord[];
     metricDefaultsBySearchName?: Map<string, SignalTickerMetricDefaults>;
     catalogueLoading: boolean;
+    includeHiddenSearches?: boolean;
+    onIncludeHiddenSearchesChange?: (includeHidden: boolean) => void;
     onChange: (config: SignalTickerConfig) => void;
     onReset: () => void;
     onClose: () => void;
@@ -915,6 +917,8 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
     catalogue,
     metricDefaultsBySearchName,
     catalogueLoading,
+    includeHiddenSearches = false,
+    onIncludeHiddenSearchesChange,
     onChange,
     onReset,
     onClose,
@@ -1044,6 +1048,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
     }, [allTagsWithCounts]);
     const activeFilterCount =
         (selectedApp !== DEFAULT_APP_SCOPE ? 1 : 0) +
+        (includeHiddenSearches ? 1 : 0) +
         (selectedCategory !== ALL_CATEGORIES ? 1 : 0) +
         (selectedSubCategory !== ALL_SUB_CATEGORIES ? 1 : 0) +
         activeTags.size;
@@ -1108,6 +1113,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
     };
     const clearFilters = () => {
         setSelectedApp(DEFAULT_APP_SCOPE);
+        onIncludeHiddenSearchesChange?.(false);
         setSelectedCategory(ALL_CATEGORIES);
         setSelectedSubCategory(ALL_SUB_CATEGORIES);
         setActiveTags(new Set());
@@ -1610,6 +1616,25 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                                 </option>
                                             )}
                                         </select>
+                                    </label>
+
+                                    <label className="grid gap-1 sm:grid-cols-[90px_minmax(0,1fr)] sm:items-center">
+                                        <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+                                            Hidden
+                                        </span>
+                                        <span className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                                            <input
+                                                type="checkbox"
+                                                checked={includeHiddenSearches}
+                                                onChange={(event) =>
+                                                    onIncludeHiddenSearchesChange?.(
+                                                        event.target.checked
+                                                    )
+                                                }
+                                                className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-900"
+                                            />
+                                            <span>Show hidden searches</span>
+                                        </span>
                                     </label>
 
                                     {categories.length > 0 && (

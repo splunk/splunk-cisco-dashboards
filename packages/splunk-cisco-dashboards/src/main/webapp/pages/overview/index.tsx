@@ -195,6 +195,11 @@ const SECTION_HEIGHT_STEP_PX = 120;
 const SECTION_WRAPPED_TILE_ROW_STEP_PX = 152;
 const SECTION_WRAP_TILE_COUNT = 5;
 const SECTION_WRAPPED_TILE_COLUMNS = 3;
+const VERTICAL_MAP_MIN_HEIGHT_PX = 420;
+const VERTICAL_MAP_COMPACT_MIN_HEIGHT_PX = 360;
+const VERTICAL_METRICS_MIN_HEIGHT_PX = 220;
+const VERTICAL_METRICS_COMPACT_MIN_HEIGHT_PX = 180;
+const VERTICAL_SPLIT_CHROME_ALLOWANCE_PX = 32;
 
 const useAvailableDashboardHeight = (): number | null => {
     const [height, setHeight] = useState<number | null>(null);
@@ -2557,9 +2562,16 @@ const OverviewPage: React.FC = () => {
     const [visibleSearchbaseCatalogue, setVisibleSearchbaseCatalogue] = useState<
         SearchbaseRecord[] | null
     >(null);
+    const [signalTickerIncludeHiddenSearches, setSignalTickerIncludeHiddenSearches] =
+        useState(false);
     useEffect(() => {
         let cancelled = false;
-        getSearchbaseCatalogue()
+        setVisibleSearchbaseCatalogue(null);
+        getSearchbaseCatalogue(
+            signalTickerIncludeHiddenSearches
+                ? { allApps: true, includeHidden: true }
+                : { allApps: true }
+        )
             .then((list) => {
                 if (cancelled) return;
                 setVisibleSearchbaseCatalogue(list);
@@ -2570,7 +2582,7 @@ const OverviewPage: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, []);
+    }, [signalTickerIncludeHiddenSearches]);
 
     // ------------------------------ Signal rail ------------------------------
     // A configurable, moving executive KPI rail. This first slice follows the
@@ -2817,6 +2829,89 @@ const OverviewPage: React.FC = () => {
         [SPLIT_MIN, SPLIT_MAX, mapPosition]
     );
     const resetSplit = useCallback(() => setLeftPct(SPLIT_DEFAULT), []);
+    const verticalMapMinHeight = compactDensity
+        ? VERTICAL_MAP_COMPACT_MIN_HEIGHT_PX
+        : VERTICAL_MAP_MIN_HEIGHT_PX;
+    const verticalMetricsMinHeight = compactDensity
+        ? VERTICAL_METRICS_COMPACT_MIN_HEIGHT_PX
+        : VERTICAL_METRICS_MIN_HEIGHT_PX;
+    const verticalMetricsStyle = useMemo<React.CSSProperties | undefined>(
+        () =>
+            isVerticalSplit
+                ? {
+                      flexBasis: `${leftPct}%`,
+                      flexGrow: 0,
+                      flexShrink: 1,
+                      minHeight: verticalMetricsMinHeight,
+                  }
+                : undefined,
+        [isVerticalSplit, leftPct, verticalMetricsMinHeight]
+    );
+    const verticalMapStyle = useMemo<React.CSSProperties | undefined>(
+        () =>
+            isVerticalSplit
+                ? {
+                      minHeight: `min(${verticalMapMinHeight}px, calc(100% - ${verticalMetricsMinHeight}px))`,
+                  }
+                : undefined,
+        [isVerticalSplit, verticalMapMinHeight, verticalMetricsMinHeight]
+    );
+    const firstVisibleSectionMinHeight = useMemo(() => {
+        const section = visibleSections[0];
+        if (!section) return verticalMetricsMinHeight;
+        const sectionMetricCount = METRIC_CONFIG.filter(
+            (metric) => metric.section === section
+        ).length;
+        const visibleCount = Math.min(
+            sectionTileCounts[section],
+            Math.min(sectionTileBounds.maxCount, sectionMetricCount)
+        );
+        const estimatedTileRows =
+            visibleCount >= SECTION_WRAP_TILE_COUNT
+                ? Math.ceil(visibleCount / SECTION_WRAPPED_TILE_COLUMNS)
+                : 1;
+        const heightLevel =
+            sectionHeights[section] ?? sectionHeightBounds.defaultLevel;
+        const baseMinHeight = compactDensity
+            ? SECTION_HEIGHT_COMPACT_BASE_PX
+            : SECTION_HEIGHT_BASE_PX;
+        return Math.max(
+            verticalMetricsMinHeight,
+            baseMinHeight +
+                (heightLevel - sectionHeightBounds.minLevel) *
+                    SECTION_HEIGHT_STEP_PX +
+                (estimatedTileRows - 1) * SECTION_WRAPPED_TILE_ROW_STEP_PX
+        );
+    }, [
+        compactDensity,
+        sectionHeightBounds.defaultLevel,
+        sectionHeightBounds.minLevel,
+        sectionHeights,
+        sectionTileBounds.maxCount,
+        sectionTileCounts,
+        verticalMetricsMinHeight,
+        visibleSections,
+    ]);
+    const splitStyle = useMemo(
+        () =>
+            ({
+                '--scd-left-pct': `${leftPct}%`,
+                ...(isVerticalSplit
+                    ? {
+                          minHeight:
+                              verticalMapMinHeight +
+                              firstVisibleSectionMinHeight +
+                              VERTICAL_SPLIT_CHROME_ALLOWANCE_PX,
+                      }
+                    : null),
+            }) as React.CSSProperties,
+        [
+            firstVisibleSectionMinHeight,
+            isVerticalSplit,
+            leftPct,
+            verticalMapMinHeight,
+        ]
+    );
 
     // ------------------------------ Export ------------------------------
     const exportRef = useRef<HTMLDivElement>(null);
@@ -3905,7 +4000,10 @@ const OverviewPage: React.FC = () => {
                 and xl stops. */}
             <main
                 className={cn(
-                    'flex-1 min-h-0 w-full overflow-hidden',
+                    'flex-1 min-h-0 w-full',
+                    isVerticalSplit
+                        ? 'overflow-y-auto overflow-x-hidden'
+                        : 'overflow-hidden',
                     compactDensity ? 'px-1 py-1.5' : 'px-1.5 py-2'
                 )}
             >
@@ -3936,11 +4034,7 @@ const OverviewPage: React.FC = () => {
                             ? 'flex-col-reverse'
                             : 'flex-col'
                     )}
-                    style={
-                        {
-                            '--scd-left-pct': `${leftPct}%`,
-                        } as React.CSSProperties
-                    }
+                    style={splitStyle}
                 >
                     {/* Left column — configurable metric sections.
                         In right mode at xl+ widths the column width is
@@ -3976,15 +4070,7 @@ const OverviewPage: React.FC = () => {
                                 : ''
                         )}
                         data-map-position={mapPosition}
-                        style={
-                            isVerticalSplit
-                                ? {
-                                      flexBasis: `${leftPct}%`,
-                                      flexGrow: 0,
-                                      flexShrink: 0,
-                                  }
-                                : undefined
-                        }
+                        style={verticalMetricsStyle}
                     >
                         {visibleSections.map((section) => {
                             const meta = effectiveSectionMeta[section];
@@ -4250,8 +4336,9 @@ const OverviewPage: React.FC = () => {
                             mapPosition === 'right' ? 'xl:flex-1' : 'flex-1'
                         )}
                         data-map-position={mapPosition}
+                        style={verticalMapStyle}
                     >
-                        <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-3 shadow-sm flex flex-col">
+                        <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-3 shadow-sm flex flex-col overflow-hidden">
                             <div className="flex items-center justify-between mb-2 flex-shrink-0">
                                 <div>
                                     <h3 className="text-base font-bold text-sky-900 dark:text-sky-200 uppercase tracking-wide leading-none">
@@ -4432,6 +4519,8 @@ const OverviewPage: React.FC = () => {
                 catalogue={searchbaseCatalogue}
                 metricDefaultsBySearchName={signalTickerMetricDefaults}
                 catalogueLoading={visibleSearchbaseCatalogue === null}
+                includeHiddenSearches={signalTickerIncludeHiddenSearches}
+                onIncludeHiddenSearchesChange={setSignalTickerIncludeHiddenSearches}
                 onChange={setSignalTickerConfig}
                 onReset={resetSignalTickerConfig}
                 onClose={() => setSignalTickerEditorOpen(false)}
