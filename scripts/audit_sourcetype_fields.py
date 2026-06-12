@@ -1316,19 +1316,20 @@ def main() -> int:
 
     env: dict = {
         "base_url": os.environ.get("SPLUNK_BASE_URL", "https://localhost:8089"),
-        "username": os.environ.get("SPLUNK_USERNAME"),
-        "password": os.environ.get("SPLUNK_PASSWORD"),
         "owner": os.environ.get("SPLUNK_OWNER", "admin"),
         "app": os.environ.get("SPLUNK_APP", "splunk-cisco-dashboards"),
         "verify_ssl": os.environ.get("SPLUNK_VERIFY_SSL", "false").lower()
         in {"1", "true", "yes"},
     }
-    if not env["username"] or not env["password"]:
+    username = os.environ.get("SPLUNK_USERNAME")
+    password = os.environ.get("SPLUNK_PASSWORD")
+    if not username or not password:
         print(
             "ERROR: SPLUNK_USERNAME and SPLUNK_PASSWORD must be set in the environment.",
             file=sys.stderr,
         )
         return 2
+    auth: dict = {"username": username, "password": password}
 
     print(f"Parsing {SEARCHBASE.relative_to(ROOT)} ...")
     refs, stanzas = collect_sourcetypes()
@@ -1361,7 +1362,7 @@ def main() -> int:
             ex.submit(
                 discover_one,
                 st,
-                env,
+                {**env, **auth},
                 args.earliest,
                 args.latest,
                 args.sample_rows,
