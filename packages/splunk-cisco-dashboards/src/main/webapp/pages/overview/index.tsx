@@ -208,11 +208,12 @@ const useAvailableDashboardHeight = (): number | null => {
         if (typeof window === 'undefined') return undefined;
 
         let animationFrame = 0;
-        let resizeObserver: ResizeObserver | null = null;
+        let cancelled = false;
 
         const measure = () => {
             window.cancelAnimationFrame(animationFrame);
             animationFrame = window.requestAnimationFrame(() => {
+                if (cancelled) return;
                 const mount = document.getElementById('scan-root');
                 const top = mount?.getBoundingClientRect().top ?? 0;
                 const next = Math.max(
@@ -227,20 +228,34 @@ const useAvailableDashboardHeight = (): number | null => {
             });
         };
 
+        // The shell height we write back lives *inside* document.body
+        // and #scan-root's parent, so observing those elements with a
+        // ResizeObserver turns every height write into a fresh resize
+        // notification — a self-referential measure→resize→measure
+        // cycle that visibly flickers whenever a scrollbar toggles or
+        // chrome above the mount reflows (the guard below only damps
+        // it, it doesn't stop it). The shell height is a pure function
+        // of the viewport height and the mount's top offset, both of
+        // which change on window resize / rotation, not on our own
+        // writes — so a resize listener is sufficient and loop-free.
+        // The delayed re-measures catch Splunk's app chrome (nav bar)
+        // settling asynchronously after first paint, which is the one
+        // legitimate post-mount `top` shift the ResizeObserver used to
+        // absorb.
         measure();
+        const settleTimers = [
+            window.setTimeout(measure, 250),
+            window.setTimeout(measure, 1000),
+        ];
         window.addEventListener('resize', measure);
-
-        if ('ResizeObserver' in window) {
-            resizeObserver = new ResizeObserver(measure);
-            resizeObserver.observe(document.body);
-            const mount = document.getElementById('scan-root');
-            if (mount?.parentElement) resizeObserver.observe(mount.parentElement);
-        }
+        window.addEventListener('orientationchange', measure);
 
         return () => {
+            cancelled = true;
             window.cancelAnimationFrame(animationFrame);
+            settleTimers.forEach((t) => window.clearTimeout(t));
             window.removeEventListener('resize', measure);
-            resizeObserver?.disconnect();
+            window.removeEventListener('orientationchange', measure);
         };
     }, []);
 
