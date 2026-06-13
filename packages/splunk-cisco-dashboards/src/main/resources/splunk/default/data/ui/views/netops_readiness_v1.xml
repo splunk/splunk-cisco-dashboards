@@ -1,10 +1,10 @@
 
 <dashboard version="2" theme="light">
- <label>NetOps Readiness — Op Florida Read</label>
- <description></description>
- <definition><![CDATA[
+    <label>NetOps Readiness</label>
+    <description></description>
+    <definition><![CDATA[
 {
-	"title": "NetOps Readiness — Op Florida Read",
+	"title": "NetOps Readiness",
 	"inputs": {
 		"input_global_trp": {
 			"options": {
@@ -120,10 +120,10 @@
 				"backgroundColor": "transparent",
 				"majorColor": "> majorValue | rangeValue(rangeColorsEditorConfig)",
 				"majorValue": "> primary | seriesByName(\"used_pct\") | lastPoint()",
-				"unit": "%",
-				"unitPosition": "after",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"unit": "%",
+				"unitPosition": "after"
 			},
 			"title": "Network Capacity Utilization",
 			"type": "splunk.singlevalueradial"
@@ -308,6 +308,7 @@
 				"annotationColor": "> annotation | seriesByName('annotation_color')",
 				"annotationLabel": "> annotation | seriesByName('label')",
 				"annotationX": "> annotation | seriesByName('_time')",
+				"legendDisplay": "bottom",
 				"lineCurveStyle": "smooth",
 				"markerDisplay": "outlined",
 				"nullValueDisplay": "connect",
@@ -318,8 +319,7 @@
 					"#CCCCCC"
 				],
 				"xAxisTitleText": "Time",
-				"yAxisTitleText": "Active issues (dc IssueID)",
-				"legendDisplay": "bottom"
+				"yAxisTitleText": "Active issues (dc IssueID)"
 			},
 			"title": "Active issues forecast - next 24 hours (95% confidence band)",
 			"type": "splunk.line"
@@ -350,10 +350,10 @@
 				"showOverlayY2Axis": true,
 				"showXMajorGridLines": true,
 				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
 				"y2AxisAbbreviation": "auto",
 				"y2AxisTitleText": "Issues / Concurrent users",
-				"yAxisTitleText": "AP Health (0-100)",
-				"xAxisTitleVisibility": "hide"
+				"yAxisTitleText": "AP Health (0-100)"
 			},
 			"title": "Splunk Cross-Source Correlation - Catalyst (AP Health + Issues) and Spaces (Concurrent Users)",
 			"type": "splunk.line"
@@ -368,16 +368,16 @@
 				"annotationColor": "> annotation | seriesByName('annotation_color')",
 				"annotationLabel": "> annotation | seriesByName('label')",
 				"annotationX": "> annotation | seriesByName('_time')",
+				"legendDisplay": "top",
 				"lineCurveStyle": "smooth",
 				"nullValueDisplay": "connect",
 				"seriesColors": [
 					"#049FD9",
 					"#9AA0A6"
 				],
-				"xAxisTitleText": "Hour of week (last week shifted +7d for alignment)",
-				"yAxisTitleText": "Concurrent users (dc MAC, hourly)",
 				"stackMode": "stacked",
-				"legendDisplay": "top"
+				"xAxisTitleText": "Hour of week (last week shifted +7d for alignment)",
+				"yAxisTitleText": "Concurrent users (dc MAC, hourly)"
 			},
 			"title": "Concurrent users - This week vs Last week",
 			"type": "splunk.area"
@@ -562,10 +562,10 @@
 			"options": {
 				"backgroundColor": "#FFFFFF",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
-				"unit": "%",
-				"unitPosition": "after",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"unit": "%",
+				"unitPosition": "after"
 			},
 			"title": "A — Attainability",
 			"type": "splunk.singlevalue"
@@ -595,10 +595,10 @@
 			"options": {
 				"backgroundColor": "#FFFFFF",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
-				"unit": "%",
-				"unitPosition": "after",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"unit": "%",
+				"unitPosition": "after"
 			},
 			"title": "D_risk — Risk Multiplier",
 			"type": "splunk.singlevalue"
@@ -653,8 +653,8 @@
 				}
 			],
 			"options": {
-				"fontSize": "small",
-				"count": 20
+				"count": 20,
+				"fontSize": "small"
 			},
 			"title": "NRS detail per site",
 			"type": "splunk.table"
@@ -684,10 +684,10 @@
 			"options": {
 				"backgroundColor": "#FFFFFF",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
-				"unit": "%",
-				"unitPosition": "after",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"unit": "%",
+				"unitPosition": "after"
 			},
 			"title": "Q — Quality",
 			"type": "splunk.singlevalue"
@@ -717,10 +717,10 @@
 			"options": {
 				"backgroundColor": "#FFFFFF",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
-				"unit": "%",
-				"unitPosition": "after",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"unit": "%",
+				"unitPosition": "after"
 			},
 			"title": "R — Retainability",
 			"type": "splunk.singlevalue"
@@ -751,12 +751,12 @@
 				"backgroundColor": "#FFFFFF",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
 				"majorValue": "> primary | seriesByName('NRS') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
 				"sparklineDisplay": "below",
 				"sparklineSeriesColor": "#049FD9",
 				"unit": "%",
-				"unitPosition": "after",
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"unitPosition": "after"
 			},
 			"title": "Network Readiness Score",
 			"type": "splunk.singlevalue"
@@ -821,6 +821,7 @@
 				"annotationColor": "> annotation | seriesByName('annotation_color')",
 				"annotationLabel": "> annotation | seriesByName('label')",
 				"annotationX": "> annotation | seriesByName('_time')",
+				"legendDisplay": "bottom",
 				"lineCurveStyle": "smooth",
 				"markerDisplay": "outlined",
 				"nullValueDisplay": "connect",
@@ -829,8 +830,7 @@
 				],
 				"xAxisTitleVisibility": "hide",
 				"yAxisMax": 10,
-				"yAxisMin": 0,
-				"legendDisplay": "bottom"
+				"yAxisMin": 0
 			},
 			"title": "Q10a — DNAC: Avg client health score over time (annotation: Op Florida Ready milestones)",
 			"type": "splunk.line"
@@ -845,11 +845,11 @@
 				"annotationColor": "> annotation | seriesByName('annotation_color')",
 				"annotationLabel": "> annotation | seriesByName('label')",
 				"annotationX": "> annotation | seriesByName('_time')",
+				"legendDisplay": "bottom",
 				"seriesColors": [
 					"#D64550"
 				],
-				"xAxisTitleVisibility": "hide",
-				"legendDisplay": "bottom"
+				"xAxisTitleVisibility": "hide"
 			},
 			"title": "Q10c — DNAC: Issue count over time (annotation: Op Florida Ready milestones)",
 			"type": "splunk.column"
@@ -864,6 +864,7 @@
 				"annotationColor": "> annotation | seriesByName('annotation_color')",
 				"annotationLabel": "> annotation | seriesByName('label')",
 				"annotationX": "> annotation | seriesByName('_time')",
+				"legendDisplay": "bottom",
 				"lineCurveStyle": "smooth",
 				"markerDisplay": "outlined",
 				"nullValueDisplay": "connect",
@@ -871,8 +872,7 @@
 					"#E5A823"
 				],
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Seconds",
-				"legendDisplay": "bottom"
+				"yAxisTitleText": "Seconds"
 			},
 			"title": "Q10b — DNAC: Avg onboarding time over time (annotation: Op Florida Ready milestones)",
 			"type": "splunk.line"
@@ -907,9 +907,9 @@
 			},
 			"description": "Every AP currently UNREACHABLE, with health < 7, or with open issues. The pre-exercise hit list. Empty table = ready to roll.",
 			"options": {
+				"count": 20,
 				"fontSize": "small",
-				"showRowNumbers": true,
-				"count": 20
+				"showRowNumbers": true
 			},
 			"title": "Q3 — DNAC: APs to fix before the exercise",
 			"type": "splunk.table"
@@ -949,12 +949,12 @@
 				"annotationColor": "> annotation | seriesByName('annotation_color')",
 				"annotationLabel": "> annotation | seriesByName('label')",
 				"annotationX": "> annotation | seriesByName('_time')",
+				"legendDisplay": "bottom",
 				"lineCurveStyle": "smooth",
 				"markerDisplay": "outlined",
 				"nullValueDisplay": "connect",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Seconds",
-				"legendDisplay": "bottom"
+				"yAxisTitleText": "Seconds"
 			},
 			"title": "Q4a — DNAC: Onboarding time per site (annotation: Op Florida Ready milestones)",
 			"type": "splunk.line"
@@ -985,10 +985,10 @@
 				"backgroundColor": "#FFFFFF",
 				"majorColor": "> primary | seriesByName('at_risk') | lastPoint() | rangeValue(majorColorEditorConfig)",
 				"majorValue": "> primary | seriesByName('label') | lastPoint()",
-				"unit": " APs over saturation",
-				"unitPosition": "after",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"unit": " APs over saturation",
+				"unitPosition": "after"
 			},
 			"title": "Q5 — Saturated APs (> 30 clients) / total",
 			"type": "splunk.singlevalue"
@@ -1017,10 +1017,10 @@
 				"annotationColor": "> annotation | seriesByName('annotation_color')",
 				"annotationLabel": "> annotation | seriesByName('label')",
 				"annotationX": "> annotation | seriesByName('_time')",
+				"legendDisplay": "bottom",
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Issues",
-				"legendDisplay": "bottom"
+				"yAxisTitleText": "Issues"
 			},
 			"title": "Q6 — DNAC: Issues stacked by severity (annotation: Op Florida Ready milestones)",
 			"type": "splunk.column"
@@ -1064,12 +1064,12 @@
 				"annotationColor": "> annotation | seriesByName('annotation_color')",
 				"annotationLabel": "> annotation | seriesByName('label')",
 				"annotationX": "> annotation | seriesByName('_time')",
+				"legendDisplay": "bottom",
 				"lineCurveStyle": "smooth",
 				"markerDisplay": "outlined",
 				"nullValueDisplay": "connect",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Concurrent clients",
-				"legendDisplay": "bottom"
+				"yAxisTitleText": "Concurrent clients"
 			},
 			"title": "Q7 - Spaces: Per-SSID concurrent associations (top 10, annotation: Op Florida Ready milestones)",
 			"type": "splunk.line"
@@ -1093,9 +1093,9 @@
 			},
 			"description": "Clients (by MAC) whose minimum health dropped below 5 during the window. Sorted worst-first. Includes site, SSID, RSSI for triage. The 'who suffered most' report.",
 			"options": {
+				"count": 20,
 				"fontSize": "small",
-				"showRowNumbers": true,
-				"count": 20
+				"showRowNumbers": true
 			},
 			"title": "Q9 — DNAC: Top 50 worst client experiences",
 			"type": "splunk.table"
@@ -1201,6 +1201,17 @@
 			},
 			"type": "ds.search"
 		},
+		"ds_annotations": {
+			"name": "Shared - ds_annotations",
+			"options": {
+				"query": "| noop",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
 		"ds_b_capacity_gauge": {
 			"name": "Tab B - Overall Capacity Utilization",
 			"options": {
@@ -1242,17 +1253,6 @@
 				"query": "| union \n [ search `index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_PRESENCE\"\n earliest=-7d@h latest=@h\n | eval mac=coalesce('devicePresence.device.macAddress','devicePresence.macAddress')\n | where isnotnull(mac) AND mac!=\"\"\n | bin _time \n | stats dc(mac) as \"This week\" by _time ]\n [ search `index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_PRESENCE\"\n earliest=-14d@h latest=-7d@h\n | eval mac=coalesce('devicePresence.device.macAddress','devicePresence.macAddress')\n | where isnotnull(mac) AND mac!=\"\"\n | eval _time = _time + 604800\n | bin _time \n | stats dc(mac) as \"Last week\" by _time ]\n| timechart max(\"This week\") as \"This week\", max(\"Last week\") as \"Last week\"\n",
 				"refresh": "300s",
 				"refreshType": "delay"
-			},
-			"type": "ds.search"
-		},
-		"ds_annotations": {
-			"name": "Shared - ds_annotations",
-			"options": {
-				"query": "| noop",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$"
-				}
 			},
 			"type": "ds.search"
 		},
@@ -2491,7 +2491,10 @@
 				}
 			]
 		}
+	},
+	"applicationProperties": {
+		"hideEdit": true
 	}
 }
-]]></definition>
+    ]]></definition>
 </dashboard>
