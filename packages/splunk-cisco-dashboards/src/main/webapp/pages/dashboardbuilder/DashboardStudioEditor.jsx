@@ -784,7 +784,7 @@ const DashboardStudioEditor = ({
                         setEditedDefinition(
                             JSON.parse(
                                 jObj.dashboard.definition.replace(/\n/g, '').startsWith('{{')
-                                    ? jObj.dashboard.definition.replace(/\n/g, '').replace('{', '')
+                                    ? jObj.dashboard.definition.replace(/\n/g, '').replace(/^\{\{/, '{')
                                     : jObj.dashboard.definition.replace(/\n/g, ''),
                             ),
                         );
@@ -794,7 +794,7 @@ const DashboardStudioEditor = ({
                                     jObj.dashboard.definition.replace(/\n/g, '').startsWith('{{')
                                         ? jObj.dashboard.definition
                                               .replace(/\n/g, '')
-                                              .replace('{', '')
+                                              .replace(/^\{\{/, '{')
                                         : jObj.dashboard.definition.replace(/\n/g, ''),
                                 ),
                             ),
