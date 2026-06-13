@@ -1947,9 +1947,11 @@ interface SearchbaseBrowserProps {
     records: SearchbaseRecord[];
     canvasTiles: CanvasTile[];
     replaceTileId: string | null;
+    includeHiddenSearches: boolean;
     onClose: () => void;
     onAddRecord: (record: SearchbaseRecord) => void;
     onAddRecords: (records: SearchbaseRecord[]) => void;
+    onIncludeHiddenSearchesChange: (includeHidden: boolean) => void;
 }
 
 const ALL = '__all__';
@@ -1968,9 +1970,11 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
     records,
     canvasTiles,
     replaceTileId,
+    includeHiddenSearches,
     onClose,
     onAddRecord,
     onAddRecords,
+    onIncludeHiddenSearchesChange,
 }) => {
     const [query, setQuery] = useState('');
     const [app, setApp] = useState(APP_NAME);
@@ -2175,6 +2179,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
     const hasActiveFilters =
         query.trim().length > 0 ||
         app !== APP_NAME ||
+        includeHiddenSearches ||
         category !== ALL ||
         subCategory !== ALL ||
         vizType !== ALL ||
@@ -2183,6 +2188,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
     const resetFilters = () => {
         setQuery('');
         setApp(appOptions.includes(APP_NAME) ? APP_NAME : ALL);
+        onIncludeHiddenSearchesChange(false);
         setCategory(ALL);
         setSubCategory(ALL);
         setVizType(ALL);
@@ -2280,6 +2286,21 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                             </option>
                         ))}
                     </select>
+
+                    <label className="self-center text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
+                        Hidden
+                    </label>
+                    <label className="flex h-11 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+                        <input
+                            type="checkbox"
+                            checked={includeHiddenSearches}
+                            onChange={(event) =>
+                                onIncludeHiddenSearchesChange(event.target.checked)
+                            }
+                            className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-950"
+                        />
+                        <span>Show hidden searches</span>
+                    </label>
 
                     <label className="self-center text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
                         Category
@@ -2536,6 +2557,7 @@ const SearchbaseCanvasPage: React.FC = () => {
     const [records, setRecords] = useState<SearchbaseRecord[]>([]);
     const [catalogueError, setCatalogueError] = useState<string | null>(null);
     const [loadingCatalogue, setLoadingCatalogue] = useState(true);
+    const [includeHiddenSearches, setIncludeHiddenSearches] = useState(false);
     const [rangeLabel, setRangeLabel] = useState(DEFAULT_TIME_RANGE_LABEL);
     const [refreshToken, setRefreshToken] = useState(0);
     const [tileRefreshCounts, setTileRefreshCounts] = useState<Record<string, number>>({});
@@ -2606,7 +2628,11 @@ const SearchbaseCanvasPage: React.FC = () => {
     useEffect(() => {
         let cancelled = false;
         setLoadingCatalogue(true);
-        getSearchbaseCatalogue()
+        getSearchbaseCatalogue(
+            includeHiddenSearches
+                ? { allApps: true, includeHidden: true }
+                : { allApps: true }
+        )
             .then((list) => {
                 if (cancelled) return;
                 setRecords(list);
@@ -2622,7 +2648,7 @@ const SearchbaseCanvasPage: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, []);
+    }, [includeHiddenSearches]);
 
     const refreshSavedCanvases = useCallback(() => {
         listSearchbaseCanvases()
@@ -3797,12 +3823,14 @@ const SearchbaseCanvasPage: React.FC = () => {
                 records={records}
                 canvasTiles={tiles}
                 replaceTileId={replaceTileId}
+                includeHiddenSearches={includeHiddenSearches}
                 onClose={() => {
                     setBrowserOpen(false);
                     setReplaceTileId(null);
                 }}
                 onAddRecord={addRecord}
                 onAddRecords={addRecords}
+                onIncludeHiddenSearchesChange={setIncludeHiddenSearches}
             />
             {activeDetailTable && (
                 <SearchbaseDetailTableModal

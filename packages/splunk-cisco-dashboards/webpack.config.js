@@ -102,6 +102,11 @@ const commonConfig = webpackMerge(baseConfig, {
             webappRoot,
             'pages/m365_activity_monitoring/render.tsx'
         ),
+        macro_index_tuning: path.join(
+            webappRoot,
+            'pages/macro_index_tuning/render.tsx'
+        ),
+        dashboardbuilder: path.join(webappRoot, 'pages/dashboardbuilder/index.jsx'),
     },
     output: {
         path: path.join(stageRoot, 'appserver', 'static', 'pages'),

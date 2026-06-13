@@ -27,7 +27,7 @@ import {
 // Types
 // ---------------------------------------------------------------------------
 
-export type SectionId = 'it_health' | 'security' | 'building';
+export type SectionId = 'it_health' | 'security' | 'building' | 'custom';
 export type MetricStatus = 'healthy' | 'warning' | 'critical' | 'unknown';
 export type DataSource = 'live' | 'mock' | 'loading';
 

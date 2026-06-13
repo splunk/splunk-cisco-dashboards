@@ -15,7 +15,8 @@
  *     order: {
  *       "it_health":  ["network_health", "open_issues", "ux_score", "device_health", "compliance"],
  *       "security":   ["fw_blocked", "threat_sources", "failed_auth", "xdr_incidents", "security_score"],
- *       "building":   ["building_score", "active_devices", "wifi_clients", "occupancy", "webex_devices"]
+ *       "building":   ["building_score", "active_devices", "wifi_clients", "occupancy", "webex_devices"],
+ *       "custom":     ["executive_ux_score", "executive_it_score"]
  *     }
  *   }
  *
@@ -38,13 +39,13 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { SectionId } from '@/common/hooks/useMetric';
+import { ALL_SECTION_IDS } from '@/common/hooks/usePersistedSectionLayout';
 
 const STORAGE_KEY = 'splunk-cisco-dashboards.sectionTileOrder.v1';
 const STORAGE_VERSION = 1;
 
-const SECTION_IDS: readonly SectionId[] = ['it_health', 'security', 'building'] as const;
 const isSectionId = (raw: unknown): raw is SectionId =>
-    typeof raw === 'string' && (SECTION_IDS as readonly string[]).includes(raw);
+    typeof raw === 'string' && (ALL_SECTION_IDS as readonly string[]).includes(raw);
 
 // Same vocabulary as `MetricConfig.id` — lowercase alnum + underscores,
 // short. Anything outside this gate is dropped on read so a hand-edited

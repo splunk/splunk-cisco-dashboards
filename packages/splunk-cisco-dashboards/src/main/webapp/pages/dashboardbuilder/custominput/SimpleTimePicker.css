@@ -1,0 +1,8 @@
+/* Custom input for SimpleTimePicker needs a greater width to avoid overlaps */
+[data-input-type='input.simpleTimePicker'] [data-test='input-container'] {
+    width: 316px !important;
+}
+
+[data-input-type='input.simpleTimePicker'] [data-test='input-container']:has(.trshowadvanced) {
+    width: 400px !important;
+}

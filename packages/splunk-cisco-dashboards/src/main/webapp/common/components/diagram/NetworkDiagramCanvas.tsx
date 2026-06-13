@@ -71,7 +71,9 @@ import {
     applyNodeChanges,
     applyEdgeChanges,
     useReactFlow,
-    useOnViewportChange,
+    useStoreApi,
+    getNodesBounds,
+    getViewportForBounds,
     type Node as RFNode,
     type Edge as RFEdge,
     type FinalConnectionState,
@@ -195,6 +197,91 @@ const DIAGRAM_EDGE_TYPES = {
  *  the AnimatedEdge renderer. */
 const DEFAULT_EDGE_OPTIONS = {
     type: ANIMATED_EDGE_TYPE,
+};
+
+const clampNumber = (value: number, min: number, max: number): number =>
+    Math.min(max, Math.max(min, value));
+
+const FLOW_VIEWPORT_SELECTOR = '.react-flow__viewport';
+
+const viewportToTransform = ({ x, y, zoom }: Viewport): string =>
+    `translate(${x}px, ${y}px) scale(${zoom})`;
+
+const parseViewportTransform = (transform: string | undefined): Viewport | null => {
+    if (!transform) return null;
+    const match = transform.match(
+        /translate\((-?\d+(?:\.\d+)?)px,\s*(-?\d+(?:\.\d+)?)px\)\s*scale\((-?\d+(?:\.\d+)?)\)/
+    );
+
+    if (!match) return null;
+
+    return {
+        x: Number(match[1]),
+        y: Number(match[2]),
+        zoom: Number(match[3]),
+    };
+};
+
+type ReactFlowStoreApi = ReturnType<typeof useStoreApi>;
+
+const getFlowViewportElement = (store: ReactFlowStoreApi): HTMLElement | null => {
+    const state = store.getState();
+    return (
+        state.domNode?.querySelector<HTMLElement>(FLOW_VIEWPORT_SELECTOR) ??
+        (typeof document === 'undefined'
+            ? null
+            : document.querySelector<HTMLElement>(FLOW_VIEWPORT_SELECTOR))
+    );
+};
+
+const readFlowViewport = (store: ReactFlowStoreApi): Viewport => {
+    const state = store.getState();
+    const [x, y, zoom] = state.transform;
+    const domViewport = parseViewportTransform(
+        getFlowViewportElement(store)?.style.transform
+    );
+
+    return domViewport ?? { x, y, zoom };
+};
+
+const applyFlowViewport = (
+    store: ReactFlowStoreApi,
+    nextViewport: Viewport
+): Viewport => {
+    const state = store.getState();
+    const resolvedViewport: Viewport = {
+        x: nextViewport.x,
+        y: nextViewport.y,
+        zoom: clampNumber(nextViewport.zoom, state.minZoom ?? 0.2, state.maxZoom ?? 10),
+    };
+
+    // Splunk's bundle resolves React Flow's d3 selection without
+    // d3-transition's interrupt/transition methods. Update the DOM
+    // transform directly and mirror it into React Flow's store.
+    store.setState({
+        transform: [
+            resolvedViewport.x,
+            resolvedViewport.y,
+            resolvedViewport.zoom,
+        ],
+    });
+    getFlowViewportElement(store)?.style.setProperty(
+        'transform',
+        viewportToTransform(resolvedViewport)
+    );
+
+    return resolvedViewport;
+};
+
+const getFlowCanvasSize = (
+    store: ReactFlowStoreApi
+): { width: number; height: number } => {
+    const state = store.getState();
+    if (state.width > 0 && state.height > 0) {
+        return { width: state.width, height: state.height };
+    }
+    const rect = state.domNode?.getBoundingClientRect();
+    return { width: rect?.width ?? 0, height: rect?.height ?? 0 };
 };
 
 /** Build 113: stable React Flow node id for the (single) diagram-
@@ -1482,6 +1569,7 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
     const bendDragOriginalEdgeRef = useRef<RFEdge | null>(null);
     const connectStartPointRef = useRef<XYPosition | null>(null);
     const reactFlow = useReactFlow();
+    const store = useStoreApi();
     const initialPayloadRef = useRef<SavedDiagramPayload | null>(initialPayload);
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
@@ -1499,6 +1587,39 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
         useRef<HostVisibilityIndex | null>(hostVisibility ?? null);
     assetIndexRef.current = assetIndex;
     visibilityIndexRef.current = hostVisibility ?? null;
+
+    const applyViewport = useCallback(
+        (viewport: Viewport): Viewport => applyFlowViewport(store, viewport),
+        [store]
+    );
+
+    const fitNodesInViewport = useCallback(
+        (targetNodes: RFNode[], padding: number, maxZoom?: number): void => {
+            const state = store.getState();
+            const { width, height } = getFlowCanvasSize(store);
+            if (!targetNodes.length || width <= 0 || height <= 0) return;
+
+            const resolvedMaxZoom = Math.min(
+                state.maxZoom ?? 10,
+                maxZoom ?? state.maxZoom ?? 10
+            );
+            const bounds = getNodesBounds(targetNodes, {
+                nodeLookup: state.nodeLookup,
+            });
+
+            applyViewport(
+                getViewportForBounds(
+                    bounds,
+                    width,
+                    height,
+                    state.minZoom ?? 0.2,
+                    resolvedMaxZoom,
+                    padding
+                )
+            );
+        },
+        [applyViewport, store]
+    );
 
     useEffect(() => {
         setSelection((prev) => {
@@ -1596,12 +1717,12 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
         // overview.
         window.requestAnimationFrame(() => {
             try {
-                void reactFlow.setViewport({ x: 0, y: 0, zoom: 1 }, { duration: 0 });
+                applyViewport({ x: 0, y: 0, zoom: 1 });
             } catch {
                 // ignore — viewport not ready yet
             }
         });
-    }, [initialPayload, reactFlow]);
+    }, [initialPayload, applyViewport]);
 
     /** Build 115.10 — patch live device-status / live asset data
      *  in-place when the asset or metadata index resolves AFTER
@@ -3246,12 +3367,7 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                 // currently off-screen. Best-effort — failures are
                 // non-fatal (e.g. viewport not ready).
                 try {
-                    reactFlow.fitView({
-                        padding: 0.25,
-                        duration: 250,
-                        nodes: [{ id: existing.id }],
-                        maxZoom: 1.5,
-                    });
+                    fitNodesInViewport([existing], 0.25, 1.5);
                 } catch {
                     // ignore
                 }
@@ -3290,7 +3406,7 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
             commitHistory(next, edges);
             return next;
         });
-    }, [edges, emitChange, commitHistory, reactFlow]);
+    }, [edges, emitChange, commitHistory, reactFlow, fitNodesInViewport]);
 
     useImperativeHandle(
         handleRef,
@@ -3814,34 +3930,82 @@ const CanvasViewportControls: React.FC<{
     onHelpClose: () => void;
 }> = ({ helpOpen, onHelpToggle, onHelpClose }) => {
     const reactFlow = useReactFlow();
-    const [zoomPct, setZoomPct] = useState<number>(100);
+    const store = useStoreApi();
+    const [manualViewport, setManualViewport] = useState<Viewport>({
+        x: 0,
+        y: 0,
+        zoom: 1,
+    });
+    const zoomPct = Math.round(manualViewport.zoom * 100);
 
-    const updateZoom = useCallback((zoom: number): void => {
-        setZoomPct(Math.round(zoom * 100));
-    }, []);
+    const readViewport = useCallback((): Viewport => {
+        return readFlowViewport(store);
+    }, [store]);
+
+    const applyViewport = useCallback(
+        (nextViewport: Viewport): void => {
+            const resolvedViewport = applyFlowViewport(store, nextViewport);
+            setManualViewport(resolvedViewport);
+        },
+        [store]
+    );
+
+    const getCanvasSize = useCallback((): { width: number; height: number } => {
+        return getFlowCanvasSize(store);
+    }, [store]);
+
+    const zoomBy = useCallback(
+        (factor: number): void => {
+            const state = store.getState();
+            const { x, y, zoom } = readViewport();
+            const nextZoom = clampNumber(
+                zoom * factor,
+                state.minZoom ?? 0.2,
+                state.maxZoom ?? 10
+            );
+            const { width, height } = getCanvasSize();
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const safeZoom = zoom || 1;
+
+            applyViewport({
+                x: centerX - ((centerX - x) / safeZoom) * nextZoom,
+                y: centerY - ((centerY - y) / safeZoom) * nextZoom,
+                zoom: nextZoom,
+            });
+        },
+        [applyViewport, getCanvasSize, readViewport, store]
+    );
 
     useEffect(() => {
-        try {
-            updateZoom(reactFlow.getZoom());
-        } catch {
-            // React Flow may not have initialised the viewport yet.
-        }
-    }, [reactFlow, updateZoom]);
+        setManualViewport(readViewport());
+    }, [readViewport]);
 
-    useOnViewportChange({
-        onChange: useCallback(
-            (viewport: Viewport) => {
-                updateZoom(viewport.zoom);
-            },
-            [updateZoom]
-        ),
-        onEnd: useCallback(
-            (viewport: Viewport) => {
-                updateZoom(viewport.zoom);
-            },
-            [updateZoom]
-        ),
-    });
+    const fitDiagram = useCallback((): void => {
+        const state = store.getState();
+        const { width, height } = getCanvasSize();
+        const visibleNodes = reactFlow.getNodes().filter((node) => !node.hidden);
+
+        if (!visibleNodes.length) {
+            applyViewport({ x: 0, y: 0, zoom: 1 });
+            return;
+        }
+        if (width <= 0 || height <= 0) return;
+
+        const bounds = getNodesBounds(visibleNodes, {
+            nodeLookup: state.nodeLookup,
+        });
+        applyViewport(
+            getViewportForBounds(
+                bounds,
+                width,
+                height,
+                state.minZoom ?? 0.2,
+                state.maxZoom ?? 10,
+                0.18
+            )
+        );
+    }, [applyViewport, getCanvasSize, reactFlow, store]);
 
     const controls: Array<{
         label: string;
@@ -3853,26 +4017,25 @@ const CanvasViewportControls: React.FC<{
             label: 'Zoom in',
             title: 'Zoom in',
             Icon: ZoomIn,
-            onClick: () => void reactFlow.zoomIn({ duration: 160 }),
+            onClick: () => zoomBy(1.2),
         },
         {
             label: 'Zoom out',
             title: 'Zoom out',
             Icon: ZoomOut,
-            onClick: () => void reactFlow.zoomOut({ duration: 160 }),
+            onClick: () => zoomBy(1 / 1.2),
         },
         {
             label: 'Reset view',
             title: 'Reset view to 100%',
             Icon: House,
-            onClick: () =>
-                void reactFlow.setViewport({ x: 0, y: 0, zoom: 1 }, { duration: 220 }),
+            onClick: () => applyViewport({ x: 0, y: 0, zoom: 1 }),
         },
         {
             label: 'Fit diagram',
             title: 'Fit diagram to view',
             Icon: Maximize2,
-            onClick: () => void reactFlow.fitView({ padding: 0.18, duration: 220 }),
+            onClick: fitDiagram,
         },
     ];
 

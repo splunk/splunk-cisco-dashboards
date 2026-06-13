@@ -6,8 +6,10 @@ import {
     AlertCircle,
     CheckCircle2,
     ExternalLink,
+    Maximize2,
     Settings2,
     Table2,
+    X,
 } from 'lucide-react';
 import {
     Sparkline,
@@ -292,6 +294,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
     dataValuesDisplay,
     className,
 }) => {
+    const [isFocusOpen, setIsFocusOpen] = React.useState(false);
     const isMock = source === 'mock';
     const numericValue = toFiniteNumber(value);
     const displayValue =
@@ -308,6 +311,40 @@ export const MetricItem: React.FC<MetricItemProps> = ({
         abbreviateTrendValue
             ? formatCompactNumber(change)
             : change;
+    const isNoData = typeof value === 'number' && Number.isNaN(value);
+    const renderedText = `${displayValue}${unit}`;
+    const focusChartColor = isMock
+        ? MOCK_VIZ_COLOR
+        : STATUS_VIZ_COLOR[status] ?? color;
+    const focusFormatValue = (n: number): string =>
+        abbreviateMajorValue &&
+        unit !== '%' &&
+        unit !== 'ms' &&
+        unit !== 'Mbps'
+            ? `${formatCompactNumber(n)}${unit}`
+            : `${n.toLocaleString()}${unit}`;
+    const hasExpandableChart = vizType !== 'singlevalue' && sparkData.length > 0;
+    const focusTitleId = React.useMemo(() => {
+        const slug =
+            label
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-|-$/g, '') || 'tile';
+        return `metric-focus-${slug}`;
+    }, [label]);
+
+    React.useEffect(() => {
+        if (!isFocusOpen) return undefined;
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') setIsFocusOpen(false);
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [isFocusOpen]);
+
+    const openDetailFromFocus = React.useCallback(() => {
+        onOpenDetailTable?.();
+    }, [onOpenDetailTable]);
 
     return (
         // flex-1 + basis-0 makes every tile grab an equal share of the
@@ -397,6 +434,18 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                                 <Table2 className="w-3 h-3 stroke-[2.5px]" />
                             </button>
                         )}
+                        {hasExpandableChart && (
+                            <button
+                                type="button"
+                                onClick={() => setIsFocusOpen(true)}
+                                title={`Expand ${label}`}
+                                aria-label={`Expand ${label}`}
+                                data-tile-control="true"
+                                className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-400 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
+                            >
+                                <Maximize2 className="w-3 h-3 stroke-[2.5px]" />
+                            </button>
+                        )}
                         {onConfigure && (
                             <button
                                 type="button"
@@ -433,7 +482,6 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                 // tell at a glance "the swap took effect, the search
                 // just has no data on this Splunk env" — instead of
                 // misreading "0%" as the original tile's value.
-                const isNoData = typeof value === 'number' && Number.isNaN(value);
                 if (isNoData) {
                     // Diagnostic subtext: tells the user *why* the tile
                     // is empty. The bare "no data" we used to render
@@ -486,7 +534,6 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                 // keep the traditional text-4xl punch. Threshold of 7
                 // characters covers single units like "100%", "1.2k",
                 // "142", and shrinks for "17 of 18", "17/18 sites", etc.
-                const renderedText = `${displayValue}${unit}`;
                 const headlineSizeClass =
                     typeof value === 'string' && renderedText.length > 7
                         ? 'text-2xl'
@@ -613,6 +660,158 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                 // height and the divider rules between tiles would not
                 // line up across the row.
                 <div className="flex-1 min-h-0" aria-hidden="true" />
+            )}
+
+            {isFocusOpen && hasExpandableChart && (
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby={focusTitleId}
+                    className="fixed inset-0 z-[1800] flex items-center justify-center p-4"
+                    onClick={(event) => {
+                        if (event.target === event.currentTarget) {
+                            setIsFocusOpen(false);
+                        }
+                    }}
+                >
+                    <div
+                        className="absolute inset-0 bg-slate-950/55 backdrop-blur-sm"
+                        onClick={() => setIsFocusOpen(false)}
+                    />
+                    <div className="relative w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-950">
+                        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
+                            <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                    <h2
+                                        id={focusTitleId}
+                                        className="truncate text-base font-black tracking-tight text-slate-900 dark:text-slate-100"
+                                    >
+                                        {label}
+                                    </h2>
+                                    {status !== 'unknown' && <StatusIcon status={status} />}
+                                    {isMock && <DemoDataChip />}
+                                </div>
+                                {subLabel && (
+                                    <p className="mt-1 truncate text-sm font-medium text-slate-500 dark:text-slate-400">
+                                        {subLabel}
+                                    </p>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {onOpenInSearch && (
+                                    <button
+                                        type="button"
+                                        onClick={onOpenInSearch}
+                                        title="Open in Search"
+                                        aria-label={`Open ${label} in Search`}
+                                        className="inline-flex items-center gap-1.5 rounded border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-slate-600 transition-colors hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:border-slate-700 dark:text-slate-300 dark:hover:border-sky-600 dark:hover:bg-sky-950/40 dark:hover:text-sky-200"
+                                    >
+                                        <ExternalLink className="h-3.5 w-3.5" />
+                                        Search
+                                    </button>
+                                )}
+                                {onOpenDetailTable && (
+                                    <button
+                                        type="button"
+                                        onClick={openDetailFromFocus}
+                                        title={detailTableTitle ?? 'View detail table'}
+                                        aria-label={detailTableTitle ?? `View ${label} detail table`}
+                                        className="inline-flex items-center gap-1.5 rounded border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-slate-600 transition-colors hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:border-slate-700 dark:text-slate-300 dark:hover:border-sky-600 dark:hover:bg-sky-950/40 dark:hover:text-sky-200"
+                                    >
+                                        <Table2 className="h-3.5 w-3.5" />
+                                        Details
+                                    </button>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={() => setIsFocusOpen(false)}
+                                    title="Close"
+                                    aria-label={`Close ${label}`}
+                                    className="rounded p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="grid max-h-[calc(90vh-73px)] gap-5 overflow-y-auto px-5 py-5 lg:grid-cols-[240px_1fr]">
+                            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/60">
+                                <div
+                                    className={cn(
+                                        'text-5xl font-black tracking-tighter leading-none',
+                                        isMock
+                                            ? MOCK_HEADLINE_COLOR
+                                            : STATUS_TEXT_COLOR[status]
+                                    )}
+                                >
+                                    {isNoData ? '—' : renderedText}
+                                </div>
+                                {typeof change === 'number' &&
+                                    Number.isFinite(change) &&
+                                    !isMock && (
+                                        <div
+                                            className={cn(
+                                                'mt-3 inline-flex items-center rounded-full px-2 py-1 text-xs font-black',
+                                                STATUS_TREND_COLOR[status],
+                                                'bg-white dark:bg-slate-950/70'
+                                            )}
+                                        >
+                                            {change >= 0 ? (
+                                                <ArrowUp className="h-3.5 w-3.5 stroke-[3px]" />
+                                            ) : (
+                                                <ArrowDown className="h-3.5 w-3.5 stroke-[3px]" />
+                                            )}
+                                            <span>
+                                                {change > 0
+                                                    ? `+${displayChange}`
+                                                    : displayChange}
+                                                %
+                                            </span>
+                                        </div>
+                                    )}
+                                <div className="mt-4 space-y-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <span>Status</span>
+                                        <span className="capitalize text-slate-700 dark:text-slate-200">
+                                            {status}
+                                        </span>
+                                    </div>
+                                    {rangeLabel && (
+                                        <div className="flex items-center justify-between gap-3">
+                                            <span>Range</span>
+                                            <span className="text-right text-slate-700 dark:text-slate-200">
+                                                {rangeLabel}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {previousLabel && previousData?.length ? (
+                                        <div className="flex items-center justify-between gap-3">
+                                            <span>Overlay</span>
+                                            <span className="text-slate-700 dark:text-slate-200">
+                                                {previousLabel}
+                                            </span>
+                                        </div>
+                                    ) : null}
+                                </div>
+                            </div>
+
+                            <div className="h-[48vh] min-h-[280px] rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
+                                <Sparkline
+                                    data={sparkData}
+                                    color={focusChartColor}
+                                    vizType={vizType}
+                                    dataValuesDisplay={dataValuesDisplay}
+                                    previousData={previousData}
+                                    previousLabel={previousLabel}
+                                    timestamps={sparkTimestamps}
+                                    timeRange={timeRange}
+                                    formatValue={focusFormatValue}
+                                    title={sparkTitle}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

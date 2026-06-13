@@ -1,27 +1,29 @@
-Total source stanzas: 606
-Kept: 528
-Dropped: 78
+Total source stanzas: 677
+Kept: 588
+Dropped: 89
 Drop reasons:
   admin_internal: 5
   demo: 19
   duplicate_search_name: 1
   duplicate_spl: 17
-  hardcoded_site_search: 1
   lookup_dependent: 35
+  macro_dependency: 6
+  makeresults_placeholder: 6
 By category (kept):
   Asset: 2
   Building: 33
-  Executive: 18
-  Identity: 38
-  Monitoring: 150
-  Network: 171
-  Security: 115
+  Executive: 17
+  Identity: 41
+  Monitoring: 143
+  Network: 188
+  Security: 163
   Shared: 1
-Index macro prose normalizations (<code>index_*</code>): 185
+Index macro prose normalizations (<code>index_*</code>): 178
 
 Dropped stanza IDs (first 40):
   building_resilience_compliance_detail (lookup_dependent)
   it_critical_systems_device_inventory_by_type (lookup_dependent)
+  it_critical_systems_sitelevel_health (macro_dependency): unresolved macro(s): dnac_site_normalize
   security_resilience_endpoint_alert_detail (lookup_dependent)
   security_resilience_severity_by_host (lookup_dependent)
   it_critical_systems_port_flapping (lookup_dependent)
@@ -36,6 +38,12 @@ Dropped stanza IDs (first 40):
   admin_cache_hit_summary (admin_internal)
   admin_schedule_health_advisor (admin_internal)
   admin_macro_index_tuning (admin_internal)
+  teuc_5_9_5_path_hop_count_analysis (makeresults_placeholder): uses | makeresults (synthetic/disabled stub)
+  teuc_5_9_6_network_path_change_detection (makeresults_placeholder): uses | makeresults (synthetic/disabled stub)
+  teuc_5_9_25_remote_worker_connectivity_health (makeresults_placeholder): uses | makeresults (synthetic/disabled stub)
+  teuc_5_9_26_vpn_path_performance (makeresults_placeholder): uses | makeresults (synthetic/disabled stub)
+  teuc_5_9_27_endpoint_connection_type_and_network_score (makeresults_placeholder): uses | makeresults (synthetic/disabled stub)
+  teuc_5_9_50_itsi_service_health (makeresults_placeholder): uses | makeresults (synthetic/disabled stub)
   asset_inventory_ds_gap_analysis (lookup_dependent)
   building_resilience_ds_ap_health_site (lookup_dependent)
   escu_alert_asa_privilege_escalation (lookup_dependent)
@@ -48,15 +56,8 @@ Dropped stanza IDs (first 40):
   it_critical_systems_ds_error_disabled_interfaces (lookup_dependent)
   it_critical_systems_ds_ntp_drift (lookup_dependent)
   it_critical_systems_ds_port_flapping (lookup_dependent)
+  it_critical_systems_ds_site_health (macro_dependency): unresolved macro(s): dnac_site_normalize
   it_critical_systems_ds_stp_mac_flapping (lookup_dependent)
   security_resilience_ds_endpoint_detail (lookup_dependent)
   security_resilience_ds_severity_by_host (lookup_dependent)
   overview_topology_overview (demo)
-  overview_active_critical_alerts (demo)
-  overview_inter_site_latency (demo)
-  overview_top_incident_volume (demo)
-  overview_operational_lead (demo)
-  overview_top_incident_volume_demo (demo)
-  overview_operational_lead_demo (demo)
-  overview_site_tallahassee_health (demo)
-  overview_site_auburndale_health (demo)

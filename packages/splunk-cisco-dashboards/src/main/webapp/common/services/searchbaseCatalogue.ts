@@ -24,11 +24,11 @@
  * The stable external key is `search_name`.
  *
  * Visibility: stanzas with `search_hidden = 1` (or `true` / `yes`) are
- * omitted from the default catalogue. All current consumers (Overview
- * dashboard, KPI picker, topology search browsers, and the Searchbase
- * Canvas) call `getSearchbaseCatalogue()` with that default so hidden
- * entries never surface in the UI. Pass `{ includeHidden: true }` to
- * opt back in (e.g. for one-off auditing tools).
+ * omitted from the default catalogue so picker/search-browse UI only
+ * surfaces visible entries. Pass `{ includeHidden: true }` when the
+ * operator explicitly asks to browse hidden support entries, or when a
+ * runtime dispatch map needs to resolve app-owned hidden support SPL
+ * without falling back to savedsearches.conf indirection.
  */
 
 import { getSearchAppContext } from './splunkSearchService';
@@ -36,9 +36,16 @@ import { getSearchAppContext } from './splunkSearchService';
 export interface SearchbaseCatalogueOptions {
     /**
      * When true, include stanzas marked `search_hidden`. Default false.
-     * Overview and picker consumers should omit this flag.
+     * UI picker/search-browser consumers should omit this flag.
      */
     includeHidden?: boolean;
+    /**
+     * When true, fetch every installed app that ships searchbase.conf.
+     * Catalogue browsers opt into this so their App facet can span all
+     * apps; runtime dispatch maps omit it to keep historical current-app
+     * scope and avoid same-`search_name` collisions.
+     */
+    allApps?: boolean;
 }
 
 export interface SearchbaseRecord {
@@ -152,32 +159,27 @@ interface SearchbaseResponse {
 const APP_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_\-.]{0,127}$/;
 
 /**
- * Builds the REST URL for fetching `searchbase.conf` entries, restricted
- * to stanzas owned by the given app via the `eai:acl.app` filter.
+ * Builds the REST URL for fetching `searchbase.conf` entries.
  *
- * Why `/servicesNS/-/-/` (wildcard user + wildcard app) instead of
- * `/servicesNS/-/<app>/`: the app-scoped namespace is INCLUSIVE, not
- * exclusive — Splunk returns stanzas from `<app>` plus any other app
- * that ships `searchbase.conf` with `global` sharing. The picker then
- * sees stanzas from upstream TAs (ThousandEyes, ISE, etc.) bleeding in.
+ * Why `/servicesNS/-/-/` (wildcard user + wildcard app): unscoped
+ * catalogue browsers need all installed apps that ship `searchbase.conf`
+ * so the App facet can narrow by owner. Runtime callers use the scoped
+ * default, which adds `search=eai:acl.app=<appName>` and keeps dispatch
+ * maps from being overwritten by another app's same `search_name`.
  *
  * Equivalent SPL one-liner for hand-testing:
  *   | rest splunk_server=local /servicesNS/-/-/configs/conf-searchbase
- *       search="eai:acl.app=splunk-cisco-dashboards"
- *
- * The `search` query parameter pushes the ACL filter to splunkd so the
- * client never has to dedupe foreign-app stanzas, and the cache stays
- * small.
+ *       search="eai:acl.app=splunk-cisco-dashboards"  // scoped variant
  */
-const buildUrl = (appName: string): string => {
-    if (!APP_NAME_PATTERN.test(appName)) {
+const buildUrl = (appName?: string): string => {
+    if (appName && !APP_NAME_PATTERN.test(appName)) {
         throw new Error('Invalid Splunk app name.');
     }
     const params = new URLSearchParams({
         output_mode: 'json',
         count: '0',
-        search: `eai:acl.app=${appName}`,
     });
+    if (appName) params.set('search', `eai:acl.app=${appName}`);
     return `/en-US/splunkd/__raw/servicesNS/-/-/configs/conf-searchbase?${params.toString()}`;
 };
 
@@ -241,7 +243,9 @@ const collapseExpandedIndexMacro = (spl: string): string =>
     );
 
 const catalogueCacheKey = (options?: SearchbaseCatalogueOptions): string =>
-    options?.includeHidden ? 'includeHidden' : 'visible';
+    `${options?.includeHidden ? 'includeHidden' : 'visible'}:${
+        options?.allApps ? 'allApps' : 'currentApp'
+    }`;
 
 const CACHED_PROMISES = new Map<string, Promise<SearchbaseRecord[]>>();
 
@@ -271,10 +275,11 @@ const fetchSearchbase = async (
 ): Promise<SearchbaseRecord[]> => {
     if (!isInSplunkRuntime()) return [];
     const appName = getSearchAppContext();
+    const scopedAppName = options?.allApps ? undefined : appName;
     const headers: Record<string, string> = { Accept: 'application/json' };
     const csrf = getCsrfToken();
     if (csrf) headers['X-Splunk-Form-Key'] = csrf;
-    const res = await fetch(buildUrl(appName), {
+    const res = await fetch(buildUrl(scopedAppName), {
         method: 'GET',
         credentials: 'include',
         headers,
@@ -290,13 +295,11 @@ const fetchSearchbase = async (
         if (isSearchbaseStanzaExcluded(content, options)) {
             continue;
         }
-        // Belt-and-suspenders: the URL already filters on
-        // `eai:acl.app=<appName>`, but the response is the source of
-        // truth — if splunkd ever returns a foreign-app stanza
-        // (older Splunk versions don't honour the filter param on
-        // every endpoint), drop it here too.
         const aclApp = typeof e.acl?.app === 'string' ? e.acl.app : '';
-        if (aclApp && aclApp !== appName) continue;
+        // Belt-and-suspenders for default current-app callers: the URL
+        // already applies the ACL filter, but the response is still the
+        // source of truth on older Splunk versions.
+        if (scopedAppName && aclApp && aclApp !== scopedAppName) continue;
         const searchName = typeof content.search_name === 'string' ? content.search_name.trim() : '';
         if (searchName.length === 0) continue; // Without a join key we can't enrich anything.
         out.push({

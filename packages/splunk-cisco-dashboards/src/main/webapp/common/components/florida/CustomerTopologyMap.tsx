@@ -60,9 +60,17 @@ import {
     plainTextFromHtml,
     type SearchbaseRecord,
 } from '@/common/services/searchbaseCatalogue';
+import {
+    DEFAULT_CUSTOMER_TOPOLOGY_SECTION_TITLES,
+    loadCustomerTopologyConfig,
+    saveCustomerTopologyConfig,
+    sanitizeCustomerTopologySectionTitles,
+    type CustomerTopologySectionTitles,
+} from '@/common/services/customerTopologyPersistenceService';
 import { runSearch } from '@/common/services/splunkSearchService';
 import type {
     CustomerTopology,
+    KnownTopologyRole,
     TopologyLink,
     TopologyRole,
     TopologySite,
@@ -83,22 +91,14 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
     id: 'customer-site-connectivity',
     name: 'Customer Site Connectivity',
     subtitle: 'Editable customer site connectivity',
-    telemetrySearchName: 'Overview - Topology Overview',
     map: {
-        // Center re-derived for the TLH+AUB-only topology (David call,
-        // 2026-05-12): MCO/Orlando was never an customer site and has been
-        // removed. The midpoint between TLH (30.4383, -84.2807) and
-        // AUB (28.0653, -81.7876) sits at ~(29.25, -83.03), which
-        // keeps both markers visible at the default zoom without
-        // needing to pan. Bounds are kept permissive so the user can
-        // still pan to neighbouring states for context.
-        center: [29.25, -83.0],
-        zoom: 6.55,
-        minZoom: 5,
+        center: [39.5, -98.35],
+        zoom: 4.2,
+        minZoom: 3,
         maxZoom: 11,
         bounds: [
-            [22.5, -90.0],
-            [32.5, -77.0],
+            [24.0, -126.0],
+            [50.5, -66.0],
         ],
     },
     // `internetEdgeMbps` is intentionally left undefined on every site.
@@ -112,66 +112,108 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
     // popup's "Awaiting"-pattern for empty fields. Customers who want
     // to surface a real number can enter it through the existing
     // topology editor pencil-tool ("Internet edge Mbps" field), which
-    // writes to the persisted localStorage payload
-    // (`splunk-cisco-dashboards.customerTopology.v4`) and immediately
-    // repopulates the popup. If the customer's network team ever confirms
-    // actual circuit bandwidths, the values can be restored here as a
-    // packaged default and the editor entry will override them
-    // per-user as before.
+    // writes to the shared customer_topology.conf payload and immediately
+    // repopulates the popup for every user. If the customer's network
+    // team ever confirms actual circuit bandwidths, the values can be
+    // restored here as a packaged default and the shared config entry
+    // will override them at runtime.
     sites: [
         {
-            id: 'tlh',
-            name: 'Tallahassee (State EOC)',
-            shortName: 'TLH',
+            id: 'nyc',
+            name: 'New York City',
+            shortName: 'NYC',
             role: 'state_hq',
-            lat: 30.4383,
-            lng: -84.2807,
+            lat: 40.7128,
+            lng: -74.006,
             status: 'unknown',
             metrics: {},
-            telemetrySource: 'Awaiting normalized site telemetry',
-            searchName: 'Overview - Site Tallahassee Health',
+            telemetrySource: 'Configured topology item',
         },
         {
-            id: 'aub',
-            name: 'Auburndale (Logistics)',
-            shortName: 'AUB',
-            role: 'logistics',
-            lat: 28.0653,
-            lng: -81.7876,
+            id: 'chicago',
+            name: 'Chicago',
+            shortName: 'CHI',
+            role: 'regional_hub',
+            lat: 41.8781,
+            lng: -87.6298,
             status: 'unknown',
             metrics: {},
-            telemetrySource: 'Awaiting normalized site telemetry',
-            searchName: 'Overview - Site Auburndale Health',
+            telemetrySource: 'Configured topology item',
+        },
+        {
+            id: 'austin',
+            name: 'Austin',
+            shortName: 'AUS',
+            role: 'branch',
+            lat: 30.2672,
+            lng: -97.7431,
+            status: 'unknown',
+            metrics: {},
+            telemetrySource: 'Configured topology item',
+        },
+        {
+            id: 'san-francisco',
+            name: 'San Francisco',
+            shortName: 'SFO',
+            role: 'datacenter',
+            lat: 37.7749,
+            lng: -122.4194,
+            status: 'unknown',
+            metrics: {},
+            telemetrySource: 'Configured topology item',
+        },
+        {
+            id: 'seattle',
+            name: 'Seattle',
+            shortName: 'SEA',
+            role: 'branch',
+            lat: 47.6062,
+            lng: -122.3321,
+            status: 'unknown',
+            metrics: {},
+            telemetrySource: 'Configured topology item',
         },
     ],
     links: [
-        // Single TLH<->AUB inter-site link. The TLH<->MCO and
-        // MCO<->AUB legs were removed alongside the MCO site (David
-        // call, 2026-05-12). A ThousandEyes agent-to-agent test does
-        // exist for this pair, but as of the call the Tallahassee
-        // enterprise agent (`demt-te01-va`) is unresponsive to probes,
-        // so the link popup will read "Awaiting" until either the
-        // agent recovers or the SPL stanza is rewired to consume the
-        // A2A `Test_Metrics` data once it's trustworthy.
         {
-            id: 'aub-tlh',
-            name: 'Auburndale to Tallahassee',
-            sourceSiteId: 'aub',
-            targetSiteId: 'tlh',
+            id: 'nyc-chicago',
+            name: 'New York City to Chicago',
+            sourceSiteId: 'nyc',
+            targetSiteId: 'chicago',
             status: 'unknown',
-            telemetrySource: 'Awaiting topology link telemetry',
-            // OOB default is the dedicated TE A2A stanza
-            // `[overview_link_te_a2a_health]` (added 2026-05-12). It
-            // returns one normalized row per A2A test path between the
-            // two cities with all three network metrics (latency, loss,
-            // jitter) plus geo-enriched agent identity and the TE
-            // permalink. The multi-source umbrella stanza
-            // `Overview - Link Auburndale to Tallahassee Health` is
-            // still in the catalogue for customers running SD-WAN who
-            // want SD-WAN > TE > Catalyst Center prioritization;
-            // operators can swap back to it via the in-popup catalogue
-            // browser.
-            searchName: 'Overview - Link ThousandEyes A2A Health',
+            telemetrySource: 'Configured topology item',
+        },
+        {
+            id: 'chicago-austin',
+            name: 'Chicago to Austin',
+            sourceSiteId: 'chicago',
+            targetSiteId: 'austin',
+            status: 'unknown',
+            telemetrySource: 'Configured topology item',
+        },
+        {
+            id: 'austin-san-francisco',
+            name: 'Austin to San Francisco',
+            sourceSiteId: 'austin',
+            targetSiteId: 'san-francisco',
+            status: 'unknown',
+            telemetrySource: 'Configured topology item',
+        },
+        {
+            id: 'san-francisco-seattle',
+            name: 'San Francisco to Seattle',
+            sourceSiteId: 'san-francisco',
+            targetSiteId: 'seattle',
+            status: 'unknown',
+            telemetrySource: 'Configured topology item',
+        },
+        {
+            id: 'seattle-chicago',
+            name: 'Seattle to Chicago',
+            sourceSiteId: 'seattle',
+            targetSiteId: 'chicago',
+            status: 'unknown',
+            telemetrySource: 'Configured topology item',
         },
     ],
 };
@@ -183,13 +225,68 @@ const STATUS_RANK: Record<TopologyStatus, number> = {
     stable: 1,
 };
 
-const ROLE_LABEL: Record<TopologyRole, string> = {
-    state_hq: 'State HQ',
+const TOPOLOGY_ROLES: KnownTopologyRole[] = [
+    'state_hq',
+    'regional_hub',
+    'logistics',
+    'branch',
+    'datacenter',
+    'internet_edge',
+];
+
+const TOPOLOGY_ROLE_SET = new Set<string>(TOPOLOGY_ROLES);
+
+const isKnownTopologyRole = (value: unknown): value is KnownTopologyRole =>
+    typeof value === 'string' && TOPOLOGY_ROLE_SET.has(value);
+
+const ROLE_LABEL: Record<KnownTopologyRole, string> = {
+    state_hq: 'HQ',
     regional_hub: 'Regional Hub',
     logistics: 'Logistics',
     branch: 'Branch',
     datacenter: 'Data Center',
     internet_edge: 'Internet Edge',
+};
+
+const roleInputValue = (role: TopologyRole): string =>
+    isKnownTopologyRole(role) ? ROLE_LABEL[role] : role;
+
+const topologyRoleLabel = (role: TopologyRole | undefined): string => {
+    const value = typeof role === 'string' ? role.trim() : '';
+    if (!value) return 'Role';
+    if (isKnownTopologyRole(value)) return ROLE_LABEL[value];
+
+    const spaced = value.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!spaced) return 'Role';
+    if (spaced === spaced.toLowerCase()) {
+        return spaced.replace(/\b[a-z0-9]/g, (match) => match.toUpperCase());
+    }
+    return spaced;
+};
+
+const normalizeTopologyRoleInput = (
+    value: unknown,
+    fallback: TopologyRole = 'branch'
+): TopologyRole => {
+    if (typeof value !== 'string') return fallback;
+    const trimmed = value.trim();
+    if (!trimmed) return fallback;
+    const lower = trimmed.toLowerCase();
+    const compact = lower.replace(/[\s_-]+/g, '');
+    for (const role of TOPOLOGY_ROLES) {
+        if (
+            lower === role ||
+            lower === ROLE_LABEL[role].toLowerCase() ||
+            compact === role.replace(/_/g, '')
+        ) {
+            return role;
+        }
+    }
+    if (compact === 'hq' || compact === 'headquarters') return 'state_hq';
+    if (compact === 'datacenter' || compact === 'datacentre') {
+        return 'datacenter';
+    }
+    return trimmed;
 };
 
 const STATUS_DOT_CLASS: Record<TopologyStatus, string> = {
@@ -206,7 +303,7 @@ const STATUS_STROKE: Record<TopologyStatus, string> = {
     unknown: '#94a3b8',
 };
 
-const ROLE_DOT_CLASS: Record<TopologyRole, string> = {
+const ROLE_DOT_CLASS: Record<KnownTopologyRole, string> = {
     state_hq: 'bg-sky-500',
     regional_hub: 'bg-amber-500',
     logistics: 'bg-red-500',
@@ -215,8 +312,13 @@ const ROLE_DOT_CLASS: Record<TopologyRole, string> = {
     internet_edge: 'bg-slate-500',
 };
 
+const CUSTOM_ROLE_DOT_CLASS = 'bg-slate-500';
+
+const topologyRoleDotClass = (role: TopologyRole): string =>
+    isKnownTopologyRole(role) ? ROLE_DOT_CLASS[role] : CUSTOM_ROLE_DOT_CLASS;
+
 const ROLE_BEACON_CHROME: Record<
-    TopologyRole,
+    KnownTopologyRole,
     { fill: string; halo: string; label: string }
 > = {
     state_hq: {
@@ -251,16 +353,20 @@ const ROLE_BEACON_CHROME: Record<
     },
 };
 
-const TOPOLOGY_STORAGE_KEY = 'splunk-cisco-dashboards.customerTopology.v4';
+const CUSTOM_ROLE_BEACON_CHROME = {
+    fill: '#64748b',
+    halo: 'rgba(100, 116, 139, 0.22)',
+    label: 'border-slate-200',
+};
+
+const topologyRoleBeaconChrome = (role: TopologyRole) =>
+    isKnownTopologyRole(role)
+        ? ROLE_BEACON_CHROME[role]
+        : CUSTOM_ROLE_BEACON_CHROME;
+
+const LEGACY_TOPOLOGY_STORAGE_KEY = 'splunk-cisco-dashboards.customerTopology.v4';
+const TOPOLOGY_CONFIG_EVENT = 'splunk-cisco-dashboards:customer-topology-config';
 const TOPOLOGY_STORAGE_VERSION = 4;
-const TOPOLOGY_ROLES: TopologyRole[] = [
-    'state_hq',
-    'regional_hub',
-    'logistics',
-    'branch',
-    'datacenter',
-    'internet_edge',
-];
 const TOPOLOGY_STATUSES: TopologyStatus[] = [
     'unknown',
     'stable',
@@ -268,9 +374,109 @@ const TOPOLOGY_STATUSES: TopologyStatus[] = [
     'critical',
 ];
 
+const SITE_PLACEMENT_PRESETS: Array<{
+    aliases: string[];
+    name: string;
+    shortName: string;
+    lat: number;
+    lng: number;
+}> = [
+    {
+        aliases: ['nyc', 'new york', 'new york city', 'new york, ny'],
+        name: 'New York City',
+        shortName: 'NYC',
+        lat: 40.7128,
+        lng: -74.006,
+    },
+    {
+        aliases: ['dc', 'washington dc', 'washington, dc'],
+        name: 'Washington DC',
+        shortName: 'DC',
+        lat: 38.9072,
+        lng: -77.0369,
+    },
+    {
+        aliases: ['la', 'los angeles', 'los angeles, ca'],
+        name: 'Los Angeles',
+        shortName: 'LA',
+        lat: 34.0522,
+        lng: -118.2437,
+    },
+    {
+        aliases: ['chi', 'chicago', 'chicago, il'],
+        name: 'Chicago',
+        shortName: 'CHI',
+        lat: 41.8781,
+        lng: -87.6298,
+    },
+    {
+        aliases: ['aus', 'austin', 'austin tx', 'austin, tx'],
+        name: 'Austin',
+        shortName: 'AUS',
+        lat: 30.2672,
+        lng: -97.7431,
+    },
+    {
+        aliases: [
+            'sf',
+            'sfo',
+            'san francisco',
+            'san francisco ca',
+            'san francisco, ca',
+        ],
+        name: 'San Francisco',
+        shortName: 'SFO',
+        lat: 37.7749,
+        lng: -122.4194,
+    },
+    {
+        aliases: ['sea', 'seattle', 'seattle wa', 'seattle, wa'],
+        name: 'Seattle',
+        shortName: 'SEA',
+        lat: 47.6062,
+        lng: -122.3321,
+    },
+    {
+        aliases: ['dal', 'dallas', 'dallas, tx'],
+        name: 'Dallas',
+        shortName: 'DAL',
+        lat: 32.7767,
+        lng: -96.797,
+    },
+    {
+        aliases: ['atl', 'atlanta', 'atlanta, ga'],
+        name: 'Atlanta',
+        shortName: 'ATL',
+        lat: 33.749,
+        lng: -84.388,
+    },
+    {
+        aliases: ['mia', 'miami', 'miami, fl'],
+        name: 'Miami',
+        shortName: 'MIA',
+        lat: 25.7617,
+        lng: -80.1918,
+    },
+    {
+        aliases: [
+            'las',
+            'lv',
+            'vegas',
+            'las vegas',
+            'las vegas, nv',
+            'las vegas nv',
+        ],
+        name: 'Las Vegas',
+        shortName: 'LAS',
+        lat: 36.1699,
+        lng: -115.1398,
+    },
+];
+
 type PersistedTopologyPayload = {
     version: number;
     topology: CustomerTopology;
+    sectionTitles: CustomerTopologySectionTitles;
 };
 
 export interface TopologySummaryMetric {
@@ -285,7 +491,7 @@ export type TopologySummaryMetricMap = Record<string, TopologySummaryMetric>;
 /**
  * Site-level metadata sourced from `cisco:dnac:site:topology` via the
  * `Site Topology - Map Marker Enrichment (Buildings with GPS)` searchbase
- * stanza. Keyed by the building's short name (e.g. "TLH", "AUB")
+ * stanza. Keyed by the building's short name (e.g. "NYC", "CHI")
  * which matches the `shortName` of `TopologySite` entries in
  * `CUSTOMER_TOPOLOGY`. Sites that DNAC isn't currently managing simply
  * have no entry; consumers MUST treat the lookup as optional.
@@ -346,9 +552,6 @@ const uniqueId = (base: string, used: Set<string>): string => {
     return candidate;
 };
 
-const isTopologyRole = (value: unknown): value is TopologyRole =>
-    TOPOLOGY_ROLES.includes(value as TopologyRole);
-
 const isTopologyStatus = (value: unknown): value is TopologyStatus =>
     TOPOLOGY_STATUSES.includes(value as TopologyStatus);
 
@@ -357,34 +560,58 @@ const optionalText = (value: unknown): string | undefined => {
     return text.length > 0 ? text : undefined;
 };
 
+const hasOwnProperty = (value: object, key: PropertyKey): boolean =>
+    Object.prototype.hasOwnProperty.call(value, key);
+
+const normalizeSearchBinding = (
+    source: object,
+    fallbackSearchName?: string
+): string | undefined => {
+    if (hasOwnProperty(source, 'searchName')) {
+        return textValue((source as { [key: string]: unknown }).searchName);
+    }
+    return optionalText(fallbackSearchName);
+};
+
 const sanitizeTopology = (
     candidate: unknown,
     fallback: CustomerTopology
 ): CustomerTopology => {
     const source = isRecord(candidate) ? (candidate as EditableTopology) : fallback;
     const fallbackMap = fallback.map;
+    const fallbackSitesById = new Map(
+        fallback.sites.map((site) => [site.id, site])
+    );
+    const fallbackLinksById = new Map(
+        fallback.links.map((link) => [link.id, link])
+    );
     const rawSites = Array.isArray(source.sites) && source.sites.length > 0
         ? source.sites
         : fallback.sites;
     const usedSiteIds = new Set<string>();
     const sites = rawSites.map((site, index) => {
-        const fallbackSite = fallback.sites[index] ?? fallback.sites[0];
         const id = uniqueId(
             normalizeId(site.id ?? site.shortName ?? site.name, `site-${index + 1}`),
             usedSiteIds
         );
+        const fallbackSite =
+            fallbackSitesById.get(id) ?? fallback.sites[index] ?? fallback.sites[0];
         const shortName = textValue(
             site.shortName,
             id.replace(/-/g, '').slice(0, 4).toUpperCase()
         ).slice(0, 8);
-        const resolvedSiteSearchName =
-            optionalText(site.searchName) ??
-            optionalText(fallbackSite?.searchName);
+        const resolvedSiteSearchName = normalizeSearchBinding(
+            site,
+            fallbackSitesById.get(id)?.searchName
+        );
         return {
             id,
             name: textValue(site.name, fallbackSite?.name ?? shortName),
             shortName: shortName.toUpperCase(),
-            role: isTopologyRole(site.role) ? site.role : fallbackSite?.role ?? 'branch',
+            role: normalizeTopologyRoleInput(
+                site.role,
+                fallbackSite?.role ?? 'branch'
+            ),
             lat: numberValue(site.lat, fallbackSite?.lat ?? 39.2, -85, 85),
             lng: numberValue(site.lng, fallbackSite?.lng ?? -96.5, -180, 180),
             status: isTopologyStatus(site.status)
@@ -432,6 +659,10 @@ const sanitizeTopology = (
                 normalizeId(link.id, `${sourceSiteId}-${targetSiteId}`),
                 usedLinkIds
             );
+            const searchName = normalizeSearchBinding(
+                link,
+                fallbackLinksById.get(id)?.searchName
+            );
             const normalized: TopologyLink = {
                 id,
                 name: textValue(link.name, `${sourceSiteId} to ${targetSiteId}`),
@@ -440,7 +671,7 @@ const sanitizeTopology = (
                 status: isTopologyStatus(link.status)
                     ? link.status
                     : fallbackLink?.status ?? 'unknown',
-                dataState: link.searchName ? 'loading' : link.dataState ?? 'static',
+                dataState: searchName ? 'loading' : link.dataState ?? 'static',
                 telemetrySource:
                     optionalText(link.telemetrySource) ??
                     'Awaiting topology link telemetry',
@@ -479,10 +710,8 @@ const sanitizeTopology = (
             if (lastUpdated) normalized.lastUpdated = lastUpdated;
             const dataError = optionalText(link.dataError);
             if (dataError) normalized.dataError = dataError;
-            const searchName =
-                optionalText(link.searchName) ??
-                optionalText(fallbackLink?.searchName);
             if (searchName) normalized.searchName = searchName;
+            if (searchName === '') normalized.searchName = '';
             return normalized;
         })
         .filter((link): link is TopologyLink => Boolean(link));
@@ -544,85 +773,329 @@ const finiteOptionalNumber = (value: unknown): number | undefined => {
     return Number.isFinite(parsed) ? parsed : undefined;
 };
 
-const readPersistedTopology = (fallback: CustomerTopology): CustomerTopology => {
-    if (typeof window === 'undefined') return cloneTopology(fallback);
+interface SitePlacement {
+    name: string;
+    shortName: string;
+    lat: number;
+    lng: number;
+}
+
+const normalizePlacementQuery = (value: string): string =>
+    value.trim().toLowerCase().replace(/\s*,\s*/g, ' ').replace(/\s+/g, ' ');
+
+const resolveSitePlacement = (value: string): SitePlacement | null => {
+    const query = normalizePlacementQuery(value);
+    if (!query) return null;
+    const coordinateMatch = query.match(
+        /^(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)$/
+    );
+    if (coordinateMatch) {
+        const lat = Number(coordinateMatch[1]);
+        const lng = Number(coordinateMatch[2]);
+        if (
+            Number.isFinite(lat) &&
+            Number.isFinite(lng) &&
+            lat >= -85 &&
+            lat <= 85 &&
+            lng >= -180 &&
+            lng <= 180
+        ) {
+            return {
+                name: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+                shortName: 'SITE',
+                lat,
+                lng,
+            };
+        }
+    }
+
+    const preset = SITE_PLACEMENT_PRESETS.find((candidate) =>
+        candidate.aliases.some((alias) => normalizePlacementQuery(alias) === query)
+    );
+    if (!preset) return null;
+    return {
+        name: preset.name,
+        shortName: preset.shortName,
+        lat: preset.lat,
+        lng: preset.lng,
+    };
+};
+
+const looksLikeGeneratedSiteName = (value: string): boolean =>
+    /^site\s+\d+$/i.test(value.trim());
+
+const looksLikeGeneratedShortName = (value: string): boolean =>
+    /^site[-\d]*$/i.test(value.trim()) || value.trim().length === 0;
+
+const expandMapForPlacement = (
+    map: CustomerTopology['map'],
+    sites: TopologySite[],
+    placement: SitePlacement
+): CustomerTopology['map'] => {
+    const usable = sites.filter(
+        (site) =>
+            Number.isFinite(site.lat) &&
+            Number.isFinite(site.lng) &&
+            !(site.lat === 0 && site.lng === 0)
+    );
+    const lats = [...usable.map((site) => site.lat), placement.lat];
+    const lngs = [...usable.map((site) => site.lng), placement.lng];
+    const minLat = Math.max(-85, Math.min(...lats) - 1.5);
+    const maxLat = Math.min(85, Math.max(...lats) + 1.5);
+    const minLng = Math.max(-180, Math.min(...lngs) - 1.5);
+    const maxLng = Math.min(180, Math.max(...lngs) + 1.5);
+
+    return {
+        ...map,
+        center: [
+            Number(placement.lat.toFixed(5)),
+            Number(placement.lng.toFixed(5)),
+        ],
+        zoom: Math.min(map.maxZoom, Math.max(map.minZoom, 8)),
+        minZoom: Math.min(map.minZoom, 3),
+        bounds: [
+            [Number(minLat.toFixed(5)), Number(minLng.toFixed(5))],
+            [Number(maxLat.toFixed(5)), Number(maxLng.toFixed(5))],
+        ],
+    };
+};
+
+const readLegacyPersistedTopology = (
+    fallback: CustomerTopology
+): CustomerTopology | null => {
+    if (typeof window === 'undefined') return null;
     try {
-        const raw = window.localStorage.getItem(TOPOLOGY_STORAGE_KEY);
-        if (!raw) return cloneTopology(fallback);
+        const raw = window.localStorage.getItem(LEGACY_TOPOLOGY_STORAGE_KEY);
+        if (!raw) return null;
         const parsed = JSON.parse(raw) as Partial<PersistedTopologyPayload>;
         return sanitizeTopology(parsed.topology ?? parsed, fallback);
     } catch {
-        return cloneTopology(fallback);
+        return null;
     }
 };
 
-const writePersistedTopology = (topology: CustomerTopology): void => {
+const clearLegacyPersistedTopology = (): void => {
     if (typeof window === 'undefined') return;
-    window.localStorage.setItem(
-        TOPOLOGY_STORAGE_KEY,
-        JSON.stringify({
-            version: TOPOLOGY_STORAGE_VERSION,
-            topology,
-        })
-    );
+    window.localStorage.removeItem(LEGACY_TOPOLOGY_STORAGE_KEY);
 };
 
-const clearPersistedTopology = (): void => {
+const emitTopologyConfigChanged = (): void => {
     if (typeof window === 'undefined') return;
-    window.localStorage.removeItem(TOPOLOGY_STORAGE_KEY);
+    window.dispatchEvent(new CustomEvent(TOPOLOGY_CONFIG_EVENT));
+};
+
+const errorMessage = (error: unknown): string =>
+    error instanceof Error ? error.message : String(error);
+
+interface PersistedTopologyState {
+    topology: CustomerTopology;
+    sectionTitles: CustomerTopologySectionTitles;
+    isLoading: boolean;
+    error: string | null;
+    saveTopology: (next: CustomerTopology) => Promise<void>;
+    resetTopology: () => Promise<void>;
+    saveSectionTitles: (next: CustomerTopologySectionTitles) => Promise<void>;
+    reload: () => Promise<void>;
+}
+
+const buildTopologyPayload = (
+    topology: CustomerTopology,
+    sectionTitles: CustomerTopologySectionTitles
+): PersistedTopologyPayload => ({
+    version: TOPOLOGY_STORAGE_VERSION,
+    topology,
+    sectionTitles,
+});
+
+const sanitizeTopologyPayload = (
+    payload: Partial<PersistedTopologyPayload> | null | undefined,
+    fallback: CustomerTopology,
+    sectionTitleFallback: CustomerTopologySectionTitles
+): {
+    topology: CustomerTopology;
+    sectionTitles: CustomerTopologySectionTitles;
+} => ({
+    topology: sanitizeTopology(payload?.topology, fallback),
+    sectionTitles: sanitizeCustomerTopologySectionTitles(
+        payload?.sectionTitles,
+        sectionTitleFallback
+    ),
+});
+
+const writeSharedTopologyConfig = async (
+    topology: CustomerTopology,
+    sectionTitles: CustomerTopologySectionTitles
+): Promise<void> => {
+    await saveCustomerTopologyConfig(
+        buildTopologyPayload(topology, sectionTitles)
+    );
 };
 
 /**
  * Public-facing helper for the "Reset all customisations" flow on
- * the Overview page. Wipes the persisted topology so the next mount
- * of `<CustomerTopologyMap />` reads `null` from localStorage and
- * falls through to the default `CUSTOMER_TOPOLOGY` factory.
- *
- * NOTE: in-tab callers must also force a remount of the map (e.g.
- * by bumping its `key` prop) — `localStorage` `storage` events only
- * fire across tabs, not in the originating tab, so the existing
- * mounted map won't reseed itself just because storage was cleared.
+ * the Overview page. As of the shared `customer_topology.conf`
+ * migration, the canonical topology is global app state, so this
+ * helper only removes the retired per-browser localStorage payload.
+ * The Topology Editor's Factory button is the explicit global reset.
  */
 export const clearCustomerTopologyStorage = (): void => {
-    clearPersistedTopology();
+    clearLegacyPersistedTopology();
 };
 
-export const usePersistedTopology = (fallback: CustomerTopology) => {
+export const usePersistedTopology = (
+    fallback: CustomerTopology,
+    sectionTitleFallback: CustomerTopologySectionTitles =
+        DEFAULT_CUSTOMER_TOPOLOGY_SECTION_TITLES
+): PersistedTopologyState => {
+    const defaultSectionTitles = useMemo(
+        () => sanitizeCustomerTopologySectionTitles(sectionTitleFallback),
+        [sectionTitleFallback]
+    );
     const [topology, setTopology] = useState<CustomerTopology>(() =>
-        readPersistedTopology(fallback)
+        cloneTopology(fallback)
+    );
+    const [sectionTitles, setSectionTitles] =
+        useState<CustomerTopologySectionTitles>(() => defaultSectionTitles);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const applyPayload = useCallback(
+        (payload: Partial<PersistedTopologyPayload> | null | undefined) => {
+            const sanitized = sanitizeTopologyPayload(
+                payload,
+                fallback,
+                defaultSectionTitles
+            );
+            setTopology(sanitized.topology);
+            setSectionTitles(sanitized.sectionTitles);
+        },
+        [defaultSectionTitles, fallback]
     );
 
+    const reload = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const payload = await loadCustomerTopologyConfig();
+            if (payload) {
+                applyPayload(payload);
+            } else {
+                const legacyTopology = readLegacyPersistedTopology(fallback);
+                applyPayload(
+                    legacyTopology
+                        ? {
+                              version: TOPOLOGY_STORAGE_VERSION,
+                              topology: legacyTopology,
+                              sectionTitles: defaultSectionTitles,
+                          }
+                        : {
+                              version: TOPOLOGY_STORAGE_VERSION,
+                              topology: fallback,
+                              sectionTitles: defaultSectionTitles,
+                          }
+                );
+            }
+            setError(null);
+        } catch (err) {
+            const legacyTopology = readLegacyPersistedTopology(fallback);
+            applyPayload(
+                legacyTopology
+                    ? {
+                          version: TOPOLOGY_STORAGE_VERSION,
+                          topology: legacyTopology,
+                          sectionTitles: defaultSectionTitles,
+                      }
+                    : {
+                          version: TOPOLOGY_STORAGE_VERSION,
+                          topology: fallback,
+                          sectionTitles: defaultSectionTitles,
+                      }
+            );
+            setError(errorMessage(err));
+        } finally {
+            setIsLoading(false);
+        }
+    }, [applyPayload, defaultSectionTitles, fallback]);
+
     useEffect(() => {
-        setTopology(readPersistedTopology(fallback));
-    }, [fallback]);
+        void reload();
+    }, [reload]);
 
     useEffect(() => {
         if (typeof window === 'undefined') return undefined;
-        const onStorage = (event: StorageEvent) => {
-            if (event.key === TOPOLOGY_STORAGE_KEY) {
-                setTopology(readPersistedTopology(fallback));
-            }
+        const onConfigChanged = () => {
+            void reload();
         };
-        window.addEventListener('storage', onStorage);
-        return () => window.removeEventListener('storage', onStorage);
-    }, [fallback]);
+        window.addEventListener(TOPOLOGY_CONFIG_EVENT, onConfigChanged);
+        return () =>
+            window.removeEventListener(TOPOLOGY_CONFIG_EVENT, onConfigChanged);
+    }, [reload]);
 
     const saveTopology = useCallback(
-        (next: CustomerTopology) => {
+        async (next: CustomerTopology) => {
             const sanitized = sanitizeTopology(next, fallback);
+            const previousTopology = topology;
             setTopology(sanitized);
-            writePersistedTopology(sanitized);
+            setError(null);
+            try {
+                await writeSharedTopologyConfig(sanitized, sectionTitles);
+                clearLegacyPersistedTopology();
+                emitTopologyConfigChanged();
+            } catch (err) {
+                setTopology(previousTopology);
+                setError(errorMessage(err));
+                throw err;
+            }
         },
-        [fallback]
+        [fallback, sectionTitles, topology]
     );
 
-    const resetTopology = useCallback(() => {
+    const resetTopology = useCallback(async () => {
         const factory = cloneTopology(fallback);
-        clearPersistedTopology();
+        const previousTopology = topology;
         setTopology(factory);
-    }, [fallback]);
+        setError(null);
+        try {
+            await writeSharedTopologyConfig(factory, sectionTitles);
+            clearLegacyPersistedTopology();
+            emitTopologyConfigChanged();
+        } catch (err) {
+            setTopology(previousTopology);
+            setError(errorMessage(err));
+            throw err;
+        }
+    }, [fallback, sectionTitles, topology]);
 
-    return { topology, saveTopology, resetTopology };
+    const saveSectionTitles = useCallback(
+        async (next: CustomerTopologySectionTitles) => {
+            const sanitized = sanitizeCustomerTopologySectionTitles(
+                next,
+                defaultSectionTitles
+            );
+            const previousSectionTitles = sectionTitles;
+            setSectionTitles(sanitized);
+            setError(null);
+            try {
+                await writeSharedTopologyConfig(topology, sanitized);
+                emitTopologyConfigChanged();
+            } catch (err) {
+                setSectionTitles(previousSectionTitles);
+                setError(errorMessage(err));
+                throw err;
+            }
+        },
+        [defaultSectionTitles, sectionTitles, topology]
+    );
+
+    return {
+        topology,
+        sectionTitles,
+        isLoading,
+        error,
+        saveTopology,
+        resetTopology,
+        saveSectionTitles,
+        reload,
+    };
 };
 
 /**
@@ -641,7 +1114,8 @@ export const usePersistedTopology = (fallback: CustomerTopology) => {
  */
 type TopologyAnimationLevel = 'on' | 'subtle' | 'off';
 
-const TOPOLOGY_ANIMATION_LEVEL_KEY = 'florida-topology-animation-level';
+const TOPOLOGY_ANIMATION_LEVEL_KEY = 'florida-topology-animation-level.v2';
+const DEFAULT_TOPOLOGY_ANIMATION_LEVEL: TopologyAnimationLevel = 'subtle';
 const TOPOLOGY_ANIMATION_LEVELS: TopologyAnimationLevel[] = [
     'on',
     'subtle',
@@ -664,7 +1138,7 @@ const readStoredAnimationLevel = (): TopologyAnimationLevel => {
     } catch {
         /* localStorage may be unavailable (private mode etc.) */
     }
-    return 'on';
+    return DEFAULT_TOPOLOGY_ANIMATION_LEVEL;
 };
 
 const subscribeStoredAnimationLevel = (
@@ -748,6 +1222,30 @@ const TOPOLOGY_ANIMATION_LEVEL_LABELS: Record<TopologyAnimationLevel, string> =
         off: 'Animations: Off',
     };
 
+type TopologyRoleLegendMode = 'compact' | 'expanded';
+
+const TOPOLOGY_ROLE_LEGEND_KEY = 'florida-topology-role-legend.v1';
+
+const readStoredRoleLegendMode = (): TopologyRoleLegendMode => {
+    if (typeof window === 'undefined') return 'compact';
+    try {
+        const stored = window.localStorage.getItem(TOPOLOGY_ROLE_LEGEND_KEY);
+        if (stored === 'compact' || stored === 'expanded') return stored;
+    } catch {
+        /* localStorage may be unavailable (private mode etc.) */
+    }
+    return 'compact';
+};
+
+const writeStoredRoleLegendMode = (mode: TopologyRoleLegendMode): void => {
+    if (typeof window === 'undefined') return;
+    try {
+        window.localStorage.setItem(TOPOLOGY_ROLE_LEGEND_KEY, mode);
+    } catch {
+        /* swallow */
+    }
+};
+
 const topologyAnimationCss = `
     @keyframes customer-topology-pulse {
         0%, 100% { stroke-opacity: 0.55; }
@@ -795,16 +1293,20 @@ const topologyAnimationCss = `
     }
     .customer-topology-link-hitbox {
         cursor: pointer;
+        pointer-events: stroke;
     }
     .customer-topology-link-shadow {
         filter: blur(2px);
         mix-blend-mode: multiply;
+        pointer-events: none;
     }
     .customer-topology-link-halo {
         filter: drop-shadow(0 0 8px currentColor);
+        pointer-events: none;
     }
     .customer-topology-link-highlight {
         filter: drop-shadow(0 1px 2px rgba(15, 23, 42, 0.18));
+        pointer-events: none;
     }
     .customer-topology-link-core {
         filter:
@@ -1056,6 +1558,13 @@ const topologyAnimationCss = `
         animation-duration: 2.6s;
         opacity: 0.75;
     }
+    .customer-topology-anim--subtle .customer-topology-radiate,
+    .customer-topology-anim--subtle .customer-topology-alert-ring,
+    .customer-topology-anim--subtle .customer-topology-site-wave,
+    .customer-topology-anim--subtle .customer-topology-site-core,
+    .customer-topology-anim--subtle .customer-topology-site-core::before {
+        animation: none !important;
+    }
     /* Off level + prefers-reduced-motion: halt everything */
     .customer-topology-anim--off .customer-topology-radiate,
     .customer-topology-anim--off .customer-topology-alert-ring,
@@ -1080,7 +1589,7 @@ const topologyAnimationCss = `
 `;
 
 interface TileLayerPreset {
-    id: 'street' | 'satellite';
+    id: 'street' | 'satellite' | 'terrain';
     label: string;
     light: string;
     dark: string;
@@ -1105,7 +1614,18 @@ const TILE_LAYER_PRESETS: TileLayerPreset[] = [
             'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
         attribution: 'Tiles &copy; Esri',
     },
+    {
+        id: 'terrain',
+        label: 'Terrain',
+        light:
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+        dark:
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+        attribution: 'Tiles &copy; Esri',
+    },
 ];
+
+const DEFAULT_TILE_LAYER_PRESET_ID: TileLayerPreset['id'] = 'terrain';
 
 const escapeHtml = (value: string): string =>
     value.replace(/[&<>"']/g, (ch) => {
@@ -1635,9 +2155,6 @@ const inferRoleFromName = (name: string): TopologyRole => {
     return 'branch';
 };
 
-const isTopologyRoleValue = (value: unknown): value is TopologyRole =>
-    typeof value === 'string' && (TOPOLOGY_ROLES as readonly string[]).includes(value);
-
 const buildShortName = (name: string): string => {
     const trimmed = name.trim();
     if (!trimmed) return '?';
@@ -1667,9 +2184,7 @@ const parseSiteRowAsDiscovered = (
     const name =
         textFromRow(row, ['siteName', 'site_name', 'name', 'displayName']) ?? siteId;
     const rawRole = textFromRow(row, ['role', 'siteRole', 'site_role']);
-    const role: TopologyRole = isTopologyRoleValue(rawRole)
-        ? rawRole
-        : inferRoleFromName(name);
+    const role = normalizeTopologyRoleInput(rawRole, inferRoleFromName(name));
     const shortName = (
         textFromRow(row, ['shortName', 'short_name', 'siteCode', 'site_code']) ??
         buildShortName(name)
@@ -1936,7 +2451,7 @@ const createSiteIcon = (
 ) => {
     const safeName = escapeHtml(site.name);
     const safeShortName = escapeHtml(site.shortName);
-    const roleChrome = ROLE_BEACON_CHROME[site.role];
+    const roleChrome = topologyRoleBeaconChrome(site.role);
     const ringColor = STATUS_RING_COLOR[site.status];
     const haloColor = STATUS_HALO_RGBA[site.status];
     const waveSpeed = STATUS_MARKER_SPEED[site.status];
@@ -2004,6 +2519,79 @@ const createSiteIcon = (
         iconAnchor: [110, 25],
     });
 };
+
+interface TopologySiteMarkerProps {
+    site: TopologySite;
+    index: number;
+    isSelected: boolean;
+    isSpotlight: boolean;
+    isDark: boolean;
+    animationLevel: TopologyAnimationLevel;
+    shouldAnimateMarkerEntrance: (
+        siteId: string,
+        level: TopologyAnimationLevel
+    ) => boolean;
+    onSelect: (site: TopologySite) => void;
+}
+
+const TopologySiteMarker: React.FC<TopologySiteMarkerProps> = React.memo(
+    ({
+        site,
+        index,
+        isSelected,
+        isSpotlight,
+        isDark,
+        animationLevel,
+        shouldAnimateMarkerEntrance,
+        onSelect,
+    }) => {
+        const animateEntrance = useMemo(
+            () => shouldAnimateMarkerEntrance(site.id, animationLevel),
+            [animationLevel, shouldAnimateMarkerEntrance, site.id]
+        );
+        const icon = useMemo(
+            () =>
+                createSiteIcon(
+                    site,
+                    isSelected,
+                    isSpotlight,
+                    isDark,
+                    animateEntrance,
+                    index * 90
+                ),
+            [
+                animateEntrance,
+                index,
+                isDark,
+                isSelected,
+                isSpotlight,
+                site.id,
+                site.name,
+                site.role,
+                site.shortName,
+                site.status,
+            ]
+        );
+        const position = useMemo<[number, number]>(
+            () => [site.lat, site.lng],
+            [site.lat, site.lng]
+        );
+        const eventHandlers = useMemo(
+            () => ({
+                click: () => onSelect(site),
+            }),
+            [onSelect, site]
+        );
+
+        return (
+            <Marker
+                position={position}
+                icon={icon}
+                eventHandlers={eventHandlers}
+            />
+        );
+    }
+);
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -2135,13 +2723,16 @@ const TopologyLinkPath: React.FC<TopologyLinkPathProps> = ({
                 positions={positions}
                 pathOptions={{
                     color: '#ffffff',
-                    weight: 16,
+                    weight: 24,
                     opacity: 0.01,
+                    lineCap: 'round',
+                    lineJoin: 'round',
                     className: 'customer-topology-link-hitbox',
                 }}
                 eventHandlers={{ click: handleClick }}
             />
             <Polyline
+                interactive={false}
                 positions={positions}
                 pathOptions={{
                     color: '#0f172a',
@@ -2153,6 +2744,7 @@ const TopologyLinkPath: React.FC<TopologyLinkPathProps> = ({
                 }}
             />
             <Polyline
+                interactive={false}
                 positions={positions}
                 pathOptions={{
                     color,
@@ -2166,6 +2758,7 @@ const TopologyLinkPath: React.FC<TopologyLinkPathProps> = ({
                 }}
             />
             <Polyline
+                interactive={false}
                 positions={positions}
                 pathOptions={{
                     color: '#ffffff',
@@ -2281,16 +2874,37 @@ interface LinkPacketLayerProps {
     animationLevel: TopologyAnimationLevel;
 }
 
+const linkPacketPathD = (
+    map: L.Map,
+    source: TopologySite,
+    target: TopologySite
+): string | null => {
+    const points = computeBezierLine(
+        [source.lat, source.lng],
+        [target.lat, target.lng]
+    );
+    if (points.length < 2) return null;
+    const layerPoints = points.map(([lat, lng]) =>
+        map.latLngToLayerPoint([lat, lng])
+    );
+    const head = layerPoints[0];
+    const tail = layerPoints
+        .slice(1)
+        .map((p) => `L${p.x},${p.y}`)
+        .join(' ');
+    return `M${head.x},${head.y} ${tail}`;
+};
+
 /**
  * Renders bright "packets" (small SVG circles) traveling end-to-end along
  * each link's bezier curve, color-coded by health status and density-tuned
  * by the active animation level.
  *
- * The implementation lives inside a custom Leaflet pane (zIndex 410, between
- * Leaflet's default overlayPane=400 and markerPane=600) so packets appear
- * above the polyline shells but below the site markers and popups. Custom
- * panes are translated by Leaflet automatically on pan, so we only need to
- * recompute path geometry on `zoomend` and `viewreset` — pan is free.
+ * The implementation lives inside Leaflet's overlay SVG so packets appear
+ * above the polyline shells but below the site markers and popups. Leaflet
+ * moves the SVG during pan, then re-anchors it after drag end; we update the
+ * referenced path geometry in place on those map events so packet animations
+ * keep running without a visible restart.
  *
  * Animation itself uses SVG <animateMotion> + <mpath> for two reasons:
  *   1. Consistency with the existing SMIL approach used by TopologyLinkPath
@@ -2329,8 +2943,9 @@ const LinkPacketLayer: React.FC<LinkPacketLayerProps> = ({
     const map = useMap();
     const groupRef = useRef<SVGGElement | null>(null);
     // version is bumped any time we want the imperative re-render effect
-    // below to run again — i.e. on the very first attach AND on every
-    // map zoomend / viewreset / moveend / resize event.
+    // below to run again, i.e. on the very first attach. Map movement
+    // updates the existing hidden path geometry in-place so SMIL packet
+    // animations continue smoothly instead of restarting after a drag.
     const [version, bumpVersion] = useReducer((n: number) => n + 1, 0);
 
     // Step 1: find Leaflet's existing overlay <svg> and append our <g>.
@@ -2372,24 +2987,50 @@ const LinkPacketLayer: React.FC<LinkPacketLayerProps> = ({
         };
     }, [map]);
 
-    // Step 2: re-render packets whenever the map's world↔pixel mapping
-    // could have changed. Pan moves the overlay SVG via a CSS transform
-    // (no re-render needed for that), but `viewreset` fires when Leaflet
-    // re-anchors the SVG and `zoomend` fires after each zoom completes —
-    // both times we need to recompute layer-point coords.
+    // Step 2: update packet path geometry whenever Leaflet re-anchors
+    // the SVG frame. This preserves the existing <animateMotion> nodes,
+    // avoiding the visible flicker caused by tearing them down on every
+    // pan / resize.
     useEffect(() => {
-        const handler = () => bumpVersion();
-        map.on('zoomend', handler);
-        map.on('viewreset', handler);
-        map.on('moveend', handler);
-        map.on('resize', handler);
-        return () => {
-            map.off('zoomend', handler);
-            map.off('viewreset', handler);
-            map.off('moveend', handler);
-            map.off('resize', handler);
+        let animationFrame = 0;
+        const updateGeometry = () => {
+            animationFrame = 0;
+            const group = groupRef.current;
+            if (!group || animationLevel === 'off') return;
+            const paths = new Map(
+                Array.from(
+                    group.querySelectorAll<SVGPathElement>(
+                        'path[data-customer-topology-packet-link-id]'
+                    )
+                ).map((path) => [
+                    path.getAttribute('data-customer-topology-packet-link-id'),
+                    path,
+                ])
+            );
+            for (const { link, source, target } of linkSegments) {
+                const path = paths.get(link.id);
+                if (!path) continue;
+                const nextD = linkPacketPathD(map, source, target);
+                if (nextD) path.setAttribute('d', nextD);
+            }
         };
-    }, [map]);
+        const scheduleGeometryUpdate = () => {
+            if (animationFrame) return;
+            animationFrame = window.requestAnimationFrame(updateGeometry);
+        };
+
+        map.on('moveend', scheduleGeometryUpdate);
+        map.on('zoomend', scheduleGeometryUpdate);
+        map.on('viewreset', scheduleGeometryUpdate);
+        map.on('resize', scheduleGeometryUpdate);
+        return () => {
+            if (animationFrame) window.cancelAnimationFrame(animationFrame);
+            map.off('moveend', scheduleGeometryUpdate);
+            map.off('zoomend', scheduleGeometryUpdate);
+            map.off('viewreset', scheduleGeometryUpdate);
+            map.off('resize', scheduleGeometryUpdate);
+        };
+    }, [animationLevel, linkSegments, map]);
 
     // Step 3: imperatively rebuild the packet DOM whenever inputs change.
     // We blow away the previous children and rebuild — `<animateMotion>`
@@ -2412,26 +3053,15 @@ const LinkPacketLayer: React.FC<LinkPacketLayerProps> = ({
         for (const { link, source, target } of linkSegments) {
             const profile = packetProfile(link.status, animationLevel);
             if (!profile) continue;
-            const points = computeBezierLine(
-                [source.lat, source.lng],
-                [target.lat, target.lng]
-            );
-            if (points.length < 2) continue;
-            const layerPoints = points.map(([lat, lng]) =>
-                map.latLngToLayerPoint([lat, lng])
-            );
-            const head = layerPoints[0];
-            const tail = layerPoints
-                .slice(1)
-                .map((p) => `L${p.x},${p.y}`)
-                .join(' ');
-            const d = `M${head.x},${head.y} ${tail}`;
+            const d = linkPacketPathD(map, source, target);
+            if (!d) continue;
 
             const pathId = `customer-topology-packet-path-${link.id}`;
             const path = document.createElementNS(SVG_NS, 'path');
             path.setAttribute('id', pathId);
             path.setAttribute('d', d);
             path.setAttribute('fill', 'none');
+            path.setAttribute('data-customer-topology-packet-link-id', link.id);
             defs.appendChild(path);
 
             // Round-trip motion: one packet now travels source → target → source.
@@ -2489,6 +3119,7 @@ const MapFrame: React.FC<MapFrameProps> = ({ topology, autoFitSites }) => {
     const map = useMap();
     const [centerLat, centerLng] = topology.map.center;
     const zoom = topology.map.zoom;
+    const [[minLat, minLng], [maxLat, maxLng]] = topology.map.bounds;
     const autoFitAppliedRef = useRef(false);
 
     // Track the last view we *programmatically* set so subsequent renders
@@ -2510,29 +3141,63 @@ const MapFrame: React.FC<MapFrameProps> = ({ topology, autoFitSites }) => {
     } | null>(null);
 
     useEffect(() => {
-        const apply = () => {
-            map.invalidateSize();
-            const last = lastAppliedViewRef.current;
-            if (
-                !last ||
-                last.lat !== centerLat ||
-                last.lng !== centerLng ||
-                last.zoom !== zoom
-            ) {
-                map.setView([centerLat, centerLng], zoom, { animate: false });
-                lastAppliedViewRef.current = {
-                    lat: centerLat,
-                    lng: centerLng,
-                    zoom,
-                };
-            }
-        };
-        apply();
-        const container = map.getContainer();
-        const observer = new ResizeObserver(() => apply());
-        observer.observe(container);
-        return () => observer.disconnect();
+        const last = lastAppliedViewRef.current;
+        if (
+            !last ||
+            last.lat !== centerLat ||
+            last.lng !== centerLng ||
+            last.zoom !== zoom
+        ) {
+            map.setView([centerLat, centerLng], zoom, { animate: false });
+            lastAppliedViewRef.current = {
+                lat: centerLat,
+                lng: centerLng,
+                zoom,
+            };
+        }
     }, [centerLat, centerLng, map, zoom]);
+
+    useEffect(() => {
+        const container = map.getContainer();
+        let animationFrame = 0;
+        let lastWidth = 0;
+        let lastHeight = 0;
+
+        const invalidate = () => {
+            animationFrame = 0;
+            const rect = container.getBoundingClientRect();
+            const width = Math.round(rect.width);
+            const height = Math.round(rect.height);
+            if (width === lastWidth && height === lastHeight) return;
+            lastWidth = width;
+            lastHeight = height;
+            map.invalidateSize({
+                animate: false,
+                pan: false,
+                debounceMoveend: true,
+            });
+        };
+
+        const scheduleInvalidate = () => {
+            if (animationFrame) return;
+            animationFrame = window.requestAnimationFrame(invalidate);
+        };
+
+        scheduleInvalidate();
+        const observer = new ResizeObserver(scheduleInvalidate);
+        observer.observe(container);
+        return () => {
+            if (animationFrame) window.cancelAnimationFrame(animationFrame);
+            observer.disconnect();
+        };
+    }, [map]);
+
+    useEffect(() => {
+        const nextBounds = L.latLngBounds([minLat, minLng], [maxLat, maxLng]);
+        if (nextBounds.isValid()) {
+            map.setMaxBounds(nextBounds);
+        }
+    }, [map, minLat, minLng, maxLat, maxLng]);
 
     useEffect(() => {
         if (autoFitAppliedRef.current) return;
@@ -2617,12 +3282,18 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     const { topology: storedTopology, saveTopology, resetTopology } =
         usePersistedTopology(topology);
     const [isEditorOpen, setIsEditorOpen] = useState(false);
+    const [isEditorSaving, setIsEditorSaving] = useState(false);
+    const [editorPersistenceError, setEditorPersistenceError] = useState<
+        string | null
+    >(null);
     const [draftTopology, setDraftTopology] = useState<CustomerTopology>(() =>
         cloneTopology(storedTopology)
     );
     const [pickSiteId, setPickSiteId] = useState<string | null>(null);
+    const [roleLegendMode, setRoleLegendMode] =
+        useState<TopologyRoleLegendMode>(readStoredRoleLegendMode);
     const [tilePresetId, setTilePresetId] = useState<TileLayerPreset['id']>(
-        TILE_LAYER_PRESETS[0].id
+        DEFAULT_TILE_LAYER_PRESET_ID
     );
     const [catalogueByName, setCatalogueByName] = useState<Record<
         string,
@@ -2658,6 +3329,15 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         setLevel: setAnimationLevel,
         reducedMotion,
     } = useTopologyAnimationLevel();
+    const visualAnimationLevel: TopologyAnimationLevel = isEditorOpen
+        ? 'off'
+        : animationLevel;
+
+    const setRoleLegendExpanded = useCallback((expanded: boolean) => {
+        const next: TopologyRoleLegendMode = expanded ? 'expanded' : 'compact';
+        setRoleLegendMode(next);
+        writeStoredRoleLegendMode(next);
+    }, []);
 
     // Track which sites we've already shown the entrance animation for so a
     // later toggle of animation level doesn't restart drop-in for everyone.
@@ -3268,7 +3948,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
             : resolvedSelected?.kind === 'link'
             ? resolvedSelected.link.searchName
             : undefined;
-    const selectedSearchName = selectedItemSearchName || telemetrySearchName;
+    const selectedSearchName = selectedItemSearchName?.trim() || undefined;
     const selectedRecord =
         selectedSearchName && catalogueByName
             ? catalogueByName[selectedSearchName] ?? null
@@ -3300,7 +3980,12 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     );
 
     useEffect(() => {
-        if (spotlightIntervalMs <= 0 || spotlightOrder.length === 0) {
+        if (
+            visualAnimationLevel !== 'on' ||
+            isEditorOpen ||
+            spotlightIntervalMs <= 0 ||
+            spotlightOrder.length === 0
+        ) {
             return undefined;
         }
         let idx = 0;
@@ -3314,7 +3999,14 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         tick();
         const id = window.setInterval(tick, spotlightIntervalMs);
         return () => window.clearInterval(id);
-    }, [spotlightIntervalMs, spotlightOrder, paused, resolvedSelected]);
+    }, [
+        isEditorOpen,
+        spotlightIntervalMs,
+        spotlightOrder,
+        paused,
+        resolvedSelected,
+        visualAnimationLevel,
+    ]);
 
     // Escape-to-dismiss + click-outside-to-dismiss now both live inside
     // `SelectionCard` so the panel's lifecycle behaviour is colocated
@@ -3326,15 +4018,18 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
 
     const tilePreset =
         TILE_LAYER_PRESETS.find((preset) => preset.id === tilePresetId) ??
+        TILE_LAYER_PRESETS.find((preset) => preset.id === DEFAULT_TILE_LAYER_PRESET_ID) ??
         TILE_LAYER_PRESETS[0];
     const tileUrl = isDark ? tilePreset.dark : tilePreset.light;
     const bounds = L.latLngBounds(
         resolvedTopology.map.bounds[0],
         resolvedTopology.map.bounds[1]
     );
+    const roleLegendExpanded = roleLegendMode === 'expanded';
+    const roleLegendPreviewSites = resolvedTopology.sites.slice(0, 6);
     const overlayChrome = isDark
-        ? 'bg-slate-900/90 border-slate-700 text-slate-200 backdrop-blur-md'
-        : 'bg-white/95 border-slate-200 text-slate-700 backdrop-blur-md';
+        ? 'bg-slate-900/75 border-slate-700/80 text-slate-200 backdrop-blur-md'
+        : 'bg-white/78 border-sky-200/80 text-slate-700 backdrop-blur-md';
     const buttonChrome = isDark
         ? 'bg-slate-900/90 border-slate-700 hover:bg-slate-800 text-slate-200'
         : 'bg-white/95 border-slate-200 hover:bg-slate-50 text-slate-600';
@@ -3371,7 +4066,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         setSelected(null);
     }, []);
 
-    const selectSite = (site: TopologySite) => {
+    const selectSite = useCallback((site: TopologySite) => {
         // Mutate the pause ref *outside* the setState updater because
         // strict-mode dev builds invoke updater functions twice for
         // detection — and a ref mutation inside the updater would
@@ -3382,14 +4077,14 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
             selected?.kind === 'site' && selected.site.id === site.id;
         pauseUntilRef.current = isClose ? 0 : Date.now() + spotlightPauseMs;
         setSelected(isClose ? null : { kind: 'site', site });
-    };
+    }, [selected, spotlightPauseMs]);
 
-    const selectLink = (link: TopologyLink) => {
+    const selectLink = useCallback((link: TopologyLink) => {
         const isClose =
             selected?.kind === 'link' && selected.link.id === link.id;
         pauseUntilRef.current = isClose ? 0 : Date.now() + spotlightPauseMs;
         setSelected(isClose ? null : { kind: 'link', link });
-    };
+    }, [selected, spotlightPauseMs]);
 
     const openEditor = () => {
         // Opening the editor closes any open selection card; that's
@@ -3400,19 +4095,36 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         pauseUntilRef.current = 0;
         setSelected(null);
         setDraftTopology(cloneTopology(storedTopology));
+        setEditorPersistenceError(null);
         setIsEditorOpen(true);
     };
 
-    const saveEditor = () => {
-        saveTopology(draftTopology);
-        setPickSiteId(null);
-        setIsEditorOpen(false);
+    const saveEditor = async () => {
+        setIsEditorSaving(true);
+        setEditorPersistenceError(null);
+        try {
+            await saveTopology(draftTopology);
+            setPickSiteId(null);
+            setIsEditorOpen(false);
+        } catch (err) {
+            setEditorPersistenceError(errorMessage(err));
+        } finally {
+            setIsEditorSaving(false);
+        }
     };
 
-    const resetEditor = () => {
-        resetTopology();
-        setPickSiteId(null);
-        setIsEditorOpen(false);
+    const resetEditor = async () => {
+        setIsEditorSaving(true);
+        setEditorPersistenceError(null);
+        try {
+            await resetTopology();
+            setPickSiteId(null);
+            setIsEditorOpen(false);
+        } catch (err) {
+            setEditorPersistenceError(errorMessage(err));
+        } finally {
+            setIsEditorSaving(false);
+        }
     };
 
     const applyMapPick = (lat: number, lng: number) => {
@@ -3435,7 +4147,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         <div
             className={cn(
                 'relative w-full h-full min-h-[320px] overflow-hidden border rounded-xl shadow-inner group',
-                `customer-topology-anim--${animationLevel}`,
+                `customer-topology-anim--${visualAnimationLevel}`,
                 isDark
                     ? 'bg-slate-900 border-slate-800'
                     : 'bg-slate-100 border-slate-200'
@@ -3443,7 +4155,10 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         >
             <style>{topologyAnimationCss}</style>
 
-            {!resolvedSelected && spotlightSite && (
+            {visualAnimationLevel === 'on' &&
+                !isEditorOpen &&
+                !resolvedSelected &&
+                spotlightSite && (
                 <div
                     className={cn(
                         'absolute top-3 left-3 z-[999] px-2 py-1 rounded-md border text-[9px] font-bold uppercase tracking-widest pointer-events-none',
@@ -3458,7 +4173,9 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                                 'w-1.5 h-1.5 rounded-full',
                                 paused
                                     ? 'bg-slate-400'
-                                    : 'bg-emerald-500 animate-pulse'
+                                    : visualAnimationLevel === 'on'
+                                    ? 'bg-emerald-500 animate-pulse'
+                                    : 'bg-emerald-500'
                             )}
                         />
                         {paused
@@ -3466,7 +4183,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                             : `Watching ${spotlightSite.shortName}`}
                     </span>
                 </div>
-            )}
+                )}
 
             <MapContainer
                 center={resolvedTopology.map.center}
@@ -3508,19 +4225,21 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                             resolvedSelected.link.id === link.id
                         }
                         onSelect={selectLink}
-                        animationLevel={animationLevel}
+                        animationLevel={visualAnimationLevel}
                     />
                 ))}
 
                 <LinkPacketLayer
                     linkSegments={linkSegments}
-                    animationLevel={animationLevel}
+                    animationLevel={visualAnimationLevel}
                 />
 
 
                 {spotlightSite &&
                     (spotlightSite.status === 'critical' ||
                         spotlightSite.status === 'warning') &&
+                    visualAnimationLevel === 'on' &&
+                    !isEditorOpen &&
                     !resolvedSelected && (
                         <Circle
                             key={`spotlight-${spotlightSite.id}`}
@@ -3538,25 +4257,24 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                     )}
 
                 {resolvedTopology.sites.map((site, index) => (
-                    <Marker
+                    <TopologySiteMarker
                         key={site.id}
-                        position={[site.lat, site.lng]}
-                        icon={createSiteIcon(
-                            site,
+                        site={site}
+                        index={index}
+                        isSelected={
                             resolvedSelected?.kind === 'site' &&
-                                resolvedSelected.site.id === site.id,
-                            spotlightSite?.id === site.id && !resolvedSelected,
-                            isDark,
-                            // Entrance animation runs only on the first mount of
-                            // each site marker. We tie it to a stable per-site
-                            // ref so toggling animation level later does not
-                            // re-trigger a now-distracting drop-in.
-                            shouldAnimateMarkerEntrance(site.id, animationLevel),
-                            index * 90
-                        )}
-                        eventHandlers={{
-                            click: () => selectSite(site),
-                        }}
+                            resolvedSelected.site.id === site.id
+                        }
+                        isSpotlight={
+                            !isEditorOpen &&
+                            visualAnimationLevel === 'on' &&
+                            spotlightSite?.id === site.id &&
+                            !resolvedSelected
+                        }
+                        isDark={isDark}
+                        animationLevel={visualAnimationLevel}
+                        shouldAnimateMarkerEntrance={shouldAnimateMarkerEntrance}
+                        onSelect={selectSite}
                     />
                 ))}
             </MapContainer>
@@ -3584,8 +4302,11 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 onTopologyChange={setDraftTopology}
                 onSave={saveEditor}
                 onResetFactory={resetEditor}
+                isSaving={isEditorSaving}
+                saveError={editorPersistenceError}
                 onClose={() => {
                     setPickSiteId(null);
+                    setEditorPersistenceError(null);
                     setIsEditorOpen(false);
                 }}
                 catalogueByName={catalogueByName}
@@ -3593,27 +4314,79 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
             />
 
             <div className="absolute bottom-6 left-4 z-[1000] space-y-3 pointer-events-auto">
-                <div
-                    className={cn(
-                        'border p-3 rounded-lg shadow-lg max-w-[170px]',
-                        overlayChrome
-                    )}
-                >
-                    <h5 className="text-[10px] font-black uppercase tracking-[0.2em] mb-3 text-slate-400">
-                        Site Roles
-                    </h5>
-                    <div className="space-y-2">
-                        {resolvedTopology.sites.map((site) => (
-                            <LegendRow
-                                key={site.id}
-                                color={ROLE_DOT_CLASS[site.role]}
-                                label={ROLE_LABEL[site.role]}
-                                id={site.shortName}
-                                isDark={isDark}
-                            />
-                        ))}
+                {roleLegendExpanded ? (
+                    <div
+                        className={cn(
+                            'border p-3 rounded-xl shadow-xl max-w-[190px] transition-all',
+                            overlayChrome
+                        )}
+                    >
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                            <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                                Site Roles
+                            </h5>
+                            <button
+                                type="button"
+                                onClick={() => setRoleLegendExpanded(false)}
+                                title="Collapse site roles"
+                                aria-label="Collapse site roles"
+                                className={cn(
+                                    'rounded-md p-1 transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                                    isDark
+                                        ? 'hover:bg-slate-800 text-slate-400 hover:text-slate-100'
+                                        : 'hover:bg-sky-50 text-slate-400 hover:text-sky-700'
+                                )}
+                            >
+                                <ChevronRight className="h-3.5 w-3.5 rotate-180" />
+                            </button>
+                        </div>
+                        <div className="space-y-2">
+                            {resolvedTopology.sites.map((site) => (
+                                <LegendRow
+                                    key={site.id}
+                                    color={topologyRoleDotClass(site.role)}
+                                    label={topologyRoleLabel(site.role)}
+                                    id={site.shortName}
+                                    isDark={isDark}
+                                />
+                            ))}
+                        </div>
                     </div>
-                </div>
+                ) : (
+                    <button
+                        type="button"
+                        onClick={() => setRoleLegendExpanded(true)}
+                        title="Show site roles"
+                        aria-label="Show site roles"
+                        aria-expanded={false}
+                        className={cn(
+                            'group flex max-w-[190px] items-center gap-2 rounded-full border px-2.5 py-2 shadow-lg transition-all focus:outline-none focus:ring-1 focus:ring-sky-400',
+                            overlayChrome
+                        )}
+                    >
+                        <span className="text-[9px] font-black uppercase tracking-[0.18em] text-sky-700 dark:text-sky-300">
+                            Roles
+                        </span>
+                        <span className="flex -space-x-1">
+                            {roleLegendPreviewSites.map((site) => (
+                                <span
+                                    key={site.id}
+                                    className={cn(
+                                        'h-2.5 w-2.5 rounded-full border border-white shadow-sm dark:border-slate-900',
+                                        topologyRoleDotClass(site.role)
+                                    )}
+                                    title={`${site.shortName}: ${topologyRoleLabel(
+                                        site.role
+                                    )}`}
+                                />
+                            ))}
+                        </span>
+                        <span className="rounded-full bg-sky-500/12 px-1.5 py-0.5 text-[9px] font-black text-sky-700 dark:bg-sky-400/15 dark:text-sky-200">
+                            {resolvedTopology.sites.length}
+                        </span>
+                        <ChevronRight className="h-3.5 w-3.5 text-slate-400 transition-transform group-hover:translate-x-0.5" />
+                    </button>
+                )}
 
                 <button
                     type="button"
@@ -3883,6 +4656,36 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                 >
                     {sorted.length} of {catalogue.length}
                 </span>
+                {currentSearchName ? (
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setCustomDraft('');
+                            onPick('');
+                        }}
+                        className={cn(
+                            'inline-flex items-center gap-1 rounded-md border px-1.5 py-1 text-[9px] font-black uppercase tracking-wider transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                            isDark
+                                ? 'border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800'
+                                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-100'
+                        )}
+                        title={`Remove the search binding from this ${label}`}
+                    >
+                        <X className="w-3 h-3" />
+                        Unbind
+                    </button>
+                ) : (
+                    <span
+                        className={cn(
+                            'rounded-md border px-1.5 py-1 text-[9px] font-black uppercase tracking-wider',
+                            isDark
+                                ? 'border-slate-800 text-slate-500'
+                                : 'border-slate-200 text-slate-400'
+                        )}
+                    >
+                        Optional
+                    </span>
+                )}
             </div>
 
             <div className="relative">
@@ -4239,7 +5042,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                                     onPick(customDraft.trim());
                                 }
                             }}
-                            placeholder="e.g. Overview - Site Tallahassee Health"
+                            placeholder="e.g. Overview - Site Health"
                             className={cn(
                                 'flex-1 rounded-md border px-2 py-1.5 text-[11px] outline-none transition-colors focus:ring-2 focus:ring-sky-400',
                                 isDark
@@ -4403,7 +5206,7 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
             : '';
     const subtitle =
         selected?.kind === 'site'
-            ? ROLE_LABEL[selected.site.role]
+            ? topologyRoleLabel(selected.site.role)
             : selected
             ? `${siteById[selected.link.sourceSiteId]?.shortName ?? '?'} to ${
                   siteById[selected.link.targetSiteId]?.shortName ?? '?'
@@ -4665,8 +5468,10 @@ interface TopologyEditorPanelProps {
     pickSiteId: string | null;
     onPickSite: (siteId: string | null) => void;
     onTopologyChange: React.Dispatch<React.SetStateAction<CustomerTopology>>;
-    onSave: () => void;
-    onResetFactory: () => void;
+    onSave: () => void | Promise<void>;
+    onResetFactory: () => void | Promise<void>;
+    isSaving?: boolean;
+    saveError?: string | null;
     onClose: () => void;
     /**
      * Searchbase catalogue keyed by `searchName`. Used to populate the
@@ -4696,6 +5501,22 @@ const editorInputClass = (isDark: boolean): string =>
 
 const editorLabelClass = 'text-[8px] font-black uppercase tracking-widest';
 
+const editorBindingSummaryClass = (
+    isDark: boolean,
+    hasBinding: boolean
+): string => {
+    if (hasBinding) {
+        return cn(
+            'min-w-0 flex-1 truncate',
+            isDark ? 'text-slate-300' : 'text-slate-600'
+        );
+    }
+    return cn(
+        'min-w-0 flex-1 truncate',
+        isDark ? 'text-slate-500 italic' : 'text-slate-400 italic'
+    );
+};
+
 const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
     open,
     topology,
@@ -4706,12 +5527,20 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
     onTopologyChange,
     onSave,
     onResetFactory,
+    isSaving = false,
+    saveError,
     onClose,
     catalogueByName,
     onOpenInSearch,
 }) => {
     const [jsonText, setJsonText] = useState('');
     const [jsonError, setJsonError] = useState<string | null>(null);
+    const [sitePlacementDrafts, setSitePlacementDrafts] = useState<
+        Record<string, string>
+    >({});
+    const [sitePlacementErrors, setSitePlacementErrors] = useState<
+        Record<string, string>
+    >({});
 
     // The editor's per-card pickers browse the full dashboard-pack
     // catalogue, identical to the in-popup `TopologySearchBrowser`.
@@ -4830,6 +5659,61 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                     },
                 ],
             };
+        });
+    };
+
+    const updateSitePlacementDraft = (siteId: string, value: string) => {
+        setSitePlacementDrafts((current) => ({
+            ...current,
+            [siteId]: value,
+        }));
+        setSitePlacementErrors((current) => {
+            if (!current[siteId]) return current;
+            const next = { ...current };
+            delete next[siteId];
+            return next;
+        });
+    };
+
+    const placeSite = (siteId: string) => {
+        const draft = sitePlacementDrafts[siteId]?.trim() ?? '';
+        const placement = resolveSitePlacement(draft);
+        if (!placement) {
+            setSitePlacementErrors((current) => ({
+                ...current,
+                [siteId]:
+                    'Try Las Vegas, NYC, or coordinates like 40.7128,-74.0060.',
+            }));
+            return;
+        }
+
+        onPickSite(null);
+        onTopologyChange((current) => {
+            const nextSites = current.sites.map((site) => {
+                if (site.id !== siteId) return site;
+                return {
+                    ...site,
+                    name: looksLikeGeneratedSiteName(site.name)
+                        ? placement.name
+                        : site.name,
+                    shortName: looksLikeGeneratedShortName(site.shortName)
+                        ? placement.shortName
+                        : site.shortName,
+                    lat: Number(placement.lat.toFixed(5)),
+                    lng: Number(placement.lng.toFixed(5)),
+                };
+            });
+            return {
+                ...current,
+                map: expandMapForPlacement(current.map, nextSites, placement),
+                sites: nextSites,
+            };
+        });
+        setSitePlacementErrors((current) => {
+            if (!current[siteId]) return current;
+            const next = { ...current };
+            delete next[siteId];
+            return next;
         });
     };
 
@@ -5157,6 +6041,11 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                         expandedCardKeys.has(cardKey);
                                     const boundSearch =
                                         site.searchName?.trim() || '';
+                                    const searchCardKey = `site-search:${site.id}`;
+                                    const isSearchPickerOpen =
+                                        expandedCardKeys.has(searchCardKey);
+                                    const shouldShowSearchPicker =
+                                        isSearchPickerOpen || !boundSearch;
                                     return (
                                     <div
                                         key={site.id}
@@ -5190,7 +6079,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                         : 'Expand site details'
                                                 }
                                                 className={cn(
-                                                    'flex items-center gap-2 min-w-0 flex-1 text-left rounded transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400'
+                                                    'flex items-center gap-2 flex-shrink-0 text-left rounded transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400'
                                                 )}
                                             >
                                                 <ChevronRight
@@ -5203,31 +6092,48 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                     )}
                                                 />
                                                 <MapPin className="w-4 h-4 text-sky-500 flex-shrink-0" />
-                                                <div className="min-w-0 flex-1">
-                                                    <div className="text-[10px] font-mono uppercase text-slate-400 truncate">
+                                            </button>
+                                            <div className="min-w-0 flex-1">
+                                                <input
+                                                    aria-label={`Rename site ${site.id}`}
+                                                    className={cn(
+                                                        'w-full rounded border border-transparent bg-transparent px-1 py-0.5 text-[11px] font-semibold outline-none transition-colors focus:border-sky-400 focus:bg-white focus:ring-1 focus:ring-sky-400',
+                                                        isDark
+                                                            ? 'text-slate-100 focus:bg-slate-950'
+                                                            : 'text-slate-800'
+                                                    )}
+                                                    value={site.name}
+                                                    onChange={(event) =>
+                                                        updateSite(site.id, {
+                                                            name: event.target.value,
+                                                        })
+                                                    }
+                                                />
+                                                <div className="flex min-w-0 items-center gap-1 px-1 text-[10px]">
+                                                    <span
+                                                        className="max-w-[5rem] truncate font-mono uppercase text-slate-400"
+                                                        title={`Internal ID: ${site.id}`}
+                                                    >
                                                         {site.id}
-                                                    </div>
-                                                    <div
-                                                        className={cn(
-                                                            'text-[10px] truncate',
-                                                            boundSearch
-                                                                ? isDark
-                                                                    ? 'text-slate-200'
-                                                                    : 'text-slate-700'
-                                                                : isDark
-                                                                ? 'text-slate-500 italic'
-                                                                : 'text-slate-400 italic'
+                                                    </span>
+                                                    <span className="text-slate-400">
+                                                        ·
+                                                    </span>
+                                                    <span
+                                                        className={editorBindingSummaryClass(
+                                                            isDark,
+                                                            Boolean(boundSearch)
                                                         )}
                                                         title={
                                                             boundSearch ||
-                                                            'No search bound — expand to pick one.'
+                                                            'No search bound'
                                                         }
                                                     >
                                                         {boundSearch ||
                                                             'No search bound'}
-                                                    </div>
+                                                    </span>
                                                 </div>
-                                            </button>
+                                            </div>
                                             <div className="flex items-center gap-1">
                                                 {onOpenInSearch && (
                                                     <button
@@ -5302,35 +6208,57 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                     : 'border-slate-200'
                                             )}
                                         >
-                                        {/*
-                                            Data-source picker. Lives at the
-                                            top of the expanded body because
-                                            "which search powers this
-                                            marker?" is the most-asked
-                                            question once the site exists in
-                                            the topology. The header above
-                                            already shows the bound search
-                                            name + an "Open in Search"
-                                            button so an operator can
-                                            sanity-check before expanding
-                                            the picker.
-                                        */}
-                                        <div className="pt-2">
-                                            <TopologySearchBrowser
-                                                catalogue={editorSearchOptions}
-                                                currentSearchName={
-                                                    site.searchName ?? ''
-                                                }
-                                                preferredTags={['Topology_Site']}
-                                                label="site"
-                                                onPick={(searchName) =>
-                                                    updateSite(site.id, {
-                                                        searchName,
-                                                    })
-                                                }
-                                                isDark={isDark}
-                                                showFreeFormInput
-                                            />
+                                        <div className="pt-2 space-y-1">
+                                            <span
+                                                className={cn(
+                                                    editorLabelClass,
+                                                    isDark
+                                                        ? 'text-slate-500'
+                                                        : 'text-slate-400'
+                                                )}
+                                            >
+                                                Place on map
+                                            </span>
+                                            <div className="flex items-stretch gap-1">
+                                                <input
+                                                    aria-label={`Place site ${site.id}`}
+                                                    className={editorInputClass(isDark)}
+                                                    value={
+                                                        sitePlacementDrafts[site.id] ??
+                                                        ''
+                                                    }
+                                                    placeholder="Las Vegas or 40.7128,-74.0060"
+                                                    onChange={(event) =>
+                                                        updateSitePlacementDraft(
+                                                            site.id,
+                                                            event.target.value
+                                                        )
+                                                    }
+                                                    onKeyDown={(event) => {
+                                                        if (event.key === 'Enter') {
+                                                            event.preventDefault();
+                                                            placeSite(site.id);
+                                                        }
+                                                    }}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => placeSite(site.id)}
+                                                    className={cn(
+                                                        'rounded-md border px-2 py-1.5 text-[10px] font-black uppercase tracking-wider transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                                                        isDark
+                                                            ? 'border-sky-500/50 bg-sky-500/20 text-sky-200 hover:bg-sky-500/30'
+                                                            : 'border-sky-300 bg-sky-100 text-sky-800 hover:bg-sky-200'
+                                                    )}
+                                                >
+                                                    Place
+                                                </button>
+                                            </div>
+                                            {sitePlacementErrors[site.id] && (
+                                                <span className="block text-[9px] font-semibold text-red-500">
+                                                    {sitePlacementErrors[site.id]}
+                                                </span>
+                                            )}
                                         </div>
                                         <div className="grid grid-cols-2 gap-2">
                                             <label className="space-y-1">
@@ -5388,22 +6316,30 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                 >
                                                     Role
                                                 </span>
-                                                <select
+                                                <input
+                                                    list={`topology-role-options-${site.id}`}
                                                     className={editorInputClass(isDark)}
-                                                    value={site.role}
+                                                    value={roleInputValue(site.role)}
                                                     onChange={(event) =>
                                                         updateSite(site.id, {
-                                                            role: event.target
-                                                                .value as TopologyRole,
+                                                            role: normalizeTopologyRoleInput(
+                                                                event.target.value,
+                                                                ''
+                                                            ),
                                                         })
                                                     }
+                                                    placeholder="HQ, Branch, Campus..."
+                                                />
+                                                <datalist
+                                                    id={`topology-role-options-${site.id}`}
                                                 >
                                                     {TOPOLOGY_ROLES.map((role) => (
-                                                        <option key={role} value={role}>
-                                                            {ROLE_LABEL[role]}
-                                                        </option>
+                                                        <option
+                                                            key={role}
+                                                            value={ROLE_LABEL[role]}
+                                                        />
                                                     ))}
-                                                </select>
+                                                </datalist>
                                             </label>
                                             <label className="space-y-1">
                                                 <span
@@ -5532,6 +6468,94 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                 confirmed yet.
                                             </span>
                                         </label>
+                                        <div
+                                            className={cn(
+                                                'rounded-md border px-2.5 py-2',
+                                                isDark
+                                                    ? 'border-slate-800 bg-slate-950/50'
+                                                    : 'border-slate-200 bg-white'
+                                            )}
+                                        >
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="min-w-0">
+                                                    <span
+                                                        className={cn(
+                                                            editorLabelClass,
+                                                            isDark
+                                                                ? 'text-slate-500'
+                                                                : 'text-slate-400'
+                                                        )}
+                                                    >
+                                                        Search binding
+                                                    </span>
+                                                    <div
+                                                        className={cn(
+                                                            'mt-1 truncate text-[11px] font-semibold',
+                                                            isDark
+                                                                ? boundSearch
+                                                                    ? 'text-slate-200'
+                                                                    : 'text-slate-500'
+                                                                : boundSearch
+                                                                ? 'text-slate-700'
+                                                                : 'text-slate-400'
+                                                        )}
+                                                        title={
+                                                            boundSearch ||
+                                                            'No search bound'
+                                                        }
+                                                    >
+                                                        {boundSearch ||
+                                                            'No search bound'}
+                                                    </div>
+                                                </div>
+                                                {boundSearch && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            toggleCardExpanded(
+                                                                searchCardKey
+                                                            )
+                                                        }
+                                                        aria-expanded={
+                                                            shouldShowSearchPicker
+                                                        }
+                                                        className={cn(
+                                                            'inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[9px] font-black uppercase tracking-wider transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                                                            isDark
+                                                                ? 'border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800'
+                                                                : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+                                                        )}
+                                                    >
+                                                        {shouldShowSearchPicker
+                                                            ? 'Hide'
+                                                            : 'Change'}
+                                                    </button>
+                                                )}
+                                            </div>
+                                            {shouldShowSearchPicker && (
+                                                <div className="mt-2">
+                                                    <TopologySearchBrowser
+                                                        catalogue={
+                                                            editorSearchOptions
+                                                        }
+                                                        currentSearchName={
+                                                            site.searchName ?? ''
+                                                        }
+                                                        preferredTags={[
+                                                            'Topology_Site',
+                                                        ]}
+                                                        label="site"
+                                                        onPick={(searchName) =>
+                                                            updateSite(site.id, {
+                                                                searchName,
+                                                            })
+                                                        }
+                                                        isDark={isDark}
+                                                        showFreeFormInput
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
                                         </div>
                                         )}
                                     </div>
@@ -5585,7 +6609,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                         ? 'Collapse link details'
                                                         : 'Expand link details'
                                                 }
-                                                className="flex items-center gap-2 min-w-0 flex-1 text-left rounded transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400"
+                                                className="flex items-center gap-2 flex-shrink-0 text-left rounded transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400"
                                             >
                                                 <ChevronRight
                                                     className={cn(
@@ -5597,31 +6621,48 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                     )}
                                                 />
                                                 <Link2 className="w-4 h-4 text-sky-500 flex-shrink-0" />
-                                                <div className="min-w-0 flex-1">
-                                                    <div className="text-[10px] font-mono uppercase text-slate-400 truncate">
+                                            </button>
+                                            <div className="min-w-0 flex-1">
+                                                <input
+                                                    aria-label={`Rename link ${link.id}`}
+                                                    className={cn(
+                                                        'w-full rounded border border-transparent bg-transparent px-1 py-0.5 text-[11px] font-semibold outline-none transition-colors focus:border-sky-400 focus:bg-white focus:ring-1 focus:ring-sky-400',
+                                                        isDark
+                                                            ? 'text-slate-100 focus:bg-slate-950'
+                                                            : 'text-slate-800'
+                                                    )}
+                                                    value={link.name}
+                                                    onChange={(event) =>
+                                                        updateLink(link.id, {
+                                                            name: event.target.value,
+                                                        })
+                                                    }
+                                                />
+                                                <div className="flex min-w-0 items-center gap-1 px-1 text-[10px]">
+                                                    <span
+                                                        className="max-w-[5rem] truncate font-mono uppercase text-slate-400"
+                                                        title={`Internal ID: ${link.id}`}
+                                                    >
                                                         {link.id}
-                                                    </div>
-                                                    <div
-                                                        className={cn(
-                                                            'text-[10px] truncate',
-                                                            boundSearch
-                                                                ? isDark
-                                                                    ? 'text-slate-200'
-                                                                    : 'text-slate-700'
-                                                                : isDark
-                                                                ? 'text-slate-500 italic'
-                                                                : 'text-slate-400 italic'
+                                                    </span>
+                                                    <span className="text-slate-400">
+                                                        ·
+                                                    </span>
+                                                    <span
+                                                        className={editorBindingSummaryClass(
+                                                            isDark,
+                                                            Boolean(boundSearch)
                                                         )}
                                                         title={
                                                             boundSearch ||
-                                                            'No search bound — expand to pick one.'
+                                                            'No search bound'
                                                         }
                                                     >
                                                         {boundSearch ||
                                                             'No search bound'}
-                                                    </div>
+                                                    </span>
                                                 </div>
-                                            </button>
+                                            </div>
                                             <div className="flex items-center gap-1">
                                                 {onOpenInSearch && (
                                                     <button
@@ -5914,25 +6955,47 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                             isDark ? 'border-slate-800' : 'border-slate-200'
                         )}
                     >
+                        <div className="min-w-0 flex-1">
+                            {saveError && (
+                                <p className="truncate text-[10px] font-semibold text-red-500" title={saveError}>
+                                    {saveError}
+                                </p>
+                            )}
+                        </div>
                         <button
                             type="button"
                             onClick={onResetFactory}
+                            disabled={isSaving}
                             className={cn(
                                 'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[10px] font-black transition-colors focus:outline-none focus:ring-1 focus:ring-red-400',
-                                isDark
+                                isSaving
+                                    ? 'cursor-not-allowed opacity-50'
+                                    : isDark
                                     ? 'bg-slate-900 text-red-300 hover:bg-red-950/70'
                                     : 'bg-red-50 text-red-600 hover:bg-red-100'
                             )}
                         >
-                            <RotateCcw className="w-3.5 h-3.5" />
+                            {isSaving ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                                <RotateCcw className="w-3.5 h-3.5" />
+                            )}
                             Factory
                         </button>
                         <button
                             type="button"
                             onClick={onSave}
-                            className="inline-flex items-center gap-1.5 rounded-md bg-sky-500 px-3 py-1.5 text-[10px] font-black text-white hover:bg-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-300"
+                            disabled={isSaving}
+                            className={cn(
+                                'inline-flex items-center gap-1.5 rounded-md bg-sky-500 px-3 py-1.5 text-[10px] font-black text-white hover:bg-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-300',
+                                isSaving && 'cursor-not-allowed opacity-60'
+                            )}
                         >
-                            <Save className="w-3.5 h-3.5" />
+                            {isSaving ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                                <Save className="w-3.5 h-3.5" />
+                            )}
                             Save
                         </button>
                     </div>
@@ -6529,7 +7592,7 @@ export const TopologySiteTable: React.FC<TopologySiteTableProps> = ({
                                     </div>
                                 </td>
                                 <td className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                                    {ROLE_LABEL[site.role]}
+                                    {topologyRoleLabel(site.role)}
                                 </td>
                                 <td className="px-3 py-1.5 text-right font-mono text-slate-700 dark:text-slate-200">
                                     {formatPercent(site.metrics.healthPct)}

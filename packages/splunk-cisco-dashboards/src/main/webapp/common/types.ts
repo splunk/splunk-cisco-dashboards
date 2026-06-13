@@ -27,13 +27,15 @@ export interface SearchResult {
 
 export type TopologyStatus = 'critical' | 'warning' | 'stable' | 'unknown';
 
-export type TopologyRole =
+export type KnownTopologyRole =
     | 'state_hq'
     | 'regional_hub'
     | 'logistics'
     | 'branch'
     | 'datacenter'
     | 'internet_edge';
+
+export type TopologyRole = KnownTopologyRole | (string & {});
 
 export interface TopologySite {
     id: string;
@@ -59,15 +61,16 @@ export interface TopologySite {
     searchName?: string;
     /**
      * Customer-entered design-of-record Internet edge bandwidth for the site,
-     * in Mbps. Set through the topology editor (pencil-tool → site → "Internet
-     * edge Mbps") and persisted in the customer-topology localStorage payload.
-     * Defaults to undefined; the popup hides the "Design of Record" line until
-     * a value is entered, and SPL stanzas should treat undefined as "awaiting
-     * circuit info" rather than fabricating a denominator. When per-site
-     * Internet uplink telemetry becomes available (e.g. ThousandEyes Internet
-     * Insights or a NetFlow uplink rollup) the live source should override
-     * this customer-entered value, mirroring how live link telemetry overrides
-     * the design-of-record capacity in the link stanzas.
+     * in Mbps. Set through the topology editor (pencil-tool -> site ->
+     * "Internet edge Mbps") and persisted in customer_topology.conf so every
+     * user sees the same value. Defaults to undefined; the popup hides the
+     * "Design of Record" line until a value is entered, and SPL stanzas should
+     * treat undefined as "awaiting circuit info" rather than fabricating a
+     * denominator. When per-site Internet uplink telemetry becomes available
+     * (e.g. ThousandEyes Internet Insights or a NetFlow uplink rollup) the
+     * live source should override this customer-entered value, mirroring how
+     * live link telemetry overrides the design-of-record capacity in the link
+     * stanzas.
      */
     internetEdgeMbps?: number;
 }
