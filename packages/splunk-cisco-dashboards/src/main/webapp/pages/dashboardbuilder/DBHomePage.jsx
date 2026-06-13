@@ -396,7 +396,7 @@ export default function DBHomePage() {
                             let jObj = parser.parse(r.content['eai:data']);
                             const data = JSON.parse(
                                 jObj.dashboard.definition.replace(/\n/g, '').startsWith('{{')
-                                    ? jObj.dashboard.definition.replace(/\n/g, '').replace('{', '')
+                                    ? jObj.dashboard.definition.replace(/\n/g, '').replace(/^\{\{/, '{')
                                     : jObj.dashboard.definition.replace(/\n/g, ''),
                             );
 
