@@ -717,12 +717,11 @@ const DashboardStudioEditor = ({
                             const parser = new XMLParser();
                             try {
                                 let jObj = parser.parse(r.content['eai:data']);
+                                const normalizedDefinition = jObj.dashboard.definition.replace(/\n/g, '');
                                 const data = JSON.parse(
-                                    jObj.dashboard.definition.replace(/\n/g, '').startsWith('{{')
-                                        ? jObj.dashboard.definition
-                                              .replace(/\n/g, '')
-                                              .replace('{', '')
-                                        : jObj.dashboard.definition.replace(/\n/g, ''),
+                                    normalizedDefinition.startsWith('{{')
+                                        ? normalizedDefinition.replace(/^\{/, '')
+                                        : normalizedDefinition,
                                 );
 
                                 return {
