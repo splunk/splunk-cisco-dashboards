@@ -1,0 +1,27 @@
+name: Pre-commit
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, reopened, synchronize]
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        python-version: [ 3.7, 3.9 ]
+    if: github.repository != 'splunk/fdse-template-app'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: pre-commit/action@v3.0.1

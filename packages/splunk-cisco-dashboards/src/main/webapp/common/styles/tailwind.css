@@ -39,6 +39,20 @@
     padding: 0 !important;
 }
 
+.dashboard:has(#scan-root) > .dashboard-header,
+.dashboard:has(#scan-root) > .dashboard-messages {
+    display: none !important;
+    height: 0 !important;
+    min-height: 0 !important;
+}
+
+.dashboard-layout-row-column:has(#scan-root),
+.dashboard-element:has(#scan-root),
+.panel-element-row:has(#scan-root) {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
 .dashboard-row:has(#scan-root),
 .dashboard-cell:has(#scan-root),
 .dashboard-panel:has(#scan-root) {

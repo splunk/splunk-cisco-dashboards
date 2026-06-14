@@ -26,3 +26,42 @@ yarn clean                # remove build artifacts
 ```
 
 For more detail see [`packages/splunk-cisco-dashboards/README.md`](packages/splunk-cisco-dashboards/README.md).
+
+## Installation
+
+Install workspace dependencies from the repository root:
+
+```bash
+yarn install
+```
+
+To build the Splunk app package locally:
+
+```bash
+yarn package:app
+```
+
+The packaged Splunk app tarball is written to `dist/`.
+
+## Usage
+
+For local development, run the app package webpack watcher:
+
+```bash
+yarn start
+```
+
+For a production build across the workspace:
+
+```bash
+yarn build
+```
+
+The actual Splunk app source, dashboards, and packaging scripts live in
+`packages/splunk-cisco-dashboards/`.
+
+## License
+
+This repository is maintained by the Splunk Field Solutions team. Use and
+distribution are governed by the applicable Splunk project and customer
+engagement terms.
