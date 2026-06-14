@@ -1693,7 +1693,7 @@ const SearchbaseDetailTableModal: React.FC<{
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
-            className="fixed inset-0 z-[1700] flex items-center justify-center p-4"
+            className="fixed inset-0 z-[2200] flex items-center justify-center p-4"
             onClick={(event) => {
                 if (event.target === event.currentTarget) onClose();
             }}
@@ -2100,7 +2100,7 @@ const SearchableFilterSelect: React.FC<SearchableFilterSelectProps> = ({
                         setOpen(false);
                     }
                 }}
-                className="flex h-11 w-full items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-left text-sm text-slate-700 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
+                className="flex h-10 w-full items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-left text-sm text-slate-700 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
             >
                 <span className="min-w-0 flex-1 truncate">{selectedLabel}</span>
                 <ChevronDown
@@ -2193,6 +2193,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
     const [vizType, setVizType] = useState(ALL);
     const [tagInput, setTagInput] = useState('');
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
+    const [filtersCollapsed, setFiltersCollapsed] = useState(true);
     const [selectedNames, setSelectedNames] = useState<Set<string>>(
         () => new Set()
     );
@@ -2204,6 +2205,12 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
         }
         return counts;
     }, [canvasTiles]);
+
+    useEffect(() => {
+        if (open) {
+            setFiltersCollapsed(true);
+        }
+    }, [open]);
 
     const blockedSearchNames = useMemo(() => {
         const names = new Set<string>();
@@ -2388,14 +2395,30 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
         [blockedSearchNames, filteredRecords]
     );
 
+    const activeFilterChips = useMemo(() => {
+        const chips: Array<{ id: string; label: string }> = [];
+        if (app !== APP_NAME) {
+            chips.push({
+                id: `app-${app}`,
+                label: app === ALL ? 'All apps' : `App: ${app}`,
+            });
+        }
+        if (includeHiddenSearches) {
+            chips.push({ id: 'hidden', label: 'Hidden included' });
+        }
+        if (category !== ALL) chips.push({ id: `category-${category}`, label: category });
+        if (subCategory !== ALL) {
+            chips.push({ id: `sub-category-${subCategory}`, label: subCategory });
+        }
+        if (vizType !== ALL) {
+            chips.push({ id: `viz-${vizType}`, label: vizFilterLabel(vizType) });
+        }
+        for (const tag of selectedTags) chips.push({ id: `tag-${tag}`, label: tag });
+        return chips;
+    }, [app, category, includeHiddenSearches, selectedTags, subCategory, vizType]);
+
     const hasActiveFilters =
-        query.trim().length > 0 ||
-        app !== APP_NAME ||
-        includeHiddenSearches ||
-        category !== ALL ||
-        subCategory !== ALL ||
-        vizType !== ALL ||
-        selectedTags.length > 0;
+        query.trim().length > 0 || activeFilterChips.length > 0;
 
     const resetFilters = () => {
         setQuery('');
@@ -2429,7 +2452,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
     const replaceMode = replaceTileId !== null;
 
     return (
-        <aside className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[520px] flex-col border-l border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-950">
+        <aside className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[560px] flex-col border-l border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-950">
             <div className="flex items-center gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
                 <div className="flex h-10 w-10 items-center justify-center rounded-md bg-sky-50 text-sky-600 dark:bg-sky-950 dark:text-sky-300">
                     <SlidersHorizontal className="h-5 w-5" />
@@ -2453,26 +2476,37 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                 </button>
             </div>
 
-            <div className="border-b border-slate-200 p-4 dark:border-slate-800">
+            <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-800">
                 <label className="relative block">
                     <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                     <input
                         value={query}
                         onChange={(event) => setQuery(event.target.value)}
                         placeholder="Filter by name, description, or tag..."
-                        className="h-12 w-full rounded-md border border-slate-300 bg-white pl-10 pr-3 text-base text-slate-900 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
+                        className="h-11 w-full rounded-md border border-slate-300 bg-white pl-10 pr-3 text-sm font-medium text-slate-900 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
                     />
                 </label>
 
-                <div className="mt-4 flex items-center gap-2">
-                    <div className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-2 text-xs font-black uppercase tracking-[0.18em] text-slate-800 dark:bg-slate-800 dark:text-slate-100">
+                <div className="mt-3 flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setFiltersCollapsed((current) => !current)}
+                        aria-expanded={!filtersCollapsed}
+                        className="inline-flex min-w-0 items-center gap-2 rounded-md bg-slate-100 px-3 py-2 text-xs font-black uppercase tracking-[0.16em] text-slate-800 transition hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-300 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus:ring-sky-800"
+                    >
                         <span>Filters</span>
                         {hasActiveFilters && (
                             <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] tracking-normal text-sky-700 dark:bg-sky-900 dark:text-sky-200">
                                 active
                             </span>
                         )}
-                    </div>
+                        <ChevronDown
+                            className={cn(
+                                'h-4 w-4 flex-shrink-0 text-slate-500 transition-transform dark:text-slate-300',
+                                filtersCollapsed && '-rotate-90'
+                            )}
+                        />
+                    </button>
                     <button
                         type="button"
                         onClick={resetFilters}
@@ -2482,119 +2516,141 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                     </button>
                 </div>
 
-                <div className="mt-3 grid grid-cols-[88px_minmax(0,1fr)] gap-x-3 gap-y-3">
-                    <label className="self-center text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
-                        App
-                    </label>
-                    <select
-                        value={app}
-                        onChange={(event) => setApp(event.target.value)}
-                        className="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
-                    >
-                        <option value={ALL}>All apps</option>
-                        {appOptions.map((option) => (
-                            <option key={option} value={option}>
-                                {option}
-                            </option>
-                        ))}
-                    </select>
-
-                    <label className="self-center text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
-                        Hidden
-                    </label>
-                    <label className="flex h-11 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
-                        <input
-                            type="checkbox"
-                            checked={includeHiddenSearches}
-                            onChange={(event) =>
-                                onIncludeHiddenSearchesChange(event.target.checked)
-                            }
-                            className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-950"
-                        />
-                        <span>Show hidden searches</span>
-                    </label>
-
-                    <label className="self-center text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
-                        Category
-                    </label>
-                    <SearchableFilterSelect
-                        value={category}
-                        options={categoryOptions}
-                        allLabel="All categories"
-                        searchPlaceholder="Search categories..."
-                        ariaLabel="Category"
-                        onChange={setCategory}
-                    />
-
-                    <label className="self-center text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
-                        Sub-cat
-                    </label>
-                    <SearchableFilterSelect
-                        value={subCategory}
-                        options={subCategoryOptions}
-                        allLabel="All sub-categories"
-                        searchPlaceholder="Search sub-categories..."
-                        ariaLabel="Sub-category"
-                        onChange={setSubCategory}
-                    />
-
-                    <label className="self-center text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
-                        Viz
-                    </label>
-                    <select
-                        value={vizType}
-                        onChange={(event) => setVizType(event.target.value)}
-                        className="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
-                    >
-                        <option value={ALL}>All viz types</option>
-                        {vizTypeOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                                {option.label} ({option.count})
-                            </option>
-                        ))}
-                    </select>
-                </div>
-
-                <div className="mt-4">
-                    <label className="relative block">
-                        <input
-                            value={tagInput}
-                            onChange={(event) => setTagInput(event.target.value)}
-                            placeholder="Filter by tag..."
-                            className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
-                        />
-                    </label>
-                    {(selectedTags.length > 0 || tagOptions.length > 0) && (
-                        <div className="mt-2 flex max-h-24 flex-wrap gap-1 overflow-y-auto">
-                            {selectedTags.map((tag) => (
-                                <button
-                                    key={tag}
-                                    type="button"
-                                    onClick={() =>
-                                        setSelectedTags((current) =>
-                                            current.filter((value) => value !== tag)
-                                        )
-                                    }
-                                    className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-1 text-[11px] font-bold text-sky-700 hover:bg-sky-200 dark:bg-sky-900 dark:text-sky-100 dark:hover:bg-sky-800"
+                {filtersCollapsed ? (
+                    activeFilterChips.length > 0 && (
+                        <div className="mt-2 flex max-h-14 flex-wrap gap-1 overflow-y-auto">
+                            {activeFilterChips.slice(0, 10).map((chip) => (
+                                <span
+                                    key={chip.id}
+                                    className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-[11px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                                 >
-                                    {tag}
-                                    <X className="h-3 w-3" />
-                                </button>
+                                    {chip.label}
+                                </span>
                             ))}
-                            {tagOptions.map(({ tag, count }) => (
-                                <button
-                                    key={tag}
-                                    type="button"
-                                    onClick={() => selectTag(tag)}
-                                    className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-500 hover:border-sky-300 hover:text-sky-600 dark:border-slate-700 dark:text-slate-400 dark:hover:border-sky-700 dark:hover:text-sky-300"
-                                >
-                                    {tag}
-                                    <span className="text-slate-400">{count}</span>
-                                </button>
-                            ))}
+                            {activeFilterChips.length > 10 && (
+                                <span className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-[11px] font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                                    +{activeFilterChips.length - 10}
+                                </span>
+                            )}
                         </div>
-                    )}
-                </div>
+                    )
+                ) : (
+                    <>
+                        <div className="mt-3 grid grid-cols-[76px_minmax(0,1fr)] gap-x-3 gap-y-2.5">
+                            <label className="self-center text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                                App
+                            </label>
+                            <select
+                                value={app}
+                                onChange={(event) => setApp(event.target.value)}
+                                className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
+                            >
+                                <option value={ALL}>All apps</option>
+                                {appOptions.map((option) => (
+                                    <option key={option} value={option}>
+                                        {option}
+                                    </option>
+                                ))}
+                            </select>
+
+                            <label className="self-center text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                                Hidden
+                            </label>
+                            <label className="flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+                                <input
+                                    type="checkbox"
+                                    checked={includeHiddenSearches}
+                                    onChange={(event) =>
+                                        onIncludeHiddenSearchesChange(event.target.checked)
+                                    }
+                                    className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-950"
+                                />
+                                <span>Show hidden searches</span>
+                            </label>
+
+                            <label className="self-center text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                                Category
+                            </label>
+                            <SearchableFilterSelect
+                                value={category}
+                                options={categoryOptions}
+                                allLabel="All categories"
+                                searchPlaceholder="Search categories..."
+                                ariaLabel="Category"
+                                onChange={setCategory}
+                            />
+
+                            <label className="self-center text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                                Sub-cat
+                            </label>
+                            <SearchableFilterSelect
+                                value={subCategory}
+                                options={subCategoryOptions}
+                                allLabel="All sub-categories"
+                                searchPlaceholder="Search sub-categories..."
+                                ariaLabel="Sub-category"
+                                onChange={setSubCategory}
+                            />
+
+                            <label className="self-center text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                                Viz
+                            </label>
+                            <select
+                                value={vizType}
+                                onChange={(event) => setVizType(event.target.value)}
+                                className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
+                            >
+                                <option value={ALL}>All viz types</option>
+                                {vizTypeOptions.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label} ({option.count})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="mt-3">
+                            <label className="relative block">
+                                <input
+                                    value={tagInput}
+                                    onChange={(event) => setTagInput(event.target.value)}
+                                    placeholder="Filter by tag..."
+                                    className="h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
+                                />
+                            </label>
+                            {(selectedTags.length > 0 || tagOptions.length > 0) && (
+                                <div className="mt-2 flex max-h-20 flex-wrap gap-1 overflow-y-auto">
+                                    {selectedTags.map((tag) => (
+                                        <button
+                                            key={tag}
+                                            type="button"
+                                            onClick={() =>
+                                                setSelectedTags((current) =>
+                                                    current.filter((value) => value !== tag)
+                                                )
+                                            }
+                                            className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-1 text-[11px] font-bold text-sky-700 hover:bg-sky-200 dark:bg-sky-900 dark:text-sky-100 dark:hover:bg-sky-800"
+                                        >
+                                            {tag}
+                                            <X className="h-3 w-3" />
+                                        </button>
+                                    ))}
+                                    {tagOptions.map(({ tag, count }) => (
+                                        <button
+                                            key={tag}
+                                            type="button"
+                                            onClick={() => selectTag(tag)}
+                                            className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-500 hover:border-sky-300 hover:text-sky-600 dark:border-slate-700 dark:text-slate-400 dark:hover:border-sky-700 dark:hover:text-sky-300"
+                                        >
+                                            {tag}
+                                            <span className="text-slate-400">{count}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </>
+                )}
             </div>
 
             <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 px-4 py-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
@@ -3624,8 +3680,11 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 </button>
                             )}
                             <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                                <span className="inline-flex h-6 items-center rounded-md border border-slate-200 bg-slate-50 px-2 text-xs font-bold text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
-                                    {tiles.length.toLocaleString()} tiles
+                                <span
+                                    className="inline-flex h-6 items-center rounded-md border border-slate-200 bg-slate-50 px-2 text-xs font-bold text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+                                    title="Total tiles on this canvas"
+                                >
+                                    {tiles.length.toLocaleString()} canvas tiles
                                 </span>
                                 <span
                                     className={cn(
@@ -3634,21 +3693,29 @@ const SearchbaseCanvasPage: React.FC = () => {
                                             ? 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-200'
                                             : 'border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300'
                                     )}
+                                    title="Tiles currently dispatching or awaiting results"
                                 >
-                                    {runningTileIds.size.toLocaleString()} running
+                                    {runningTileIds.size.toLocaleString()} running now
                                 </span>
-                                <span
+                                <button
+                                    type="button"
+                                    onClick={() => setNoDataReportOpen(true)}
                                     className={cn(
-                                        'inline-flex h-6 items-center rounded-md border px-2 text-xs font-bold',
+                                        'inline-flex h-6 items-center rounded-md border px-2 text-xs font-bold transition focus:outline-none focus:ring-2 focus:ring-amber-300',
                                         observedNoDataRows.length > 0
-                                            ? 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200'
-                                            : 'border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300'
+                                            ? 'border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300 hover:bg-amber-100 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200 dark:hover:bg-amber-900'
+                                            : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
                                     )}
+                                    title="Open no data report"
+                                    aria-label={`Open no data report. ${observedNoDataRows.length.toLocaleString()} observed no-data tiles.`}
                                 >
                                     {observedNoDataRows.length.toLocaleString()} no data
-                                </span>
-                                <span className="inline-flex h-6 items-center rounded-md border border-slate-200 bg-slate-50 px-2 text-xs font-bold text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
-                                    {records.length.toLocaleString()} searches
+                                </button>
+                                <span
+                                    className="inline-flex h-6 items-center rounded-md border border-slate-200 bg-slate-50 px-2 text-xs font-bold text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+                                    title="Loaded searches available in the catalogue"
+                                >
+                                    {records.length.toLocaleString()} in catalogue
                                 </span>
                             </div>
                         </div>
