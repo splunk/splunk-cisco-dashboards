@@ -17,11 +17,20 @@
  *   - `deltaFormat` (`"absolute"` | `"percent"`, default `"absolute"`)
  *     — chooses the delta rendering. `"absolute"` matches the DS
  *     scoreboard style (`↑4`); `"percent"` appends `%`.
+ *   - `valueField` (string | null, default `null`) — names the SPL
+ *     column carrying the headline value.
+ *   - `sparkDataField` (string | null, default `null`) — names the
+ *     SPL column carrying the visible primary sparkline series when it
+ *     differs from the headline value column.
  *   - `deltaField` (string | null, default `null`) — names the SPL
  *     column carrying the delta value. The Searchbase Canvas wires
  *     this into `MetricConfig.changeField`; an empty / null value
  *     falls back to whatever `useMetric` already produces (typically
  *     auto-computed % change between first and last bucket).
+ *   - `baselineField` / `overlayField` (string | null, default `null`)
+ *     — names the SPL column to render as a dashed comparison overlay.
+ *   - `overlayLabel` (string, default field name) — short label for
+ *     the dashed comparison overlay in hover/focus detail views.
  *   - `decimals` (number, 0 ≤ n ≤ 4, default `0`) — decimal places
  *     for the headline value.
  *   - `valueSuffix` (string, default `""`) — appended verbatim after
@@ -132,19 +141,48 @@ export const resolveDeltaFormat = (
 
 const SAFE_FIELD_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_.:]{0,127}$/;
 
-/**
- * Resolve a SPL column name from `viz_options.deltaField`. Returns
- * `null` for empty / non-string / unsafe values so the caller falls
- * back to whatever `useMetric.change` already produces.
- */
-export const resolveDeltaField = (
-    options: Record<string, unknown> | undefined
+const resolveFieldNameOption = (
+    options: Record<string, unknown> | undefined,
+    key: string
 ): string | null => {
-    const raw = options?.deltaField;
+    const raw = options?.[key];
     if (typeof raw !== 'string') return null;
     const trimmed = raw.trim();
     if (trimmed.length === 0) return null;
     return SAFE_FIELD_NAME_PATTERN.test(trimmed) ? trimmed : null;
+};
+
+/**
+ * Resolve a SPL column name from a `viz_options` field-key. Returns
+ * `null` for empty / non-string / unsafe values so the caller falls
+ * back to runtime auto-detection.
+ */
+export const resolveValueField = (
+    options: Record<string, unknown> | undefined
+): string | null => resolveFieldNameOption(options, 'valueField');
+
+export const resolveSparkDataField = (
+    options: Record<string, unknown> | undefined
+): string | null => resolveFieldNameOption(options, 'sparkDataField');
+
+export const resolveDeltaField = (
+    options: Record<string, unknown> | undefined
+): string | null => resolveFieldNameOption(options, 'deltaField');
+
+export const resolveBaselineField = (
+    options: Record<string, unknown> | undefined
+): string | null =>
+    resolveFieldNameOption(options, 'baselineField') ??
+    resolveFieldNameOption(options, 'overlayField');
+
+export const resolveOverlayLabel = (
+    options: Record<string, unknown> | undefined
+): string | null => {
+    const raw = options?.overlayLabel;
+    if (typeof raw !== 'string') return null;
+    const trimmed = raw.trim();
+    if (!trimmed || trimmed.length > 32) return null;
+    return trimmed;
 };
 
 export const resolveDecimals = (

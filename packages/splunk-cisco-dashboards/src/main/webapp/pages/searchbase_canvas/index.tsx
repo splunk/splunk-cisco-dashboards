@@ -50,7 +50,13 @@ import {
     sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
 import { BarBreakdownTile } from '@/common/components/florida/BarBreakdownTile';
-import { resolveDeltaField } from '@/common/components/florida/canvasVizOptions';
+import {
+    resolveBaselineField,
+    resolveDeltaField,
+    resolveOverlayLabel,
+    resolveSparkDataField,
+    resolveValueField,
+} from '@/common/components/florida/canvasVizOptions';
 import {
     isFillerGaugeViz,
     isMarkerGaugeViz,
@@ -134,6 +140,8 @@ const TIME_RANGE_OPTIONS: TimeRange[] = [
 const DEFAULT_TIME_RANGE_LABEL = 'Last 24 hours';
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 const DEFAULT_TILE_VIZ = '__default_tile_viz__';
+const DEFAULT_OVERLAY_FIELD = '__default_overlay_field__';
+const NO_OVERLAY_FIELD = '__no_overlay_field__';
 
 type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
 type TileSpan = 1 | 2 | 4;
@@ -144,6 +152,7 @@ interface CanvasTile {
     span: TileSpan;
     addedAt: number;
     vizOverride?: string;
+    overlayField?: string | null;
 }
 
 interface PersistedCanvasState {
@@ -217,6 +226,17 @@ const normalizeTileVizOverride = (value: unknown): string | undefined => {
     return trimmed.slice(0, 64);
 };
 
+const SAFE_OVERLAY_FIELD_PATTERN = /^[A-Za-z_][A-Za-z0-9_.:]{0,127}$/;
+
+const normalizeTileOverlayField = (value: unknown): string | null | undefined => {
+    if (value === null) return null;
+    if (typeof value !== 'string') return undefined;
+    const trimmed = value.trim();
+    if (!trimmed || trimmed === DEFAULT_OVERLAY_FIELD) return undefined;
+    if (trimmed === NO_OVERLAY_FIELD) return null;
+    return SAFE_OVERLAY_FIELD_PATTERN.test(trimmed) ? trimmed : undefined;
+};
+
 const readPersistedState = (): PersistedCanvasState => {
     const fallback: PersistedCanvasState = {
         canvasName: 'Searchbase Canvas',
@@ -249,6 +269,9 @@ const readPersistedState = (): PersistedCanvasState => {
                                   : Date.now(),
                           vizOverride: normalizeTileVizOverride(
                               candidate.vizOverride
+                          ),
+                          overlayField: normalizeTileOverlayField(
+                              candidate.overlayField
                           ),
                       },
                   ];
@@ -289,6 +312,7 @@ const canvasPayloadFromState = (
         span: tile.span,
         addedAt: tile.addedAt,
         vizOverride: normalizeTileVizOverride(tile.vizOverride),
+        overlayField: normalizeTileOverlayField(tile.overlayField),
     })),
 });
 
@@ -321,6 +345,9 @@ const applyCanvasPayload = (
                               ? candidate.addedAt
                               : Date.now(),
                       vizOverride: normalizeTileVizOverride(candidate.vizOverride),
+                      overlayField: normalizeTileOverlayField(
+                          candidate.overlayField
+                      ),
                   },
               ];
           })
@@ -376,6 +403,20 @@ const effectiveTileViz = (
     record: SearchbaseRecord
 ): string | undefined => tile.vizOverride ?? record.defaultViz;
 
+const supportsTileOverlayControl = (viz: string | undefined): boolean => {
+    if (
+        isTableViz(viz) ||
+        isBarBreakdownViz(viz) ||
+        isPieViz(viz) ||
+        isSingleValueRadialViz(viz) ||
+        isFillerGaugeViz(viz) ||
+        isMarkerGaugeViz(viz)
+    ) {
+        return false;
+    }
+    return sparklineVizTypeFromSplunkViz(viz) !== 'singlevalue';
+};
+
 /** Stable key so metric vs table hook trees remount when viz family changes. */
 const searchbaseTileBodyKey = (
     tileId: string,
@@ -419,6 +460,78 @@ const TileVizSelect: React.FC<{
                 {TILE_VIZ_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
                         {option.label}
+                    </option>
+                ))}
+            </select>
+        </label>
+    );
+};
+
+const TileOverlaySelect: React.FC<{
+    tile: CanvasTile;
+    record: SearchbaseRecord;
+    overlayFields: string[];
+    onChangeOverlay: (tileId: string, overlayField?: string | null) => void;
+}> = ({ tile, record, overlayFields, onChangeOverlay }) => {
+    const defaultOverlayField = resolveBaselineField(record.vizOptions);
+    const selectedOverlayField =
+        typeof tile.overlayField === 'string' ? tile.overlayField : undefined;
+    const fieldOptions = Array.from(
+        new Set(
+            [selectedOverlayField, ...overlayFields].filter(
+                (field): field is string =>
+                    typeof field === 'string' && field.length > 0
+            )
+        )
+    ).filter((field) => field !== defaultOverlayField);
+
+    if (!defaultOverlayField && !selectedOverlayField && fieldOptions.length === 0) {
+        return null;
+    }
+
+    const selectedValue =
+        tile.overlayField === undefined
+            ? defaultOverlayField
+                ? DEFAULT_OVERLAY_FIELD
+                : NO_OVERLAY_FIELD
+            : tile.overlayField === null
+            ? NO_OVERLAY_FIELD
+            : tile.overlayField;
+
+    return (
+        <label
+            className="inline-flex min-w-0 items-center gap-1"
+            data-tile-control="true"
+            title="Overlay series"
+        >
+            <SlidersHorizontal className="h-3.5 w-3.5 flex-shrink-0" />
+            <select
+                value={selectedValue}
+                aria-label={`Overlay series for ${record.searchName}`}
+                onPointerDown={(event) => event.stopPropagation()}
+                onChange={(event) => {
+                    const next = event.target.value;
+                    if (next === DEFAULT_OVERLAY_FIELD) {
+                        onChangeOverlay(tile.id, undefined);
+                        return;
+                    }
+                    if (next === NO_OVERLAY_FIELD) {
+                        onChangeOverlay(tile.id, null);
+                        return;
+                    }
+                    onChangeOverlay(tile.id, next);
+                }}
+                className="h-6 max-w-[152px] rounded border border-transparent bg-transparent px-1 text-[10px] font-black uppercase text-slate-500 outline-none transition hover:border-slate-300 hover:bg-white focus:border-sky-300 focus:bg-white focus:ring-1 focus:ring-sky-300 dark:text-slate-300 dark:hover:border-slate-700 dark:hover:bg-slate-900 dark:focus:border-sky-700 dark:focus:bg-slate-900 dark:focus:ring-sky-800"
+            >
+                {defaultOverlayField && (
+                    <option value={DEFAULT_OVERLAY_FIELD}>
+                        Overlay: default ({defaultOverlayField})
+                    </option>
+                )}
+                <option value={NO_OVERLAY_FIELD}>Overlay: none</option>
+                {fieldOptions.map((field) => (
+                    <option key={field} value={field}>
+                        Overlay: {field}
                     </option>
                 ))}
             </select>
@@ -702,7 +815,10 @@ interface SearchbaseCanvasTileProps {
     onRemove: (tileId: string) => void;
     onCycleSize: (tileId: string) => void;
     onChangeViz: (tileId: string, vizOverride?: string) => void;
+    overlayFields: string[];
+    onChangeOverlay: (tileId: string, overlayField?: string | null) => void;
     onOpenDetailTable: (config: SearchbaseDetailTableConfig) => void;
+    onOverlayFieldsChange: (tileId: string, fields: string[]) => void;
     onNoDataObservation: (
         tileId: string,
         entry: ObservedNoDataEntry | null
@@ -753,6 +869,7 @@ interface SearchbaseTileBodyProps {
     onOpenDrilldown?: () => void;
     drilldownTitle?: string;
     presentationMode?: boolean;
+    onOverlayFieldsChange?: (tileId: string, fields: string[]) => void;
     onNoDataObservation: (entry: ObservedNoDataEntry | null) => void;
 }
 
@@ -913,26 +1030,26 @@ const SearchbaseNoDataPanel: React.FC<{
                 </p>
             </div>
 
-            {!presentationMode && (
-                <div className="mt-auto flex flex-wrap gap-2 pt-4">
+            <div className="mt-auto flex flex-wrap gap-2 pt-4">
+                <button
+                    type="button"
+                    onClick={onOpenSearch}
+                    className="inline-flex items-center gap-1 rounded-md bg-slate-900 px-2.5 py-1.5 text-xs font-black text-white transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-sky-200"
+                >
+                    <Search className="h-3.5 w-3.5" />
+                    Open in Search
+                </button>
+                {onOpenDrilldown && (
                     <button
                         type="button"
-                        onClick={onOpenSearch}
-                        className="inline-flex items-center gap-1 rounded-md bg-slate-900 px-2.5 py-1.5 text-xs font-black text-white transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-sky-200"
+                        onClick={onOpenDrilldown}
+                        className="inline-flex items-center gap-1 rounded-md border border-sky-200 bg-white px-2.5 py-1.5 text-xs font-black text-sky-700 transition hover:border-sky-300 hover:bg-sky-50 focus:outline-none focus:ring-2 focus:ring-sky-300 dark:border-sky-900 dark:bg-slate-950 dark:text-sky-200 dark:hover:bg-sky-950"
                     >
-                        <Search className="h-3.5 w-3.5" />
-                        Open in Search
+                        <Table2 className="h-3.5 w-3.5" />
+                        {drilldownTitle ?? 'View detail'}
                     </button>
-                    {onOpenDrilldown && (
-                        <button
-                            type="button"
-                            onClick={onOpenDrilldown}
-                            className="inline-flex items-center gap-1 rounded-md border border-sky-200 bg-white px-2.5 py-1.5 text-xs font-black text-sky-700 transition hover:border-sky-300 hover:bg-sky-50 focus:outline-none focus:ring-2 focus:ring-sky-300 dark:border-sky-900 dark:bg-slate-950 dark:text-sky-200 dark:hover:bg-sky-950"
-                        >
-                            <Table2 className="h-3.5 w-3.5" />
-                            {drilldownTitle ?? 'View detail'}
-                        </button>
-                    )}
+                )}
+                {!presentationMode && (
                     <button
                         type="button"
                         onClick={onConfigure}
@@ -941,8 +1058,8 @@ const SearchbaseNoDataPanel: React.FC<{
                         <Settings2 className="h-3.5 w-3.5" />
                         Replace
                     </button>
-                </div>
-            )}
+                )}
+            </div>
         </div>
     );
 };
@@ -960,6 +1077,7 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
     onOpenDrilldown,
     drilldownTitle,
     presentationMode = false,
+    onOverlayFieldsChange,
     onNoDataObservation,
 }) => {
     // `viz_options.deltaField` (new in Build 1224) names the SPL
@@ -968,6 +1086,18 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
     // `changeField`, which `useMetric` already supports — the only
     // new wiring is the resolver call.
     const deltaFieldOverride = resolveDeltaField(record.vizOptions) ?? undefined;
+    const defaultOverlayField = resolveBaselineField(record.vizOptions) ?? undefined;
+    const selectedOverlayField =
+        tile.overlayField === null
+            ? undefined
+            : tile.overlayField ?? defaultOverlayField;
+    const overlayLabel =
+        selectedOverlayField === defaultOverlayField
+            ? resolveOverlayLabel(record.vizOptions) ?? selectedOverlayField
+            : selectedOverlayField;
+    const valueFieldOverride = resolveValueField(record.vizOptions) ?? undefined;
+    const sparkDataFieldOverride =
+        resolveSparkDataField(record.vizOptions) ?? undefined;
 
     const metricConfig = useMemo<MetricConfig>(
         () => ({
@@ -980,7 +1110,11 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
             description,
             spl: record.search,
             color,
+            valueField: valueFieldOverride,
+            sparkDataField: sparkDataFieldOverride,
             changeField: deltaFieldOverride,
+            baselineField: selectedOverlayField,
+            overlayLabel,
             thresholdNote: 'Searchbase canvas tile.',
             suppressMockOnEmpty: true,
             mock: {
@@ -995,16 +1129,30 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
             color,
             deltaFieldOverride,
             description,
+            overlayLabel,
             record.category,
             record.id,
             record.search,
             record.searchName,
             record.subCategory,
+            selectedOverlayField,
+            sparkDataFieldOverride,
             tile.id,
+            valueFieldOverride,
         ]
     );
 
     const metric = useMetric(metricConfig, range, refreshToken);
+    const availableOverlayFieldsKey = metric.availableOverlayFields.join('\u0001');
+
+    useEffect(() => {
+        onOverlayFieldsChange?.(tile.id, metric.availableOverlayFields);
+    }, [
+        availableOverlayFieldsKey,
+        metric.availableOverlayFields,
+        onOverlayFieldsChange,
+        tile.id,
+    ]);
 
     useEffect(() => {
         if (metric.source === 'live' && metric.noDataReason === 'empty_rows') {
@@ -1050,9 +1198,9 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
         description,
         descriptionFootnote: record.id,
         thresholdNote: 'Searchbase canvas tile.',
-        onOpenInSearch: presentationMode ? undefined : onOpenSearch,
+        onOpenInSearch: onOpenSearch,
         onConfigure: presentationMode ? undefined : onConfigure,
-        onOpenDetailTable: presentationMode ? undefined : onOpenDrilldown,
+        onOpenDetailTable: onOpenDrilldown,
         detailTableTitle: drilldownTitle ?? 'View detail',
         isCustomized: presentationMode ? false : (true as const),
         className: 'h-full',
@@ -1091,7 +1239,7 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
             description={description}
             descriptionFootnote={record.id}
             thresholdNote="Searchbase canvas tile."
-            onOpenInSearch={presentationMode ? undefined : onOpenSearch}
+            onOpenInSearch={onOpenSearch}
             onConfigure={presentationMode ? undefined : onConfigure}
             isCustomized={!presentationMode}
             className="h-full"
@@ -1099,7 +1247,7 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
             change={metric.change}
             sparkData={metric.sparkData}
             previousData={metric.previousSparkData}
-            previousLabel="Prev"
+            previousLabel={overlayLabel ?? 'Prev'}
             sparkTimestamps={metric.sparkTimestamps}
             timeRange={range}
             color={color}
@@ -1111,7 +1259,7 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
             dataValuesDisplay={normalizeDataValuesDisplay(
                 record.vizOptions?.dataValuesDisplay
             )}
-            onOpenDetailTable={presentationMode ? undefined : onOpenDrilldown}
+            onOpenDetailTable={onOpenDrilldown}
             detailTableTitle={drilldownTitle ?? 'View detail'}
         />
     );
@@ -1127,6 +1275,8 @@ const SearchbaseTableTileBody: React.FC<
     description,
     onConfigure,
     onOpenSearch,
+    onOpenDrilldown,
+    drilldownTitle,
     variant,
     presentationMode = false,
     onNoDataObservation,
@@ -1170,6 +1320,8 @@ const SearchbaseTableTileBody: React.FC<
                 failureHttpStatus={table.failureHttpStatus}
                 onConfigure={onConfigure}
                 onOpenSearch={onOpenSearch}
+                onOpenDrilldown={onOpenDrilldown}
+                drilldownTitle={drilldownTitle}
                 presentationMode={presentationMode}
             />
         );
@@ -1181,7 +1333,9 @@ const SearchbaseTableTileBody: React.FC<
         description,
         descriptionFootnote: record.id,
         thresholdNote: 'Searchbase canvas tile.',
-        onOpenInSearch: presentationMode ? undefined : onOpenSearch,
+        onOpenInSearch: onOpenSearch,
+        onOpenDetailTable: onOpenDrilldown,
+        detailTableTitle: drilldownTitle ?? 'View detail',
         onConfigure: presentationMode ? undefined : onConfigure,
         isCustomized: !presentationMode,
         className: 'h-full',
@@ -1237,7 +1391,10 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
     onRemove,
     onCycleSize,
     onChangeViz,
+    overlayFields,
+    onChangeOverlay,
     onOpenDetailTable,
+    onOverlayFieldsChange,
     onNoDataObservation,
     onStop,
     onRefresh,
@@ -1291,6 +1448,10 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                         description={description}
                         onConfigure={() => onConfigure(tile.id)}
                         onOpenSearch={openSearch}
+                        onOpenDrilldown={
+                            detailTableConfig ? openDrilldown : undefined
+                        }
+                        drilldownTitle={detailTableConfig?.buttonTitle}
                         presentationMode={presentationMode}
                         variant="table"
                         onNoDataObservation={(entry) =>
@@ -1309,6 +1470,10 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                         description={description}
                         onConfigure={() => onConfigure(tile.id)}
                         onOpenSearch={openSearch}
+                        onOpenDrilldown={
+                            detailTableConfig ? openDrilldown : undefined
+                        }
+                        drilldownTitle={detailTableConfig?.buttonTitle}
                         presentationMode={presentationMode}
                         variant="bar"
                         onNoDataObservation={(entry) =>
@@ -1327,6 +1492,10 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                         description={description}
                         onConfigure={() => onConfigure(tile.id)}
                         onOpenSearch={openSearch}
+                        onOpenDrilldown={
+                            detailTableConfig ? openDrilldown : undefined
+                        }
+                        drilldownTitle={detailTableConfig?.buttonTitle}
                         presentationMode={presentationMode}
                         variant="pie"
                         onNoDataObservation={(entry) =>
@@ -1350,6 +1519,7 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                         }
                         drilldownTitle={detailTableConfig?.buttonTitle}
                         presentationMode={presentationMode}
+                        onOverlayFieldsChange={onOverlayFieldsChange}
                         onNoDataObservation={(entry) =>
                             onNoDataObservation(tile.id, entry)
                         }
@@ -1363,6 +1533,14 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                         record={record}
                         onChangeViz={onChangeViz}
                     />
+                    {supportsTileOverlayControl(viz) && (
+                        <TileOverlaySelect
+                            tile={tile}
+                            record={record}
+                            overlayFields={overlayFields}
+                            onChangeOverlay={onChangeOverlay}
+                        />
+                    )}
                     <span className="ml-auto flex items-center gap-1">
                         <button
                             type="button"
@@ -1512,23 +1690,25 @@ const SearchbasePreviewTile: React.FC<ResolvedSearchbaseCanvasTileProps> = ({
                 )}
             </div>
 
-            {!presentationMode && (
-                <div className="flex items-center gap-2 border-t border-slate-100 px-2 py-1.5 text-[10px] font-semibold text-slate-500 dark:border-slate-700 dark:text-slate-300">
+            <div className="flex items-center gap-2 border-t border-slate-100 px-2 py-1.5 text-[10px] font-semibold text-slate-500 dark:border-slate-700 dark:text-slate-300">
+                {!presentationMode && (
                     <TileVizSelect
                         tile={tile}
                         record={record}
                         onChangeViz={onChangeViz}
                     />
-                    <span className="ml-auto flex items-center gap-1">
-                        <button
-                            type="button"
-                            onClick={openSearch}
-                            title="Open in Search"
-                            aria-label={`Open ${record.searchName} in Search`}
-                            className="rounded p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-sky-300"
-                        >
-                            <Search className="h-3.5 w-3.5" />
-                        </button>
+                )}
+                <span className="ml-auto flex items-center gap-1">
+                    <button
+                        type="button"
+                        onClick={openSearch}
+                        title="Open in Search"
+                        aria-label={`Open ${record.searchName} in Search`}
+                        className="rounded p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-sky-300"
+                    >
+                        <Search className="h-3.5 w-3.5" />
+                    </button>
+                    {!presentationMode && (
                         <button
                             type="button"
                             onClick={() => onConfigure(tile.id)}
@@ -1538,38 +1718,42 @@ const SearchbasePreviewTile: React.FC<ResolvedSearchbaseCanvasTileProps> = ({
                         >
                             <Settings2 className="h-3.5 w-3.5" />
                         </button>
-                        {detailTableConfig && (
-                            <button
-                                type="button"
-                                onClick={openDrilldown}
-                                title={detailTableConfig.buttonTitle}
-                                aria-label={detailTableConfig.buttonTitle}
-                                className="rounded p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-sky-300"
-                            >
-                                <Table2 className="h-3.5 w-3.5" />
-                            </button>
-                        )}
+                    )}
+                    {detailTableConfig && (
                         <button
                             type="button"
-                            onClick={() => onCycleSize(tile.id)}
-                            title={`Tile size: ${TILE_SPAN_LABEL[tile.span]}`}
-                            aria-label={`Tile size: ${TILE_SPAN_LABEL[tile.span]}`}
+                            onClick={openDrilldown}
+                            title={detailTableConfig.buttonTitle}
+                            aria-label={detailTableConfig.buttonTitle}
                             className="rounded p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-sky-300"
                         >
-                            <Maximize2 className="h-3.5 w-3.5" />
+                            <Table2 className="h-3.5 w-3.5" />
                         </button>
-                        <button
-                            type="button"
-                            onClick={() => onRemove(tile.id)}
-                            title="Remove tile"
-                            aria-label="Remove tile"
-                            className="rounded p-1 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 focus:outline-none focus:ring-1 focus:ring-rose-400 dark:hover:bg-rose-950/40 dark:hover:text-rose-300"
-                        >
-                            <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                    </span>
-                </div>
-            )}
+                    )}
+                    {!presentationMode && (
+                        <>
+                            <button
+                                type="button"
+                                onClick={() => onCycleSize(tile.id)}
+                                title={`Tile size: ${TILE_SPAN_LABEL[tile.span]}`}
+                                aria-label={`Tile size: ${TILE_SPAN_LABEL[tile.span]}`}
+                                className="rounded p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-sky-300"
+                            >
+                                <Maximize2 className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => onRemove(tile.id)}
+                                title="Remove tile"
+                                aria-label="Remove tile"
+                                className="rounded p-1 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 focus:outline-none focus:ring-1 focus:ring-rose-400 dark:hover:bg-rose-950/40 dark:hover:text-rose-300"
+                            >
+                                <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                        </>
+                    )}
+                </span>
+            </div>
         </div>
     );
 };
@@ -2840,6 +3024,9 @@ const SearchbaseCanvasPage: React.FC = () => {
     const [observedNoDataByTile, setObservedNoDataByTile] = useState<
         Map<string, ObservedNoDataEntry>
     >(() => new Map());
+    const [overlayFieldsByTile, setOverlayFieldsByTile] = useState<
+        Map<string, string[]>
+    >(() => new Map());
     const [savedCanvases, setSavedCanvases] = useState<SearchbaseCanvasSummary[]>(
         []
     );
@@ -2946,6 +3133,7 @@ const SearchbaseCanvasPage: React.FC = () => {
 
     useEffect(() => {
         setObservedNoDataByTile(new Map());
+        setOverlayFieldsByTile(new Map());
     }, [rangeLabel]);
 
     const entryByName = useMemo(() => {
@@ -3084,6 +3272,26 @@ const SearchbaseCanvasPage: React.FC = () => {
         []
     );
 
+    const updateOverlayFields = useCallback((tileId: string, fields: string[]) => {
+        const nextFields = fields.filter((field) => normalizeTileOverlayField(field));
+        setOverlayFieldsByTile((current) => {
+            const previous = current.get(tileId) ?? [];
+            if (
+                previous.length === nextFields.length &&
+                previous.every((field, index) => field === nextFields[index])
+            ) {
+                return current;
+            }
+            const next = new Map(current);
+            if (nextFields.length === 0) {
+                next.delete(tileId);
+            } else {
+                next.set(tileId, nextFields);
+            }
+            return next;
+        });
+    }, []);
+
     const saveCanvasWithName = useCallback(
         async (name: string) => {
             const trimmed = name.trim();
@@ -3155,6 +3363,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                 setTileSearchQuery('');
                 setRunningTileIds(new Set());
                 setObservedNoDataByTile(new Map());
+                setOverlayFieldsByTile(new Map());
                 setBrowserOpen(next.tiles.length === 0);
                 setReplaceTileId(null);
                 setActiveSavedCanvasName(name);
@@ -3220,12 +3429,22 @@ const SearchbaseCanvasPage: React.FC = () => {
                     replaced = true;
                     return current.map((tile) =>
                         tile.id === replaceTileId
-                            ? { ...tile, searchName: record.searchName }
+                            ? {
+                                  ...tile,
+                                  searchName: record.searchName,
+                                  overlayField: undefined,
+                              }
                             : tile
                     );
                 });
                 if (!replaced) return;
                 clearObservedNoData([replaceTileId]);
+                setOverlayFieldsByTile((current) => {
+                    if (!current.has(replaceTileId)) return current;
+                    const next = new Map(current);
+                    next.delete(replaceTileId);
+                    return next;
+                });
                 setRunningTileIds((current) => {
                     const next = new Set(current);
                     next.add(replaceTileId);
@@ -3297,6 +3516,12 @@ const SearchbaseCanvasPage: React.FC = () => {
             if (!(tileId in current)) return current;
             const next = { ...current };
             delete next[tileId];
+            return next;
+        });
+        setOverlayFieldsByTile((current) => {
+            if (!current.has(tileId)) return current;
+            const next = new Map(current);
+            next.delete(tileId);
             return next;
         });
         clearObservedNoData([tileId]);
@@ -3534,6 +3759,22 @@ const SearchbaseCanvasPage: React.FC = () => {
         []
     );
 
+    const changeTileOverlay = useCallback(
+        (tileId: string, overlayField?: string | null) => {
+            setTiles((current) =>
+                current.map((tile) =>
+                    tile.id === tileId
+                        ? {
+                              ...tile,
+                              overlayField: normalizeTileOverlayField(overlayField),
+                          }
+                        : tile
+                )
+            );
+        },
+        []
+    );
+
     const handleDragEnd = useCallback((event: DragEndEvent) => {
         const { active, over } = event;
         if (!over || active.id === over.id) return;
@@ -3549,6 +3790,7 @@ const SearchbaseCanvasPage: React.FC = () => {
         setTiles([]);
         setRunningTileIds(new Set());
         setObservedNoDataByTile(new Map());
+        setOverlayFieldsByTile(new Map());
         setPageIndex(0);
         setTileSearchQuery('');
         setBrowserOpen(true);
@@ -3571,6 +3813,7 @@ const SearchbaseCanvasPage: React.FC = () => {
         setTiles([]);
         setRunningTileIds(new Set());
         setObservedNoDataByTile(new Map());
+        setOverlayFieldsByTile(new Map());
         setPageIndex(0);
         setTileSearchQuery('');
         setBrowserOpen(false);
@@ -3624,7 +3867,10 @@ const SearchbaseCanvasPage: React.FC = () => {
                 onRemove={removeTile}
                 onCycleSize={cycleSize}
                 onChangeViz={changeTileViz}
+                overlayFields={overlayFieldsByTile.get(tile.id) ?? []}
+                onChangeOverlay={changeTileOverlay}
                 onOpenDetailTable={setActiveDetailTable}
+                onOverlayFieldsChange={updateOverlayFields}
                 onNoDataObservation={updateNoDataObservation}
             />
         );
