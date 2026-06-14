@@ -2,9 +2,6 @@ name: Package Splunk App / Add-On and Run AppInspect
 
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
 
 # Allow only 1 concurrent execution
 concurrency:
