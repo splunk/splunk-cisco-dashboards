@@ -1,15 +1,8 @@
 name: Package Splunk App / Add-On and Run AppInspect
 
 on:
-  pull_request:
-    branches:
-      - main
-    types: [opened, reopened, synchronize]
+  workflow_dispatch:
   push:
-    branches:
-      - main
-    paths:
-      - package/**
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
 
@@ -18,9 +11,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# Grants permission to create releases
+# Default to read-only. The release job elevates this when it creates a GitHub Release.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   pre-commit:
@@ -43,7 +36,8 @@ jobs:
     strategy:
       matrix:
         python-version: [ 3.7, 3.9 ]
-    # Avoid running on the template repo itself
+    # Local app packages are produced with ./build.sh. This CI path is reserved
+    # for manual checks and version-tag release builds, never pull requests.
     if: github.repository != 'splunk/fdse-template-app'
     needs: pre-commit
     outputs:
@@ -56,13 +50,17 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install --upgrade crudini splunk-packaging-toolkit splunk-add-on-ucc-framework
+          pip install --upgrade crudini splunk-packaging-toolkit
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
 
       - name: Get App Info
         id: app
         run: |
-          MANIFEST="app.manifest"
-          APP_CONF="default/app.conf"
+          APP_CONF="packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf"
+          MANIFEST="packages/splunk-cisco-dashboards/src/main/resources/splunk/app.manifest"
           if [ -f "$MANIFEST" ]; then
             app_id=$(cat "$MANIFEST" | jq -r '.info.id.name')
             app_version=$(cat "$MANIFEST" | jq -r '.info.id.version')
@@ -82,39 +80,18 @@ jobs:
             echo "name=${app_id}" >> $GITHUB_OUTPUT
             echo "version=${app_version}" >> $GITHUB_OUTPUT
           else
-            echo "Files Not Found ❌ Please add 'package/app.manifest' or 'package/default/app.conf'"
+            echo "Files Not Found ❌ Please add '${MANIFEST}' or '${APP_CONF}'"
             exit 1
           fi
-        working-directory: ./package
 
-      - name: Check whether built by the UCC framework
-        id: ta_builder
+      - name: Install workspace packages
         run: |
-          if [ -f "./globalConfig.json" ]; then
-            echo "result=ucc" >> $GITHUB_OUTPUT
-          else
-            echo "result=none" >> $GITHUB_OUTPUT
-          fi
+          yarn install --frozen-lockfile
 
       - name: Bundle App Source
-        if: ${{ steps.ta_builder.outputs.result == 'none' }}
         run: |
-          sed -i '/^!/d' README.md
-          cp README.md package/README.md
-          if [ ! -f "./package/default/addon_builder.conf" ]; then
-            rm -rf package/README.txt
-          fi
-          mkdir -p output/${{ steps.app.outputs.name }}
-          cp -r package/* output/${{ steps.app.outputs.name }}
-          tar -C output -zcvf ${{ steps.app.outputs.name }}-${{ steps.app.outputs.version }}.tar.gz ${{ steps.app.outputs.name }}/
-
-      - name: Build and bundle TA
-        if: ${{ steps.ta_builder.outputs.result == 'ucc' }}
-        run: |
-          ucc-gen build --ta-version ${{ steps.app.outputs.version }}
-          chmod -R +r output
-          chmod -R go-w output
-          ucc-gen package --path output/${{ steps.app.outputs.name }}
+          yarn package:app
+          ls -lh dist/${{ steps.app.outputs.name }}*.tar.gz
         shell: bash
 
       - id: artifact
@@ -124,7 +101,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.artifact.outputs.name }}
-          path: ${{ steps.app.outputs.name }}*.tar.gz
+          path: dist/${{ steps.app.outputs.name }}*.tar.gz
 
   appinspect-cli:
     name: appinspect-cli ${{ matrix.tags }}
@@ -163,6 +140,8 @@ jobs:
       - build
       - appinspect-cli
     if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
