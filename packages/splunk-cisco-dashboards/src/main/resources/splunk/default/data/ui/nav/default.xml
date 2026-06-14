@@ -38,7 +38,6 @@
     <!-- Admin utilities, dashboard tooling, and built-in Splunk views -->
     <collection label="Admin &amp; Tools">
         <a href="admin_guide_v1">Admin Guide</a>
-        <a href="dashboardbuilder">Dashboard Manager</a>
         <a href="macro_index_tuning">Macro Index Tuning</a>
         <a href="template">Customer Template</a>
         <divider/>
@@ -46,6 +45,7 @@
         <view name="dashboards"/>
         <a href="search" target="_blank" rel="noopener">Search</a>
     </collection>
+    <a href="dashboardbuilder">Dashboard Manager</a>
     <collection label="My Views">
         <a href="dashboardbuilder">Dashboard Manager</a>
 	</collection>
