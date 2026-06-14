@@ -21,8 +21,8 @@
         <a href="m365_activity_monitoring">M365 Activity Monitoring</a>
     </collection>
 
-    <!-- Cisco Live and related event operations dashboards -->
-    <collection label="Cisco Live Event Ops">
+    <!-- Event Operations dashboards -->
+    <collection label="Event Ops">
         <a href="statewide_exercise_v1">Network Activation Report</a>
         <a href="statewide_exercise_v1_studio_modern">Statewide Exercise - Modern Dashboard Studio</a>
     </collection>
