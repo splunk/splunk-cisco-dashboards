@@ -333,7 +333,7 @@ const METRIC_CONFIG: MetricConfig[] = [
         // `headline_pct` are broadcast onto every row via eventstats
         // latest, so reading the latest row gives a stable string +
         // numeric pair.
-        savedSearch: 'Executive Dashboard - Critical Website Availability',
+        savedSearch: 'Executive - Critical Website Availability',
         valueField: 'headline_pct',
         displayField: 'display',
         sparkDataField: 'current_pct',
@@ -382,7 +382,7 @@ const METRIC_CONFIG: MetricConfig[] = [
             'Catalyst Center. Devices that are reachable AND managed score 100, ' +
             'reachable-only score 50, otherwise 0.',
         // Single row: { score: 0..100 }
-        savedSearch: 'Executive Dashboard - Current Device Health',
+        savedSearch: 'Executive - Current Device Health',
         valueField: 'score',
         unit: '%',
         thresholds: { warning: 98, critical: 90, direction: 'higher_is_better' },
@@ -402,7 +402,7 @@ const METRIC_CONFIG: MetricConfig[] = [
             'Count of open issues raised by Catalyst Center across every priority. ' +
             'Source: cisco:dnac:issue. ',
         // Single row: { total, critical, high, affected_devices, affected_sites }
-        savedSearch: 'Executive Dashboard - Issue Summary KPIs',
+        savedSearch: 'Executive - Issue Summary KPIs',
         valueField: 'total',
         thresholds: { warning: 500, critical: 1000, direction: 'lower_is_better' },
         thresholdNote:
@@ -490,7 +490,7 @@ const METRIC_CONFIG: MetricConfig[] = [
         description:
             'Composite IT score blending Catalyst Center network health, device ' +
             'readiness, and compliance pass rate into a single executive signal.',
-        savedSearch: 'Executive Dashboard - IT Domain Score',
+        savedSearch: 'Executive - IT Domain Score',
         valueField: 'score',
         unit: '%',
         color: '#2563eb',
@@ -510,7 +510,7 @@ const METRIC_CONFIG: MetricConfig[] = [
             'Synthetic monitoring health across packet loss, latency, HTTP ' +
             'availability, and page-load completion from ThousandEyes data model ' +
             'summaries.',
-        savedSearch: 'Executive Dashboard - ThousandEyes Health Score',
+        savedSearch: 'Executive - ThousandEyes Health Score',
         valueField: 'score',
         unit: '%',
         color: '#0ea5e9',
@@ -555,7 +555,7 @@ const METRIC_CONFIG: MetricConfig[] = [
         // blocked is per-hour (sparkline); baseline is window-avg
         // (dashed overlay).
         savedSearch:
-            'Executive Dashboard - Firewall Blocked Connections (with Baseline)',
+            'Executive - Firewall Blocked Connections (with Baseline)',
         valueField: 'total_blocked',
         sparkDataField: 'blocked',
         baselineField: 'baseline',
@@ -590,7 +590,7 @@ const METRIC_CONFIG: MetricConfig[] = [
         // `isSingleRow` mock-spark fallback — the chart was synthesised
         // RNG between sparkMin (5) and sparkMax (20), not real data.
         // See SESSION_LOG Build 1209 for the full diagnosis.
-        savedSearch: 'Executive Dashboard - Threat Sources (with Baseline)',
+        savedSearch: 'Executive - Threat Sources (with Baseline)',
         valueField: 'total_sources',
         sparkDataField: 'sources',
         baselineField: 'baseline',
@@ -623,7 +623,7 @@ const METRIC_CONFIG: MetricConfig[] = [
             'stuffing or a lockout storm.',
         // Hour-bucket timechart: { _time, failures, baseline, total_count }.
         savedSearch:
-            'Executive Dashboard - Failed Logon Count (with Baseline)',
+            'Executive - Failed Logon Count (with Baseline)',
         valueField: 'total_count',
         sparkDataField: 'failures',
         baselineField: 'baseline',
@@ -646,7 +646,7 @@ const METRIC_CONFIG: MetricConfig[] = [
             'Count of distinct Cisco XDR / SecureX incident IDs in the dispatched ' +
             'window. Includes both real-time and summary incident sourcetypes.',
         // Single row: { total }
-        savedSearch: 'Executive Dashboard - XDR Incidents',
+        savedSearch: 'Executive - XDR Incidents',
         valueField: 'total',
         // Same rationale as Threat Sources: resting state stays neutral
         // sky; MetricItem's status palette turns the sparkline amber/
@@ -669,7 +669,7 @@ const METRIC_CONFIG: MetricConfig[] = [
             '(CISE_Passed_Authentications vs CISE_Failed_Attempts) with ' +
             'Windows AD events (4624 vs 4625). 0-100.',
         // Single row: { score: 0..100 }
-        savedSearch: 'Executive Dashboard - Security Domain Score',
+        savedSearch: 'Executive - Security Domain Score',
         valueField: 'score',
         unit: '%',
         color: '#10b981',
@@ -775,7 +775,7 @@ const METRIC_CONFIG: MetricConfig[] = [
             'derived from the latest DEVICE_PRESENCE event per location in Cisco ' +
             'Spaces. Reflects how busy the campus is right now.',
         // Time series: { active_devices }
-        savedSearch: 'Executive Dashboard - Active Devices',
+        savedSearch: 'Executive - Active Devices',
         valueField: 'active_devices',
         color: '#10b981',
         thresholdNote:
@@ -802,7 +802,7 @@ const METRIC_CONFIG: MetricConfig[] = [
         // headline); clients is per-bucket (sparkline); baseline is
         // window-avg (dashed overlay). See searchbase stanza
         // executive_dashboard_wifi_clients for the SPL.
-        savedSearch: 'Executive Dashboard - Wifi Clients',
+        savedSearch: 'Executive - Wifi Clients',
         valueField: 'score',
         sparkDataField: 'clients',
         baselineField: 'baseline',
@@ -824,7 +824,7 @@ const METRIC_CONFIG: MetricConfig[] = [
             'derived from Cisco Spaces SPACE_OCCUPANCY events. 0% may indicate either ' +
             'an empty building or a stalled feed — check the source dot.',
         // Single row: { score: 0..100 }
-        savedSearch: 'Executive Dashboard - Building Occupancy (Dashboard Tile)',
+        savedSearch: 'Executive - Building Occupancy',
         valueField: 'score',
         unit: '%',
         thresholdNote:
@@ -844,7 +844,7 @@ const METRIC_CONFIG: MetricConfig[] = [
             'device-presence connectivity (Cisco Spaces) + room occupancy + ' +
             'compliance pass-rate, averaged. 0-100.',
         // Single row: { score: 0..100 }
-        savedSearch: 'Executive Dashboard - Building Score',
+        savedSearch: 'Executive - Building Score',
         valueField: 'score',
         unit: '%',
         color: '#10b981',
@@ -866,7 +866,7 @@ const METRIC_CONFIG: MetricConfig[] = [
             '(WEBEX_TELEMETRY events) from Cisco Spaces. Drops in this number can ' +
             'indicate a feed issue or large-scale device offline event.',
         // Single row: { score }
-        savedSearch: 'Executive Dashboard - Collab Devices',
+        savedSearch: 'Executive - Collab Devices',
         valueField: 'score',
         color: '#0ea5e9',
         thresholdNote:
@@ -966,7 +966,7 @@ const METRIC_CONFIG: MetricConfig[] = [
         description:
             'User-experience domain score combining Catalyst Center client health ' +
             'and infrastructure readiness.',
-        savedSearch: 'Executive Dashboard - User Experience Domain Score',
+        savedSearch: 'Executive - User Experience Domain Score',
         valueField: 'score',
         unit: '%',
         color: '#0ea5e9',
@@ -982,7 +982,7 @@ const METRIC_CONFIG: MetricConfig[] = [
         label: 'IT score',
         subLabel: 'IT domain rollup',
         description: 'Executive IT domain score for command-center layouts.',
-        savedSearch: 'Executive Dashboard - IT Domain Score',
+        savedSearch: 'Executive - IT Domain Score',
         valueField: 'score',
         unit: '%',
         color: '#2563eb',
@@ -999,7 +999,7 @@ const METRIC_CONFIG: MetricConfig[] = [
         description:
             'Executive security-domain score built from ISE and Active Directory ' +
             'authentication success rates.',
-        savedSearch: 'Executive Dashboard - Security Domain Score',
+        savedSearch: 'Executive - Security Domain Score',
         valueField: 'score',
         unit: '%',
         color: '#10b981',
@@ -1017,7 +1017,7 @@ const METRIC_CONFIG: MetricConfig[] = [
         description:
             'Executive building-domain score across AP health, presence, occupancy, ' +
             'and compliance pillars.',
-        savedSearch: 'Executive Dashboard - Building Domain Score',
+        savedSearch: 'Executive - Building Domain Score',
         valueField: 'score',
         unit: '%',
         color: '#10b981',
@@ -1035,7 +1035,7 @@ const METRIC_CONFIG: MetricConfig[] = [
         description:
             'Active Catalyst Center clients by connection type. Useful as an ' +
             'occupancy and capacity proxy.',
-        savedSearch: 'Executive Dashboard - Active Clients',
+        savedSearch: 'Executive - Active Clients',
         valueField: 'count',
         color: '#0ea5e9',
         thresholdNote:
@@ -1098,7 +1098,7 @@ const METRIC_CONFIG: MetricConfig[] = [
         subLabel: 'Active Catalyst Center issues',
         description:
             'Active Catalyst Center issue volume with P1/P2 and footprint context.',
-        savedSearch: 'Executive Dashboard - Issue Summary KPIs',
+        savedSearch: 'Executive - Issue Summary KPIs',
         valueField: 'total',
         color: '#0ea5e9',
         thresholds: { warning: 50, critical: 250, direction: 'lower_is_better' },

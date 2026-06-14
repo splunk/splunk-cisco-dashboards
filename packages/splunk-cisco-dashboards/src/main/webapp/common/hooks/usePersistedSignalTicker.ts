@@ -27,7 +27,7 @@ export interface SignalTickerConfig {
 }
 
 const STORAGE_KEY = 'splunk-cisco-dashboards.signalTicker.v1';
-const STORAGE_VERSION = 1;
+const STORAGE_VERSION = 2;
 
 const ID_PATTERN = /^[a-z0-9_]{1,80}$/;
 const SEARCH_NAME_PATTERN = /^[\w\s\-.:()<>/&]+$/;
@@ -41,34 +41,59 @@ const DEFAULT_SIGNAL_TICKER_CONFIG: SignalTickerConfig = {
     density: 'compact',
     items: [
         {
-            id: 'asset_inventory_firewall_gap',
-            searchName: 'Asset Inventory - Firewall Gap',
-            label: 'Asset inventory',
+            id: 'event_ops_feeds_active',
+            searchName: 'Cisco Live - Event Ops - Onboarding Gap Summary KPI',
+            label: 'Feeds active',
+            valueField: 'active_integrations',
+            thresholdWarning: 12,
+            thresholdCritical: 8,
+            thresholdDirection: 'higher_is_better',
         },
         {
-            id: 'critical_sites_available',
-            searchName: 'Executive Dashboard - Critical Website Availability',
-            label: 'Critical sites available',
+            id: 'catalyst_active_issues',
+            searchName: 'Catalyst Center - Event Ops - Active Issues Readiness',
+            label: 'Active issues',
+            valueField: 'total_issues',
+            thresholdWarning: 50,
+            thresholdCritical: 250,
+            thresholdDirection: 'lower_is_better',
         },
         {
-            id: 'network_health',
-            searchName: 'IT - Critical Systems - Network Health Score (Current)',
-            label: 'Network health',
+            id: 'catalyst_compliance_ready',
+            searchName: 'Catalyst Center - Event Ops - Compliance Readiness',
+            label: 'Compliance ready',
+            valueField: 'pct',
+            thresholdWarning: 95,
+            thresholdCritical: 80,
+            thresholdDirection: 'higher_is_better',
+            thresholdUnit: '%',
         },
         {
-            id: 'fw_blocked',
-            searchName: 'Executive Dashboard - Firewall Blocked Connections (with Baseline)',
-            label: 'FW blocked',
+            id: 'fmc_ips_ready',
+            searchName: 'FMC - Event Ops - eStreamer IPS Readiness',
+            label: 'IPS telemetry',
+            valueField: 'count',
+            thresholdWarning: 1,
+            thresholdCritical: 1,
+            thresholdDirection: 'higher_is_better',
         },
         {
-            id: 'threat_sources',
-            searchName: 'Executive Dashboard - Threat Sources (with Baseline)',
-            label: 'Threat sources',
+            id: 'thousandeyes_feed_ready',
+            searchName: 'ThousandEyes - Event Ops - Feed Health Readiness',
+            label: 'ThousandEyes feed',
+            valueField: 'count',
+            thresholdWarning: 1,
+            thresholdCritical: 1,
+            thresholdDirection: 'higher_is_better',
         },
         {
-            id: 'active_devices',
-            searchName: 'Executive Dashboard - Active Devices',
-            label: 'Active devices',
+            id: 'duo_auth_ready',
+            searchName: 'Duo - Event Ops - Authentication Volume Readiness',
+            label: 'Duo auth',
+            valueField: 'count',
+            thresholdWarning: 1,
+            thresholdCritical: 1,
+            thresholdDirection: 'higher_is_better',
         },
     ],
 };

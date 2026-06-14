@@ -15,7 +15,7 @@ import {
     X,
 } from 'lucide-react';
 import { cn } from '@/common/lib/utils';
-import { openSplunkSearch } from '@/common/lib/splunkSearchUrl';
+import { splunkSearchAppUrl } from '@/common/lib/splunkSearchUrl';
 import {
     plainTextFromHtml,
     type SearchbaseRecord,
@@ -311,23 +311,31 @@ const sameVisualState = (
 interface SignalTickerTileChromeProps {
     visual: SignalTickerTileVisualState;
     density: SignalTickerDensity;
-    onOpen?: () => void;
+    searchHref?: string;
     duplicate?: boolean;
 }
 
 const SignalTickerTileChrome: React.FC<SignalTickerTileChromeProps> = ({
     visual,
     density,
-    onOpen,
+    searchHref,
     duplicate = false,
 }) => {
+    const handleOpenInSearchClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+        event.stopPropagation();
+    };
+
+    const stopRailDrag = (event: React.PointerEvent<HTMLAnchorElement>) => {
+        event.stopPropagation();
+    };
+
     const className = cn(
         'group relative overflow-hidden rounded-lg border text-left shadow-sm transition-all',
         'scd-signal-ticker-tile',
         TILE_SIZE_CLASS[density],
         STATUS_BG_CLASS[visual.status],
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
-        visual.canOpen ? 'cursor-pointer' : 'cursor-default',
+        'cursor-default',
         STATUS_ACCENT_CLASS[visual.status]
     );
     const content = (
@@ -364,17 +372,32 @@ const SignalTickerTileChrome: React.FC<SignalTickerTileChromeProps> = ({
                     </span>
                 </span>
                 <span className="flex flex-col items-end gap-1">
-                    <span
-                        className={cn(
-                            'rounded-full px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.12em]',
-                            STATUS_PILL_CLASS[visual.status]
+                    <span className="flex items-center gap-0.5">
+                        <span
+                            className={cn(
+                                'rounded-full px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.12em]',
+                                STATUS_PILL_CLASS[visual.status]
+                            )}
+                        >
+                            {STATUS_LABEL[visual.status]}
+                        </span>
+                        {visual.canOpen && searchHref && (
+                            <a
+                                href={searchHref}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onPointerDown={stopRailDrag}
+                                onClick={handleOpenInSearchClick}
+                                title="Open in Search"
+                                aria-label={`Open ${visual.label} in Search`}
+                                tabIndex={duplicate ? -1 : 0}
+                                data-tile-control="true"
+                                className="p-0.5 -my-0.5 text-slate-300 transition-colors rounded hover:text-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:text-slate-500 dark:hover:text-sky-300"
+                            >
+                                <ExternalLink className="h-3 w-3 stroke-[2.5px]" />
+                            </a>
                         )}
-                    >
-                        {STATUS_LABEL[visual.status]}
                     </span>
-                    {visual.canOpen && (
-                        <ExternalLink className="h-3 w-3 text-slate-300 opacity-0 transition-opacity group-hover:opacity-100 dark:text-slate-500" />
-                    )}
                 </span>
             </span>
             <span
@@ -395,14 +418,6 @@ const SignalTickerTileChrome: React.FC<SignalTickerTileChromeProps> = ({
                 data-status={visual.status}
                 aria-hidden="true"
                 title={visual.canOpen ? `Open ${visual.label} in Search` : visual.label}
-                onClick={
-                    visual.canOpen && onOpen
-                        ? (event) => {
-                              event.preventDefault();
-                              onOpen();
-                          }
-                        : undefined
-                }
             >
                 {content}
             </div>
@@ -410,16 +425,13 @@ const SignalTickerTileChrome: React.FC<SignalTickerTileChromeProps> = ({
     }
 
     return (
-        <button
-            type="button"
-            onClick={visual.canOpen ? onOpen : undefined}
-            disabled={!visual.canOpen}
+        <div
             data-status={visual.status}
-            title={visual.canOpen ? `Open ${visual.label} in Search` : visual.label}
+            title={visual.label}
             className={className}
         >
             {content}
-        </button>
+        </div>
     );
 };
 
@@ -512,9 +524,11 @@ const SignalTickerTile: React.FC<SignalTickerTileProps> = ({
         <SignalTickerTileChrome
             visual={visual}
             density={density}
-            onOpen={() => {
-                if (record?.search) openSplunkSearch(record.search, range);
-            }}
+            searchHref={
+                record?.search
+                    ? splunkSearchAppUrl(record.search, range)
+                    : undefined
+            }
         />
     );
 };
@@ -822,14 +836,14 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
                                                                 )
                                                             }
                                                             density={density}
-                                                            onOpen={() => {
-                                                                if (record?.search) {
-                                                                    openSplunkSearch(
-                                                                        record.search,
-                                                                        range
-                                                                    );
-                                                                }
-                                                            }}
+                                                            searchHref={
+                                                                record?.search
+                                                                    ? splunkSearchAppUrl(
+                                                                          record.search,
+                                                                          range
+                                                                      )
+                                                                    : undefined
+                                                            }
                                                             duplicate
                                                         />
                                                     );
