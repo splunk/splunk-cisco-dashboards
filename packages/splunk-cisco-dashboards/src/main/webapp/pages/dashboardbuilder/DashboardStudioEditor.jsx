@@ -1065,10 +1065,16 @@ const DashboardStudioEditor = ({
             edit: [
                 <HistoryGroup key="historyGroup" />,
                 <VisualizationGroup key="visualization" />,
-                <BackgroundButton key="backgroundButton"></BackgroundButton>,
-                <InsightKpiButton key="insightKpi" />,
                 <SidebarControlGroup key="sidebarControlGroup" />,
                 <EditorGroup key="editorGroup" sourceButtonOnClick={handleEnterSourceMode} />,
+                <ItemGroup key="customExtensionToolbar" borders={false}>
+                    <span
+                        className="dashboardbuilder-custom-toolbar-separator"
+                        aria-hidden="true"
+                    />
+                    <BackgroundButton key="backgroundButton" iconColor="#26afac" />
+                    <InsightKpiButton key="insightKpi" />
+                </ItemGroup>,
                 <ItemGroup key="sideToolbar" align="right" borders={false}>
                     <ModeSwitch key="modeSwitch" />
                     <SaveButton key="save" onClick={handleSaveClick} isDirty={isDirty} />
@@ -1096,10 +1102,16 @@ const DashboardStudioEditor = ({
             editconvert: [
                 <HistoryGroup key="historyGroup" />,
                 <VisualizationGroup key="visualization" />,
-                <BackgroundButton key="backgroundButton"></BackgroundButton>,
-                <InsightKpiButton key="insightKpi" />,
                 <SidebarControlGroup key="sidebarControlGroup" />,
                 <EditorGroup key="editorGroup" sourceButtonOnClick={handleEnterSourceMode} />,
+                <ItemGroup key="customExtensionToolbar" borders={false}>
+                    <span
+                        className="dashboardbuilder-custom-toolbar-separator"
+                        aria-hidden="true"
+                    />
+                    <BackgroundButton key="backgroundButton" iconColor="#26afac" />
+                    <InsightKpiButton key="insightKpi" />
+                </ItemGroup>,
                 <ItemGroup key="sideToolbar" align="right" borders={false}>
                     <Button
                         style={{ marginRight: 10 }}

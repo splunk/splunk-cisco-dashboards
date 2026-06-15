@@ -5,6 +5,9 @@ import { getSearches } from '../../common/lib/searchbase';
 import Magnifier from '@splunk/react-icons/Magnifier';
 
 const ActionButtonIcon = <Magnifier />;
+const DEFAULT_EARLIEST = '-24h@h';
+const DEFAULT_LATEST = 'now';
+const GLOBAL_TIME_TOKEN = 'global_time';
 
 const CustomOpenSearch = ({ itemId, dashboardApi, itemDefinition, dataSources }) => {
     const [disabled, setDisabled] = useState(true);
@@ -28,6 +31,58 @@ const CustomOpenSearch = ({ itemId, dashboardApi, itemDefinition, dataSources })
         return [...new Set(matches.map((match) => match[1]))];
     };
 
+    const getUrlParameter = useCallback((name) => {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get(name) || urlParams.get(`form.${name}`);
+    }, []);
+
+    const getInputDefaultValue = useCallback(
+        (token) => {
+            const [tokenName, timePart] = token.split('.');
+            const input = Object.values(dashboardApi?.getDefinition?.().inputs || {}).find(
+                (candidate) => candidate?.options?.token === tokenName,
+            );
+            const [defaultEarliest, defaultLatest] = `${input?.options?.defaultValue || ''}`.split(
+                ',',
+            );
+
+            if (timePart === 'earliest') return defaultEarliest;
+            if (timePart === 'latest') return defaultLatest;
+            return undefined;
+        },
+        [dashboardApi],
+    );
+
+    const resolveTokenValue = useCallback(
+        (value) => {
+            if (!value) return undefined;
+
+            return `${value}`.replace(/\$(.+?)\$/g, (match, token) => {
+                return getUrlParameter(token) || getInputDefaultValue(token) || match;
+            });
+        },
+        [getInputDefaultValue, getUrlParameter],
+    );
+
+    const getGlobalTimeValue = useCallback(
+        (timePart) => {
+            const token = `${GLOBAL_TIME_TOKEN}.${timePart}`;
+            const fallback = timePart === 'earliest' ? DEFAULT_EARLIEST : DEFAULT_LATEST;
+            return getUrlParameter(token) || getInputDefaultValue(token) || fallback;
+        },
+        [getInputDefaultValue, getUrlParameter],
+    );
+
+    const setResolvedTimeRange = useCallback(
+        (queryParameters) => {
+            setEarliest(
+                resolveTokenValue(queryParameters?.earliest) || getGlobalTimeValue('earliest'),
+            );
+            setLatest(resolveTokenValue(queryParameters?.latest) || getGlobalTimeValue('latest'));
+        },
+        [getGlobalTimeValue, resolveTokenValue],
+    );
+
     useEffect(() => {
         if (searches.length > 0) {
             if (itemDefinition.dataSources) {
@@ -43,62 +98,50 @@ const CustomOpenSearch = ({ itemId, dashboardApi, itemDefinition, dataSources })
                     return;
                 }
 
-                if (dataSources[itemDefinition.dataSources.primary].type == 'ds.chain') {
+                const primaryDataSourceId = itemDefinition.dataSources.primary;
+                const primaryDataSource = dataSources[primaryDataSourceId];
+
+                if (!primaryDataSource) {
+                    return;
+                }
+
+                if (primaryDataSource.type == 'ds.chain') {
+                    const extendedDataSourceId = primaryDataSource.options.extend;
+                    const extendedDataSource =
+                        dashboardApi.getDefinition().dataSources[extendedDataSourceId];
                     spl = `${
-                        dashboardApi.getDefinition().dataSources[
-                            dataSources[itemDefinition.dataSources.primary].options.extend
-                        ].options.query
-                    }${dataSources[itemDefinition.dataSources.primary].options.query}`;
-                    if (
-                        dataSourceRegistry.getDataSourceController(
-                            dataSources[itemDefinition.dataSources.primary].options.extend,
-                        )
-                    ) {
-                        setEarliest(
-                            dataSourceRegistry.getDataSourceController(
-                                dataSources[itemDefinition.dataSources.primary].options.extend,
-                            ).def.options.queryParameters.earliest,
-                        );
-                        setLatest(
-                            dataSourceRegistry.getDataSourceController(
-                                dataSources[itemDefinition.dataSources.primary].options.extend,
-                            ).def.options.queryParameters.latest,
-                        );
-                    }
+                        extendedDataSource?.options?.query || ''
+                    }${primaryDataSource.options.query || ''}`;
+                    setResolvedTimeRange(
+                        dataSourceRegistry.getDataSourceController(extendedDataSourceId)?.def
+                            ?.options?.queryParameters ||
+                            extendedDataSource?.options?.queryParameters ||
+                            primaryDataSource.options?.queryParameters,
+                    );
                     setDisabled(false);
-                } else if (
-                    dataSources[itemDefinition.dataSources.primary].type == 'ds.searchbase'
-                ) {
-                    if (dataSources[itemDefinition.dataSources.primary].options.ref) {
+                } else if (primaryDataSource.type == 'ds.searchbase') {
+                    if (primaryDataSource.options.ref) {
                         const search = searches.find(
-                            (s) =>
-                                s.name ==
-                                dataSources[itemDefinition.dataSources.primary].options.ref,
+                            (s) => s.name == primaryDataSource.options.ref,
                         );
                         if (search) {
                             spl = search.content.search;
+                            setResolvedTimeRange(
+                                dataSourceRegistry.getDataSourceController(primaryDataSourceId)?.def
+                                    ?.options?.queryParameters ||
+                                    primaryDataSource.options?.queryParameters,
+                            );
                             setDisabled(false);
                         }
                     }
-                } else if (dataSources[itemDefinition.dataSources.primary].type == 'ds.search') {
-                    if (dataSources[itemDefinition.dataSources.primary].options.query) {
-                        spl = dataSources[itemDefinition.dataSources.primary].options.query;
-                        if (
-                            dataSourceRegistry.getDataSourceController(
-                                itemDefinition.dataSources.primary,
-                            )
-                        ) {
-                            setEarliest(
-                                dataSourceRegistry.getDataSourceController(
-                                    itemDefinition.dataSources.primary,
-                                ).def.options.queryParameters.earliest,
-                            );
-                            setLatest(
-                                dataSourceRegistry.getDataSourceController(
-                                    itemDefinition.dataSources.primary,
-                                ).def.options.queryParameters.latest,
-                            );
-                        }
+                } else if (primaryDataSource.type == 'ds.search') {
+                    if (primaryDataSource.options.query) {
+                        spl = primaryDataSource.options.query;
+                        setResolvedTimeRange(
+                            dataSourceRegistry.getDataSourceController(primaryDataSourceId)?.def
+                                ?.options?.queryParameters ||
+                                primaryDataSource.options?.queryParameters,
+                        );
                         setDisabled(false);
                     }
                 }
@@ -106,21 +149,27 @@ const CustomOpenSearch = ({ itemId, dashboardApi, itemDefinition, dataSources })
                 if (spl) {
                     const tokens = extractTokens(spl);
                     if (tokens.length > 0) {
-                        const urlParams = new URLSearchParams(window.location.search);
-                        tokens.map((tok) => {
-                            var val = urlParams.get(tok);
-                            if (!val) val = urlParams.get(`form.${tok}`);
+                        tokens.forEach((tok) => {
+                            var val = getUrlParameter(tok);
                             if (val) {
                                 spl = spl.replaceAll(`$${tok}$`, val);
                             }
                         });
                     }
 
-                    setSplSearch(spl);
+                    setSplSearch(resolveTokenValue(spl));
                 }
             }
         }
-    }, [searches, dashboardApi, itemDefinition, dataSources]);
+    }, [
+        searches,
+        dashboardApi,
+        itemDefinition,
+        dataSources,
+        getUrlParameter,
+        resolveTokenValue,
+        setResolvedTimeRange,
+    ]);
 
     return (
         <ActionButton
