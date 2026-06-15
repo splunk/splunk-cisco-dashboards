@@ -35,6 +35,7 @@ import LayoutOverview from '@splunk/react-icons/LayoutOverview';
 
 import { default as SplunkControlGroup } from '@splunk/react-ui/ControlGroup';
 import Modal from '@splunk/react-ui/Modal';
+import Tooltip from '@splunk/react-ui/Tooltip';
 import Select from '@splunk/react-ui/Select';
 import Text from '@splunk/react-ui/Text';
 import TabLayout from '@splunk/react-ui/TabLayout';
@@ -237,6 +238,16 @@ async function updateDash(dashName, jsonDefinition, app, owner, description, lab
     data.status = response.status;
     return data;
 }
+
+const getDefinitionTextValue = (definition, key, fallback = '') => {
+    const value = definition?.[key];
+    if (typeof value !== 'string') {
+        return fallback;
+    }
+
+    const trimmedValue = value.trim();
+    return trimmedValue || fallback;
+};
 
 export const AbsolutSVG = () => {
     return (
@@ -677,6 +688,7 @@ const DashboardStudioEditor = ({
     const cloneModalToggle = useRef();
     const [openDashboardModal, setOpenDashboardModal] = useState(false);
     const [openConvertModal, setOpenConvertModal] = useState(false);
+    const [openBackToManagerModal, setOpenBackToManagerModal] = useState(false);
     const [activeModeId, setActiveModeId] = useState('create');
     const [gridLayout, setGridLayout] = useState('absolute');
     const [dashboardTitle, setDashboardTitle] = useState('');
@@ -818,6 +830,7 @@ const DashboardStudioEditor = ({
         () => !isEqual(currentDashboard ? JSON.parse(currentDashboard.data) : {}, editedDefinition),
         [currentDashboard, editedDefinition],
     );
+    const hasPendingDashboardChanges = isDirty || unsavedDefinition;
 
     const source = useMemo(() => {
         return editedDefinition;
@@ -845,14 +858,23 @@ const DashboardStudioEditor = ({
                 convertedDataSources,
                 convertedInputs,
             } = await resolveSearchbaseDefinitionForNativeStudio(editedDefinition);
+            const dashboardLabel = getDefinitionTextValue(
+                definitionToSave,
+                'title',
+                currentDashboard.label || dashID,
+            );
+            const dashboardDescription =
+                typeof definitionToSave?.description === 'string'
+                    ? definitionToSave.description
+                    : currentDashboard.description || '';
 
             const response = await updateDash(
                 dashID,
                 JSON.stringify(definitionToSave, null, 4),
                 currentDashboard.app,
                 currentDashboard.author,
-                currentDashboard.description,
-                currentDashboard.label,
+                dashboardDescription,
+                dashboardLabel,
                 currentDashboard.tag,
             );
 
@@ -873,6 +895,8 @@ const DashboardStudioEditor = ({
                 setCurrentDashboard((prev) => {
                     let newDs = cloneDeep(prev);
                     newDs.data = JSON.stringify(definitionToSave);
+                    newDs.label = dashboardLabel;
+                    newDs.description = dashboardDescription;
                     return newDs;
                 });
                 if (onDashboardSaved) onDashboardSaved();
@@ -931,6 +955,15 @@ const DashboardStudioEditor = ({
         },
         [unsavedDefinition],
     );
+
+    const returnToDashboardManager = useCallback(() => {
+        setOpenBackToManagerModal(false);
+        navigate('/');
+    }, [navigate]);
+
+    const handleBackToManagerClick = useCallback(() => {
+        setOpenBackToManagerModal(true);
+    }, []);
 
     const handleDefinitionChange = useCallback((newDefinition) => {
         if (serverInfo?.isSplunkCloud) {
@@ -1081,23 +1114,18 @@ const DashboardStudioEditor = ({
                     <ModeSwitch key="modeSwitch" />
                     <SaveButton key="save" onClick={handleSaveClick} isDirty={isDirty} />
                     {showClose && (
-                        <Button
-                            style={{ marginLeft: 5 }}
-                            label="Close"
-                            appearance="destructive"
-                            onClick={() => {
-                                if (isDirty) {
-                                    const confirmLeave = window.confirm(
-                                        'Leave dashboard without saving?',
-                                    );
-                                    if (confirmLeave) {
-                                        navigate('/');
-                                    }
-                                } else {
-                                    navigate('/');
-                                }
-                            }}
-                        ></Button>
+                        <Tooltip
+                            key="backToManagerTooltip"
+                            content="Return to Dashboard Manager"
+                        >
+                            <Button
+                                style={{ marginLeft: 5 }}
+                                label="Back to Manager"
+                                appearance="default"
+                                aria-label="Back to Manager"
+                                onClick={handleBackToManagerClick}
+                            ></Button>
+                        </Tooltip>
                     )}
                 </ItemGroup>,
             ],
@@ -1123,16 +1151,28 @@ const DashboardStudioEditor = ({
                     ></Button>
                     <ModeSwitch key="modeSwitch" />
                     <SaveButton key="save" onClick={handleSaveClick} isDirty={isDirty} />
-                    <Button
-                        style={{ marginLeft: 5 }}
-                        label="Close"
-                        appearance="destructive"
-                        onClick={() => navigate('/')}
-                    ></Button>
+                    <Tooltip key="backToManagerTooltip" content="Return to Dashboard Manager">
+                        <Button
+                            style={{ marginLeft: 5 }}
+                            label="Back to Manager"
+                            appearance="default"
+                            aria-label="Back to Manager"
+                            onClick={handleBackToManagerClick}
+                        ></Button>
+                    </Tooltip>
                 </ItemGroup>,
             ],
         }),
-        [currentDashboard, editedDefinition, setIsCodeEditable],
+        [
+            currentDashboard,
+            editedDefinition,
+            handleBackToManagerClick,
+            handleEnterSourceMode,
+            handleSaveClick,
+            isDirty,
+            setIsCodeEditable,
+            showClose,
+        ],
     );
 
     /*
@@ -1311,7 +1351,7 @@ const DashboardStudioEditor = ({
                 // Cancel the event
                 e.preventDefault();
                 // Chrome requires returnValue to be set
-                const msg = 'Leave dashboard without saving?';
+                const msg = 'Leave Dashboard Builder without saving?';
                 e.returnValue = msg;
                 return msg;
             }
@@ -1409,7 +1449,7 @@ const DashboardStudioEditor = ({
             jsonDefinition.title = dashboardTitle;
             jsonDefinition.layout.type = gridLayout;
 
-            addDash(dashid, JSON.stringify(jsonDefinition)).then((response) => {
+            addDash(dashid, JSON.stringify(jsonDefinition), dashboardTitle).then((response) => {
                 if (response.status >= 200 && response.status <= 299) {
                     console.log(response);
                     syncDashboardManagerNavigation([
@@ -1511,6 +1551,30 @@ const DashboardStudioEditor = ({
                         onClick={() => setOpenConvertModal(false)}
                     />
                     <Button appearance="primary" label="Convert" onClick={convertDashboard} />
+                </Modal.Footer>
+            </Modal>
+            <Modal
+                open={openBackToManagerModal}
+                style={{ width: '460px' }}
+                onRequestClose={() => setOpenBackToManagerModal(false)}
+            >
+                <Modal.Header title="Back to Dashboard Manager?" />
+                <Modal.Body>
+                    {hasPendingDashboardChanges
+                        ? 'This will return you to Dashboard Manager. Unsaved changes may be lost.'
+                        : 'This will return you to Dashboard Manager.'}
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button
+                        appearance="secondary"
+                        label="Stay"
+                        onClick={() => setOpenBackToManagerModal(false)}
+                    />
+                    <Button
+                        appearance="destructive"
+                        label="Back to Manager"
+                        onClick={returnToDashboardManager}
+                    />
                 </Modal.Footer>
             </Modal>
             <Modal

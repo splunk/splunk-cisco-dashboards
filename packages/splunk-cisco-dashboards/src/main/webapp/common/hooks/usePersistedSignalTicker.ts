@@ -41,62 +41,79 @@ const DEFAULT_SIGNAL_TICKER_CONFIG: SignalTickerConfig = {
     density: 'compact',
     items: [
         {
-            id: 'event_ops_feeds_active',
-            searchName: 'Cisco Live - Event Ops - Onboarding Gap Summary KPI',
-            label: 'Feeds active',
-            valueField: 'active_integrations',
-            thresholdWarning: 12,
-            thresholdCritical: 8,
+            id: 'critical_sites_available',
+            searchName: 'Executive - Critical Website Availability',
+            label: 'Critical sites',
+            valueField: 'headline_pct',
+            thresholdWarning: 99.5,
+            thresholdCritical: 90,
             thresholdDirection: 'higher_is_better',
+            thresholdUnit: '%',
         },
         {
-            id: 'catalyst_active_issues',
-            searchName: 'Catalyst Center - Event Ops - Active Issues Readiness',
-            label: 'Active issues',
-            valueField: 'total_issues',
-            thresholdWarning: 50,
-            thresholdCritical: 250,
-            thresholdDirection: 'lower_is_better',
-        },
-        {
-            id: 'catalyst_compliance_ready',
-            searchName: 'Catalyst Center - Event Ops - Compliance Readiness',
-            label: 'Compliance ready',
-            valueField: 'pct',
+            id: 'network_health',
+            searchName: 'IT - Critical Systems - Network Health Score (Current)',
+            label: 'Network health',
+            valueField: 'score',
             thresholdWarning: 95,
             thresholdCritical: 80,
             thresholdDirection: 'higher_is_better',
             thresholdUnit: '%',
         },
         {
-            id: 'fmc_ips_ready',
-            searchName: 'FMC - Event Ops - eStreamer IPS Readiness',
-            label: 'IPS telemetry',
-            valueField: 'count',
-            thresholdWarning: 1,
-            thresholdCritical: 1,
-            thresholdDirection: 'higher_is_better',
+            id: 'active_issues',
+            searchName: 'Executive - Issue Summary KPIs',
+            label: 'Active issues',
+            valueField: 'total',
+            thresholdWarning: 50,
+            thresholdCritical: 250,
+            thresholdDirection: 'lower_is_better',
         },
         {
-            id: 'thousandeyes_feed_ready',
-            searchName: 'ThousandEyes - Event Ops - Feed Health Readiness',
-            label: 'ThousandEyes feed',
-            valueField: 'count',
+            id: 'xdr_critical',
+            searchName: 'Overview - XDR Critical Incidents',
+            label: 'XDR critical',
+            valueField: 'total',
             thresholdWarning: 1,
-            thresholdCritical: 1,
-            thresholdDirection: 'higher_is_better',
+            thresholdCritical: 5,
+            thresholdDirection: 'lower_is_better',
         },
         {
-            id: 'duo_auth_ready',
-            searchName: 'Duo - Event Ops - Authentication Volume Readiness',
-            label: 'Duo auth',
-            valueField: 'count',
-            thresholdWarning: 1,
-            thresholdCritical: 1,
-            thresholdDirection: 'higher_is_better',
+            id: 'failed_auth',
+            searchName: 'Executive - Failed Logon Count (with Baseline)',
+            label: 'Failed auth',
+            valueField: 'total_count',
+            thresholdWarning: 25,
+            thresholdCritical: 100,
+            thresholdDirection: 'lower_is_better',
+        },
+        {
+            id: 'threat_sources',
+            searchName: 'Executive - Threat Sources (with Baseline)',
+            label: 'Threat sources',
+            valueField: 'total_sources',
+            thresholdWarning: 25,
+            thresholdCritical: 100,
+            thresholdDirection: 'lower_is_better',
         },
     ],
 };
+
+const LEGACY_FACTORY_SIGNAL_TICKER_IDS = new Set([
+    'event_ops_feeds_active',
+    'catalyst_active_issues',
+    'catalyst_compliance_ready',
+    'fmc_ips_ready',
+    'thousandeyes_feed_ready',
+    'duo_auth_ready',
+]);
+
+const RENAMED_SEARCH_NAMES = new Map([
+    [
+        'Cisco Live - Event Ops - Onboarding Gap Summary KPI',
+        'Event Ops - Onboarding Gap Summary KPI',
+    ],
+]);
 
 const LEGACY_SPEED_MAP: Record<string, SignalTickerSpeed> = {
     slow: 3,
@@ -230,6 +247,28 @@ const sanitizeConfig = (raw: unknown): SignalTickerConfig | null => {
     return { enabled, rows, speed, density, items };
 };
 
+const isLegacyFactorySignalTickerConfig = (config: SignalTickerConfig): boolean =>
+    config.items.length === LEGACY_FACTORY_SIGNAL_TICKER_IDS.size &&
+    config.items.every((item) => LEGACY_FACTORY_SIGNAL_TICKER_IDS.has(item.id));
+
+const migrateSignalTickerConfig = (
+    config: SignalTickerConfig
+): SignalTickerConfig => {
+    if (isLegacyFactorySignalTickerConfig(config)) {
+        return DEFAULT_SIGNAL_TICKER_CONFIG;
+    }
+
+    let changed = false;
+    const items = config.items.map((item) => {
+        const searchName = RENAMED_SEARCH_NAMES.get(item.searchName);
+        if (!searchName) return item;
+        changed = true;
+        return { ...item, searchName };
+    });
+
+    return changed ? { ...config, items } : config;
+};
+
 const readFromStorage = (): SignalTickerConfig => {
     if (typeof window === 'undefined' || !window.localStorage) {
         return DEFAULT_SIGNAL_TICKER_CONFIG;
@@ -241,7 +280,10 @@ const readFromStorage = (): SignalTickerConfig => {
         if (!parsed || parsed.v !== STORAGE_VERSION) {
             return DEFAULT_SIGNAL_TICKER_CONFIG;
         }
-        return sanitizeConfig(parsed.config) ?? DEFAULT_SIGNAL_TICKER_CONFIG;
+        const sanitized = sanitizeConfig(parsed.config);
+        return sanitized
+            ? migrateSignalTickerConfig(sanitized)
+            : DEFAULT_SIGNAL_TICKER_CONFIG;
     } catch {
         return DEFAULT_SIGNAL_TICKER_CONFIG;
     }

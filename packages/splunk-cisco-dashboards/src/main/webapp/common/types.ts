@@ -33,7 +33,13 @@ export type KnownTopologyRole =
     | 'logistics'
     | 'branch'
     | 'datacenter'
-    | 'internet_edge';
+    | 'internet_edge'
+    | 'campus'
+    | 'office'
+    | 'event_venue'
+    | 'cisco_live'
+    | 'lab'
+    | 'cloud_region';
 
 export type TopologyRole = KnownTopologyRole | (string & {});
 

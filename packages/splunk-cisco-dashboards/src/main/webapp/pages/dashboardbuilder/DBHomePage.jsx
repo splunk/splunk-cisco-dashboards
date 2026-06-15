@@ -194,6 +194,11 @@ const getSplunkLocalePrefix = () => {
     return match?.[0] || '/en-US';
 };
 
+const buildAppStaticAssetUrl = (fileName, owner = 'nobody') =>
+    `${getSplunkLocalePrefix()}/splunkd/__raw/servicesNS/${encodeURIComponent(
+        owner || 'nobody',
+    )}/${encodeURIComponent(INSIGHTS_APP_ID)}/static/${encodeURIComponent(fileName)}`;
+
 const buildDashboardStudioPath = (dashboardId, mode = 'view') => {
     const encodedDashboardId = encodeURIComponent(dashboardId);
 
@@ -231,6 +236,10 @@ export default function DBHomePage() {
 
     const dashboardManagerSubtitle =
         'Turn predefined Cisco KPIs into actionable insights in seconds using the custom dashboard manager.';
+    const dashboardManagerIconSrc = useMemo(
+        () => buildAppStaticAssetUrl('appIcon.png', currentSplunkUser),
+        [currentSplunkUser],
+    );
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -998,7 +1007,14 @@ export default function DBHomePage() {
                                     <img
                                         className="icn-collection"
                                         alt="Splunk Executive Insights"
-                                        src="/static/app/splunk-cisco-dashboards/appIcon_2x.png"
+                                        src={dashboardManagerIconSrc}
+                                        onError={(event) => {
+                                            const fallbackSrc = buildAppStaticAssetUrl('appIcon.png');
+                                            const currentSrc = event.currentTarget.getAttribute('src');
+                                            if (currentSrc !== fallbackSrc) {
+                                                event.currentTarget.src = fallbackSrc;
+                                            }
+                                        }}
                                     />
                                 </div>
                                 <div className="manager-header-actions">

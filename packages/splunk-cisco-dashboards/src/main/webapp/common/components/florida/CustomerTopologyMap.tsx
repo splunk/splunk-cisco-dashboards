@@ -232,6 +232,12 @@ const TOPOLOGY_ROLES: KnownTopologyRole[] = [
     'branch',
     'datacenter',
     'internet_edge',
+    'campus',
+    'office',
+    'event_venue',
+    'cisco_live',
+    'lab',
+    'cloud_region',
 ];
 
 const TOPOLOGY_ROLE_SET = new Set<string>(TOPOLOGY_ROLES);
@@ -246,10 +252,13 @@ const ROLE_LABEL: Record<KnownTopologyRole, string> = {
     branch: 'Branch',
     datacenter: 'Data Center',
     internet_edge: 'Internet Edge',
+    campus: 'Campus',
+    office: 'Office',
+    event_venue: 'Event Venue',
+    cisco_live: 'Cisco Live',
+    lab: 'Lab',
+    cloud_region: 'Cloud Region',
 };
-
-const roleInputValue = (role: TopologyRole): string =>
-    isKnownTopologyRole(role) ? ROLE_LABEL[role] : role;
 
 const topologyRoleLabel = (role: TopologyRole | undefined): string => {
     const value = typeof role === 'string' ? role.trim() : '';
@@ -304,12 +313,18 @@ const STATUS_STROKE: Record<TopologyStatus, string> = {
 };
 
 const ROLE_DOT_CLASS: Record<KnownTopologyRole, string> = {
-    state_hq: 'bg-sky-500',
-    regional_hub: 'bg-amber-500',
-    logistics: 'bg-red-500',
-    branch: 'bg-emerald-500',
-    datacenter: 'bg-violet-500',
-    internet_edge: 'bg-slate-500',
+    state_hq: 'bg-sky-600',
+    regional_hub: 'bg-blue-600',
+    logistics: 'bg-indigo-600',
+    branch: 'bg-violet-600',
+    datacenter: 'bg-purple-600',
+    internet_edge: 'bg-slate-600',
+    campus: 'bg-blue-400',
+    office: 'bg-sky-500',
+    event_venue: 'bg-fuchsia-600',
+    cisco_live: 'bg-violet-500',
+    lab: 'bg-indigo-400',
+    cloud_region: 'bg-slate-700',
 };
 
 const CUSTOM_ROLE_DOT_CLASS = 'bg-slate-500';
@@ -322,33 +337,63 @@ const ROLE_BEACON_CHROME: Record<
     { fill: string; halo: string; label: string }
 > = {
     state_hq: {
-        fill: '#0ea5e9',
-        halo: 'rgba(14, 165, 233, 0.26)',
+        fill: '#0284c7',
+        halo: 'rgba(2, 132, 199, 0.26)',
         label: 'border-sky-200',
     },
     regional_hub: {
-        fill: '#f59e0b',
-        halo: 'rgba(245, 158, 11, 0.24)',
-        label: 'border-amber-200',
+        fill: '#2563eb',
+        halo: 'rgba(37, 99, 235, 0.23)',
+        label: 'border-blue-200',
     },
     logistics: {
-        fill: '#ef4444',
-        halo: 'rgba(239, 68, 68, 0.22)',
-        label: 'border-red-200',
+        fill: '#4f46e5',
+        halo: 'rgba(79, 70, 229, 0.23)',
+        label: 'border-indigo-200',
     },
     branch: {
-        fill: '#10b981',
-        halo: 'rgba(16, 185, 129, 0.22)',
-        label: 'border-emerald-200',
-    },
-    datacenter: {
-        fill: '#8b5cf6',
-        halo: 'rgba(139, 92, 246, 0.22)',
+        fill: '#7c3aed',
+        halo: 'rgba(124, 58, 237, 0.23)',
         label: 'border-violet-200',
     },
+    datacenter: {
+        fill: '#9333ea',
+        halo: 'rgba(147, 51, 234, 0.23)',
+        label: 'border-purple-200',
+    },
     internet_edge: {
-        fill: '#64748b',
-        halo: 'rgba(100, 116, 139, 0.22)',
+        fill: '#475569',
+        halo: 'rgba(71, 85, 105, 0.22)',
+        label: 'border-slate-200',
+    },
+    campus: {
+        fill: '#60a5fa',
+        halo: 'rgba(96, 165, 250, 0.23)',
+        label: 'border-blue-200',
+    },
+    office: {
+        fill: '#0ea5e9',
+        halo: 'rgba(14, 165, 233, 0.23)',
+        label: 'border-sky-200',
+    },
+    event_venue: {
+        fill: '#c026d3',
+        halo: 'rgba(192, 38, 211, 0.23)',
+        label: 'border-fuchsia-200',
+    },
+    cisco_live: {
+        fill: '#8b5cf6',
+        halo: 'rgba(139, 92, 246, 0.24)',
+        label: 'border-violet-200',
+    },
+    lab: {
+        fill: '#818cf8',
+        halo: 'rgba(129, 140, 248, 0.23)',
+        label: 'border-indigo-200',
+    },
+    cloud_region: {
+        fill: '#334155',
+        halo: 'rgba(51, 65, 85, 0.23)',
         label: 'border-slate-200',
     },
 };
@@ -381,36 +426,39 @@ const SITE_PLACEMENT_PRESETS: Array<{
     lat: number;
     lng: number;
 }> = [
+    // Offline city resolver for the topology editor. This is not a full
+    // geocoder, but it covers common global sites without leaking customer
+    // topology names to a public geocoding API from Splunk Web.
     {
-        aliases: ['nyc', 'new york', 'new york city', 'new york, ny'],
+        aliases: ['nyc', 'new york', 'new york city', 'new york ny', 'new york, ny', 'new york, usa'],
         name: 'New York City',
         shortName: 'NYC',
         lat: 40.7128,
         lng: -74.006,
     },
     {
-        aliases: ['dc', 'washington dc', 'washington, dc'],
+        aliases: ['dc', 'washington dc', 'washington, dc', 'washington, usa'],
         name: 'Washington DC',
         shortName: 'DC',
         lat: 38.9072,
         lng: -77.0369,
     },
     {
-        aliases: ['la', 'los angeles', 'los angeles, ca'],
+        aliases: ['la', 'los angeles', 'los angeles ca', 'los angeles, ca', 'los angeles, usa'],
         name: 'Los Angeles',
         shortName: 'LA',
         lat: 34.0522,
         lng: -118.2437,
     },
     {
-        aliases: ['chi', 'chicago', 'chicago, il'],
+        aliases: ['chi', 'chicago', 'chicago il', 'chicago, il', 'chicago, usa'],
         name: 'Chicago',
         shortName: 'CHI',
         lat: 41.8781,
         lng: -87.6298,
     },
     {
-        aliases: ['aus', 'austin', 'austin tx', 'austin, tx'],
+        aliases: ['aus', 'austin', 'austin tx', 'austin, tx', 'austin, usa'],
         name: 'Austin',
         shortName: 'AUS',
         lat: 30.2672,
@@ -423,6 +471,7 @@ const SITE_PLACEMENT_PRESETS: Array<{
             'san francisco',
             'san francisco ca',
             'san francisco, ca',
+            'san francisco, usa',
         ],
         name: 'San Francisco',
         shortName: 'SFO',
@@ -430,28 +479,28 @@ const SITE_PLACEMENT_PRESETS: Array<{
         lng: -122.4194,
     },
     {
-        aliases: ['sea', 'seattle', 'seattle wa', 'seattle, wa'],
+        aliases: ['sea', 'seattle', 'seattle wa', 'seattle, wa', 'seattle, usa'],
         name: 'Seattle',
         shortName: 'SEA',
         lat: 47.6062,
         lng: -122.3321,
     },
     {
-        aliases: ['dal', 'dallas', 'dallas, tx'],
+        aliases: ['dal', 'dallas', 'dallas tx', 'dallas, tx', 'dallas, usa'],
         name: 'Dallas',
         shortName: 'DAL',
         lat: 32.7767,
         lng: -96.797,
     },
     {
-        aliases: ['atl', 'atlanta', 'atlanta, ga'],
+        aliases: ['atl', 'atlanta', 'atlanta ga', 'atlanta, ga', 'atlanta, usa'],
         name: 'Atlanta',
         shortName: 'ATL',
         lat: 33.749,
         lng: -84.388,
     },
     {
-        aliases: ['mia', 'miami', 'miami, fl'],
+        aliases: ['mia', 'miami', 'miami fl', 'miami, fl', 'miami, usa'],
         name: 'Miami',
         shortName: 'MIA',
         lat: 25.7617,
@@ -465,11 +514,432 @@ const SITE_PLACEMENT_PRESETS: Array<{
             'las vegas',
             'las vegas, nv',
             'las vegas nv',
+            'las vegas, usa',
         ],
         name: 'Las Vegas',
         shortName: 'LAS',
         lat: 36.1699,
         lng: -115.1398,
+    },
+    {
+        aliases: ['sjc', 'san jose', 'san jose ca', 'san jose, ca', 'san jose, california', 'san jose, usa'],
+        name: 'San Jose, CA',
+        shortName: 'SJC',
+        lat: 37.3382,
+        lng: -121.8863,
+    },
+    {
+        aliases: ['par', 'paris', 'paris france', 'paris, france'],
+        name: 'Paris, France',
+        shortName: 'PAR',
+        lat: 48.8566,
+        lng: 2.3522,
+    },
+    {
+        aliases: ['tyo', 'tokyo', 'tokyo japan', 'tokyo, japan'],
+        name: 'Tokyo, Japan',
+        shortName: 'TYO',
+        lat: 35.6762,
+        lng: 139.6503,
+    },
+    {
+        aliases: ['lon', 'london', 'london uk', 'london, uk', 'london england', 'london, england'],
+        name: 'London',
+        shortName: 'LON',
+        lat: 51.5072,
+        lng: -0.1276,
+    },
+    {
+        aliases: ['ber', 'berlin', 'berlin germany', 'berlin, germany'],
+        name: 'Berlin',
+        shortName: 'BER',
+        lat: 52.52,
+        lng: 13.405,
+    },
+    {
+        aliases: ['fra', 'frankfurt', 'frankfurt germany', 'frankfurt, germany'],
+        name: 'Frankfurt',
+        shortName: 'FRA',
+        lat: 50.1109,
+        lng: 8.6821,
+    },
+    {
+        aliases: ['ams', 'amsterdam', 'amsterdam netherlands', 'amsterdam, netherlands'],
+        name: 'Amsterdam',
+        shortName: 'AMS',
+        lat: 52.3676,
+        lng: 4.9041,
+    },
+    {
+        aliases: ['dub', 'dublin', 'dublin ireland', 'dublin, ireland'],
+        name: 'Dublin',
+        shortName: 'DUB',
+        lat: 53.3498,
+        lng: -6.2603,
+    },
+    {
+        aliases: ['mad', 'madrid', 'madrid spain', 'madrid, spain'],
+        name: 'Madrid',
+        shortName: 'MAD',
+        lat: 40.4168,
+        lng: -3.7038,
+    },
+    {
+        aliases: ['bcn', 'barcelona', 'barcelona spain', 'barcelona, spain'],
+        name: 'Barcelona',
+        shortName: 'BCN',
+        lat: 41.3874,
+        lng: 2.1686,
+    },
+    {
+        aliases: ['rom', 'rome', 'rome italy', 'rome, italy'],
+        name: 'Rome',
+        shortName: 'ROM',
+        lat: 41.9028,
+        lng: 12.4964,
+    },
+    {
+        aliases: ['mil', 'milan', 'milan italy', 'milan, italy'],
+        name: 'Milan',
+        shortName: 'MIL',
+        lat: 45.4642,
+        lng: 9.19,
+    },
+    {
+        aliases: ['zur', 'zurich', 'zurich switzerland', 'zurich, switzerland'],
+        name: 'Zurich',
+        shortName: 'ZUR',
+        lat: 47.3769,
+        lng: 8.5417,
+    },
+    {
+        aliases: ['gva', 'geneva', 'geneva switzerland', 'geneva, switzerland'],
+        name: 'Geneva',
+        shortName: 'GVA',
+        lat: 46.2044,
+        lng: 6.1432,
+    },
+    {
+        aliases: ['sto', 'stockholm', 'stockholm sweden', 'stockholm, sweden'],
+        name: 'Stockholm',
+        shortName: 'STO',
+        lat: 59.3293,
+        lng: 18.0686,
+    },
+    {
+        aliases: ['cph', 'copenhagen', 'copenhagen denmark', 'copenhagen, denmark'],
+        name: 'Copenhagen',
+        shortName: 'CPH',
+        lat: 55.6761,
+        lng: 12.5683,
+    },
+    {
+        aliases: ['osl', 'oslo', 'oslo norway', 'oslo, norway'],
+        name: 'Oslo',
+        shortName: 'OSL',
+        lat: 59.9139,
+        lng: 10.7522,
+    },
+    {
+        aliases: ['hel', 'helsinki', 'helsinki finland', 'helsinki, finland'],
+        name: 'Helsinki',
+        shortName: 'HEL',
+        lat: 60.1699,
+        lng: 24.9384,
+    },
+    {
+        aliases: ['vienna', 'vienna austria', 'vienna, austria'],
+        name: 'Vienna',
+        shortName: 'VIE',
+        lat: 48.2082,
+        lng: 16.3738,
+    },
+    {
+        aliases: ['prg', 'prague', 'prague czechia', 'prague, czechia', 'prague czech republic'],
+        name: 'Prague',
+        shortName: 'PRG',
+        lat: 50.0755,
+        lng: 14.4378,
+    },
+    {
+        aliases: ['waw', 'warsaw', 'warsaw poland', 'warsaw, poland'],
+        name: 'Warsaw',
+        shortName: 'WAW',
+        lat: 52.2297,
+        lng: 21.0122,
+    },
+    {
+        aliases: ['lis', 'lisbon', 'lisbon portugal', 'lisbon, portugal'],
+        name: 'Lisbon',
+        shortName: 'LIS',
+        lat: 38.7223,
+        lng: -9.1393,
+    },
+    {
+        aliases: ['ath', 'athens', 'athens greece', 'athens, greece'],
+        name: 'Athens',
+        shortName: 'ATH',
+        lat: 37.9838,
+        lng: 23.7275,
+    },
+    {
+        aliases: ['ist', 'istanbul', 'istanbul turkey', 'istanbul, turkey'],
+        name: 'Istanbul',
+        shortName: 'IST',
+        lat: 41.0082,
+        lng: 28.9784,
+    },
+    {
+        aliases: ['dxb', 'dubai', 'dubai uae', 'dubai, uae', 'dubai united arab emirates'],
+        name: 'Dubai',
+        shortName: 'DXB',
+        lat: 25.2048,
+        lng: 55.2708,
+    },
+    {
+        aliases: ['auh', 'abu dhabi', 'abu dhabi uae', 'abu dhabi, uae'],
+        name: 'Abu Dhabi',
+        shortName: 'AUH',
+        lat: 24.4539,
+        lng: 54.3773,
+    },
+    {
+        aliases: ['riyadh', 'riyadh saudi arabia', 'riyadh, saudi arabia'],
+        name: 'Riyadh',
+        shortName: 'RUH',
+        lat: 24.7136,
+        lng: 46.6753,
+    },
+    {
+        aliases: ['tel aviv', 'tel aviv israel', 'tel aviv, israel'],
+        name: 'Tel Aviv',
+        shortName: 'TLV',
+        lat: 32.0853,
+        lng: 34.7818,
+    },
+    {
+        aliases: ['cairo', 'cairo egypt', 'cairo, egypt'],
+        name: 'Cairo',
+        shortName: 'CAI',
+        lat: 30.0444,
+        lng: 31.2357,
+    },
+    {
+        aliases: ['jnb', 'johannesburg', 'johannesburg south africa', 'johannesburg, south africa'],
+        name: 'Johannesburg',
+        shortName: 'JNB',
+        lat: -26.2041,
+        lng: 28.0473,
+    },
+    {
+        aliases: ['cpt', 'cape town', 'cape town south africa', 'cape town, south africa'],
+        name: 'Cape Town',
+        shortName: 'CPT',
+        lat: -33.9249,
+        lng: 18.4241,
+    },
+    {
+        aliases: ['nairobi', 'nairobi kenya', 'nairobi, kenya'],
+        name: 'Nairobi',
+        shortName: 'NBO',
+        lat: -1.2921,
+        lng: 36.8219,
+    },
+    {
+        aliases: ['lagos', 'lagos nigeria', 'lagos, nigeria'],
+        name: 'Lagos',
+        shortName: 'LOS',
+        lat: 6.5244,
+        lng: 3.3792,
+    },
+    {
+        aliases: ['mum', 'mumbai', 'mumbai india', 'mumbai, india'],
+        name: 'Mumbai',
+        shortName: 'BOM',
+        lat: 19.076,
+        lng: 72.8777,
+    },
+    {
+        aliases: ['delhi', 'new delhi', 'new delhi india', 'new delhi, india'],
+        name: 'New Delhi',
+        shortName: 'DEL',
+        lat: 28.6139,
+        lng: 77.209,
+    },
+    {
+        aliases: ['blr', 'bangalore', 'bengaluru', 'bengaluru india', 'bengaluru, india'],
+        name: 'Bengaluru',
+        shortName: 'BLR',
+        lat: 12.9716,
+        lng: 77.5946,
+    },
+    {
+        aliases: ['sin', 'singapore', 'singapore singapore'],
+        name: 'Singapore',
+        shortName: 'SIN',
+        lat: 1.3521,
+        lng: 103.8198,
+    },
+    {
+        aliases: ['hkg', 'hong kong', 'hong kong china', 'hong kong, china'],
+        name: 'Hong Kong',
+        shortName: 'HKG',
+        lat: 22.3193,
+        lng: 114.1694,
+    },
+    {
+        aliases: ['sha', 'shanghai', 'shanghai china', 'shanghai, china'],
+        name: 'Shanghai',
+        shortName: 'SHA',
+        lat: 31.2304,
+        lng: 121.4737,
+    },
+    {
+        aliases: ['pek', 'beijing', 'beijing china', 'beijing, china'],
+        name: 'Beijing',
+        shortName: 'PEK',
+        lat: 39.9042,
+        lng: 116.4074,
+    },
+    {
+        aliases: ['seoul', 'seoul korea', 'seoul south korea', 'seoul, south korea'],
+        name: 'Seoul',
+        shortName: 'SEL',
+        lat: 37.5665,
+        lng: 126.978,
+    },
+    {
+        aliases: ['osa', 'osaka', 'osaka japan', 'osaka, japan'],
+        name: 'Osaka',
+        shortName: 'OSA',
+        lat: 34.6937,
+        lng: 135.5023,
+    },
+    {
+        aliases: ['taipei', 'taipei taiwan', 'taipei, taiwan'],
+        name: 'Taipei',
+        shortName: 'TPE',
+        lat: 25.033,
+        lng: 121.5654,
+    },
+    {
+        aliases: ['bangkok', 'bangkok thailand', 'bangkok, thailand'],
+        name: 'Bangkok',
+        shortName: 'BKK',
+        lat: 13.7563,
+        lng: 100.5018,
+    },
+    {
+        aliases: ['kuala lumpur', 'kuala lumpur malaysia', 'kuala lumpur, malaysia'],
+        name: 'Kuala Lumpur',
+        shortName: 'KUL',
+        lat: 3.139,
+        lng: 101.6869,
+    },
+    {
+        aliases: ['jakarta', 'jakarta indonesia', 'jakarta, indonesia'],
+        name: 'Jakarta',
+        shortName: 'JKT',
+        lat: -6.2088,
+        lng: 106.8456,
+    },
+    {
+        aliases: ['manila', 'manila philippines', 'manila, philippines'],
+        name: 'Manila',
+        shortName: 'MNL',
+        lat: 14.5995,
+        lng: 120.9842,
+    },
+    {
+        aliases: ['syd', 'sydney', 'sydney australia', 'sydney, australia'],
+        name: 'Sydney',
+        shortName: 'SYD',
+        lat: -33.8688,
+        lng: 151.2093,
+    },
+    {
+        aliases: ['mel', 'melbourne', 'melbourne australia', 'melbourne, australia'],
+        name: 'Melbourne',
+        shortName: 'MEL',
+        lat: -37.8136,
+        lng: 144.9631,
+    },
+    {
+        aliases: ['akl', 'auckland', 'auckland new zealand', 'auckland, new zealand'],
+        name: 'Auckland',
+        shortName: 'AKL',
+        lat: -36.8485,
+        lng: 174.7633,
+    },
+    {
+        aliases: ['tor', 'toronto', 'toronto canada', 'toronto, canada'],
+        name: 'Toronto',
+        shortName: 'TOR',
+        lat: 43.6532,
+        lng: -79.3832,
+    },
+    {
+        aliases: ['yvr', 'vancouver', 'vancouver canada', 'vancouver, canada'],
+        name: 'Vancouver',
+        shortName: 'YVR',
+        lat: 49.2827,
+        lng: -123.1207,
+    },
+    {
+        aliases: ['yul', 'montreal', 'montreal canada', 'montreal, canada'],
+        name: 'Montreal',
+        shortName: 'YUL',
+        lat: 45.5019,
+        lng: -73.5674,
+    },
+    {
+        aliases: ['mex', 'mexico city', 'mexico city mexico', 'mexico city, mexico'],
+        name: 'Mexico City',
+        shortName: 'MEX',
+        lat: 19.4326,
+        lng: -99.1332,
+    },
+    {
+        aliases: ['sao paulo', 'sao paulo brazil', 'sao paulo, brazil', 'são paulo'],
+        name: 'Sao Paulo',
+        shortName: 'SAO',
+        lat: -23.5558,
+        lng: -46.6396,
+    },
+    {
+        aliases: ['rio', 'rio de janeiro', 'rio de janeiro brazil', 'rio de janeiro, brazil'],
+        name: 'Rio de Janeiro',
+        shortName: 'RIO',
+        lat: -22.9068,
+        lng: -43.1729,
+    },
+    {
+        aliases: ['buenos aires', 'buenos aires argentina', 'buenos aires, argentina'],
+        name: 'Buenos Aires',
+        shortName: 'BUE',
+        lat: -34.6037,
+        lng: -58.3816,
+    },
+    {
+        aliases: ['scl', 'santiago', 'santiago chile', 'santiago, chile'],
+        name: 'Santiago',
+        shortName: 'SCL',
+        lat: -33.4489,
+        lng: -70.6693,
+    },
+    {
+        aliases: ['bogota', 'bogota colombia', 'bogota, colombia'],
+        name: 'Bogota',
+        shortName: 'BOG',
+        lat: 4.711,
+        lng: -74.0721,
+    },
+    {
+        aliases: ['lima', 'lima peru', 'lima, peru'],
+        name: 'Lima',
+        shortName: 'LIM',
+        lat: -12.0464,
+        lng: -77.0428,
     },
 ];
 
@@ -781,12 +1251,98 @@ interface SitePlacement {
 }
 
 const normalizePlacementQuery = (value: string): string =>
-    value.trim().toLowerCase().replace(/\s*,\s*/g, ' ').replace(/\s+/g, ' ');
+    value
+        .trim()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/&/g, ' and ')
+        .replace(/\./g, '')
+        .replace(/\s*,\s*/g, ',')
+        .replace(/[^a-z0-9,-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .replace(/\s*,\s*/g, ',')
+        .replace(/,+/g, ',')
+        .replace(/^,|,$/g, '')
+        .trim();
+
+const compactPlacementQuery = (value: string): string =>
+    normalizePlacementQuery(value).replace(/[^a-z0-9]+/g, '');
+
+const getPlacementAliases = (
+    placement: (typeof SITE_PLACEMENT_PRESETS)[number]
+): string[] => [placement.name, placement.shortName, ...placement.aliases];
+
+const placementPhrase = (value: string): string =>
+    normalizePlacementQuery(value).replace(/,/g, ' ');
+
+const escapeRegex = (value: string): string =>
+    value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const includesPlacementPhrase = (query: string, alias: string): boolean =>
+    new RegExp(`(^|\\s)${escapeRegex(alias)}($|\\s)`).test(query);
+
+const buildPlacementLookupQueries = (value: string): string[] => {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+
+    const queries: string[] = [];
+    const add = (candidate: string) => {
+        const normalized = candidate.replace(/\s+/g, ' ').trim();
+        if (normalized && !queries.includes(normalized)) queries.push(normalized);
+    };
+
+    add(trimmed);
+
+    const commaParts = trimmed
+        .split(',')
+        .map((part) => part.trim())
+        .filter(Boolean);
+    if (commaParts.length > 1) {
+        add(commaParts.slice(-2).join(', '));
+        add(commaParts[0]);
+    }
+
+    const words = trimmed
+        .replace(/[^a-zA-Z0-9\s,-]+/g, ' ')
+        .split(/\s+/)
+        .map((word) => word.trim())
+        .filter(Boolean);
+    for (let count = Math.min(4, words.length); count >= 1; count -= 1) {
+        add(words.slice(-count).join(' '));
+    }
+
+    return queries;
+};
+
+const placementShortName = (name: string): string => {
+    const words = normalizePlacementQuery(name)
+        .replace(/,/g, ' ')
+        .split(/\s+/)
+        .filter((word) => word && !/^\d+$/.test(word));
+    if (words.length === 0) return 'SITE';
+    if (words.length === 1) return words[0].slice(0, 4).toUpperCase();
+    return words
+        .slice(0, 4)
+        .map((word) => word[0])
+        .join('')
+        .toUpperCase();
+};
+
+const sitePlacementFromPreset = (
+    preset: (typeof SITE_PLACEMENT_PRESETS)[number]
+): SitePlacement => ({
+    name: preset.name,
+    shortName: preset.shortName,
+    lat: preset.lat,
+    lng: preset.lng,
+});
 
 const resolveSitePlacement = (value: string): SitePlacement | null => {
-    const query = normalizePlacementQuery(value);
+    const rawQuery = value.trim();
+    const query = normalizePlacementQuery(rawQuery);
     if (!query) return null;
-    const coordinateMatch = query.match(
+    const coordinateMatch = rawQuery.match(
         /^(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)$/
     );
     if (coordinateMatch) {
@@ -809,17 +1365,118 @@ const resolveSitePlacement = (value: string): SitePlacement | null => {
         }
     }
 
-    const preset = SITE_PLACEMENT_PRESETS.find((candidate) =>
-        candidate.aliases.some((alias) => normalizePlacementQuery(alias) === query)
-    );
-    if (!preset) return null;
-    return {
-        name: preset.name,
-        shortName: preset.shortName,
-        lat: preset.lat,
-        lng: preset.lng,
-    };
+    const queryCompact = compactPlacementQuery(query);
+    const queryPhrase = placementPhrase(query);
+    let bestPreset: {
+        preset: (typeof SITE_PLACEMENT_PRESETS)[number];
+        score: number;
+    } | null = null;
+
+    for (const candidate of SITE_PLACEMENT_PRESETS) {
+        const aliases = getPlacementAliases(candidate);
+        for (const alias of aliases) {
+            const normalizedAlias = normalizePlacementQuery(alias);
+            if (
+                normalizedAlias === query ||
+                normalizedAlias.replace(/,/g, ' ') === query.replace(/,/g, ' ') ||
+                compactPlacementQuery(normalizedAlias) === queryCompact
+            ) {
+                return sitePlacementFromPreset(candidate);
+            }
+
+            const aliasPhrase = placementPhrase(normalizedAlias);
+            if (
+                aliasPhrase.length >= 4 &&
+                includesPlacementPhrase(queryPhrase, aliasPhrase)
+            ) {
+                const score = aliasPhrase.length;
+                if (!bestPreset || score > bestPreset.score) {
+                    bestPreset = { preset: candidate, score };
+                }
+            }
+        }
+    }
+
+    return bestPreset ? sitePlacementFromPreset(bestPreset.preset) : null;
 };
+
+const pickRemoteGeocodeText = (
+    query: string,
+    address: Record<string, unknown>
+): string => {
+    const city =
+        textValue(address.city) ||
+        textValue(address.town) ||
+        textValue(address.village) ||
+        textValue(address.hamlet) ||
+        textValue(address.municipality) ||
+        textValue(address.county);
+    const region = textValue(address.state);
+    const country = textValue(address.country);
+    const suffix = region || country;
+    if (city && suffix && normalizePlacementQuery(city) !== normalizePlacementQuery(suffix)) {
+        return `${city}, ${suffix}`;
+    }
+    return city || query;
+};
+
+const resolveRemoteSitePlacement = async (
+    value: string
+): Promise<SitePlacement | null> => {
+    if (typeof window === 'undefined' || typeof window.fetch !== 'function') {
+        return null;
+    }
+
+    for (const query of buildPlacementLookupQueries(value)) {
+        try {
+            const response = await window.fetch(
+                `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&q=${encodeURIComponent(
+                    query
+                )}`,
+                {
+                    headers: {
+                        Accept: 'application/json',
+                    },
+                }
+            );
+            if (!response.ok) continue;
+            const rows = (await response.json()) as unknown;
+            const first = Array.isArray(rows) ? rows[0] : null;
+            if (!isRecord(first)) continue;
+
+            const lat = Number(first.lat);
+            const lng = Number(first.lon);
+            if (
+                !Number.isFinite(lat) ||
+                !Number.isFinite(lng) ||
+                lat < -85 ||
+                lat > 85 ||
+                lng < -180 ||
+                lng > 180
+            ) {
+                continue;
+            }
+
+            const address = isRecord(first.address) ? first.address : {};
+            const name = pickRemoteGeocodeText(query, address);
+            return {
+                name,
+                shortName: placementShortName(name),
+                lat,
+                lng,
+            };
+        } catch {
+            // A failed geocoder request should not block manual coordinate entry.
+        }
+    }
+
+    return null;
+};
+
+const resolveSitePlacementWithFallback = async (
+    value: string
+): Promise<SitePlacement | null> =>
+    resolveSitePlacement(value) ?? resolveRemoteSitePlacement(value);
 
 const looksLikeGeneratedSiteName = (value: string): boolean =>
     /^site\s+\d+$/i.test(value.trim());
@@ -827,23 +1484,104 @@ const looksLikeGeneratedSiteName = (value: string): boolean =>
 const looksLikeGeneratedShortName = (value: string): boolean =>
     /^site[-\d]*$/i.test(value.trim()) || value.trim().length === 0;
 
+const topologyLinkEndpointKey = (sourceSiteId: string, targetSiteId: string): string =>
+    [sourceSiteId, targetSiteId].sort().join('__');
+
+const topologySiteOptionLabel = (site: TopologySite): string =>
+    `${site.shortName || site.id} · ${site.name}`;
+
+const validTopologySites = (sites: TopologySite[]): TopologySite[] =>
+    sites.filter(
+        (site) =>
+            Number.isFinite(site.lat) &&
+            Number.isFinite(site.lng) &&
+            site.lat >= -85 &&
+            site.lat <= 85 &&
+            site.lng >= -180 &&
+            site.lng <= 180 &&
+            !(site.lat === 0 && site.lng === 0)
+    );
+
+const topologySiteSpread = (
+    sites: TopologySite[]
+): { latSpan: number; lngSpan: number } => {
+    const usable = validTopologySites(sites);
+    if (usable.length < 2) return { latSpan: 0, lngSpan: 0 };
+    const lats = usable.map((site) => site.lat);
+    const lngs = usable.map((site) => site.lng);
+    return {
+        latSpan: Math.max(...lats) - Math.min(...lats),
+        lngSpan: Math.max(...lngs) - Math.min(...lngs),
+    };
+};
+
+const minZoomForTopologySites = (sites: TopologySite[], configuredMinZoom: number): number => {
+    const { latSpan, lngSpan } = topologySiteSpread(sites);
+    if (latSpan > 75 || lngSpan > 210) return Math.min(configuredMinZoom, 0);
+    if (latSpan > 45 || lngSpan > 120) return Math.min(configuredMinZoom, 2);
+    return configuredMinZoom;
+};
+
+const boundsForTopologySites = (
+    mapBounds: CustomerTopology['map']['bounds'],
+    sites: TopologySite[]
+): CustomerTopology['map']['bounds'] => {
+    const usable = validTopologySites(sites);
+    if (usable.length === 0) return mapBounds;
+
+    const lats = [
+        ...usable.map((site) => site.lat),
+        mapBounds[0][0],
+        mapBounds[1][0],
+    ];
+    const lngs = [
+        ...usable.map((site) => site.lng),
+        mapBounds[0][1],
+        mapBounds[1][1],
+    ];
+    const latPadding = Math.max(2, (Math.max(...lats) - Math.min(...lats)) * 0.08);
+    const lngPadding = Math.max(3, (Math.max(...lngs) - Math.min(...lngs)) * 0.08);
+
+    return [
+        [
+            Number(Math.max(-85, Math.min(...lats) - latPadding).toFixed(5)),
+            Number(Math.max(-180, Math.min(...lngs) - lngPadding).toFixed(5)),
+        ],
+        [
+            Number(Math.min(85, Math.max(...lats) + latPadding).toFixed(5)),
+            Number(Math.min(180, Math.max(...lngs) + lngPadding).toFixed(5)),
+        ],
+    ];
+};
+
 const expandMapForPlacement = (
     map: CustomerTopology['map'],
     sites: TopologySite[],
     placement: SitePlacement
 ): CustomerTopology['map'] => {
-    const usable = sites.filter(
-        (site) =>
-            Number.isFinite(site.lat) &&
-            Number.isFinite(site.lng) &&
-            !(site.lat === 0 && site.lng === 0)
-    );
+    const usable = validTopologySites(sites);
     const lats = [...usable.map((site) => site.lat), placement.lat];
     const lngs = [...usable.map((site) => site.lng), placement.lng];
     const minLat = Math.max(-85, Math.min(...lats) - 1.5);
     const maxLat = Math.min(85, Math.max(...lats) + 1.5);
     const minLng = Math.max(-180, Math.min(...lngs) - 1.5);
     const maxLng = Math.min(180, Math.max(...lngs) + 1.5);
+    const spread = {
+        latSpan: maxLat - minLat,
+        lngSpan: maxLng - minLng,
+    };
+    const minZoom =
+        spread.latSpan > 75 || spread.lngSpan > 210
+            ? Math.min(map.minZoom, 0)
+            : spread.latSpan > 45 || spread.lngSpan > 120
+            ? Math.min(map.minZoom, 2)
+            : Math.min(map.minZoom, 3);
+    const zoom =
+        spread.latSpan > 75 || spread.lngSpan > 210
+            ? 2
+            : spread.latSpan > 45 || spread.lngSpan > 120
+            ? 3
+            : 8;
 
     return {
         ...map,
@@ -851,8 +1589,8 @@ const expandMapForPlacement = (
             Number(placement.lat.toFixed(5)),
             Number(placement.lng.toFixed(5)),
         ],
-        zoom: Math.min(map.maxZoom, Math.max(map.minZoom, 8)),
-        minZoom: Math.min(map.minZoom, 3),
+        zoom: Math.min(map.maxZoom, Math.max(minZoom, zoom)),
+        minZoom,
         bounds: [
             [Number(minLat.toFixed(5)), Number(minLng.toFixed(5))],
             [Number(maxLat.toFixed(5)), Number(maxLng.toFixed(5))],
@@ -2408,10 +3146,9 @@ const linkFlowProfile = (link: TopologyLink): LinkFlowProfile => {
 };
 
 /**
- * Site marker design: status drives the visible chrome (border ring colour,
- * radiating-halo cadence, optional corner alert dot); role drives the inner
- * letter glyph and the label-border tint. This keeps "what's wrong" the
- * dominant signal while still conveying "what role this site plays".
+ * Site marker design: role owns the primary marker colour, while status is
+ * reserved for the small LED/search-health signal. This avoids role colours
+ * being mistaken for healthy, warning, or critical search results.
  */
 const STATUS_RING_COLOR: Record<TopologyStatus, string> = {
     critical: '#ef4444',
@@ -2432,13 +3169,6 @@ const STATUS_MARKER_SPEED: Record<TopologyStatus, string> = {
     warning: '1.75s',
     stable: '3.35s',
     unknown: '4.6s',
-};
-
-const STATUS_DARK_CORE_SURFACE: Record<TopologyStatus, string> = {
-    critical: '#fff1f2',
-    warning: '#fff7ed',
-    stable: '#ecfdf5',
-    unknown: '#f8fafc',
 };
 
 const createSiteIcon = (
@@ -2468,17 +3198,11 @@ const createSiteIcon = (
     const labelChrome = isDark
         ? 'bg-slate-900/90 backdrop-blur-sm border-slate-700 text-slate-100'
         : 'bg-white/90 backdrop-blur-sm border-slate-200 text-slate-800';
-    const markerAccentColor =
-        site.status === 'unknown' ? roleChrome.fill : ringColor;
-    const markerAccentHalo =
-        site.status === 'unknown' ? roleChrome.halo : haloColor;
-    const pillBg = isDark
-        ? STATUS_DARK_CORE_SURFACE[site.status]
-        : markerAccentColor;
-    const siteTextColor = isDark ? '#0f172a' : '#ffffff';
-    const siteTextShadow = isDark
-        ? '0 1px 0 rgba(255, 255, 255, 0.72)'
-        : '0 1px 2px rgba(15, 23, 42, 0.36)';
+    const markerAccentColor = roleChrome.fill;
+    const markerAccentHalo = roleChrome.halo;
+    const pillBg = markerAccentColor;
+    const siteTextColor = '#ffffff';
+    const siteTextShadow = '0 1px 2px rgba(15, 23, 42, 0.38)';
     const beaconModeClass = isDark
         ? 'customer-topology-site-beacon--dark'
         : 'customer-topology-site-beacon--light';
@@ -2510,7 +3234,7 @@ const createSiteIcon = (
           </span>
           <span class="customer-topology-site-led" aria-hidden="true"></span>
         </div>
-        <div class="mt-1 whitespace-nowrap font-semibold px-2.5 py-0.5 rounded-md shadow-sm border text-[11px] ${labelChrome} ${roleChrome.label}" style="border-color:${ringColor}66;">
+        <div class="mt-1 whitespace-nowrap font-semibold px-2.5 py-0.5 rounded-md shadow-sm border text-[11px] ${labelChrome} ${roleChrome.label}" style="border-color:${markerAccentColor}66;">
           ${safeName}
         </div>
       </div>
@@ -3119,7 +3843,12 @@ const MapFrame: React.FC<MapFrameProps> = ({ topology, autoFitSites }) => {
     const map = useMap();
     const [centerLat, centerLng] = topology.map.center;
     const zoom = topology.map.zoom;
-    const [[minLat, minLng], [maxLat, maxLng]] = topology.map.bounds;
+    const effectiveBounds = boundsForTopologySites(topology.map.bounds, topology.sites);
+    const effectiveMinZoom = minZoomForTopologySites(
+        topology.sites,
+        topology.map.minZoom
+    );
+    const [[minLat, minLng], [maxLat, maxLng]] = effectiveBounds;
     const autoFitAppliedRef = useRef(false);
 
     // Track the last view we *programmatically* set so subsequent renders
@@ -3193,6 +3922,13 @@ const MapFrame: React.FC<MapFrameProps> = ({ topology, autoFitSites }) => {
     }, [map]);
 
     useEffect(() => {
+        map.setMinZoom(effectiveMinZoom);
+        if (map.getZoom() < effectiveMinZoom) {
+            map.setZoom(effectiveMinZoom, { animate: false });
+        }
+    }, [effectiveMinZoom, map]);
+
+    useEffect(() => {
         const nextBounds = L.latLngBounds([minLat, minLng], [maxLat, maxLng]);
         if (nextBounds.isValid()) {
             map.setMaxBounds(nextBounds);
@@ -3202,18 +3938,13 @@ const MapFrame: React.FC<MapFrameProps> = ({ topology, autoFitSites }) => {
     useEffect(() => {
         if (autoFitAppliedRef.current) return;
         if (!autoFitSites || autoFitSites.length === 0) return;
-        const usable = autoFitSites.filter(
-            (site) =>
-                Number.isFinite(site.lat) &&
-                Number.isFinite(site.lng) &&
-                !(site.lat === 0 && site.lng === 0)
-        );
+        const usable = validTopologySites(autoFitSites);
         if (usable.length === 0) return;
         const bounds = L.latLngBounds(
             usable.map((site) => [site.lat, site.lng] as [number, number])
         );
         if (!bounds.isValid()) return;
-        map.fitBounds(bounds, { padding: [40, 40], animate: false, maxZoom: 9 });
+        map.fitBounds(bounds, { padding: [48, 48], animate: false, maxZoom: 9 });
         autoFitAppliedRef.current = true;
     }, [autoFitSites, map]);
 
@@ -4021,10 +4752,18 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         TILE_LAYER_PRESETS.find((preset) => preset.id === DEFAULT_TILE_LAYER_PRESET_ID) ??
         TILE_LAYER_PRESETS[0];
     const tileUrl = isDark ? tilePreset.dark : tilePreset.light;
-    const bounds = L.latLngBounds(
-        resolvedTopology.map.bounds[0],
-        resolvedTopology.map.bounds[1]
+    const effectiveMapBounds = boundsForTopologySites(
+        resolvedTopology.map.bounds,
+        resolvedTopology.sites
     );
+    const effectiveMinZoom = minZoomForTopologySites(
+        resolvedTopology.sites,
+        resolvedTopology.map.minZoom
+    );
+    const resolvedSiteSpread = topologySiteSpread(resolvedTopology.sites);
+    const shouldAutoFitGlobalTopology =
+        resolvedSiteSpread.latSpan > 45 || resolvedSiteSpread.lngSpan > 120;
+    const bounds = L.latLngBounds(effectiveMapBounds[0], effectiveMapBounds[1]);
     const roleLegendExpanded = roleLegendMode === 'expanded';
     const roleLegendPreviewSites = resolvedTopology.sites.slice(0, 6);
     const overlayChrome = isDark
@@ -4189,8 +4928,8 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 center={resolvedTopology.map.center}
                 zoom={resolvedTopology.map.zoom}
                 maxBounds={bounds}
-                maxBoundsViscosity={1.0}
-                minZoom={resolvedTopology.map.minZoom}
+                maxBoundsViscosity={0.85}
+                minZoom={effectiveMinZoom}
                 maxZoom={resolvedTopology.map.maxZoom}
                 style={{ height: '100%', width: '100%' }}
                 zoomControl={false}
@@ -4201,7 +4940,9 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 <MapFrame
                     topology={resolvedTopology}
                     autoFitSites={
-                        activeTopology.sites.length === 0
+                        shouldAutoFitGlobalTopology
+                            ? resolvedTopology.sites
+                            : activeTopology.sites.length === 0
                             ? resolvedTopology.sites
                             : undefined
                     }
@@ -5541,6 +6282,9 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
     const [sitePlacementErrors, setSitePlacementErrors] = useState<
         Record<string, string>
     >({});
+    const [placingSiteIds, setPlacingSiteIds] = useState<Record<string, boolean>>(
+        {}
+    );
 
     // The editor's per-card pickers browse the full dashboard-pack
     // catalogue, identical to the in-popup `TopologySearchBrowser`.
@@ -5572,6 +6316,33 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                 })
             );
     }, [catalogueByName]);
+
+    const editorSiteById = useMemo(() => {
+        const map: Record<string, TopologySite> = {};
+        for (const site of topology.sites) map[site.id] = site;
+        return map;
+    }, [topology.sites]);
+
+    const linkNameForEndpoints = useCallback(
+        (sourceSiteId: string, targetSiteId: string): string => {
+            const source = editorSiteById[sourceSiteId];
+            const target = editorSiteById[targetSiteId];
+            return `${source?.name ?? sourceSiteId} to ${target?.name ?? targetSiteId}`;
+        },
+        [editorSiteById]
+    );
+
+    const linkHasGeneratedName = useCallback(
+        (link: TopologyLink): boolean => {
+            const name = link.name.trim();
+            return (
+                name.length === 0 ||
+                name === linkNameForEndpoints(link.sourceSiteId, link.targetSiteId) ||
+                name === `${link.sourceSiteId} to ${link.targetSiteId}`
+            );
+        },
+        [linkNameForEndpoints]
+    );
 
     // Collapsed-by-default site / link cards. Storing the
     // *expanded* set (rather than the collapsed set) means a fresh
@@ -5675,14 +6446,34 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
         });
     };
 
-    const placeSite = (siteId: string) => {
+    const placeSite = async (siteId: string) => {
+        const site = topology.sites.find((candidate) => candidate.id === siteId);
         const draft = sitePlacementDrafts[siteId]?.trim() ?? '';
-        const placement = resolveSitePlacement(draft);
+        const fallbackName =
+            site && !looksLikeGeneratedSiteName(site.name) ? site.name.trim() : '';
+        const lookupText = draft || fallbackName;
+
+        if (!lookupText) {
+            setSitePlacementErrors((current) => ({
+                ...current,
+                [siteId]:
+                    'Enter a city, address, or coordinates. Renamed sites can be placed by name too.',
+            }));
+            return;
+        }
+
+        setPlacingSiteIds((current) => ({ ...current, [siteId]: true }));
+        const placement = await resolveSitePlacementWithFallback(lookupText);
+        setPlacingSiteIds((current) => {
+            const next = { ...current };
+            delete next[siteId];
+            return next;
+        });
         if (!placement) {
             setSitePlacementErrors((current) => ({
                 ...current,
                 [siteId]:
-                    'Try Las Vegas, NYC, or coordinates like 40.7128,-74.0060.',
+                    'Could not place that location. Try a city, address, or coordinates like 48.8566,2.3522.',
             }));
             return;
         }
@@ -5738,27 +6529,101 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
         }));
     };
 
+    const updateLinkEndpoints = (
+        link: TopologyLink,
+        patch: Pick<Partial<TopologyLink>, 'sourceSiteId' | 'targetSiteId'>
+    ) => {
+        let sourceSiteId = patch.sourceSiteId ?? link.sourceSiteId;
+        let targetSiteId = patch.targetSiteId ?? link.targetSiteId;
+
+        if (sourceSiteId === targetSiteId) {
+            const alternate = topology.sites.find((site) => site.id !== sourceSiteId);
+            if (!alternate) return;
+            if (patch.sourceSiteId) {
+                targetSiteId = alternate.id;
+            } else {
+                sourceSiteId = alternate.id;
+            }
+        }
+
+        updateLink(link.id, {
+            sourceSiteId,
+            targetSiteId,
+            name: linkHasGeneratedName(link)
+                ? linkNameForEndpoints(sourceSiteId, targetSiteId)
+                : link.name,
+        });
+    };
+
     const addLink = () => {
-        onTopologyChange((current) => {
-            if (current.sites.length < 2) return current;
-            const source = current.sites[0];
-            const target = current.sites[1];
-            const used = new Set(current.links.map((link) => link.id));
-            const id = uniqueId(`${source.id}-${target.id}`, used);
+        if (topology.sites.length < 2) return;
+
+        const current = topology;
+        const existingPairs = new Set(
+            current.links.map((link) =>
+                topologyLinkEndpointKey(link.sourceSiteId, link.targetSiteId)
+            )
+        );
+        const preferredSource =
+            (pickSiteId && current.sites.find((site) => site.id === pickSiteId)) ||
+            current.sites[0];
+        let source = preferredSource;
+        let target =
+            current.sites.find(
+                (site) =>
+                    site.id !== source.id &&
+                    !existingPairs.has(topologyLinkEndpointKey(source.id, site.id))
+            ) || current.sites.find((site) => site.id !== source.id);
+
+        if (!target) return;
+
+        if (existingPairs.has(topologyLinkEndpointKey(source.id, target.id))) {
+            for (const candidateSource of current.sites) {
+                const candidateTarget = current.sites.find(
+                    (site) =>
+                        site.id !== candidateSource.id &&
+                        !existingPairs.has(
+                            topologyLinkEndpointKey(candidateSource.id, site.id)
+                        )
+                );
+                if (candidateTarget) {
+                    source = candidateSource;
+                    target = candidateTarget;
+                    break;
+                }
+            }
+        }
+
+        const used = new Set(current.links.map((link) => link.id));
+        const id = uniqueId(`${source.id}-${target.id}`, used);
+        const newLink: TopologyLink = {
+            id,
+            name: `${source.name} to ${target.name}`,
+            sourceSiteId: source.id,
+            targetSiteId: target.id,
+            status: 'unknown',
+            telemetrySource: 'Awaiting topology link telemetry',
+        };
+
+        onTopologyChange((latest) => {
+            const existingPairs = new Set(
+                latest.links.map((link) =>
+                    topologyLinkEndpointKey(link.sourceSiteId, link.targetSiteId)
+                )
+            );
+            if (existingPairs.has(topologyLinkEndpointKey(source.id, target.id))) {
+                return latest;
+            }
             return {
-                ...current,
-                links: [
-                    ...current.links,
-                    {
-                        id,
-                        name: `${source.name} to ${target.name}`,
-                        sourceSiteId: source.id,
-                        targetSiteId: target.id,
-                        status: 'unknown',
-                        telemetrySource: 'Awaiting topology link telemetry',
-                    },
-                ],
+                ...latest,
+                links: [...latest.links, newLink],
             };
+        });
+
+        setExpandedCardKeys((current) => {
+            const next = new Set(current);
+            next.add(`link:${id}`);
+            return next;
         });
     };
 
@@ -6046,6 +6911,9 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                         expandedCardKeys.has(searchCardKey);
                                     const shouldShowSearchPicker =
                                         isSearchPickerOpen || !boundSearch;
+                                    const isPlacingSite = Boolean(
+                                        placingSiteIds[site.id]
+                                    );
                                     return (
                                     <div
                                         key={site.id}
@@ -6227,7 +7095,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                         sitePlacementDrafts[site.id] ??
                                                         ''
                                                     }
-                                                    placeholder="Las Vegas or 40.7128,-74.0060"
+                                                    placeholder="City, address, or 48.8566,2.3522"
                                                     onChange={(event) =>
                                                         updateSitePlacementDraft(
                                                             site.id,
@@ -6237,21 +7105,25 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                     onKeyDown={(event) => {
                                                         if (event.key === 'Enter') {
                                                             event.preventDefault();
-                                                            placeSite(site.id);
+                                                            void placeSite(site.id);
                                                         }
                                                     }}
                                                 />
                                                 <button
                                                     type="button"
-                                                    onClick={() => placeSite(site.id)}
+                                                    onClick={() => void placeSite(site.id)}
+                                                    disabled={isPlacingSite}
                                                     className={cn(
-                                                        'rounded-md border px-2 py-1.5 text-[10px] font-black uppercase tracking-wider transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                                                        'inline-flex items-center justify-center gap-1 rounded-md border px-2 py-1.5 text-[10px] font-black uppercase tracking-wider transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400 disabled:cursor-wait disabled:opacity-60',
                                                         isDark
                                                             ? 'border-sky-500/50 bg-sky-500/20 text-sky-200 hover:bg-sky-500/30'
                                                             : 'border-sky-300 bg-sky-100 text-sky-800 hover:bg-sky-200'
                                                     )}
                                                 >
-                                                    Place
+                                                    {isPlacingSite && (
+                                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                                    )}
+                                                    {isPlacingSite ? 'Placing' : 'Place'}
                                                 </button>
                                             </div>
                                             {sitePlacementErrors[site.id] && (
@@ -6316,30 +7188,32 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                 >
                                                     Role
                                                 </span>
-                                                <input
-                                                    list={`topology-role-options-${site.id}`}
+                                                <select
                                                     className={editorInputClass(isDark)}
-                                                    value={roleInputValue(site.role)}
+                                                    value={String(site.role)}
                                                     onChange={(event) =>
                                                         updateSite(site.id, {
                                                             role: normalizeTopologyRoleInput(
                                                                 event.target.value,
-                                                                ''
+                                                                'branch'
                                                             ),
                                                         })
                                                     }
-                                                    placeholder="HQ, Branch, Campus..."
-                                                />
-                                                <datalist
-                                                    id={`topology-role-options-${site.id}`}
                                                 >
                                                     {TOPOLOGY_ROLES.map((role) => (
                                                         <option
                                                             key={role}
-                                                            value={ROLE_LABEL[role]}
-                                                        />
+                                                            value={role}
+                                                        >
+                                                            {ROLE_LABEL[role]}
+                                                        </option>
                                                     ))}
-                                                </datalist>
+                                                    {!isKnownTopologyRole(site.role) && (
+                                                        <option value={String(site.role)}>
+                                                            {topologyRoleLabel(site.role)}
+                                                        </option>
+                                                    )}
+                                                </select>
                                             </label>
                                             <label className="space-y-1">
                                                 <span
@@ -6573,11 +7447,11 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                     type="button"
                                     onClick={addLink}
                                     disabled={topology.sites.length < 2}
-                                    title="Add link"
+                                    title="Add connection"
                                     className="inline-flex items-center gap-1 rounded-md bg-sky-500 px-2 py-1 text-[10px] font-black text-white hover:bg-sky-600 disabled:opacity-40 disabled:hover:bg-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-300"
                                 >
                                     <Plus className="w-3.5 h-3.5" />
-                                    Add
+                                    Add connection
                                 </button>
                             </div>
                             <div className="space-y-2">
@@ -6587,6 +7461,16 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                         expandedCardKeys.has(cardKey);
                                     const boundSearch =
                                         link.searchName?.trim() || '';
+                                    const searchCardKey = `link-search:${link.id}`;
+                                    const isSearchPickerOpen =
+                                        expandedCardKeys.has(searchCardKey);
+                                    const sourceSite = editorSiteById[link.sourceSiteId];
+                                    const targetSite = editorSiteById[link.targetSiteId];
+                                    const endpointSummary = `${
+                                        sourceSite?.shortName ?? link.sourceSiteId
+                                    } to ${
+                                        targetSite?.shortName ?? link.targetSiteId
+                                    }`;
                                     return (
                                     <div
                                         key={link.id}
@@ -6643,7 +7527,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                         className="max-w-[5rem] truncate font-mono uppercase text-slate-400"
                                                         title={`Internal ID: ${link.id}`}
                                                     >
-                                                        {link.id}
+                                                        {endpointSummary}
                                                     </span>
                                                     <span className="text-slate-400">
                                                         ·
@@ -6716,35 +7600,92 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                     : 'border-slate-200'
                                             )}
                                         >
-                                        {/*
-                                            Editor variant of the link
-                                            catalogue browser. Same
-                                            component as the site card,
-                                            scoped to `Topology_Link`-tagged
-                                            stanzas as the preferred sort
-                                            but with full Cisco-tagged
-                                            catalogue browsable. The
-                                            header above already shows the
-                                            bound search name + an "Open
-                                            in Search" button for quick
-                                            sanity-checks.
-                                        */}
-                                        <div className="pt-2">
-                                            <TopologySearchBrowser
-                                                catalogue={editorSearchOptions}
-                                                currentSearchName={
-                                                    link.searchName ?? ''
-                                                }
-                                                preferredTags={['Topology_Link']}
-                                                label="link"
-                                                onPick={(searchName) =>
-                                                    updateLink(link.id, {
-                                                        searchName,
-                                                    })
-                                                }
-                                                isDark={isDark}
-                                                showFreeFormInput
-                                            />
+                                        <div
+                                            className={cn(
+                                                'mt-2 rounded-md border p-2',
+                                                isDark
+                                                    ? 'border-slate-800 bg-slate-950/50'
+                                                    : 'border-slate-200 bg-white'
+                                            )}
+                                        >
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <label className="space-y-1">
+                                                    <span
+                                                        className={cn(
+                                                            editorLabelClass,
+                                                            isDark
+                                                                ? 'text-slate-500'
+                                                                : 'text-slate-400'
+                                                        )}
+                                                    >
+                                                        From
+                                                    </span>
+                                                    <select
+                                                        aria-label={`Source site for link ${link.id}`}
+                                                        className={editorInputClass(isDark)}
+                                                        value={link.sourceSiteId}
+                                                        onChange={(event) =>
+                                                            updateLinkEndpoints(link, {
+                                                                sourceSiteId:
+                                                                    event.target.value,
+                                                            })
+                                                        }
+                                                    >
+                                                        {topology.sites.map((site) => (
+                                                            <option
+                                                                key={site.id}
+                                                                value={site.id}
+                                                                disabled={
+                                                                    site.id ===
+                                                                    link.targetSiteId
+                                                                }
+                                                            >
+                                                                {topologySiteOptionLabel(
+                                                                    site
+                                                                )}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </label>
+                                                <label className="space-y-1">
+                                                    <span
+                                                        className={cn(
+                                                            editorLabelClass,
+                                                            isDark
+                                                                ? 'text-slate-500'
+                                                                : 'text-slate-400'
+                                                        )}
+                                                    >
+                                                        To
+                                                    </span>
+                                                    <select
+                                                        aria-label={`Target site for link ${link.id}`}
+                                                        className={editorInputClass(isDark)}
+                                                        value={link.targetSiteId}
+                                                        onChange={(event) =>
+                                                            updateLinkEndpoints(link, {
+                                                                targetSiteId:
+                                                                    event.target.value,
+                                                            })
+                                                        }
+                                                    >
+                                                        {topology.sites.map((site) => (
+                                                            <option
+                                                                key={site.id}
+                                                                value={site.id}
+                                                                disabled={
+                                                                    site.id ===
+                                                                    link.sourceSiteId
+                                                                }
+                                                            >
+                                                                {topologySiteOptionLabel(
+                                                                    site
+                                                                )}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </label>
+                                            </div>
                                         </div>
                                         <label className="block space-y-1">
                                             <span
@@ -6768,68 +7709,6 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                             />
                                         </label>
                                         <div className="grid grid-cols-2 gap-2">
-                                            <label className="space-y-1">
-                                                <span
-                                                    className={cn(
-                                                        editorLabelClass,
-                                                        isDark
-                                                            ? 'text-slate-500'
-                                                            : 'text-slate-400'
-                                                    )}
-                                                >
-                                                    Source
-                                                </span>
-                                                <select
-                                                    className={editorInputClass(isDark)}
-                                                    value={link.sourceSiteId}
-                                                    onChange={(event) =>
-                                                        updateLink(link.id, {
-                                                            sourceSiteId:
-                                                                event.target.value,
-                                                        })
-                                                    }
-                                                >
-                                                    {topology.sites.map((site) => (
-                                                        <option
-                                                            key={site.id}
-                                                            value={site.id}
-                                                        >
-                                                            {site.shortName}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </label>
-                                            <label className="space-y-1">
-                                                <span
-                                                    className={cn(
-                                                        editorLabelClass,
-                                                        isDark
-                                                            ? 'text-slate-500'
-                                                            : 'text-slate-400'
-                                                    )}
-                                                >
-                                                    Target
-                                                </span>
-                                                <select
-                                                    className={editorInputClass(isDark)}
-                                                    value={link.targetSiteId}
-                                                    onChange={(event) =>
-                                                        updateLink(link.id, {
-                                                            targetSiteId:
-                                                                event.target.value,
-                                                        })
-                                                    }
-                                                >
-                                                    {topology.sites.map((site) => (
-                                                        <option
-                                                            key={site.id}
-                                                            value={site.id}
-                                                        >
-                                                            {site.shortName}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </label>
                                             <label className="space-y-1">
                                                 <span
                                                     className={cn(
@@ -6889,6 +7768,88 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                     }
                                                 />
                                             </label>
+                                        </div>
+                                        <div
+                                            className={cn(
+                                                'rounded-md border px-2.5 py-2',
+                                                isDark
+                                                    ? 'border-slate-800 bg-slate-950/50'
+                                                    : 'border-slate-200 bg-white'
+                                            )}
+                                        >
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="min-w-0">
+                                                    <span
+                                                        className={cn(
+                                                            editorLabelClass,
+                                                            isDark
+                                                                ? 'text-slate-500'
+                                                                : 'text-slate-400'
+                                                        )}
+                                                    >
+                                                        Search binding
+                                                    </span>
+                                                    <div
+                                                        className={cn(
+                                                            'mt-1 truncate text-[11px] font-semibold',
+                                                            isDark
+                                                                ? boundSearch
+                                                                    ? 'text-slate-200'
+                                                                    : 'text-slate-500'
+                                                                : boundSearch
+                                                                ? 'text-slate-700'
+                                                                : 'text-slate-400'
+                                                        )}
+                                                        title={
+                                                            boundSearch ||
+                                                            'No search bound'
+                                                        }
+                                                    >
+                                                        {boundSearch ||
+                                                            'No search bound'}
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        toggleCardExpanded(
+                                                            searchCardKey
+                                                        )
+                                                    }
+                                                    aria-expanded={isSearchPickerOpen}
+                                                    className={cn(
+                                                        'inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[9px] font-black uppercase tracking-wider transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                                                        isDark
+                                                            ? 'border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800'
+                                                            : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+                                                    )}
+                                                >
+                                                    {isSearchPickerOpen
+                                                        ? 'Hide'
+                                                        : boundSearch
+                                                        ? 'Change'
+                                                        : 'Pick search'}
+                                                </button>
+                                            </div>
+                                            {isSearchPickerOpen && (
+                                                <div className="mt-2">
+                                                    <TopologySearchBrowser
+                                                        catalogue={editorSearchOptions}
+                                                        currentSearchName={
+                                                            link.searchName ?? ''
+                                                        }
+                                                        preferredTags={['Topology_Link']}
+                                                        label="link"
+                                                        onPick={(searchName) =>
+                                                            updateLink(link.id, {
+                                                                searchName,
+                                                            })
+                                                        }
+                                                        isDark={isDark}
+                                                        showFreeFormInput
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
                                         </div>
                                         )}
