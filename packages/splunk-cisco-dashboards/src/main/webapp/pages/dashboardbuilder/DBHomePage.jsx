@@ -22,6 +22,7 @@ import SearchBaseDataSource from './SearchBaseDataSource';
 import SimpleTimePicker from './custominput/SimpleTimePicker';
 import VizKpi from '../../common/components/templatewizard/viz-kpi/VizKpi';
 import VizOther from '../../common/components/templatewizard/viz-other/VizOther';
+import SpaceManagerViz from './SpaceManager/SpaceManagerViz';
 import Modal from '@splunk/react-ui/Modal';
 import { useNavigate } from 'react-router-dom';
 import DashboardStudioEditor from './DashboardStudioEditor';
@@ -75,6 +76,7 @@ export const customPresets = {
         ...EnterprisePreset.visualizations,
         'splunk.template_kpi': VizKpi,
         'splunk.template_other': VizOther,
+        'splunk.cisco_spaces_space_manager': SpaceManagerViz,
     },
 };
 

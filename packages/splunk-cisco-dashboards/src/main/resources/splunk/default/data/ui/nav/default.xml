@@ -47,6 +47,6 @@
     </collection>
     <a href="dashboardbuilder">Dashboard Manager</a>
     <collection label="My Views">
-        <a href="dashboardbuilder">Dashboard Manager</a>
+        <view source="all" match="scd_" />
 	</collection>
 </nav>

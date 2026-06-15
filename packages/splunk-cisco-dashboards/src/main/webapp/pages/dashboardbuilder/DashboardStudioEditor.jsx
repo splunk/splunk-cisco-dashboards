@@ -79,6 +79,7 @@ import SplunkThemeProvider from '@splunk/themes/SplunkThemeProvider';
 import { isVersionLower, getServerInfo } from '../../common/lib/splunk';
 import Paintbrush from '@splunk/react-icons/Paintbrush';
 import BackgroundButton from './BackgroundButton';
+import SpaceManagerButton from './SpaceManager/SpaceManagerButton';
 import useDashboardStore from '../../common/state/dashboardStore';
 import createSEIIconRegistry from '../../common/udf/IconProviders/createSEIIconRegistry';
 import { resolveSearchbaseDefinitionForNativeStudio } from './searchbaseDefinitionUtils';
@@ -1074,6 +1075,7 @@ const DashboardStudioEditor = ({
                     />
                     <BackgroundButton key="backgroundButton" iconColor="#26afac" />
                     <InsightKpiButton key="insightKpi" />
+                    <SpaceManagerButton key="spaceManager" />
                 </ItemGroup>,
                 <ItemGroup key="sideToolbar" align="right" borders={false}>
                     <ModeSwitch key="modeSwitch" />
@@ -1111,6 +1113,7 @@ const DashboardStudioEditor = ({
                     />
                     <BackgroundButton key="backgroundButton" iconColor="#26afac" />
                     <InsightKpiButton key="insightKpi" />
+                    <SpaceManagerButton key="spaceManager" />
                 </ItemGroup>,
                 <ItemGroup key="sideToolbar" align="right" borders={false}>
                     <Button
