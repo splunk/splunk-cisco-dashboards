@@ -1,8 +1,8 @@
 
 <dashboard version="2" theme="light">
- <label>IT - Critical Systems Health</label>
- <description>Network health, device status, compliance, inventory, and configuration</description>
- <definition><![CDATA[
+    <label>IT - Critical Systems Health</label>
+    <description>Network health, device status, compliance, inventory, and configuration</description>
+    <definition><![CDATA[
 {
 	"title": "IT - Critical Systems Health",
 	"description": "Network health, device status, compliance, inventory, and configuration",
@@ -245,41 +245,7 @@
 			"type": "splunk.markdown"
 		},
 		"viz_cc_compliance_report_table": {
-			"dataSources": {
-				"primary": "ds_compliance_report"
-			},
-			"description": "Devices failing compliance checks with detail",
-			"options": {
-				"backgroundColor": "transparent",
-				"count": 20,
-				"fontSize": "small",
-				"headerVisibility": "fixed",
-				"tableFormat": {
-					"headerBackgroundColor": "rgba(255,255,255,0.06)",
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rgba(255,255,255,0.03))"
-				},
-				"columnFormat": {
-					"Reachability": {
-						"rowBackgroundColors": "> table | seriesByName(\"Reachability\") | matchValue(viz_cc_compliance_report_table_Reachability_colors)"
-					},
-					"Manageability": {
-						"rowBackgroundColors": "> table | seriesByName(\"Manageability\") | matchValue(viz_cc_compliance_report_table_Manageability_colors)"
-					}
-				}
-			},
-			"title": "Non-Compliant Devices",
-			"type": "splunk.table",
 			"context": {
-				"viz_cc_compliance_report_table_Reachability_colors": [
-					{
-						"match": "Unreachable",
-						"value": "rgba(214,69,80,0.35)"
-					},
-					{
-						"match": "Reachable",
-						"value": "rgba(110,190,74,0.15)"
-					}
-				],
 				"viz_cc_compliance_report_table_Manageability_colors": [
 					{
 						"match": "Unmanaged",
@@ -293,33 +259,44 @@
 						"match": "Managed",
 						"value": "rgba(110,190,74,0.15)"
 					}
+				],
+				"viz_cc_compliance_report_table_Reachability_colors": [
+					{
+						"match": "Unreachable",
+						"value": "rgba(214,69,80,0.35)"
+					},
+					{
+						"match": "Reachable",
+						"value": "rgba(110,190,74,0.15)"
+					}
 				]
-			}
-		},
-		"viz_cc_cpu_mem_table": {
-			"dataSources": {
-				"primary": "ds_cpu_mem"
 			},
-			"description": "Devices with CPU or memory utilization > 80%",
+			"dataSources": {
+				"primary": "ds_compliance_report"
+			},
+			"description": "Devices failing compliance checks with detail",
 			"options": {
 				"backgroundColor": "transparent",
-				"count": 10,
+				"columnFormat": {
+					"Manageability": {
+						"rowBackgroundColors": "> table | seriesByName(\"Manageability\") | matchValue(viz_cc_compliance_report_table_Manageability_colors)"
+					},
+					"Reachability": {
+						"rowBackgroundColors": "> table | seriesByName(\"Reachability\") | matchValue(viz_cc_compliance_report_table_Reachability_colors)"
+					}
+				},
+				"count": 20,
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
-				},
-				"columnFormat": {
-					"cpu_status": {
-						"rowBackgroundColors": "> table | seriesByName(\"cpu_status\") | matchValue(viz_cc_cpu_mem_table_cpustatus_colors)"
-					},
-					"mem_status": {
-						"rowBackgroundColors": "> table | seriesByName(\"mem_status\") | matchValue(viz_cc_cpu_mem_table_memstatus_colors)"
-					}
+					"headerBackgroundColor": "rgba(255,255,255,0.06)",
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rgba(255,255,255,0.03))"
 				}
 			},
-			"title": "CPU / Memory Threshold Alerts",
-			"type": "splunk.table",
+			"title": "Non-Compliant Devices",
+			"type": "splunk.table"
+		},
+		"viz_cc_cpu_mem_table": {
 			"context": {
 				"viz_cc_cpu_mem_table_cpustatus_colors": [
 					{
@@ -349,7 +326,30 @@
 						"value": "rgba(110,190,74,0.15)"
 					}
 				]
-			}
+			},
+			"dataSources": {
+				"primary": "ds_cpu_mem"
+			},
+			"description": "Devices with CPU or memory utilization > 80%",
+			"options": {
+				"backgroundColor": "transparent",
+				"columnFormat": {
+					"cpu_status": {
+						"rowBackgroundColors": "> table | seriesByName(\"cpu_status\") | matchValue(viz_cc_cpu_mem_table_cpustatus_colors)"
+					},
+					"mem_status": {
+						"rowBackgroundColors": "> table | seriesByName(\"mem_status\") | matchValue(viz_cc_cpu_mem_table_memstatus_colors)"
+					}
+				},
+				"count": 10,
+				"fontSize": "small",
+				"headerVisibility": "fixed",
+				"tableFormat": {
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+				}
+			},
+			"title": "CPU / Memory Threshold Alerts",
+			"type": "splunk.table"
 		},
 		"viz_cc_dhcp_table": {
 			"dataSources": {
@@ -511,16 +511,16 @@
 			"options": {
 				"majorColor": "#049FD9",
 				"majorFontSize": 36,
-				"showTrendIndicator": true,
-				"sparklineDisplay": "below",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
-				"trendDisplay": "percent",
-				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"sparklineStrokeColor": "#049FD9",
+				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"sparklineDisplay": "below",
+				"sparklineStrokeColor": "#049FD9",
+				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+				"trendDisplay": "percent"
 			},
 			"title": "CPU/Memory Alerts >80%",
 			"type": "splunk.singlevalue"
@@ -545,16 +545,16 @@
 			"options": {
 				"majorColor": "#049FD9",
 				"majorFontSize": 36,
-				"showTrendIndicator": true,
-				"sparklineDisplay": "below",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
-				"trendDisplay": "percent",
-				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"sparklineStrokeColor": "#049FD9",
+				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"sparklineDisplay": "below",
+				"sparklineStrokeColor": "#049FD9",
+				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+				"trendDisplay": "percent"
 			},
 			"title": "DHCP Pool Events",
 			"type": "splunk.singlevalue"
@@ -585,10 +585,10 @@
 				"backgroundColor": "transparent",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
 				"majorFontSize": 42,
-				"showTrendIndicator": false,
-				"sparklineDisplay": "off",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"showTrendIndicator": false,
+				"sparklineDisplay": "off"
 			},
 			"title": "Power Events",
 			"type": "splunk.singlevalue"
@@ -613,16 +613,16 @@
 			"options": {
 				"majorColor": "#049FD9",
 				"majorFontSize": 36,
-				"showTrendIndicator": true,
-				"sparklineDisplay": "below",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
-				"trendDisplay": "percent",
-				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"sparklineStrokeColor": "#049FD9",
+				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"sparklineDisplay": "below",
+				"sparklineStrokeColor": "#049FD9",
+				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+				"trendDisplay": "percent"
 			},
 			"title": "Recent Reboots",
 			"type": "splunk.singlevalue"
@@ -647,16 +647,16 @@
 			"options": {
 				"majorColor": "#049FD9",
 				"majorFontSize": 36,
-				"showTrendIndicator": true,
-				"sparklineDisplay": "below",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
-				"trendDisplay": "percent",
-				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"sparklineStrokeColor": "#049FD9",
+				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"sparklineDisplay": "below",
+				"sparklineStrokeColor": "#049FD9",
+				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+				"trendDisplay": "percent"
 			},
 			"title": "Unreachable Devices",
 			"type": "splunk.singlevalue"
@@ -758,10 +758,10 @@
 				"count": 10,
 				"fontSize": "small",
 				"headerVisibility": "fixed",
+				"showRowNumbers": true,
 				"tableFormat": {
 					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
-				},
-				"showRowNumbers": true
+				}
 			},
 			"title": "Recently Rebooted Devices",
 			"type": "splunk.table"
@@ -843,26 +843,6 @@
 			"type": "splunk.table"
 		},
 		"viz_compliance_detail_table": {
-			"dataSources": {
-				"primary": "ds_compliance_detail"
-			},
-			"description": "Devices failing compliance checks",
-			"options": {
-				"backgroundColor": "transparent",
-				"count": 10,
-				"fontSize": "small",
-				"headerVisibility": "fixed",
-				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
-				},
-				"columnFormat": {
-					"Status": {
-						"rowBackgroundColors": "> table | seriesByName(\"Status\") | matchValue(viz_compliance_detail_table_Status_colors)"
-					}
-				}
-			},
-			"title": "Non-Compliant Devices",
-			"type": "splunk.table",
 			"context": {
 				"viz_compliance_detail_table_Status_colors": [
 					{
@@ -890,7 +870,27 @@
 						"value": "rgba(110,190,74,0.15)"
 					}
 				]
-			}
+			},
+			"dataSources": {
+				"primary": "ds_compliance_detail"
+			},
+			"description": "Devices failing compliance checks",
+			"options": {
+				"backgroundColor": "transparent",
+				"columnFormat": {
+					"Status": {
+						"rowBackgroundColors": "> table | seriesByName(\"Status\") | matchValue(viz_compliance_detail_table_Status_colors)"
+					}
+				},
+				"count": 10,
+				"fontSize": "small",
+				"headerVisibility": "fixed",
+				"tableFormat": {
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+				}
+			},
+			"title": "Non-Compliant Devices",
+			"type": "splunk.table"
 		},
 		"viz_compliance_donut": {
 			"dataSources": {
@@ -929,11 +929,11 @@
 			"options": {
 				"backgroundColor": "transparent",
 				"majorFontSize": 32,
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
 				"sparklineDisplay": "off",
 				"unit": "%",
-				"unitPosition": "after",
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"unitPosition": "after"
 			},
 			"title": "Compliance %",
 			"type": "splunk.singlevalue"
@@ -963,12 +963,52 @@
 			"options": {
 				"backgroundColor": "transparent",
 				"majorFontSize": 28,
-				"sparklineDisplay": "off",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"sparklineDisplay": "off"
 			},
 			"title": "Human config workflows (window)",
 			"type": "splunk.singlevalue"
+		},
+		"viz_config_detail": {
+			"context": {
+				"viz_config_detail_How_colors": [
+					{
+						"match": "DNAC CLI session",
+						"value": "rgba(229,168,35,0.30)"
+					},
+					{
+						"match": "DNAC NETCONF push",
+						"value": "rgba(229,168,35,0.30)"
+					},
+					{
+						"match": "DNAC UI / REST API",
+						"value": "rgba(110,190,74,0.15)"
+					},
+					{
+						"match": "DNAC API",
+						"value": "rgba(110,190,74,0.15)"
+					}
+				]
+			},
+			"dataSources": {
+				"primary": "ds_config_detail"
+			},
+			"description": "Top 50 most recent events. Audit description newlines collapsed for readability.",
+			"options": {
+				"backgroundColor": "transparent",
+				"columnFormat": {
+					"How": {
+						"rowBackgroundColors": "> table | seriesByName(\"How\") | matchValue(viz_config_detail_How_colors)"
+					}
+				},
+				"count": 100,
+				"fontSize": "small",
+				"headerVisibility": "fixed",
+				"rowNumbers": false
+			},
+			"title": "Recent human config changes - who, how, what, where",
+			"type": "splunk.table"
 		},
 		"viz_config_trend": {
 			"dataSources": {
@@ -1017,10 +1057,10 @@
 				"backgroundColor": "transparent",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
 				"majorFontSize": 28,
-				"showTrendIndicator": false,
-				"sparklineDisplay": "off",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"showTrendIndicator": false,
+				"sparklineDisplay": "off"
 			},
 			"title": "Human config workflows (4h)",
 			"type": "splunk.singlevalue"
@@ -1045,17 +1085,17 @@
 			"options": {
 				"majorColor": "#049FD9",
 				"majorFontSize": 36,
-				"showTrendIndicator": true,
-				"sparklineDisplay": "below",
-				"unit": "%",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
-				"trendDisplay": "percent",
-				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"sparklineStrokeColor": "#049FD9",
+				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"sparklineDisplay": "below",
+				"sparklineStrokeColor": "#049FD9",
+				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+				"trendDisplay": "percent",
+				"unit": "%"
 			},
 			"title": "Device Health",
 			"type": "splunk.singlevalue"
@@ -1068,38 +1108,18 @@
 			"options": {
 				"backgroundColor": "transparent",
 				"legendDisplay": "off",
+				"nullValueDisplay": "connect",
 				"seriesColors": [
 					"#6EBE4A"
 				],
 				"xAxisLabelVisibility": "hide",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide",
-				"nullValueDisplay": "connect"
+				"yAxisTitleVisibility": "hide"
 			},
 			"title": "Device Health Trend",
 			"type": "splunk.line"
 		},
 		"viz_device_table": {
-			"dataSources": {
-				"primary": "ds_topology_device_table"
-			},
-			"description": "All managed devices with health, role, platform, site, software, and issue count",
-			"options": {
-				"backgroundColor": "transparent",
-				"count": 20,
-				"fontSize": "small",
-				"headerVisibility": "fixed",
-				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
-				},
-				"columnFormat": {
-					"Reachability": {
-						"rowBackgroundColors": "> table | seriesByName(\"Reachability\") | matchValue(viz_device_table_Reachability_colors)"
-					}
-				}
-			},
-			"title": "Live Device Inventory — Catalyst Center",
-			"type": "splunk.table",
 			"context": {
 				"viz_device_table_Reachability_colors": [
 					{
@@ -1111,7 +1131,27 @@
 						"value": "rgba(110,190,74,0.15)"
 					}
 				]
-			}
+			},
+			"dataSources": {
+				"primary": "ds_topology_device_table"
+			},
+			"description": "All managed devices with health, role, platform, site, software, and issue count",
+			"options": {
+				"backgroundColor": "transparent",
+				"columnFormat": {
+					"Reachability": {
+						"rowBackgroundColors": "> table | seriesByName(\"Reachability\") | matchValue(viz_device_table_Reachability_colors)"
+					}
+				},
+				"count": 20,
+				"fontSize": "small",
+				"headerVisibility": "fixed",
+				"tableFormat": {
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+				}
+			},
+			"title": "Live Device Inventory — Catalyst Center",
+			"type": "splunk.table"
 		},
 		"viz_devices_by_role": {
 			"dataSources": {
@@ -1180,14 +1220,30 @@
 				"backgroundColor": "transparent",
 				"majorColor": "#049FD9",
 				"majorFontSize": 36,
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
 				"showTrendIndicator": false,
 				"sparklineDisplay": "off",
-				"unit": " devices",
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"unit": " devices"
 			},
 			"title": "Device Inventory",
 			"type": "splunk.singlevalue"
+		},
+		"viz_ise_device_logins": {
+			"dataSources": {
+				"primary": "ds_ise_device_logins"
+			},
+			"description": "Per-user, per-device authentication and command activity in the window.",
+			"options": {
+				"backgroundColor": "transparent",
+				"count": 30,
+				"fontSize": "small",
+				"headerVisibility": "fixed",
+				"rowNumbers": false,
+				"showRowNumbers": true
+			},
+			"title": "Identity-attested device logins - who authenticated where (cisco:ise:syslog)",
+			"type": "splunk.table"
 		},
 		"viz_issue_cat_donut": {
 			"dataSources": {
@@ -1263,16 +1319,16 @@
 			"options": {
 				"majorColor": "#049FD9",
 				"majorFontSize": 36,
-				"showTrendIndicator": true,
-				"sparklineDisplay": "below",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
-				"trendDisplay": "percent",
-				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"sparklineStrokeColor": "#049FD9",
+				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"sparklineDisplay": "below",
+				"sparklineStrokeColor": "#049FD9",
+				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+				"trendDisplay": "percent"
 			},
 			"title": "Open Issues",
 			"type": "splunk.singlevalue"
@@ -1321,6 +1377,33 @@
 			"title": "Live Network Topology",
 			"type": "splunk.linkgraph"
 		},
+		"viz_md_config_detail_header": {
+			"options": {
+				"backgroundColor": "#ffffff",
+				"fontColor": "#000000",
+				"fontSize": "small",
+				"markdown": "**Recent human config changes** &mdash; Detailed audit log entries for human-initiated workflows in the selected window. Each row = one action: **who** triggered it (admin), **how** (DNAC UI / API), **what** was done (description with newlines collapsed), and **where** (target site / device / template / network profile). Use this table to drill into individual changes captured in the trend tile above. Source: `cisco:dnac:audit:logs`."
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_md_ise_logins_header": {
+			"options": {
+				"backgroundColor": "#ffffff",
+				"fontColor": "#000000",
+				"fontSize": "small",
+				"markdown": "**Identity-attested device logins** &mdash; Cross-source view of who authenticated to network devices via TACACS+/ISE &mdash; including auth success/failure and per-command authorization decisions (allowed / denied) &mdash; and the last device they touched. Pair this with the Catalyst Center audit table above to confirm config changes were performed by an authorized human and not via an out-of-band channel. Source: `cisco:ise:syslog`."
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_md_workflow_header": {
+			"options": {
+				"backgroundColor": "#ffffff",
+				"fontColor": "#000000",
+				"fontSize": "small",
+				"markdown": "**Human config workflows** &mdash; A *workflow* = one admin &times; one 5-minute window of activity, collapsing multi-device fan-out (a single push to 28 devices that fires 8 audit lines within 5 min counts as **1 workflow**, not 8). Excludes service accounts, sub-events, read-only commands, and \"Going to deploy\" precursors. Source: `cisco:dnac:audit:logs`."
+			},
+			"type": "splunk.markdown"
+		},
 		"viz_narr_cc_intel": {
 			"options": {
 				"backgroundColor": "transparent",
@@ -1368,17 +1451,17 @@
 			"options": {
 				"majorColor": "#049FD9",
 				"majorFontSize": 36,
-				"showTrendIndicator": true,
-				"sparklineDisplay": "below",
-				"unit": "%",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
-				"trendDisplay": "percent",
-				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"sparklineStrokeColor": "#049FD9",
+				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"sparklineDisplay": "below",
+				"sparklineStrokeColor": "#049FD9",
+				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+				"trendDisplay": "percent",
+				"unit": "%"
 			},
 			"title": "Network Health",
 			"type": "splunk.singlevalue"
@@ -1391,13 +1474,13 @@
 			"options": {
 				"backgroundColor": "transparent",
 				"legendDisplay": "off",
+				"nullValueDisplay": "connect",
 				"seriesColors": [
 					"#049FD9"
 				],
 				"xAxisLabelVisibility": "hide",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide",
-				"nullValueDisplay": "connect"
+				"yAxisTitleVisibility": "hide"
 			},
 			"title": "Network Health Trend",
 			"type": "splunk.line"
@@ -1418,6 +1501,29 @@
 			},
 			"type": "splunk.markdown"
 		},
+		"viz_site_health_distribution": {
+			"dataSources": {
+				"primary": "ds_site_health_distribution"
+			},
+			"description": "Devices per site, broken down by Catalyst Center health tier",
+			"options": {
+				"backgroundColor": "transparent",
+				"dataValuesDisplay": "all",
+				"legendDisplay": "right",
+				"legendTruncation": "ellipsisEnd",
+				"seriesColors": [
+					"#6EBE4A",
+					"#E5A823",
+					"#D64550",
+					"#9CA3AF"
+				],
+				"stackMode": "stacked",
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide"
+			},
+			"title": "Device Health by Site",
+			"type": "splunk.bar"
+		},
 		"viz_site_health_table": {
 			"dataSources": {
 				"primary": "ds_site_health"
@@ -1434,29 +1540,6 @@
 			},
 			"title": "Site-level Health",
 			"type": "splunk.table"
-		},
-		"viz_site_health_distribution": {
-			"dataSources": {
-				"primary": "ds_site_health_distribution"
-			},
-			"description": "Devices per site, broken down by Catalyst Center health tier",
-			"options": {
-				"backgroundColor": "transparent",
-				"stackMode": "stacked",
-				"seriesColors": [
-					"#6EBE4A",
-					"#E5A823",
-					"#D64550",
-					"#9CA3AF"
-				],
-				"legendDisplay": "right",
-				"legendTruncation": "ellipsisEnd",
-				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide",
-				"dataValuesDisplay": "all"
-			},
-			"title": "Device Health by Site",
-			"type": "splunk.bar"
 		},
 		"viz_switch_loc_bar": {
 			"dataSources": {
@@ -1514,19 +1597,208 @@
 			"options": {
 				"majorColor": "#049FD9",
 				"majorFontSize": 36,
-				"showTrendIndicator": true,
-				"sparklineDisplay": "below",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
-				"trendDisplay": "percent",
-				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"sparklineStrokeColor": "#049FD9",
+				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"sparklineDisplay": "below",
+				"sparklineStrokeColor": "#049FD9",
+				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+				"trendDisplay": "percent"
 			},
 			"title": "Syslog Critical",
 			"type": "splunk.singlevalue"
+		},
+		"viz_te_alerts_summary": {
+			"dataSources": {
+				"primary": "ds_te_alerts_summary"
+			},
+			"description": "Active alert count grouped by severity",
+			"options": {
+				"backgroundColor": "transparent",
+				"legendDisplay": "off",
+				"seriesColors": [
+					"#D43F3F",
+					"#EDA800",
+					"#0EA5E9"
+				],
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide"
+			},
+			"title": "Alerts by Severity",
+			"type": "splunk.column"
+		},
+		"viz_te_alerts_table": {
+			"dataSources": {
+				"primary": "ds_te_alerts_table"
+			},
+			"description": "Most recent 20 ThousandEyes alerts with deep-link permalinks",
+			"options": {
+				"backgroundColor": "transparent",
+				"count": 20,
+				"fontSize": "small",
+				"headerVisibility": "fixed",
+				"tableFormat": {
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+				}
+			},
+			"title": "Recent Alerts",
+			"type": "splunk.table"
+		},
+		"viz_te_alerts_timeline": {
+			"dataSources": {
+				"primary": "ds_te_alerts_timeline"
+			},
+			"description": "Hourly stacked alert volume by severity",
+			"options": {
+				"backgroundColor": "transparent",
+				"legendDisplay": "bottom",
+				"seriesColors": [
+					"#D43F3F",
+					"#EDA800",
+					"#0EA5E9"
+				],
+				"stackMode": "stacked",
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide"
+			},
+			"title": "Alert Timeline (hourly, stacked by severity)",
+			"type": "splunk.column"
+		},
+		"viz_te_alerts_title": {
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#005073",
+				"fontSize": "default",
+				"markdown": "### Alerts\n\nActive ThousandEyes alerts by severity, hourly trend, and the most-recent 20 with permalinks back to the TE console."
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_te_box_alerts": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.78)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.06)"
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_te_box_path": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.78)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.06)"
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_te_box_traces": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.78)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.06)"
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_te_endpoint_traces": {
+			"dataSources": {
+				"primary": "ds_te_endpoint_traces"
+			},
+			"description": "Per-trace span counts, HTTP error counts, and duration from cisco:thousandeyes:trace events",
+			"options": {
+				"backgroundColor": "transparent",
+				"count": 25,
+				"fontSize": "small",
+				"headerVisibility": "fixed",
+				"tableFormat": {
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+				}
+			},
+			"title": "Endpoint Traces",
+			"type": "splunk.table"
+		},
+		"viz_te_jitter_chart": {
+			"dataSources": {
+				"primary": "ds_te_network_jitter"
+			},
+			"description": "Per-destination jitter (ms) from agent-to-server and agent-to-agent tests",
+			"options": {
+				"backgroundColor": "transparent",
+				"legendDisplay": "bottom",
+				"lineWidth": 2,
+				"nullValueDisplay": "gaps",
+				"yAxisTitleText": "Jitter (ms)"
+			},
+			"title": "Network Jitter Trend",
+			"type": "splunk.line"
+		},
+		"viz_te_latency_chart": {
+			"dataSources": {
+				"primary": "ds_te_network_latency"
+			},
+			"description": "Per-destination network latency (ms) from agent-to-server and agent-to-agent tests",
+			"options": {
+				"backgroundColor": "transparent",
+				"legendDisplay": "bottom",
+				"lineWidth": 2,
+				"nullValueDisplay": "gaps",
+				"yAxisTitleText": "Latency (ms)"
+			},
+			"title": "Network Latency Trend",
+			"type": "splunk.line"
+		},
+		"viz_te_loss_chart": {
+			"dataSources": {
+				"primary": "ds_te_network_loss"
+			},
+			"description": "Per-destination packet loss (%) from agent-to-server and agent-to-agent tests",
+			"options": {
+				"backgroundColor": "transparent",
+				"legendDisplay": "bottom",
+				"lineWidth": 2,
+				"nullValueDisplay": "gaps",
+				"yAxisTitleText": "Loss (%)"
+			},
+			"title": "Network Loss Trend",
+			"type": "splunk.line"
+		},
+		"viz_te_narrative": {
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#6E6E6E",
+				"fontSize": "small",
+				"markdown": "**ThousandEyes** &mdash; Internet path quality (latency / loss / jitter), active alerts by severity, and per-trace endpoint health for HTTP-server tests. Use this tab when the Overview map shows a degraded inter-site link or when an external SaaS dependency may be impacting users. Requires the *Cisco ThousandEyes App for Splunk* with both `Cisco_ThousandEyes.Test_Metrics` and `Cisco_ThousandEyes.Alerts` data models accelerated."
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_te_path_title": {
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#005073",
+				"fontSize": "default",
+				"markdown": "### Path Quality\n\nPer-destination latency / loss / jitter from agent-to-server and agent-to-agent tests &mdash; sorted worst-first."
+			},
+			"type": "splunk.markdown"
+		},
+		"viz_te_section": {
+			"options": {
+				"fillColor": "rgba(255,255,255,0.45)",
+				"fillOpacity": 1,
+				"rx": 12,
+				"strokeColor": "rgba(0,0,0,0.06)",
+				"strokeOpacity": 0.3,
+				"strokeWidth": 1
+			},
+			"type": "splunk.rectangle"
+		},
+		"viz_te_traces_title": {
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#005073",
+				"fontSize": "default",
+				"markdown": "### Endpoint Traces\n\nPer-trace span counts, HTTP error counts, and durations from `cisco:thousandeyes:trace` events. Sort by error count to surface root-cause traces."
+			},
+			"type": "splunk.markdown"
 		},
 		"viz_top_client_issues_table": {
 			"dataSources": {
@@ -1580,132 +1852,11 @@
 			"title": "Top 5 Sites by Issue Count",
 			"type": "splunk.bar"
 		},
-		"viz_wow_value": {
-			"context": {
-				"majorColorEditorConfig": [
-					{
-						"to": 70,
-						"value": "#D64550"
-					},
-					{
-						"from": 70,
-						"to": 85,
-						"value": "#E5A823"
-					},
-					{
-						"from": 85,
-						"value": "#6EBE4A"
-					}
-				]
-			},
-			"dataSources": {
-				"primary": "ds_wow_health"
-			},
-			"description": "Week-over-week health change — positive means improving",
+		"viz_uxh_box_breakdown": {
 			"options": {
-				"backgroundColor": "transparent",
-				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
-				"majorFontSize": 48,
-				"showTrendIndicator": false,
-				"sparklineDisplay": "off",
-				"unit": "%",
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
-			},
-			"title": "Week-over-Week Health",
-			"type": "splunk.singlevalue"
-		},
-		"viz_config_detail": {
-			"dataSources": {
-				"primary": "ds_config_detail"
-			},
-			"description": "Top 50 most recent events. Audit description newlines collapsed for readability.",
-			"options": {
-				"backgroundColor": "transparent",
-				"count": 100,
-				"rowNumbers": false,
-				"headerVisibility": "fixed",
-				"fontSize": "small",
-				"columnFormat": {
-					"How": {
-						"rowBackgroundColors": "> table | seriesByName(\"How\") | matchValue(viz_config_detail_How_colors)"
-					}
-				}
-			},
-			"title": "Recent human config changes - who, how, what, where",
-			"type": "splunk.table",
-			"context": {
-				"viz_config_detail_How_colors": [
-					{
-						"match": "DNAC CLI session",
-						"value": "rgba(229,168,35,0.30)"
-					},
-					{
-						"match": "DNAC NETCONF push",
-						"value": "rgba(229,168,35,0.30)"
-					},
-					{
-						"match": "DNAC UI / REST API",
-						"value": "rgba(110,190,74,0.15)"
-					},
-					{
-						"match": "DNAC API",
-						"value": "rgba(110,190,74,0.15)"
-					}
-				]
-			}
-		},
-		"viz_ise_device_logins": {
-			"dataSources": {
-				"primary": "ds_ise_device_logins"
-			},
-			"description": "Per-user, per-device authentication and command activity in the window.",
-			"options": {
-				"backgroundColor": "transparent",
-				"count": 30,
-				"rowNumbers": false,
-				"headerVisibility": "fixed",
-				"fontSize": "small",
-				"showRowNumbers": true
-			},
-			"title": "Identity-attested device logins - who authenticated where (cisco:ise:syslog)",
-			"type": "splunk.table"
-		},
-		"viz_md_workflow_header": {
-			"type": "splunk.markdown",
-			"options": {
-				"markdown": "**Human config workflows** &mdash; A *workflow* = one admin &times; one 5-minute window of activity, collapsing multi-device fan-out (a single push to 28 devices that fires 8 audit lines within 5 min counts as **1 workflow**, not 8). Excludes service accounts, sub-events, read-only commands, and \"Going to deploy\" precursors. Source: `cisco:dnac:audit:logs`.",
-				"backgroundColor": "#ffffff",
-				"fontColor": "#000000",
-				"fontSize": "small"
-			}
-		},
-		"viz_md_config_detail_header": {
-			"type": "splunk.markdown",
-			"options": {
-				"backgroundColor": "#ffffff",
-				"fontColor": "#000000",
-				"fontSize": "small",
-				"markdown": "**Recent human config changes** &mdash; Detailed audit log entries for human-initiated workflows in the selected window. Each row = one action: **who** triggered it (admin), **how** (DNAC UI / API), **what** was done (description with newlines collapsed), and **where** (target site / device / template / network profile). Use this table to drill into individual changes captured in the trend tile above. Source: `cisco:dnac:audit:logs`."
-			}
-		},
-		"viz_md_ise_logins_header": {
-			"type": "splunk.markdown",
-			"options": {
-				"backgroundColor": "#ffffff",
-				"fontColor": "#000000",
-				"fontSize": "small",
-				"markdown": "**Identity-attested device logins** &mdash; Cross-source view of who authenticated to network devices via TACACS+/ISE &mdash; including auth success/failure and per-command authorization decisions (allowed / denied) &mdash; and the last device they touched. Pair this with the Catalyst Center audit table above to confirm config changes were performed by an authorized human and not via an out-of-band channel. Source: `cisco:ise:syslog`."
-			}
-		},
-		"viz_uxh_section": {
-			"options": {
-				"fillColor": "rgba(255,255,255,0.45)",
-				"fillOpacity": 1,
-				"rx": 12,
-				"strokeColor": "rgba(0,0,0,0.06)",
-				"strokeOpacity": 0.3,
-				"strokeWidth": 1
+				"fillColor": "rgba(255,255,255,0.78)",
+				"rx": 10,
+				"strokeColor": "rgba(0,0,0,0.08)"
 			},
 			"type": "splunk.rectangle"
 		},
@@ -1725,72 +1876,25 @@
 			},
 			"type": "splunk.rectangle"
 		},
-		"viz_uxh_box_breakdown": {
-			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
-			},
-			"type": "splunk.rectangle"
-		},
-		"viz_uxh_narrative": {
-			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#6E6E6E",
-				"fontSize": "small",
-				"markdown": "End-user **client experience** seen from Catalyst Center &mdash; wireless and wired health scores, distribution over time, and what kinds of devices are on the network. Use this tab to confirm clients are healthy and to spot which device categories or operating systems trend with degraded experience. Internet-path metrics (ThousandEyes) appear here once the `Cisco_ThousandEyes.Test_Metrics` data model is installed and accelerated."
-			},
-			"type": "splunk.markdown"
-		},
-		"viz_uxh_wireless_gauge": {
-			"context": {
-				"majorColorEditorConfig": [
-					{ "to": 70, "value": "#D64550" },
-					{ "from": 70, "to": 85, "value": "#E5A823" },
-					{ "from": 85, "value": "#6EBE4A" }
-				]
-			},
+		"viz_uxh_client_os_pie": {
 			"dataSources": {
-				"primary": "ds_uxh_wireless_health"
+				"primary": "ds_uxh_top_client_os"
 			},
-			"description": "Current wireless client health score from Catalyst Center",
+			"description": "Top operating systems by unique MAC count",
 			"options": {
 				"backgroundColor": "transparent",
-				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
-				"majorFontSize": 48,
-				"showTrendIndicator": false,
-				"sparklineDisplay": "off",
-				"unit": "%",
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"labelDisplay": "valuesAndPercentage",
+				"seriesColors": [
+					"#6EBE4A",
+					"#049FD9",
+					"#E5A823",
+					"#D64550",
+					"#6E6E6E"
+				],
+				"showDonutHole": true
 			},
-			"title": "Wireless Health",
-			"type": "splunk.singlevalue"
-		},
-		"viz_uxh_wired_gauge": {
-			"context": {
-				"majorColorEditorConfig": [
-					{ "to": 70, "value": "#D64550" },
-					{ "from": 70, "to": 85, "value": "#E5A823" },
-					{ "from": 85, "value": "#6EBE4A" }
-				]
-			},
-			"dataSources": {
-				"primary": "ds_uxh_wired_health"
-			},
-			"description": "Current wired client health score from Catalyst Center",
-			"options": {
-				"backgroundColor": "transparent",
-				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
-				"majorFontSize": 48,
-				"showTrendIndicator": false,
-				"sparklineDisplay": "off",
-				"unit": "%",
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
-			},
-			"title": "Wired Health",
-			"type": "splunk.singlevalue"
+			"title": "Client OS Distribution",
+			"type": "splunk.pie"
 		},
 		"viz_uxh_client_trend": {
 			"dataSources": {
@@ -1829,36 +1933,16 @@
 			"title": "Top 5 Device Types",
 			"type": "splunk.bar"
 		},
-		"viz_uxh_client_os_pie": {
-			"dataSources": {
-				"primary": "ds_uxh_top_client_os"
-			},
-			"description": "Top operating systems by unique MAC count",
+		"viz_uxh_narrative": {
 			"options": {
 				"backgroundColor": "transparent",
-				"labelDisplay": "valuesAndPercentage",
-				"seriesColors": [
-					"#6EBE4A",
-					"#049FD9",
-					"#E5A823",
-					"#D64550",
-					"#6E6E6E"
-				],
-				"showDonutHole": true
-			},
-			"title": "Client OS Distribution",
-			"type": "splunk.pie"
-		},
-		"viz_uxh_te_note": {
-			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
+				"fontColor": "#6E6E6E",
 				"fontSize": "small",
-				"markdown": "### Internet path metrics (ThousandEyes)\n\nThousandEyes per-test latency, loss, jitter, and HTTP availability panels are **temporarily parked** because the `Cisco_ThousandEyes.Test_Metrics` data model is not installed on this stack. Once the *Cisco ThousandEyes App for Splunk* is installed and the data model is accelerated, these panels will return:\n\n- Internet path composite score (gauge)\n- Per-agent latency / loss / jitter table\n- Per-test result table with status\n- Test-health distribution (donut)\n\nReinstating them requires no SPL changes &mdash; the underlying searches already live in `searchbase.conf` and are filterable in the KPI Picker via the `Requires_Cisco_ThousandEyes_DM` tag."
+				"markdown": "End-user **client experience** seen from Catalyst Center &mdash; wireless and wired health scores, distribution over time, and what kinds of devices are on the network. Use this tab to confirm clients are healthy and to spot which device categories or operating systems trend with degraded experience. Internet-path metrics (ThousandEyes) appear here once the `Cisco_ThousandEyes.Test_Metrics` data model is installed and accelerated."
 			},
 			"type": "splunk.markdown"
 		},
-		"viz_te_section": {
+		"viz_uxh_section": {
 			"options": {
 				"fillColor": "rgba(255,255,255,0.45)",
 				"fillOpacity": 1,
@@ -1869,183 +1953,119 @@
 			},
 			"type": "splunk.rectangle"
 		},
-		"viz_te_narrative": {
+		"viz_uxh_te_note": {
 			"options": {
 				"backgroundColor": "transparent",
-				"fontColor": "#6E6E6E",
+				"fontColor": "#2B2B2B",
 				"fontSize": "small",
-				"markdown": "**ThousandEyes** &mdash; Internet path quality (latency / loss / jitter), active alerts by severity, and per-trace endpoint health for HTTP-server tests. Use this tab when the Overview map shows a degraded inter-site link or when an external SaaS dependency may be impacting users. Requires the *Cisco ThousandEyes App for Splunk* with both `Cisco_ThousandEyes.Test_Metrics` and `Cisco_ThousandEyes.Alerts` data models accelerated."
+				"markdown": "### Internet path metrics (ThousandEyes)\n\nThousandEyes per-test latency, loss, jitter, and HTTP availability panels are **temporarily parked** because the `Cisco_ThousandEyes.Test_Metrics` data model is not installed on this stack. Once the *Cisco ThousandEyes App for Splunk* is installed and the data model is accelerated, these panels will return:\n\n- Internet path composite score (gauge)\n- Per-agent latency / loss / jitter table\n- Per-test result table with status\n- Test-health distribution (donut)\n\nReinstating them requires no SPL changes &mdash; the underlying searches already live in `searchbase.conf` and are filterable in the KPI Picker via the `Requires_Cisco_ThousandEyes_DM` tag."
 			},
 			"type": "splunk.markdown"
 		},
-		"viz_te_box_path": {
-			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.06)"
+		"viz_uxh_wired_gauge": {
+			"context": {
+				"majorColorEditorConfig": [
+					{
+						"to": 70,
+						"value": "#D64550"
+					},
+					{
+						"from": 70,
+						"to": 85,
+						"value": "#E5A823"
+					},
+					{
+						"from": 85,
+						"value": "#6EBE4A"
+					}
+				]
 			},
-			"type": "splunk.rectangle"
-		},
-		"viz_te_box_alerts": {
-			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.06)"
-			},
-			"type": "splunk.rectangle"
-		},
-		"viz_te_box_traces": {
-			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.06)"
-			},
-			"type": "splunk.rectangle"
-		},
-		"viz_te_path_title": {
-			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#005073",
-				"fontSize": "default",
-				"markdown": "### Path Quality\n\nPer-destination latency / loss / jitter from agent-to-server and agent-to-agent tests &mdash; sorted worst-first."
-			},
-			"type": "splunk.markdown"
-		},
-		"viz_te_alerts_title": {
-			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#005073",
-				"fontSize": "default",
-				"markdown": "### Alerts\n\nActive ThousandEyes alerts by severity, hourly trend, and the most-recent 20 with permalinks back to the TE console."
-			},
-			"type": "splunk.markdown"
-		},
-		"viz_te_traces_title": {
-			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#005073",
-				"fontSize": "default",
-				"markdown": "### Endpoint Traces\n\nPer-trace span counts, HTTP error counts, and durations from `cisco:thousandeyes:trace` events. Sort by error count to surface root-cause traces."
-			},
-			"type": "splunk.markdown"
-		},
-		"viz_te_latency_chart": {
 			"dataSources": {
-				"primary": "ds_te_network_latency"
+				"primary": "ds_uxh_wired_health"
 			},
-			"description": "Per-destination network latency (ms) from agent-to-server and agent-to-agent tests",
+			"description": "Current wired client health score from Catalyst Center",
 			"options": {
 				"backgroundColor": "transparent",
-				"legendDisplay": "bottom",
-				"lineWidth": 2,
-				"nullValueDisplay": "gaps",
-				"yAxisTitleText": "Latency (ms)"
+				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
+				"majorFontSize": 48,
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
+				"showTrendIndicator": false,
+				"sparklineDisplay": "off",
+				"unit": "%"
 			},
-			"title": "Network Latency Trend",
-			"type": "splunk.line"
+			"title": "Wired Health",
+			"type": "splunk.singlevalue"
 		},
-		"viz_te_loss_chart": {
-			"dataSources": {
-				"primary": "ds_te_network_loss"
+		"viz_uxh_wireless_gauge": {
+			"context": {
+				"majorColorEditorConfig": [
+					{
+						"to": 70,
+						"value": "#D64550"
+					},
+					{
+						"from": 70,
+						"to": 85,
+						"value": "#E5A823"
+					},
+					{
+						"from": 85,
+						"value": "#6EBE4A"
+					}
+				]
 			},
-			"description": "Per-destination packet loss (%) from agent-to-server and agent-to-agent tests",
+			"dataSources": {
+				"primary": "ds_uxh_wireless_health"
+			},
+			"description": "Current wireless client health score from Catalyst Center",
 			"options": {
 				"backgroundColor": "transparent",
-				"legendDisplay": "bottom",
-				"lineWidth": 2,
-				"nullValueDisplay": "gaps",
-				"yAxisTitleText": "Loss (%)"
+				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
+				"majorFontSize": 48,
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
+				"showTrendIndicator": false,
+				"sparklineDisplay": "off",
+				"unit": "%"
 			},
-			"title": "Network Loss Trend",
-			"type": "splunk.line"
+			"title": "Wireless Health",
+			"type": "splunk.singlevalue"
 		},
-		"viz_te_jitter_chart": {
-			"dataSources": {
-				"primary": "ds_te_network_jitter"
+		"viz_wow_value": {
+			"context": {
+				"majorColorEditorConfig": [
+					{
+						"to": 70,
+						"value": "#D64550"
+					},
+					{
+						"from": 70,
+						"to": 85,
+						"value": "#E5A823"
+					},
+					{
+						"from": 85,
+						"value": "#6EBE4A"
+					}
+				]
 			},
-			"description": "Per-destination jitter (ms) from agent-to-server and agent-to-agent tests",
+			"dataSources": {
+				"primary": "ds_wow_health"
+			},
+			"description": "Week-over-week health change — positive means improving",
 			"options": {
 				"backgroundColor": "transparent",
-				"legendDisplay": "bottom",
-				"lineWidth": 2,
-				"nullValueDisplay": "gaps",
-				"yAxisTitleText": "Jitter (ms)"
+				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
+				"majorFontSize": 48,
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
+				"showTrendIndicator": false,
+				"sparklineDisplay": "off",
+				"unit": "%"
 			},
-			"title": "Network Jitter Trend",
-			"type": "splunk.line"
-		},
-		"viz_te_alerts_summary": {
-			"dataSources": {
-				"primary": "ds_te_alerts_summary"
-			},
-			"description": "Active alert count grouped by severity",
-			"options": {
-				"backgroundColor": "transparent",
-				"legendDisplay": "off",
-				"seriesColors": [
-					"#D43F3F",
-					"#EDA800",
-					"#0EA5E9"
-				],
-				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide"
-			},
-			"title": "Alerts by Severity",
-			"type": "splunk.column"
-		},
-		"viz_te_alerts_timeline": {
-			"dataSources": {
-				"primary": "ds_te_alerts_timeline"
-			},
-			"description": "Hourly stacked alert volume by severity",
-			"options": {
-				"backgroundColor": "transparent",
-				"legendDisplay": "bottom",
-				"seriesColors": [
-					"#D43F3F",
-					"#EDA800",
-					"#0EA5E9"
-				],
-				"stackMode": "stacked",
-				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide"
-			},
-			"title": "Alert Timeline (hourly, stacked by severity)",
-			"type": "splunk.column"
-		},
-		"viz_te_alerts_table": {
-			"dataSources": {
-				"primary": "ds_te_alerts_table"
-			},
-			"description": "Most recent 20 ThousandEyes alerts with deep-link permalinks",
-			"options": {
-				"backgroundColor": "transparent",
-				"count": 20,
-				"fontSize": "small",
-				"headerVisibility": "fixed",
-				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
-				}
-			},
-			"title": "Recent Alerts",
-			"type": "splunk.table"
-		},
-		"viz_te_endpoint_traces": {
-			"dataSources": {
-				"primary": "ds_te_endpoint_traces"
-			},
-			"description": "Per-trace span counts, HTTP error counts, and duration from cisco:thousandeyes:trace events",
-			"options": {
-				"backgroundColor": "transparent",
-				"count": 25,
-				"fontSize": "small",
-				"headerVisibility": "fixed",
-				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
-				}
-			},
-			"title": "Endpoint Traces",
-			"type": "splunk.table"
+			"title": "Week-over-Week Health",
+			"type": "splunk.singlevalue"
 		}
 	},
 	"dataSources": {
@@ -2153,6 +2173,17 @@
 			},
 			"type": "ds.search"
 		},
+		"ds_config_detail": {
+			"name": "IT Health - Recent Human Config Changes",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:audit:logs\" name=\"AUDIT_LOG\"\n userId!=\"system\" userId!=\"SYSTEM\" userId!=\"dnac-svc\" userId!=\"license-management\" userId!=\"localhost\" userId!=\"null\"\n NOT description=\"*read-only commands*\"\n NOT description=\"*preview*\"\n NOT description=\"Service request processing completed*\"\n NOT description=\"Going to deploy*\"\n| where (parentInstanceId=\"null\" OR parentInstanceId=\"\" OR isnull(parentInstanceId))\n| where NOT (description LIKE \"Executing command%display%\")\n| rex field=description mode=sed \"s/[\\r\\n\\t]+/ /g\"\n| rex field=description mode=sed \"s/ +/ /g\"\n| eval description = replace(description, \"&quot;\", \"\\\"\")\n| eval description = replace(description, \"&amp;\", \"&\")\n| eval description = replace(description, \"&lt;\", \"<\")\n| eval description = replace(description, \"&gt;\", \">\")\n| eval admin = coalesce(adminName, userId, \"unknown\")\n| spath path=\"additionalDetails.eventMetadata.auditLogMetadata.type\" output=audit_type\n| spath path=\"network.deviceId\" output=net_deviceId\n| eval net_deviceId = if(net_deviceId IN (\"null\",\"SYSTEM\",\"\") OR isnull(net_deviceId), null(), net_deviceId)\n| rex field=description \"Network Profile \\[.*?\\\"name\\\":\\\"(?<x_profile>[^\\\"]+)\"\n| rex field=description \"Creating task schedule.*?description:\\s*'(?<x_task>[^']+)'\"\n| rex field=description \"AP Provisioning request for AP\\(s\\) in (?<x_ap_site>[^,]+),\"\n| rex field=description \"for activity '(?<x_activity>[^']+)'\"\n| rex field=description \"network device (?<x_ip>\\d+\\.\\d+\\.\\d+\\.\\d+)\"\n| rex field=description \"deployed template (?<x_template>\\S+?)\\.?$\"\n| eval target = coalesce(net_deviceId, x_profile, x_task, x_ap_site, x_activity, x_ip, x_template, \"-\")\n| eval how = case(\n audit_type=\"CLI\", \"DNAC CLI session\",\n audit_type=\"API\", \"DNAC UI / REST API\",\n audit_type=\"NETCONF\", \"DNAC NETCONF push\",\n audit_type=\"SOCKET\", \"DNAC internal\",\n 1=1, \"DNAC \" . coalesce(audit_type, \"audit\"))\n| eval description = if(len(description) > 200, substr(description, 1, 197) . \"...\", description)\n| table _time admin how description target\n| rename admin as \"Who\", how as \"How\", description as \"What\", target as \"Target\"\n| sort - _time\n| head 5000",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
 		"ds_config_trend": {
 			"name": "IT Health - Config Change Trend",
 			"options": {
@@ -2179,6 +2210,28 @@
 				"query": "| stats count | fields count"
 			},
 			"type": "ds.chain"
+		},
+		"ds_cpu_mem_trend": {
+			"name": "CPU/Memory Alerts Trend",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" | where CPUUtilization > 80 OR MemoryUtilization > 80 | timechart fixedrange=false dc(DeviceName) as \"CPU/Memory Alerts\"",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_dev_health_trend": {
+			"name": "Shared - ds_dev_health_trend",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" | where OverallHealth>=0 | eval health=OverallHealth*10 | timechart fixedrange=false avg(health) as score",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
 		},
 		"ds_device_health": {
 			"name": "IT Health - Device Health Trend",
@@ -2226,6 +2279,17 @@
 			},
 			"type": "ds.search"
 		},
+		"ds_dhcp_trend": {
+			"name": "DHCP Pool Events Trend",
+			"options": {
+				"query": "`index_dhcp` sourcetype=\"DhcpSrvLog\" | rex \"^(?<event_id>\\d+),\" | where event_id IN (\"13\",\"14\",\"15\",\"16\",\"17\",\"20\",\"21\",\"36\") | timechart fixedrange=false count as \"DHCP Pool Events\"",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
 		"ds_guest_surge": {
 			"name": "IT Health - Guest Surge Monitor",
 			"options": {
@@ -2260,6 +2324,17 @@
 				"query": "| stats sum(count) as total | fields total"
 			},
 			"type": "ds.chain"
+		},
+		"ds_ise_device_logins": {
+			"name": "IT Health - Identity-attested device logins",
+			"options": {
+				"query": "`index_identity` sourcetype=\"cisco:ise:syslog\"\n| rex field=_raw \"(?<event_class>CISE_(?:Passed_Authentications|Failed_Attempts|Administrative_and_Operational|Posture|Profiler|RADIUS_Accounting))\"\n| where (event_class=\"CISE_Administrative_and_Operational\" OR (event_class=\"CISE_Passed_Authentications\" AND match(_raw, \"TACACS|Device-Admin\")) OR (event_class=\"CISE_Failed_Attempts\" AND match(_raw, \"TACACS|Device-Admin\")))\n| rex field=_raw \"(?:UserName|User-Name|User=)\\s*[=:]?\\s*(?<ise_user>[^,;\\s\\\"]+)\"\n| rex field=_raw \"(?:Device IP Address|NAS-IP-Address|NAS_IP_Address)\\s*=\\s*(?<target_device>[\\d.]+)\"\n| eval ise_action=case(\n match(_raw, \"Command Authorization succeeded\"), \"TACACS+ command allowed\",\n match(_raw, \"Command Authorization failed\"), \"TACACS+ command DENIED\",\n match(_raw, \"Authentication succeeded\"), \"Device login succeeded\",\n match(_raw, \"Authentication failed\"), \"Device login FAILED\",\n event_class=\"CISE_Passed_Authentications\", \"Auth succeeded\",\n event_class=\"CISE_Failed_Attempts\", \"Auth FAILED\",\n event_class=\"CISE_Administrative_and_Operational\", \"ISE admin operation\",\n 1=1, event_class)\n| where isnotnull(ise_user) AND ise_user!=\"\" AND NOT match(ise_user, \"^([0-9A-Fa-f]{2}[:.]){2,}\")\n| stats count, values(ise_action) as actions, latest(target_device) as last_device, latest(_time) as last_seen by ise_user\n| eval actions=mvjoin(actions, \", \")\n| eval last_seen=strftime(last_seen, \"%Y-%m-%d %H:%M\")\n| rename ise_user as \"Who (AD/ISE user)\", count as \"Events\", actions as \"ISE actions seen\", last_device as \"Last device\", last_seen as \"Last seen\"\n| sort -Events",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
 		},
 		"ds_issue_by_priority": {
 			"name": "Issues by Priority",
@@ -2320,6 +2395,81 @@
 			},
 			"type": "ds.chain"
 		},
+		"ds_issues_trend": {
+			"name": "Open Issues Trend",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\" | timechart fixedrange=false dc(IssueID) as issues",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_kpi_cpu_mem": {
+			"name": "KPI CPU/Memory Alerts",
+			"options": {
+				"extend": "ds_cpu_mem_trend",
+				"query": "| fields _time \"CPU/Memory Alerts\""
+			},
+			"type": "ds.chain"
+		},
+		"ds_kpi_dev_health": {
+			"name": "KPI Device Health",
+			"options": {
+				"extend": "ds_dev_health_trend",
+				"query": "| fields _time score"
+			},
+			"type": "ds.chain"
+		},
+		"ds_kpi_dhcp": {
+			"name": "KPI DHCP Pool Events",
+			"options": {
+				"extend": "ds_dhcp_trend",
+				"query": "| fields _time \"DHCP Pool Events\""
+			},
+			"type": "ds.chain"
+		},
+		"ds_kpi_issues": {
+			"name": "KPI Open Issues",
+			"options": {
+				"extend": "ds_issues_trend",
+				"query": "| fields _time issues"
+			},
+			"type": "ds.chain"
+		},
+		"ds_kpi_net_health": {
+			"name": "KPI Network Health",
+			"options": {
+				"extend": "ds_net_health_trend",
+				"query": "| fields _time score"
+			},
+			"type": "ds.chain"
+		},
+		"ds_kpi_reboots": {
+			"name": "KPI Recent Reboots",
+			"options": {
+				"extend": "ds_reboots_trend",
+				"query": "| fields _time \"Recent Reboots\""
+			},
+			"type": "ds.chain"
+		},
+		"ds_kpi_syslog": {
+			"name": "KPI Syslog Critical",
+			"options": {
+				"extend": "ds_syslog_trend",
+				"query": "| fields _time count"
+			},
+			"type": "ds.chain"
+		},
+		"ds_kpi_unreachable": {
+			"name": "KPI Unreachable Devices",
+			"options": {
+				"extend": "ds_unreachable_trend",
+				"query": "| fields _time \"Unreachable Devices\""
+			},
+			"type": "ds.chain"
+		},
 		"ds_link_flap_storm": {
 			"name": "IT - Critical Systems - ds_link_flap_storm",
 			"options": {
@@ -2340,7 +2490,7 @@
 			"type": "ds.chain"
 		},
 		"ds_net_health_trend": {
-			"type": "ds.search",
+			"name": "Network Health Trend",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:networkhealth\" category=\"All\" | timechart fixedrange=false latest(healthScore) as score",
 				"queryParameters": {
@@ -2348,7 +2498,7 @@
 					"latest": "$global_time.latest$"
 				}
 			},
-			"name": "Network Health Trend"
+			"type": "ds.search"
 		},
 		"ds_network_health": {
 			"name": "IT Health - Network Health Score",
@@ -2437,6 +2587,17 @@
 			},
 			"type": "ds.chain"
 		},
+		"ds_reboots_trend": {
+			"name": "Recent Reboots Trend",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" UptimeSeconds<14400 | timechart fixedrange=false dc(DeviceName) as \"Recent Reboots\"",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
 		"ds_routing_reconvergence": {
 			"name": "IT - Critical Systems - ds_routing_reconvergence",
 			"options": {
@@ -2498,6 +2659,94 @@
 			"name": "IT - Critical Systems - ds_syslog_severity",
 			"options": {
 				"query": "`index_network` (sourcetype=\"cisco:ios\")\n| rex \"%(?<facility>[A-Z_]+)-(?<severity_id>\\d+)-(?<mnemonic>[A-Z_]+)\"\n| eval severity=case(severity_id<=2,\"Critical\", severity_id==3,\"Error\", severity_id<=5,\"Warning\", 1==1,\"Info\")\n| stats count as events, dc(host) as hosts, dc(mnemonic) as message_types by severity",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_syslog_trend": {
+			"name": "Syslog Critical Trend",
+			"options": {
+				"query": "`index_network` sourcetype=\"cisco:ios\" | rex \"%(?<facility>[A-Z_]+)-(?<severity_id>\\d+)-(?<mnemonic>[A-Z_]+)\" | where severity_id<=2 | timechart fixedrange=false count as count",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_te_alerts_summary": {
+			"name": "IT Health - ThousandEyes Alerts Summary by Severity",
+			"options": {
+				"query": "| tstats `summariesonly` count\nFROM datamodel=\"Cisco_ThousandEyes.Alerts\"\nBY Alerts.severity\n| rename Alerts.severity AS Severity\n| sort - count",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_te_alerts_table": {
+			"name": "IT Health - ThousandEyes Active Alerts (Recent 20)",
+			"options": {
+				"query": "| tstats `summariesonly` count, values(Alerts.triggerTime) as triggerTime, values(Alerts.accountId) as accountId, values(Alerts.organizationId) as organizationId, values(Alerts.testId) as testId, values(Alerts.testName) as testName, values(Alerts.testType) as testType, values(Alerts.permalink) as permalink, values(Alerts.expression) as expression, values(Alerts.severity) as severity\nFROM datamodel=\"Cisco_ThousandEyes.Alerts\"\nBY _time, Alerts.alertId\n| eval \"Trigger Time\"=coalesce(strftime(triggerTime, \"%Y-%m-%d %H:%M:%S\"), strftime(_time, \"%Y-%m-%d %H:%M:%S\"))\n| rename accountId AS \"Account ID\", organizationId AS \"Org ID\", testId AS \"Test ID\", testName AS \"Test Name\", testType AS \"Test Type\", permalink AS \"Permalink\", expression AS \"Expression\", severity AS \"Severity\", Alerts.alertId AS \"Alert ID\"\n| sort 0 - \"Trigger Time\"\n| fields - _time, triggerTime, count\n| head 20\n| table \"Trigger Time\", \"Account ID\", \"Org ID\", \"Test ID\", \"Test Name\", \"Test Type\", \"Permalink\", \"Expression\", \"Severity\", \"Alert ID\"",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_te_alerts_timeline": {
+			"name": "IT Health - ThousandEyes Alerts Timeline",
+			"options": {
+				"query": "| tstats `summariesonly` count\nFROM datamodel=\"Cisco_ThousandEyes.Alerts\"\nBY Alerts.severity, _time span=1h\n| rename Alerts.severity AS Severity\n| timechart span=1h sum(count) AS count BY Severity",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_te_endpoint_traces": {
+			"name": "IT Health - ThousandEyes Endpoint Trace Health",
+			"options": {
+				"query": "index=* sourcetype=\"cisco:thousandeyes:trace\"\n| eval is_parent=if(parent_span_id==\"\", 1, 0)\n| eval parent_key=if(is_parent==1, span_id, parent_span_id)\n| eval http_code_num = if(is_parent==1, 0, attributes.http.response.code)\n| eval agent_name = 'thousandeyes.source.agent.name'\n| eval permalink = 'thousandeyes.permalink'\n| eventstats count as spans_count count(eval('attributes.http.response.code'>399)) as error_count count(eval('attributes.http.response.code'>=500 AND 'attributes.http.response.code'<600)) as error_5xx_count min(start_time) as min_start_time max(end_time) as max_end_time by trace_id, parent_key\n| where is_parent==1\n| eval duration=round((max_end_time - min_start_time)/1000000) . \" ms\"\n| eval started_at_epoch = round(min_start_time / 1000000000)\n| eval timestamp = strftime(started_at_epoch, \"%a, %b %d %Y %I:%M:%S %p %Z\")\n| eval spans_count=spans_count-1\n| where (max_end_time - min_start_time)/1000000 >= 0\n| rename name as endpoint\n| rename thousandeyes.account.id as account_id\n| rename thousandeyes.test.name as test_name\n| dedup trace_id\n| table trace_id endpoint timestamp error_count spans_count duration agent_name account_id test_name permalink _raw",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_te_network_jitter": {
+			"name": "IT Health - ThousandEyes Network Jitter",
+			"options": {
+				"query": "| tstats `summariesonly` avg(Test_Metrics.metric_name:network.jitter) as avg_jitter\nFROM datamodel=\"Cisco_ThousandEyes.Test_Metrics\"\nWHERE Test_Metrics.metric_name:network.jitter=\"*\"\nTest_Metrics.thousandeyes.test.type IN (\"agent-to-server\",\"agent-to-agent\")\nBY _time, Test_Metrics.server.address\n| timechart eval(round(avg(avg_jitter), 2)) as avg_jitter BY Test_Metrics.server.address\n| sort 0 - avg_jitter",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_te_network_latency": {
+			"name": "IT Health - ThousandEyes Network Latency",
+			"options": {
+				"query": "| tstats `summariesonly` avg(Test_Metrics.metric_name:network.latency) as avg_latency\nFROM datamodel=\"Cisco_ThousandEyes.Test_Metrics\"\nWHERE Test_Metrics.metric_name:network.latency=\"*\"\nTest_Metrics.thousandeyes.test.type IN (\"agent-to-server\",\"agent-to-agent\")\nBY _time, Test_Metrics.server.address\n| timechart eval(round(avg(avg_latency), 2)) as avg_latency BY Test_Metrics.server.address\n| sort 0 - avg_latency",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_te_network_loss": {
+			"name": "IT Health - ThousandEyes Network Loss",
+			"options": {
+				"query": "| tstats `summariesonly` avg(Test_Metrics.metric_name:network.loss) as avg_loss\nFROM datamodel=\"Cisco_ThousandEyes.Test_Metrics\"\nWHERE Test_Metrics.metric_name:network.loss=\"*\"\nTest_Metrics.thousandeyes.test.type IN (\"agent-to-server\",\"agent-to-agent\")\nBY _time, Test_Metrics.server.address\n| timechart eval(round(avg(avg_loss), 2)) as avg_loss BY Test_Metrics.server.address\n| sort 0 - avg_loss",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2572,206 +2821,10 @@
 			},
 			"type": "ds.chain"
 		},
-		"ds_wow_health": {
-			"name": "IT - Critical Systems - ds_wow_health",
-			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:networkhealth\"\n| eval is_this_week=if(_time >= relative_time(now(), \"-7d@d\"), 1, 0)\n| stats avg(eval(if(is_this_week==1, healthScore, null()))) as this_week, avg(eval(if(is_this_week==0, healthScore, null()))) as last_week\n| eval score=round(this_week, 1), delta=round(this_week - last_week, 1)\n| table score delta",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_dev_health_trend": {
-			"name": "Shared - ds_dev_health_trend",
-			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" | where OverallHealth>=0 | eval health=OverallHealth*10 | timechart fixedrange=false avg(health) as score",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_issues_trend": {
-			"type": "ds.search",
-			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\" | timechart fixedrange=false dc(IssueID) as issues",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$"
-				}
-			},
-			"name": "Open Issues Trend"
-		},
-		"ds_syslog_trend": {
-			"type": "ds.search",
-			"options": {
-				"query": "`index_network` sourcetype=\"cisco:ios\" | rex \"%(?<facility>[A-Z_]+)-(?<severity_id>\\d+)-(?<mnemonic>[A-Z_]+)\" | where severity_id<=2 | timechart fixedrange=false count as count",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$"
-				}
-			},
-			"name": "Syslog Critical Trend"
-		},
-		"ds_kpi_net_health": {
-			"type": "ds.chain",
-			"options": {
-				"extend": "ds_net_health_trend",
-				"query": "| fields _time score"
-			},
-			"name": "KPI Network Health"
-		},
-		"ds_kpi_dev_health": {
-			"type": "ds.chain",
-			"options": {
-				"extend": "ds_dev_health_trend",
-				"query": "| fields _time score"
-			},
-			"name": "KPI Device Health"
-		},
-		"ds_kpi_issues": {
-			"type": "ds.chain",
-			"options": {
-				"extend": "ds_issues_trend",
-				"query": "| fields _time issues"
-			},
-			"name": "KPI Open Issues"
-		},
-		"ds_kpi_syslog": {
-			"type": "ds.chain",
-			"options": {
-				"extend": "ds_syslog_trend",
-				"query": "| fields _time count"
-			},
-			"name": "KPI Syslog Critical"
-		},
 		"ds_unreachable_trend": {
-			"type": "ds.search",
+			"name": "Unreachable Devices Trend",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" Reachability=\"Unreachable\" | timechart fixedrange=false dc(DeviceName) as \"Unreachable Devices\"",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$"
-				}
-			},
-			"name": "Unreachable Devices Trend"
-		},
-		"ds_kpi_unreachable": {
-			"type": "ds.chain",
-			"options": {
-				"extend": "ds_unreachable_trend",
-				"query": "| fields _time \"Unreachable Devices\""
-			},
-			"name": "KPI Unreachable Devices"
-		},
-		"ds_reboots_trend": {
-			"type": "ds.search",
-			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" UptimeSeconds<14400 | timechart fixedrange=false dc(DeviceName) as \"Recent Reboots\"",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$"
-				}
-			},
-			"name": "Recent Reboots Trend"
-		},
-		"ds_kpi_reboots": {
-			"type": "ds.chain",
-			"options": {
-				"extend": "ds_reboots_trend",
-				"query": "| fields _time \"Recent Reboots\""
-			},
-			"name": "KPI Recent Reboots"
-		},
-		"ds_cpu_mem_trend": {
-			"type": "ds.search",
-			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" | where CPUUtilization > 80 OR MemoryUtilization > 80 | timechart fixedrange=false dc(DeviceName) as \"CPU/Memory Alerts\"",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$"
-				}
-			},
-			"name": "CPU/Memory Alerts Trend"
-		},
-		"ds_kpi_cpu_mem": {
-			"type": "ds.chain",
-			"options": {
-				"extend": "ds_cpu_mem_trend",
-				"query": "| fields _time \"CPU/Memory Alerts\""
-			},
-			"name": "KPI CPU/Memory Alerts"
-		},
-		"ds_dhcp_trend": {
-			"type": "ds.search",
-			"options": {
-				"query": "`index_dhcp` sourcetype=\"DhcpSrvLog\" | rex \"^(?<event_id>\\d+),\" | where event_id IN (\"13\",\"14\",\"15\",\"16\",\"17\",\"20\",\"21\",\"36\") | timechart fixedrange=false count as \"DHCP Pool Events\"",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$"
-				}
-			},
-			"name": "DHCP Pool Events Trend"
-		},
-		"ds_kpi_dhcp": {
-			"type": "ds.chain",
-			"options": {
-				"extend": "ds_dhcp_trend",
-				"query": "| fields _time \"DHCP Pool Events\""
-			},
-			"name": "KPI DHCP Pool Events"
-		},
-		"ds_config_detail": {
-			"name": "IT Health - Recent Human Config Changes",
-			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:audit:logs\" name=\"AUDIT_LOG\"\n userId!=\"system\" userId!=\"SYSTEM\" userId!=\"dnac-svc\" userId!=\"license-management\" userId!=\"localhost\" userId!=\"null\"\n NOT description=\"*read-only commands*\"\n NOT description=\"*preview*\"\n NOT description=\"Service request processing completed*\"\n NOT description=\"Going to deploy*\"\n| where (parentInstanceId=\"null\" OR parentInstanceId=\"\" OR isnull(parentInstanceId))\n| where NOT (description LIKE \"Executing command%display%\")\n| rex field=description mode=sed \"s/[\\r\\n\\t]+/ /g\"\n| rex field=description mode=sed \"s/ +/ /g\"\n| eval description = replace(description, \"&quot;\", \"\\\"\")\n| eval description = replace(description, \"&amp;\", \"&\")\n| eval description = replace(description, \"&lt;\", \"<\")\n| eval description = replace(description, \"&gt;\", \">\")\n| eval admin = coalesce(adminName, userId, \"unknown\")\n| spath path=\"additionalDetails.eventMetadata.auditLogMetadata.type\" output=audit_type\n| spath path=\"network.deviceId\" output=net_deviceId\n| eval net_deviceId = if(net_deviceId IN (\"null\",\"SYSTEM\",\"\") OR isnull(net_deviceId), null(), net_deviceId)\n| rex field=description \"Network Profile \\[.*?\\\"name\\\":\\\"(?<x_profile>[^\\\"]+)\"\n| rex field=description \"Creating task schedule.*?description:\\s*'(?<x_task>[^']+)'\"\n| rex field=description \"AP Provisioning request for AP\\(s\\) in (?<x_ap_site>[^,]+),\"\n| rex field=description \"for activity '(?<x_activity>[^']+)'\"\n| rex field=description \"network device (?<x_ip>\\d+\\.\\d+\\.\\d+\\.\\d+)\"\n| rex field=description \"deployed template (?<x_template>\\S+?)\\.?$\"\n| eval target = coalesce(net_deviceId, x_profile, x_task, x_ap_site, x_activity, x_ip, x_template, \"-\")\n| eval how = case(\n audit_type=\"CLI\", \"DNAC CLI session\",\n audit_type=\"API\", \"DNAC UI / REST API\",\n audit_type=\"NETCONF\", \"DNAC NETCONF push\",\n audit_type=\"SOCKET\", \"DNAC internal\",\n 1=1, \"DNAC \" . coalesce(audit_type, \"audit\"))\n| eval description = if(len(description) > 200, substr(description, 1, 197) . \"...\", description)\n| table _time admin how description target\n| rename admin as \"Who\", how as \"How\", description as \"What\", target as \"Target\"\n| sort - _time\n| head 5000",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_ise_device_logins": {
-			"name": "IT Health - Identity-attested device logins",
-			"options": {
-				"query": "`index_identity` sourcetype=\"cisco:ise:syslog\"\n| rex field=_raw \"(?<event_class>CISE_(?:Passed_Authentications|Failed_Attempts|Administrative_and_Operational|Posture|Profiler|RADIUS_Accounting))\"\n| where (event_class=\"CISE_Administrative_and_Operational\" OR (event_class=\"CISE_Passed_Authentications\" AND match(_raw, \"TACACS|Device-Admin\")) OR (event_class=\"CISE_Failed_Attempts\" AND match(_raw, \"TACACS|Device-Admin\")))\n| rex field=_raw \"(?:UserName|User-Name|User=)\\s*[=:]?\\s*(?<ise_user>[^,;\\s\\\"]+)\"\n| rex field=_raw \"(?:Device IP Address|NAS-IP-Address|NAS_IP_Address)\\s*=\\s*(?<target_device>[\\d.]+)\"\n| eval ise_action=case(\n match(_raw, \"Command Authorization succeeded\"), \"TACACS+ command allowed\",\n match(_raw, \"Command Authorization failed\"), \"TACACS+ command DENIED\",\n match(_raw, \"Authentication succeeded\"), \"Device login succeeded\",\n match(_raw, \"Authentication failed\"), \"Device login FAILED\",\n event_class=\"CISE_Passed_Authentications\", \"Auth succeeded\",\n event_class=\"CISE_Failed_Attempts\", \"Auth FAILED\",\n event_class=\"CISE_Administrative_and_Operational\", \"ISE admin operation\",\n 1=1, event_class)\n| where isnotnull(ise_user) AND ise_user!=\"\" AND NOT match(ise_user, \"^([0-9A-Fa-f]{2}[:.]){2,}\")\n| stats count, values(ise_action) as actions, latest(target_device) as last_device, latest(_time) as last_seen by ise_user\n| eval actions=mvjoin(actions, \", \")\n| eval last_seen=strftime(last_seen, \"%Y-%m-%d %H:%M\")\n| rename ise_user as \"Who (AD/ISE user)\", count as \"Events\", actions as \"ISE actions seen\", last_device as \"Last device\", last_seen as \"Last seen\"\n| sort -Events",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_uxh_wireless_health": {
-			"name": "IT Health - User Experience - ds_uxh_wireless_health",
-			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" scoreType=\"ALL\"\n| stats latest(scoreValue) as sv\n| eval score=if(sv>=0, sv, 0)\n| fields score",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_uxh_wired_health": {
-			"name": "IT Health - User Experience - ds_uxh_wired_health",
-			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" scoreType=\"ALL\"\n| stats latest(scoreValue) as sv\n| eval score=if(sv>=0, sv, 0)\n| fields score",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_uxh_client_trend": {
-			"name": "IT Health - User Experience - ds_uxh_client_trend",
-			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRED\" OR clientType=\"WIRELESS\") (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\")\n| bin _time\n| stats latest(clientCount) as cc by _time, clientType, scoreType\n| stats sum(cc) as cc by _time, scoreType\n| eval Good=if(scoreType==\"GOOD\",cc,null()), Fair=if(scoreType==\"FAIR\",cc,null()), Poor=if(scoreType==\"POOR\",cc,null())\n| stats sum(Good) as Good, sum(Fair) as Fair, sum(Poor) as Poor by _time",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2783,6 +2836,17 @@
 			"name": "IT Health - User Experience - ds_uxh_base_client_ref",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| fields macAddress, osType, deviceType",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_uxh_client_trend": {
+			"name": "IT Health - User Experience - ds_uxh_client_trend",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRED\" OR clientType=\"WIRELESS\") (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\")\n| bin _time\n| stats latest(clientCount) as cc by _time, clientType, scoreType\n| stats sum(cc) as cc by _time, scoreType\n| eval Good=if(scoreType==\"GOOD\",cc,null()), Fair=if(scoreType==\"FAIR\",cc,null()), Poor=if(scoreType==\"POOR\",cc,null())\n| stats sum(Good) as Good, sum(Fair) as Fair, sum(Poor) as Poor by _time",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2806,10 +2870,10 @@
 			},
 			"type": "ds.chain"
 		},
-		"ds_te_network_latency": {
-			"name": "IT Health - ThousandEyes Network Latency",
+		"ds_uxh_wired_health": {
+			"name": "IT Health - User Experience - ds_uxh_wired_health",
 			"options": {
-				"query": "| tstats `summariesonly` avg(Test_Metrics.metric_name:network.latency) as avg_latency\nFROM datamodel=\"Cisco_ThousandEyes.Test_Metrics\"\nWHERE Test_Metrics.metric_name:network.latency=\"*\"\nTest_Metrics.thousandeyes.test.type IN (\"agent-to-server\",\"agent-to-agent\")\nBY _time, Test_Metrics.server.address\n| timechart eval(round(avg(avg_latency), 2)) as avg_latency BY Test_Metrics.server.address\n| sort 0 - avg_latency",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" scoreType=\"ALL\"\n| stats latest(scoreValue) as sv\n| eval score=if(sv>=0, sv, 0)\n| fields score",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2817,10 +2881,10 @@
 			},
 			"type": "ds.search"
 		},
-		"ds_te_network_loss": {
-			"name": "IT Health - ThousandEyes Network Loss",
+		"ds_uxh_wireless_health": {
+			"name": "IT Health - User Experience - ds_uxh_wireless_health",
 			"options": {
-				"query": "| tstats `summariesonly` avg(Test_Metrics.metric_name:network.loss) as avg_loss\nFROM datamodel=\"Cisco_ThousandEyes.Test_Metrics\"\nWHERE Test_Metrics.metric_name:network.loss=\"*\"\nTest_Metrics.thousandeyes.test.type IN (\"agent-to-server\",\"agent-to-agent\")\nBY _time, Test_Metrics.server.address\n| timechart eval(round(avg(avg_loss), 2)) as avg_loss BY Test_Metrics.server.address\n| sort 0 - avg_loss",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" scoreType=\"ALL\"\n| stats latest(scoreValue) as sv\n| eval score=if(sv>=0, sv, 0)\n| fields score",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2828,54 +2892,10 @@
 			},
 			"type": "ds.search"
 		},
-		"ds_te_network_jitter": {
-			"name": "IT Health - ThousandEyes Network Jitter",
+		"ds_wow_health": {
+			"name": "IT - Critical Systems - ds_wow_health",
 			"options": {
-				"query": "| tstats `summariesonly` avg(Test_Metrics.metric_name:network.jitter) as avg_jitter\nFROM datamodel=\"Cisco_ThousandEyes.Test_Metrics\"\nWHERE Test_Metrics.metric_name:network.jitter=\"*\"\nTest_Metrics.thousandeyes.test.type IN (\"agent-to-server\",\"agent-to-agent\")\nBY _time, Test_Metrics.server.address\n| timechart eval(round(avg(avg_jitter), 2)) as avg_jitter BY Test_Metrics.server.address\n| sort 0 - avg_jitter",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_te_alerts_summary": {
-			"name": "IT Health - ThousandEyes Alerts Summary by Severity",
-			"options": {
-				"query": "| tstats `summariesonly` count\nFROM datamodel=\"Cisco_ThousandEyes.Alerts\"\nBY Alerts.severity\n| rename Alerts.severity AS Severity\n| sort - count",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_te_alerts_timeline": {
-			"name": "IT Health - ThousandEyes Alerts Timeline",
-			"options": {
-				"query": "| tstats `summariesonly` count\nFROM datamodel=\"Cisco_ThousandEyes.Alerts\"\nBY Alerts.severity, _time span=1h\n| rename Alerts.severity AS Severity\n| timechart span=1h sum(count) AS count BY Severity",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_te_alerts_table": {
-			"name": "IT Health - ThousandEyes Active Alerts (Recent 20)",
-			"options": {
-				"query": "| tstats `summariesonly` count, values(Alerts.triggerTime) as triggerTime, values(Alerts.accountId) as accountId, values(Alerts.organizationId) as organizationId, values(Alerts.testId) as testId, values(Alerts.testName) as testName, values(Alerts.testType) as testType, values(Alerts.permalink) as permalink, values(Alerts.expression) as expression, values(Alerts.severity) as severity\nFROM datamodel=\"Cisco_ThousandEyes.Alerts\"\nBY _time, Alerts.alertId\n| eval \"Trigger Time\"=coalesce(strftime(triggerTime, \"%Y-%m-%d %H:%M:%S\"), strftime(_time, \"%Y-%m-%d %H:%M:%S\"))\n| rename accountId AS \"Account ID\", organizationId AS \"Org ID\", testId AS \"Test ID\", testName AS \"Test Name\", testType AS \"Test Type\", permalink AS \"Permalink\", expression AS \"Expression\", severity AS \"Severity\", Alerts.alertId AS \"Alert ID\"\n| sort 0 - \"Trigger Time\"\n| fields - _time, triggerTime, count\n| head 20\n| table \"Trigger Time\", \"Account ID\", \"Org ID\", \"Test ID\", \"Test Name\", \"Test Type\", \"Permalink\", \"Expression\", \"Severity\", \"Alert ID\"",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_te_endpoint_traces": {
-			"name": "IT Health - ThousandEyes Endpoint Trace Health",
-			"options": {
-				"query": "index=* sourcetype=\"cisco:thousandeyes:trace\"\n| eval is_parent=if(parent_span_id==\"\", 1, 0)\n| eval parent_key=if(is_parent==1, span_id, parent_span_id)\n| eval http_code_num = if(is_parent==1, 0, attributes.http.response.code)\n| eval agent_name = 'thousandeyes.source.agent.name'\n| eval permalink = 'thousandeyes.permalink'\n| eventstats count as spans_count count(eval('attributes.http.response.code'>399)) as error_count count(eval('attributes.http.response.code'>=500 AND 'attributes.http.response.code'<600)) as error_5xx_count min(start_time) as min_start_time max(end_time) as max_end_time by trace_id, parent_key\n| where is_parent==1\n| eval duration=round((max_end_time - min_start_time)/1000000) . \" ms\"\n| eval started_at_epoch = round(min_start_time / 1000000000)\n| eval timestamp = strftime(started_at_epoch, \"%a, %b %d %Y %I:%M:%S %p %Z\")\n| eval spans_count=spans_count-1\n| where (max_end_time - min_start_time)/1000000 >= 0\n| rename name as endpoint\n| rename thousandeyes.account.id as account_id\n| rename thousandeyes.test.name as test_name\n| dedup trace_id\n| table trace_id endpoint timestamp error_count spans_count duration agent_name account_id test_name permalink _raw",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:networkhealth\"\n| eval is_this_week=if(_time >= relative_time(now(), \"-7d@d\"), 1, 0)\n| stats avg(eval(if(is_this_week==1, healthScore, null()))) as this_week, avg(eval(if(is_this_week==0, healthScore, null()))) as last_week\n| eval score=round(this_week, 1), delta=round(this_week - last_week, 1)\n| table score delta",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -3711,30 +3731,30 @@
 					{
 						"item": "viz_net_health_gauge",
 						"position": {
-							"x": 30,
-							"y": 125,
+							"h": 150,
 							"w": 430,
-							"h": 150
+							"x": 30,
+							"y": 125
 						},
 						"type": "block"
 					},
 					{
 						"item": "viz_dev_health_gauge",
 						"position": {
-							"x": 470,
-							"y": 125,
+							"h": 150,
 							"w": 430,
-							"h": 150
+							"x": 470,
+							"y": 125
 						},
 						"type": "block"
 					},
 					{
 						"item": "viz_issues_value",
 						"position": {
-							"x": 910,
-							"y": 125,
+							"h": 150,
 							"w": 430,
-							"h": 150
+							"x": 910,
+							"y": 125
 						},
 						"type": "block"
 					},
@@ -3751,10 +3771,10 @@
 					{
 						"item": "viz_syslog_value",
 						"position": {
-							"x": 30,
-							"y": 285,
+							"h": 150,
 							"w": 430,
-							"h": 150
+							"x": 30,
+							"y": 285
 						},
 						"type": "block"
 					},
@@ -3771,10 +3791,10 @@
 					{
 						"item": "viz_inv_total",
 						"position": {
-							"x": 470,
-							"y": 285,
+							"h": 150,
 							"w": 430,
-							"h": 150
+							"x": 470,
+							"y": 285
 						},
 						"type": "block"
 					},
@@ -3874,7 +3894,7 @@
 							"h": 70,
 							"w": 198,
 							"x": 30,
-							"y": -8
+							"y": 10
 						},
 						"type": "input"
 					},
@@ -3901,113 +3921,32 @@
 					{
 						"item": "viz_md_workflow_header",
 						"position": {
-							"x": 30,
-							"y": 697,
+							"h": 40,
 							"w": 1380,
-							"h": 40
+							"x": 30,
+							"y": 697
 						},
 						"type": "block"
 					},
 					{
 						"item": "viz_md_config_detail_header",
 						"position": {
-							"x": 30,
-							"y": 1290,
+							"h": 40,
 							"w": 1380,
-							"h": 40
+							"x": 30,
+							"y": 1290
 						},
 						"type": "block"
 					},
 					{
 						"item": "viz_md_ise_logins_header",
 						"position": {
-							"x": 30,
-							"y": 1690,
+							"h": 40,
 							"w": 1380,
-							"h": 40
+							"x": 30,
+							"y": 1690
 						},
 						"type": "block"
-					}
-				],
-				"type": "absolute"
-			},
-			"layout_user_experience": {
-				"options": {
-					"backgroundColor": "#f5f6f8",
-					"display": "auto-scale",
-					"height": 950,
-					"width": 1440
-				},
-				"structure": [
-					{
-						"item": "viz_p_hdr_bg",
-						"position": { "h": 60, "w": 1400, "x": 20, "y": 10 },
-						"type": "block"
-					},
-					{
-						"item": "viz_p_hdr_title",
-						"position": { "h": 30, "w": 440, "x": 500, "y": 20 },
-						"type": "block"
-					},
-					{
-						"item": "viz_uxh_narrative",
-						"position": { "h": 50, "w": 1350, "x": 30, "y": 75 },
-						"type": "block"
-					},
-					{
-						"item": "viz_uxh_section",
-						"position": { "h": 815, "w": 1420, "x": 10, "y": 130 },
-						"type": "block"
-					},
-					{
-						"item": "viz_uxh_box_gauges",
-						"position": { "h": 230, "w": 1400, "x": 20, "y": 145 },
-						"type": "block"
-					},
-					{
-						"item": "viz_uxh_wireless_gauge",
-						"position": { "h": 200, "w": 400, "x": 35, "y": 160 },
-						"type": "block"
-					},
-					{
-						"item": "viz_uxh_wired_gauge",
-						"position": { "h": 200, "w": 400, "x": 450, "y": 160 },
-						"type": "block"
-					},
-					{
-						"item": "viz_uxh_dev_types_bar",
-						"position": { "h": 200, "w": 555, "x": 865, "y": 160 },
-						"type": "block"
-					},
-					{
-						"item": "viz_uxh_box_trend",
-						"position": { "h": 290, "w": 1400, "x": 20, "y": 390 },
-						"type": "block"
-					},
-					{
-						"item": "viz_uxh_client_trend",
-						"position": { "h": 260, "w": 1370, "x": 35, "y": 405 },
-						"type": "block"
-					},
-					{
-						"item": "viz_uxh_box_breakdown",
-						"position": { "h": 250, "w": 1400, "x": 20, "y": 695 },
-						"type": "block"
-					},
-					{
-						"item": "viz_uxh_client_os_pie",
-						"position": { "h": 220, "w": 560, "x": 35, "y": 710 },
-						"type": "block"
-					},
-					{
-						"item": "viz_uxh_te_note",
-						"position": { "h": 220, "w": 820, "x": 600, "y": 710 },
-						"type": "block"
-					},
-					{
-						"item": "input_global_trp",
-						"position": { "h": 70, "w": 198, "x": 30, "y": -8 },
-						"type": "input"
 					}
 				],
 				"type": "absolute"
@@ -4022,92 +3961,333 @@
 				"structure": [
 					{
 						"item": "viz_p_hdr_bg",
-						"position": { "h": 60, "w": 1400, "x": 20, "y": 10 },
+						"position": {
+							"h": 60,
+							"w": 1400,
+							"x": 20,
+							"y": 10
+						},
 						"type": "block"
 					},
 					{
 						"item": "viz_p_hdr_title",
-						"position": { "h": 30, "w": 440, "x": 500, "y": 20 },
+						"position": {
+							"h": 30,
+							"w": 440,
+							"x": 500,
+							"y": 20
+						},
 						"type": "block"
 					},
 					{
 						"item": "viz_te_narrative",
-						"position": { "h": 50, "w": 1350, "x": 30, "y": 75 },
+						"position": {
+							"h": 50,
+							"w": 1350,
+							"x": 30,
+							"y": 75
+						},
 						"type": "block"
 					},
 					{
 						"item": "viz_te_section",
-						"position": { "h": 1740, "w": 1420, "x": 10, "y": 130 },
+						"position": {
+							"h": 1740,
+							"w": 1420,
+							"x": 10,
+							"y": 130
+						},
 						"type": "block"
 					},
 					{
 						"item": "viz_te_box_path",
-						"position": { "h": 420, "w": 1400, "x": 20, "y": 145 },
+						"position": {
+							"h": 420,
+							"w": 1400,
+							"x": 20,
+							"y": 145
+						},
 						"type": "block"
 					},
 					{
 						"item": "viz_te_path_title",
-						"position": { "h": 50, "w": 1370, "x": 35, "y": 155 },
+						"position": {
+							"h": 50,
+							"w": 1370,
+							"x": 35,
+							"y": 155
+						},
 						"type": "block"
 					},
 					{
 						"item": "viz_te_latency_chart",
-						"position": { "h": 340, "w": 450, "x": 35, "y": 215 },
+						"position": {
+							"h": 340,
+							"w": 450,
+							"x": 35,
+							"y": 215
+						},
 						"type": "block"
 					},
 					{
 						"item": "viz_te_loss_chart",
-						"position": { "h": 340, "w": 450, "x": 495, "y": 215 },
+						"position": {
+							"h": 340,
+							"w": 450,
+							"x": 495,
+							"y": 215
+						},
 						"type": "block"
 					},
 					{
 						"item": "viz_te_jitter_chart",
-						"position": { "h": 340, "w": 455, "x": 955, "y": 215 },
+						"position": {
+							"h": 340,
+							"w": 455,
+							"x": 955,
+							"y": 215
+						},
 						"type": "block"
 					},
 					{
 						"item": "viz_te_box_alerts",
-						"position": { "h": 700, "w": 1400, "x": 20, "y": 580 },
+						"position": {
+							"h": 700,
+							"w": 1400,
+							"x": 20,
+							"y": 580
+						},
 						"type": "block"
 					},
 					{
 						"item": "viz_te_alerts_title",
-						"position": { "h": 50, "w": 1370, "x": 35, "y": 590 },
+						"position": {
+							"h": 50,
+							"w": 1370,
+							"x": 35,
+							"y": 590
+						},
 						"type": "block"
 					},
 					{
 						"item": "viz_te_alerts_summary",
-						"position": { "h": 280, "w": 450, "x": 35, "y": 650 },
+						"position": {
+							"h": 280,
+							"w": 450,
+							"x": 35,
+							"y": 650
+						},
 						"type": "block"
 					},
 					{
 						"item": "viz_te_alerts_timeline",
-						"position": { "h": 280, "w": 925, "x": 495, "y": 650 },
+						"position": {
+							"h": 280,
+							"w": 925,
+							"x": 495,
+							"y": 650
+						},
 						"type": "block"
 					},
 					{
 						"item": "viz_te_alerts_table",
-						"position": { "h": 320, "w": 1370, "x": 35, "y": 945 },
+						"position": {
+							"h": 320,
+							"w": 1370,
+							"x": 35,
+							"y": 945
+						},
 						"type": "block"
 					},
 					{
 						"item": "viz_te_box_traces",
-						"position": { "h": 530, "w": 1400, "x": 20, "y": 1300 },
+						"position": {
+							"h": 530,
+							"w": 1400,
+							"x": 20,
+							"y": 1300
+						},
 						"type": "block"
 					},
 					{
 						"item": "viz_te_traces_title",
-						"position": { "h": 60, "w": 1370, "x": 35, "y": 1310 },
+						"position": {
+							"h": 60,
+							"w": 1370,
+							"x": 35,
+							"y": 1310
+						},
 						"type": "block"
 					},
 					{
 						"item": "viz_te_endpoint_traces",
-						"position": { "h": 450, "w": 1370, "x": 35, "y": 1375 },
+						"position": {
+							"h": 450,
+							"w": 1370,
+							"x": 35,
+							"y": 1375
+						},
 						"type": "block"
 					},
 					{
 						"item": "input_global_trp",
-						"position": { "h": 70, "w": 198, "x": 30, "y": -8 },
+						"position": {
+							"h": 70,
+							"w": 198,
+							"x": 30,
+							"y": -8
+						},
+						"type": "input"
+					}
+				],
+				"type": "absolute"
+			},
+			"layout_user_experience": {
+				"options": {
+					"backgroundColor": "#f5f6f8",
+					"display": "auto-scale",
+					"height": 950,
+					"width": 1440
+				},
+				"structure": [
+					{
+						"item": "viz_p_hdr_bg",
+						"position": {
+							"h": 60,
+							"w": 1400,
+							"x": 20,
+							"y": 10
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_p_hdr_title",
+						"position": {
+							"h": 30,
+							"w": 440,
+							"x": 500,
+							"y": 20
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_uxh_narrative",
+						"position": {
+							"h": 50,
+							"w": 1350,
+							"x": 30,
+							"y": 75
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_uxh_section",
+						"position": {
+							"h": 815,
+							"w": 1420,
+							"x": 10,
+							"y": 130
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_uxh_box_gauges",
+						"position": {
+							"h": 230,
+							"w": 1400,
+							"x": 20,
+							"y": 145
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_uxh_wireless_gauge",
+						"position": {
+							"h": 200,
+							"w": 400,
+							"x": 35,
+							"y": 160
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_uxh_wired_gauge",
+						"position": {
+							"h": 200,
+							"w": 400,
+							"x": 450,
+							"y": 160
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_uxh_dev_types_bar",
+						"position": {
+							"h": 200,
+							"w": 555,
+							"x": 865,
+							"y": 160
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_uxh_box_trend",
+						"position": {
+							"h": 290,
+							"w": 1400,
+							"x": 20,
+							"y": 390
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_uxh_client_trend",
+						"position": {
+							"h": 260,
+							"w": 1370,
+							"x": 35,
+							"y": 405
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_uxh_box_breakdown",
+						"position": {
+							"h": 250,
+							"w": 1400,
+							"x": 20,
+							"y": 695
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_uxh_client_os_pie",
+						"position": {
+							"h": 220,
+							"w": 560,
+							"x": 35,
+							"y": 710
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_uxh_te_note",
+						"position": {
+							"h": 220,
+							"w": 820,
+							"x": 600,
+							"y": 710
+						},
+						"type": "block"
+					},
+					{
+						"item": "input_global_trp",
+						"position": {
+							"h": 70,
+							"w": 198,
+							"x": 30,
+							"y": -8
+						},
 						"type": "input"
 					}
 				],
@@ -4146,15 +4326,11 @@
 			]
 		}
 	},
-	"expressions": {
-		"conditions": {},
-		"eval": {}
-	},
 	"applicationProperties": {
 		"collapseNavigation": false,
 		"hideEdit": true,
 		"hideOpenInSearch": false
 	}
 }
-]]></definition>
+    ]]></definition>
 </dashboard>

@@ -346,6 +346,10 @@ export const MetricItem: React.FC<MetricItemProps> = ({
     const openDetailFromFocus = React.useCallback(() => {
         onOpenDetailTable?.();
     }, [onOpenDetailTable]);
+    const focusPortalTarget =
+        typeof document !== 'undefined'
+            ? document.getElementById('scan-root') ?? document.body
+            : null;
 
     return (
         // flex-1 + basis-0 makes every tile grab an equal share of the
@@ -665,7 +669,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
 
             {isFocusOpen &&
                 hasExpandableChart &&
-                typeof document !== 'undefined' &&
+                focusPortalTarget &&
                 createPortal(
                     <div
                         role="dialog"
@@ -817,7 +821,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                             </div>
                         </div>
                     </div>,
-                    document.body
+                    focusPortalTarget
                 )}
         </div>
     );

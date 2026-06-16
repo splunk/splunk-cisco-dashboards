@@ -1659,10 +1659,10 @@
 					{
 						"item": "viz_arq_legend",
 						"position": {
-							"h": 140,
+							"h": 110,
 							"w": 1380,
 							"x": 30,
-							"y": 550
+							"y": 570
 						},
 						"type": "block"
 					},

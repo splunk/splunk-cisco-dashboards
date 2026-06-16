@@ -1,8 +1,8 @@
 
 <dashboard version="2" theme="light">
- <label>Asset Inventory</label>
- <description>Unified device inventory from Catalyst Center, Meraki, IOS, ASA/FTD, ISE, F5, and Windows/AD</description>
- <definition><![CDATA[
+    <label>Asset Inventory</label>
+    <description>Unified device inventory from Catalyst Center, Meraki, IOS, ASA/FTD, ISE, F5, and Windows/AD</description>
+    <definition><![CDATA[
 {
 	"title": "Asset Inventory",
 	"description": "Unified device inventory from Catalyst Center, Meraki, IOS, ASA/FTD, ISE, F5, and Windows/AD",
@@ -112,7 +112,7 @@
 				"defaultValue": "-4h@m,now",
 				"token": "time_tok"
 			},
-			"title": "",
+			"title": "Time Selector",
 			"type": "input.timerange"
 		}
 	},
@@ -946,7 +946,7 @@
 					{
 						"item": "viz_header_bg",
 						"position": {
-							"h": 60,
+							"h": 80,
 							"w": 1410,
 							"x": 20,
 							"y": 10
@@ -959,7 +959,7 @@
 							"h": 1460,
 							"w": 1420,
 							"x": 10,
-							"y": 105
+							"y": 120
 						},
 						"type": "block"
 					},
@@ -969,7 +969,7 @@
 							"h": 105,
 							"w": 1400,
 							"x": 20,
-							"y": 110
+							"y": 130
 						},
 						"type": "block"
 					},
@@ -979,7 +979,7 @@
 							"h": 340,
 							"w": 1400,
 							"x": 20,
-							"y": 225
+							"y": 240
 						},
 						"type": "block"
 					},
@@ -989,7 +989,7 @@
 							"h": 260,
 							"w": 1400,
 							"x": 20,
-							"y": 575
+							"y": 590
 						},
 						"type": "block"
 					},
@@ -999,7 +999,7 @@
 							"h": 680,
 							"w": 1400,
 							"x": 20,
-							"y": 845
+							"y": 860
 						},
 						"type": "block"
 					},
@@ -1009,7 +1009,7 @@
 							"h": 80,
 							"w": 397,
 							"x": 30,
-							"y": 115
+							"y": 130
 						},
 						"type": "block"
 					},
@@ -1018,8 +1018,8 @@
 						"position": {
 							"h": 80,
 							"w": 313,
-							"x": 429,
-							"y": 115
+							"x": 430,
+							"y": 130
 						},
 						"type": "block"
 					},
@@ -1028,8 +1028,8 @@
 						"position": {
 							"h": 80,
 							"w": 355,
-							"x": 744,
-							"y": 115
+							"x": 740,
+							"y": 130
 						},
 						"type": "block"
 					},
@@ -1038,8 +1038,8 @@
 						"position": {
 							"h": 80,
 							"w": 327,
-							"x": 1101,
-							"y": 115
+							"x": 1100,
+							"y": 130
 						},
 						"type": "block"
 					},
@@ -1049,7 +1049,7 @@
 							"h": 330,
 							"w": 440,
 							"x": 30,
-							"y": 230
+							"y": 250
 						},
 						"type": "block"
 					},
@@ -1059,7 +1059,7 @@
 							"h": 330,
 							"w": 440,
 							"x": 490,
-							"y": 230
+							"y": 250
 						},
 						"type": "block"
 					},
@@ -1069,7 +1069,7 @@
 							"h": 330,
 							"w": 440,
 							"x": 970,
-							"y": 230
+							"y": 250
 						},
 						"type": "block"
 					},
@@ -1079,7 +1079,7 @@
 							"h": 250,
 							"w": 1380,
 							"x": 30,
-							"y": 580
+							"y": 600
 						},
 						"type": "block"
 					},
@@ -1089,17 +1089,17 @@
 							"h": 630,
 							"w": 1380,
 							"x": 30,
-							"y": 870
+							"y": 890
 						},
 						"type": "block"
 					},
 					{
 						"item": "input_time_range",
 						"position": {
-							"h": 70,
+							"h": 80,
 							"w": 198,
 							"x": 30,
-							"y": -8
+							"y": 10
 						},
 						"type": "input"
 					},
@@ -1116,20 +1116,20 @@
 					{
 						"item": "input_device_type",
 						"position": {
-							"h": 82,
+							"h": 80,
 							"w": 198,
 							"x": 250,
-							"y": -8
+							"y": 10
 						},
 						"type": "input"
 					},
 					{
 						"item": "input_mgmt_source",
 						"position": {
-							"h": 82,
+							"h": 80,
 							"w": 198,
 							"x": 500,
-							"y": -8
+							"y": 10
 						},
 						"type": "input"
 					},
@@ -1137,7 +1137,7 @@
 						"item": "viz_narr_inventory",
 						"position": {
 							"x": 30,
-							"y": 70,
+							"y": 90,
 							"w": 1390,
 							"h": 35
 						}
@@ -1230,7 +1230,7 @@
 					{
 						"item": "viz_gap_header_bg",
 						"position": {
-							"h": 60,
+							"h": 70,
 							"w": 1410,
 							"x": 20,
 							"y": 10
@@ -1403,7 +1403,7 @@
 							"h": 70,
 							"w": 198,
 							"x": 30,
-							"y": -8
+							"y": 10
 						},
 						"type": "input"
 					},
@@ -1421,7 +1421,7 @@
 						"item": "viz_narr_gaps",
 						"position": {
 							"x": 30,
-							"y": 75,
+							"y": 80,
 							"w": 1390,
 							"h": 25
 						}
@@ -1450,14 +1450,10 @@
 			]
 		}
 	},
-	"expressions": {
-		"conditions": {},
-		"eval": {}
-	},
 	"applicationProperties": {
 		"hideEdit": true,
 		"collapseNavigation": false
 	}
 }
-]]></definition>
+    ]]></definition>
 </dashboard>
