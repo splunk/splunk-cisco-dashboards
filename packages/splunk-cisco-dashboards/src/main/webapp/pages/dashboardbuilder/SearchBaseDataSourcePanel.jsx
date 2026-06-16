@@ -189,6 +189,15 @@ export const SearchBaseDataSourcePanel = ({
         [dashboardApi, createDataSource, from, rest.dataSourceBindingType]
     );
 
+    const handleSelectSearchbaseSearch = useCallback(
+        (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleCreate({ type: 'ds.searchbase' });
+        },
+        [handleCreate]
+    );
+
     const handleEdit = useCallback(
         (dsTemplate) => {
             return editDataSource(dsTemplate);
@@ -290,7 +299,8 @@ export const SearchBaseDataSourcePanel = ({
                 defaultOpen={true}
             >
                 <Link
-                    onClick={() => handleCreate({ type: 'ds.searchbase' })}
+                    tag="button"
+                    onClick={handleSelectSearchbaseSearch}
                     style={{ paddingLeft: 35, paddingTop: 5 }}
                 >
                     + Select Searchbase Search

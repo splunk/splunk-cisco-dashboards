@@ -853,11 +853,7 @@ const DashboardStudioEditor = ({
 
     const handleSaveClick = useCallback(() => {
         const saveDashboard = async () => {
-            const {
-                definition: definitionToSave,
-                convertedDataSources,
-                convertedInputs,
-            } = await resolveSearchbaseDefinitionForNativeStudio(editedDefinition);
+            const definitionToSave = cloneDeep(editedDefinition);
             const dashboardLabel = getDefinitionTextValue(
                 definitionToSave,
                 'title',
@@ -880,15 +876,8 @@ const DashboardStudioEditor = ({
 
             if (response.status >= 200 && response.status <= 299) {
                 console.log(response);
-                if (convertedDataSources > 0 || convertedInputs > 0) {
-                    dashboardApiElem.current?.updateDefinition(definitionToSave);
-                    setEditedDefinition(definitionToSave);
-                }
                 makeCreateToast(Toaster)({
-                    message:
-                        convertedDataSources > 0
-                            ? `Dashboard saved successfully. Searchbase data sources were converted for menu launch.`
-                            : `Dashboard saved successfully...`,
+                    message: `Dashboard saved successfully...`,
                     type: TOAST_TYPES.SUCCESS,
                 });
                 setUnsavedDefinition(false);
@@ -914,7 +903,7 @@ const DashboardStudioEditor = ({
         saveDashboard().catch((error) => {
             console.error(error);
             makeCreateToast(Toaster)({
-                message: `An error occured while resolving searchbase data sources... ${error.message}`,
+                message: `An error occured while saving the dashboard... ${error.message}`,
                 type: TOAST_TYPES.ERROR,
             });
         });
