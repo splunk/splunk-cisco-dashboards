@@ -24,7 +24,7 @@ import type {
 /** Friendly `search_name` of the searchbase stanza that backs the
  *  synthetic A2A edge fetcher. Kept here (and not in the stanza id)
  *  because `search_name` is the stable, reviewer-visible key. */
-const TE_A2A_SEARCH_NAME = 'Overview - Link ThousandEyes A2A Health';
+const TE_A2A_SEARCH_NAME = 'Overview - Link ThousandEyes A2A Inventory';
 
 const optionalString = (raw: unknown): string | undefined => {
     if (typeof raw !== 'string') return undefined;
@@ -40,6 +40,25 @@ const optionalNumber = (raw: unknown): number | undefined => {
     }
     return undefined;
 };
+
+const tokenListFromValue = (raw: unknown): string[] => {
+    const value = optionalString(raw);
+    if (!value) return [];
+    const out: string[] = [];
+    const add = (candidate: string) => {
+        const trimmed = candidate.trim();
+        if (trimmed.length > 1 && !out.includes(trimmed)) out.push(trimmed);
+    };
+    add(value);
+    value.split(/[\n,|/]+/).forEach(add);
+    return out;
+};
+
+const edgeIdPart = (raw: unknown): string =>
+    (optionalString(raw) ?? 'candidate')
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]+/g, '_')
+        .replace(/^_+|_+$/g, '') || 'candidate';
 
 /** Map the upstream TE stanza's `status` string ("stable",
  *  "warning", "critical", "unknown") to our canonical
@@ -92,19 +111,10 @@ const pickRepresentativeDeviceId = (
 };
 
 /**
- * Synthetic-edge fetcher backed by the `[overview_link_te_a2a_
- * health]` stanza. Resolves the AUB↔TLH measurement to
- * representative devices in the customer's asset inventory and
- * emits one `synthetic_a2a` edge.
- *
- * Today this is hard-coded to AUB↔TLH because that's the only
- * commissioned A2A test. When additional tests come online (TLH↔
- * Orlando / Blanding / SLRC / Rudd / Easley / Sadowski / MCV) the
- * call site can either:
- *   • dispatch this fetcher per-pair with different stanza names,
- *   • or upgrade the underlying SPL to return one row per
- *     (sourceCity, targetCity) tuple and rewrite this fetcher to
- *     iterate the results.
+ * Synthetic-edge fetcher backed by the generic ThousandEyes A2A
+ * inventory stanza. Each row describes one observed TE source/target
+ * agent tuple; we resolve those row-provided location/agent strings
+ * against representative devices in the discovered asset inventory.
  */
 export const fetchThousandEyesA2AEdges = async (
     topology: DiscoveredTopology
@@ -155,16 +165,17 @@ export const fetchThousandEyesA2AEdges = async (
         : [];
     const edges: TopologyDiscoveredEdge[] = [];
     for (const row of rows) {
-        const sourceTokens = ['Tallahassee', 'TLH', 'tlh'];
-        const targetTokens = ['Auburndale', 'AUB', 'aub'];
-        // The stanza also embeds source/target locations on the
-        // row itself; prefer those when available so customers
-        // who tag agents with a city other than what the test
-        // name says still get a sensible join.
-        const sourceLocation = optionalString(row['sourceLocation']);
-        const targetLocation = optionalString(row['targetLocation']);
-        if (sourceLocation) sourceTokens.unshift(sourceLocation);
-        if (targetLocation) targetTokens.unshift(targetLocation);
+        const sourceTokens = [
+            ...tokenListFromValue(row['sourceLocation']),
+            ...tokenListFromValue(row['sourceAgent']),
+            ...tokenListFromValue(row['sourceAgents']),
+        ];
+        const targetTokens = [
+            ...tokenListFromValue(row['targetLocation']),
+            ...tokenListFromValue(row['targetAgent']),
+            ...tokenListFromValue(row['targetAgents']),
+        ];
+        if (sourceTokens.length === 0 || targetTokens.length === 0) continue;
 
         const sourceId = pickRepresentativeDeviceId(topology, sourceTokens);
         const targetId = pickRepresentativeDeviceId(topology, targetTokens);
@@ -181,7 +192,7 @@ export const fetchThousandEyesA2AEdges = async (
         const label = labelParts.length > 0 ? labelParts.join(' · ') : 'TE A2A';
 
         edges.push({
-            id: `te__${sourceId}__${targetId}`,
+            id: `te__${edgeIdPart(row['candidateId'])}__${sourceId}__${targetId}`,
             sourceId,
             targetId,
             kind: 'synthetic_a2a',

@@ -43,10 +43,22 @@ export type KnownTopologyRole =
 
 export type TopologyRole = KnownTopologyRole | (string & {});
 
+export interface ThousandEyesA2ABinding {
+    candidateId?: string;
+    teAccountId?: string;
+    teTestId?: string;
+    teTestName?: string;
+    sourceAgent?: string;
+    targetAgent?: string;
+    sourceLocation?: string;
+    targetLocation?: string;
+}
+
 export interface TopologySite {
     id: string;
     name: string;
     shortName: string;
+    aliases?: string[];
     role: TopologyRole;
     lat: number;
     lng: number;
@@ -153,6 +165,7 @@ export interface TopologyLink {
      */
     telemetrySource: string;
     searchName?: string;
+    thousandEyesA2A?: ThousandEyesA2ABinding;
 }
 
 export interface CustomerTopology {

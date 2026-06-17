@@ -71,6 +71,7 @@ import { runSearch } from '@/common/services/splunkSearchService';
 import type {
     CustomerTopology,
     KnownTopologyRole,
+    ThousandEyesA2ABinding,
     TopologyLink,
     TopologyRole,
     TopologySite,
@@ -418,6 +419,34 @@ const TOPOLOGY_STATUSES: TopologyStatus[] = [
     'warning',
     'critical',
 ];
+
+const TOPOLOGY_STATUS_FIELD_HELP =
+    'Fallback/manual status. If this item has a bound search, live search results ' +
+    'override it after they load.';
+
+const TE_A2A_INVENTORY_SEARCH_NAME = 'Overview - Link ThousandEyes A2A Inventory';
+const TE_A2A_MATCH_THRESHOLD = 72;
+const TE_A2A_CLOSE_MATCH_DELTA = 8;
+const TE_A2A_STOP_WORDS = new Set([
+    'and',
+    'branch',
+    'building',
+    'campus',
+    'center',
+    'centre',
+    'city',
+    'cloud',
+    'data',
+    'datacenter',
+    'edge',
+    'hq',
+    'hub',
+    'office',
+    'regional',
+    'site',
+    'state',
+    'the',
+]);
 
 const SITE_PLACEMENT_PRESETS: Array<{
     aliases: string[];
@@ -976,6 +1005,47 @@ export interface SiteEnrichment {
     lastUpdated?: string;
 }
 
+interface ThousandEyesA2ACandidate {
+    candidateId: string;
+    teAccountId?: string;
+    teTestId?: string;
+    teTestName?: string;
+    sourceAgent?: string;
+    targetAgent?: string;
+    sourceAgents?: string;
+    targetAgents?: string;
+    sourceLocation?: string;
+    targetLocation?: string;
+    sourceCountry?: string;
+    targetCountry?: string;
+    sourceRegion?: string;
+    targetRegion?: string;
+    status: TopologyStatus;
+    capacityMbps?: number;
+    throughputMbps?: number;
+    peakThroughputMbps?: number;
+    utilizationPct?: number;
+    peakUtilizationPct?: number;
+    latencyMs?: number;
+    lossPct?: number;
+    jitterMs?: number;
+    endpointHealthPct?: number;
+    txMbps?: number;
+    rxMbps?: number;
+    endpointDevices?: number;
+    teLink?: string;
+    lastUpdated?: string;
+    telemetrySource: string;
+}
+
+interface ThousandEyesA2AMatch {
+    candidate: ThousandEyesA2ACandidate;
+    confidence: number;
+    reason: string;
+    exact: boolean;
+    ambiguous?: boolean;
+}
+
 type EditableTopology = Partial<CustomerTopology> & {
     map?: Partial<CustomerTopology['map']>;
     sites?: Array<Partial<TopologySite>>;
@@ -1043,6 +1113,364 @@ const normalizeSearchBinding = (
     return optionalText(fallbackSearchName);
 };
 
+const optionalTextArray = (value: unknown): string[] => {
+    const rawItems = Array.isArray(value)
+        ? value
+        : typeof value === 'string'
+        ? value.split(',')
+        : [];
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const raw of rawItems) {
+        const text = optionalText(raw);
+        if (!text) continue;
+        const key = text.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(text.slice(0, 80));
+    }
+    return out;
+};
+
+const TE_A2A_BINDING_KEYS: Array<keyof ThousandEyesA2ABinding> = [
+    'candidateId',
+    'teAccountId',
+    'teTestId',
+    'teTestName',
+    'sourceAgent',
+    'targetAgent',
+    'sourceLocation',
+    'targetLocation',
+];
+
+const sanitizeThousandEyesA2ABinding = (
+    value: unknown,
+    fallback?: ThousandEyesA2ABinding
+): ThousandEyesA2ABinding | undefined => {
+    const source = isRecord(value) ? value : {};
+    const normalized: ThousandEyesA2ABinding = {};
+    for (const key of TE_A2A_BINDING_KEYS) {
+        const text = optionalText(source[key]) ?? optionalText(fallback?.[key]);
+        if (text) normalized[key] = text.slice(0, 256);
+    }
+    return Object.keys(normalized).length > 0 ? normalized : undefined;
+};
+
+const normalizeA2AMatchText = (value: unknown): string =>
+    textValue(value)
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/&/g, ' and ')
+        .replace(/[^a-z0-9]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+const compactA2AMatchText = (value: unknown): string =>
+    normalizeA2AMatchText(value).replace(/[^a-z0-9]+/g, '');
+
+const escapeMatchRegex = (value: string): string =>
+    value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const containsMatchPhrase = (haystack: string, needle: string): boolean => {
+    if (!haystack || !needle) return false;
+    return new RegExp(`(^|\\s)${escapeMatchRegex(needle)}($|\\s)`).test(
+        haystack
+    );
+};
+
+interface TeSiteAlias {
+    label: string;
+    phrase: string;
+    compact: string;
+    strong: boolean;
+}
+
+const topologySiteAliasesForTeMatch = (site: TopologySite): TeSiteAlias[] => {
+    const aliases: TeSiteAlias[] = [];
+    const seen = new Set<string>();
+    const add = (raw: unknown, strong = false) => {
+        const label = optionalText(raw);
+        if (!label) return;
+        const phrase = normalizeA2AMatchText(label);
+        const compact = compactA2AMatchText(label);
+        if (!phrase || !compact || seen.has(compact)) return;
+        seen.add(compact);
+        aliases.push({ label, phrase, compact, strong });
+    };
+
+    add(site.shortName, true);
+    add(site.id, true);
+    add(site.name, true);
+    for (const alias of site.aliases ?? []) add(alias, true);
+
+    for (const raw of [site.name, ...(site.aliases ?? [])]) {
+        for (const token of normalizeA2AMatchText(raw).split(' ')) {
+            if (token.length < 3 || TE_A2A_STOP_WORDS.has(token)) continue;
+            add(token, false);
+        }
+    }
+    return aliases;
+};
+
+const teCandidateSideText = (
+    candidate: ThousandEyesA2ACandidate,
+    side: 'source' | 'target'
+): string => {
+    const fields =
+        side === 'source'
+            ? [
+                  candidate.sourceAgent,
+                  candidate.sourceAgents,
+                  candidate.sourceLocation,
+                  candidate.sourceCountry,
+                  candidate.sourceRegion,
+              ]
+            : [
+                  candidate.targetAgent,
+                  candidate.targetAgents,
+                  candidate.targetLocation,
+                  candidate.targetCountry,
+                  candidate.targetRegion,
+              ];
+    return fields.filter(Boolean).join(' ');
+};
+
+const scoreSiteAgainstTeSide = (
+    site: TopologySite,
+    candidate: ThousandEyesA2ACandidate,
+    side: 'source' | 'target'
+): { score: number; label?: string } => {
+    const sideText = normalizeA2AMatchText(teCandidateSideText(candidate, side));
+    const sideCompact = compactA2AMatchText(sideText);
+    const sharedText = normalizeA2AMatchText(candidate.teTestName);
+    const sharedCompact = compactA2AMatchText(candidate.teTestName);
+    let bestScore = 0;
+    let bestLabel: string | undefined;
+
+    for (const alias of topologySiteAliasesForTeMatch(site)) {
+        let score = 0;
+        if (containsMatchPhrase(sideText, alias.phrase)) {
+            score = alias.strong ? 52 : 44;
+        } else if (
+            alias.compact.length >= 3 &&
+            sideCompact.includes(alias.compact)
+        ) {
+            score = alias.strong ? 46 : 36;
+        } else {
+            const tokens = alias.phrase
+                .split(' ')
+                .filter(
+                    (token) =>
+                        token.length >= 3 && !TE_A2A_STOP_WORDS.has(token)
+                );
+            if (
+                tokens.length >= 2 &&
+                tokens.every((token) => sideText.includes(token))
+            ) {
+                score = 32;
+            }
+        }
+
+        if (
+            containsMatchPhrase(sharedText, alias.phrase) ||
+            (alias.compact.length >= 3 && sharedCompact.includes(alias.compact))
+        ) {
+            score = Math.max(score, alias.strong ? 20 : 16);
+        }
+
+        if (score > bestScore) {
+            bestScore = score;
+            bestLabel = alias.label;
+        }
+    }
+
+    return { score: Math.min(bestScore, 60), label: bestLabel };
+};
+
+const sameTeText = (left: unknown, right: unknown): boolean => {
+    const a = optionalText(left)?.toLowerCase();
+    const b = optionalText(right)?.toLowerCase();
+    return Boolean(a && b && a === b);
+};
+
+const teBindingMatchesCandidate = (
+    binding: ThousandEyesA2ABinding | undefined,
+    candidate: ThousandEyesA2ACandidate
+): boolean => {
+    if (!binding) return false;
+    if (sameTeText(binding.candidateId, candidate.candidateId)) return true;
+    if (
+        sameTeText(binding.teAccountId, candidate.teAccountId) &&
+        sameTeText(binding.teTestId, candidate.teTestId)
+    ) {
+        if (!binding.sourceAgent || !binding.targetAgent) return true;
+        const forward =
+            sameTeText(binding.sourceAgent, candidate.sourceAgent) &&
+            sameTeText(binding.targetAgent, candidate.targetAgent);
+        const reverse =
+            sameTeText(binding.sourceAgent, candidate.targetAgent) &&
+            sameTeText(binding.targetAgent, candidate.sourceAgent);
+        return forward || reverse;
+    }
+    if (!sameTeText(binding.teTestId, candidate.teTestId)) return false;
+    const forward =
+        sameTeText(binding.sourceAgent, candidate.sourceAgent) &&
+        sameTeText(binding.targetAgent, candidate.targetAgent);
+    const reverse =
+        sameTeText(binding.sourceAgent, candidate.targetAgent) &&
+        sameTeText(binding.targetAgent, candidate.sourceAgent);
+    return forward || reverse;
+};
+
+const scoreTeCandidateForLink = (
+    link: TopologyLink,
+    sourceSite: TopologySite | undefined,
+    targetSite: TopologySite | undefined,
+    candidate: ThousandEyesA2ACandidate
+): ThousandEyesA2AMatch => {
+    if (teBindingMatchesCandidate(link.thousandEyesA2A, candidate)) {
+        return {
+            candidate,
+            confidence: 100,
+            reason: 'Saved TE test binding',
+            exact: true,
+        };
+    }
+
+    if (!sourceSite || !targetSite) {
+        return {
+            candidate,
+            confidence: 0,
+            reason: 'Missing link endpoint',
+            exact: false,
+        };
+    }
+
+    const forwardSource = scoreSiteAgainstTeSide(sourceSite, candidate, 'source');
+    const forwardTarget = scoreSiteAgainstTeSide(targetSite, candidate, 'target');
+    const reverseSource = scoreSiteAgainstTeSide(sourceSite, candidate, 'target');
+    const reverseTarget = scoreSiteAgainstTeSide(targetSite, candidate, 'source');
+    const forward = forwardSource.score + forwardTarget.score;
+    const reverse = reverseSource.score + reverseTarget.score;
+    const useReverse = reverse > forward;
+    const confidence = Math.min(99, Math.max(forward, reverse));
+    const sourceLabel = useReverse ? reverseSource.label : forwardSource.label;
+    const targetLabel = useReverse ? reverseTarget.label : forwardTarget.label;
+    const direction = useReverse ? 'reverse' : 'forward';
+    const reason =
+        sourceLabel && targetLabel
+            ? `${direction} match: ${sourceLabel} / ${targetLabel}`
+            : 'Weak name/location match';
+
+    return {
+        candidate,
+        confidence,
+        reason,
+        exact: false,
+    };
+};
+
+const rankTeCandidatesForLink = (
+    link: TopologyLink,
+    sourceSite: TopologySite | undefined,
+    targetSite: TopologySite | undefined,
+    candidates: ThousandEyesA2ACandidate[]
+): ThousandEyesA2AMatch[] => {
+    const sorted = candidates
+        .map((candidate) =>
+            scoreTeCandidateForLink(link, sourceSite, targetSite, candidate)
+        )
+        .sort((a, b) => {
+            if (a.exact !== b.exact) return a.exact ? -1 : 1;
+            if (a.confidence !== b.confidence) return b.confidence - a.confidence;
+            return formatTeCandidateLabel(a.candidate).localeCompare(
+                formatTeCandidateLabel(b.candidate),
+                undefined,
+                { sensitivity: 'base' }
+            );
+        });
+
+    if (sorted.length < 2 || sorted[0].exact) return sorted;
+    const [best, second] = sorted;
+    if (
+        best.confidence >= TE_A2A_MATCH_THRESHOLD &&
+        second.confidence >= best.confidence - TE_A2A_CLOSE_MATCH_DELTA
+    ) {
+        return [{ ...best, ambiguous: true }, ...sorted.slice(1)];
+    }
+    return sorted;
+};
+
+const selectAutoTeMatch = (
+    link: TopologyLink,
+    sourceSite: TopologySite | undefined,
+    targetSite: TopologySite | undefined,
+    candidates: ThousandEyesA2ACandidate[]
+): ThousandEyesA2AMatch | null => {
+    const [best] = rankTeCandidatesForLink(
+        link,
+        sourceSite,
+        targetSite,
+        candidates
+    );
+    if (!best) return null;
+    if (best.exact) return best;
+    if (best.ambiguous || best.confidence < TE_A2A_MATCH_THRESHOLD) return null;
+    return best;
+};
+
+const buildThousandEyesPathLink = (
+    teAccountId?: string,
+    teTestId?: string
+): string | undefined => {
+    if (!teTestId) return undefined;
+    const params = [
+        `testId=${encodeURIComponent(teTestId)}`,
+        'direction=BIDIRECTIONAL',
+        'detailId=pathvis',
+        'metrics=oneWayNetLoss',
+    ];
+    if (teAccountId) params.push(`__a=${encodeURIComponent(teAccountId)}`);
+    return `https://app.thousandeyes.com/network-app-synthetics/views/?${params.join(
+        '&'
+    )}`;
+};
+
+const teBindingFromCandidate = (
+    candidate: ThousandEyesA2ACandidate
+): ThousandEyesA2ABinding => ({
+    candidateId: candidate.candidateId,
+    teAccountId: candidate.teAccountId,
+    teTestId: candidate.teTestId,
+    teTestName: candidate.teTestName,
+    sourceAgent: candidate.sourceAgent,
+    targetAgent: candidate.targetAgent,
+    sourceLocation: candidate.sourceLocation,
+    targetLocation: candidate.targetLocation,
+});
+
+const formatTeCandidateLabel = (candidate: ThousandEyesA2ACandidate): string => {
+    const source =
+        candidate.sourceAgent ?? candidate.sourceLocation ?? 'Source agent';
+    const target =
+        candidate.targetAgent ?? candidate.targetLocation ?? 'Target agent';
+    const testName = candidate.teTestName ? ` (${candidate.teTestName})` : '';
+    return `${source} -> ${target}${testName}`;
+};
+
+const formatTeBindingSummary = (
+    binding?: ThousandEyesA2ABinding,
+    candidate?: ThousandEyesA2ACandidate
+): string => {
+    if (candidate) return formatTeCandidateLabel(candidate);
+    if (!binding) return 'No ThousandEyes A2A binding';
+    const source = binding.sourceAgent ?? binding.sourceLocation ?? 'source';
+    const target = binding.targetAgent ?? binding.targetLocation ?? 'target';
+    const test = binding.teTestName ? ` (${binding.teTestName})` : '';
+    return `${source} -> ${target}${test}`;
+};
+
 const sanitizeTopology = (
     candidate: unknown,
     fallback: CustomerTopology
@@ -1074,10 +1502,15 @@ const sanitizeTopology = (
             site,
             fallbackSitesById.get(id)?.searchName
         );
+        const aliases = optionalTextArray(site.aliases);
+        const fallbackAliases = optionalTextArray(fallbackSite?.aliases);
+        const resolvedAliases =
+            aliases.length > 0 ? aliases : fallbackAliases.length > 0 ? fallbackAliases : [];
         return {
             id,
             name: textValue(site.name, fallbackSite?.name ?? shortName),
             shortName: shortName.toUpperCase(),
+            ...(resolvedAliases.length > 0 ? { aliases: resolvedAliases } : {}),
             role: normalizeTopologyRoleInput(
                 site.role,
                 fallbackSite?.role ?? 'branch'
@@ -1133,6 +1566,10 @@ const sanitizeTopology = (
                 link,
                 fallbackLinksById.get(id)?.searchName
             );
+            const thousandEyesA2A = sanitizeThousandEyesA2ABinding(
+                link.thousandEyesA2A,
+                fallbackLinksById.get(id)?.thousandEyesA2A
+            );
             const normalized: TopologyLink = {
                 id,
                 name: textValue(link.name, `${sourceSiteId} to ${targetSiteId}`),
@@ -1141,7 +1578,10 @@ const sanitizeTopology = (
                 status: isTopologyStatus(link.status)
                     ? link.status
                     : fallbackLink?.status ?? 'unknown',
-                dataState: searchName ? 'loading' : link.dataState ?? 'static',
+                dataState:
+                    searchName || thousandEyesA2A
+                        ? 'loading'
+                        : link.dataState ?? 'static',
                 telemetrySource:
                     optionalText(link.telemetrySource) ??
                     'Awaiting topology link telemetry',
@@ -1182,6 +1622,7 @@ const sanitizeTopology = (
             if (dataError) normalized.dataError = dataError;
             if (searchName) normalized.searchName = searchName;
             if (searchName === '') normalized.searchName = '';
+            if (thousandEyesA2A) normalized.thousandEyesA2A = thousandEyesA2A;
             return normalized;
         })
         .filter((link): link is TopologyLink => Boolean(link));
@@ -2786,6 +3227,110 @@ const parseLinkRow = (
     };
 };
 
+const parseTeA2ACandidateRow = (
+    row: Record<string, unknown>
+): ThousandEyesA2ACandidate | null => {
+    const teAccountId = textFromRow(row, ['teAccountId', 'accountId']);
+    const teTestId = textFromRow(row, ['teTestId', 'testId']);
+    const sourceAgent = textFromRow(row, ['sourceAgent', 'sourceAgents']);
+    const targetAgent = textFromRow(row, ['targetAgent', 'targetAgents']);
+    const fallbackId = [teAccountId, teTestId, sourceAgent, targetAgent]
+        .filter(Boolean)
+        .join('|');
+    const candidateId =
+        textFromRow(row, ['candidateId', 'id']) || fallbackId || undefined;
+    if (!candidateId) return null;
+
+    const status =
+        normalizeStatus(textFromRow(row, ['status', 'linkStatus'])) ?? 'unknown';
+    const teLink =
+        textFromRow(row, ['teLink', 'te_link', 'thousandeyes.permalink']) ??
+        buildThousandEyesPathLink(teAccountId, teTestId);
+
+    return {
+        candidateId,
+        teAccountId,
+        teTestId,
+        teTestName: textFromRow(row, ['teTestName', 'testName']),
+        sourceAgent,
+        targetAgent,
+        sourceAgents: textFromRow(row, ['sourceAgents', 'source_agents']),
+        targetAgents: textFromRow(row, ['targetAgents', 'target_agents']),
+        sourceLocation: textFromRow(row, ['sourceLocation', 'source_location']),
+        targetLocation: textFromRow(row, ['targetLocation', 'target_location']),
+        sourceCountry: textFromRow(row, ['sourceCountry', 'source_country']),
+        targetCountry: textFromRow(row, ['targetCountry', 'target_country']),
+        sourceRegion: textFromRow(row, ['sourceRegion', 'source_region']),
+        targetRegion: textFromRow(row, ['targetRegion', 'target_region']),
+        status,
+        capacityMbps: finiteNumberFromRow(row, ['capacityMbps', 'capacity_mbps']),
+        throughputMbps: finiteNumberFromRow(row, [
+            'throughputMbps',
+            'throughput_mbps',
+        ]),
+        peakThroughputMbps: finiteNumberFromRow(row, [
+            'peakThroughputMbps',
+            'peak_throughput_mbps',
+        ]),
+        utilizationPct: finiteNumberFromRow(row, [
+            'utilizationPct',
+            'utilization_pct',
+        ]),
+        peakUtilizationPct: finiteNumberFromRow(row, [
+            'peakUtilizationPct',
+            'peak_utilization_pct',
+        ]),
+        latencyMs: finiteNumberFromRow(row, ['latencyMs', 'latency_ms']),
+        lossPct: finiteNumberFromRow(row, ['lossPct', 'loss_pct']),
+        jitterMs: finiteNumberFromRow(row, ['jitterMs', 'jitter_ms']),
+        endpointHealthPct: finiteNumberFromRow(row, [
+            'endpointHealthPct',
+            'endpoint_health_pct',
+        ]),
+        txMbps: finiteNumberFromRow(row, ['txMbps', 'tx_mbps']),
+        rxMbps: finiteNumberFromRow(row, ['rxMbps', 'rx_mbps']),
+        endpointDevices: finiteNumberFromRow(row, [
+            'endpointDevices',
+            'endpoint_devices',
+        ]),
+        teLink,
+        lastUpdated: textFromRow(row, ['lastUpdated', 'last_updated', '_time']),
+        telemetrySource:
+            textFromRow(row, ['telemetrySource', 'telemetry_source']) ??
+            'ThousandEyes A2A',
+    };
+};
+
+const liveLinkPatchFromTeCandidate = (
+    base: TopologyLink,
+    candidate: ThousandEyesA2ACandidate,
+    match?: ThousandEyesA2AMatch
+): Partial<TopologyLink> => ({
+    ...parseLinkRow(base, candidate as unknown as Record<string, unknown>),
+    telemetrySource: match?.exact
+        ? candidate.telemetrySource
+        : `${candidate.telemetrySource} (${match?.reason ?? 'matched by site identity'})`,
+    dataState: 'live',
+    dataError: undefined,
+});
+
+const missingTeBindingPatch = (link: TopologyLink): Partial<TopologyLink> => {
+    const binding = link.thousandEyesA2A;
+    return {
+        status: 'unknown',
+        sourceAgents: binding?.sourceAgent ?? link.sourceAgents,
+        targetAgents: binding?.targetAgent ?? link.targetAgents,
+        sourceLocation: binding?.sourceLocation ?? link.sourceLocation,
+        targetLocation: binding?.targetLocation ?? link.targetLocation,
+        teLink:
+            link.teLink ??
+            buildThousandEyesPathLink(binding?.teAccountId, binding?.teTestId),
+        dataState: 'error',
+        dataError: 'No recent ThousandEyes A2A metric rows matched this binding',
+        telemetrySource: 'ThousandEyes A2A binding awaiting recent metrics',
+    };
+};
+
 const deriveSiteStatus = (
     row: Record<string, unknown>,
     fallback: TopologyStatus
@@ -4046,6 +4591,12 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         string,
         TopologyLink
     >>({});
+    const [teA2ACandidates, setTeA2ACandidates] = useState<
+        ThousandEyesA2ACandidate[] | null
+    >(null);
+    const [teA2AInventoryError, setTeA2AInventoryError] = useState<string | null>(
+        null
+    );
     const [summaryMetricById, setSummaryMetricById] =
         useState<TopologySummaryMetricMap>({});
     const [siteEnrichmentByShortName, setSiteEnrichmentByShortName] = useState<
@@ -4115,6 +4666,70 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
             cancelled = true;
         };
     }, []);
+
+    useEffect(() => {
+        if (catalogueByName === null) return undefined;
+        const record = catalogueByName[TE_A2A_INVENTORY_SEARCH_NAME];
+        if (!record?.search?.trim()) {
+            setTeA2ACandidates([]);
+            setTeA2AInventoryError(
+                'ThousandEyes A2A inventory search is not installed'
+            );
+            return undefined;
+        }
+
+        let cancelled = false;
+        setTeA2ACandidates(null);
+        setTeA2AInventoryError(null);
+        setLiveLinkById((current) => {
+            const next = { ...current };
+            for (const link of storedTopology.links) {
+                if (!link.thousandEyesA2A) continue;
+                next[link.id] = {
+                    ...next[link.id],
+                    dataState:
+                        next[link.id]?.dataState === 'live' ? 'live' : 'loading',
+                };
+            }
+            return next;
+        });
+
+        runSearch({
+            spl: record.search,
+            earliestTime,
+            latestTime,
+            tag: 'topology_te_a2a_inventory',
+        })
+            .then((res) => {
+                if (cancelled) return;
+                const rows = (res?.results ?? []) as Array<Record<string, unknown>>;
+                const candidates = rows
+                    .map(parseTeA2ACandidateRow)
+                    .filter(
+                        (candidate): candidate is ThousandEyesA2ACandidate =>
+                            Boolean(candidate)
+                    );
+                setTeA2ACandidates(candidates);
+                setTeA2AInventoryError(null);
+            })
+            .catch((err) => {
+                if (cancelled) return;
+                setTeA2ACandidates([]);
+                setTeA2AInventoryError(
+                    err instanceof Error ? err.message : String(err)
+                );
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        catalogueByName,
+        earliestTime,
+        latestTime,
+        refreshToken,
+        storedTopology.links,
+    ]);
 
     useEffect(() => {
         if (catalogueByName === null) return undefined;
@@ -4305,7 +4920,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 setLiveLinkById((current) => {
                     const next = { ...current };
                     for (const link of storedTopology.links) {
-                        if (link.searchName) {
+                        if (link.searchName || link.thousandEyesA2A) {
                             if (linkUpdates[link.id]) {
                                 next[link.id] = {
                                     ...next[link.id],
@@ -4349,7 +4964,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 setLiveLinkById((current) => {
                     const next = { ...current };
                     for (const link of storedTopology.links) {
-                        if (link.searchName) continue;
+                        if (link.searchName || link.thousandEyesA2A) continue;
                         next[link.id] = {
                             dataState: 'error',
                             dataError: message,
@@ -4530,6 +5145,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         if (catalogueByName === null) return undefined;
         let cancelled = false;
         const searchableLinks = storedTopology.links.filter((link) => {
+            if (link.thousandEyesA2A) return false;
             if (!link.searchName) return false;
             const record = catalogueByName[link.searchName];
             return Boolean(record?.search?.trim());
@@ -4595,6 +5211,53 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         storedTopology.links,
     ]);
 
+    useEffect(() => {
+        if (teA2ACandidates === null) return undefined;
+        const siteMap = new Map(storedTopology.sites.map((site) => [site.id, site]));
+        setLiveLinkById((current) => {
+            const next = { ...current };
+            for (const link of storedTopology.links) {
+                const sourceSite = siteMap.get(link.sourceSiteId);
+                const targetSite = siteMap.get(link.targetSiteId);
+                const match = selectAutoTeMatch(
+                    link,
+                    sourceSite,
+                    targetSite,
+                    teA2ACandidates
+                );
+
+                if (link.thousandEyesA2A) {
+                    next[link.id] = match
+                        ? {
+                              ...next[link.id],
+                              ...liveLinkPatchFromTeCandidate(link, match.candidate, match),
+                          }
+                        : {
+                              ...next[link.id],
+                              ...missingTeBindingPatch(link),
+                          };
+                    continue;
+                }
+
+                if (link.searchName) continue;
+
+                if (match) {
+                    next[link.id] = {
+                        ...next[link.id],
+                        ...liveLinkPatchFromTeCandidate(link, match.candidate, match),
+                    };
+                    continue;
+                }
+
+                if (next[link.id]?.telemetrySource?.includes('ThousandEyes A2A')) {
+                    delete next[link.id];
+                }
+            }
+            return next;
+        });
+        return undefined;
+    }, [teA2ACandidates, storedTopology.links, storedTopology.sites]);
+
     const resolvedTopology = useMemo<CustomerTopology>(() => {
         const configuredSites = activeTopology.sites.map((site) => {
             const liveSite = liveSiteById[site.id];
@@ -4610,7 +5273,10 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         });
         const configuredLinks = activeTopology.links.map((link) => ({
             ...link,
-            dataState: link.searchName ? 'loading' : link.dataState ?? 'static',
+            dataState:
+                link.searchName || link.thousandEyesA2A
+                    ? 'loading'
+                    : link.dataState ?? 'static',
             ...liveLinkById[link.id],
         }));
         const configuredSiteIds = new Set(configuredSites.map((s) => s.id));
@@ -5030,6 +5696,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 selectedSpl={selectedSpl}
                 siteEnrichmentByShortName={siteEnrichmentByShortName}
                 onClose={closeSelection}
+                onSelectLink={selectLink}
                 onOpenInSearch={onOpenInSearch ? openSelectedInSearch : undefined}
             />
 
@@ -5051,6 +5718,8 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                     setIsEditorOpen(false);
                 }}
                 catalogueByName={catalogueByName}
+                teA2ACandidates={teA2ACandidates}
+                teA2AInventoryError={teA2AInventoryError}
                 onOpenInSearch={onOpenInSearch}
             />
 
@@ -5836,6 +6505,7 @@ interface SelectionCardProps {
     selectedSpl: string;
     siteEnrichmentByShortName?: Record<string, SiteEnrichment>;
     onClose: () => void;
+    onSelectLink?: (link: TopologyLink) => void;
     onOpenInSearch?: () => void;
 }
 
@@ -5861,6 +6531,7 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
     selectedSpl,
     siteEnrichmentByShortName,
     onClose,
+    onSelectLink,
     onOpenInSearch,
 }) => {
     const dragControls = useDragControls();
@@ -6034,6 +6705,7 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
                                 site={selected.site}
                                 links={connectedLinks}
                                 isDark={isDark}
+                                onSelectLink={onSelectLink}
                                 enrichment={
                                     siteEnrichmentByShortName?.[
                                         selected.site.shortName
@@ -6221,6 +6893,8 @@ interface TopologyEditorPanelProps {
      * `null` while the catalogue is still loading.
      */
     catalogueByName: Record<string, SearchbaseRecord> | null;
+    teA2ACandidates: ThousandEyesA2ACandidate[] | null;
+    teA2AInventoryError?: string | null;
     /**
      * Optional dispatch for the per-card "Open in Splunk Search"
      * affordance. When wired by the parent map, each editor card
@@ -6272,6 +6946,8 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
     saveError,
     onClose,
     catalogueByName,
+    teA2ACandidates,
+    teA2AInventoryError,
     onOpenInSearch,
 }) => {
     const [jsonText, setJsonText] = useState('');
@@ -6527,6 +7203,30 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                 link.id === linkId ? { ...link, ...patch } : link
             ),
         }));
+    };
+
+    const bindThousandEyesA2A = (
+        linkId: string,
+        candidate: ThousandEyesA2ACandidate
+    ) => {
+        updateLink(linkId, {
+            thousandEyesA2A: teBindingFromCandidate(candidate),
+            searchName: '',
+            teLink: candidate.teLink,
+            telemetrySource: `ThousandEyes A2A binding: ${formatTeCandidateLabel(candidate)}`,
+            dataState: 'loading',
+            dataError: undefined,
+        });
+    };
+
+    const clearThousandEyesA2A = (linkId: string) => {
+        updateLink(linkId, {
+            thousandEyesA2A: undefined,
+            teLink: undefined,
+            dataState: 'static',
+            dataError: undefined,
+            telemetrySource: 'Awaiting topology link telemetry',
+        });
     };
 
     const updateLinkEndpoints = (
@@ -7217,8 +7917,10 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                             </label>
                                             <label className="space-y-1">
                                                 <span
+                                                    title={TOPOLOGY_STATUS_FIELD_HELP}
                                                     className={cn(
                                                         editorLabelClass,
+                                                        'cursor-help',
                                                         isDark
                                                             ? 'text-slate-500'
                                                             : 'text-slate-400'
@@ -7297,6 +7999,34 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                 />
                                             </label>
                                         </div>
+                                        <label className="block space-y-1">
+                                            <span
+                                                className={cn(
+                                                    editorLabelClass,
+                                                    isDark
+                                                        ? 'text-slate-500'
+                                                        : 'text-slate-400'
+                                                )}
+                                            >
+                                                Matching aliases
+                                            </span>
+                                            <input
+                                                className={editorInputClass(isDark)}
+                                                value={(site.aliases ?? []).join(', ')}
+                                                placeholder="AUB, Tallahassee EOC, facility code"
+                                                onChange={(event) => {
+                                                    const aliases = optionalTextArray(
+                                                        event.target.value
+                                                    );
+                                                    updateSite(site.id, {
+                                                        aliases:
+                                                            aliases.length > 0
+                                                                ? aliases
+                                                                : undefined,
+                                                    });
+                                                }}
+                                            />
+                                        </label>
                                         <label className="block space-y-1">
                                             <span
                                                 className={cn(
@@ -7471,6 +8201,37 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                     } to ${
                                         targetSite?.shortName ?? link.targetSiteId
                                     }`;
+                                    const teMatches = teA2ACandidates
+                                        ? rankTeCandidatesForLink(
+                                              link,
+                                              sourceSite,
+                                              targetSite,
+                                              teA2ACandidates
+                                          )
+                                        : [];
+                                    const boundTeMatch = teMatches.find(
+                                        (match) => match.exact
+                                    );
+                                    const selectedTeCandidateId =
+                                        boundTeMatch?.candidate.candidateId ??
+                                        link.thousandEyesA2A?.candidateId ??
+                                        '';
+                                    const hasTeBinding = Boolean(link.thousandEyesA2A);
+                                    const bindingSummary =
+                                        boundSearch ||
+                                        (hasTeBinding
+                                            ? formatTeBindingSummary(
+                                                  link.thousandEyesA2A,
+                                                  boundTeMatch?.candidate
+                                              )
+                                            : '');
+                                    const teLink =
+                                        boundTeMatch?.candidate.teLink ??
+                                        link.teLink ??
+                                        buildThousandEyesPathLink(
+                                            link.thousandEyesA2A?.teAccountId,
+                                            link.thousandEyesA2A?.teTestId
+                                        );
                                     return (
                                     <div
                                         key={link.id}
@@ -7535,14 +8296,14 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                     <span
                                                         className={editorBindingSummaryClass(
                                                             isDark,
-                                                            Boolean(boundSearch)
+                                                            Boolean(bindingSummary)
                                                         )}
                                                         title={
-                                                            boundSearch ||
+                                                            bindingSummary ||
                                                             'No search bound'
                                                         }
                                                     >
-                                                        {boundSearch ||
+                                                        {bindingSummary ||
                                                             'No search bound'}
                                                     </span>
                                                 </div>
@@ -7711,8 +8472,10 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                         <div className="grid grid-cols-2 gap-2">
                                             <label className="space-y-1">
                                                 <span
+                                                    title={TOPOLOGY_STATUS_FIELD_HELP}
                                                     className={cn(
                                                         editorLabelClass,
+                                                        'cursor-help',
                                                         isDark
                                                             ? 'text-slate-500'
                                                             : 'text-slate-400'
@@ -7768,6 +8531,165 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                     }
                                                 />
                                             </label>
+                                        </div>
+                                        <div
+                                            className={cn(
+                                                'rounded-md border px-2.5 py-2',
+                                                isDark
+                                                    ? 'border-slate-800 bg-slate-950/50'
+                                                    : 'border-slate-200 bg-white'
+                                            )}
+                                        >
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="min-w-0">
+                                                    <span
+                                                        className={cn(
+                                                            editorLabelClass,
+                                                            isDark
+                                                                ? 'text-slate-500'
+                                                                : 'text-slate-400'
+                                                        )}
+                                                    >
+                                                        ThousandEyes A2A
+                                                    </span>
+                                                    <div
+                                                        className={cn(
+                                                            'mt-1 truncate text-[11px] font-semibold',
+                                                            isDark
+                                                                ? hasTeBinding
+                                                                    ? 'text-slate-200'
+                                                                    : 'text-slate-500'
+                                                                : hasTeBinding
+                                                                ? 'text-slate-700'
+                                                                : 'text-slate-400'
+                                                        )}
+                                                        title={formatTeBindingSummary(
+                                                            link.thousandEyesA2A,
+                                                            boundTeMatch?.candidate
+                                                        )}
+                                                    >
+                                                        {formatTeBindingSummary(
+                                                            link.thousandEyesA2A,
+                                                            boundTeMatch?.candidate
+                                                        )}
+                                                    </div>
+                                                    {teA2AInventoryError && (
+                                                        <p
+                                                            className="mt-1 truncate text-[9px] font-semibold text-red-500"
+                                                            title={teA2AInventoryError}
+                                                        >
+                                                            {teA2AInventoryError}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <div className="flex flex-shrink-0 items-center gap-1">
+                                                    {teLink && (
+                                                        <a
+                                                            href={teLink}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            title="Open ThousandEyes path view"
+                                                            className={cn(
+                                                                'p-1.5 rounded-md transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                                                                isDark
+                                                                    ? 'bg-slate-800 text-sky-300 hover:bg-sky-950/70'
+                                                                    : 'bg-slate-50 text-sky-700 hover:bg-sky-100'
+                                                            )}
+                                                        >
+                                                            <ExternalLink className="w-3.5 h-3.5" />
+                                                        </a>
+                                                    )}
+                                                    {hasTeBinding && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                clearThousandEyesA2A(
+                                                                    link.id
+                                                                )
+                                                            }
+                                                            title="Clear ThousandEyes binding"
+                                                            className={cn(
+                                                                'p-1.5 rounded-md transition-colors focus:outline-none focus:ring-1 focus:ring-red-400',
+                                                                isDark
+                                                                    ? 'bg-slate-800 text-red-300 hover:bg-red-950/70'
+                                                                    : 'bg-red-50 text-red-600 hover:bg-red-100'
+                                                            )}
+                                                        >
+                                                            <X className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="mt-2">
+                                                <select
+                                                    aria-label={`ThousandEyes A2A binding for link ${link.id}`}
+                                                    className={editorInputClass(isDark)}
+                                                    value={selectedTeCandidateId}
+                                                    disabled={
+                                                        teA2ACandidates === null ||
+                                                        teMatches.length === 0
+                                                    }
+                                                    onChange={(event) => {
+                                                        const candidate =
+                                                            teA2ACandidates?.find(
+                                                                (item) =>
+                                                                    item.candidateId ===
+                                                                    event.target.value
+                                                            );
+                                                        if (candidate) {
+                                                            bindThousandEyesA2A(
+                                                                link.id,
+                                                                candidate
+                                                            );
+                                                        }
+                                                    }}
+                                                >
+                                                    <option value="">
+                                                        {teA2ACandidates === null
+                                                            ? 'Loading A2A tests'
+                                                            : teMatches.length === 0
+                                                            ? 'No A2A tests observed'
+                                                            : 'Select A2A test'}
+                                                    </option>
+                                                    {teMatches.slice(0, 30).map(
+                                                        (match) => (
+                                                            <option
+                                                                key={
+                                                                    match.candidate
+                                                                        .candidateId
+                                                                }
+                                                                value={
+                                                                    match.candidate
+                                                                        .candidateId
+                                                                }
+                                                            >
+                                                                {match.exact
+                                                                    ? 'Bound'
+                                                                    : match.confidence >=
+                                                                      TE_A2A_MATCH_THRESHOLD
+                                                                    ? 'Suggested'
+                                                                    : `${match.confidence}%`}
+                                                                {' - '}
+                                                                {formatTeCandidateLabel(
+                                                                    match.candidate
+                                                                )}
+                                                            </option>
+                                                        )
+                                                    )}
+                                                </select>
+                                                {teMatches[0]?.ambiguous && (
+                                                    <p
+                                                        className={cn(
+                                                            'mt-1 text-[9px] font-semibold',
+                                                            isDark
+                                                                ? 'text-amber-300'
+                                                                : 'text-amber-700'
+                                                        )}
+                                                    >
+                                                        Multiple close A2A matches found
+                                                    </p>
+                                                )}
+                                            </div>
                                         </div>
                                         <div
                                             className={cn(
@@ -7843,6 +8765,9 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                         onPick={(searchName) =>
                                                             updateLink(link.id, {
                                                                 searchName,
+                                                                thousandEyesA2A:
+                                                                    undefined,
+                                                                dataState: 'loading',
                                                             })
                                                         }
                                                         isDark={isDark}
@@ -7971,6 +8896,7 @@ interface SiteDetailsProps {
     links: TopologyLink[];
     isDark: boolean;
     enrichment?: SiteEnrichment;
+    onSelectLink?: (link: TopologyLink) => void;
 }
 
 const SiteDetails: React.FC<SiteDetailsProps> = ({
@@ -7978,6 +8904,7 @@ const SiteDetails: React.FC<SiteDetailsProps> = ({
     links,
     isDark,
     enrichment,
+    onSelectLink,
 }) => {
     const hasEnrichment = Boolean(
         enrichment &&
@@ -8157,13 +9084,15 @@ const SiteDetails: React.FC<SiteDetailsProps> = ({
                     </div>
                     <div className="space-y-1">
                         {links.map((link) => (
-                            <div
+                            <button
+                                type="button"
                                 key={link.id}
+                                onClick={() => onSelectLink?.(link)}
                                 className={cn(
-                                    'flex items-center justify-between gap-2 rounded border px-2 py-1',
+                                    'flex w-full items-center justify-between gap-2 rounded border px-2 py-1 text-left transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
                                     isDark
-                                        ? 'bg-white/5 border-white/5'
-                                        : 'bg-white border-slate-200'
+                                        ? 'bg-white/5 border-white/5 hover:bg-white/10'
+                                        : 'bg-white border-slate-200 hover:bg-sky-50'
                                 )}
                                 title={`${link.name}: ${formatMbps(
                                     link.throughputMbps
@@ -8201,7 +9130,7 @@ const SiteDetails: React.FC<SiteDetailsProps> = ({
                                         title={link.status}
                                     />
                                 </div>
-                            </div>
+                            </button>
                         ))}
                     </div>
                 </div>
