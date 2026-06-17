@@ -7,6 +7,40 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PKG_ROOT="${SCRIPT_DIR}/.."
 STAGE_DIR="${PKG_ROOT}/stage"
 APP_NAME="splunk-cisco-dashboards"
+FROM_STAGE=0
+
+usage() {
+  cat <<EOF
+Usage: bin/package_app.sh [--from-stage]
+
+Default behavior: clean stage/, run production webpack, then package stage/.
+
+Options:
+  --from-stage, --stage   Package the current stage/ directory without running
+                          clean_build.sh or webpack. Useful when webpack --watch
+                          is already maintaining stage/ and you still want to
+                          create a tarball for splunkd install.
+  -h, --help              Show this help.
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --from-stage|--stage)
+      FROM_STAGE=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "ERROR: Unknown option: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
 
 # Read version from app.conf (source of truth)
 APP_CONF="${PKG_ROOT}/src/main/resources/splunk/default/app.conf"
@@ -20,13 +54,22 @@ DIST_DIR="${PKG_ROOT}/../../dist"
 mkdir -p "$DIST_DIR"
 PKG_PATH="${DIST_DIR}/${APP_NAME}-${VERSION}.tar.gz"
 
-if [[ ! -d "$STAGE_DIR" ]]; then
-  echo "stage/ not found; running clean:build first..."
-fi
+if [[ "$FROM_STAGE" -eq 1 ]]; then
+  if [[ ! -d "$STAGE_DIR" ]]; then
+    echo "ERROR: --from-stage requested but stage/ does not exist." >&2
+    echo "       Run 'yarn run package:app' once, or keep 'yarn start' running until webpack has compiled." >&2
+    exit 1
+  fi
+  echo "[package] using existing stage/ (--from-stage); skipping clean build and webpack"
+else
+  if [[ ! -d "$STAGE_DIR" ]]; then
+    echo "stage/ not found; running clean:build first..."
+  fi
 
-# Always run clean build (preserving local) to ensure package is fresh
-bash "${SCRIPT_DIR}/clean_build.sh"
-node "${PKG_ROOT}/bin/build.js" build
+  # Always run clean build (preserving local) to ensure package is fresh
+  bash "${SCRIPT_DIR}/clean_build.sh"
+  node "${PKG_ROOT}/bin/build.js" build
+fi
 
 # Stage into a temp directory with the correct app directory name
 TMP_DIR="$(mktemp -d)"

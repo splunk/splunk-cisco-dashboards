@@ -70,6 +70,8 @@ import { PieTile } from '@/common/components/florida/PieTile';
 import { SingleValueRadialTile } from '@/common/components/florida/SingleValueRadialTile';
 import { SortableMetricCard } from '@/common/components/florida/SortableMetricCard';
 import { TableTile } from '@/common/components/florida/TableTile';
+import { InfoTooltip } from '@/common/components/florida/InfoTooltip';
+import { SplPreviewTooltip } from '@/common/components/florida/SplPreviewTooltip';
 import {
     normalizeDataValuesDisplay,
     sparklineVizTypeFromSplunkViz,
@@ -142,6 +144,10 @@ const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 const DEFAULT_TILE_VIZ = '__default_tile_viz__';
 const DEFAULT_OVERLAY_FIELD = '__default_overlay_field__';
 const NO_OVERLAY_FIELD = '__no_overlay_field__';
+const SPL_PREVIEW_FONT_SCALE = 1.18;
+
+const clampNumber = (value: number, min: number, max: number): number =>
+    Math.min(max, Math.max(min, value));
 
 type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
 type TileSpan = 1 | 2 | 4;
@@ -167,10 +173,44 @@ interface ObservedNoDataEntry {
     searchName: string;
     category: string;
     subCategory: string;
+    tags: string[];
+    description: string;
+    search: string;
     reason: NoDataReason;
     rangeLabel: string;
     observedAt: string;
 }
+
+type NoDataReportSortKey =
+    | 'stanzaName'
+    | 'searchName'
+    | 'category'
+    | 'subCategory'
+    | 'tags';
+type SortDirection = 'asc' | 'desc';
+type NoDataReportResizeAxis = 'width' | 'height' | 'both';
+
+interface NoDataReportResizeDrag {
+    axis: NoDataReportResizeAxis;
+    startX: number;
+    startY: number;
+    startWidth: number;
+    startHeight: number;
+    horizontalMultiplier: number;
+    verticalMultiplier: number;
+}
+
+const NO_DATA_REPORT_SORT_COLUMNS: Array<{
+    key: NoDataReportSortKey;
+    label: string;
+    thClassName: string;
+}> = [
+    { key: 'stanzaName', label: 'stanza_name', thClassName: 'px-5 py-3' },
+    { key: 'searchName', label: 'search_name', thClassName: 'px-4 py-3' },
+    { key: 'category', label: 'category', thClassName: 'px-4 py-3' },
+    { key: 'subCategory', label: 'sub_category', thClassName: 'px-4 py-3' },
+    { key: 'tags', label: 'tags', thClassName: 'px-4 py-3' },
+];
 
 const TILE_SPAN_CLASS: Record<TileSpan, string> = {
     1: 'md:col-span-1 xl:col-span-1',
@@ -585,6 +625,13 @@ const buildObservedNoDataReportSearch = (
                     `row=${index + 1},${splunkStringLiteral(String(entry[field]))}`
             )
             .join(',');
+    const caseTags = (): string =>
+        sorted
+            .map(
+                (entry, index) =>
+                    `row=${index + 1},${splunkStringLiteral(entry.tags.join(', '))}`
+            )
+            .join(',');
 
     return [
         `| makeresults count=${sorted.length}`,
@@ -593,6 +640,7 @@ const buildObservedNoDataReportSearch = (
         `| eval search_name=case(${caseFor('searchName')})`,
         `| eval category=case(${caseFor('category')})`,
         `| eval sub_category=case(${caseFor('subCategory')})`,
+        `| eval tags=case(${caseTags()})`,
         `| eval reason=case(${sorted
             .map(
                 (entry, index) =>
@@ -603,8 +651,7 @@ const buildObservedNoDataReportSearch = (
             .join(',')})`,
         `| eval time_range=case(${caseFor('rangeLabel')})`,
         `| eval observed_at=case(${caseFor('observedAt')})`,
-        '| table stanza_name search_name category sub_category reason time_range observed_at',
-        '| sort stanza_name',
+        '| table stanza_name search_name category sub_category tags reason time_range observed_at',
     ].join('\n');
 };
 
@@ -943,6 +990,9 @@ const observedNoDataEntry = (
     searchName: record.searchName,
     category: record.category,
     subCategory: record.subCategory,
+    tags: record.tags,
+    description: plainTextFromHtml(record.description),
+    search: record.search,
     reason,
     rangeLabel: rangeLabel ?? '',
     observedAt: new Date().toISOString(),
@@ -2017,6 +2067,18 @@ const NoDataReportModal: React.FC<{
     range: TimeRange;
     onClose: () => void;
 }> = ({ entries, entryByName, range, onClose }) => {
+    const dialogRef = useRef<HTMLDivElement | null>(null);
+    const resizeDragRef = useRef<NoDataReportResizeDrag | null>(null);
+    const [dialogPixels, setDialogPixels] = useState({ width: 0, height: 0 });
+    const [manualDialogSize, setManualDialogSize] = useState<{
+        width?: number;
+        height?: number;
+    }>({});
+    const [sortConfig, setSortConfig] = useState<{
+        key: NoDataReportSortKey;
+        direction: SortDirection;
+    }>({ key: 'stanzaName', direction: 'asc' });
+
     useEffect(() => {
         const onKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape') onClose();
@@ -2025,20 +2087,209 @@ const NoDataReportModal: React.FC<{
         return () => window.removeEventListener('keydown', onKeyDown);
     }, [onClose]);
 
-    const rows = useMemo(
-        () =>
-            [...entries].sort(
-                (a, b) =>
-                    a.stanzaName.localeCompare(b.stanzaName) ||
-                    a.searchName.localeCompare(b.searchName)
-            ),
-        [entries]
+    useEffect(() => {
+        const updateDialogPixels = () => {
+            if (!dialogRef.current) return;
+            const rect = dialogRef.current.getBoundingClientRect();
+            setDialogPixels((current) =>
+                Math.abs(current.width - rect.width) < 1 &&
+                Math.abs(current.height - rect.height) < 1
+                    ? current
+                    : { width: rect.width, height: rect.height }
+            );
+        };
+
+        updateDialogPixels();
+
+        if (typeof ResizeObserver === 'undefined') {
+            window.addEventListener('resize', updateDialogPixels);
+            return () => window.removeEventListener('resize', updateDialogPixels);
+        }
+
+        const observer = new ResizeObserver(updateDialogPixels);
+        if (dialogRef.current) observer.observe(dialogRef.current);
+        return () => observer.disconnect();
+    }, []);
+
+    useEffect(() => {
+        const onPointerMove = (event: PointerEvent) => {
+            const drag = resizeDragRef.current;
+            if (!drag) return;
+
+            const maxWidth = Math.max(320, window.innerWidth - 32);
+            const maxHeight = Math.max(320, window.innerHeight - 32);
+            const minWidth = Math.min(760, maxWidth);
+            const minHeight = Math.min(360, maxHeight);
+            const deltaX = event.clientX - drag.startX;
+            const deltaY = event.clientY - drag.startY;
+
+            setManualDialogSize((current) => ({
+                width:
+                    drag.axis === 'height'
+                        ? current.width
+                        : clampNumber(
+                              drag.startWidth + deltaX * drag.horizontalMultiplier,
+                              minWidth,
+                              maxWidth
+                          ),
+                height:
+                    drag.axis === 'width'
+                        ? current.height
+                        : clampNumber(
+                              drag.startHeight + deltaY * drag.verticalMultiplier,
+                              minHeight,
+                              maxHeight
+                          ),
+            }));
+        };
+
+        const onPointerUp = () => {
+            if (!resizeDragRef.current) return;
+            resizeDragRef.current = null;
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
+
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+        window.addEventListener('pointercancel', onPointerUp);
+        return () => {
+            window.removeEventListener('pointermove', onPointerMove);
+            window.removeEventListener('pointerup', onPointerUp);
+            window.removeEventListener('pointercancel', onPointerUp);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
+    }, []);
+
+    const startDialogResize = useCallback(
+        (
+            event: React.PointerEvent<HTMLElement>,
+            axis: NoDataReportResizeAxis,
+            horizontalMultiplier: number,
+            verticalMultiplier: number
+        ) => {
+            if (!dialogRef.current) return;
+            event.preventDefault();
+            event.stopPropagation();
+
+            const rect = dialogRef.current.getBoundingClientRect();
+            resizeDragRef.current = {
+                axis,
+                startX: event.clientX,
+                startY: event.clientY,
+                startWidth: rect.width,
+                startHeight: rect.height,
+                horizontalMultiplier,
+                verticalMultiplier,
+            };
+            document.body.style.cursor =
+                axis === 'both'
+                    ? 'nwse-resize'
+                    : axis === 'width'
+                      ? 'ew-resize'
+                      : 'ns-resize';
+            document.body.style.userSelect = 'none';
+        },
+        []
     );
+
+    const toggleSort = useCallback((key: NoDataReportSortKey) => {
+        setSortConfig((current) =>
+            current.key === key
+                ? {
+                      key,
+                      direction: current.direction === 'asc' ? 'desc' : 'asc',
+                  }
+                : { key, direction: 'asc' }
+        );
+    }, []);
+
+    const rows = useMemo(() => {
+        const valueFor = (
+            entry: ObservedNoDataEntry,
+            key: NoDataReportSortKey
+        ): string => {
+            if (key === 'tags') {
+                return (entryByName.get(entry.searchName)?.tags ?? entry.tags).join(', ');
+            }
+            return entry[key] ?? '';
+        };
+
+        return [...entries].sort((a, b) => {
+            const direction = sortConfig.direction === 'asc' ? 1 : -1;
+            const primary =
+                valueFor(a, sortConfig.key).localeCompare(
+                    valueFor(b, sortConfig.key),
+                    undefined,
+                    { numeric: true, sensitivity: 'base' }
+                ) * direction;
+            return (
+                primary ||
+                a.stanzaName.localeCompare(b.stanzaName) ||
+                a.searchName.localeCompare(b.searchName)
+            );
+        });
+    }, [entries, entryByName, sortConfig]);
     const reportSearch = useMemo(
         () => buildObservedNoDataReportSearch(rows),
         [rows]
     );
     const reportUrl = splunkSearchAppUrl(reportSearch, range);
+    const splPreviewMaxWidth = useMemo(() => {
+        const viewportMax =
+            typeof window === 'undefined' ? 1180 : Math.max(320, window.innerWidth - 48);
+        const scaledWidth = 760 + Math.max(0, dialogPixels.width - 1080) * 0.5;
+        return clampNumber(scaledWidth, 760, Math.min(1180, viewportMax));
+    }, [dialogPixels.width]);
+    const dialogStyle = useMemo(
+        () =>
+            ({
+                width: manualDialogSize.width
+                    ? `${manualDialogSize.width}px`
+                    : 'min(96vw, 1680px)',
+                height: manualDialogSize.height
+                    ? `${manualDialogSize.height}px`
+                    : 'min(88vh, 900px)',
+                minWidth: 'min(760px, calc(100vw - 2rem))',
+                minHeight: 'min(360px, calc(100vh - 2rem))',
+                maxWidth: 'calc(100vw - 2rem)',
+                maxHeight: 'calc(100vh - 2rem)',
+                resize: 'both',
+            }) as React.CSSProperties,
+        [manualDialogSize.height, manualDialogSize.width]
+    );
+    const renderSortHeader = (column: (typeof NO_DATA_REPORT_SORT_COLUMNS)[number]) => {
+        const active = sortConfig.key === column.key;
+        const ariaSort = active
+            ? sortConfig.direction === 'asc'
+                ? 'ascending'
+                : 'descending'
+            : 'none';
+
+        return (
+            <th key={column.key} className={column.thClassName} aria-sort={ariaSort}>
+                <button
+                    type="button"
+                    onClick={() => toggleSort(column.key)}
+                    className={cn(
+                        'inline-flex items-center gap-1.5 rounded px-1 py-0.5 text-left transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-slate-100',
+                        active && 'text-slate-900 dark:text-slate-100'
+                    )}
+                >
+                    <span>{column.label}</span>
+                    <ChevronDown
+                        className={cn(
+                            'h-3.5 w-3.5 transition-transform',
+                            active
+                                ? sortConfig.direction === 'asc' && 'rotate-180'
+                                : 'opacity-25'
+                        )}
+                    />
+                </button>
+            </th>
+        );
+    };
 
     return (
         <div
@@ -2051,8 +2302,13 @@ const NoDataReportModal: React.FC<{
             }}
         >
             <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm" />
-            <div className="relative w-full max-w-6xl max-h-[88vh] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-950">
-                <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
+            <div
+                ref={dialogRef}
+                className="relative flex overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-950"
+                style={dialogStyle}
+            >
+                <div className="flex min-h-0 w-full flex-col">
+                <div className="flex flex-shrink-0 items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
                     <div>
                         <div className="flex items-center gap-2">
                             <Table2 className="h-4 w-4 text-sky-600 dark:text-sky-300" />
@@ -2090,13 +2346,11 @@ const NoDataReportModal: React.FC<{
                     </div>
                 </div>
 
-                <div className="max-h-[calc(88vh-90px)] overflow-auto">
-                    <table className="w-full min-w-[900px] text-sm">
+                <div className="min-h-0 flex-1 overflow-auto">
+                    <table className="w-full min-w-[1180px] text-sm">
                         <thead className="sticky top-0 z-10 border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
                             <tr className="text-left text-xs font-bold text-slate-500 dark:text-slate-400">
-                                <th className="px-5 py-3">stanza_name</th>
-                                <th className="px-4 py-3">search_name</th>
-                                <th className="px-4 py-3">category</th>
+                                {NO_DATA_REPORT_SORT_COLUMNS.map(renderSortHeader)}
                                 <th className="px-4 py-3">reason</th>
                                 <th className="px-4 py-3">time_range</th>
                                 <th className="px-4 py-3 text-right">action</th>
@@ -2106,7 +2360,7 @@ const NoDataReportModal: React.FC<{
                             {rows.length === 0 ? (
                                 <tr>
                                     <td
-                                        colSpan={6}
+                                        colSpan={8}
                                         className="px-5 py-10 text-center text-sm text-slate-500 dark:text-slate-400"
                                     >
                                         Run tiles first; searches that complete with 0 rows
@@ -2116,6 +2370,11 @@ const NoDataReportModal: React.FC<{
                             ) : (
                                 rows.map((row) => {
                                     const record = entryByName.get(row.searchName);
+                                    const searchDescription =
+                                        (record ? recordPlainText(record) : row.description) ||
+                                        'No description available';
+                                    const searchSpl = record?.search ?? row.search;
+                                    const tags = record?.tags ?? row.tags;
                                     return (
                                         <tr
                                             key={`${row.tileId}-${row.observedAt}`}
@@ -2125,12 +2384,59 @@ const NoDataReportModal: React.FC<{
                                                 {row.stanzaName}
                                             </td>
                                             <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
-                                                {row.searchName}
+                                                <div className="flex items-start gap-2">
+                                                    <span>{row.searchName}</span>
+                                                    <InfoTooltip
+                                                        title={row.searchName}
+                                                        description={searchDescription}
+                                                        footnote={row.stanzaName}
+                                                        anchor="right"
+                                                        iconAriaLabel={`Show description for ${row.searchName}`}
+                                                        className="mt-0.5 flex-none"
+                                                        iconClassName="text-sky-600 hover:text-sky-700 focus:text-sky-700 dark:text-sky-300 dark:hover:text-sky-200 dark:focus:text-sky-200"
+                                                    />
+                                                    <SplPreviewTooltip
+                                                        title={row.searchName}
+                                                        spl={searchSpl}
+                                                        footnote={row.stanzaName}
+                                                        anchor="left"
+                                                        iconAriaLabel={`Preview SPL for ${row.searchName}`}
+                                                        className="mt-0.5 flex-none"
+                                                        iconClassName="text-indigo-600 hover:text-indigo-700 focus:text-indigo-700 dark:text-indigo-300 dark:hover:text-indigo-200 dark:focus:text-indigo-200"
+                                                        fontScale={SPL_PREVIEW_FONT_SCALE}
+                                                        maxWidth={splPreviewMaxWidth}
+                                                    />
+                                                </div>
                                             </td>
                                             <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
-                                                {[row.category, row.subCategory]
-                                                    .filter(Boolean)
-                                                    .join(' / ') || '-'}
+                                                {row.category || '-'}
+                                            </td>
+                                            <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
+                                                {row.subCategory || '-'}
+                                            </td>
+                                            <td
+                                                className="px-4 py-3 text-slate-600 dark:text-slate-300"
+                                                title={tags.join(', ') || 'No tags'}
+                                            >
+                                                {tags.length > 0 ? (
+                                                    <div className="flex max-w-[220px] flex-wrap gap-1">
+                                                        {tags.slice(0, 4).map((tag) => (
+                                                            <span
+                                                                key={tag}
+                                                                className="rounded border border-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 dark:border-slate-700 dark:text-slate-300"
+                                                            >
+                                                                {tag}
+                                                            </span>
+                                                        ))}
+                                                        {tags.length > 4 && (
+                                                            <span className="rounded border border-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 dark:border-slate-700 dark:text-slate-500">
+                                                                +{tags.length - 4}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    '-'
+                                                )}
                                             </td>
                                             <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
                                                 {noDataReasonLabel(row.reason)}
@@ -2162,6 +2468,45 @@ const NoDataReportModal: React.FC<{
                         </tbody>
                     </table>
                 </div>
+                </div>
+                <button
+                    type="button"
+                    tabIndex={-1}
+                    aria-label="Resize no data report from the left edge"
+                    onPointerDown={(event) => startDialogResize(event, 'width', -1, 0)}
+                    className="absolute bottom-10 left-0 top-14 z-20 w-2 cursor-ew-resize rounded-l-lg transition-colors hover:bg-sky-400/20"
+                />
+                <button
+                    type="button"
+                    tabIndex={-1}
+                    aria-label="Resize no data report from the right edge"
+                    onPointerDown={(event) => startDialogResize(event, 'width', 1, 0)}
+                    className="absolute bottom-10 right-0 top-14 z-20 w-2 cursor-ew-resize rounded-r-lg transition-colors hover:bg-sky-400/20"
+                />
+                <button
+                    type="button"
+                    tabIndex={-1}
+                    aria-label="Resize no data report from the top edge"
+                    onPointerDown={(event) => startDialogResize(event, 'height', 0, -1)}
+                    className="absolute left-10 right-10 top-0 z-20 h-2 cursor-ns-resize rounded-t-lg transition-colors hover:bg-sky-400/20"
+                />
+                <button
+                    type="button"
+                    tabIndex={-1}
+                    aria-label="Resize no data report from the bottom edge"
+                    onPointerDown={(event) => startDialogResize(event, 'height', 0, 1)}
+                    className="absolute bottom-0 left-10 right-10 z-20 h-2 cursor-ns-resize transition-colors hover:bg-sky-400/20"
+                />
+                <button
+                    type="button"
+                    tabIndex={-1}
+                    aria-label="Resize no data report from the corner"
+                    onPointerDown={(event) => startDialogResize(event, 'both', 1, 1)}
+                    className="absolute bottom-0 right-0 z-30 h-8 w-8 cursor-nwse-resize rounded-br-lg transition-colors hover:bg-sky-400/20"
+                >
+                    <span className="pointer-events-none absolute bottom-1 right-1 h-3 w-3 border-b border-r border-slate-400 dark:border-slate-500" />
+                    <span className="pointer-events-none absolute bottom-2 right-2 h-2 w-2 border-b border-r border-slate-300 dark:border-slate-600" />
+                </button>
             </div>
         </div>
     );
