@@ -539,6 +539,7 @@ interface SignalTickerRailProps {
     metricDefaultsBySearchName?: Map<string, SignalTickerMetricDefaults>;
     range: TimeRange;
     refreshToken: number;
+    paused?: boolean;
     onOpenEditor: () => void;
 }
 
@@ -548,6 +549,7 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
     metricDefaultsBySearchName,
     range,
     refreshToken,
+    paused = false,
     onOpenEditor,
 }) => {
     const [visualById, setVisualById] = useState<
@@ -642,6 +644,9 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
         if (typeof window === 'undefined') {
             return undefined;
         }
+        if (paused) {
+            return undefined;
+        }
         const reduceMotion = window.matchMedia?.(
             '(prefers-reduced-motion: reduce)'
         ).matches;
@@ -676,7 +681,7 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
         };
         animationFrame = window.requestAnimationFrame(tick);
         return () => window.cancelAnimationFrame(animationFrame);
-    }, [applyTrackTransform, config.speed, getLoopWidth, rows]);
+    }, [applyTrackTransform, config.speed, getLoopWidth, paused, rows]);
 
     const handleRailPointerDown = useCallback(
         (event: React.PointerEvent<HTMLDivElement>) => {

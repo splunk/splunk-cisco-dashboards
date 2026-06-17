@@ -14,7 +14,7 @@
  *   * Mini incident ticker, currently empty until a real incident feed is wired
  *   * KPI cards under the topology map driven by searchbase or inline SPL
  *   * PNG / PDF export of the entire page
- *   * Keyboard shortcuts (g i, g s, g b, t, r, ?, /)
+ *   * Keyboard shortcuts (g i, g s, g b, g r, t, r, ?, /)
  *   * Click-to-pin map popups (ESC or X to close)
  *
  * Each "feature" surfaced through this page is independent — see the
@@ -3614,47 +3614,80 @@ const OverviewPage: React.FC = () => {
         );
         el?.focus();
     }, []);
+    const openSignalTickerEditor = useCallback(() => {
+        setSignalTickerEditorOpen(true);
+    }, []);
+    const closeHelp = useCallback(() => {
+        setHelpOpen(false);
+    }, []);
 
-    const SHORTCUTS: { keys: string; description: string; handler: () => void }[] = [
-        {
-            keys: 'g i',
-            description: `Open ${effectiveSectionMeta.it_health.title} dashboard (new tab)`,
-            handler: () => openDrilldown(effectiveSectionMeta.it_health.href),
-        },
-        {
-            keys: 'g s',
-            description: `Open ${effectiveSectionMeta.security.title} dashboard (new tab)`,
-            handler: () => openDrilldown(effectiveSectionMeta.security.href),
-        },
-        {
-            keys: 'g b',
-            description: `Open ${effectiveSectionMeta.building.title} (new tab)`,
-            handler: () => openDrilldown(effectiveSectionMeta.building.href),
-        },
-        { keys: 't', description: 'Cycle time range', handler: cycleTimeRange },
-        { keys: 'r', description: 'Refresh all data now', handler: refreshNow },
-        { keys: '/', description: 'Focus the time-range picker', handler: focusGlobalSearch },
-        {
-            keys: '?',
-            description: 'Toggle this help overlay',
-            handler: () => setHelpOpen((o) => !o),
-        },
-    ];
-    useKeyboardShortcuts(
-        SHORTCUTS.map((s) => ({
-            keys: s.keys,
-            description: s.description,
-            handler: s.handler,
-        })),
-        true
+    const SHORTCUTS = useMemo<
+        { keys: string; description: string; handler: () => void }[]
+    >(
+        () => [
+            {
+                keys: 'g i',
+                description: `Open ${effectiveSectionMeta.it_health.title} dashboard (new tab)`,
+                handler: () => openDrilldown(effectiveSectionMeta.it_health.href),
+            },
+            {
+                keys: 'g s',
+                description: `Open ${effectiveSectionMeta.security.title} dashboard (new tab)`,
+                handler: () => openDrilldown(effectiveSectionMeta.security.href),
+            },
+            {
+                keys: 'g b',
+                description: `Open ${effectiveSectionMeta.building.title} (new tab)`,
+                handler: () => openDrilldown(effectiveSectionMeta.building.href),
+            },
+            {
+                keys: 'g r',
+                description: 'Configure Signal Rail',
+                handler: openSignalTickerEditor,
+            },
+            { keys: 't', description: 'Cycle time range', handler: cycleTimeRange },
+            { keys: 'r', description: 'Refresh all data now', handler: refreshNow },
+            {
+                keys: '/',
+                description: 'Focus the time-range picker',
+                handler: focusGlobalSearch,
+            },
+            {
+                keys: '?',
+                description: 'Toggle this help overlay',
+                handler: () => setHelpOpen((o) => !o),
+            },
+        ],
+        [
+            cycleTimeRange,
+            effectiveSectionMeta.building.href,
+            effectiveSectionMeta.building.title,
+            effectiveSectionMeta.it_health.href,
+            effectiveSectionMeta.it_health.title,
+            effectiveSectionMeta.security.href,
+            effectiveSectionMeta.security.title,
+            focusGlobalSearch,
+            openDrilldown,
+            openSignalTickerEditor,
+            refreshNow,
+        ]
     );
+    const helpShortcutRows = useMemo(
+        () =>
+            SHORTCUTS.map((s) => ({
+                keys: s.keys,
+                description: s.description,
+            })),
+        [SHORTCUTS]
+    );
+    useKeyboardShortcuts(SHORTCUTS, true);
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && helpOpen) setHelpOpen(false);
+            if (e.key === 'Escape' && helpOpen) closeHelp();
         };
         document.addEventListener('keydown', onKey);
         return () => document.removeEventListener('keydown', onKey);
-    }, [helpOpen]);
+    }, [closeHelp, helpOpen]);
 
     // ------------------------------ Render ------------------------------
     const inputClass =
@@ -3926,7 +3959,13 @@ const OverviewPage: React.FC = () => {
                 metricDefaultsBySearchName={signalTickerMetricDefaults}
                 range={timeRange}
                 refreshToken={refreshToken}
-                onOpenEditor={() => setSignalTickerEditorOpen(true)}
+                paused={
+                    helpOpen ||
+                    signalTickerEditorOpen ||
+                    pickerContext !== null ||
+                    activeDetailTable !== null
+                }
+                onOpenEditor={openSignalTickerEditor}
             />
 
             {/* Customer-pinned, app-local drill-down. Keep this to one
@@ -4492,11 +4531,8 @@ const OverviewPage: React.FC = () => {
 
             <HelpOverlay
                 open={helpOpen}
-                onClose={() => setHelpOpen(false)}
-                shortcuts={SHORTCUTS.map((s) => ({
-                    keys: s.keys,
-                    description: s.description,
-                }))}
+                onClose={closeHelp}
+                shortcuts={helpShortcutRows}
             />
 
             <KpiPickerPanel

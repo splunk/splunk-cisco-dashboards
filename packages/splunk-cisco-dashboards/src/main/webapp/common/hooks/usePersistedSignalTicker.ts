@@ -41,72 +41,97 @@ const DEFAULT_SIGNAL_TICKER_CONFIG: SignalTickerConfig = {
     density: 'compact',
     items: [
         {
-            id: 'critical_sites_available',
-            searchName: 'Executive - Critical Website Availability',
-            label: 'Critical sites',
-            valueField: 'headline_pct',
-            thresholdWarning: 99.5,
+            id: 'thousandeyes_stream_age',
+            searchName:
+                'Feed Monitor - ThousandEyes - Stream Staleness (Signal Rail KPI)',
+            label: 'TE stream age',
+            valueField: 'age_minutes',
+            thresholdWarning: 30,
             thresholdCritical: 90,
-            thresholdDirection: 'higher_is_better',
-            thresholdUnit: '%',
-        },
-        {
-            id: 'network_health',
-            searchName: 'IT - Critical Systems - Network Health Score (Current)',
-            label: 'Network health',
-            valueField: 'score',
-            thresholdWarning: 95,
-            thresholdCritical: 80,
-            thresholdDirection: 'higher_is_better',
-            thresholdUnit: '%',
-        },
-        {
-            id: 'active_issues',
-            searchName: 'Executive - Issue Summary KPIs',
-            label: 'Active issues',
-            valueField: 'total',
-            thresholdWarning: 50,
-            thresholdCritical: 250,
             thresholdDirection: 'lower_is_better',
+            thresholdUnit: 'm',
         },
         {
-            id: 'xdr_critical',
-            searchName: 'Overview - XDR Critical Incidents',
-            label: 'XDR critical',
-            valueField: 'total',
-            thresholdWarning: 1,
-            thresholdCritical: 5,
+            id: 'ftd_firewall_age',
+            searchName:
+                'Feed Monitor - FTD Firewall - Stream Staleness (Signal Rail KPI)',
+            label: 'FTD feed age',
+            valueField: 'age_minutes',
+            thresholdWarning: 30,
+            thresholdCritical: 90,
             thresholdDirection: 'lower_is_better',
+            thresholdUnit: 'm',
         },
         {
-            id: 'failed_auth',
-            searchName: 'Executive - Failed Logon Count (with Baseline)',
-            label: 'Failed auth',
-            valueField: 'total_count',
-            thresholdWarning: 25,
-            thresholdCritical: 100,
+            id: 'fmc_estreamer_age',
+            searchName:
+                'Feed Monitor - FMC eStreamer - IPS Feed Staleness (Signal Rail KPI)',
+            label: 'FMC IPS age',
+            valueField: 'age_minutes',
+            thresholdWarning: 60,
+            thresholdCritical: 180,
             thresholdDirection: 'lower_is_better',
+            thresholdUnit: 'm',
         },
         {
-            id: 'threat_sources',
-            searchName: 'Executive - Threat Sources (with Baseline)',
-            label: 'Threat sources',
-            valueField: 'total_sources',
-            thresholdWarning: 25,
-            thresholdCritical: 100,
+            id: 'ise_syslog_age',
+            searchName:
+                'Feed Monitor - ISE - RADIUS Syslog Staleness (Signal Rail KPI)',
+            label: 'ISE syslog age',
+            valueField: 'age_minutes',
+            thresholdWarning: 30,
+            thresholdCritical: 90,
             thresholdDirection: 'lower_is_better',
+            thresholdUnit: 'm',
+        },
+        {
+            id: 'catalyst_center_age',
+            searchName:
+                'Feed Monitor - Catalyst Center - API Feed Staleness (Signal Rail KPI)',
+            label: 'Catalyst API age',
+            valueField: 'age_minutes',
+            thresholdWarning: 60,
+            thresholdCritical: 180,
+            thresholdDirection: 'lower_is_better',
+            thresholdUnit: 'm',
+        },
+        {
+            id: 'spaces_firehose_age',
+            searchName:
+                'Feed Monitor - Cisco Spaces - Firehose Staleness (Signal Rail KPI)',
+            label: 'Spaces feed age',
+            valueField: 'age_minutes',
+            thresholdWarning: 90,
+            thresholdCritical: 240,
+            thresholdDirection: 'lower_is_better',
+            thresholdUnit: 'm',
         },
     ],
 };
 
-const LEGACY_FACTORY_SIGNAL_TICKER_IDS = new Set([
-    'event_ops_feeds_active',
-    'catalyst_active_issues',
-    'catalyst_compliance_ready',
-    'fmc_ips_ready',
-    'thousandeyes_feed_ready',
-    'duo_auth_ready',
-]);
+const LEGACY_FACTORY_SIGNAL_TICKER_ID_SETS = [
+    new Set([
+        'event_ops_feeds_active',
+        'catalyst_active_issues',
+        'catalyst_compliance_ready',
+        'fmc_ips_ready',
+        'thousandeyes_feed_ready',
+        'duo_auth_ready',
+    ]),
+    // Build 2026-06-16 briefly defaulted the Signal Rail to the same
+    // searchbase entries used by the factory Overview section tiles.
+    // Treat that exact six-item selection as a factory preset so it
+    // migrates to the dedicated feed-monitor rail without replacing a
+    // genuinely customized operator rail.
+    new Set([
+        'critical_sites_available',
+        'network_health',
+        'active_issues',
+        'xdr_critical',
+        'failed_auth',
+        'threat_sources',
+    ]),
+];
 
 const RENAMED_SEARCH_NAMES = new Map([
     [
@@ -248,8 +273,11 @@ const sanitizeConfig = (raw: unknown): SignalTickerConfig | null => {
 };
 
 const isLegacyFactorySignalTickerConfig = (config: SignalTickerConfig): boolean =>
-    config.items.length === LEGACY_FACTORY_SIGNAL_TICKER_IDS.size &&
-    config.items.every((item) => LEGACY_FACTORY_SIGNAL_TICKER_IDS.has(item.id));
+    LEGACY_FACTORY_SIGNAL_TICKER_ID_SETS.some(
+        (ids) =>
+            config.items.length === ids.size &&
+            config.items.every((item) => ids.has(item.id))
+    );
 
 const migrateSignalTickerConfig = (
     config: SignalTickerConfig

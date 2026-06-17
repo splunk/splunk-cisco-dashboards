@@ -34,6 +34,7 @@ import {
     Check,
     ChevronRight,
     Code2,
+    Crosshair,
     Download,
     ExternalLink,
     Globe,
@@ -320,22 +321,113 @@ const ROLE_DOT_CLASS: Record<KnownTopologyRole, string> = {
     branch: 'bg-violet-600',
     datacenter: 'bg-purple-600',
     internet_edge: 'bg-slate-600',
-    campus: 'bg-blue-400',
-    office: 'bg-sky-500',
+    campus: 'bg-cyan-600',
+    office: 'bg-sky-400',
     event_venue: 'bg-fuchsia-600',
-    cisco_live: 'bg-violet-500',
+    cisco_live: 'bg-violet-400',
     lab: 'bg-indigo-400',
-    cloud_region: 'bg-slate-700',
+    cloud_region: 'bg-zinc-700',
 };
 
-const CUSTOM_ROLE_DOT_CLASS = 'bg-slate-500';
+type RoleBeaconChrome = { fill: string; halo: string; label: string };
+
+const CUSTOM_ROLE_SWATCHES: Array<{
+    dotClass: string;
+    chrome: RoleBeaconChrome;
+}> = [
+    {
+        dotClass: 'bg-slate-500',
+        chrome: {
+            fill: '#64748b',
+            halo: 'rgba(100, 116, 139, 0.22)',
+            label: 'border-slate-200',
+        },
+    },
+    {
+        dotClass: 'bg-cyan-500',
+        chrome: {
+            fill: '#06b6d4',
+            halo: 'rgba(6, 182, 212, 0.23)',
+            label: 'border-cyan-200',
+        },
+    },
+    {
+        dotClass: 'bg-sky-500',
+        chrome: {
+            fill: '#0ea5e9',
+            halo: 'rgba(14, 165, 233, 0.23)',
+            label: 'border-sky-200',
+        },
+    },
+    {
+        dotClass: 'bg-blue-500',
+        chrome: {
+            fill: '#3b82f6',
+            halo: 'rgba(59, 130, 246, 0.23)',
+            label: 'border-blue-200',
+        },
+    },
+    {
+        dotClass: 'bg-indigo-500',
+        chrome: {
+            fill: '#6366f1',
+            halo: 'rgba(99, 102, 241, 0.23)',
+            label: 'border-indigo-200',
+        },
+    },
+    {
+        dotClass: 'bg-violet-500',
+        chrome: {
+            fill: '#8b5cf6',
+            halo: 'rgba(139, 92, 246, 0.24)',
+            label: 'border-violet-200',
+        },
+    },
+    {
+        dotClass: 'bg-purple-500',
+        chrome: {
+            fill: '#a855f7',
+            halo: 'rgba(168, 85, 247, 0.23)',
+            label: 'border-purple-200',
+        },
+    },
+    {
+        dotClass: 'bg-fuchsia-500',
+        chrome: {
+            fill: '#d946ef',
+            halo: 'rgba(217, 70, 239, 0.23)',
+            label: 'border-fuchsia-200',
+        },
+    },
+    {
+        dotClass: 'bg-zinc-500',
+        chrome: {
+            fill: '#71717a',
+            halo: 'rgba(113, 113, 122, 0.22)',
+            label: 'border-zinc-200',
+        },
+    },
+];
+
+const customRoleSwatchIndex = (role: TopologyRole): number => {
+    const value = String(role ?? '').trim().toLowerCase();
+    if (!value) return 0;
+    let hash = 0;
+    for (let index = 0; index < value.length; index += 1) {
+        hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+    }
+    return hash % CUSTOM_ROLE_SWATCHES.length;
+};
+
+const customRoleSwatch = (role: TopologyRole) =>
+    CUSTOM_ROLE_SWATCHES[customRoleSwatchIndex(role)] ?? CUSTOM_ROLE_SWATCHES[0];
 
 const topologyRoleDotClass = (role: TopologyRole): string =>
-    isKnownTopologyRole(role) ? ROLE_DOT_CLASS[role] : CUSTOM_ROLE_DOT_CLASS;
+    isKnownTopologyRole(role) ? ROLE_DOT_CLASS[role] : customRoleSwatch(role).dotClass;
 
 const ROLE_BEACON_CHROME: Record<
     KnownTopologyRole,
-    { fill: string; halo: string; label: string }
+    RoleBeaconChrome
 > = {
     state_hq: {
         fill: '#0284c7',
@@ -368,13 +460,13 @@ const ROLE_BEACON_CHROME: Record<
         label: 'border-slate-200',
     },
     campus: {
-        fill: '#60a5fa',
-        halo: 'rgba(96, 165, 250, 0.23)',
-        label: 'border-blue-200',
+        fill: '#0891b2',
+        halo: 'rgba(8, 145, 178, 0.23)',
+        label: 'border-cyan-200',
     },
     office: {
-        fill: '#0ea5e9',
-        halo: 'rgba(14, 165, 233, 0.23)',
+        fill: '#38bdf8',
+        halo: 'rgba(56, 189, 248, 0.23)',
         label: 'border-sky-200',
     },
     event_venue: {
@@ -383,8 +475,8 @@ const ROLE_BEACON_CHROME: Record<
         label: 'border-fuchsia-200',
     },
     cisco_live: {
-        fill: '#8b5cf6',
-        halo: 'rgba(139, 92, 246, 0.24)',
+        fill: '#a78bfa',
+        halo: 'rgba(167, 139, 250, 0.24)',
         label: 'border-violet-200',
     },
     lab: {
@@ -393,22 +485,16 @@ const ROLE_BEACON_CHROME: Record<
         label: 'border-indigo-200',
     },
     cloud_region: {
-        fill: '#334155',
-        halo: 'rgba(51, 65, 85, 0.23)',
-        label: 'border-slate-200',
+        fill: '#3f3f46',
+        halo: 'rgba(63, 63, 70, 0.23)',
+        label: 'border-zinc-200',
     },
-};
-
-const CUSTOM_ROLE_BEACON_CHROME = {
-    fill: '#64748b',
-    halo: 'rgba(100, 116, 139, 0.22)',
-    label: 'border-slate-200',
 };
 
 const topologyRoleBeaconChrome = (role: TopologyRole) =>
     isKnownTopologyRole(role)
         ? ROLE_BEACON_CHROME[role]
-        : CUSTOM_ROLE_BEACON_CHROME;
+        : customRoleSwatch(role).chrome;
 
 const LEGACY_TOPOLOGY_STORAGE_KEY = 'splunk-cisco-dashboards.customerTopology.v4';
 const TOPOLOGY_CONFIG_EVENT = 'splunk-cisco-dashboards:customer-topology-config';
@@ -4384,6 +4470,40 @@ interface MapFrameProps {
     autoFitSites?: TopologySite[];
 }
 
+type TopologyMapView = {
+    center: CustomerTopology['map']['center'];
+    zoom: number;
+};
+
+const mapViewFromTopologyMap = (
+    map: CustomerTopology['map']
+): TopologyMapView => ({
+    center: [
+        Number(map.center[0].toFixed(5)),
+        Number(map.center[1].toFixed(5)),
+    ],
+    zoom: Number(map.zoom.toFixed(2)),
+});
+
+const mapViewFromLeaflet = (map: L.Map): TopologyMapView => {
+    const center = map.getCenter();
+    return {
+        center: [
+            Number(center.lat.toFixed(5)),
+            Number(center.lng.toFixed(5)),
+        ],
+        zoom: Number(map.getZoom().toFixed(2)),
+    };
+};
+
+const topologyMapViewsMatch = (
+    left: TopologyMapView,
+    right: TopologyMapView
+): boolean =>
+    left.center[0] === right.center[0] &&
+    left.center[1] === right.center[1] &&
+    left.zoom === right.zoom;
+
 const MapFrame: React.FC<MapFrameProps> = ({ topology, autoFitSites }) => {
     const map = useMap();
     const [centerLat, centerLng] = topology.map.center;
@@ -4496,6 +4616,28 @@ const MapFrame: React.FC<MapFrameProps> = ({ topology, autoFitSites }) => {
     return null;
 };
 
+interface MapViewCaptureProps {
+    onViewChange: (view: TopologyMapView) => void;
+}
+
+const MapViewCapture: React.FC<MapViewCaptureProps> = ({ onViewChange }) => {
+    const map = useMap();
+    const emitView = useCallback(() => {
+        onViewChange(mapViewFromLeaflet(map));
+    }, [map, onViewChange]);
+
+    useEffect(() => {
+        emitView();
+    }, [emitView]);
+
+    useMapEvents({
+        moveend: emitView,
+        zoomend: emitView,
+    });
+
+    return null;
+};
+
 interface MapClickCaptureProps {
     enabled: boolean;
     onPick: (lat: number, lng: number) => void;
@@ -4565,6 +4707,9 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     const [draftTopology, setDraftTopology] = useState<CustomerTopology>(() =>
         cloneTopology(storedTopology)
     );
+    const [currentMapView, setCurrentMapView] = useState<TopologyMapView>(() =>
+        mapViewFromTopologyMap(storedTopology.map)
+    );
     const [pickSiteId, setPickSiteId] = useState<string | null>(null);
     const [roleLegendMode, setRoleLegendMode] =
         useState<TopologyRoleLegendMode>(readStoredRoleLegendMode);
@@ -4620,6 +4765,23 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         setRoleLegendMode(next);
         writeStoredRoleLegendMode(next);
     }, []);
+
+    const updateCurrentMapView = useCallback((view: TopologyMapView) => {
+        setCurrentMapView((current) =>
+            topologyMapViewsMatch(current, view) ? current : view
+        );
+    }, []);
+
+    const applyCurrentMapViewToDraft = useCallback(() => {
+        setDraftTopology((current) => ({
+            ...current,
+            map: {
+                ...current.map,
+                center: currentMapView.center,
+                zoom: currentMapView.zoom,
+            },
+        }));
+    }, [currentMapView]);
 
     // Track which sites we've already shown the entrance animation for so a
     // later toggle of animation level doesn't restart drop-in for everyone.
@@ -5613,6 +5775,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                             : undefined
                     }
                 />
+                <MapViewCapture onViewChange={updateCurrentMapView} />
                 <MapClickCapture
                     enabled={isEditorOpen && Boolean(pickSiteId)}
                     onPick={applyMapPick}
@@ -5708,6 +5871,8 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 pickSiteId={pickSiteId}
                 onPickSite={setPickSiteId}
                 onTopologyChange={setDraftTopology}
+                currentMapView={currentMapView}
+                onApplyCurrentMapView={applyCurrentMapViewToDraft}
                 onSave={saveEditor}
                 onResetFactory={resetEditor}
                 isSaving={isEditorSaving}
@@ -6881,6 +7046,8 @@ interface TopologyEditorPanelProps {
     pickSiteId: string | null;
     onPickSite: (siteId: string | null) => void;
     onTopologyChange: React.Dispatch<React.SetStateAction<CustomerTopology>>;
+    currentMapView: TopologyMapView;
+    onApplyCurrentMapView: () => void;
     onSave: () => void | Promise<void>;
     onResetFactory: () => void | Promise<void>;
     isSaving?: boolean;
@@ -6940,6 +7107,8 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
     pickSiteId,
     onPickSite,
     onTopologyChange,
+    currentMapView,
+    onApplyCurrentMapView,
     onSave,
     onResetFactory,
     isSaving = false,
@@ -7513,6 +7682,22 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                     }
                                 />
                             </label>
+                            <div className="flex items-center justify-end">
+                                <button
+                                    type="button"
+                                    onClick={onApplyCurrentMapView}
+                                    title={`Copy current map view: ${currentMapView.center[0]}, ${currentMapView.center[1]} at zoom ${currentMapView.zoom}`}
+                                    className={cn(
+                                        'inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-black uppercase tracking-wider transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                                        isDark
+                                            ? 'border-sky-500/40 bg-sky-500/10 text-sky-200 hover:bg-sky-500/20'
+                                            : 'border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100'
+                                    )}
+                                >
+                                    <Crosshair className="h-3.5 w-3.5" />
+                                    Use current view
+                                </button>
+                            </div>
                             <div className="grid grid-cols-3 gap-2">
                                 <label className="space-y-1">
                                     <span
