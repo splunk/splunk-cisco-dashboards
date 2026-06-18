@@ -9,7 +9,7 @@
 	"inputs": {
 		"input_global_trp": {
 			"options": {
-				"defaultValue": "-14d@d,now",
+				"defaultValue": "-7d@h,now",
 				"token": "global_time"
 			},
 			"title": "",
@@ -378,7 +378,8 @@
 					"#0051b5"
 				],
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Client Health (0-10)"
+				"yAxisTitleText": "Client Health (0-10)",
+				"nullValueDisplay": "connect"
 			},
 			"showLastUpdated": false,
 			"showProgressBar": false,
@@ -405,7 +406,8 @@
 					"#7B56DB"
 				],
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Health Score (0-100)"
+				"yAxisTitleText": "Health Score (0-100)",
+				"markerDisplay": "filled"
 			},
 			"title": "DNAC × DNAC — network & client health + DNAC issues + date annotations",
 			"type": "splunk.line"
@@ -560,7 +562,8 @@
 					"#6EBE4A",
 					"#7B56DB"
 				],
-				"xAxisTitleVisibility": "hide"
+				"xAxisTitleVisibility": "hide",
+				"markerDisplay": "filled"
 			},
 			"title": "Webex sensors — humidity by floor + exercise annotations",
 			"type": "splunk.line"
@@ -610,7 +613,8 @@
 				],
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Issues"
+				"yAxisTitleText": "Issues",
+				"dataValuesDisplay": "minmax"
 			},
 			"showLastUpdated": false,
 			"showProgressBar": false,
@@ -1036,7 +1040,9 @@
 					"#6EBE4A",
 					"#7B56DB"
 				],
-				"xAxisTitleVisibility": "hide"
+				"xAxisTitleVisibility": "hide",
+				"nullValueDisplay": "connect",
+				"markerDisplay": "filled"
 			},
 			"title": "Webex sensors — temperature by floor + exercise annotations",
 			"type": "splunk.line"
@@ -1133,7 +1139,8 @@
 					"#D64550",
 					"#CCCCCC",
 					"#CCCCCC"
-				]
+				],
+				"markerDisplay": "outlined"
 			},
 			"title": "Daily visitors with 7-day forecast",
 			"type": "splunk.line"

@@ -195,7 +195,8 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "ISE Failures",
 			"type": "splunk.singlevalue"
@@ -229,7 +230,8 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Email Threats",
 			"type": "splunk.singlevalue"
@@ -392,7 +394,8 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Failed (ISE+AD)",
 			"type": "splunk.singlevalue"
@@ -512,7 +515,8 @@
 				],
 				"xAxisLabelVisibility": "hide",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide"
+				"yAxisTitleVisibility": "hide",
+				"nullValueDisplay": "connect"
 			},
 			"title": "Firewall Trend",
 			"type": "splunk.area"
@@ -534,7 +538,8 @@
 				],
 				"xAxisLabelVisibility": "hide",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide"
+				"yAxisTitleVisibility": "hide",
+				"nullValueDisplay": "connect"
 			},
 			"title": "Identity Events Trend (AD + ISE)",
 			"type": "splunk.line"
@@ -554,7 +559,8 @@
 				],
 				"xAxisLabelVisibility": "hide",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide"
+				"yAxisTitleVisibility": "hide",
+				"nullValueDisplay": "connect"
 			},
 			"title": "Identity Trend (ISE + AD)",
 			"type": "splunk.line"
@@ -588,7 +594,8 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "IDS/IPS Alerts",
 			"type": "splunk.singlevalue"
@@ -644,7 +651,8 @@
 				],
 				"xAxisLabelVisibility": "hide",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide"
+				"yAxisTitleVisibility": "hide",
+				"nullValueDisplay": "connect"
 			},
 			"title": "ISE Auth Trend",
 			"type": "splunk.area"
@@ -711,7 +719,8 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Lockouts (AD)",
 			"type": "splunk.singlevalue"
@@ -791,7 +800,8 @@
 			"description": "Trend line",
 			"options": {
 				"backgroundColor": "transparent",
-				"xAxisTitleVisibility": "hide"
+				"xAxisTitleVisibility": "hide",
+				"nullValueDisplay": "connect"
 			},
 			"showLastUpdated": false,
 			"showProgressBar": false,
@@ -827,7 +837,8 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Privileged (AD)",
 			"type": "splunk.singlevalue"
@@ -893,7 +904,8 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Rogue Devices",
 			"type": "splunk.singlevalue"
@@ -927,7 +939,8 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "SD-WAN UTD",
 			"type": "splunk.singlevalue"
@@ -991,7 +1004,8 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Unauth Wireless",
 			"type": "splunk.singlevalue"
@@ -1025,7 +1039,8 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Web Blocked",
 			"type": "splunk.singlevalue"

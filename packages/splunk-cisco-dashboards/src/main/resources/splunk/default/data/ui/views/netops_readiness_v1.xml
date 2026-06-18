@@ -8,7 +8,7 @@
 	"inputs": {
 		"input_global_trp": {
 			"options": {
-				"defaultValue": "-20d@d,now",
+				"defaultValue": "-7d@h,now",
 				"token": "global_time"
 			},
 			"title": "Time range",
@@ -73,7 +73,8 @@
 				"xAxisTitleText": "Time",
 				"yAxisMax": 100,
 				"yAxisMin": 0,
-				"yAxisTitleText": "NRS"
+				"yAxisTitleText": "NRS",
+				"markerDisplay": "outlined"
 			},
 			"title": "NRS forecast - next 24 hours (95% confidence band)",
 			"type": "splunk.line"
@@ -337,7 +338,7 @@
 				"legendDisplay": "bottom",
 				"lineCurveStyle": "smooth",
 				"markerDisplay": "outlined",
-				"nullValueDisplay": "gaps",
+				"nullValueDisplay": "connect",
 				"overlayFields": [
 					"DNAC Active Issues",
 					"Spaces Concurrent Users"
@@ -756,7 +757,9 @@
 				"sparklineDisplay": "below",
 				"sparklineSeriesColor": "#049FD9",
 				"unit": "%",
-				"unitPosition": "after"
+				"unitPosition": "after",
+				"sparklineNullValueDisplay": "connect",
+				"showSparklineAreaGraph": true
 			},
 			"title": "Network Readiness Score",
 			"type": "splunk.singlevalue"

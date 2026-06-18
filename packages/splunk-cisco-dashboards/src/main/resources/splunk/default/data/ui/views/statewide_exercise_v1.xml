@@ -273,7 +273,7 @@
 			},
 			"description": "Client count over time colored by health status",
 			"options": {
-				"nullValueDisplay": "zero",
+				"nullValueDisplay": "connect",
 				"seriesColorsByField": {
 					"Fair Count": "#E5A823",
 					"Good Count": "#6EBE4A",
@@ -390,7 +390,8 @@
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"unit": "%"
+				"unit": "%",
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Client Health Score",
 			"type": "splunk.singlevalue"
@@ -525,7 +526,8 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Total Connected Clients",
 			"type": "splunk.singlevalue"
@@ -622,7 +624,8 @@
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"unit": "%"
+				"unit": "%",
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "AP Reachability",
 			"type": "splunk.singlevalue"
@@ -657,7 +660,8 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Access Points",
 			"type": "splunk.singlevalue"
@@ -805,7 +809,8 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Healthy Devices",
 			"type": "splunk.singlevalue"
@@ -911,7 +916,8 @@
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
 				"xAxisVisibility": "show",
-				"yAxisTitleText": "Issues"
+				"yAxisTitleText": "Issues",
+				"nullValueDisplay": "connect"
 			},
 			"title": "Total Issue Trend",
 			"type": "splunk.area"
@@ -947,7 +953,8 @@
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"unit": "%"
+				"unit": "%",
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Network Health",
 			"type": "splunk.singlevalue"
@@ -1105,7 +1112,8 @@
 				"majorValue": "> primary | seriesByName('Open') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
-				"unit": ""
+				"unit": "",
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Open Issues",
 			"type": "splunk.singlevalue"
@@ -1120,7 +1128,8 @@
 				"majorValue": "> primary | seriesByName('Resolved') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
-				"unit": ""
+				"unit": "",
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Resolved Issues",
 			"type": "splunk.singlevalue"
@@ -1135,7 +1144,8 @@
 				"majorValue": "> primary | seriesByName('Total') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
-				"unit": ""
+				"unit": "",
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Total Issues",
 			"type": "splunk.singlevalue"
@@ -1180,7 +1190,8 @@
 			"options": {
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Mbps"
+				"yAxisTitleText": "Mbps",
+				"nullValueDisplay": "connect"
 			},
 			"title": "Internet — Bandwidth by Protocol",
 			"type": "splunk.area"
@@ -1205,7 +1216,8 @@
 			"options": {
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Mbps"
+				"yAxisTitleText": "Mbps",
+				"nullValueDisplay": "connect"
 			},
 			"title": "Public Internet — Bandwidth by Protocol",
 			"type": "splunk.area"
@@ -1226,7 +1238,8 @@
 			"options": {
 				"xAxisTitleVisibility": "hide",
 				"xAxisVisibility": "show",
-				"yAxisTitleText": "Clients"
+				"yAxisTitleText": "Clients",
+				"nullValueDisplay": "connect"
 			},
 			"title": "Client Count per SSID",
 			"type": "splunk.line"
@@ -1239,7 +1252,8 @@
 			"options": {
 				"xAxisTitleVisibility": "hide",
 				"xAxisVisibility": "show",
-				"yAxisTitleText": "Clients"
+				"yAxisTitleText": "Clients",
+				"nullValueDisplay": "connect"
 			},
 			"title": "Client Count per SSID — Past Week",
 			"type": "splunk.line"
@@ -1272,7 +1286,8 @@
 				},
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Clients"
+				"yAxisTitleText": "Clients",
+				"nullValueDisplay": "connect"
 			},
 			"title": "Wired Client Trend",
 			"type": "splunk.area"
@@ -1291,7 +1306,8 @@
 				},
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Clients"
+				"yAxisTitleText": "Clients",
+				"nullValueDisplay": "connect"
 			},
 			"title": "Wired Clients — Past Week",
 			"type": "splunk.area"
@@ -1327,7 +1343,8 @@
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"unit": "%"
+				"unit": "%",
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Wired Health",
 			"type": "splunk.singlevalue"
@@ -1379,7 +1396,8 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Wired Clients",
 			"type": "splunk.singlevalue"
@@ -1398,7 +1416,8 @@
 				},
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Clients"
+				"yAxisTitleText": "Clients",
+				"nullValueDisplay": "connect"
 			},
 			"title": "Wireless Client Trend",
 			"type": "splunk.area"
@@ -1417,7 +1436,8 @@
 				},
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Clients"
+				"yAxisTitleText": "Clients",
+				"nullValueDisplay": "connect"
 			},
 			"title": "Wireless Clients — Past Week",
 			"type": "splunk.area"
@@ -1453,7 +1473,8 @@
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"unit": "%"
+				"unit": "%",
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Wireless Health",
 			"type": "splunk.singlevalue"
@@ -1505,7 +1526,8 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Wireless Clients",
 			"type": "splunk.singlevalue"

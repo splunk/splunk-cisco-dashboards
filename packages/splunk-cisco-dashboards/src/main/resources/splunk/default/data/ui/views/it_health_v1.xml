@@ -486,7 +486,8 @@
 				"legendDisplay": "bottom",
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide"
+				"yAxisTitleVisibility": "hide",
+				"nullValueDisplay": "connect"
 			},
 			"title": "Issue Trend by Category",
 			"type": "splunk.area"
@@ -520,7 +521,8 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "CPU/Memory Alerts >80%",
 			"type": "splunk.singlevalue"
@@ -554,7 +556,8 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "DHCP Pool Events",
 			"type": "splunk.singlevalue"
@@ -622,7 +625,8 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Recent Reboots",
 			"type": "splunk.singlevalue"
@@ -656,7 +660,8 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Unreachable Devices",
 			"type": "splunk.singlevalue"
@@ -693,7 +698,8 @@
 				],
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide"
+				"yAxisTitleVisibility": "hide",
+				"nullValueDisplay": "connect"
 			},
 			"title": "Network Health Trend",
 			"type": "splunk.area"
@@ -743,7 +749,8 @@
 				],
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide"
+				"yAxisTitleVisibility": "hide",
+				"nullValueDisplay": "connect"
 			},
 			"title": "Power Event Timeline (minute-by-minute)",
 			"type": "splunk.area"
@@ -1092,6 +1099,7 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
@@ -1108,6 +1116,7 @@
 			"options": {
 				"backgroundColor": "transparent",
 				"legendDisplay": "off",
+				"markerDisplay": "filled",
 				"nullValueDisplay": "connect",
 				"seriesColors": [
 					"#6EBE4A"
@@ -1271,6 +1280,8 @@
 			"options": {
 				"backgroundColor": "transparent",
 				"legendDisplay": "off",
+				"markerDisplay": "filled",
+				"nullValueDisplay": "connect",
 				"seriesColors": [
 					"#049FD9"
 				],
@@ -1326,6 +1337,7 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent"
@@ -1458,6 +1470,7 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
@@ -1474,6 +1487,7 @@
 			"options": {
 				"backgroundColor": "transparent",
 				"legendDisplay": "off",
+				"markerDisplay": "outlined",
 				"nullValueDisplay": "connect",
 				"seriesColors": [
 					"#049FD9"
@@ -1604,6 +1618,7 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent"
@@ -1726,7 +1741,8 @@
 				"backgroundColor": "transparent",
 				"legendDisplay": "bottom",
 				"lineWidth": 2,
-				"nullValueDisplay": "gaps",
+				"markerDisplay": "outlined",
+				"nullValueDisplay": "connect",
 				"yAxisTitleText": "Jitter (ms)"
 			},
 			"title": "Network Jitter Trend",
@@ -1741,7 +1757,8 @@
 				"backgroundColor": "transparent",
 				"legendDisplay": "bottom",
 				"lineWidth": 2,
-				"nullValueDisplay": "gaps",
+				"markerDisplay": "outlined",
+				"nullValueDisplay": "connect",
 				"yAxisTitleText": "Latency (ms)"
 			},
 			"title": "Network Latency Trend",
@@ -1756,7 +1773,8 @@
 				"backgroundColor": "transparent",
 				"legendDisplay": "bottom",
 				"lineWidth": 2,
-				"nullValueDisplay": "gaps",
+				"markerDisplay": "outlined",
+				"nullValueDisplay": "connect",
 				"yAxisTitleText": "Loss (%)"
 			},
 			"title": "Network Loss Trend",
@@ -3392,7 +3410,7 @@
 							"h": 70,
 							"w": 198,
 							"x": 30,
-							"y": -8
+							"y": 10
 						},
 						"type": "input"
 					},
@@ -3643,7 +3661,7 @@
 							"h": 70,
 							"w": 198,
 							"x": 30,
-							"y": -8
+							"y": 10
 						},
 						"type": "input"
 					}
@@ -4135,7 +4153,7 @@
 							"h": 70,
 							"w": 198,
 							"x": 30,
-							"y": -8
+							"y": 10
 						},
 						"type": "input"
 					}
@@ -4286,7 +4304,7 @@
 							"h": 70,
 							"w": 198,
 							"x": 30,
-							"y": -8
+							"y": 10
 						},
 						"type": "input"
 					}

@@ -558,7 +558,8 @@
 				"nullValueDisplay": "connect",
 				"xAxisLabelVisibility": "hide",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide"
+				"yAxisTitleVisibility": "hide",
+				"markerDisplay": "outlined"
 			},
 			"title": "SSID Association Trend",
 			"type": "splunk.line"
@@ -621,7 +622,8 @@
 				"stackMode": "stacked",
 				"xAxisLabelVisibility": "hide",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide"
+				"yAxisTitleVisibility": "hide",
+				"nullValueDisplay": "connect"
 			},
 			"title": "People detected by location",
 			"type": "splunk.area"
