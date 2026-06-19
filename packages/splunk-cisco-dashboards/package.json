@@ -59,7 +59,7 @@
         "@splunk/visualizations-shared": "28.3.0",
         "@xyflow/react": "^12.10.2",
         "clsx": "^2.1.1",
-        "dompurify": "^3.3.3",
+        "dompurify": "^3.4.11",
         "elkjs": "^0.11.1",
         "fast-xml-parser": "^5.5.9",
         "fflate": "^0.8.1",
