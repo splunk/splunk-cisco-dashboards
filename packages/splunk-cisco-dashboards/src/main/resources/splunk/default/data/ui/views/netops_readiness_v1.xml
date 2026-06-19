@@ -13,14 +13,6 @@
 			},
 			"title": "Time range",
 			"type": "input.timerange"
-		},
-		"input_site_filter": {
-			"options": {
-				"defaultValue": "",
-				"token": "site_filter"
-			},
-			"title": "Focus site (optional, click a bar to set; clear for all sites)",
-			"type": "input.text"
 		}
 	},
 	"defaults": {
@@ -1284,7 +1276,7 @@
 		"ds_q10_recovery_onboarding": {
 			"name": "Q10b - DNAC avg onboarding time over time",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| eval onb_ms = 'onboarding.avgRunDuration'\n| where isnotnull(onb_ms) AND onb_ms>0\n| timechart avg(onb_ms) as \"Avg Onboarding ms\"\n| eval \"Avg Onboarding Seconds\" = round('Avg Onboarding ms'/1000, 2)\n| fields - \"Avg Onboarding ms\"",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| eval onb_ms = 'onboarding.avgRunDuration'\n| where isnotnull(onb_ms) ```AND onb_ms>0```\n| timechart avg(onb_ms) as \"Avg Onboarding ms\"\n| eval \"Avg Onboarding Seconds\" = round('Avg Onboarding ms'/1000, 2)\n| fields - \"Avg Onboarding ms\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1339,7 +1331,7 @@
 		"ds_q4_onboarding_per_site": {
 			"name": "Q4a - DNAC onboarding time per site",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| eval site = siteHierarchy\n| where isnotnull(site) AND trim(site)!=\"\" AND lower(site)!=\"null\" AND NOT match(site, \"(?i)(^|/)null(/|$)\") AND NOT match(site, \"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$\")\n| eval onb_ms = 'onboarding.avgRunDuration'\n| where isnotnull(onb_ms) AND onb_ms>0\n| bin _time\n| stats avg(onb_ms) as onb_ms by _time, site\n| eval \"Onboarding Seconds\" = round(onb_ms/1000, 2)\n| xyseries _time site \"Onboarding Seconds\"",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| eval site = siteHierarchy\n| where isnotnull(site) AND trim(site)!=\"\" AND lower(site)!=\"null\" AND NOT match(site, \"(?i)(^|/)null(/|$)\") AND NOT match(site, \"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$\")\n| eval onb_ms = 'onboarding.avgRunDuration'\n| where isnotnull(onb_ms) ```AND onb_ms>0```\n| bin _time\n| stats avg(onb_ms) as onb_ms by _time, site\n| eval \"Onboarding Seconds\" = round(onb_ms/1000, 2)\n| xyseries _time site \"Onboarding Seconds\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1537,8 +1529,7 @@
 	},
 	"layout": {
 		"globalInputs": [
-			"input_global_trp",
-			"input_site_filter"
+			"input_global_trp"
 		],
 		"layoutDefinitions": {
 			"layout_tab_a": {
