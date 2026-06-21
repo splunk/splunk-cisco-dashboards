@@ -555,6 +555,7 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
     const [visualById, setVisualById] = useState<
         Record<string, SignalTickerTileVisualState>
     >({});
+    const railViewportRef = useRef<HTMLDivElement | null>(null);
     const trackRefs = useRef<Array<HTMLDivElement | null>>([]);
     const offsetsRef = useRef<number[]>([]);
     const dragRef = useRef<{
@@ -570,6 +571,9 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
     });
     const suppressNextClickRef = useRef(false);
     const [isDragging, setIsDragging] = useState(false);
+    const [isInteractionPaused, setIsInteractionPaused] = useState(false);
+    const [isFocusPaused, setIsFocusPaused] = useState(false);
+    const animationPaused = paused || isInteractionPaused || isFocusPaused;
     const handleVisualState = useCallback(
         (id: string, visual: SignalTickerTileVisualState) => {
             setVisualById((current) => {
@@ -644,7 +648,7 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
         if (typeof window === 'undefined') {
             return undefined;
         }
-        if (paused) {
+        if (animationPaused) {
             return undefined;
         }
         const reduceMotion = window.matchMedia?.(
@@ -681,7 +685,60 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
         };
         animationFrame = window.requestAnimationFrame(tick);
         return () => window.cancelAnimationFrame(animationFrame);
-    }, [applyTrackTransform, config.speed, getLoopWidth, paused, rows]);
+    }, [animationPaused, applyTrackTransform, config.speed, getLoopWidth, rows]);
+
+    const pauseForInteraction = useCallback(() => {
+        setIsInteractionPaused(true);
+    }, []);
+
+    const resumeAfterInteraction = useCallback(() => {
+        setIsInteractionPaused(false);
+    }, []);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return undefined;
+        }
+
+        const syncPointerPause = (event: PointerEvent | MouseEvent) => {
+            const viewport = railViewportRef.current;
+            if (!viewport) {
+                return;
+            }
+            const rect = viewport.getBoundingClientRect();
+            setIsInteractionPaused(
+                event.clientX >= rect.left &&
+                    event.clientX <= rect.right &&
+                    event.clientY >= rect.top &&
+                    event.clientY <= rect.bottom
+            );
+        };
+
+        window.addEventListener('pointermove', syncPointerPause, { passive: true });
+        window.addEventListener('mousemove', syncPointerPause, { passive: true });
+        return () => {
+            window.removeEventListener('pointermove', syncPointerPause);
+            window.removeEventListener('mousemove', syncPointerPause);
+        };
+    }, []);
+
+    const pauseForFocus = useCallback(() => {
+        setIsFocusPaused(true);
+    }, []);
+
+    const handleRailFocusLeave = useCallback(
+        (event: React.FocusEvent<HTMLDivElement>) => {
+            const nextTarget = event.relatedTarget;
+            if (
+                nextTarget instanceof Node &&
+                event.currentTarget.contains(nextTarget)
+            ) {
+                return;
+            }
+            setIsFocusPaused(false);
+        },
+        []
+    );
 
     const handleRailPointerDown = useCallback(
         (event: React.PointerEvent<HTMLDivElement>) => {
@@ -703,6 +760,7 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
         (event: React.PointerEvent<HTMLDivElement>) => {
             const drag = dragRef.current;
             if (!drag.active || drag.pointerId !== event.pointerId) {
+                setIsInteractionPaused(true);
                 return;
             }
             const deltaX = event.clientX - drag.lastX;
@@ -779,6 +837,7 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
                     </div>
                 </div>
                 <div
+                    ref={railViewportRef}
                     className={cn(
                         'min-w-0 flex-1 overflow-hidden select-none touch-pan-y',
                         isDragging ? 'cursor-grabbing' : 'cursor-grab',
@@ -788,6 +847,12 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
                     onPointerMove={handleRailPointerMove}
                     onPointerUp={finishRailDrag}
                     onPointerCancel={finishRailDrag}
+                    onPointerEnter={pauseForInteraction}
+                    onPointerLeave={resumeAfterInteraction}
+                    onMouseEnter={pauseForInteraction}
+                    onMouseLeave={resumeAfterInteraction}
+                    onFocusCapture={pauseForFocus}
+                    onBlurCapture={handleRailFocusLeave}
                     onClickCapture={handleRailClickCapture}
                     title="Drag left or right to browse Signal Rail"
                 >
