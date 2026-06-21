@@ -7131,6 +7131,17 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
         {}
     );
 
+    useEffect(() => {
+        if (!open) return undefined;
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key !== 'Escape') return;
+            event.preventDefault();
+            onClose();
+        };
+        document.addEventListener('keydown', onKeyDown, true);
+        return () => document.removeEventListener('keydown', onKeyDown, true);
+    }, [open, onClose]);
+
     // The editor's per-card pickers browse the full dashboard-pack
     // catalogue, identical to the in-popup `TopologySearchBrowser`.
     // Tag-narrowing (Topology_Site / Topology_Link) is a *sort

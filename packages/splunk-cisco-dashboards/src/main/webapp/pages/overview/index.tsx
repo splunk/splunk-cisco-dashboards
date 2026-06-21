@@ -2579,6 +2579,16 @@ const OverviewPage: React.FC = () => {
     >(null);
     const [signalTickerIncludeHiddenSearches, setSignalTickerIncludeHiddenSearches] =
         useState(false);
+    const [
+        signalTickerIncludeDrilldownSearches,
+        setSignalTickerIncludeDrilldownSearches,
+    ] = useState(false);
+    const [signalTickerIncludeTableSearches, setSignalTickerIncludeTableSearches] =
+        useState(false);
+    const [
+        signalTickerDrilldownSearchNames,
+        setSignalTickerDrilldownSearchNames,
+    ] = useState<Set<string> | null>(null);
     useEffect(() => {
         let cancelled = false;
         setVisibleSearchbaseCatalogue(null);
@@ -2598,6 +2608,25 @@ const OverviewPage: React.FC = () => {
             cancelled = true;
         };
     }, [signalTickerIncludeHiddenSearches]);
+    useEffect(() => {
+        let cancelled = false;
+        getSearchbaseCatalogue({ allApps: true, includeHidden: true })
+            .then((list) => {
+                if (cancelled) return;
+                const drilldownNames = new Set<string>();
+                for (const entry of list) {
+                    const name = entry.drilldownSearchName?.trim();
+                    if (name) drilldownNames.add(name);
+                }
+                setSignalTickerDrilldownSearchNames(drilldownNames);
+            })
+            .catch(() => {
+                if (!cancelled) setSignalTickerDrilldownSearchNames(new Set());
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     // ------------------------------ Signal rail ------------------------------
     // A configurable, moving executive KPI rail. This first slice follows the
@@ -2612,13 +2641,37 @@ const OverviewPage: React.FC = () => {
     } = usePersistedSignalTicker();
     const [signalTickerEditorOpen, setSignalTickerEditorOpen] = useState(false);
     const searchbaseCatalogue = useMemo(
-        () =>
-            visibleSearchbaseCatalogue
-                ? [...visibleSearchbaseCatalogue].sort((a, b) =>
-                      a.searchName.localeCompare(b.searchName)
-                  )
-                : [],
-        [visibleSearchbaseCatalogue]
+        () => {
+            if (!visibleSearchbaseCatalogue) return [];
+            const fallbackDrilldownNames = new Set<string>();
+            for (const entry of visibleSearchbaseCatalogue) {
+                const name = entry.drilldownSearchName?.trim();
+                if (name) fallbackDrilldownNames.add(name);
+            }
+            const drilldownNames =
+                signalTickerDrilldownSearchNames ?? fallbackDrilldownNames;
+            return visibleSearchbaseCatalogue
+                .filter((entry) => {
+                    const isDrilldownSearch = drilldownNames.has(
+                        entry.searchName
+                    );
+                    const isTableSearch =
+                        entry.defaultViz?.trim().toLowerCase() ===
+                        'splunk.table';
+                    return (
+                        (signalTickerIncludeDrilldownSearches ||
+                            !isDrilldownSearch) &&
+                        (signalTickerIncludeTableSearches || !isTableSearch)
+                    );
+                })
+                .sort((a, b) => a.searchName.localeCompare(b.searchName));
+        },
+        [
+            signalTickerDrilldownSearchNames,
+            signalTickerIncludeDrilldownSearches,
+            signalTickerIncludeTableSearches,
+            visibleSearchbaseCatalogue,
+        ]
     );
 
     // ------------------------------ Regional view (map | table) ------------------------------
@@ -4570,8 +4623,15 @@ const OverviewPage: React.FC = () => {
                 catalogue={searchbaseCatalogue}
                 metricDefaultsBySearchName={signalTickerMetricDefaults}
                 catalogueLoading={visibleSearchbaseCatalogue === null}
+                range={timeRange}
                 includeHiddenSearches={signalTickerIncludeHiddenSearches}
+                includeDrilldownSearches={signalTickerIncludeDrilldownSearches}
+                includeTableSearches={signalTickerIncludeTableSearches}
                 onIncludeHiddenSearchesChange={setSignalTickerIncludeHiddenSearches}
+                onIncludeDrilldownSearchesChange={
+                    setSignalTickerIncludeDrilldownSearches
+                }
+                onIncludeTableSearchesChange={setSignalTickerIncludeTableSearches}
                 onChange={setSignalTickerConfig}
                 onReset={resetSignalTickerConfig}
                 onClose={() => setSignalTickerEditorOpen(false)}
