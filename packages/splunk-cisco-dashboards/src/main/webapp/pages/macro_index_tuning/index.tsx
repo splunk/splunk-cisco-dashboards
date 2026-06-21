@@ -79,7 +79,13 @@ const TIME_RANGE_OPTIONS = [
 ];
 
 const lightButtonBase =
-    'inline-flex h-9 items-center justify-center gap-2 rounded border px-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-55';
+    'inline-flex h-10 min-h-10 items-center justify-center gap-2 rounded-md border px-3 text-sm font-semibold leading-none transition disabled:cursor-not-allowed disabled:opacity-55';
+const compactButtonBase =
+    'inline-flex h-8 min-h-8 items-center justify-center gap-2 rounded border px-3 text-sm font-semibold leading-none transition disabled:cursor-not-allowed disabled:opacity-55';
+const toolbarSelectBase =
+    'mb-0 block h-10 min-h-10 rounded-md border border-slate-300 bg-white px-3 pr-9 text-sm font-normal leading-none text-slate-800';
+const tableSearchInputBase =
+    'h-10 min-h-10 w-full rounded-md border border-slate-300 bg-white py-0 pl-9 pr-3 text-sm leading-none text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-100';
 
 const normalizeText = (value: unknown): string =>
     Array.isArray(value)
@@ -165,6 +171,21 @@ const buildMacroStanzas = (rows: EditableMacroRow[]): string =>
 
 const buildMacroStanza = (macro: string, definition: string): string =>
     definition.trim() ? `[${macro}]\ndefinition = ${definition.trim()}\niseval = 0` : '';
+
+const rowMatchesFilter = (row: EditableMacroRow, terms: string[]): boolean => {
+    if (!terms.length) return true;
+    const haystack = [
+        row.macro,
+        row.definition,
+        row.draftDefinition,
+        ...row.indexes,
+        ...row.sourcetypes,
+    ]
+        .join(' ')
+        .toLowerCase();
+
+    return terms.every((term) => haystack.includes(term));
+};
 
 const extractSplunkError = (payload: unknown): string | null => {
     if (!payload || typeof payload !== 'object') return null;
@@ -338,8 +359,18 @@ function CopyButton({
     );
 }
 
-function FieldPills({ values, tone = 'slate' }: { values: string[]; tone?: 'slate' | 'sky' }): JSX.Element {
-    const visible = values.slice(0, 6);
+function FieldPills({
+    values,
+    tone = 'slate',
+    expandable = false,
+}: {
+    values: string[];
+    tone?: 'slate' | 'sky';
+    expandable?: boolean;
+}): JSX.Element {
+    const [expanded, setExpanded] = useState(false);
+    const canExpand = expandable && values.length > 6;
+    const visible = canExpand && expanded ? values : values.slice(0, 6);
     const extra = Math.max(0, values.length - visible.length);
     const classes =
         tone === 'sky'
@@ -357,10 +388,29 @@ function FieldPills({ values, tone = 'slate' }: { values: string[]; tone?: 'slat
                     {value}
                 </span>
             ))}
-            {extra > 0 && (
+            {extra > 0 && canExpand && (
+                <button
+                    type="button"
+                    onClick={() => setExpanded(true)}
+                    className="rounded border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-sky-700 hover:border-sky-400 hover:bg-sky-50"
+                    title={`Show ${extra} more sourcetypes`}
+                >
+                    +{extra}
+                </button>
+            )}
+            {extra > 0 && !canExpand && (
                 <span className="rounded border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-500">
                     +{extra}
                 </span>
+            )}
+            {canExpand && expanded && (
+                <button
+                    type="button"
+                    onClick={() => setExpanded(false)}
+                    className="rounded border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-600 hover:border-slate-400 hover:bg-slate-50"
+                >
+                    Show fewer
+                </button>
             )}
         </div>
     );
@@ -372,6 +422,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
     const [error, setError] = useState<string>('');
     const [searchSpl, setSearchSpl] = useState<string>('');
     const [timeRange, setTimeRange] = useState(TIME_RANGE_OPTIONS[2].value);
+    const [filterText, setFilterText] = useState('');
     const [saveStatuses, setSaveStatuses] = useState<Record<string, SaveStatus>>({});
     const [adhocDefinition, setAdhocDefinition] = useState(DEFAULT_SUMMARIESONLY_DEFINITION);
     const [adhocStatus, setAdhocStatus] = useState<SaveStatus>({ state: 'idle' });
@@ -393,6 +444,19 @@ export default function MacroIndexTuningPage(): JSX.Element {
     const hasUnknown = rows.some((row) => row.macro === 'unknown');
     const indexMacroRows = rows.filter((row) => INDEX_MACRO_NAME_SET.has(row.macro));
     const rowsToSave = indexMacroRows.filter((row) => row.draftDefinition.trim());
+    const filterTerms = useMemo(
+        () =>
+            filterText
+                .trim()
+                .toLowerCase()
+                .split(/\s+/)
+                .filter(Boolean),
+        [filterText]
+    );
+    const filteredRows = useMemo(
+        () => rows.filter((row) => rowMatchesFilter(row, filterTerms)),
+        [filterTerms, rows]
+    );
     const totalEvents = rows.reduce((sum, row) => sum + row.events, 0);
     const totalIndexValues = indexMacroRows.reduce(
         (sum, row) => sum + extractIndexTokens(row.draftDefinition).length,
@@ -598,13 +662,17 @@ export default function MacroIndexTuningPage(): JSX.Element {
                             .
                         </p>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                        <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                    <div className="flex flex-wrap items-center gap-3">
+                        <label
+                            htmlFor="macro-index-tuning-range"
+                            className="mb-0 flex h-10 items-center gap-3 text-sm font-semibold text-slate-700"
+                        >
                             Range
                             <select
+                                id="macro-index-tuning-range"
                                 value={timeRange}
                                 onChange={(event) => setTimeRange(event.target.value)}
-                                className="h-9 rounded border border-slate-300 bg-white px-2 text-sm font-normal text-slate-800"
+                                className={`${toolbarSelectBase} w-[220px]`}
                             >
                                 {TIME_RANGE_OPTIONS.map((option) => (
                                     <option key={option.value} value={option.value}>
@@ -761,12 +829,32 @@ export default function MacroIndexTuningPage(): JSX.Element {
             )}
 
             <section className="mb-4 border border-slate-200 bg-white">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
+                <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
                     <div className="flex items-center gap-2">
                         <Search size={17} className="text-sky-700" />
                         <h2 className="m-0 text-base font-bold text-slate-900">Generated macro definitions</h2>
                     </div>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 lg:justify-end">
+                        <label
+                            htmlFor="macro-index-tuning-search"
+                            className="relative min-w-[260px] flex-1 lg:max-w-[420px]"
+                        >
+                            <span className="sr-only">
+                                Search macro, definition, indexes, and sourcetypes
+                            </span>
+                            <Search
+                                size={16}
+                                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                            />
+                            <input
+                                id="macro-index-tuning-search"
+                                type="search"
+                                value={filterText}
+                                onChange={(event) => setFilterText(event.target.value)}
+                                placeholder="Search macro, definition, indexes, sourcetypes"
+                                className={tableSearchInputBase}
+                            />
+                        </label>
                         <CopyButton
                             text={macroStanzas}
                             label="Copy macros.conf"
@@ -793,6 +881,10 @@ export default function MacroIndexTuningPage(): JSX.Element {
                     <div className="min-h-[220px] px-4 py-12 text-center text-sm text-slate-500">
                         No macro rows returned for the selected range.
                     </div>
+                ) : filteredRows.length === 0 ? (
+                    <div className="min-h-[220px] px-4 py-12 text-center text-sm text-slate-500">
+                        No macro rows match the current search.
+                    </div>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="min-w-full border-collapse text-left text-sm">
@@ -807,7 +899,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                                 </tr>
                             </thead>
                             <tbody>
-                                {rows.map((row) => {
+                                {filteredRows.map((row) => {
                                     const status = saveStatuses[row.macro] || { state: 'idle' };
                                     const isUnknown = row.macro === 'unknown';
                                     const isSaving = status.state === 'saving';
@@ -849,7 +941,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                                                 <FieldPills values={row.indexes} tone="sky" />
                                             </td>
                                             <td className="px-4 py-3">
-                                                <FieldPills values={row.sourcetypes} />
+                                                <FieldPills values={row.sourcetypes} expandable />
                                             </td>
                                             <td className="px-4 py-3 text-right font-mono text-sm text-slate-700">
                                                 {formatNumber(row.events)}
@@ -859,7 +951,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                                                     type="button"
                                                     onClick={() => saveOne(row)}
                                                     disabled={isUnknown || isSaving || !row.draftDefinition.trim()}
-                                                    className={`${lightButtonBase} h-8 border-slate-300 bg-white text-slate-700 hover:border-emerald-500 hover:text-emerald-700`}
+                                                    className={`${compactButtonBase} border-slate-300 bg-white text-slate-700 hover:border-emerald-500 hover:text-emerald-700`}
                                                 >
                                                     {isSaving ? (
                                                         <Loader2 size={15} className="animate-spin" />
