@@ -1113,27 +1113,27 @@ const METRIC_CONFIG: MetricConfig[] = [
 // the picker, just like the larger overview tiles.
 const MAP_FOOTER_KPI_CONFIG: KpiConfig[] = [
     {
-        id: 'map_critical_site_availability',
-        label: 'Critical sites',
+        id: 'map_inter_site_latency',
+        label: 'Inter-site latency',
         description:
-            'Business-critical site availability over the dispatched window. The headline mirrors the site-centric availability search used by the IT Health row.',
-        savedSearch: 'Executive - Critical Website Availability',
-        valueField: 'display',
+            'Current measured latency between the customer sites shown on the topology map. This is a path-level signal, not a repeat of the IT Health availability tiles.',
+        savedSearch: 'Overview - Inter-Site Latency (TLH <-> AUB)',
+        valueField: 'value',
         mockValue: 'Loading...',
         thresholdNote:
-            'Healthy means every critical ThousandEyes HTTP site is meeting the 99.5% availability target. Use this beside the map to decide which site needs investigation first.',
+            'Lower is better. A dash means the ThousandEyes agent-to-agent path is not reporting for the selected window; rising latency means the mapped site path deserves investigation.',
     },
     {
-        id: 'map_network_health',
-        label: 'Network health',
+        id: 'map_site_link_availability',
+        label: 'Site link availability',
         description:
-            'Latest network-wide Catalyst Center health score for the customer environment. This gives the map a broad health context while site markers show location-specific issues.',
-        savedSearch: 'IT - Critical Systems - Network Health Score (Current)',
-        valueField: 'score',
+            'Worst-site inter-device link availability from Catalyst Center. This complements the map by showing whether the weakest site still has its network links up.',
+        savedSearch: 'IT Critical Systems - Site Link Availability % (Worst Site)',
+        valueField: 'availability_pct',
         unit: '%',
         mockValue: 'Loading...',
         thresholdNote:
-            'Catalyst Center treats 95% and above as good, 80-94% as fair, and below 80% as poor. Use the map markers to identify where the score is being dragged down.',
+            'Higher is better. 99%+ is normal, 95-99% is watch-list, and sustained drops below 95% usually mean one site has active link loss or flapping.',
     },
 ];
 

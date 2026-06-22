@@ -1698,9 +1698,6 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                                             ? ` / ${entry.subCategory}`
                                                             : ''}
                                                     </p>
-                                                    <p className="mt-1 line-clamp-2 text-xs text-slate-500 dark:text-slate-400">
-                                                        {searchDescription}
-                                                    </p>
                                                 </div>
                                                 <div className="flex shrink-0 items-center gap-1.5">
                                                     <button

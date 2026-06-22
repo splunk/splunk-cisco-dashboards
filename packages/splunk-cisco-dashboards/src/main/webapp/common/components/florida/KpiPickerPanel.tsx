@@ -41,6 +41,7 @@ import {
     Eye,
     ExternalLink,
     Gauge,
+    Info,
     Loader2,
     Play,
     RotateCcw,
@@ -426,6 +427,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         DEFAULT_APP_SCOPE
     );
     const [includeHiddenSearches, setIncludeHiddenSearches] = useState(false);
+    const [includeDrilldownSearches, setIncludeDrilldownSearches] = useState(false);
+    const [includeTableSearches, setIncludeTableSearches] = useState(false);
     const [activeTags, setActiveTags] = useState<Set<string>>(() => new Set());
     // Free-text input that powers the tag multi-select dropdown. As
     // the user types, the dropdown narrows to substring matches and
@@ -663,6 +666,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         setSelectedSubCategory(ALL_SUB_CATEGORIES);
         setSelectedApp(DEFAULT_APP_SCOPE);
         setIncludeHiddenSearches(false);
+        setIncludeDrilldownSearches(false);
+        setIncludeTableSearches(false);
         setActiveTags(new Set());
         setTagFilter('');
         setTagDropdownOpen(false);
@@ -787,6 +792,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         if (
             selectedApp !== DEFAULT_APP_SCOPE ||
             includeHiddenSearches ||
+            includeDrilldownSearches ||
+            includeTableSearches ||
             selectedCategory !== ALL_CATEGORIES ||
             selectedSubCategory !== ALL_SUB_CATEGORIES ||
             activeTags.size > 0
@@ -796,6 +803,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     }, [
         selectedApp,
         includeHiddenSearches,
+        includeDrilldownSearches,
+        includeTableSearches,
         selectedCategory,
         selectedSubCategory,
         activeTags,
@@ -1092,6 +1101,15 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         return m;
     }, [drilldownAllTagsWithCounts]);
 
+    const drilldownSearchNames = useMemo(() => {
+        const names = new Set<string>();
+        for (const entry of catalogue) {
+            const name = entry.drilldownSearchName?.trim();
+            if (name) names.add(name.toLowerCase());
+        }
+        return names;
+    }, [catalogue]);
+
     const filtered = useMemo(() => {
         return catalogue.filter((entry) => {
             if (
@@ -1109,6 +1127,15 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
             ) {
                 return false;
             }
+            const isDrilldownSearch =
+                drilldownSearchNames.has(entry.searchName.trim().toLowerCase()) ||
+                drilldownSearchNames.has(entry.id.trim().toLowerCase());
+            if (!includeDrilldownSearches && isDrilldownSearch) {
+                return false;
+            }
+            if (!includeTableSearches && entry.defaultViz === 'splunk.table') {
+                return false;
+            }
             if (activeTags.size > 0) {
                 // AND across selected tags so executives can compose
                 // narrower filters (e.g. Network + Catalyst_Center).
@@ -1118,7 +1145,17 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
             }
             return matchesQuery(entry, query);
         });
-    }, [catalogue, query, selectedApp, selectedCategory, selectedSubCategory, activeTags]);
+    }, [
+        activeTags,
+        catalogue,
+        drilldownSearchNames,
+        includeDrilldownSearches,
+        includeTableSearches,
+        query,
+        selectedApp,
+        selectedCategory,
+        selectedSubCategory,
+    ]);
 
     const selectedEntry = useMemo(
         () =>
@@ -1447,6 +1484,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     const activeFilterCount =
         (selectedApp !== DEFAULT_APP_SCOPE ? 1 : 0) +
         (includeHiddenSearches ? 1 : 0) +
+        (includeDrilldownSearches ? 1 : 0) +
+        (includeTableSearches ? 1 : 0) +
         (selectedCategory !== ALL_CATEGORIES ? 1 : 0) +
         (selectedSubCategory !== ALL_SUB_CATEGORIES ? 1 : 0) +
         activeTags.size;
@@ -1628,6 +1667,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     const handleClearFacets = () => {
         setSelectedApp(DEFAULT_APP_SCOPE);
         setIncludeHiddenSearches(false);
+        setIncludeDrilldownSearches(false);
+        setIncludeTableSearches(false);
         setSelectedCategory(ALL_CATEGORIES);
         setSelectedSubCategory(ALL_SUB_CATEGORIES);
         setActiveTags(new Set());
@@ -1742,19 +1783,16 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                     </div>
 
                     {filtersOpen && (
-                        <div id="kpi-picker-filters" className="space-y-2">
-                            {/* App facet — defaults to this app's
-                                namespace (read from the searchbase
-                                entry's `dispatch_context` field) so the
-                                picker stays scoped to the dashboard
-                                pack. Switch to "All apps" or another
-                                app's namespace to widen. Always
-                                renders so operators can see which
-                                scope they're browsing — even when only
-                                one app is present in the catalogue. */}
-                            <div className="flex items-center gap-2">
+                        <div
+                            id="kpi-picker-filters"
+                            className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-900/50"
+                        >
+                            {/* App facet — defaults to this app's namespace
+                                so each picker open starts scoped to vetted
+                                dashboard-pack searches. */}
+                            <label className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-center">
                                 <span
-                                    className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex-shrink-0 w-16"
+                                    className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400"
                                     title="Splunk app the search belongs to"
                                 >
                                     App
@@ -1762,7 +1800,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 <select
                                     value={selectedApp}
                                     onChange={(e) => setSelectedApp(e.target.value)}
-                                    className="flex-1 px-2 py-1 text-[11px] rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-950"
                                 >
                                     <option value={ALL_APPS}>
                                         All apps ({apps.length})
@@ -1772,47 +1810,64 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             {app}
                                         </option>
                                     ))}
-                                    {/* Keep the default visible even
-                                        when the catalogue hasn't
-                                        loaded yet (initial paint,
-                                        error states) so the dropdown
-                                        never collapses to "All" with
-                                        the default value silently
-                                        lost. */}
                                     {!apps.includes(DEFAULT_APP_SCOPE) && (
                                         <option value={DEFAULT_APP_SCOPE}>
                                             {DEFAULT_APP_SCOPE}
                                         </option>
                                     )}
                                 </select>
-                            </div>
-
-                            <label className="flex items-center gap-2">
-                                <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex-shrink-0 w-16">
-                                    Hidden
-                                </span>
-                                <span className="flex flex-1 items-center gap-2 rounded border border-slate-200 bg-white px-2 py-1.5 text-[11px] font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
-                                    <input
-                                        type="checkbox"
-                                        checked={includeHiddenSearches}
-                                        onChange={(e) =>
-                                            setIncludeHiddenSearches(e.target.checked)
-                                        }
-                                        className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-600 dark:bg-slate-900"
-                                    />
-                                    <span>Show hidden searches</span>
-                                </span>
                             </label>
 
+                            <div className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-start">
+                                <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+                                    Visibility
+                                </span>
+                                <div className="grid grid-cols-3 gap-2">
+                                    <label className="flex min-h-[58px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px] font-bold leading-snug text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                                        <input
+                                            type="checkbox"
+                                            checked={includeHiddenSearches}
+                                            onChange={(e) =>
+                                                setIncludeHiddenSearches(e.target.checked)
+                                            }
+                                            className="h-4 w-4 shrink-0 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-900"
+                                        />
+                                        <span>Show hidden searches</span>
+                                    </label>
+                                    <label className="flex min-h-[58px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px] font-bold leading-snug text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                                        <input
+                                            type="checkbox"
+                                            checked={includeDrilldownSearches}
+                                            onChange={(e) =>
+                                                setIncludeDrilldownSearches(e.target.checked)
+                                            }
+                                            className="h-4 w-4 shrink-0 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-900"
+                                        />
+                                        <span>Show drill-down searches</span>
+                                    </label>
+                                    <label className="flex min-h-[58px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px] font-bold leading-snug text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                                        <input
+                                            type="checkbox"
+                                            checked={includeTableSearches}
+                                            onChange={(e) =>
+                                                setIncludeTableSearches(e.target.checked)
+                                            }
+                                            className="h-4 w-4 shrink-0 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-900"
+                                        />
+                                        <span>Show table searches</span>
+                                    </label>
+                                </div>
+                            </div>
+
                             {categories.length > 1 && (
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex-shrink-0 w-16">
+                                <label className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-center">
+                                    <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
                                         Category
                                     </span>
                                     <select
                                         value={selectedCategory}
                                         onChange={(e) => setSelectedCategory(e.target.value)}
-                                        className="flex-1 px-2 py-1 text-[11px] rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-950"
                                     >
                                         <option value={ALL_CATEGORIES}>All categories</option>
                                         {categories.map((c) => (
@@ -1821,168 +1876,169 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             </option>
                                         ))}
                                     </select>
-                                </div>
+                                </label>
                             )}
 
-                            {/* Sub-category facet — only renders when a
-                                category is picked AND that category has
-                                multiple sub-categories. Otherwise the
-                                dropdown would be a one-option no-op. */}
-                            {selectedCategory !== ALL_CATEGORIES && subCategories.length > 0 && (
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex-shrink-0 w-16">
-                                        Sub-cat
-                                    </span>
-                                    <select
-                                        value={selectedSubCategory}
-                                        onChange={(e) => setSelectedSubCategory(e.target.value)}
-                                        className="flex-1 px-2 py-1 text-[11px] rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
-                                    >
-                                        <option value={ALL_SUB_CATEGORIES}>
-                                            All sub-categories ({subCategories.length})
-                                        </option>
-                                        {subCategories.map((s) => (
-                                            <option key={s} value={s}>
-                                                {s}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Tag multi-select — compact token input. Click to
-                        open the dropdown of available tags (top-N by
-                        frequency, lifted when typing). Selected tags
-                        become AND-combined pills inside the field.
-                        Lives under the same Filters toggle as the
-                        App/Category/Sub-cat block so collapsing the
-                        block fully reclaims its vertical real-estate. */}
-                    {filtersOpen && (allTagsWithCounts.length > 0 || activeTags.size > 0) && (
-                        <div className="relative" ref={tagSelectRef}>
-                            <div
-                                onClick={() => {
-                                    setTagDropdownOpen(true);
-                                    tagInputRef.current?.focus();
-                                }}
-                                className={cn(
-                                    'flex flex-wrap items-center gap-1 px-1.5 py-1 rounded-md border bg-white dark:bg-slate-800 cursor-text transition-shadow',
-                                    tagDropdownOpen
-                                        ? 'border-sky-400 ring-2 ring-sky-400/40'
-                                        : 'border-slate-200 dark:border-slate-700'
-                                )}
-                            >
-                                <Tag className="w-3 h-3 text-slate-400 flex-shrink-0 ml-0.5" />
-                                {Array.from(activeTags).map((tag) => {
-                                    const count = tagCountByName.get(tag) ?? 0;
-                                    return (
-                                        <span
-                                            key={tag}
-                                            className="inline-flex items-center gap-1 pl-1.5 pr-0.5 py-0.5 rounded-full bg-sky-500 text-white text-[9px] font-bold uppercase tracking-wider"
-                                        >
-                                            {tag}
-                                            {count > 0 && (
-                                                <span className="opacity-70 font-normal">
-                                                    {count}
-                                                </span>
-                                            )}
-                                            <button
-                                                type="button"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    removeTag(tag);
-                                                }}
-                                                title={`Remove ${tag} filter`}
-                                                aria-label={`Remove ${tag} filter`}
-                                                className="p-0.5 rounded-full hover:bg-sky-700/40"
-                                            >
-                                                <X className="w-2 h-2" />
-                                            </button>
+                            {selectedCategory !== ALL_CATEGORIES &&
+                                subCategories.length > 0 && (
+                                    <label className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-center">
+                                        <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+                                            Sub-cat
                                         </span>
-                                    );
-                                })}
-                                <input
-                                    ref={tagInputRef}
-                                    type="text"
-                                    value={tagFilter}
-                                    onChange={(e) => {
-                                        setTagFilter(e.target.value);
-                                        setTagDropdownOpen(true);
-                                    }}
-                                    onFocus={() => setTagDropdownOpen(true)}
-                                    onKeyDown={handleTagInputKeyDown}
-                                    placeholder={
-                                        activeTags.size === 0
-                                            ? `Filter by tag (${allTagsWithCounts.length} available, AND combined)…`
-                                            : 'Add tag…'
-                                    }
-                                    maxLength={64}
-                                    aria-label="Filter results by tag"
-                                    className="flex-1 min-w-[80px] bg-transparent border-0 outline-none text-[11px] text-slate-700 dark:text-slate-100 placeholder:text-slate-400 py-0.5"
-                                />
-                            </div>
+                                        <select
+                                            value={selectedSubCategory}
+                                            onChange={(e) =>
+                                                setSelectedSubCategory(e.target.value)
+                                            }
+                                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-950"
+                                        >
+                                            <option value={ALL_SUB_CATEGORIES}>
+                                                All sub-categories ({subCategories.length})
+                                            </option>
+                                            {subCategories.map((s) => (
+                                                <option key={s} value={s}>
+                                                    {s}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                )}
 
-                            {tagDropdownOpen && (
-                                <div
-                                    role="listbox"
-                                    aria-label="Available tags"
-                                    className="absolute left-0 right-0 top-full mt-1 z-20 max-h-56 overflow-auto rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl"
-                                >
-                                    {tagDropdownOptions.length === 0 ? (
-                                        <p className="px-2 py-2 text-[10px] italic text-slate-400 dark:text-slate-500">
-                                            {tagFilter.trim()
-                                                ? `No more tags match "${tagFilter.trim()}".`
-                                                : activeTags.size > 0
-                                                  ? 'All available tags already selected.'
-                                                  : 'No tags available in this slice.'}
-                                        </p>
-                                    ) : (
-                                        <>
-                                            {tagDropdownOptions.map(([tag, count], idx) => {
-                                                const isFirstTyped =
-                                                    idx === 0 && Boolean(tagFilter.trim());
+                            {(allTagsWithCounts.length > 0 || activeTags.size > 0) && (
+                                <div className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-start">
+                                    <span className="pt-2 text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+                                        Tags
+                                    </span>
+                                    <div className="relative" ref={tagSelectRef}>
+                                        <div
+                                            onClick={() => {
+                                                setTagDropdownOpen(true);
+                                                tagInputRef.current?.focus();
+                                            }}
+                                            className={cn(
+                                                'flex min-h-[42px] cursor-text flex-wrap items-center gap-1 rounded-lg border bg-white px-2 py-1.5 transition-shadow dark:bg-slate-950',
+                                                tagDropdownOpen
+                                                    ? 'border-sky-400 ring-2 ring-sky-400/25'
+                                                    : 'border-slate-200 dark:border-slate-800'
+                                            )}
+                                        >
+                                            <Tag className="ml-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
+                                            {Array.from(activeTags).map((tag) => {
+                                                const count = tagCountByName.get(tag) ?? 0;
                                                 return (
-                                                    <button
+                                                    <span
                                                         key={tag}
-                                                        type="button"
-                                                        role="option"
-                                                        aria-selected={isFirstTyped}
-                                                        onClick={() => addTag(tag)}
-                                                        title={`${count} search${count === 1 ? '' : 'es'} tagged ${tag}`}
-                                                        className={cn(
-                                                            'w-full flex items-center justify-between gap-2 px-2 py-1 text-left text-[11px] focus:outline-none transition-colors',
-                                                            isFirstTyped
-                                                                ? 'bg-sky-50 dark:bg-sky-900/30'
-                                                                : 'hover:bg-sky-50 dark:hover:bg-sky-900/30'
-                                                        )}
+                                                        className="inline-flex items-center gap-1 rounded-full bg-sky-500 py-0.5 pl-2 pr-1 text-[10px] font-bold uppercase tracking-wide text-white"
                                                     >
-                                                        <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-200 truncate min-w-0">
-                                                            <Tag className="w-2.5 h-2.5 flex-shrink-0 text-slate-400" />
-                                                            <span className="truncate">
-                                                                {tagFilter.trim()
-                                                                    ? highlightMatch(tag, tagFilter)
-                                                                    : tag}
+                                                        {tag}
+                                                        {count > 0 && (
+                                                            <span className="font-normal opacity-75">
+                                                                {count}
                                                             </span>
-                                                        </span>
-                                                        <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 flex-shrink-0">
-                                                            {count}
-                                                        </span>
-                                                    </button>
+                                                        )}
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                removeTag(tag);
+                                                            }}
+                                                            title={`Remove ${tag} filter`}
+                                                            aria-label={`Remove ${tag} filter`}
+                                                            className="rounded-full p-0.5 hover:bg-sky-700/40"
+                                                        >
+                                                            <X className="h-2.5 w-2.5" />
+                                                        </button>
+                                                    </span>
                                                 );
                                             })}
-                                            {!tagFilter.trim() &&
-                                                allTagsWithCounts.length - activeTags.size >
-                                                    tagDropdownOptions.length && (
-                                                    <p className="px-2 py-1 text-[9px] text-slate-400 dark:text-slate-500 border-t border-slate-100 dark:border-slate-800">
-                                                        Top {tagDropdownOptions.length} of{' '}
-                                                        {allTagsWithCounts.length -
-                                                            activeTags.size}{' '}
-                                                        — type to filter.
+                                            <input
+                                                ref={tagInputRef}
+                                                type="text"
+                                                value={tagFilter}
+                                                onChange={(e) => {
+                                                    setTagFilter(e.target.value);
+                                                    setTagDropdownOpen(true);
+                                                }}
+                                                onFocus={() => setTagDropdownOpen(true)}
+                                                onKeyDown={handleTagInputKeyDown}
+                                                placeholder={
+                                                    activeTags.size === 0
+                                                        ? `Filter by tag (${allTagsWithCounts.length} available, AND combined)...`
+                                                        : 'Add tag...'
+                                                }
+                                                maxLength={64}
+                                                aria-label="Filter results by tag"
+                                                className="min-w-[120px] flex-1 border-0 bg-transparent py-1 text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-slate-100"
+                                            />
+                                        </div>
+
+                                        {tagDropdownOpen && (
+                                            <div
+                                                role="listbox"
+                                                aria-label="Available tags"
+                                                className="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-auto rounded-lg border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900"
+                                            >
+                                                {tagDropdownOptions.length === 0 ? (
+                                                    <p className="px-3 py-2 text-xs italic text-slate-400 dark:text-slate-500">
+                                                        {tagFilter.trim()
+                                                            ? `No more tags match "${tagFilter.trim()}".`
+                                                            : activeTags.size > 0
+                                                            ? 'All available tags already selected.'
+                                                            : 'No tags available in this slice.'}
                                                     </p>
+                                                ) : (
+                                                    <>
+                                                        {tagDropdownOptions.map(([tag, count], idx) => {
+                                                            const isFirstTyped =
+                                                                idx === 0 &&
+                                                                Boolean(tagFilter.trim());
+                                                            return (
+                                                                <button
+                                                                    key={tag}
+                                                                    type="button"
+                                                                    role="option"
+                                                                    aria-selected={isFirstTyped}
+                                                                    onClick={() => addTag(tag)}
+                                                                    title={`${count} search${count === 1 ? '' : 'es'} tagged ${tag}`}
+                                                                    className={cn(
+                                                                        'flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-xs transition-colors focus:outline-none',
+                                                                        isFirstTyped
+                                                                            ? 'bg-sky-50 dark:bg-sky-900/30'
+                                                                            : 'hover:bg-sky-50 dark:hover:bg-sky-900/30'
+                                                                    )}
+                                                                >
+                                                                    <span className="flex min-w-0 items-center gap-1.5 truncate text-slate-700 dark:text-slate-200">
+                                                                        <Tag className="h-3 w-3 shrink-0 text-slate-400" />
+                                                                        <span className="truncate">
+                                                                            {tagFilter.trim()
+                                                                                ? highlightMatch(tag, tagFilter)
+                                                                                : tag}
+                                                                        </span>
+                                                                    </span>
+                                                                    <span className="shrink-0 text-[10px] font-bold text-slate-400 dark:text-slate-500">
+                                                                        {count}
+                                                                    </span>
+                                                                </button>
+                                                            );
+                                                        })}
+                                                        {!tagFilter.trim() &&
+                                                            allTagsWithCounts.length -
+                                                                activeTags.size >
+                                                                tagDropdownOptions.length && (
+                                                                <p className="border-t border-slate-100 px-3 py-1.5 text-[10px] text-slate-400 dark:border-slate-800 dark:text-slate-500">
+                                                                    Top{' '}
+                                                                    {tagDropdownOptions.length}{' '}
+                                                                    of{' '}
+                                                                    {allTagsWithCounts.length -
+                                                                        activeTags.size}{' '}
+                                                                    — type to filter.
+                                                                </p>
+                                                            )}
+                                                    </>
                                                 )}
-                                        </>
-                                    )}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -2075,7 +2131,6 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             const isInUse = entryIsUsed(entry, context.usedSavedSearches);
                             const plainDesc = plainTextFromHtml(entry.description);
                             const descExpanded = expandedDescriptionId === entry.id;
-                            const descExpandable = plainDesc.length > 120;
                             return (
                                 <div
                                     key={entry.id}
@@ -2134,10 +2189,36 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             )}
                                         />
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex items-baseline gap-2 flex-wrap">
+                                            <div className="flex items-center gap-2 flex-wrap">
                                                 <span className="text-[11px] font-bold text-slate-800 dark:text-slate-100 break-all select-text cursor-text">
                                                     {highlightMatch(entry.searchName, query)}
                                                 </span>
+                                                {plainDesc && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setExpandedDescriptionId(
+                                                                descExpanded ? null : entry.id
+                                                            );
+                                                        }}
+                                                        aria-label={`Show description for ${entry.searchName}`}
+                                                        aria-expanded={descExpanded}
+                                                        title={
+                                                            descExpanded
+                                                                ? 'Hide description'
+                                                                : 'Show description'
+                                                        }
+                                                        className={cn(
+                                                            'inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                                                            descExpanded
+                                                                ? 'border-sky-300 bg-sky-50 text-sky-700 dark:border-sky-700 dark:bg-sky-950/40 dark:text-sky-200'
+                                                                : 'border-transparent text-slate-400 hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700 dark:text-slate-500 dark:hover:border-sky-800 dark:hover:bg-sky-950/40 dark:hover:text-sky-200'
+                                                        )}
+                                                    >
+                                                        <Info className="w-3 h-3" />
+                                                    </button>
+                                                )}
                                                 {isCurrent && (
                                                     <span className="inline-flex items-center gap-0.5 text-[8px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-400 flex-shrink-0">
                                                         <span className="inline-block w-1 h-1 rounded-full bg-emerald-500" />
@@ -2186,43 +2267,10 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                     )}
                                                 </div>
                                             )}
-                                            {plainDesc && (
-                                                <div className="mt-1">
-                                                    <p
-                                                        className={cn(
-                                                            'text-[10px] text-slate-500 dark:text-slate-400',
-                                                            !descExpanded && 'line-clamp-2'
-                                                        )}
-                                                    >
-                                                        {highlightMatch(plainDesc, query)}
-                                                    </p>
-                                                    {descExpandable && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setExpandedDescriptionId(
-                                                                    descExpanded ? null : entry.id
-                                                                );
-                                                            }}
-                                                            aria-expanded={descExpanded}
-                                                            title={
-                                                                descExpanded
-                                                                    ? 'Collapse this description'
-                                                                    : 'Show the full description inline'
-                                                            }
-                                                            className="mt-0.5 inline-flex items-center gap-0.5 rounded px-0.5 py-px text-[8px] font-black uppercase tracking-widest text-sky-600 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-200 focus:outline-none focus:ring-1 focus:ring-sky-400"
-                                                        >
-                                                            <ChevronRight
-                                                                className={cn(
-                                                                    'w-2.5 h-2.5 transition-transform',
-                                                                    descExpanded && 'rotate-90'
-                                                                )}
-                                                            />
-                                                            {descExpanded ? 'Less' : 'More'}
-                                                        </button>
-                                                    )}
-                                                </div>
+                                            {plainDesc && descExpanded && (
+                                                <p className="mt-2 rounded-md border border-sky-100 bg-sky-50/70 px-2 py-1.5 text-[10px] leading-relaxed text-slate-600 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-slate-300">
+                                                    {highlightMatch(plainDesc, query)}
+                                                </p>
                                             )}
                                         </div>
                                     </div>
