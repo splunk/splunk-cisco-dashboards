@@ -17,7 +17,8 @@ export type SignalRailVariant =
     | 'original'
     | 'bloomberg'
     | 'cisco-blue-gradient'
-    | 'minimal-enterprise';
+    | 'minimal-enterprise'
+    | 'telemetry-constellation';
 
 export interface SignalRailKpi {
     id: string;
@@ -76,6 +77,13 @@ const VARIANT_OPTIONS: Array<{
         description: 'Light chip cards with accent bars',
         swatchClassName: 'bg-[#f8fafc] border border-slate-200',
     },
+    {
+        id: 'telemetry-constellation',
+        label: 'Telemetry Constellation',
+        description: 'Orbital glass rail with live signal paths',
+        swatchClassName:
+            'bg-[radial-gradient(circle_at_30%_30%,#67e8f9_0,#172554_34%,#020617_72%)] border border-cyan-300',
+    },
 ];
 
 const signalRailTickerCss = `
@@ -110,6 +118,52 @@ const signalRailTickerCss = `
     );
     opacity: 0.45;
     mix-blend-mode: screen;
+}
+.scd-signal-rail-constellation {
+    background:
+        radial-gradient(circle at 12% 35%, rgba(34, 211, 238, 0.28), transparent 28%),
+        radial-gradient(circle at 88% 42%, rgba(168, 85, 247, 0.24), transparent 32%),
+        linear-gradient(100deg, #020617 0%, #07142d 42%, #0c1f3d 100%);
+}
+.scd-signal-rail-constellation::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+        linear-gradient(rgba(125, 211, 252, 0.09) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(125, 211, 252, 0.08) 1px, transparent 1px);
+    background-size: 28px 28px;
+    mask-image: linear-gradient(90deg, transparent, black 10%, black 90%, transparent);
+}
+.scd-signal-rail-constellation::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgba(103, 232, 249, 0.16), transparent);
+    mix-blend-mode: screen;
+}
+.scd-signal-rail-constellation-card::before {
+    content: "";
+    position: absolute;
+    inset: 5px;
+    border-radius: 999px;
+    border: 1px solid rgba(125, 211, 252, 0.12);
+    pointer-events: none;
+}
+.scd-signal-rail-constellation-card::after {
+    content: "";
+    position: absolute;
+    right: 18px;
+    top: 50%;
+    width: 54px;
+    height: 54px;
+    transform: translateY(-50%);
+    border-radius: 999px;
+    border: 1px dashed rgba(103, 232, 249, 0.25);
+    opacity: 0.7;
+    pointer-events: none;
 }
 `;
 
@@ -155,7 +209,8 @@ const isSignalRailVariant = (value: string | null): value is SignalRailVariant =
     value === 'original' ||
     value === 'bloomberg' ||
     value === 'cisco-blue-gradient' ||
-    value === 'minimal-enterprise';
+    value === 'minimal-enterprise' ||
+    value === 'telemetry-constellation';
 
 const readStoredVariant = (): SignalRailVariant => {
     if (typeof window === 'undefined') return DEFAULT_VARIANT;
@@ -223,6 +278,7 @@ const passClass = (variant: SignalRailVariant, density: SignalTickerDensity): st
         density === 'compact' ? 'gap-3' : 'gap-4',
         variant === 'bloomberg' && 'gap-0',
         variant === 'cisco-blue-gradient' && 'gap-0',
+        variant === 'telemetry-constellation' && 'gap-4',
         variant === 'original' && 'gap-3',
         variant === 'minimal-enterprise' && 'gap-4'
     );
@@ -245,6 +301,11 @@ const itemSizeClass = (
         return density === 'compact'
             ? 'h-[54px] min-w-[282px] px-4'
             : 'h-[68px] min-w-[320px] px-5';
+    }
+    if (variant === 'telemetry-constellation') {
+        return density === 'compact'
+            ? 'h-[58px] min-w-[310px] px-5'
+            : 'h-[72px] min-w-[350px] px-6';
     }
     return density === 'compact'
         ? 'h-[62px] min-w-[238px] px-3 py-2.5'
@@ -381,6 +442,39 @@ const KpiItem: React.FC<KpiItemProps> = ({
         );
     }
 
+    if (variant === 'telemetry-constellation') {
+        return (
+            <div
+                className={cn(
+                    'scd-signal-rail-item scd-signal-rail-constellation-card relative flex items-center overflow-hidden rounded-full border border-cyan-300/25 bg-slate-950/72 text-cyan-50 shadow-[0_0_34px_rgba(34,211,238,0.18)] backdrop-blur-md',
+                    itemSizeClass(variant, density)
+                )}
+                data-status={kpi.status}
+            >
+                <span className={cn('relative z-10 mr-4 h-3 w-3 shrink-0 rounded-full ring-4 ring-cyan-300/10', status.glow)} />
+                <span className="relative z-10 min-w-0 flex-1">
+                    <span className="block truncate text-[9px] font-black uppercase tracking-[0.22em] text-cyan-200/55">
+                        {category}
+                    </span>
+                    <span className="mt-1 flex min-w-0 items-baseline gap-3">
+                        <span className="truncate text-[13px] font-black uppercase tracking-[0.12em] text-cyan-50">
+                            {label}
+                        </span>
+                        <span className="shrink-0 font-mono text-[27px] font-black leading-none text-white drop-shadow-[0_0_12px_rgba(103,232,249,0.55)]">
+                            {valueText(kpi)}
+                        </span>
+                    </span>
+                </span>
+                <span className="relative z-10 ml-4 flex shrink-0 items-center gap-2 pr-1">
+                    <span className={cn('text-[10px] font-black uppercase tracking-[0.16em]', status.text)}>
+                        {STATUS_LABEL[kpi.status]}
+                    </span>
+                    {openLink}
+                </span>
+            </div>
+        );
+    }
+
     return (
         <div
             className={cn(
@@ -498,7 +592,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
     return (
         <section
             className={cn(
-                'scd-signal-rail-ticker group/signal-rail relative z-0 flex-shrink-0 border-b',
+                'scd-signal-rail-ticker group/signal-rail relative z-40 flex-shrink-0 border-b',
                 variant === 'original' &&
                     'border-slate-200 bg-white/82 px-1.5 py-1 dark:border-slate-800 dark:bg-slate-950/95',
                 variant === 'bloomberg' &&
@@ -507,6 +601,8 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                     'scd-signal-rail-cisco border-sky-900/60 px-1.5 py-1 text-white',
                 variant === 'minimal-enterprise' &&
                     'border-slate-200 bg-[#f8fafc] px-1.5 py-2 text-slate-900',
+                variant === 'telemetry-constellation' &&
+                    'scd-signal-rail-constellation border-cyan-500/30 px-1.5 py-1.5 text-cyan-50',
                 className
             )}
             data-variant={variant}
@@ -525,10 +621,10 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
             }}
         >
             <style>{signalRailTickerCss}</style>
-            <div className={cn('relative z-10 flex items-center', density === 'compact' ? 'gap-2' : 'gap-3')}>
+            <div className={cn('relative z-[70] flex items-center', density === 'compact' ? 'gap-2' : 'gap-3')}>
                 <div
                     className={cn(
-                        'absolute left-1.5 top-1/2 z-20 hidden shrink-0 -translate-y-1/2 items-center gap-2 rounded-lg border shadow-sm transition-all duration-150 lg:flex',
+                        'absolute left-1.5 top-1/2 z-[80] hidden shrink-0 -translate-y-1/2 items-center gap-2 rounded-lg border shadow-sm transition-all duration-150 lg:flex',
                         density === 'compact' ? 'px-2.5 py-1.5' : 'px-3 py-2',
                         leftChromeVisibility,
                         variant === 'original' &&
@@ -538,7 +634,9 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                         variant === 'cisco-blue-gradient' &&
                             'border-white/15 bg-white/10 text-white backdrop-blur-sm',
                         variant === 'minimal-enterprise' &&
-                            'border-slate-200 bg-white text-sky-700'
+                            'border-slate-200 bg-white text-sky-700',
+                        variant === 'telemetry-constellation' &&
+                            'border-cyan-300/20 bg-slate-950/70 text-cyan-100 shadow-[0_0_28px_rgba(34,211,238,0.16)] backdrop-blur-md'
                     )}
                 >
                     <span className="h-2.5 w-2.5 rounded-full bg-sky-500 shadow-[0_0_12px_rgba(14,165,233,0.7)]" />
@@ -575,7 +673,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
 
                 <div
                     className={cn(
-                        'absolute right-1.5 top-1/2 z-20 flex shrink-0 -translate-y-1/2 items-center gap-1 transition-all duration-150',
+                        'absolute right-1.5 top-1/2 z-[90] flex shrink-0 -translate-y-1/2 items-center gap-1 transition-all duration-150',
                         rightChromeVisibility
                     )}
                     ref={pickerRef}
@@ -590,6 +688,8 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                             density === 'compact' ? 'h-9 w-9' : 'h-10 w-10',
                             variant === 'bloomberg'
                                 ? 'border-[#1e2d4a] bg-[#070b14] text-blue-300 hover:text-white'
+                                : variant === 'telemetry-constellation'
+                                ? 'border-cyan-300/25 bg-slate-950/78 text-cyan-200 shadow-[0_0_18px_rgba(34,211,238,0.14)] hover:bg-cyan-950/70 hover:text-white'
                                 : variant === 'cisco-blue-gradient'
                                 ? 'border-white/20 bg-white/10 text-white hover:bg-white/18'
                                 : 'border-slate-200 bg-white text-slate-500 hover:bg-sky-50 hover:text-sky-700'
@@ -608,6 +708,8 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                             density === 'compact' ? 'h-9 w-9' : 'h-10 w-10',
                             variant === 'bloomberg'
                                 ? 'border-[#1e2d4a] bg-[#070b14] text-blue-300 hover:text-white'
+                                : variant === 'telemetry-constellation'
+                                ? 'border-cyan-300/25 bg-slate-950/78 text-cyan-200 shadow-[0_0_18px_rgba(34,211,238,0.14)] hover:bg-cyan-950/70 hover:text-white'
                                 : variant === 'cisco-blue-gradient'
                                 ? 'border-white/20 bg-white/10 text-white hover:bg-white/18'
                                 : 'border-slate-200 bg-white text-slate-500 hover:bg-sky-50 hover:text-sky-700'
@@ -625,6 +727,8 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                                 density === 'compact' ? 'h-9 w-9' : 'h-10 w-10',
                                 variant === 'bloomberg'
                                     ? 'border-[#1e2d4a] bg-[#070b14] text-blue-300 hover:text-white'
+                                    : variant === 'telemetry-constellation'
+                                    ? 'border-cyan-300/25 bg-slate-950/78 text-cyan-200 shadow-[0_0_18px_rgba(34,211,238,0.14)] hover:bg-cyan-950/70 hover:text-white'
                                     : variant === 'cisco-blue-gradient'
                                     ? 'border-white/20 bg-white/10 text-white hover:bg-white/18'
                                     : 'border-slate-200 bg-white text-slate-500 hover:bg-sky-50 hover:text-sky-700'
@@ -638,41 +742,58 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                         <div
                             role="menu"
                             aria-label="Choose signal rail style"
-                            className="absolute right-0 top-full z-30 mt-2 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 text-slate-900 shadow-2xl dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                            className="absolute right-0 top-[calc(100%+0.75rem)] z-[120] w-[min(25rem,calc(100vw-2rem))] rounded-2xl border border-slate-200 bg-white p-2 text-slate-900 shadow-[0_24px_60px_rgba(15,23,42,0.28)] ring-1 ring-slate-950/5 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
                         >
-                            {VARIANT_OPTIONS.map((option) => (
-                                <button
-                                    key={option.id}
-                                    type="button"
-                                    role="menuitemradio"
-                                    aria-checked={variant === option.id}
-                                    data-variant-option={option.id}
-                                    onClick={() => selectVariant(option.id)}
-                                    className={cn(
-                                        'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-sky-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:hover:bg-slate-900',
-                                        variant === option.id && 'bg-sky-50 dark:bg-sky-950/40'
-                                    )}
-                                >
-                                    <span
+                            <div className="flex items-center justify-between px-2.5 pb-2 pt-1.5">
+                                <div>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">
+                                        Ticker style
+                                    </p>
+                                    <p className="mt-0.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                                        Choose one of five rail treatments
+                                    </p>
+                                </div>
+                                <span className="rounded-full bg-sky-50 px-2 py-1 text-[10px] font-black uppercase tracking-[0.1em] text-sky-700 dark:bg-sky-950/50 dark:text-sky-200">
+                                    {VARIANT_OPTIONS.length} styles
+                                </span>
+                            </div>
+                            <div className="space-y-1">
+                                {VARIANT_OPTIONS.map((option) => (
+                                    <button
+                                        key={option.id}
+                                        type="button"
+                                        role="menuitemradio"
+                                        aria-checked={variant === option.id}
+                                        data-variant-option={option.id}
+                                        onClick={() => selectVariant(option.id)}
                                         className={cn(
-                                            'h-8 w-10 shrink-0 rounded-md shadow-inner',
-                                            option.swatchClassName
+                                            'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-sky-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:hover:bg-slate-900',
+                                            variant === option.id && 'bg-sky-50 dark:bg-sky-950/40',
+                                            option.id === 'telemetry-constellation' &&
+                                                'border border-cyan-200/70 bg-cyan-50/55 hover:bg-cyan-50 dark:border-cyan-900/70 dark:bg-cyan-950/20 dark:hover:bg-cyan-950/32'
                                         )}
-                                        aria-hidden="true"
-                                    />
-                                    <span className="min-w-0 flex-1">
-                                        <span className="block text-[12px] font-black uppercase tracking-[0.08em]">
-                                            {option.label}
+                                    >
+                                        <span
+                                            className={cn(
+                                                'h-10 w-12 shrink-0 rounded-lg shadow-inner',
+                                                option.swatchClassName
+                                            )}
+                                            aria-hidden="true"
+                                        />
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block text-[12px] font-black uppercase tracking-[0.12em]">
+                                                {option.label}
+                                            </span>
+                                            <span className="mt-0.5 block text-[11px] font-semibold leading-snug text-slate-500 dark:text-slate-400">
+                                                {option.description}
+                                            </span>
                                         </span>
-                                        <span className="mt-0.5 block truncate text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                                            {option.description}
-                                        </span>
-                                    </span>
-                                    {variant === option.id && (
-                                        <Check className="h-4 w-4 shrink-0 text-sky-600" />
-                                    )}
-                                </button>
-                            ))}
+                                        {variant === option.id && (
+                                            <Check className="h-4 w-4 shrink-0 text-sky-600" />
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     )}
                 </div>
@@ -690,12 +811,23 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                 </div>
             )}
             {variant === 'minimal-enterprise' && (
-                <div className="relative z-10 flex items-center justify-between border-t border-slate-200 px-8 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-slate-400">
+                <div className="relative z-0 flex items-center justify-between border-t border-slate-200 px-8 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-slate-400">
                     <span>Signal Rail · {kpis.length} KPIs</span>
                     <span className="normal-case tracking-normal">
                         <span className="text-emerald-500">• {counts.healthy} Healthy</span>
                         <span className="ml-3 text-amber-500">• {counts.warning} Warning</span>
                         <span className="ml-3 text-red-500">• {counts.critical} Critical</span>
+                    </span>
+                </div>
+            )}
+            {variant === 'telemetry-constellation' && (
+                <div className="relative z-0 flex items-center justify-between border-t border-cyan-300/12 bg-slate-950/24 px-8 py-2 font-mono text-[11px] font-black uppercase tracking-[0.16em] text-cyan-200/58">
+                    <span>
+                        <span className="mr-2 inline-block h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_14px_rgba(103,232,249,0.9)]" />
+                        Telemetry Constellation
+                    </span>
+                    <span className="text-cyan-100/70">
+                        {counts.healthy} nominal / {counts.warning} drift / {counts.critical} breach
                     </span>
                 </div>
             )}

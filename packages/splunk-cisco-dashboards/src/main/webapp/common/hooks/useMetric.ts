@@ -980,6 +980,8 @@ export interface KpiConfig {
     spl?: string;
     /** Field whose value is displayed. Defaults to 'value'. */
     valueField?: string;
+    /** Optional suffix appended to numeric KPI values, e.g. '%' or 'ms'. */
+    unit?: string;
     /** Mock fallback when no search wired. */
     mockValue: string;
     /**
@@ -1002,6 +1004,17 @@ export interface KpiConfig {
      */
     suppressMockOnEmpty?: boolean;
 }
+
+const formatKpiValue = (raw: unknown, unit?: string): string => {
+    const text = String(raw).trim();
+    if (!unit || !text || text.includes(unit)) return text;
+    // Only append units to plain numeric outputs. String headlines like
+    // "3 of 4 available" should render exactly as emitted by SPL.
+    if (/^-?\d[\d,]*(?:\.\d+)?$/.test(text)) {
+        return `${text}${unit}`;
+    }
+    return text;
+};
 
 export interface KpiResult {
     value: string;
@@ -1173,7 +1186,7 @@ export const useKpi = (
                     raw,
                 });
                 setResult({
-                    value: String(raw),
+                    value: formatKpiValue(raw, cfg.unit),
                     source: 'live',
                     spl,
                     resolvedSavedSearch: savedSearchName,

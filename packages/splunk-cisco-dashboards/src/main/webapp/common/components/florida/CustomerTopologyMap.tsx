@@ -2854,8 +2854,9 @@ const topologyAnimationCss = `
 `;
 
 interface TileLayerPreset {
-    id: 'street' | 'satellite' | 'terrain';
+    id: 'street' | 'satellite' | 'terrain' | 'dark-ops' | 'navigation';
     label: string;
+    badge: string;
     light: string;
     dark: string;
     attribution: string;
@@ -2865,6 +2866,7 @@ const TILE_LAYER_PRESETS: TileLayerPreset[] = [
     {
         id: 'street',
         label: 'Street',
+        badge: 'St',
         light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
         dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
         attribution:
@@ -2873,6 +2875,7 @@ const TILE_LAYER_PRESETS: TileLayerPreset[] = [
     {
         id: 'satellite',
         label: 'Satellite',
+        badge: 'Sat',
         light:
             'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
         dark:
@@ -2882,11 +2885,32 @@ const TILE_LAYER_PRESETS: TileLayerPreset[] = [
     {
         id: 'terrain',
         label: 'Terrain',
+        badge: 'Ter',
         light:
             'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
         dark:
             'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
         attribution: 'Tiles &copy; Esri',
+    },
+    {
+        id: 'dark-ops',
+        label: 'Dark Ops',
+        badge: 'Ops',
+        light:
+            'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+        dark:
+            'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+        attribution: 'Tiles &copy; Esri',
+    },
+    {
+        id: 'navigation',
+        label: 'Navigation',
+        badge: 'Nav',
+        light:
+            'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+        dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+        attribution:
+            '&copy; OpenStreetMap contributors &copy; CARTO',
     },
 ];
 
@@ -4806,10 +4830,6 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     const telemetrySearchName = storedTopology.telemetrySearchName?.trim();
 
     useEffect(() => {
-        onSummaryMetricsChange?.(summaryMetricById);
-    }, [onSummaryMetricsChange, summaryMetricById]);
-
-    useEffect(() => {
         let cancelled = false;
         getSearchbaseCatalogue()
             .then((list) => {
@@ -5458,6 +5478,62 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         };
     }, [activeTopology, liveLinkById, liveSiteById, discoveredSiteById, discoveredLinkById]);
 
+    const topologyFooterSummaryById = useMemo<TopologySummaryMetricMap>(() => {
+        const sourceForItems = (
+            items: Array<{ dataState?: TopologySite['dataState'] }>
+        ): TopologySummaryMetric['source'] => {
+            if (items.some((item) => item.dataState === 'live')) return 'live';
+            if (items.some((item) => item.dataState === 'loading')) return 'loading';
+            return 'mock';
+        };
+        const sites = resolvedTopology.sites;
+        const links = resolvedTopology.links;
+        const sitesWithKnownHealth = sites.filter((site) => site.status !== 'unknown');
+        const linksWithKnownHealth = links.filter((link) => link.status !== 'unknown');
+        const healthySites = sites.filter((site) => site.status === 'stable').length;
+        const healthyLinks = links.filter((link) => link.status === 'stable').length;
+        return {
+            sites_healthy: {
+                id: 'sites_healthy',
+                label:
+                    sitesWithKnownHealth.length > 0 ? 'Sites healthy' : 'Sites mapped',
+                value:
+                    sites.length > 0
+                        ? sitesWithKnownHealth.length > 0
+                            ? `${healthySites}/${sites.length}`
+                            : String(sites.length)
+                        : '—',
+                source: sourceForItems(sites),
+            },
+            wan_paths_healthy: {
+                id: 'wan_paths_healthy',
+                label:
+                    linksWithKnownHealth.length > 0
+                        ? 'WAN paths healthy'
+                        : 'WAN paths mapped',
+                value:
+                    links.length > 0
+                        ? linksWithKnownHealth.length > 0
+                            ? `${healthyLinks}/${links.length}`
+                            : String(links.length)
+                        : '—',
+                source: sourceForItems(links),
+            },
+        };
+    }, [resolvedTopology.links, resolvedTopology.sites]);
+
+    const parentSummaryMetricById = useMemo<TopologySummaryMetricMap>(
+        () => ({
+            ...summaryMetricById,
+            ...topologyFooterSummaryById,
+        }),
+        [summaryMetricById, topologyFooterSummaryById]
+    );
+
+    useEffect(() => {
+        onSummaryMetricsChange?.(parentSummaryMetricById);
+    }, [onSummaryMetricsChange, parentSummaryMetricById]);
+
     const siteById = useMemo(() => {
         const map: Record<string, TopologySite> = {};
         for (const site of resolvedTopology.sites) map[site.id] = site;
@@ -5781,7 +5857,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                     onPick={applyMapPick}
                     onBackgroundClick={closeSelection}
                 />
-                <TileLayer key={tileUrl} attribution="" url={tileUrl} />
+                <TileLayer key={`${tilePreset.id}-${tileUrl}`} attribution="" url={tileUrl} />
                 <ZoomControl position="bottomright" />
 
                 {linkSegments.map(({ link, source, target }) => (
@@ -5975,7 +6051,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 >
                     <Layers className="w-4 h-4" />
                     <span className="absolute -bottom-1 -right-1 px-1 py-0.5 rounded text-[7px] font-bold uppercase tracking-widest bg-sky-500 text-white shadow-sm">
-                        {tilePreset.id.charAt(0)}
+                        {tilePreset.badge}
                     </span>
                 </button>
 

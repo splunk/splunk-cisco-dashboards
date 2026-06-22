@@ -177,7 +177,7 @@ const descriptionForRecord = (
     metricDefault?: SignalTickerMetricDefaults
 ): string | undefined =>
     metricDefault?.description ||
-    (record ? plainTextFromHtml(record.explanation || record.description) : undefined);
+    (record ? plainTextFromHtml(record.description || record.explanation) : undefined);
 
 const resolveThresholds = (
     item: SignalTickerItem,
@@ -1665,8 +1665,8 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                     );
                                     const searchDescription =
                                         plainTextFromHtml(
-                                            entry.explanation ||
-                                                entry.description
+                                            entry.description ||
+                                                entry.explanation
                                         ) || 'No description supplied.';
                                     const descriptionExpanded =
                                         expandedDescriptionId === entry.id;

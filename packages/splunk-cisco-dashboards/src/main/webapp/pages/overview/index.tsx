@@ -70,7 +70,6 @@ import {
     CustomerTopologyMap,
     CUSTOMER_TOPOLOGY,
     clearCustomerTopologyStorage,
-    type TopologySummaryMetricMap,
     TopologySiteTable,
     usePersistedTopology,
 } from '@/common/components/florida/CustomerTopologyMap';
@@ -1109,115 +1108,32 @@ const METRIC_CONFIG: MetricConfig[] = [
     },
 ];
 
-// =============================================================================
-// Right-column KPI cards
-// =============================================================================
-//
-// "Top incident volume" - site producing the most XDR/SecureX
-// incident IDs. Uses eventstats to avoid post-aggregation sort/head.
-//
-// "Operational lead" - site with the strongest IT health. Derived
-// from per-device health rolled up by Site (since there isn't a
-// pre-built single-row "best site" stanza).
-//
-// Both fall back to mock if the data sources are empty (the dispatch
-// returns 0 rows and `useKpi` shows the mockValue).
-//
-// Shape contract — IMPORTANT for the picker:
-// These cards display a single STRING (typically a site name), not a
-// numeric metric or sparkline. When swapping searches via the gear
-// icon, pick one whose final pipeline emits a single row with a
-// readable string column (set Value field to that column name). A
-// numeric `timechart` will not produce a usable site label and will
-// surface the empty-row "—" placeholder.
-
-// Each tile binds to a `search_name` in `searchbase.conf` so:
-//   1. the KPI picker's "currently bound" banner + Jump To button can
-//      locate the entry (both gate on a non-null `currentSavedSearch`),
-//   2. the runtime dispatch is the literal `search` field from the
-//      catalogue entry — keeping picker preview, runtime, and the
-//      Open-in-Search drilldown in lockstep,
-//   3. the SPL itself stays out of this file so any rewrite happens in
-//      one place (`searchbase.conf`) without rebuilding the React app.
-//
-// The same SPL is also embedded as `append [search ...]` blocks inside
-// `overview_topology_overview` — that's intentional, the topology
-// React component reads it as a single summary feed and shadows the
-// useKpi value when no override is bound. Both paths now reference
-// the canonical SPL string; neither is duplicated in TypeScript.
-// Default bindings (2026-05-12): the right-column KPI tiles next to
-// the topology map were originally site-ranking strings ("Top
-// incident volume", "Operational lead"). Both broke on Alan's stack:
-// XDR `site` enrichment isn't wired so the incident-ranking tile
-// always shows the "Site enrichment unavailable" sentinel, and the
-// DNAC fixture on the stack carries Sydney/APAC sites from a
-// different demo customer's data so the operational-lead tile
-// surfaces those instead of TLH or AUB.
-//
-// Even with the data fixed, ranking is barely informative for a
-// 2-site footprint — leader and trailer are the same two
-// sites every refresh. The map already shows per-site health colours
-// and per-link colours, so the right-column tiles add more value as
-// **aggregate signals** the map can't show:
-//
-//   - `active_critical_alerts` — count of currently-firing TE alerts
-//     at critical/error severity. Direct pressure-gauge answer to
-//     "is anything firing?". Sourced from the same accelerated
-//     `Cisco_ThousandEyes.Alerts` data model that powers the IT
-//     Health "Active TE Alerts" sparkline tile, so the data path is
-//     proven against live customer data.
-//   - `inter_site_latency` — current path latency between TLH and
-//     AUB ThousandEyes agents, as a formatted "12 ms" / "—" string.
-//     Sourced from the same A2A test that powers the topology map
-//     link health (via `[overview_link_auburndale_tallahassee_health]`).
-//
-// Both saved searches `appendpipe` a `count==0` fallback so the tile
-// never renders blank — `0` for the alert count, `—` for latency
-// when no measurement exists in the window.
-//
-// **Legacy alternates:** the original `[overview_top_incident_volume]`
-// and `[overview_operational_lead]` stanzas (and their `_demo`
-// counterparts) stay in the catalogue tagged `Legacy_KPI` so any
-// deployment with real XDR `site` enrichment or a bigger-than-2-site
-// footprint can rebind via the picker.
-const KPI_CONFIG: KpiConfig[] = [
+// Search-backed map footer cards. Keep these as normal KPI bindings so
+// operators can open the backing SPL and reassign each footer card from
+// the picker, just like the larger overview tiles.
+const MAP_FOOTER_KPI_CONFIG: KpiConfig[] = [
     {
-        id: 'active_critical_alerts',
-        label: 'Active critical alerts',
+        id: 'map_critical_site_availability',
+        label: 'Critical sites',
         description:
-            'Count of currently-active ThousandEyes alerts at critical or ' +
-            'error severity. Pulled from the accelerated ' +
-            'Cisco_ThousandEyes.Alerts data model with a defensive ' +
-            'fallback to "0" when the data model is empty so the tile ' +
-            'never renders blank.',
+            'Business-critical site availability over the dispatched window. The headline mirrors the site-centric availability search used by the IT Health row.',
+        savedSearch: 'Executive - Critical Website Availability',
+        valueField: 'display',
+        mockValue: 'Loading...',
         thresholdNote:
-            'Pressure gauge: 0 = quiet window, no action. 1+ = pivot to ' +
-            'the IT Health "ThousandEyes Active Alerts" table for the ' +
-            'recent-20 list and triage from the top. Sustained elevation ' +
-            'across refreshes = long-running incident not yet cleared.',
-        savedSearch: 'Overview - Active Critical Alerts',
-        valueField: 'value',
-        mockValue: 'Awaiting data',
+            'Healthy means every critical ThousandEyes HTTP site is meeting the 99.5% availability target. Use this beside the map to decide which site needs investigation first.',
     },
     {
-        id: 'inter_site_latency',
-        label: 'TLH ↔ AUB latency',
+        id: 'map_network_health',
+        label: 'Network health',
         description:
-            'Current path latency between Tallahassee and Auburndale ' +
-            'ThousandEyes agents-to-agent test, formatted as "12 ms". ' +
-            'Renders "—" when the data model returns no measurement ' +
-            '(typically because the source/target agent is offline). The ' +
-            'topology map link popup names which agents are being measured.',
+            'Latest network-wide Catalyst Center health score for the customer environment. This gives the map a broad health context while site markers show location-specific issues.',
+        savedSearch: 'IT - Critical Systems - Network Health Score (Current)',
+        valueField: 'score',
+        unit: '%',
+        mockValue: 'Loading...',
         thresholdNote:
-            'Health bands match the inter-site link health stanza: under ' +
-            '30 ms is calm, 30–100 ms is warning territory, ≥100 ms is ' +
-            'critical. A reading of "—" means the A2A test isn\'t producing ' +
-            'data — check agent status on both ends. For path-level detail ' +
-            '(loss, jitter, hops), open the topology map link popup and use ' +
-            'the "View in ThousandEyes" deep link.',
-        savedSearch: 'Overview - Inter-Site Latency (TLH <-> AUB)',
-        valueField: 'value',
-        mockValue: 'Awaiting data',
+            'Catalyst Center treats 95% and above as good, 80-94% as fair, and below 80% as poor. Use the map markers to identify where the score is being dragged down.',
     },
 ];
 
@@ -2676,14 +2592,6 @@ const OverviewPage: React.FC = () => {
 
     // ------------------------------ Regional view (map | table) ------------------------------
     const [regionalView, setRegionalView] = useState<RegionalView>('map');
-    const [topologySummaryById, setTopologySummaryById] =
-        useState<TopologySummaryMetricMap>({});
-    const handleTopologySummaryChange = useCallback(
-        (metrics: TopologySummaryMetricMap) => {
-            setTopologySummaryById(metrics);
-        },
-        []
-    );
 
     // ------------------------------ Map position (right / below / above) ------------------------------
     // Where the topology map sits relative to the metric tiles. Default
@@ -3191,7 +3099,7 @@ const OverviewPage: React.FC = () => {
             const name = ov?.savedSearch ?? m.savedSearch;
             if (name) used.add(name);
         }
-        for (const k of KPI_CONFIG) {
+        for (const k of MAP_FOOTER_KPI_CONFIG) {
             const ov = overrides[k.id];
             const name = ov?.savedSearch ?? k.savedSearch;
             if (name) used.add(name);
@@ -3331,7 +3239,7 @@ const OverviewPage: React.FC = () => {
      *
      * Why this lives in the page (not the picker): the picker
      * doesn't know the section roster, and we don't want to hand
-     * it the whole `METRIC_CONFIG` / `KPI_CONFIG` catalogue. The
+     * it the whole `METRIC_CONFIG` catalogue. The
      * page owns the catalogue; the picker hands us the section id
      * and the patch and we do the fan-out.
      *
@@ -3348,10 +3256,7 @@ const OverviewPage: React.FC = () => {
             sectionId: string,
             patch: { hidePeak: boolean; hideDelta: boolean; hideOverlay: boolean }
         ) => {
-            // Resolve siblings from both catalogues. `KPI_CONFIG`
-            // entries (the two summary cards above the topology map)
-            // don't carry a section, so they're naturally excluded —
-            // see comment on `openPicker` for the rationale.
+            // Resolve siblings from the metric catalogue only.
             const sectionMetrics = METRIC_CONFIG.filter((m) => m.section === sectionId);
             for (const m of sectionMetrics) {
                 const existing = overrides[m.id];
@@ -3442,38 +3347,14 @@ const OverviewPage: React.FC = () => {
         setMapPosition,
     ]);
 
-    // ------------------------------ KPI cards ------------------------------
-    // Same `valueField: ov.valueField` (no fallback) and
-    // `suppressMockOnEmpty: true` rules as `applyOverride` for the
-    // metric grid — see the long comment there. The fallback to the
-    // original tile's `valueField` was the same root cause: useKpi
-    // would read a column the new SPL doesn't emit, get undefined,
-    // and quietly fall back to the original tile's mock string.
-    //
-    // Searchbase resolution mirrors `dispatchedConfig` for the metric
-    // grid: when the picker writes `savedSearch: <searchbase entry name>`,
-    // we look that name up in `searchbaseByName` and replace the binding
-    // with the literal `search` field — same SPL the picker preview shows
-    // and the "Open in Search" drilldown opens. This is the critical step
-    // that was missing: most catalogue searches (e.g.
-    // "Building Resilience - Power Trend") live ONLY in searchbase.conf,
-    // not in savedsearches.conf, so a raw `| savedsearch "X"` dispatch
-    // was failing silently → tile showed "Awaiting data" / "—" → looked
-    // like the picker did nothing.
-    //
-    // While `searchbaseByName === null` (still loading) we strip both
-    // `spl` and `savedSearch` so useKpi short-circuits to mock and waits
-    // — same defer pattern as `dispatchedConfig` to avoid a doomed first
-    // dispatch that gets superseded once the catalogue lands.
-    const buildEffectiveKpiCfg = (
+    // ------------------------------ Map footer ------------------------------
+    // Same dispatch rules as the main metric grid: searchbase.conf
+    // entries resolve to literal SPL so the footer value, picker preview,
+    // and Open in Search action all point at the same query.
+    const buildEffectiveMapFooterKpiCfg = (
         base: KpiConfig,
         ov: MetricOverride | undefined
     ): KpiConfig => {
-        // Defer until the catalogue is ready — same defer pattern as
-        // `dispatchedConfig` for the metric grid. Without this, the first
-        // dispatch fires against the static binding before searchbase
-        // resolves and gets immediately superseded; useKpi's mock briefly
-        // flashes through to the user.
         if (searchbaseByName === null) {
             return {
                 ...base,
@@ -3488,37 +3369,22 @@ const OverviewPage: React.FC = () => {
                     : {}),
             };
         }
-        // No override — use the static binding from KPI_CONFIG. Resolve
-        // `savedSearch` through the searchbase catalogue to literal SPL
-        // exactly like the override branch does, so:
-        //   1. The KPI picker's "currently bound" banner / Jump To
-        //      button can match this saved search to a catalogue entry
-        //      (both gate on `cfg.savedSearch` being set at picker-open
-        //      time, which we preserve via `currentSavedSearch`).
-        //   2. The runtime dispatch is the catalogue's literal `search`
-        //      field — same SPL the picker preview shows and the Open
-        //      in Search drilldown opens, no `| savedsearch "..."`
-        //      indirection that would fail for searchbase-only entries.
+
         if (!ov) {
             const sbBase = base.savedSearch
-                ? searchbaseByName.get(base.savedSearch)
+                ? searchbaseByName?.get(base.savedSearch)
                 : undefined;
-            if (sbBase && sbBase.search) {
+            if (sbBase?.search) {
                 return {
                     ...base,
-                    // Keep `savedSearch` set so the picker can locate
-                    // the currently-bound entry, but inject the literal
-                    // SPL so useKpi dispatches that directly instead
-                    // of a doomed `| savedsearch` indirection.
                     spl: sbBase.search,
                 };
             }
             return base;
         }
-        const sb = ov.savedSearch
-            ? searchbaseByName.get(ov.savedSearch)
-            : undefined;
-        if (sb && sb.search) {
+
+        const sb = ov.savedSearch ? searchbaseByName?.get(ov.savedSearch) : undefined;
+        if (sb?.search) {
             return {
                 ...base,
                 spl: sb.search,
@@ -3528,9 +3394,7 @@ const OverviewPage: React.FC = () => {
                 suppressMockOnEmpty: true,
             };
         }
-        // No matching searchbase entry — fall through to the configured
-        // savedsearch name (will resolve only if a real savedsearches.conf
-        // stanza of that name exists).
+
         return {
             ...base,
             savedSearch: ov.savedSearch,
@@ -3540,109 +3404,56 @@ const OverviewPage: React.FC = () => {
             suppressMockOnEmpty: true,
         };
     };
-    const effectiveActiveAlertsCfg = useMemo<KpiConfig>(
-        () => buildEffectiveKpiCfg(KPI_CONFIG[0], overrides[KPI_CONFIG[0].id]),
+
+    const effectiveMapPrimaryCfg = useMemo<KpiConfig>(
+        () =>
+            buildEffectiveMapFooterKpiCfg(
+                MAP_FOOTER_KPI_CONFIG[0],
+                overrides[MAP_FOOTER_KPI_CONFIG[0].id]
+            ),
         [overrides, searchbaseByName]
     );
-    const effectiveInterSiteLatencyCfg = useMemo<KpiConfig>(
-        () => buildEffectiveKpiCfg(KPI_CONFIG[1], overrides[KPI_CONFIG[1].id]),
+    const effectiveMapSecondaryCfg = useMemo<KpiConfig>(
+        () =>
+            buildEffectiveMapFooterKpiCfg(
+                MAP_FOOTER_KPI_CONFIG[1],
+                overrides[MAP_FOOTER_KPI_CONFIG[1].id]
+            ),
         [overrides, searchbaseByName]
     );
-    const activeAlerts = useKpi(effectiveActiveAlertsCfg, timeRange, refreshToken);
-    const interSiteLatency = useKpi(effectiveInterSiteLatencyCfg, timeRange, refreshToken);
-    // Topology summary feed key parity with KPI_CONFIG ids — when the
-    // overview_topology_overview SPL emits a `summary` row with
-    // `summaryId="active_critical_alerts"` / `"inter_site_latency"`
-    // it shadows the standalone useKpi value. Earlier revisions keyed
-    // these on `top_incident` / `operational_lead`; both sides moved
-    // in lockstep on 2026-05-12.
-    const topologyActiveAlerts = topologySummaryById.active_critical_alerts;
-    const topologyInterSiteLatency = topologySummaryById.inter_site_latency;
-    // Picker-override precedence: when the operator has explicitly bound
-    // a different search via the gear icon (overrides[id] present), the
-    // user's `useKpi` result wins. Otherwise we fall through to the
-    // topology overview SPL summary row (cheap, already-running, kept in
-    // lockstep with the map). Without this branch, the topology summary
-    // silently shadowed the override and the picker appeared broken.
-    const activeAlertsOverride = overrides[KPI_CONFIG[0].id];
-    const interSiteLatencyOverride = overrides[KPI_CONFIG[1].id];
-    const activeAlertsCard = activeAlertsOverride
-        ? {
-              label: effectiveActiveAlertsCfg.label,
-              value: activeAlerts.value,
-              source: activeAlerts.source,
-          }
-        : {
-              label: topologyActiveAlerts?.label ?? effectiveActiveAlertsCfg.label,
-              value: topologyActiveAlerts?.value ?? activeAlerts.value,
-              source: topologyActiveAlerts?.source ?? activeAlerts.source,
-          };
-    const interSiteLatencyCard = interSiteLatencyOverride
-        ? {
-              label: effectiveInterSiteLatencyCfg.label,
-              value: interSiteLatency.value,
-              source: interSiteLatency.source,
-          }
-        : {
-              label: topologyInterSiteLatency?.label ?? effectiveInterSiteLatencyCfg.label,
-              value: topologyInterSiteLatency?.value ?? interSiteLatency.value,
-              source: topologyInterSiteLatency?.source ?? interSiteLatency.source,
-          };
-    // Footnote shown at the bottom of the info tooltip — surfaces the
-    // current data source so the operator can trace lineage. When an
-    // override is bound, we point at the user's saved search; otherwise
-    // we name the topology overview stanza that's actually emitting the
-    // value (or "(inline SPL)" if both are absent).
-    // Drilldown SPL: always the literal SPL useKpi just dispatched
-    // (`activeAlerts.spl` / `interSiteLatency.spl`). When no override is
-    // bound, that's the inline KPI_CONFIG SPL — a clean, single-purpose
-    // query — which is a far better drilldown target than the giant
-    // `overview_topology_overview` pipeline. When an override is bound,
-    // it's the resolved searchbase SPL → exactly what the picker preview
-    // showed. Either way: see-and-click parity with what's running.
-    const activeAlertsDrilldownSpl = activeAlerts.spl;
-    const interSiteLatencyDrilldownSpl = interSiteLatency.spl;
-    const handleActiveAlertsOpenInSearch = useCallback(() => {
-        if (!activeAlertsDrilldownSpl) return;
-        const url = splunkSearchAppUrl(activeAlertsDrilldownSpl, timeRange);
+    const mapPrimary = useKpi(effectiveMapPrimaryCfg, timeRange, refreshToken);
+    const mapSecondary = useKpi(effectiveMapSecondaryCfg, timeRange, refreshToken);
+    const mapPrimaryOverride = overrides[MAP_FOOTER_KPI_CONFIG[0].id];
+    const mapSecondaryOverride = overrides[MAP_FOOTER_KPI_CONFIG[1].id];
+    const mapPrimaryDrilldownSpl = mapPrimary.spl;
+    const mapSecondaryDrilldownSpl = mapSecondary.spl;
+    const handleMapPrimaryOpenInSearch = useCallback(() => {
+        if (!mapPrimaryDrilldownSpl) return;
+        const url = splunkSearchAppUrl(mapPrimaryDrilldownSpl, timeRange);
         if (typeof window !== 'undefined') {
             window.open(url, '_blank', 'noopener,noreferrer');
         }
-    }, [activeAlertsDrilldownSpl, timeRange]);
-    const handleInterSiteLatencyOpenInSearch = useCallback(() => {
-        if (!interSiteLatencyDrilldownSpl) return;
-        const url = splunkSearchAppUrl(interSiteLatencyDrilldownSpl, timeRange);
+    }, [mapPrimaryDrilldownSpl, timeRange]);
+    const handleMapSecondaryOpenInSearch = useCallback(() => {
+        if (!mapSecondaryDrilldownSpl) return;
+        const url = splunkSearchAppUrl(mapSecondaryDrilldownSpl, timeRange);
         if (typeof window !== 'undefined') {
             window.open(url, '_blank', 'noopener,noreferrer');
         }
-    }, [interSiteLatencyDrilldownSpl, timeRange]);
-    // Footnote precedence:
-    //   1. Override bound  → user's saved search (or "(inline SPL)" if
-    //      they wired a free-form SPL via the picker).
-    //   2. Topology summary feed  → that's the actual source of the
-    //      displayed value; surface the topology overview stanza.
-    //   3. useKpi default path  → the static binding from KPI_CONFIG,
-    //      which is a real searchbase entry (`Overview - Active
-    //      Critical Alerts` / `Overview - Inter-Site Latency (TLH <->
-    //      AUB)`). Surface that name so the footnote credits the
-    //      actual SPL that ran.
-    const activeAlertsBindingFootnote = activeAlertsOverride
-        ? activeAlertsOverride.savedSearch
-            ? `Saved search: ${activeAlertsOverride.savedSearch}`
+    }, [mapSecondaryDrilldownSpl, timeRange]);
+    const mapPrimaryBindingFootnote = mapPrimaryOverride
+        ? mapPrimaryOverride.savedSearch
+            ? `Saved search: ${mapPrimaryOverride.savedSearch}`
             : '(inline SPL)'
-        : topologyActiveAlerts
-        ? 'Saved search: Overview - Topology Overview'
-        : KPI_CONFIG[0].savedSearch
-        ? `Saved search: ${KPI_CONFIG[0].savedSearch}`
+        : MAP_FOOTER_KPI_CONFIG[0].savedSearch
+        ? `Saved search: ${MAP_FOOTER_KPI_CONFIG[0].savedSearch}`
         : '(inline SPL)';
-    const interSiteLatencyBindingFootnote = interSiteLatencyOverride
-        ? interSiteLatencyOverride.savedSearch
-            ? `Saved search: ${interSiteLatencyOverride.savedSearch}`
+    const mapSecondaryBindingFootnote = mapSecondaryOverride
+        ? mapSecondaryOverride.savedSearch
+            ? `Saved search: ${mapSecondaryOverride.savedSearch}`
             : '(inline SPL)'
-        : topologyInterSiteLatency
-        ? 'Saved search: Overview - Topology Overview'
-        : KPI_CONFIG[1].savedSearch
-        ? `Saved search: ${KPI_CONFIG[1].savedSearch}`
+        : MAP_FOOTER_KPI_CONFIG[1].savedSearch
+        ? `Saved search: ${MAP_FOOTER_KPI_CONFIG[1].savedSearch}`
         : '(inline SPL)';
 
     // ------------------------------ Keyboard shortcuts ------------------------------
@@ -4503,9 +4314,6 @@ const OverviewPage: React.FC = () => {
                                         earliestTime={timeRange.earliest}
                                         latestTime={timeRange.latest}
                                         refreshToken={refreshToken}
-                                        onSummaryMetricsChange={
-                                            handleTopologySummaryChange
-                                        }
                                         onOpenInSearch={(spl) => {
                                             const url = splunkSearchAppUrl(spl, timeRange);
                                             if (typeof window !== 'undefined') {
@@ -4524,53 +4332,72 @@ const OverviewPage: React.FC = () => {
 
                             <div className="mt-3 grid grid-cols-2 gap-3 flex-shrink-0">
                                 <KpiCard
-                                    label={activeAlertsCard.label}
-                                    value={activeAlertsCard.value}
-                                    source={activeAlertsCard.source}
-                                    accentClassName="bg-red-500"
-                                    description={KPI_CONFIG[0].description}
-                                    thresholdNote={KPI_CONFIG[0].thresholdNote}
-                                    bindingFootnote={activeAlertsBindingFootnote}
+                                    label={effectiveMapPrimaryCfg.label}
+                                    value={mapPrimary.value}
+                                    source={mapPrimary.source}
+                                    accentClassName="bg-emerald-500"
+                                    description={MAP_FOOTER_KPI_CONFIG[0].description}
+                                    thresholdNote={
+                                        MAP_FOOTER_KPI_CONFIG[0].thresholdNote
+                                    }
+                                    bindingFootnote={mapPrimaryBindingFootnote}
                                     onOpenInSearch={
-                                        activeAlertsDrilldownSpl
-                                            ? handleActiveAlertsOpenInSearch
+                                        mapPrimaryDrilldownSpl
+                                            ? handleMapPrimaryOpenInSearch
                                             : undefined
                                     }
                                     onConfigure={() =>
-                                        openPicker(KPI_CONFIG[0].id, KPI_CONFIG[0].label, {
-                                            savedSearch: KPI_CONFIG[0].savedSearch,
-                                            valueField: KPI_CONFIG[0].valueField,
-                                            // KPI cards ship without numeric
-                                            // thresholds (string headlines), but
-                                            // the picker form still renders so
-                                            // the user can establish thresholds
-                                            // if they swap to a numeric search.
-                                            unit: undefined,
-                                        })
+                                        openPicker(
+                                            MAP_FOOTER_KPI_CONFIG[0].id,
+                                            MAP_FOOTER_KPI_CONFIG[0].label,
+                                            {
+                                                savedSearch:
+                                                    MAP_FOOTER_KPI_CONFIG[0]
+                                                        .savedSearch,
+                                                valueField:
+                                                    MAP_FOOTER_KPI_CONFIG[0]
+                                                        .valueField,
+                                                unit:
+                                                    MAP_FOOTER_KPI_CONFIG[0].unit,
+                                            }
+                                        )
                                     }
-                                    isCustomized={Boolean(overrides[KPI_CONFIG[0].id])}
+                                    isCustomized={Boolean(mapPrimaryOverride)}
                                 />
                                 <KpiCard
-                                    label={interSiteLatencyCard.label}
-                                    value={interSiteLatencyCard.value}
-                                    source={interSiteLatencyCard.source}
+                                    label={effectiveMapSecondaryCfg.label}
+                                    value={mapSecondary.value}
+                                    source={mapSecondary.source}
                                     accentClassName="bg-sky-500"
-                                    description={KPI_CONFIG[1].description}
-                                    thresholdNote={KPI_CONFIG[1].thresholdNote}
-                                    bindingFootnote={interSiteLatencyBindingFootnote}
+                                    description={
+                                        MAP_FOOTER_KPI_CONFIG[1].description
+                                    }
+                                    thresholdNote={
+                                        MAP_FOOTER_KPI_CONFIG[1].thresholdNote
+                                    }
+                                    bindingFootnote={mapSecondaryBindingFootnote}
                                     onOpenInSearch={
-                                        interSiteLatencyDrilldownSpl
-                                            ? handleInterSiteLatencyOpenInSearch
+                                        mapSecondaryDrilldownSpl
+                                            ? handleMapSecondaryOpenInSearch
                                             : undefined
                                     }
                                     onConfigure={() =>
-                                        openPicker(KPI_CONFIG[1].id, KPI_CONFIG[1].label, {
-                                            savedSearch: KPI_CONFIG[1].savedSearch,
-                                            valueField: KPI_CONFIG[1].valueField,
-                                            unit: undefined,
-                                        })
+                                        openPicker(
+                                            MAP_FOOTER_KPI_CONFIG[1].id,
+                                            MAP_FOOTER_KPI_CONFIG[1].label,
+                                            {
+                                                savedSearch:
+                                                    MAP_FOOTER_KPI_CONFIG[1]
+                                                        .savedSearch,
+                                                valueField:
+                                                    MAP_FOOTER_KPI_CONFIG[1]
+                                                        .valueField,
+                                                unit:
+                                                    MAP_FOOTER_KPI_CONFIG[1].unit,
+                                            }
+                                        )
                                     }
-                                    isCustomized={Boolean(overrides[KPI_CONFIG[1].id])}
+                                    isCustomized={Boolean(mapSecondaryOverride)}
                                 />
                             </div>
                         </div>
