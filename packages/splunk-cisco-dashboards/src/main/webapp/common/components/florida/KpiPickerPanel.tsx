@@ -107,6 +107,84 @@ const DEFAULT_APP_SCOPE = 'splunk-cisco-dashboards';
 const MAX_FIELD_LENGTH = 64;
 const FIELD_NAME_PATTERN = /^[A-Za-z_][\w.]{0,63}$/;
 const TAG_CHIP_LIMIT = 24;
+const CHART_STYLE_OPTIONS: Array<{
+    v: Exclude<MetricOverride['vizOverride'], undefined> | null;
+    label: string;
+    splunkViz?: string;
+    hint: string;
+}> = [
+    {
+        v: null,
+        label: 'Default',
+        hint: 'Use the searchbase default_viz',
+    },
+    {
+        v: 'area',
+        label: 'Area',
+        splunkViz: 'splunk.area',
+        hint: 'Sparkline area chart',
+    },
+    {
+        v: 'line',
+        label: 'Line',
+        splunkViz: 'splunk.line',
+        hint: 'Sparkline line chart',
+    },
+    {
+        v: 'column',
+        label: 'Column',
+        splunkViz: 'splunk.column',
+        hint: 'Sparkline vertical bars, one bar per bucket',
+    },
+    {
+        v: 'bar',
+        label: 'Bar',
+        splunkViz: 'splunk.bar',
+        hint: 'Sparkline horizontal bars, one bar per bucket',
+    },
+    {
+        v: 'singlevalue',
+        label: 'Single',
+        splunkViz: 'splunk.singlevalue',
+        hint: 'Headline only, with no chart underneath',
+    },
+    {
+        v: 'table',
+        label: 'Table',
+        splunkViz: 'splunk.table',
+        hint: 'Raw table rows',
+    },
+    {
+        v: 'barbreakdown',
+        label: 'Breakdown',
+        splunkViz: 'splunk.bar',
+        hint: 'Categorical bar breakdown from table rows',
+    },
+    {
+        v: 'pie',
+        label: 'Pie',
+        splunkViz: 'splunk.pie',
+        hint: 'Categorical pie chart from table rows',
+    },
+    {
+        v: 'singlevalueradial',
+        label: 'Radial',
+        splunkViz: 'splunk.singlevalueradial',
+        hint: 'Single-value radial progress gauge',
+    },
+    {
+        v: 'fillergauge',
+        label: 'Filler',
+        splunkViz: 'splunk.fillergauge',
+        hint: 'Horizontal filler gauge',
+    },
+    {
+        v: 'markergauge',
+        label: 'Marker',
+        splunkViz: 'splunk.markergauge',
+        hint: 'Marker gauge on a threshold scale',
+    },
+];
 
 export interface KpiPickerContext {
     /** Stable tile id from the metric/KPI config. */
@@ -148,10 +226,10 @@ export interface KpiPickerContext {
     /** Saved-search names already bound to other tiles — for "in use" hints. */
     usedSavedSearches?: Set<string>;
     /**
-     * Currently-applied viz override for this tile, if any (Build 1174;
-     * `bar` added in Build 1187). Pre-fills the CHART STYLE picker so
-     * re-opening the picker on a customised tile shows the active
-     * selection rather than always landing on "Default".
+     * Currently-applied viz override for this tile, if any. Pre-fills
+     * the CHART STYLE picker so re-opening the picker on a customised
+     * tile shows the active selection rather than always landing on
+     * "Default".
      */
     currentVizOverride?: MetricOverride['vizOverride'];
     /**
@@ -3086,38 +3164,19 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 )}
                             </div>
 
-                            {/* CHART STYLE form (Build 1174).
+                            {/* CHART STYLE form.
                               *
                               * Lets the operator override how the tile
                               * renders WITHOUT changing which search
-                              * drives it. Useful when the conf default
-                              * (e.g. `splunk.column` for FW Blocked)
-                              * doesn't fit the operator's preference
-                              * (Alan asked for area on FW Blocked on
-                              * 2026-05-18). Also exposes the
-                              * `singlevalue` collapse-the-chart option
-                              * for tiles whose timechart adds clutter.
-                              *
-                              * Storage rule: persisted only when the
-                              * user picks something other than
-                              * "Default". Picking Default on Apply
-                              * silently drops the override field from
-                              * the stored payload — same as
-                              * "Reset to default" for thresholds. The
-                              * runtime `MetricCardLeaf` reads
-                              * `override.vizOverride` first and falls
-                              * back to `searchbase.conf`'s
-                              * `default_viz` so this picker can never
-                              * desync from what the tile actually
-                              * shows.
-                              *
-                              * Choices intentionally limited to the
-                              * four sparkline variants; switching to
-                              * a TABLE / BAR-BREAKDOWN viz changes
-                              * the data hook, not just the rendering,
-                              * so it must come through a different
-                              * `savedSearch` whose conf default
-                              * already names that viz. */}
+                              * drives it. Storage rule: persisted only
+                              * when the user picks something other than
+                              * "Default"; picking Default silently
+                              * drops the override field from the stored
+                              * payload. The runtime resolves structural
+                              * choices (table, pie, gauge, breakdown)
+                              * before the sparkline path, so this list
+                              * only exposes renderer families the
+                              * overview page can actually draw. */}
                             <div className="rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-2.5">
                                 <div className="flex items-center justify-between gap-2">
                                     <button
@@ -3178,20 +3237,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 </p>
                                 )}
                                 {chartStyleOpen && (
-                                <div id="kpi-picker-chart-style-block" className="mt-2 grid grid-cols-6 gap-1 p-0.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
-                                    {(
-                                        [
-                                            { v: null, label: 'Default', splunkViz: undefined, hint: 'Use the searchbase default_viz' },
-                                            { v: 'area' as const, label: 'Area', splunkViz: 'splunk.area', hint: 'Filled area chart' },
-                                            { v: 'line' as const, label: 'Line', splunkViz: 'splunk.line', hint: 'Line chart' },
-                                            { v: 'column' as const, label: 'Column', splunkViz: 'splunk.column', hint: 'Vertical bars (each bar grows up; one per bucket)' },
-                                            // Build 1187 — horizontal bars, recharts `layout="vertical"`.
-                                            // Kept distinct from Column so operators can pick which
-                                            // axis the bars sit on without editing searchbase.conf.
-                                            { v: 'bar' as const, label: 'Bar', splunkViz: 'splunk.bar', hint: 'Horizontal bars (each bar grows right; one per bucket)' },
-                                            { v: 'singlevalue' as const, label: 'Single', splunkViz: 'splunk.singlevalue', hint: 'Headline only — no chart underneath' },
-                                        ]
-                                    ).map((opt) => {
+                                <div id="kpi-picker-chart-style-block" className="mt-2 flex flex-wrap gap-1 p-0.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+                                    {CHART_STYLE_OPTIONS.map((opt) => {
                                         const active = vizOverrideInput === opt.v;
                                         return (
                                             <button
@@ -3200,7 +3247,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 onClick={() => setVizOverrideInput(opt.v)}
                                                 title={opt.hint}
                                                 className={cn(
-                                                    'inline-flex items-center justify-center gap-1 px-1 py-1 text-[10px] font-bold uppercase tracking-wider rounded transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                                                    'inline-flex min-w-[64px] items-center justify-center gap-1 px-1.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
                                                     active
                                                         ? 'bg-sky-500 text-white'
                                                         : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'

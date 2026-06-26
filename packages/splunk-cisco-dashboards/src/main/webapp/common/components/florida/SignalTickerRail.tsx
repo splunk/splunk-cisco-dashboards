@@ -975,7 +975,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
 
                 <div className="grid min-h-0 flex-1 grid-cols-1 gap-0 overflow-hidden lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
                     <section className="min-h-0 overflow-y-auto border-b border-slate-200 p-4 dark:border-slate-800 lg:border-b-0 lg:border-r">
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                             <button
                                 type="button"
                                 onClick={() =>
@@ -1030,6 +1030,31 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                 </span>
                                 <span className="mt-1 block text-sm font-bold">
                                     {config.rows === 1 ? 'One row' : 'Two rows'}
+                                </span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    updateConfig({
+                                        showPriorityDrilldown:
+                                            !config.showPriorityDrilldown,
+                                    })
+                                }
+                                className={cn(
+                                    'rounded-lg border px-3 py-2 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
+                                    config.showPriorityDrilldown
+                                        ? 'border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-700 dark:bg-sky-950/50 dark:text-sky-200'
+                                        : 'border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400'
+                                )}
+                                title="Show or hide the Priority Drill-Down row below the Signal Rail"
+                            >
+                                <span className="block text-[10px] font-black uppercase tracking-[0.16em]">
+                                    Drill-down
+                                </span>
+                                <span className="mt-1 block text-sm font-bold">
+                                    {config.showPriorityDrilldown
+                                        ? 'Shown'
+                                        : 'Hidden'}
                                 </span>
                             </button>
                         </div>

@@ -20,6 +20,7 @@ export interface SignalTickerItem {
 
 export interface SignalTickerConfig {
     enabled: boolean;
+    showPriorityDrilldown: boolean;
     rows: SignalTickerRows;
     speed: SignalTickerSpeed;
     density: SignalTickerDensity;
@@ -36,6 +37,7 @@ const UNIT_PATTERN = /^[%A-Za-z0-9_./ -]{1,16}$/;
 
 const DEFAULT_SIGNAL_TICKER_CONFIG: SignalTickerConfig = {
     enabled: true,
+    showPriorityDrilldown: false,
     rows: 1,
     speed: 5,
     density: 'compact',
@@ -255,6 +257,10 @@ const sanitizeConfig = (raw: unknown): SignalTickerConfig | null => {
         typeof source.enabled === 'boolean'
             ? source.enabled
             : DEFAULT_SIGNAL_TICKER_CONFIG.enabled;
+    const showPriorityDrilldown =
+        typeof source.showPriorityDrilldown === 'boolean'
+            ? source.showPriorityDrilldown
+            : DEFAULT_SIGNAL_TICKER_CONFIG.showPriorityDrilldown;
     const rows: SignalTickerRows = source.rows === 2 ? 2 : 1;
     const speed = sanitizeSpeed(source.speed);
     const density: SignalTickerDensity =
@@ -269,7 +275,7 @@ const sanitizeConfig = (raw: unknown): SignalTickerConfig | null => {
         items.push(item);
         if (items.length >= 24) break;
     }
-    return { enabled, rows, speed, density, items };
+    return { enabled, showPriorityDrilldown, rows, speed, density, items };
 };
 
 const isLegacyFactorySignalTickerConfig = (config: SignalTickerConfig): boolean =>
