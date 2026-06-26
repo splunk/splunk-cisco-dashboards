@@ -556,7 +556,6 @@ def _convert_eval_scale_timechart(base_cond, rest_segs, node, dm_path):
         parts = [f"`index_thousandeyes` {base_cond}"] + ["| " + s for s in rest_segs]
         return " \\\n".join(parts)
 
-    ms_alias   = eval_m.group(1)   # e.g. dns_duration_ms
     raw_field  = eval_m.group(2)   # e.g. dns.lookup.duration
     scale      = eval_m.group(3)   # e.g. 1000
 
