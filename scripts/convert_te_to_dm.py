@@ -14,7 +14,7 @@ Syntax used: FROM datamodel=Cisco_ThousandEyes.DatasetName  (dot-notation, unquo
 Field refs:  Dataset.field.name  (DM object prefix applied to every BY/agg/WHERE field)
 """
 
-import re, sys, textwrap
+import re, sys
 from pathlib import Path
 
 CONF = Path(__file__).parent.parent / (
