@@ -22,6 +22,7 @@ import SearchBaseDataSource from './SearchBaseDataSource';
 import SimpleTimePicker from './custominput/SimpleTimePicker';
 import VizKpi from '../../common/components/templatewizard/viz-kpi/VizKpi';
 import VizOther from '../../common/components/templatewizard/viz-other/VizOther';
+import SpaceManagerViz from './SpaceManager/SpaceManagerViz';
 import Modal from '@splunk/react-ui/Modal';
 import { useNavigate } from 'react-router-dom';
 import DashboardStudioEditor from './DashboardStudioEditor';
@@ -75,6 +76,7 @@ export const customPresets = {
         ...EnterprisePreset.visualizations,
         'splunk.template_kpi': VizKpi,
         'splunk.template_other': VizOther,
+        'splunk.cisco_spaces_space_manager': SpaceManagerViz,
     },
 };
 
@@ -192,6 +194,11 @@ const getSplunkLocalePrefix = () => {
     return match?.[0] || '/en-US';
 };
 
+const buildAppStaticAssetUrl = (fileName, owner = 'nobody') =>
+    `${getSplunkLocalePrefix()}/splunkd/__raw/servicesNS/${encodeURIComponent(
+        owner || 'nobody',
+    )}/${encodeURIComponent(INSIGHTS_APP_ID)}/static/${encodeURIComponent(fileName)}`;
+
 const buildDashboardStudioPath = (dashboardId, mode = 'view') => {
     const encodedDashboardId = encodeURIComponent(dashboardId);
 
@@ -229,6 +236,10 @@ export default function DBHomePage() {
 
     const dashboardManagerSubtitle =
         'Turn predefined Cisco KPIs into actionable insights in seconds using the custom dashboard manager.';
+    const dashboardManagerIconSrc = useMemo(
+        () => buildAppStaticAssetUrl('appIcon.png', currentSplunkUser),
+        [currentSplunkUser],
+    );
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -996,7 +1007,14 @@ export default function DBHomePage() {
                                     <img
                                         className="icn-collection"
                                         alt="Splunk Executive Insights"
-                                        src="/static/app/splunk-cisco-dashboards/appIcon_2x.png"
+                                        src={dashboardManagerIconSrc}
+                                        onError={(event) => {
+                                            const fallbackSrc = buildAppStaticAssetUrl('appIcon.png');
+                                            const currentSrc = event.currentTarget.getAttribute('src');
+                                            if (currentSrc !== fallbackSrc) {
+                                                event.currentTarget.src = fallbackSrc;
+                                            }
+                                        }}
                                     />
                                 </div>
                                 <div className="manager-header-actions">

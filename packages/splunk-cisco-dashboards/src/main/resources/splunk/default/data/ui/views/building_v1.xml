@@ -1,8 +1,8 @@
 
 <dashboard version="2" theme="light">
- <label>Cisco Spaces - Building Intelligence</label>
- <description>Cisco Spaces location and occupancy plus ISE-correlated wireless device trust — why Splunk when you already have Spaces</description>
- <definition><![CDATA[
+    <label>Cisco Spaces - Building Intelligence</label>
+    <description>Cisco Spaces location and occupancy plus ISE-correlated wireless device trust</description>
+    <definition><![CDATA[
 {
 	"title": "Cisco Spaces - Building Intelligence",
 	"description": "Cisco Spaces location and occupancy plus ISE-correlated wireless device trust",
@@ -23,6 +23,14 @@
 					"queryParameters": {
 						"earliest": "$global_time.earliest$",
 						"latest": "$global_time.latest$"
+					}
+				}
+			},
+			"ds.spl2": {
+				"options": {
+					"queryParameters": {
+						"latest": "$global_time.latest$",
+						"earliest": "$global_time.earliest$"
 					}
 				}
 			}
@@ -550,7 +558,8 @@
 				"nullValueDisplay": "connect",
 				"xAxisLabelVisibility": "hide",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide"
+				"yAxisTitleVisibility": "hide",
+				"markerDisplay": "outlined"
 			},
 			"title": "SSID Association Trend",
 			"type": "splunk.line"
@@ -613,7 +622,8 @@
 				"stackMode": "stacked",
 				"xAxisLabelVisibility": "hide",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide"
+				"yAxisTitleVisibility": "hide",
+				"nullValueDisplay": "connect"
 			},
 			"title": "People detected by location",
 			"type": "splunk.area"
@@ -1678,7 +1688,7 @@
 							"h": 70,
 							"w": 198,
 							"x": 30,
-							"y": -8
+							"y": 10
 						},
 						"type": "input"
 					},
@@ -1760,14 +1770,10 @@
 			]
 		}
 	},
-	"expressions": {
-		"conditions": {},
-		"eval": {}
-	},
 	"applicationProperties": {
 		"collapseNavigation": false,
 		"hideEdit": true
 	}
 }
-]]></definition>
+    ]]></definition>
 </dashboard>

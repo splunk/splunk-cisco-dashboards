@@ -5,10 +5,10 @@ import {
     ChevronDown,
     ExternalLink,
     GripVertical,
+    Info,
     Plus,
     RotateCcw,
     Search,
-    Settings2,
     Sparkles,
     Tag,
     Trash2,
@@ -35,79 +35,14 @@ import {
     type SignalTickerRows,
     type SignalTickerThresholdDirection,
 } from '@/common/hooks/usePersistedSignalTicker';
-
-const signalTickerCss = `
-.scd-signal-ticker-track {
-    width: max-content;
-    transform: translate3d(0, 0, 0);
-    will-change: transform;
-}
-.dark .scd-signal-ticker-rail {
-    background: linear-gradient(90deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.94));
-    border-color: rgba(30, 41, 59, 0.95);
-}
-.dark .scd-signal-ticker-label-card,
-.dark .scd-signal-ticker-settings {
-    background: rgba(15, 23, 42, 0.92);
-    border-color: rgba(14, 165, 233, 0.22);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 24px rgba(2, 6, 23, 0.18);
-}
-.dark .scd-signal-ticker-tile {
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045), 0 10px 24px rgba(2, 6, 23, 0.16);
-}
-.dark .scd-signal-ticker-tile[data-status='healthy'] {
-    background: linear-gradient(90deg, rgba(6, 78, 59, 0.58), rgba(15, 23, 42, 0.93));
-    border-color: rgba(52, 211, 153, 0.36);
-}
-.dark .scd-signal-ticker-tile[data-status='warning'] {
-    background: linear-gradient(90deg, rgba(120, 53, 15, 0.6), rgba(15, 23, 42, 0.93));
-    border-color: rgba(251, 191, 36, 0.4);
-}
-.dark .scd-signal-ticker-tile[data-status='critical'] {
-    background: linear-gradient(90deg, rgba(127, 29, 29, 0.64), rgba(15, 23, 42, 0.92));
-    border-color: rgba(248, 113, 113, 0.42);
-}
-.dark .scd-signal-ticker-tile[data-status='unknown'] {
-    background: linear-gradient(90deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.92));
-    border-color: rgba(100, 116, 139, 0.44);
-}
-.dark .scd-signal-ticker-tile .scd-signal-ticker-label {
-    color: rgb(203, 213, 225);
-}
-.dark .scd-signal-ticker-tile .scd-signal-ticker-subtitle {
-    color: rgb(148, 163, 184);
-}
-.dark .scd-signal-ticker-shine {
-    background-image: linear-gradient(90deg, transparent, rgba(125, 211, 252, 0.18), transparent);
-}
-`;
+import {
+    SignalRailTicker,
+    type SignalRailDeltaDirection,
+    type SignalRailKpi,
+} from './SignalRailTicker';
 
 const MIN_SIGNAL_SPEED = 0;
 const MAX_SIGNAL_SPEED = 10;
-const MAX_SIGNAL_PIXELS_PER_SECOND = 92;
-const DRAG_CLICK_THRESHOLD_PX = 5;
-
-const TICKER_TRAVEL_PX_PER_ITEM: Record<SignalTickerDensity, number> = {
-    compact: 252,
-    comfortable: 285,
-};
-
-const speedToPixelsPerSecond = (speed: number): number => {
-    const clamped = Math.min(MAX_SIGNAL_SPEED, Math.max(MIN_SIGNAL_SPEED, speed));
-    if (clamped <= 0) {
-        return 0;
-    }
-    const eased = (clamped / MAX_SIGNAL_SPEED) ** 1.2;
-    return Math.max(8, Math.round(eased * MAX_SIGNAL_PIXELS_PER_SECOND));
-};
-
-const wrapOffset = (offset: number, loopWidth: number): number => {
-    if (!Number.isFinite(loopWidth) || loopWidth <= 0) {
-        return 0;
-    }
-    const wrapped = offset % loopWidth;
-    return wrapped < 0 ? wrapped + loopWidth : wrapped;
-};
 
 const ALL_CATEGORIES = '__all__';
 const ALL_SUB_CATEGORIES = '__all_sub__';
@@ -242,7 +177,7 @@ const descriptionForRecord = (
     metricDefault?: SignalTickerMetricDefaults
 ): string | undefined =>
     metricDefault?.description ||
-    (record ? plainTextFromHtml(record.explanation || record.description) : undefined);
+    (record ? plainTextFromHtml(record.description || record.explanation) : undefined);
 
 const resolveThresholds = (
     item: SignalTickerItem,
@@ -282,6 +217,8 @@ interface SignalTickerTileVisualState {
     valueText: string;
     status: MetricStatus;
     canOpen: boolean;
+    delta?: string;
+    deltaDir?: SignalRailDeltaDirection;
 }
 
 const makePendingVisual = (
@@ -295,6 +232,7 @@ const makePendingVisual = (
     valueText: catalogueLoading ? 'Loading' : '--',
     status: 'unknown',
     canOpen: Boolean(record?.search),
+    deltaDir: 'flat',
 });
 
 const sameVisualState = (
@@ -306,7 +244,9 @@ const sameVisualState = (
     a?.subtitle === b.subtitle &&
     a?.valueText === b.valueText &&
     a?.status === b.status &&
-    a?.canOpen === b.canOpen;
+    a?.canOpen === b.canOpen &&
+    a?.delta === b.delta &&
+    a?.deltaDir === b.deltaDir;
 
 interface SignalTickerTileChromeProps {
     visual: SignalTickerTileVisualState;
@@ -445,6 +385,7 @@ interface SignalTickerTileProps {
     refreshToken: number;
     index: number;
     onVisualState: (id: string, visual: SignalTickerTileVisualState) => void;
+    probeOnly?: boolean;
 }
 
 const SignalTickerTile: React.FC<SignalTickerTileProps> = ({
@@ -457,6 +398,7 @@ const SignalTickerTile: React.FC<SignalTickerTileProps> = ({
     refreshToken,
     index,
     onVisualState,
+    probeOnly = false,
 }) => {
     const label = labelForRecord(item, record, metricDefault);
     const thresholds = useMemo(
@@ -505,6 +447,16 @@ const SignalTickerTile: React.FC<SignalTickerTileProps> = ({
         : result.displayValue ?? formatTickerNumber(result.value, unit);
     const status: MetricStatus = loading ? 'unknown' : result.status;
     const subtitle = subtitleForRecord(record, metricDefault);
+    const deltaDir: SignalRailDeltaDirection =
+        !Number.isFinite(result.change) || Math.abs(result.change) < 0.01
+            ? 'flat'
+            : result.change > 0
+            ? 'up'
+            : 'down';
+    const delta =
+        !loading && Number.isFinite(result.change)
+            ? formatTickerNumber(Math.abs(result.change), unit)
+            : undefined;
     const visual = useMemo<SignalTickerTileVisualState>(
         () => ({
             label,
@@ -512,13 +464,19 @@ const SignalTickerTile: React.FC<SignalTickerTileProps> = ({
             valueText,
             status,
             canOpen: Boolean(record?.search),
+            delta,
+            deltaDir,
         }),
-        [label, record?.search, status, subtitle, valueText]
+        [delta, deltaDir, label, record?.search, status, subtitle, valueText]
     );
 
     useEffect(() => {
         onVisualState(item.id, visual);
     }, [item.id, onVisualState, visual]);
+
+    if (probeOnly) {
+        return null;
+    }
 
     return (
         <SignalTickerTileChrome
@@ -539,6 +497,7 @@ interface SignalTickerRailProps {
     metricDefaultsBySearchName?: Map<string, SignalTickerMetricDefaults>;
     range: TimeRange;
     refreshToken: number;
+    paused?: boolean;
     onOpenEditor: () => void;
 }
 
@@ -548,26 +507,12 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
     metricDefaultsBySearchName,
     range,
     refreshToken,
+    paused = false,
     onOpenEditor,
 }) => {
     const [visualById, setVisualById] = useState<
         Record<string, SignalTickerTileVisualState>
     >({});
-    const trackRefs = useRef<Array<HTMLDivElement | null>>([]);
-    const offsetsRef = useRef<number[]>([]);
-    const dragRef = useRef<{
-        active: boolean;
-        pointerId: number | null;
-        lastX: number;
-        totalMovement: number;
-    }>({
-        active: false,
-        pointerId: null,
-        lastX: 0,
-        totalMovement: 0,
-    });
-    const suppressNextClickRef = useRef(false);
-    const [isDragging, setIsDragging] = useState(false);
     const handleVisualState = useCallback(
         (id: string, visual: SignalTickerTileVisualState) => {
             setVisualById((current) => {
@@ -577,318 +522,88 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
         },
         []
     );
-    const rows = useMemo(() => {
-        const items = config.items;
-        if (config.rows === 2 && items.length > 3) {
-            return [
-                items.filter((_, idx) => idx % 2 === 0),
-                items.filter((_, idx) => idx % 2 === 1),
-            ].filter((row) => row.length > 0);
-        }
-        return [items];
-    }, [config.items, config.rows]);
-
     const density = config.density ?? 'compact';
-    const getLoopWidth = useCallback(
-        (rowIndex: number, rowItemCount: number): number => {
-            const track = trackRefs.current[rowIndex];
-            if (!track) {
-                return rowItemCount * TICKER_TRAVEL_PX_PER_ITEM[density];
-            }
-            return track.scrollWidth / 2;
-        },
-        [density]
-    );
-    const applyTrackTransform = useCallback(
-        (rowIndex: number, rowItemCount: number) => {
-            const track = trackRefs.current[rowIndex];
-            if (!track) {
-                return;
-            }
-            const loopWidth = getLoopWidth(rowIndex, rowItemCount);
-            const offset = wrapOffset(offsetsRef.current[rowIndex] ?? 0, loopWidth);
-            offsetsRef.current[rowIndex] = offset;
-            track.style.transform = `translate3d(${-offset}px, 0, 0)`;
-        },
-        [getLoopWidth]
-    );
-    const moveRowsBy = useCallback(
-        (deltaX: number) => {
-            rows.forEach((rowItems, rowIndex) => {
-                if (rowItems.length <= 1) {
-                    return;
-                }
-                const loopWidth = getLoopWidth(rowIndex, rowItems.length);
-                offsetsRef.current[rowIndex] = wrapOffset(
-                    (offsetsRef.current[rowIndex] ?? 0) - deltaX,
-                    loopWidth
+    const durationSeconds = useMemo(() => {
+        if (paused || config.speed <= 0) return 0;
+        const clamped = Math.min(MAX_SIGNAL_SPEED, Math.max(MIN_SIGNAL_SPEED, config.speed));
+        return Math.max(24, Math.round(96 - clamped * 7.2));
+    }, [config.speed, paused]);
+    const tickerKpis = useMemo<SignalRailKpi[]>(
+        () =>
+            config.items.map((item) => {
+                const record = catalogueByName?.get(item.searchName);
+                const metricDefault = metricDefaultsBySearchName?.get(
+                    item.searchName
                 );
-                applyTrackTransform(rowIndex, rowItems.length);
-            });
-        },
-        [applyTrackTransform, getLoopWidth, rows]
-    );
-
-    useEffect(() => {
-        offsetsRef.current = rows.map(
-            (_, rowIndex) => offsetsRef.current[rowIndex] ?? 0
-        );
-        rows.forEach((rowItems, rowIndex) =>
-            applyTrackTransform(rowIndex, rowItems.length)
-        );
-    }, [applyTrackTransform, rows]);
-
-    useEffect(() => {
-        if (typeof window === 'undefined') {
-            return undefined;
-        }
-        const reduceMotion = window.matchMedia?.(
-            '(prefers-reduced-motion: reduce)'
-        ).matches;
-        const pixelsPerSecond = reduceMotion ? 0 : speedToPixelsPerSecond(config.speed);
-        if (pixelsPerSecond <= 0) {
-            return undefined;
-        }
-
-        let animationFrame = 0;
-        let lastTimestamp = window.performance.now();
-        const tick = (timestamp: number) => {
-            const deltaSeconds = Math.min(
-                0.1,
-                Math.max(0, (timestamp - lastTimestamp) / 1000)
-            );
-            lastTimestamp = timestamp;
-            if (!dragRef.current.active) {
-                rows.forEach((rowItems, rowIndex) => {
-                    if (rowItems.length <= 1) {
-                        return;
-                    }
-                    const loopWidth = getLoopWidth(rowIndex, rowItems.length);
-                    offsetsRef.current[rowIndex] = wrapOffset(
-                        (offsetsRef.current[rowIndex] ?? 0) +
-                            deltaSeconds * pixelsPerSecond,
-                        loopWidth
+                const visual =
+                    visualById[item.id] ??
+                    makePendingVisual(
+                        item,
+                        record,
+                        catalogueByName === null,
+                        metricDefault
                     );
-                    applyTrackTransform(rowIndex, rowItems.length);
-                });
-            }
-            animationFrame = window.requestAnimationFrame(tick);
-        };
-        animationFrame = window.requestAnimationFrame(tick);
-        return () => window.cancelAnimationFrame(animationFrame);
-    }, [applyTrackTransform, config.speed, getLoopWidth, rows]);
-
-    const handleRailPointerDown = useCallback(
-        (event: React.PointerEvent<HTMLDivElement>) => {
-            if (event.button !== 0) {
-                return;
-            }
-            dragRef.current = {
-                active: true,
-                pointerId: event.pointerId,
-                lastX: event.clientX,
-                totalMovement: 0,
-            };
-            setIsDragging(true);
-            event.currentTarget.setPointerCapture(event.pointerId);
-        },
-        []
-    );
-    const handleRailPointerMove = useCallback(
-        (event: React.PointerEvent<HTMLDivElement>) => {
-            const drag = dragRef.current;
-            if (!drag.active || drag.pointerId !== event.pointerId) {
-                return;
-            }
-            const deltaX = event.clientX - drag.lastX;
-            if (deltaX === 0) {
-                return;
-            }
-            drag.lastX = event.clientX;
-            drag.totalMovement += Math.abs(deltaX);
-            moveRowsBy(deltaX);
-            event.preventDefault();
-        },
-        [moveRowsBy]
-    );
-    const finishRailDrag = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-        const drag = dragRef.current;
-        if (!drag.active || drag.pointerId !== event.pointerId) {
-            return;
-        }
-        if (drag.totalMovement >= DRAG_CLICK_THRESHOLD_PX) {
-            suppressNextClickRef.current = true;
-            window.setTimeout(() => {
-                suppressNextClickRef.current = false;
-            }, 0);
-        }
-        dragRef.current = {
-            active: false,
-            pointerId: null,
-            lastX: 0,
-            totalMovement: 0,
-        };
-        setIsDragging(false);
-        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-            event.currentTarget.releasePointerCapture(event.pointerId);
-        }
-    }, []);
-    const handleRailClickCapture = useCallback(
-        (event: React.MouseEvent<HTMLDivElement>) => {
-            if (!suppressNextClickRef.current) {
-                return;
-            }
-            suppressNextClickRef.current = false;
-            event.preventDefault();
-            event.stopPropagation();
-        },
-        []
+                return {
+                    id: item.id,
+                    label: visual.label,
+                    value: visual.valueText,
+                    status: visual.status,
+                    category: visual.subtitle,
+                    delta: visual.delta,
+                    deltaDir: visual.deltaDir,
+                    href: record?.search
+                        ? splunkSearchAppUrl(record.search, range)
+                        : undefined,
+                    canOpen: visual.canOpen,
+                };
+            }),
+        [
+            catalogueByName,
+            config.items,
+            metricDefaultsBySearchName,
+            range,
+            visualById,
+        ]
     );
 
     if (!config.enabled || config.items.length === 0) return null;
 
-    const trackGap = density === 'compact' ? 'gap-3' : 'gap-4';
     const labelCopy =
         density === 'compact'
             ? `${config.items.length} KPIs`
             : `${config.items.length} live KPIs`;
 
     return (
-        <section className="scd-signal-ticker-rail flex-shrink-0 border-b border-slate-200 bg-white/82 px-1.5 py-1 dark:border-slate-800 dark:bg-slate-950/95">
-            <style>{signalTickerCss}</style>
-            <div className={cn('flex items-center', density === 'compact' ? 'gap-2' : 'gap-3')}>
-                <div
-                    className={cn(
-                        'scd-signal-ticker-label-card hidden shrink-0 items-center gap-2 rounded-lg border border-sky-100 bg-white/90 shadow-sm dark:border-sky-900/70 dark:bg-slate-900/95 lg:flex',
-                        density === 'compact' ? 'px-2.5 py-1.5' : 'px-3 py-2'
-                    )}
-                >
-                    <Sparkles className="h-4 w-4 text-sky-500" />
-                    <div className="leading-tight">
-                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-sky-700 dark:text-sky-300">
-                            Signal Rail
-                        </p>
-                        <p className="text-[9px] font-semibold text-slate-400 dark:text-slate-500">
-                            {labelCopy}
-                        </p>
-                    </div>
-                </div>
-                <div
-                    className={cn(
-                        'min-w-0 flex-1 overflow-hidden select-none touch-pan-y',
-                        isDragging ? 'cursor-grabbing' : 'cursor-grab',
-                        density === 'compact' ? 'space-y-0.5' : 'space-y-1'
-                    )}
-                    onPointerDown={handleRailPointerDown}
-                    onPointerMove={handleRailPointerMove}
-                    onPointerUp={finishRailDrag}
-                    onPointerCancel={finishRailDrag}
-                    onClickCapture={handleRailClickCapture}
-                    title="Drag left or right to browse Signal Rail"
-                >
-                    {rows.map((rowItems, rowIndex) => {
-                        const rowKey = rowItems.map((item) => item.id).join('-');
-                        return (
-                            <div
-                                key={`ticker-row-${rowIndex}-${rowKey}`}
-                                className="overflow-hidden py-0.5"
-                            >
-                                <div
-                                    key={`ticker-track-${rowIndex}-${density}-${rowKey}`}
-                                    ref={(node) => {
-                                        trackRefs.current[rowIndex] = node;
-                                    }}
-                                    className={cn('scd-signal-ticker-track flex', trackGap)}
-                                >
-                                    {[0, 1].map((pass) => (
-                                        <div
-                                            key={`pass-${pass}`}
-                                            className={cn(
-                                                'flex',
-                                                trackGap,
-                                                pass === 1 &&
-                                                    'scd-signal-ticker-duplicate'
-                                            )}
-                                            aria-hidden={pass === 1}
-                                        >
-                                            {rowItems.map((item, idx) => {
-                                                const record =
-                                                    catalogueByName?.get(
-                                                        item.searchName
-                                                    );
-                                                const metricDefault =
-                                                    metricDefaultsBySearchName?.get(
-                                                        item.searchName
-                                                    );
-                                                const catalogueLoading =
-                                                    catalogueByName === null;
-                                                if (pass === 1) {
-                                                    return (
-                                                        <SignalTickerTileChrome
-                                                            key={`${pass}-${item.id}`}
-                                                            visual={
-                                                                visualById[item.id] ??
-                                                                makePendingVisual(
-                                                                    item,
-                                                                    record,
-                                                                    catalogueLoading,
-                                                                    metricDefault
-                                                                )
-                                                            }
-                                                            density={density}
-                                                            searchHref={
-                                                                record?.search
-                                                                    ? splunkSearchAppUrl(
-                                                                          record.search,
-                                                                          range
-                                                                      )
-                                                                    : undefined
-                                                            }
-                                                            duplicate
-                                                        />
-                                                    );
-                                                }
-                                                return (
-                                                    <SignalTickerTile
-                                                        key={`${pass}-${item.id}`}
-                                                        item={item}
-                                                        record={record}
-                                                        metricDefault={
-                                                            metricDefault
-                                                        }
-                                                        catalogueLoading={
-                                                            catalogueLoading
-                                                        }
-                                                        density={density}
-                                                        range={range}
-                                                        refreshToken={refreshToken}
-                                                        index={idx + rowIndex * 10}
-                                                        onVisualState={
-                                                            handleVisualState
-                                                        }
-                                                    />
-                                                );
-                                            })}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-                <button
-                    type="button"
-                    onClick={onOpenEditor}
-                    title="Configure signal rail"
-                    className={cn(
-                        'scd-signal-ticker-settings flex shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-sky-50 hover:text-sky-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:border-slate-800 dark:bg-slate-900/95 dark:text-slate-300 dark:hover:bg-sky-950/50 dark:hover:text-sky-200',
-                        density === 'compact' ? 'h-9 w-9' : 'h-10 w-10'
-                    )}
-                >
-                    <Settings2 className="h-4 w-4" />
-                </button>
-            </div>
-        </section>
+        <>
+            {config.items.map((item, index) => {
+                const record = catalogueByName?.get(item.searchName);
+                return (
+                    <SignalTickerTile
+                        key={item.id}
+                        item={item}
+                        record={record}
+                        metricDefault={metricDefaultsBySearchName?.get(
+                            item.searchName
+                        )}
+                        catalogueLoading={catalogueByName === null}
+                        density={density}
+                        range={range}
+                        refreshToken={refreshToken}
+                        index={index}
+                        onVisualState={handleVisualState}
+                        probeOnly
+                    />
+                );
+            })}
+            <SignalRailTicker
+                kpis={tickerKpis}
+                density={density}
+                rows={config.rows}
+                durationSeconds={durationSeconds}
+                subtitle={labelCopy}
+                onOpenEditor={onOpenEditor}
+            />
+        </>
     );
 };
 
@@ -898,8 +613,13 @@ interface SignalTickerEditorProps {
     catalogue: SearchbaseRecord[];
     metricDefaultsBySearchName?: Map<string, SignalTickerMetricDefaults>;
     catalogueLoading: boolean;
+    range: TimeRange;
     includeHiddenSearches?: boolean;
+    includeDrilldownSearches?: boolean;
+    includeTableSearches?: boolean;
     onIncludeHiddenSearchesChange?: (includeHidden: boolean) => void;
+    onIncludeDrilldownSearchesChange?: (includeDrilldowns: boolean) => void;
+    onIncludeTableSearchesChange?: (includeTables: boolean) => void;
     onChange: (config: SignalTickerConfig) => void;
     onReset: () => void;
     onClose: () => void;
@@ -931,8 +651,13 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
     catalogue,
     metricDefaultsBySearchName,
     catalogueLoading,
+    range,
     includeHiddenSearches = false,
+    includeDrilldownSearches = false,
+    includeTableSearches = false,
     onIncludeHiddenSearchesChange,
+    onIncludeDrilldownSearchesChange,
+    onIncludeTableSearchesChange,
     onChange,
     onReset,
     onClose,
@@ -946,6 +671,9 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
     const [tagFilter, setTagFilter] = useState('');
     const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
     const [filtersOpen, setFiltersOpen] = useState(false);
+    const [expandedDescriptionId, setExpandedDescriptionId] = useState<
+        string | null
+    >(null);
     const tagSelectRef = useRef<HTMLDivElement | null>(null);
     const tagInputRef = useRef<HTMLInputElement | null>(null);
     const selectedNames = useMemo(
@@ -1063,6 +791,8 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
     const activeFilterCount =
         (selectedApp !== DEFAULT_APP_SCOPE ? 1 : 0) +
         (includeHiddenSearches ? 1 : 0) +
+        (includeDrilldownSearches ? 1 : 0) +
+        (includeTableSearches ? 1 : 0) +
         (selectedCategory !== ALL_CATEGORIES ? 1 : 0) +
         (selectedSubCategory !== ALL_SUB_CATEGORIES ? 1 : 0) +
         activeTags.size;
@@ -1106,6 +836,17 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
         return () => document.removeEventListener('mousedown', handler);
     }, [open, tagDropdownOpen]);
 
+    useEffect(() => {
+        if (!open) return undefined;
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key !== 'Escape') return;
+            event.preventDefault();
+            onClose();
+        };
+        document.addEventListener('keydown', onKeyDown, true);
+        return () => document.removeEventListener('keydown', onKeyDown, true);
+    }, [open, onClose]);
+
     const addTag = (tag: string) => {
         setActiveTags((current) => {
             if (current.has(tag)) return current;
@@ -1128,6 +869,8 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
     const clearFilters = () => {
         setSelectedApp(DEFAULT_APP_SCOPE);
         onIncludeHiddenSearchesChange?.(false);
+        onIncludeDrilldownSearchesChange?.(false);
+        onIncludeTableSearchesChange?.(false);
         setSelectedCategory(ALL_CATEGORIES);
         setSelectedSubCategory(ALL_SUB_CATEGORIES);
         setActiveTags(new Set());
@@ -1232,7 +975,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
 
                 <div className="grid min-h-0 flex-1 grid-cols-1 gap-0 overflow-hidden lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
                     <section className="min-h-0 overflow-y-auto border-b border-slate-200 p-4 dark:border-slate-800 lg:border-b-0 lg:border-r">
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                             <button
                                 type="button"
                                 onClick={() =>
@@ -1287,6 +1030,31 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                 </span>
                                 <span className="mt-1 block text-sm font-bold">
                                     {config.rows === 1 ? 'One row' : 'Two rows'}
+                                </span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    updateConfig({
+                                        showPriorityDrilldown:
+                                            !config.showPriorityDrilldown,
+                                    })
+                                }
+                                className={cn(
+                                    'rounded-lg border px-3 py-2 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
+                                    config.showPriorityDrilldown
+                                        ? 'border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-700 dark:bg-sky-950/50 dark:text-sky-200'
+                                        : 'border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400'
+                                )}
+                                title="Show or hide the Priority Drill-Down row below the Signal Rail"
+                            >
+                                <span className="block text-[10px] font-black uppercase tracking-[0.16em]">
+                                    Drill-down
+                                </span>
+                                <span className="mt-1 block text-sm font-bold">
+                                    {config.showPriorityDrilldown
+                                        ? 'Shown'
+                                        : 'Hidden'}
                                 </span>
                             </button>
                         </div>
@@ -1632,24 +1400,52 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                         </select>
                                     </label>
 
-                                    <label className="grid gap-1 sm:grid-cols-[90px_minmax(0,1fr)] sm:items-center">
+                                    <div className="grid gap-1 sm:grid-cols-[90px_minmax(0,1fr)] sm:items-start">
                                         <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
-                                            Hidden
+                                            Visibility
                                         </span>
-                                        <span className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
-                                            <input
-                                                type="checkbox"
-                                                checked={includeHiddenSearches}
-                                                onChange={(event) =>
-                                                    onIncludeHiddenSearchesChange?.(
-                                                        event.target.checked
-                                                    )
-                                                }
-                                                className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-900"
-                                            />
-                                            <span>Show hidden searches</span>
-                                        </span>
-                                    </label>
+                                        <div className="grid gap-2 md:grid-cols-3">
+                                            <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={includeHiddenSearches}
+                                                    onChange={(event) =>
+                                                        onIncludeHiddenSearchesChange?.(
+                                                            event.target.checked
+                                                        )
+                                                    }
+                                                    className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-900"
+                                                />
+                                                <span>Show hidden searches</span>
+                                            </label>
+                                            <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={includeDrilldownSearches}
+                                                    onChange={(event) =>
+                                                        onIncludeDrilldownSearchesChange?.(
+                                                            event.target.checked
+                                                        )
+                                                    }
+                                                    className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-900"
+                                                />
+                                                <span>Show drill-down searches</span>
+                                            </label>
+                                            <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={includeTableSearches}
+                                                    onChange={(event) =>
+                                                        onIncludeTableSearchesChange?.(
+                                                            event.target.checked
+                                                        )
+                                                    }
+                                                    className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-900"
+                                                />
+                                                <span>Show table searches</span>
+                                            </label>
+                                        </div>
+                                    </div>
 
                                     {categories.length > 0 && (
                                         <label className="grid gap-1 sm:grid-cols-[90px_minmax(0,1fr)] sm:items-center">
@@ -1892,6 +1688,20 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                     const selected = selectedNames.has(
                                         entry.searchName
                                     );
+                                    const searchDescription =
+                                        plainTextFromHtml(
+                                            entry.description ||
+                                                entry.explanation
+                                        ) || 'No description supplied.';
+                                    const descriptionExpanded =
+                                        expandedDescriptionId === entry.id;
+                                    const descriptionId = `signal-rail-search-description-${entry.id.replace(
+                                        /[^A-Za-z0-9_-]/g,
+                                        '-'
+                                    )}`;
+                                    const searchHref = entry.search?.trim()
+                                        ? splunkSearchAppUrl(entry.search, range)
+                                        : undefined;
                                     return (
                                         <div
                                             key={entry.id}
@@ -1913,28 +1723,76 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                                             ? ` / ${entry.subCategory}`
                                                             : ''}
                                                     </p>
-                                                    <p className="mt-1 line-clamp-2 text-xs text-slate-500 dark:text-slate-400">
-                                                        {plainTextFromHtml(
-                                                            entry.explanation ||
-                                                                entry.description
-                                                        ) || 'No description supplied.'}
-                                                    </p>
                                                 </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => addEntry(entry)}
-                                                    disabled={selected}
-                                                    className={cn(
-                                                        'inline-flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-black uppercase tracking-wide transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
-                                                        selected
-                                                            ? 'bg-slate-100 text-slate-400 dark:bg-slate-900 dark:text-slate-600'
-                                                            : 'bg-sky-500 text-white hover:bg-sky-600'
+                                                <div className="flex shrink-0 items-center gap-1.5">
+                                                    <button
+                                                        type="button"
+                                                        aria-label={`Show description for ${entry.searchName}`}
+                                                        aria-controls={descriptionId}
+                                                        aria-expanded={descriptionExpanded}
+                                                        title="Show search description"
+                                                        onClick={() =>
+                                                            setExpandedDescriptionId(
+                                                                descriptionExpanded
+                                                                    ? null
+                                                                    : entry.id
+                                                            )
+                                                        }
+                                                        className={cn(
+                                                            'inline-flex h-8 w-8 items-center justify-center rounded-lg border text-slate-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:text-slate-300',
+                                                            descriptionExpanded
+                                                                ? 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-200'
+                                                                : 'border-slate-200 bg-white hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-sky-800 dark:hover:bg-sky-950/40 dark:hover:text-sky-200'
+                                                        )}
+                                                    >
+                                                        <Info className="h-3.5 w-3.5" />
+                                                    </button>
+                                                    {searchHref ? (
+                                                        <a
+                                                            href={searchHref}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            aria-label={`Open ${entry.searchName} in Search`}
+                                                            title={`Open ${entry.searchName} in Search`}
+                                                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-black uppercase tracking-wide text-slate-600 transition-colors hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 dark:hover:border-sky-800 dark:hover:bg-sky-950/40 dark:hover:text-sky-200"
+                                                        >
+                                                            <ExternalLink className="h-3.5 w-3.5" />
+                                                            Open
+                                                        </a>
+                                                    ) : (
+                                                        <span
+                                                            aria-label={`No search available for ${entry.searchName}`}
+                                                            title="No SPL available"
+                                                            className="inline-flex cursor-not-allowed items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-black uppercase tracking-wide text-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-600"
+                                                        >
+                                                            <ExternalLink className="h-3.5 w-3.5" />
+                                                            Open
+                                                        </span>
                                                     )}
-                                                >
-                                                    <Plus className="h-3.5 w-3.5" />
-                                                    {selected ? 'Added' : 'Add'}
-                                                </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => addEntry(entry)}
+                                                        disabled={selected}
+                                                        className={cn(
+                                                            'inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-black uppercase tracking-wide transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
+                                                            selected
+                                                                ? 'bg-slate-100 text-slate-400 dark:bg-slate-900 dark:text-slate-600'
+                                                                : 'bg-sky-500 text-white hover:bg-sky-600'
+                                                        )}
+                                                    >
+                                                        <Plus className="h-3.5 w-3.5" />
+                                                        {selected ? 'Added' : 'Add'}
+                                                    </button>
+                                                </div>
                                             </div>
+                                            {descriptionExpanded && (
+                                                <div
+                                                    id={descriptionId}
+                                                    className="mt-3 rounded-lg border border-sky-100 bg-sky-50/70 px-3 py-2 text-xs leading-relaxed text-slate-600 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-slate-300"
+                                                >
+                                                    {searchDescription}
+                                                </div>
+                                            )}
                                             {entry.tags.length > 0 && (
                                                 <div className="mt-2 flex flex-wrap gap-1">
                                                     {entry.tags.slice(0, 5).map((tag) => (

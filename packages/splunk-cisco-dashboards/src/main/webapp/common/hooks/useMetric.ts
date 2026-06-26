@@ -328,6 +328,12 @@ export interface MetricResult {
     sparkTimestamps: number[];
     /** Same shape as sparkData but for the previous period; empty if unavailable. */
     previousSparkData: number[];
+    /**
+     * Numeric result columns available for a canvas user-selected
+     * overlay. Excludes Splunk internal columns and the resolved
+     * primary value/spark/delta columns.
+     */
+    availableOverlayFields: string[];
     source: DataSource;
     status: MetricStatus;
     /** SPL that was (or would be) executed. Used by the click-to-search drilldown. */
@@ -419,6 +425,7 @@ const buildMock = (cfg: MetricConfig, spl: string, savedSearch: string): MetricR
         sparkData: buildMockSparkline(cfg),
         sparkTimestamps: [],
         previousSparkData: [],
+        availableOverlayFields: [],
         source: 'mock',
         status: computeStatus(value, cfg.thresholds),
         spl,
@@ -463,27 +470,47 @@ const PREFERRED_VALUE_FIELDS: readonly string[] = [
  * across all rows before falling back to the first non-internal
  * numeric column it finds.
  */
+const isUsableNumericValue = (raw: unknown): boolean =>
+    raw !== null &&
+    raw !== undefined &&
+    raw !== '' &&
+    Number.isFinite(Number(raw));
+
+const isInternalResultField = (field: string): boolean =>
+    field.startsWith('_') || field === 'time' || field === 'span';
+
+const detectNumericFields = (
+    rows: ReadonlyArray<Record<string, unknown>>
+): string[] => {
+    const seen = new Set<string>();
+    const fields: string[] = [];
+    for (const row of rows) {
+        for (const [field, raw] of Object.entries(row)) {
+            if (isInternalResultField(field) || seen.has(field)) continue;
+            if (!isUsableNumericValue(raw)) continue;
+            seen.add(field);
+            fields.push(field);
+        }
+    }
+    return fields;
+};
+
 const autoDetectValueField = (
     rows: ReadonlyArray<Record<string, unknown>>
 ): string | null => {
     if (rows.length === 0) return null;
-    const isUsable = (raw: unknown): boolean =>
-        raw !== null &&
-        raw !== undefined &&
-        raw !== '' &&
-        Number.isFinite(Number(raw));
 
     for (const name of PREFERRED_VALUE_FIELDS) {
         for (const r of rows) {
-            if (isUsable(r[name])) return name;
+            if (isUsableNumericValue(r[name])) return name;
         }
     }
     // Splunk uses leading underscore for system fields (_time, _span,
     // _raw, etc.) which we never want to surface as a headline value.
     for (const r of rows) {
         for (const [key, val] of Object.entries(r)) {
-            if (key.startsWith('_')) continue;
-            if (isUsable(val)) return key;
+            if (isInternalResultField(key)) continue;
+            if (isUsableNumericValue(val)) return key;
         }
     }
     return null;
@@ -653,6 +680,7 @@ export const useMetric = (
             sparkData: [],
             sparkTimestamps: [],
             previousSparkData: [],
+            availableOverlayFields: [],
             source: 'live',
             status: 'unknown',
             spl,
@@ -709,12 +737,7 @@ export const useMetric = (
                 const fieldExists = (name: string): boolean =>
                     rows.some((r) => {
                         const v = r[name];
-                        return (
-                            v !== null &&
-                            v !== undefined &&
-                            v !== '' &&
-                            Number.isFinite(Number(v))
-                        );
+                        return isUsableNumericValue(v);
                     });
 
                 let detected: string | null;
@@ -847,11 +870,21 @@ export const useMetric = (
                 // so a flat broadcast baseline renders as a clean dashed
                 // line through the avg.
                 const prevRows = (prevRes?.results ?? []) as Array<Record<string, unknown>>;
-                const previousSparkData = cfg.baselineField
-                    ? rows.map((r) => rowToNumber(r[cfg.baselineField as string]))
+                const baselineField =
+                    cfg.baselineField && fieldExists(cfg.baselineField)
+                        ? cfg.baselineField
+                        : undefined;
+                const previousSparkData = baselineField
+                    ? rows.map((r) => rowToNumber(r[baselineField]))
                     : isSingleRow
                     ? []
                     : prevRows.map((r) => rowToNumber(r[valueField]));
+                const availableOverlayFields = detectNumericFields(rows).filter(
+                    (field) =>
+                        field !== valueField &&
+                        field !== sparkField &&
+                        field !== changeField
+                );
 
                 // Optional string headline override. Read from the
                 // latest row only - a `displayField` is always
@@ -882,6 +915,7 @@ export const useMetric = (
                     sparkTimestamps:
                         sparkTimestamps.length === sparkData.length ? sparkTimestamps : [],
                     previousSparkData,
+                    availableOverlayFields,
                     source: 'live',
                     status: computeStatus(value, cfg.thresholds),
                     spl,
@@ -946,6 +980,8 @@ export interface KpiConfig {
     spl?: string;
     /** Field whose value is displayed. Defaults to 'value'. */
     valueField?: string;
+    /** Optional suffix appended to numeric KPI values, e.g. '%' or 'ms'. */
+    unit?: string;
     /** Mock fallback when no search wired. */
     mockValue: string;
     /**
@@ -968,6 +1004,17 @@ export interface KpiConfig {
      */
     suppressMockOnEmpty?: boolean;
 }
+
+const formatKpiValue = (raw: unknown, unit?: string): string => {
+    const text = String(raw).trim();
+    if (!unit || !text || text.includes(unit)) return text;
+    // Only append units to plain numeric outputs. String headlines like
+    // "3 of 4 available" should render exactly as emitted by SPL.
+    if (/^-?\d[\d,]*(?:\.\d+)?$/.test(text)) {
+        return `${text}${unit}`;
+    }
+    return text;
+};
 
 export interface KpiResult {
     value: string;
@@ -1139,7 +1186,7 @@ export const useKpi = (
                     raw,
                 });
                 setResult({
-                    value: String(raw),
+                    value: formatKpiValue(raw, cfg.unit),
                     source: 'live',
                     spl,
                     resolvedSavedSearch: savedSearchName,

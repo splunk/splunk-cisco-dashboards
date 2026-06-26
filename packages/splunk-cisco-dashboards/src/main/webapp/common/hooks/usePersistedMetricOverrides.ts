@@ -22,7 +22,7 @@
  *         thresholdWarning?: number,   // optional override for threshold.warning
  *         thresholdCritical?: number,  // optional override for threshold.critical
  *         thresholdDirection?: 'higher_is_better' | 'lower_is_better',
- *         vizOverride?: 'area'|'line'|'column'|'bar'|'singlevalue', // Builds 1174 / 1187
+ *         vizOverride?: MetricVizOverride, // Builds 1174 / 1187 / 1225
  *         hidePeak?: true,             // Build 1202 — suppress peak callout
  *         hideDelta?: true,            // Build 1202 — suppress delta pill
  *         hideOverlay?: true,          // Build 1203 — suppress previous-period dashed overlay
@@ -85,12 +85,31 @@ const VALID_DIRECTIONS = new Set<string>(['higher_is_better', 'lower_is_better']
  * places at once: this set, the runtime SparklineVizType, and the
  * picker UI's option list.
  */
+export type MetricVizOverride =
+    | 'area'
+    | 'line'
+    | 'column'
+    | 'bar'
+    | 'singlevalue'
+    | 'table'
+    | 'barbreakdown'
+    | 'pie'
+    | 'singlevalueradial'
+    | 'fillergauge'
+    | 'markergauge';
+
 const VALID_VIZ_OVERRIDES = new Set<string>([
     'area',
     'line',
     'column',
     'bar',
     'singlevalue',
+    'table',
+    'barbreakdown',
+    'pie',
+    'singlevalueradial',
+    'fillergauge',
+    'markergauge',
 ]);
 
 export interface MetricOverride {
@@ -130,16 +149,15 @@ export interface MetricOverride {
      * Mirrors the runtime `SparklineVizType` so the picker can swap
      * the rendering without forking the searchbase entry: an `area`
      * tile can be re-styled as `line` / `column` / `bar` /
-     * `singlevalue` per user. `singlevalue` collapses the chart
-     * entirely and only shows the headline + threshold rows, useful
-     * for tiles whose timechart adds clutter rather than insight
-     * (Alan asked for this on 2026-05-18). `bar` (Build 1187) is the
-     * recharts-`layout="vertical"` horizontal-bar render path, kept
-     * separate from `column` so the two chart styles are reachable
-     * independently. When unset, the runtime falls back to
-     * `searchbase.conf`'s `default_viz` (current behaviour).
+     * `singlevalue` per user. Build 1225 extended the same persisted
+     * knob to structural tile renderers that already exist in the app:
+     * `table`, `barbreakdown`, `pie`, `singlevalueradial`,
+     * `fillergauge`, and `markergauge`. `bar` remains the sparkline
+     * horizontal-bar style for backward compatibility; use
+     * `barbreakdown` for categorical row distributions. When unset,
+     * the runtime falls back to `searchbase.conf`'s `default_viz`.
      */
-    vizOverride?: 'area' | 'line' | 'column' | 'bar' | 'singlevalue';
+    vizOverride?: MetricVizOverride;
     /**
      * Display toggles (Build 1202, from Atef's review on 2026-05-19).
      * Together with the picker-driven KPI binding and Chart style,

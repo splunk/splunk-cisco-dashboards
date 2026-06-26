@@ -17,6 +17,7 @@ import VizKpi from '../../common/components/templatewizard/viz-kpi/VizKpi';
 import VizOther from '../../common/components/templatewizard/viz-other/VizOther';
 import { actionMenus } from '../../common/udf/presets';
 import DBHomePage from './DBHomePage';
+import SpaceManagerViz from './SpaceManager/SpaceManagerViz';
 
 const router = createHashRouter(
     //<Route path="/:dashboardid/:currentmode" element={<DashbiardStudioEditor />} />
@@ -54,6 +55,7 @@ const customPresets = {
         ...EnterprisePreset.visualizations,
         'splunk.template_kpi': VizKpi,
         'splunk.template_other': VizOther,
+        'splunk.cisco_spaces_space_manager': SpaceManagerViz,
     },
 };
 

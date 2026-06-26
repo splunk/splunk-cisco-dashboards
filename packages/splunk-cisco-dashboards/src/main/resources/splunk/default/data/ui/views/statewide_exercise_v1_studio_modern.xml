@@ -1,2508 +1,1811 @@
 
 <dashboard version="2" theme="light">
- <label>Statewide Exercise - Modern Dashboard Studio</label>
- <description>Modern Dashboard Studio JSON conversion of statewide_exercise_v1.xml with tabbed layout, refreshed searches, token filters, drilldown detail panels, and enterprise network monitoring visuals.</description>
- <definition><![CDATA[
+    <label>Statewide Exercise - Modern Dashboard Studio</label>
+    <description>Modern Dashboard Studio JSON conversion of statewide_exercise_v1.xml with tabbed layout, refreshed searches, token filters, drilldown detail panels, and enterprise network monitoring visuals.</description>
+    <definition><![CDATA[
 {
-  "title": "Statewide Exercise - Modern Dashboard Studio",
-  "description": "Modern Dashboard Studio JSON conversion of statewide_exercise_v1.xml with tabbed layout, refreshed searches, token filters, drilldown detail panels, and enterprise network monitoring visuals.",
-  "inputs": {
-    "input_time_range": {
-      "type": "input.timerange",
-      "title": "Time Range",
-      "options": {
-        "token": "time_tok",
-        "defaultValue": "-24h@h,now"
-      }
-    },
-    "input_refresh_rate": {
-      "type": "input.dropdown",
-      "title": "Refresh",
-      "options": {
-        "token": "refresh_tok",
-        "defaultValue": "60s",
-        "items": [
-          {
-            "label": "60 seconds",
-            "value": "60s"
-          },
-          {
-            "label": "5 minutes",
-            "value": "300s"
-          },
-          {
-            "label": "15 minutes",
-            "value": "900s"
-          }
-        ]
-      }
-    },
-    "input_client_type": {
-      "type": "input.dropdown",
-      "title": "Client Type",
-      "options": {
-        "token": "client_type_tok",
-        "defaultValue": "*",
-        "items": [
-          {
-            "label": "All clients",
-            "value": "*"
-          },
-          {
-            "label": "Wireless",
-            "value": "Wireless"
-          },
-          {
-            "label": "Wired",
-            "value": "Wired"
-          }
-        ]
-      }
-    },
-    "input_site_filter": {
-      "type": "input.text",
-      "title": "Site Filter",
-      "options": {
-        "token": "site_tok",
-        "defaultValue": "*"
-      }
-    },
-    "input_close_issue": {
-      "type": "input.button",
-      "title": "",
-      "options": {
-        "label": "Close Details"
-      },
-      "eventHandlers": [
-        {
-          "type": "drilldown.setToken",
-          "options": {
-            "tokens": [
-              {
-                "token": "selected_issue",
-                "value": ""
-              },
-              {
-                "token": "selected_issue_priority",
-                "value": ""
-              }
-            ]
-          }
-        }
-      ],
-      "containerOptions": {
-        "visibility": {
-          "showConditions": [
-            "condition_issue_selected"
-          ]
-        }
-      }
-    }
-  },
-  "defaults": {
-    "dataSources": {
-      "global": {
-        "options": {
-          "refresh": "$refresh_tok$",
-          "refreshType": "delay"
-        }
-      },
-      "ds.search": {
-        "options": {
-          "queryParameters": {
-            "earliest": "$time_tok.earliest$",
-            "latest": "$time_tok.latest$"
-          }
-        }
-      },
-      "ds.spl2": {
-        "options": {
-          "queryParameters": {
-            "earliest": "$time_tok.earliest$",
-            "latest": "$time_tok.latest$"
-          }
-        }
-      }
-    },
-    "visualizations": {
-      "global": {
-        "showProgressBar": true,
-        "showLastUpdated": true
-      }
-    },
-    "tokens": {
-      "default": {
-        "selected_issue": {
-          "value": ""
-        },
-        "selected_issue_priority": {
-          "value": ""
-        },
-        "selected_client": {
-          "value": ""
-        },
-        "site_tok": {
-          "value": "*"
-        },
-        "client_type_tok": {
-          "value": "*"
-        },
-        "refresh_tok": {
-          "value": "60s"
-        }
-      }
-    }
-  },
-  "visualizations": {
-    "viz_header_overview": {
-      "type": "splunk.markdown",
-      "options": {
-        "markdown": "## General Overview\nMonitor statewide wired and wireless client health across all sites. Use the filters above to narrow client views by site or connection type.",
-        "backgroundColor": "#ffffff",
-        "fontColor": "#111827",
-        "fontSize": "small"
-      },
-      "showProgressBar": false,
-      "showLastUpdated": false
-    },
-    "viz_header_exec": {
-      "type": "splunk.markdown",
-      "options": {
-        "markdown": "## Overall Health Summary - Network Devices\nExecutive view of device health, inventory, and active Catalyst Center issues across the statewide environment.",
-        "backgroundColor": "#ffffff",
-        "fontColor": "#111827",
-        "fontSize": "small"
-      },
-      "showProgressBar": false,
-      "showLastUpdated": false
-    },
-    "viz_header_client": {
-      "type": "splunk.markdown",
-      "options": {
-        "markdown": "## Client Summary\nComprehensive client health, distribution, activity, and top-client details for operational troubleshooting.",
-        "backgroundColor": "#ffffff",
-        "fontColor": "#111827",
-        "fontSize": "small"
-      },
-      "showProgressBar": false,
-      "showLastUpdated": false
-    },
-    "viz_header_about": {
-      "type": "splunk.markdown",
-      "options": {
-        "markdown": "## About This Dashboard\nSource, design, and operational notes for the statewide network exercise dashboard.",
-        "backgroundColor": "#ffffff",
-        "fontColor": "#111827",
-        "fontSize": "small"
-      },
-      "showProgressBar": false,
-      "showLastUpdated": false
-    },
-    "viz_ov_wireless_health": {
-      "type": "splunk.singlevalue",
-      "title": "Wireless Health",
-      "description": "Wireless client health with threshold-colored sparkline.",
-      "dataSources": {
-        "primary": "ds_kpi_wireless_health"
-      },
-      "options": {
-        "majorValue": "> primary | seriesByName('Wireless Health') | lastPoint()",
-        "majorColor": "> majorValue | rangeValue(healthColorRange)",
-        "majorFontSize": 38,
-        "sparklineDisplay": "below",
-        "showSparklineAreaGraph": true,
-        "showSparklineTooltip": true,
-        "sparklineStrokeColor": "> majorValue | rangeValue(healthColorRange)",
-        "sparklineAreaColor": "> majorValue | rangeValue(healthColorRange)",
-        "trendDisplay": "percent",
-        "showTrendIndicator": true,
-        "unit": "%",
-        "shouldAbbreviateMajorValue": true,
-        "shouldAbbreviateTrendValue": true,
-        "backgroundColor": "#ffffff"
-      },
-      "context": {
-        "healthColorRange": [
-          {
-            "to": 80,
-            "value": "#dc2626"
-          },
-          {
-            "from": 80,
-            "to": 95,
-            "value": "#eab308"
-          },
-          {
-            "from": 95,
-            "value": "#16a34a"
-          }
-        ]
-      }
-    },
-    "viz_ov_wireless_clients": {
-      "type": "splunk.singlevalue",
-      "title": "Wireless Clients",
-      "description": "Total wireless clients currently connected.",
-      "dataSources": {
-        "primary": "ds_kpi_wireless_total"
-      },
-      "options": {
-        "majorValue": "> primary | seriesByName('Wireless Clients') | lastPoint()",
-        "majorColor": "#2563eb",
-        "majorFontSize": 38,
-        "sparklineDisplay": "below",
-        "showSparklineAreaGraph": true,
-        "showSparklineTooltip": true,
-        "sparklineStrokeColor": "#2563eb",
-        "sparklineAreaColor": "rgba(37,99,235,0.18)",
-        "trendDisplay": "percent",
-        "showTrendIndicator": true,
-        "shouldAbbreviateMajorValue": true,
-        "shouldAbbreviateTrendValue": true,
-        "backgroundColor": "#ffffff"
-      }
-    },
-    "viz_ov_wireless_healthy": {
-      "type": "splunk.singlevalue",
-      "title": "Healthy Wireless Clients",
-      "description": "Wireless clients currently in healthy status.",
-      "dataSources": {
-        "primary": "ds_wireless_trend_24h"
-      },
-      "options": {
-        "majorValue": "> primary | seriesByName('Healthy') | lastPoint()",
-        "majorColor": "#16a34a",
-        "majorFontSize": 38,
-        "sparklineDisplay": "below",
-        "showSparklineAreaGraph": true,
-        "showSparklineTooltip": true,
-        "sparklineStrokeColor": "#2563eb",
-        "sparklineAreaColor": "rgba(37,99,235,0.18)",
-        "trendDisplay": "percent",
-        "showTrendIndicator": true,
-        "shouldAbbreviateMajorValue": true,
-        "shouldAbbreviateTrendValue": true,
-        "backgroundColor": "#ffffff"
-      }
-    },
-    "viz_ov_wired_health": {
-      "type": "splunk.singlevalue",
-      "title": "Wired Health",
-      "description": "Wired client health with threshold-colored sparkline.",
-      "dataSources": {
-        "primary": "ds_kpi_wired_health"
-      },
-      "options": {
-        "majorValue": "> primary | seriesByName('Wired Health') | lastPoint()",
-        "majorColor": "> majorValue | rangeValue(healthColorRange)",
-        "majorFontSize": 38,
-        "sparklineDisplay": "below",
-        "showSparklineAreaGraph": true,
-        "showSparklineTooltip": true,
-        "sparklineStrokeColor": "> majorValue | rangeValue(healthColorRange)",
-        "sparklineAreaColor": "> majorValue | rangeValue(healthColorRange)",
-        "trendDisplay": "percent",
-        "showTrendIndicator": true,
-        "unit": "%",
-        "shouldAbbreviateMajorValue": true,
-        "shouldAbbreviateTrendValue": true,
-        "backgroundColor": "#ffffff"
-      },
-      "context": {
-        "healthColorRange": [
-          {
-            "to": 80,
-            "value": "#dc2626"
-          },
-          {
-            "from": 80,
-            "to": 95,
-            "value": "#eab308"
-          },
-          {
-            "from": 95,
-            "value": "#16a34a"
-          }
-        ]
-      }
-    },
-    "viz_ov_wired_clients": {
-      "type": "splunk.singlevalue",
-      "title": "Wired Clients",
-      "description": "Total wired clients currently connected.",
-      "dataSources": {
-        "primary": "ds_kpi_wired_total"
-      },
-      "options": {
-        "majorValue": "> primary | seriesByName('Wired Clients') | lastPoint()",
-        "majorColor": "#7c3aed",
-        "majorFontSize": 38,
-        "sparklineDisplay": "below",
-        "showSparklineAreaGraph": true,
-        "showSparklineTooltip": true,
-        "sparklineStrokeColor": "#7c3aed",
-        "sparklineAreaColor": "rgba(124,58,237,0.18)",
-        "trendDisplay": "percent",
-        "showTrendIndicator": true,
-        "shouldAbbreviateMajorValue": true,
-        "shouldAbbreviateTrendValue": true,
-        "backgroundColor": "#ffffff"
-      }
-    },
-    "viz_ov_wired_healthy": {
-      "type": "splunk.singlevalue",
-      "title": "Healthy Wired Clients",
-      "description": "Wired clients currently in healthy status.",
-      "dataSources": {
-        "primary": "ds_wired_trend_24h"
-      },
-      "options": {
-        "majorValue": "> primary | seriesByName('Healthy') | lastPoint()",
-        "majorColor": "#16a34a",
-        "majorFontSize": 38,
-        "sparklineDisplay": "below",
-        "showSparklineAreaGraph": true,
-        "showSparklineTooltip": true,
-        "sparklineStrokeColor": "#2563eb",
-        "sparklineAreaColor": "rgba(37,99,235,0.18)",
-        "trendDisplay": "percent",
-        "showTrendIndicator": true,
-        "shouldAbbreviateMajorValue": true,
-        "shouldAbbreviateTrendValue": true,
-        "backgroundColor": "#ffffff"
-      }
-    },
-    "viz_ov_wireless_trend": {
-      "type": "splunk.area",
-      "title": "Wireless Client Trend",
-      "description": "Stacked wireless client count with health score and 80/95 threshold overlays.",
-      "dataSources": {
-        "primary": "ds_mod_wireless_client_trend_health"
-      },
-      "options": {
-        "backgroundColor": "#ffffff",
-        "nullValueDisplay": "zero",
-        "showYMajorGridLines": true,
-        "xAxisTitleVisibility": "hide",
-        "yAxisTitleVisibility": "hide",
-        "stackMode": "stacked",
-        "seriesColorsByField": {
-          "Healthy": "#16a34a",
-          "Fair": "#eab308",
-          "Poor": "#dc2626",
-          "No Data": "#94a3b8",
-          "Wireless Health": "#2563eb",
-          "Warning Threshold": "#eab308",
-          "Healthy Threshold": "#16a34a"
-        },
-        "overlayFields": [
-          "Wireless Health",
-          "Warning Threshold",
-          "Healthy Threshold"
-        ],
-        "showOverlayY2Axis": true,
-        "yAxisTitleText": "Clients",
-        "y2AxisTitleText": "Health %"
-      }
-    },
-    "viz_ov_wired_trend": {
-      "type": "splunk.area",
-      "title": "Wired Client Trend",
-      "description": "Stacked wired client count with health score and 80/95 threshold overlays.",
-      "dataSources": {
-        "primary": "ds_mod_wired_client_trend_health"
-      },
-      "options": {
-        "backgroundColor": "#ffffff",
-        "nullValueDisplay": "zero",
-        "showYMajorGridLines": true,
-        "xAxisTitleVisibility": "hide",
-        "yAxisTitleVisibility": "hide",
-        "stackMode": "stacked",
-        "seriesColorsByField": {
-          "Healthy": "#16a34a",
-          "Fair": "#eab308",
-          "Poor": "#dc2626",
-          "No Data": "#94a3b8",
-          "Wired Health": "#7c3aed",
-          "Warning Threshold": "#eab308",
-          "Healthy Threshold": "#16a34a"
-        },
-        "overlayFields": [
-          "Wired Health",
-          "Warning Threshold",
-          "Healthy Threshold"
-        ],
-        "showOverlayY2Axis": true,
-        "yAxisTitleText": "Clients",
-        "y2AxisTitleText": "Health %"
-      }
-    },
-    "viz_ov_ssid_bar": {
-      "type": "splunk.bar",
-      "title": "Client Count per SSID",
-      "description": "Wireless client distribution by SSID for the selected time range.",
-      "dataSources": {
-        "primary": "ds_cs_by_ssid"
-      },
-      "options": {
-        "backgroundColor": "#ffffff",
-        "dataValuesDisplay": "all",
-        "legendDisplay": "off",
-        "showYMajorGridLines": true,
-        "xAxisTitleVisibility": "hide",
-        "yAxisTitleVisibility": "hide",
-        "seriesColors": [
-          "#2563eb"
-        ],
-        "xAxisTitleText": "SSID",
-        "yAxisTitleText": "Clients"
-      }
-    },
-    "viz_ov_week_line": {
-      "type": "splunk.line",
-      "title": "Past Week - Client Trends",
-      "description": "Wireless and wired client counts over the last 7 days.",
-      "dataSources": {
-        "primary": "ds_mod_past_week_client_trends"
-      },
-      "options": {
-        "backgroundColor": "#ffffff",
-        "nullValueDisplay": "connect",
-        "markerDisplay": "outlined",
-        "showYMajorGridLines": true,
-        "xAxisTitleVisibility": "hide",
-        "yAxisTitleVisibility": "hide",
-        "seriesColorsByField": {
-          "Wireless Clients": "#2563eb",
-          "Wired Clients": "#7c3aed"
-        },
-        "lineWidth": 3
-      }
-    },
-    "viz_ex_ap_health": {
-      "type": "splunk.fillergauge",
-      "title": "Access Points",
-      "description": "Reachable and managed access points as a percentage of total AP inventory.",
-      "context": {
-        "healthColorRange": [
-          {
-            "to": 80,
-            "value": "#dc2626"
-          },
-          {
-            "from": 80,
-            "to": 95,
-            "value": "#eab308"
-          },
-          {
-            "from": 95,
-            "value": "#16a34a"
-          }
-        ]
-      },
-      "dataSources": {
-        "primary": "ds_mod_device_health_ap"
-      },
-      "options": {
-        "value": "> primary | seriesByName('health_pct') | lastPoint()",
-        "valueDisplay": "percentage",
-        "labelDisplay": "percentage",
-        "orientation": "horizontal",
-        "gaugeColor": "> primary | seriesByName('health_pct') | lastPoint() | rangeValue(healthColorRange)",
-        "backgroundColor": "#ffffff"
-      }
-    },
-    "viz_ex_switch_health": {
-      "type": "splunk.fillergauge",
-      "title": "Switches",
-      "description": "Reachable and managed switches as a percentage of total switch inventory.",
-      "context": {
-        "healthColorRange": [
-          {
-            "to": 80,
-            "value": "#dc2626"
-          },
-          {
-            "from": 80,
-            "to": 95,
-            "value": "#eab308"
-          },
-          {
-            "from": 95,
-            "value": "#16a34a"
-          }
-        ]
-      },
-      "dataSources": {
-        "primary": "ds_mod_device_health_switches"
-      },
-      "options": {
-        "value": "> primary | seriesByName('health_pct') | lastPoint()",
-        "valueDisplay": "percentage",
-        "labelDisplay": "percentage",
-        "orientation": "horizontal",
-        "gaugeColor": "> primary | seriesByName('health_pct') | lastPoint() | rangeValue(healthColorRange)",
-        "backgroundColor": "#ffffff"
-      }
-    },
-    "viz_ex_router_health": {
-      "type": "splunk.fillergauge",
-      "title": "Routers",
-      "description": "Reachable and managed routers as a percentage of total router inventory.",
-      "context": {
-        "healthColorRange": [
-          {
-            "to": 80,
-            "value": "#dc2626"
-          },
-          {
-            "from": 80,
-            "to": 95,
-            "value": "#eab308"
-          },
-          {
-            "from": 95,
-            "value": "#16a34a"
-          }
-        ]
-      },
-      "dataSources": {
-        "primary": "ds_mod_device_health_routers"
-      },
-      "options": {
-        "value": "> primary | seriesByName('health_pct') | lastPoint()",
-        "valueDisplay": "percentage",
-        "labelDisplay": "percentage",
-        "orientation": "horizontal",
-        "gaugeColor": "> primary | seriesByName('health_pct') | lastPoint() | rangeValue(healthColorRange)",
-        "backgroundColor": "#ffffff"
-      }
-    },
-    "viz_ex_firewall_health": {
-      "type": "splunk.fillergauge",
-      "title": "Firewalls",
-      "description": "Reachable and managed firewalls as a percentage of total firewall inventory.",
-      "context": {
-        "healthColorRange": [
-          {
-            "to": 80,
-            "value": "#dc2626"
-          },
-          {
-            "from": 80,
-            "to": 95,
-            "value": "#eab308"
-          },
-          {
-            "from": 95,
-            "value": "#16a34a"
-          }
-        ]
-      },
-      "dataSources": {
-        "primary": "ds_mod_device_health_firewalls"
-      },
-      "options": {
-        "value": "> primary | seriesByName('health_pct') | lastPoint()",
-        "valueDisplay": "percentage",
-        "labelDisplay": "percentage",
-        "orientation": "horizontal",
-        "gaugeColor": "> primary | seriesByName('health_pct') | lastPoint() | rangeValue(healthColorRange)",
-        "backgroundColor": "#ffffff"
-      }
-    },
-    "viz_ex_device_health_distribution": {
-      "type": "splunk.bar",
-      "title": "Device Health Distribution",
-      "description": "Fleet-wide healthy, fair, and poor device distribution.",
-      "dataSources": {
-        "primary": "ds_mod_device_health_distribution"
-      },
-      "options": {
-        "backgroundColor": "#ffffff",
-        "dataValuesDisplay": "all",
-        "legendDisplay": "bottom",
-        "showYMajorGridLines": true,
-        "xAxisTitleVisibility": "hide",
-        "yAxisTitleVisibility": "hide",
-        "orientation": "horizontal",
-        "stackMode": "stacked",
-        "seriesColorsByField": {
-          "Healthy": "#16a34a",
-          "Fair": "#eab308",
-          "Poor": "#dc2626"
-        }
-      }
-    },
-    "viz_ex_device_inventory": {
-      "type": "splunk.bar",
-      "title": "Device Inventory",
-      "description": "Reachable versus attention-needed devices by network role.",
-      "dataSources": {
-        "primary": "ds_mod_device_inventory_bar"
-      },
-      "options": {
-        "backgroundColor": "#ffffff",
-        "dataValuesDisplay": "all",
-        "legendDisplay": "bottom",
-        "showYMajorGridLines": true,
-        "xAxisTitleVisibility": "hide",
-        "yAxisTitleVisibility": "hide",
-        "orientation": "horizontal",
-        "stackMode": "stacked",
-        "seriesColorsByField": {
-          "Healthy": "#16a34a",
-          "NeedsAttention": "#dc2626"
-        }
-      }
-    },
-    "viz_ex_device_total_radial": {
-      "type": "splunk.singlevalueradial",
-      "title": "Device Summary - Total",
-      "description": "Total discovered network devices, with radial color based on overall device health.",
-      "context": {
-        "healthColorRange": [
-          {
-            "to": 80,
-            "value": "#dc2626"
-          },
-          {
-            "from": 80,
-            "to": 95,
-            "value": "#eab308"
-          },
-          {
-            "from": 95,
-            "value": "#16a34a"
-          }
-        ]
-      },
-      "dataSources": {
-        "primary": "ds_mod_device_summary_total"
-      },
-      "options": {
-        "majorValue": "> primary | seriesByName('total') | lastPoint()",
-        "majorColor": "> primary | seriesByName('health_pct') | lastPoint() | rangeValue(healthColorRange)",
-        "sparklineDisplay": "off",
-        "trendDisplay": "off",
-        "backgroundColor": "#ffffff",
-        "shouldAbbreviateMajorValue": true
-      }
-    },
-    "viz_ex_issues_table": {
-      "type": "splunk.table",
-      "title": "Issues",
-      "description": "Critical and warning alerts requiring attention. Select a row to open details.",
-      "dataSources": {
-        "primary": "ds_mod_exec_issues_table"
-      },
-      "options": {
-        "backgroundColor": "#ffffff",
-        "count": 15,
-        "fontSize": "small",
-        "showInternalFields": false,
-        "drilldown": "row",
-        "columnFormat": {
-          "Severity": {
-            "rowBackgroundColors": "> table | seriesByName(\"Severity\") | matchValue(severityColors)",
-            "textOverflow": "break-word"
-          },
-          "Issue": {
-            "textOverflow": "break-word"
-          },
-          "Sites": {
-            "textOverflow": "break-word"
-          },
-          "Devices": {
-            "textOverflow": "break-word"
-          }
-        }
-      },
-      "context": {
-        "severityColors": [
-          {
-            "match": "Critical",
-            "value": "rgba(220,38,38,0.22)"
-          },
-          {
-            "match": "Warning",
-            "value": "rgba(234,179,8,0.22)"
-          },
-          {
-            "match": "Notice",
-            "value": "rgba(37,99,235,0.12)"
-          },
-          {
-            "match": "Info",
-            "value": "rgba(22,163,74,0.12)"
-          }
-        ]
-      },
-      "eventHandlers": [
-        {
-          "type": "drilldown.setToken",
-          "options": {
-            "tokens": [
-              {
-                "token": "selected_issue",
-                "key": "row.Issue.value"
-              },
-              {
-                "token": "selected_issue_priority",
-                "key": "row.Priority.value"
-              }
-            ]
-          }
-        }
-      ],
-      "containerOptions": {
-        "visibility": {
-          "hideConditions": [
-            "condition_issue_selected"
-          ]
-        }
-      }
-    },
-    "viz_ex_issue_detail_modal": {
-      "type": "splunk.table",
-      "title": "Issue Detail",
-      "description": "Row-click detail view for the selected active issue.",
-      "dataSources": {
-        "primary": "ds_mod_selected_issue_detail"
-      },
-      "options": {
-        "backgroundColor": "#ffffff",
-        "count": 10,
-        "fontSize": "small",
-        "showInternalFields": false,
-        "drilldown": "none"
-      },
-      "containerOptions": {
-        "visibility": {
-          "showConditions": [
-            "condition_issue_selected"
-          ]
-        }
-      }
-    },
-    "viz_client_health_score": {
-      "type": "splunk.singlevalue",
-      "title": "Active Client Score",
-      "description": "Average client health score across wired and wireless clients.",
-      "dataSources": {
-        "primary": "ds_kpi_cs_health"
-      },
-      "options": {
-        "majorValue": "> primary | seriesByName('Client Health Score') | lastPoint()",
-        "majorColor": "> majorValue | rangeValue(healthColorRange)",
-        "majorFontSize": 38,
-        "sparklineDisplay": "below",
-        "showSparklineAreaGraph": true,
-        "showSparklineTooltip": true,
-        "sparklineStrokeColor": "> majorValue | rangeValue(healthColorRange)",
-        "sparklineAreaColor": "> majorValue | rangeValue(healthColorRange)",
-        "trendDisplay": "percent",
-        "showTrendIndicator": true,
-        "unit": "%",
-        "shouldAbbreviateMajorValue": true,
-        "shouldAbbreviateTrendValue": true,
-        "backgroundColor": "#ffffff"
-      },
-      "context": {
-        "healthColorRange": [
-          {
-            "to": 80,
-            "value": "#dc2626"
-          },
-          {
-            "from": 80,
-            "to": 95,
-            "value": "#eab308"
-          },
-          {
-            "from": 95,
-            "value": "#16a34a"
-          }
-        ]
-      }
-    },
-    "viz_client_total": {
-      "type": "splunk.singlevalue",
-      "title": "Total Active Clients",
-      "description": "Total unique connected clients in the selected time range.",
-      "dataSources": {
-        "primary": "ds_kpi_cs_total"
-      },
-      "options": {
-        "majorValue": "> primary | seriesByName('Total Connected Clients') | lastPoint()",
-        "majorColor": "#111827",
-        "majorFontSize": 38,
-        "sparklineDisplay": "below",
-        "showSparklineAreaGraph": true,
-        "showSparklineTooltip": true,
-        "sparklineStrokeColor": "#2563eb",
-        "sparklineAreaColor": "rgba(37,99,235,0.18)",
-        "trendDisplay": "percent",
-        "showTrendIndicator": true,
-        "shouldAbbreviateMajorValue": true,
-        "shouldAbbreviateTrendValue": true,
-        "backgroundColor": "#ffffff"
-      }
-    },
-    "viz_client_distribution": {
-      "type": "splunk.singlevalueradial",
-      "title": "Client Distribution",
-      "description": "Percentage of clients reporting GOOD health.",
-      "context": {
-        "healthColorRange": [
-          {
-            "to": 80,
-            "value": "#dc2626"
-          },
-          {
-            "from": 80,
-            "to": 95,
-            "value": "#eab308"
-          },
-          {
-            "from": 95,
-            "value": "#16a34a"
-          }
-        ]
-      },
-      "dataSources": {
-        "primary": "ds_mod_client_distribution_score"
-      },
-      "options": {
-        "majorValue": "> primary | seriesByName('healthy_pct') | lastPoint()",
-        "majorColor": "> primary | seriesByName('healthy_pct') | lastPoint() | rangeValue(healthColorRange)",
-        "unit": "%",
-        "trendDisplay": "off",
-        "sparklineDisplay": "off",
-        "backgroundColor": "#ffffff"
-      }
-    },
-    "viz_client_health_over_time": {
-      "type": "splunk.area",
-      "title": "Client Health Over Time",
-      "description": "Stacked client health distribution across wired and wireless clients.",
-      "dataSources": {
-        "primary": "ds_cs_count_over_time"
-      },
-      "options": {
-        "backgroundColor": "#ffffff",
-        "nullValueDisplay": "zero",
-        "showYMajorGridLines": true,
-        "xAxisTitleVisibility": "hide",
-        "yAxisTitleVisibility": "hide",
-        "stackMode": "stacked",
-        "seriesColorsByField": {
-          "Good Count": "#16a34a",
-          "Fair Count": "#eab308",
-          "Poor Count": "#dc2626",
-          "Idle Count": "#94a3b8"
-        },
-        "yAxisTitleText": "Clients",
-        "splitByLayout": "trellis",
-        "trellisColumns": 2
-      }
-    },
-    "viz_client_os_distribution": {
-      "type": "splunk.bar",
-      "title": "Client Distribution by OS",
-      "description": "Operating system breakdown for filtered clients.",
-      "dataSources": {
-        "primary": "ds_mod_client_os_dist"
-      },
-      "options": {
-        "backgroundColor": "#ffffff",
-        "dataValuesDisplay": "all",
-        "legendDisplay": "off",
-        "showYMajorGridLines": true,
-        "xAxisTitleVisibility": "hide",
-        "yAxisTitleVisibility": "hide",
-        "orientation": "horizontal",
-        "seriesColors": [
-          "#111827"
-        ]
-      }
-    },
-    "viz_client_location_distribution": {
-      "type": "splunk.bar",
-      "title": "Client Distribution by Location",
-      "description": "Top sites by connected client count.",
-      "dataSources": {
-        "primary": "ds_mod_client_location_dist"
-      },
-      "options": {
-        "backgroundColor": "#ffffff",
-        "dataValuesDisplay": "all",
-        "legendDisplay": "off",
-        "showYMajorGridLines": true,
-        "xAxisTitleVisibility": "hide",
-        "yAxisTitleVisibility": "hide",
-        "orientation": "horizontal",
-        "seriesColors": [
-          "#2563eb"
-        ]
-      }
-    },
-    "viz_client_details": {
-      "type": "splunk.table",
-      "title": "Wireless Client Details",
-      "description": "Top connected clients by traffic. Select a row to inspect client detail.",
-      "dataSources": {
-        "primary": "ds_mod_client_details"
-      },
-      "options": {
-        "backgroundColor": "#ffffff",
-        "count": 20,
-        "fontSize": "small",
-        "showInternalFields": false,
-        "drilldown": "row",
-        "columnFormat": {
-          "Health %": {
-            "rowColors": "> table | seriesByName(\"Health %\") | rangeValue(healthColorRange)"
-          },
-          "Traffic (GB)": {
-            "textOverflow": "break-word"
-          }
-        }
-      },
-      "context": {
-        "healthColorRange": [
-          {
-            "to": 80,
-            "value": "#dc2626"
-          },
-          {
-            "from": 80,
-            "to": 95,
-            "value": "#eab308"
-          },
-          {
-            "from": 95,
-            "value": "#16a34a"
-          }
-        ]
-      },
-      "eventHandlers": [
-        {
-          "type": "drilldown.setToken",
-          "options": {
-            "tokens": [
-              {
-                "token": "selected_client",
-                "key": "row.Client.value"
-              }
-            ]
-          }
-        }
-      ]
-    },
-    "viz_client_activity_onboarding": {
-      "type": "splunk.bar",
-      "title": "Client Activity and Onboarding",
-      "description": "Daily active clients with average onboarding duration as an overlay.",
-      "dataSources": {
-        "primary": "ds_mod_client_activity_7d"
-      },
-      "options": {
-        "backgroundColor": "#ffffff",
-        "dataValuesDisplay": "all",
-        "legendDisplay": "right",
-        "showYMajorGridLines": true,
-        "xAxisTitleVisibility": "hide",
-        "yAxisTitleVisibility": "hide",
-        "seriesColorsByField": {
-          "Active Clients": "#a855f7",
-          "Avg Onboarding (ms)": "#0ea5e9"
-        },
-        "overlayFields": [
-          "Avg Onboarding (ms)"
-        ],
-        "showOverlayY2Axis": true,
-        "yAxisTitleText": "Active Clients"
-      }
-    },
-    "viz_about_content": {
-      "type": "splunk.markdown",
-      "title": "Metric Reference",
-      "showProgressBar": false,
-      "showLastUpdated": false,
-      "options": {
-        "backgroundColor": "#ffffff",
-        "fontColor": "#111827",
-        "markdown": "### Purpose\n\nThis Dashboard Studio definition modernizes `statewide_exercise_v1.xml` into a four-tab operational view for statewide network activation exercises.\n\n### Preserved searches\n\nAll SPL data sources embedded in the existing `statewide_exercise_v1.xml` CDATA definition are copied into this JSON. New `ds_mod_*` searches add tokenized filters, reusable base searches, 60-second refresh behavior, issue drilldowns, and the executive health distribution panels.\n\n### Data sources\n\n- `cisco:dnac:clienthealth`: wired and wireless health KPIs, client counts, 24-hour and 7-day trends.\n- `cisco:dnac:client`: SSID, OS, site, traffic, onboarding, and per-client detail tables.\n- `cisco:dnac:devicehealth`: device type KPIs, health distribution, inventory, and total fleet summary.\n- `cisco:dnac:issue`: active issue summaries and row-click detail panels.\n\n### Interaction model\n\n- Global time range controls dashboard searches through `$time_tok$`.\n- Refresh rate defaults to 60 seconds through `$refresh_tok$`.\n- Client Type and Site Filter tokens narrow client distribution/detail searches.\n- Selecting an issue row sets `$selected_issue$` and opens the Issue Detail panel. Use Close Details to clear the token.\n\n### Health color policy\n\n- `>=95%`: green `#16a34a`.\n- `80-95%`: yellow `#eab308`.\n- `<80%`: red `#dc2626`.\n\n### Studio schema notes\n\nDashboard Studio source JSON uses `splunk.*` visualization type IDs. The old `viz.*` syntax is legacy and is migrated by Splunk when opened in current Studio. JSON does not support comments, so implementation notes are encoded here and in visualization descriptions to keep this definition importable."
-      }
-    }
-  },
-  "dataSources": {
-    "ds_bw": {
-      "name": "Statewide - ds_bandwidth_internet",
-      "options": {
-        "query": "| noop",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_bw_public": {
-      "name": "Statewide - ds_bandwidth_public_internet",
-      "options": {
-        "query": "| noop",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_cs_by_band": {
-      "name": "Client Count by Band",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.band as band, connection.protocol as protocol | eval band=case(isnotnull(band) AND band!=\"null\", band, match(protocol, \"ax6\"), \"6 GHz\", match(protocol, \"ax\"), \"5 GHz\", match(protocol, \"ac\"), \"5 GHz\", match(protocol, \"n\"), \"2.4 GHz\", 1=1, \"Unknown\") | stats dc(macAddress) as clients by band",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_cs_by_device_type": {
-      "name": "Client Summary - ds_client_by_device_type",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" \n| eval deviceType=if(isnull(deviceType) OR deviceType==\"null\" OR deviceType==\"\" OR deviceType==\"Un-Classified Device\", \"Unknown\", deviceType) \n| stats dc(macAddress) as clients by deviceType \n| sort -clients",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_cs_by_location": {
-      "name": "Client Summary - ds_client_by_location",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" \n| eval Site=mvindex(split(siteHierarchy,\"/\"),-1) \n| where isnotnull(Site) AND Site!=\"null\" AND Site!=\"\" \n| stats dc(macAddress) as clients by Site \n| sort -clients",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_cs_by_location_table": {
-      "name": "Client Count by Location",
-      "options": {
-        "extend": "ds_cs_by_location",
-        "query": "| rename clients as Clients"
-      },
-      "type": "ds.chain"
-    },
-    "ds_cs_by_protocol": {
-      "name": "Client Count by Wireless Protocol",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.protocol as protocol | stats dc(macAddress) as clients by protocol | sort -clients",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_cs_by_ssid": {
-      "name": "Client Summary - ds_client_by_ssid",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" \n| stats dc(macAddress) as clients by connection.ssid \n| rename connection.ssid as ssid ",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_cs_by_ssid_table": {
-      "name": "Client Count by SSID",
-      "options": {
-        "extend": "ds_cs_by_ssid",
-        "query": "| rename ssid as SSID, clients as Clients"
-      },
-      "type": "ds.chain"
-    },
-    "ds_cs_client_kpi": {
-      "name": "Client Summary - ds_client_health_kpi",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\" scoreType=\"ALL\"\n| stats latest(scoreValue) as score, latest(clientCount) as total\n| eval health=round(score)",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_cs_count_over_time": {
-      "name": "Client Summary - ds_client_count_over_time",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRED\" OR clientType=\"WIRELESS\") (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| bin _time\n| stats latest(clientCount) as cc by _time, clientType, scoreType\n| stats sum(cc) as cc by _time, scoreType\n| eval \"Good Count\"=if(scoreType==\"GOOD\",cc,null()), \"Fair Count\"=if(scoreType==\"FAIR\",cc,null()), \"Poor Count\"=if(scoreType==\"POOR\",cc,null()), \"Idle Count\"=if(scoreType==\"IDLE\" OR scoreType==\"NODATA\",cc,null())\n| stats sum(\"Good Count\") as \"Good Count\", sum(\"Fair Count\") as \"Fair Count\", sum(\"Poor Count\") as \"Poor Count\", sum(\"Idle Count\") as \"Idle Count\" by _time",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_cs_health_by_loc_table": {
-      "name": "Client Health by Location",
-      "options": {
-        "extend": "ds_cs_health_by_location",
-        "query": "| rename health as \"Health %\", clients as Clients"
-      },
-      "type": "ds.chain"
-    },
-    "ds_cs_health_by_location": {
-      "name": "Client Summary - ds_client_health_by_location",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" \n| eval Site=mvindex(split(siteHierarchy,\"/\"),-1) \n| where isnotnull(Site) AND Site!=\"null\" AND Site!=\"\" \n| stats avg(health.overallScore) as sv, dc(macAddress) as clients by Site \n| eval health=round(sv*10, 2) \n| sort -clients \n| fields Site clients health",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_cs_health_dist": {
-      "name": "Client Summary - ds_client_health_dist",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRED\" OR clientType=\"WIRELESS\") (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| stats latest(clientCount) as cc by clientType, scoreType\n| stats sum(cc) as clients by scoreType",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_cs_health_trend": {
-      "name": "Client Health Score Trend",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\" scoreType=\"ALL\" | timechart fixedrange=false latest(scoreValue) as \"Client Health Score\"",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_cs_onboarding": {
-      "name": "Client Summary - ds_client_onboarding",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" \n| stats avg(onboarding.avgAuthDuration) as avg_aaa, avg(onboarding.avgDhcpDuration) as avg_dhcp, avg(onboarding.avgAssocDuration) as avg_assoc \n| eval avg_onboard=round(avg_aaa+avg_dhcp+avg_assoc, 2), avg_aaa=round(avg_aaa, 2), avg_dhcp=round(avg_dhcp, 2), avg_assoc=round(avg_assoc, 2)",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_cs_onboarding_table": {
-      "name": "Client Onboarding Time",
-      "options": {
-        "extend": "ds_cs_onboarding",
-        "query": "| rename avg_onboard as \"Total (ms)\", avg_aaa as \"AAA (ms)\", avg_dhcp as \"DHCP (ms)\", avg_assoc as \"Assoc (ms)\""
-      },
-      "type": "ds.chain"
-    },
-    "ds_cs_os_dist": {
-      "name": "Client Summary - ds_client_os_dist",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" \n| eval osType=if(isnull(osType) OR osType==\"null\" OR osType==\"\" OR osType==\"Un-Classified Device\", \"Unknown\", osType) \n| stats dc(macAddress) as clients by osType \n| rename osType as hostOs \n| sort -clients",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_cs_session_by_band": {
-      "name": "Client Session Duration by Band",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.band as band, connection.sessionDuration as sessionDuration | eval session_hrs=coalesce(sessionDuration,0)/3600 | eval band=coalesce(band, \"Unknown\") | stats sum(session_hrs) as total_hours, dc(macAddress) as clients by band | eval total_hours=round(total_hours, 2) | sort -total_hours",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_cs_session_by_protocol": {
-      "name": "Client Session Duration by Protocol",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.protocol as Protocol, connection.sessionDuration as sessionDuration | eval session_hrs=coalesce(sessionDuration,0)/3600 | stats sum(session_hrs) as total_hours, dc(macAddress) as clients by Protocol | eval total_hours=round(total_hours, 2) | sort -total_hours",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_cs_session_by_ssid": {
-      "name": "Client Session Duration by SSID",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.sessionDuration as sessionDuration, connection.ssid as SSID | eval session_hrs=coalesce(sessionDuration,0)/3600 | stats sum(session_hrs) as total_hours, dc(macAddress) as clients by SSID | eval total_hours=round(total_hours, 2) | sort -total_hours | head 10",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_cs_top_clients": {
-      "name": "Client Summary - ds_top_clients_by_usage",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" \n| stats sum(traffic.usage) as usage, latest(deviceType) as device_type, latest(connection.ssid) as ssid, latest(connection.l3Vn) as vn, latest(type) as conn_type, latest(siteHierarchy) as location by macAddress \n| eval usage_gb=tonumber(round(usage/1073741824,2)), ssid=case(isnotnull(ssid) AND ssid!=\"null\" AND ssid!=\"\", ssid, conn_type==\"Wired\" AND isnotnull(vn) AND vn!=\"null\", \"Wired (\".vn.\")\", conn_type==\"Wired\", \"Wired\", 1==1, \"Unknown\"), device_type=if(isnull(device_type) OR device_type==\"null\" OR device_type==\"\", \"Unknown\", device_type) \n| where usage_gb > 0 \n| sort -usage_gb \n| head 20 \n| fields macAddress device_type ssid location usage_gb",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_cs_top_clients_table": {
-      "name": "Top Clients by Data Usage",
-      "options": {
-        "extend": "ds_cs_top_clients",
-        "query": "| rename macAddress as \"MAC\", device_type as \"Type\", ssid as SSID, location as Location, usage_gb as \"Usage (GB)\" | eval \"Usage (GB)\"=tonumber('Usage (GB)')"
-      },
-      "type": "ds.chain"
-    },
-    "ds_cs_total_trend": {
-      "name": "Total Connected Clients Trend",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\" scoreType=\"ALL\" | timechart fixedrange=false latest(clientCount) as \"Total Connected Clients\"",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_cs_traffic_by_band": {
-      "name": "Client Traffic by Band",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.band as band, traffic.* as * | eval total_bytes=coalesce(txBytes,0)+coalesce(rxBytes,0) | eval band=coalesce(band, \"Unknown\") | stats sum(total_bytes) as traffic_bytes, dc(macAddress) as clients by band | eval traffic_mb=round(traffic_bytes/1048576, 1) | sort -traffic_bytes",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_cs_traffic_by_protocol": {
-      "name": "Client Traffic by Protocol (timechart)",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.protocol as Protocol, traffic.* as * | eval total_bytes=coalesce(txBytes,0)+coalesce(rxBytes,0) | timechart sum(total_bytes) as traffic_bytes by Protocol fixedrange=false | foreach * [eval <<FIELD>>=if(\"<<FIELD>>\"!=\"_time\", round(<<FIELD>>/1073741824, 2), <<FIELD>>)]",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_cs_traffic_by_ssid": {
-      "name": "Client Traffic by SSID (timechart)",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.ssid as SSID, traffic.* as * | eval total_bytes=coalesce(txBytes,0)+coalesce(rxBytes,0) | timechart sum(total_bytes) as traffic_bytes by SSID fixedrange=false | foreach * [eval <<FIELD>>=if(\"<<FIELD>>\"!=\"_time\", round(<<FIELD>>/1073741824, 2), <<FIELD>>)]",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_cs_wireless_vs_wired": {
-      "name": "Client Summary - ds_wireless_vs_wired",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRELESS\" OR clientType=\"WIRED\") scoreType=\"ALL\"\n| stats latest(clientCount) as clients by clientType",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_ex_ap_pct_trend": {
-      "name": "AP Reachability Trend",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" | where match(DeviceFamily,\"(?i)ap|access.point|unified.ap\") | eval healthy=if(Reachability==\"Reachable\",1,0) | timechart fixedrange=false avg(healthy) as pct | eval \"AP Reachability\"=round(pct*100, 2)",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_ex_ap_trend": {
-      "name": "Access Points Trend",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" | where match(DeviceFamily,\"(?i)ap|access.point|unified.ap\") | timechart fixedrange=false dc(DeviceID) as \"Access Points\"",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_ex_client_health_trend": {
-      "name": "Client Health Trend",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\" scoreType=\"ALL\" | timechart fixedrange=false latest(scoreValue) as \"Client Health\"",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_ex_healthy_trend": {
-      "name": "Healthy Devices Trend",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" | eval healthy=if(Reachability==\"Reachable\" AND match(Manageability,\"^Managed\"), 1, 0) | timechart fixedrange=false avg(healthy) as pct | eval \"Healthy Devices\"=round(pct*100, 2)",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_ex_net_health_trend": {
-      "name": "Network Health Trend",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" | eval healthy=if(Reachability==\"Reachable\" AND match(Manageability,\"^Managed\"), 1, 0) | timechart fixedrange=false avg(healthy) as pct | eval \"Network Health\"=round(pct*100, 2)",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_exec_ap_count": {
-      "name": "Executive Summary - ds_ap_count",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| stats latest(DeviceFamily) as DeviceFamily, latest(Reachability) as Reachability by DeviceID\n| where match(DeviceFamily,\"(?i)ap|access.point|unified.ap\")\n| eval healthy=if(Reachability==\"Reachable\",1,0)\n| stats count as total, sum(healthy) as up\n| eval pct=round(up/total*100), down=total-up",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_exec_client_health_by_site": {
-      "name": "Executive Summary - ds_client_health_by_site",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| eval siteHierarchy=`dnac_site_normalize(siteHierarchy)`\n| where siteHierarchy!=\"\"\n| stats avg(health.overallScore) as health by type, siteHierarchy\n| eval health=round(health*10, 2)\n| chart avg(health) by siteHierarchy, type\n| rename Wireless as wireless, Wired as wired, siteHierarchy as Site\n| fields Site wireless wired",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_exec_client_health_trend": {
-      "name": "Executive Summary - ds_client_health_trend",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\" scoreType=\"ALL\" | timechart fixedrange=false latest(scoreValue) as health | eval health=round(health, 2)",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_exec_client_site_bottom": {
-      "name": "Sites with Lowest Client Health",
-      "options": {
-        "extend": "ds_exec_client_health_by_site",
-        "query": "| sort wireless | head 10 | rename wireless as \"Wireless %\", wired as \"Wired %\""
-      },
-      "type": "ds.chain"
-    },
-    "ds_exec_client_site_top": {
-      "name": "Sites with Highest Client Health",
-      "options": {
-        "extend": "ds_exec_client_health_by_site",
-        "query": "| sort -wireless | head 10 | rename wireless as \"Wireless %\", wired as \"Wired %\""
-      },
-      "type": "ds.chain"
-    },
-    "ds_exec_device_inv_bar": {
-      "name": "Device Inventory Bar",
-      "options": {
-        "extend": "ds_exec_device_inventory",
-        "query": "| fields cat, up, down"
-      },
-      "type": "ds.chain"
-    },
-    "ds_exec_device_inv_table": {
-      "name": "Device Inventory Detail",
-      "options": {
-        "extend": "ds_exec_device_inventory",
-        "query": "| rename cat as Category, total as Total, up as Reachable, down as Unreachable"
-      },
-      "type": "ds.chain"
-    },
-    "ds_exec_device_inventory": {
-      "name": "Executive Summary - ds_device_inventory",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| stats latest(DeviceFamily) as DeviceFamily, latest(Reachability) as Reachability by DeviceID\n| eval cat=case(match(DeviceFamily,\"(?i)switch\"),\"Switches\", match(DeviceFamily,\"(?i)router\"),\"Routers\", match(DeviceFamily,\"(?i)ap|access.point|unified.ap\"),\"APs\", match(DeviceFamily,\"(?i)wireless.controller|wlc\"),\"WLCs\", 1==1,\"Third Party\"), reachable=if(Reachability==\"Reachable\",1,0)\n| stats count as total, sum(reachable) as up by cat\n| eval down=total-up",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_exec_healthy_devices": {
-      "name": "Executive Summary - ds_healthy_device_count",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| stats latest(Reachability) as Reachability, latest(Manageability) as Manageability by DeviceID\n| eval healthy=if(Reachability==\"Reachable\" AND match(Manageability,\"^Managed\"), 1, 0)\n| stats count as total, sum(healthy) as healthy_count\n| eval pct=round(healthy_count/total*100)",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_exec_issue_details": {
-      "name": "Executive Summary - ds_issue_details",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueStatus=\"active\"\n| stats dc(IssueID) as Count, latest(IssueSpecificDescription) as Description, latest(IssueSpecificSummary) as Summary, values(SiteName) as Sites, values(DeviceName) as Devices by IssueName, IssueSpecificPriority\n| eval Explanation=coalesce(Description, Summary, \"No description available\"), Sites=mvjoin(Sites, \", \"), Devices=mvjoin(Devices, \", \")\n| rename IssueName as Issue, IssueSpecificPriority as Priority, Explanation as Why\n| table Priority, Issue, Count, Why, Sites, Devices",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_exec_issue_dist": {
-      "name": "Executive Summary - ds_issue_distribution",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueStatus=\"active\"\n| stats dc(IssueID) as count by IssueSpecificPriority",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_exec_issue_priority_kpi": {
-      "name": "Executive Summary - ds_issue_by_priority_kpi",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueStatus=\"active\"\n| stats dc(IssueID) as count by IssuePriority\n| eval p1=if(IssuePriority=\"P1\",count,0), p2=if(IssuePriority=\"P2\",count,0), p3=if(IssuePriority=\"P3\",count,0), p4=if(IssuePriority=\"P4\",count,0)\n| stats sum(p1) as p1, sum(p2) as p2, sum(p3) as p3, sum(p4) as p4",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_exec_issue_summary": {
-      "name": "Issue Summary (Total/Open/Resolved)",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\" | stats dc(IssueID) as Total, dc(eval(if(IssueStatus==\"active\", IssueID, null()))) as Open, dc(eval(if(IssueStatus==\"resolved\", IssueID, null()))) as Resolved",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_exec_issue_trend": {
-      "name": "Executive Summary - ds_issue_trend",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\" | timechart count by IssueSpecificPriority",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_exec_net_health_by_site": {
-      "name": "Executive Summary - ds_network_health_by_site",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| where Site!=\"\"\n| stats latest(Reachability) as Reachability, latest(Manageability) as Manageability, latest(DeviceFamily) as DeviceFamily by DeviceID, Site\n| eval healthy=if(Reachability==\"Reachable\" AND match(Manageability,\"^Managed\"), 1, 0), cat=case(match(DeviceFamily,\"(?i)switch\"),\"Switch\", match(DeviceFamily,\"(?i)router\"),\"Router\", match(DeviceFamily,\"(?i)ap|access.point|unified.ap\"),\"Wireless\", 1==1,\"Third Party\")\n| stats avg(healthy) as health_pct, dc(eval(if(cat==\"Switch\",DeviceID,null()))) as switches, dc(eval(if(cat==\"Router\",DeviceID,null()))) as routers, dc(eval(if(cat==\"Wireless\",DeviceID,null()))) as wireless, dc(eval(if(cat==\"Third Party\",DeviceID,null()))) as third_party by Site\n| eval health_pct=round(health_pct*100)\n| sort health_pct",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_exec_net_site_bottom": {
-      "name": "Sites with Lowest Health",
-      "options": {
-        "extend": "ds_exec_net_health_by_site",
-        "query": "| sort health_pct | head 10 | rename health_pct as \"Health %\", switches as Switches, routers as Routers, wireless as \"Wireless/APs\", third_party as \"Third Party\""
-      },
-      "type": "ds.chain"
-    },
-    "ds_exec_net_site_top": {
-      "name": "Sites with Highest Health",
-      "options": {
-        "extend": "ds_exec_net_health_by_site",
-        "query": "| sort -health_pct | head 10 | rename health_pct as \"Health %\", switches as Switches, routers as Routers, wireless as \"Wireless/APs\", third_party as \"Third Party\""
-      },
-      "type": "ds.chain"
-    },
-    "ds_exec_network_health_trend": {
-      "name": "Executive Summary - ds_network_health_trend",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" | timechart avg(eval(round(if(Reachability==\"Reachable\" AND match(Manageability,\"^Managed\"), 100, 0), 2))) as pct | eval pct=round(pct, 2)",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_exec_overall_client_health": {
-      "name": "Executive Summary - ds_overall_client_health",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRELESS\" OR clientType=\"WIRED\") scoreType=\"ALL\"\n| stats latest(scoreValue) as sv by clientType\n| eval health=round(sv)\n| stats avg(health) as overall",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_exec_overall_network_health": {
-      "name": "Executive Summary - ds_overall_network_health",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| stats latest(Reachability) as Reachability, latest(Manageability) as Manageability by DeviceID\n| eval healthy=if(Reachability==\"Reachable\" AND match(Manageability,\"^Managed\"), 1, 0)\n| stats avg(healthy) as pct\n| eval pct=round(pct*100)",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_exec_top_issues": {
-      "name": "Executive Summary - ds_top_issues",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueStatus=\"active\" \n| stats count by IssueName, IssueSpecificPriority, IssueSpecificCategory",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_exec_top_issues_table": {
-      "name": "Top Open Issues",
-      "options": {
-        "extend": "ds_exec_top_issues",
-        "query": "| rename name as Issue, priority as Priority, entity_type as \"Entity Type\", count as Count"
-      },
-      "type": "ds.chain"
-    },
-    "ds_exec_wow_summary": {
-      "name": "Week-over-Week KPI Comparison",
-      "options": {
-        "query": "| makeresults | eval x=1 | fields - x, _time | append [ search `index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueStatus=\"active\" earliest=-7d@d | stats dc(IssueID) as current_val | eval metric=\"Open Issues\" | appendcols [ search `index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueStatus=\"active\" earliest=-14d@d latest=-7d@d | stats dc(IssueID) as prev_val ]] | append [ search `index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\" scoreType=\"ALL\" scoreValue>=0 earliest=-7d@d | stats latest(scoreValue) as current_val | eval metric=\"Client Health %\" | appendcols [ search `index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\" scoreType=\"ALL\" scoreValue>=0 earliest=-14d@d latest=-7d@d | stats latest(scoreValue) as prev_val ]] | append [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" earliest=-7d@d | stats latest(Reachability) as r, latest(Manageability) as m by DeviceID | where r=\"Reachable\" AND match(m,\"^Managed\") | stats dc(DeviceID) as current_val | eval metric=\"Healthy Devices\" | appendcols [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" earliest=-14d@d latest=-7d@d | stats latest(Reachability) as r, latest(Manageability) as m by DeviceID | where r=\"Reachable\" AND match(m,\"^Managed\") | stats dc(DeviceID) as prev_val ]] | append [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" (DeviceFamily=\"Unified AP\" OR DeviceFamily=\"Access Points\") earliest=-7d@d | stats latest(Reachability) as r by DeviceID | where r=\"Reachable\" | stats dc(DeviceID) as current_val | eval metric=\"Reachable APs\" | appendcols [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" (DeviceFamily=\"Unified AP\" OR DeviceFamily=\"Access Points\") earliest=-14d@d latest=-7d@d | stats latest(Reachability) as r by DeviceID | where r=\"Reachable\" | stats dc(DeviceID) as prev_val ]] | where isnotnull(metric) | eval Change=if(isnum(prev_val) AND prev_val>0, round((current_val-prev_val)/prev_val*100,1), \"N/A\") | eval Change=case(Change=\"N/A\",\"N/A\", Change>0,\"+\".Change.\"%\", Change<0,Change.\"%\", Change=0,\"No change\", 1=1,\"N/A\") | rename metric as Metric, current_val as \"This Week\", prev_val as \"Last Week\" | table Metric, \"This Week\", \"Last Week\", Change",
-        "queryParameters": {
-          "earliest": "-14d@d",
-          "latest": "now"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_kpi_cs_health": {
-      "name": "KPI Client Health Score",
-      "options": {
-        "extend": "ds_cs_health_trend",
-        "query": "| fields _time \"Client Health Score\""
-      },
-      "type": "ds.chain"
-    },
-    "ds_kpi_cs_total": {
-      "name": "KPI Total Connected Clients",
-      "options": {
-        "extend": "ds_cs_total_trend",
-        "query": "| fields _time \"Total Connected Clients\""
-      },
-      "type": "ds.chain"
-    },
-    "ds_kpi_ex_ap_pct": {
-      "name": "KPI AP Reachability",
-      "options": {
-        "extend": "ds_ex_ap_pct_trend",
-        "query": "| fields _time \"AP Reachability\""
-      },
-      "type": "ds.chain"
-    },
-    "ds_kpi_ex_ap_total": {
-      "name": "KPI Access Points",
-      "options": {
-        "extend": "ds_ex_ap_trend",
-        "query": "| fields _time \"Access Points\""
-      },
-      "type": "ds.chain"
-    },
-    "ds_kpi_ex_client_health": {
-      "name": "KPI Client Health",
-      "options": {
-        "extend": "ds_ex_client_health_trend",
-        "query": "| fields _time \"Client Health\""
-      },
-      "type": "ds.chain"
-    },
-    "ds_kpi_ex_healthy": {
-      "name": "KPI Healthy Devices",
-      "options": {
-        "extend": "ds_ex_healthy_trend",
-        "query": "| fields _time \"Healthy Devices\""
-      },
-      "type": "ds.chain"
-    },
-    "ds_kpi_ex_net_health": {
-      "name": "KPI Network Health",
-      "options": {
-        "extend": "ds_ex_net_health_trend",
-        "query": "| fields _time \"Network Health\""
-      },
-      "type": "ds.chain"
-    },
-    "ds_kpi_issue_open": {
-      "name": "KPI Open Issues",
-      "options": {
-        "extend": "ds_exec_issue_summary",
-        "fields": [
-          "Open"
-        ]
-      },
-      "type": "ds.chain"
-    },
-    "ds_kpi_issue_resolved": {
-      "name": "KPI Resolved Issues",
-      "options": {
-        "extend": "ds_exec_issue_summary",
-        "fields": [
-          "Resolved"
-        ]
-      },
-      "type": "ds.chain"
-    },
-    "ds_kpi_issue_total": {
-      "name": "KPI Total Issues",
-      "options": {
-        "extend": "ds_exec_issue_summary",
-        "fields": [
-          "Total"
-        ]
-      },
-      "type": "ds.chain"
-    },
-    "ds_kpi_wired_health": {
-      "name": "KPI Wired Health",
-      "options": {
-        "extend": "ds_wired_health_trend",
-        "query": "| fields _time \"Wired Health\""
-      },
-      "type": "ds.chain"
-    },
-    "ds_kpi_wired_total": {
-      "name": "KPI Wired Clients",
-      "options": {
-        "extend": "ds_wired_total_trend",
-        "query": "| fields _time \"Wired Clients\""
-      },
-      "type": "ds.chain"
-    },
-    "ds_kpi_wireless_health": {
-      "name": "KPI Wireless Health",
-      "options": {
-        "extend": "ds_wireless_health_trend",
-        "query": "| fields _time \"Wireless Health\""
-      },
-      "type": "ds.chain"
-    },
-    "ds_kpi_wireless_total": {
-      "name": "KPI Wireless Clients",
-      "options": {
-        "extend": "ds_wireless_total_trend",
-        "query": "| fields _time \"Wireless Clients\""
-      },
-      "type": "ds.chain"
-    },
-    "ds_ssid_trend_24h": {
-      "name": "Statewide - ds_ssid_client_trend_24h",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\"\n| timechart dc(macAddress) as clients by connection.ssid",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_ssid_trend_7d": {
-      "name": "Statewide - ds_ssid_client_trend_24h",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\"\n| timechart dc(macAddress) as clients by connection.ssid",
-        "queryParameters": {
-          "earliest": "-7d@d",
-          "latest": "now"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_wired_health_trend": {
-      "name": "Wired Health Trend",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" scoreType=\"ALL\" | timechart fixedrange=false latest(scoreValue) as \"Wired Health\"",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_wired_kpi": {
-      "name": "Statewide - ds_wired_health_kpi",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\"\n| stats latest(scoreValue) as sv, latest(clientCount) as total by scoreType\n| eval health=round(sv)\n| stats sum(eval(if(scoreType==\"ALL\", total, 0))) as total, avg(eval(if(scoreType==\"ALL\", health, null()))) as health, sum(eval(if(scoreType==\"GOOD\", total, 0))) as healthy, sum(eval(if(scoreType==\"FAIR\", total, 0))) as active, sum(eval(if(scoreType==\"POOR\", total, 0))) as inactive, sum(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\", total, 0))) as new_clients\n| eval health=round(health)",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_wired_total_trend": {
-      "name": "Wired Clients Trend",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" scoreType=\"ALL\" | timechart fixedrange=false latest(clientCount) as \"Wired Clients\"",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_wired_trend_24h": {
-      "name": "Statewide - ds_wired_client_trend_24h",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| timechart latest(eval(if(scoreType==\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType==\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType==\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\",clientCount,null()))) as \"No Data\"",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_wired_trend_7d": {
-      "name": "Statewide - ds_wired_client_trend_24h",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| timechart latest(eval(if(scoreType==\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType==\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType==\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\",clientCount,null()))) as \"No Data\"",
-        "queryParameters": {
-          "earliest": "-7d@d",
-          "latest": "now"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_wireless_health_trend": {
-      "name": "Wireless Health Trend",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" scoreType=\"ALL\" | timechart fixedrange=false latest(scoreValue) as \"Wireless Health\"",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_wireless_kpi": {
-      "name": "Statewide - ds_wireless_health_kpi",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\"\n| stats latest(scoreValue) as sv, latest(clientCount) as total by scoreType\n| eval health=round(sv)\n| stats sum(eval(if(scoreType==\"ALL\", total, 0))) as total, avg(eval(if(scoreType==\"ALL\", health, null()))) as health, sum(eval(if(scoreType==\"GOOD\", total, 0))) as healthy, sum(eval(if(scoreType==\"FAIR\", total, 0))) as active, sum(eval(if(scoreType==\"POOR\", total, 0))) as inactive, sum(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\", total, 0))) as new_clients\n| eval health=round(health)",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_wireless_total_trend": {
-      "name": "Wireless Clients Trend",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" scoreType=\"ALL\" | timechart fixedrange=false latest(clientCount) as \"Wireless Clients\"",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_wireless_trend_24h": {
-      "name": "Statewide - ds_wireless_client_trend_24h",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| timechart latest(eval(if(scoreType==\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType==\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType==\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\",clientCount,null()))) as \"No Data\"",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_wireless_trend_7d": {
-      "name": "Statewide - ds_wireless_client_trend_7d",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\") clientCount=*\n| timechart max(clientCount) as clientCount by scoreType",
-        "queryParameters": {
-          "earliest": "-7d@d",
-          "latest": "now"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_mod_wireless_health_threshold": {
-      "name": "Modern - Wireless health with threshold bands",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" scoreType=\"ALL\"\n| timechart fixedrange=false latest(scoreValue) as \"Wireless Health\"\n| eval \"Warning Threshold\"=80, \"Healthy Threshold\"=95",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_mod_wired_health_threshold": {
-      "name": "Modern - Wired health with threshold bands",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" scoreType=\"ALL\"\n| timechart fixedrange=false latest(scoreValue) as \"Wired Health\"\n| eval \"Warning Threshold\"=80, \"Healthy Threshold\"=95",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_mod_past_week_client_trends": {
-      "name": "Modern - 7 day wired and wireless client comparison",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRELESS\" OR clientType=\"WIRED\") scoreType=\"ALL\"\n| timechart span=1d latest(clientCount) as Clients by clientType\n| rename WIRELESS as \"Wireless Clients\", WIRED as \"Wired Clients\"",
-        "queryParameters": {
-          "earliest": "-7d@d",
-          "latest": "now"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_mod_base_device_health": {
-      "name": "Modern base - Latest device health by DeviceID",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| stats latest(DeviceFamily) as DeviceFamily, latest(Reachability) as Reachability, latest(Manageability) as Manageability by DeviceID\n| eval DeviceType=case(match(DeviceFamily,\"(?i)ap|access.point|unified.ap\"),\"Access Points\", match(DeviceFamily,\"(?i)switch\"),\"Switches\", match(DeviceFamily,\"(?i)router\"),\"Routers\", match(DeviceFamily,\"(?i)firewall|asa|ftd|firepower\"),\"Firewalls\", 1==1,\"Other\")\n| eval healthy=if(Reachability=\"Reachable\" AND match(Manageability,\"^Managed\"),1,0)\n| eval HealthStatus=case(healthy=1,\"Healthy\", Reachability=\"Reachable\",\"Fair\", 1==1,\"Poor\")",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_mod_device_health_ap": {
-      "name": "Modern - Access Points health percent",
-      "options": {
-        "extend": "ds_mod_base_device_health",
-        "query": "| search DeviceType=\"Access Points\"\n| stats count as total, sum(healthy) as healthy\n| eval health_pct=if(total>0, round(healthy/total*100, 1), 0)\n| fields health_pct healthy total"
-      },
-      "type": "ds.chain"
-    },
-    "ds_mod_device_health_switches": {
-      "name": "Modern - Switches health percent",
-      "options": {
-        "extend": "ds_mod_base_device_health",
-        "query": "| search DeviceType=\"Switches\"\n| stats count as total, sum(healthy) as healthy\n| eval health_pct=if(total>0, round(healthy/total*100, 1), 0)\n| fields health_pct healthy total"
-      },
-      "type": "ds.chain"
-    },
-    "ds_mod_device_health_routers": {
-      "name": "Modern - Routers health percent",
-      "options": {
-        "extend": "ds_mod_base_device_health",
-        "query": "| search DeviceType=\"Routers\"\n| stats count as total, sum(healthy) as healthy\n| eval health_pct=if(total>0, round(healthy/total*100, 1), 0)\n| fields health_pct healthy total"
-      },
-      "type": "ds.chain"
-    },
-    "ds_mod_device_health_firewalls": {
-      "name": "Modern - Firewalls health percent",
-      "options": {
-        "extend": "ds_mod_base_device_health",
-        "query": "| search DeviceType=\"Firewalls\"\n| stats count as total, sum(healthy) as healthy\n| eval health_pct=if(total>0, round(healthy/total*100, 1), 0)\n| fields health_pct healthy total"
-      },
-      "type": "ds.chain"
-    },
-    "ds_mod_device_health_distribution": {
-      "name": "Modern - Fleet health distribution",
-      "options": {
-        "extend": "ds_mod_base_device_health",
-        "query": "| stats count(eval(HealthStatus=\"Healthy\")) as Healthy, count(eval(HealthStatus=\"Fair\")) as Fair, count(eval(HealthStatus=\"Poor\")) as Poor\n| eval Fleet=\"All Devices\"\n| table Fleet Healthy Fair Poor"
-      },
-      "type": "ds.chain"
-    },
-    "ds_mod_device_inventory_bar": {
-      "name": "Modern - Device inventory by type",
-      "options": {
-        "extend": "ds_mod_base_device_health",
-        "query": "| stats count as Total, sum(healthy) as Healthy by DeviceType\n| eval NeedsAttention=Total-Healthy\n| sort -Total\n| rename DeviceType as \"Device Type\"\n| table \"Device Type\" Healthy NeedsAttention"
-      },
-      "type": "ds.chain"
-    },
-    "ds_mod_device_summary_total": {
-      "name": "Modern - Total device summary",
-      "options": {
-        "extend": "ds_mod_base_device_health",
-        "query": "| stats count as total, sum(healthy) as healthy\n| eval health_pct=if(total>0, round(healthy/total*100, 1), 0)\n| fields total healthy health_pct"
-      },
-      "type": "ds.chain"
-    },
-    "ds_mod_exec_issues_table": {
-      "name": "Modern - Active issues table",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueStatus=\"active\"\n| stats count as Count, latest(_time) as last_seen, values(DeviceName) as Devices, values(SiteName) as Sites by IssueName, IssueSpecificPriority, IssueSpecificCategory\n| eval Severity=case(IssueSpecificPriority=\"P1\",\"Critical\", IssueSpecificPriority=\"P2\",\"Warning\", IssueSpecificPriority=\"P3\",\"Notice\", IssueSpecificPriority=\"P4\",\"Info\", 1==1, coalesce(IssueSpecificPriority,\"Unknown\"))\n| eval Sites=mvjoin(Sites, \", \"), Devices=mvjoin(Devices, \", \"), \"Last Seen\"=strftime(last_seen, \"%Y-%m-%d %H:%M:%S\")\n| rename IssueName as Issue, IssueSpecificPriority as Priority, IssueSpecificCategory as Category\n| table Issue Priority Severity Category Count Sites Devices \"Last Seen\"",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_mod_selected_issue_detail": {
-      "name": "Modern - Selected issue detail",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueStatus=\"active\" IssueName=\"$selected_issue$\"\n| stats latest(IssueSpecificPriority) as Priority, latest(IssueSpecificDescription) as Description, latest(IssueSpecificSummary) as Summary, latest(IssueSpecificCategory) as Category, latest(_time) as last_seen, values(DeviceName) as Devices, values(SiteName) as Sites by IssueID, IssueName\n| eval Why=coalesce(Description, Summary, \"No description available\"), Sites=mvjoin(Sites, \", \"), Devices=mvjoin(Devices, \", \"), \"Last Seen\"=strftime(last_seen, \"%Y-%m-%d %H:%M:%S\")\n| rename IssueName as Issue\n| table IssueID Issue Priority Category Why Sites Devices \"Last Seen\"",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_mod_client_distribution_score": {
-      "name": "Modern - Client good-health distribution score",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRED\" OR clientType=\"WIRELESS\") (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| stats latest(clientCount) as clients by scoreType\n| stats sum(eval(if(scoreType=\"GOOD\",clients,0))) as healthy, sum(clients) as total\n| eval healthy_pct=if(total>0, round(healthy/total*100, 1), 0)\n| fields healthy_pct healthy total",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_mod_client_os_dist": {
-      "name": "Modern - Client OS distribution with filters",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| eval Site=mvindex(split(siteHierarchy,\"/\"),-1)\n| search Site=\"$site_tok$\" type=\"$client_type_tok$\"\n| eval osType=if(isnull(osType) OR osType=\"null\" OR osType=\"\" OR osType=\"Un-Classified Device\", \"Unknown\", osType)\n| stats dc(macAddress) as Clients by osType\n| sort -Clients\n| rename osType as \"OS\"",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_mod_client_location_dist": {
-      "name": "Modern - Client location distribution with filters",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| eval Site=mvindex(split(siteHierarchy,\"/\"),-1)\n| search Site=\"$site_tok$\" type=\"$client_type_tok$\"\n| where isnotnull(Site) AND Site!=\"null\" AND Site!=\"\"\n| stats dc(macAddress) as Clients by Site\n| sort -Clients\n| head 20",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_mod_client_details": {
-      "name": "Modern - Client details table with filters",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| eval Site=mvindex(split(siteHierarchy,\"/\"),-1)\n| search Site=\"$site_tok$\" type=\"$client_type_tok$\"\n| stats sum(traffic.usage) as usage, latest(deviceType) as device_type, latest(connection.ssid) as ssid, latest(connection.l3Vn) as vn, latest(connection.apMac) as ap, latest(type) as conn_type, latest(Site) as Site, latest(health.overallScore) as health by macAddress\n| eval usage_gb=tonumber(round(usage/1073741824,2)), ssid=case(isnotnull(ssid) AND ssid!=\"null\" AND ssid!=\"\", ssid, conn_type=\"Wired\" AND isnotnull(vn) AND vn!=\"null\", \"Wired (\".vn.\")\", conn_type=\"Wired\", \"Wired\", 1==1, \"Unknown\"), device_type=if(isnull(device_type) OR device_type=\"null\" OR device_type=\"\", \"Unknown\", device_type), health=round(health*10, 1)\n| where usage_gb > 0\n| sort -usage_gb\n| head 50\n| rename macAddress as Client, device_type as Type, ssid as SSID, ap as AP, usage_gb as \"Traffic (GB)\", health as \"Health %\"\n| table Client Type SSID AP Site \"Traffic (GB)\" \"Health %\"",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_mod_client_activity_7d": {
-      "name": "Modern - Client activity and onboarding over 7 days",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| eval Site=mvindex(split(siteHierarchy,\"/\"),-1)\n| search Site=\"$site_tok$\" type=\"$client_type_tok$\"\n| bin _time span=1d\n| stats dc(macAddress) as \"Active Clients\", avg(onboarding.avgAuthDuration) as avg_aaa, avg(onboarding.avgDhcpDuration) as avg_dhcp, avg(onboarding.avgAssocDuration) as avg_assoc by _time\n| eval \"Avg Onboarding (ms)\"=round(coalesce(avg_aaa,0)+coalesce(avg_dhcp,0)+coalesce(avg_assoc,0), 2)\n| fields _time \"Active Clients\" \"Avg Onboarding (ms)\"",
-        "queryParameters": {
-          "earliest": "-7d@d",
-          "latest": "now"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_mod_client_selected_detail": {
-      "name": "Modern - Selected client detail",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" macAddress=\"$selected_client$\"\n| eval Site=mvindex(split(siteHierarchy,\"/\"),-1)\n| stats latest(type) as Type, latest(deviceType) as DeviceType, latest(osType) as OS, latest(connection.ssid) as SSID, latest(connection.apMac) as AP, latest(Site) as Site, latest(connection.rssi) as RSSI, latest(health.overallScore) as Health, sum(traffic.usage) as Usage by macAddress\n| eval Health=round(Health*10,1), \"Usage (GB)\"=round(Usage/1073741824,2)\n| rename macAddress as Client\n| table Client Type DeviceType OS SSID AP Site RSSI Health \"Usage (GB)\"",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_mod_wireless_client_trend_health": {
-      "name": "Modern - Wireless client trend with health threshold overlays",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" (scoreType=\"ALL\" OR scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| timechart latest(eval(if(scoreType=\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType=\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType=\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType=\"IDLE\" OR scoreType=\"NODATA\",clientCount,null()))) as \"No Data\", latest(eval(if(scoreType=\"ALL\",scoreValue,null()))) as \"Wireless Health\"\n| eval \"Warning Threshold\"=80, \"Healthy Threshold\"=95",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    },
-    "ds_mod_wired_client_trend_health": {
-      "name": "Modern - Wired client trend with health threshold overlays",
-      "options": {
-        "query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" (scoreType=\"ALL\" OR scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| timechart latest(eval(if(scoreType=\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType=\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType=\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType=\"IDLE\" OR scoreType=\"NODATA\",clientCount,null()))) as \"No Data\", latest(eval(if(scoreType=\"ALL\",scoreValue,null()))) as \"Wired Health\"\n| eval \"Warning Threshold\"=80, \"Healthy Threshold\"=95",
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      },
-      "type": "ds.search"
-    }
-  },
-  "layout": {
-    "globalInputs": [
-      "input_time_range",
-      "input_refresh_rate",
-      "input_client_type",
-      "input_site_filter"
-    ],
-    "layoutDefinitions": {
-      "layout_overview": {
-        "type": "absolute",
-        "options": {
-          "backgroundColor": "#f5f7fb",
-          "display": "auto-scale",
-          "width": 1440,
-          "height": 1600
-        },
-        "structure": [
-          {
-            "item": "viz_header_overview",
-            "type": "block",
-            "position": {
-              "x": 20,
-              "y": 0,
-              "w": 1400,
-              "h": 90
-            }
-          },
-          {
-            "item": "viz_ov_wireless_health",
-            "type": "block",
-            "position": {
-              "x": 20,
-              "y": 110,
-              "w": 453,
-              "h": 170
-            }
-          },
-          {
-            "item": "viz_ov_wireless_clients",
-            "type": "block",
-            "position": {
-              "x": 493,
-              "y": 110,
-              "w": 453,
-              "h": 170
-            }
-          },
-          {
-            "item": "viz_ov_wireless_healthy",
-            "type": "block",
-            "position": {
-              "x": 966,
-              "y": 110,
-              "w": 454,
-              "h": 170
-            }
-          },
-          {
-            "item": "viz_ov_wired_health",
-            "type": "block",
-            "position": {
-              "x": 20,
-              "y": 300,
-              "w": 453,
-              "h": 170
-            }
-          },
-          {
-            "item": "viz_ov_wired_clients",
-            "type": "block",
-            "position": {
-              "x": 493,
-              "y": 300,
-              "w": 453,
-              "h": 170
-            }
-          },
-          {
-            "item": "viz_ov_wired_healthy",
-            "type": "block",
-            "position": {
-              "x": 966,
-              "y": 300,
-              "w": 454,
-              "h": 170
-            }
-          },
-          {
-            "item": "viz_ov_wireless_trend",
-            "type": "block",
-            "position": {
-              "x": 20,
-              "y": 490,
-              "w": 690,
-              "h": 330
-            }
-          },
-          {
-            "item": "viz_ov_wired_trend",
-            "type": "block",
-            "position": {
-              "x": 730,
-              "y": 490,
-              "w": 690,
-              "h": 330
-            }
-          },
-          {
-            "item": "viz_ov_ssid_bar",
-            "type": "block",
-            "position": {
-              "x": 20,
-              "y": 840,
-              "w": 1400,
-              "h": 360
-            }
-          },
-          {
-            "item": "viz_ov_week_line",
-            "type": "block",
-            "position": {
-              "x": 20,
-              "y": 1220,
-              "w": 1400,
-              "h": 360
-            }
-          }
-        ]
-      },
-      "layout_exec": {
-        "type": "absolute",
-        "options": {
-          "backgroundColor": "#f5f7fb",
-          "display": "auto-scale",
-          "width": 1440,
-          "height": 1530
-        },
-        "structure": [
-          {
-            "item": "viz_header_exec",
-            "type": "block",
-            "position": {
-              "x": 20,
-              "y": 0,
-              "w": 1400,
-              "h": 90
-            }
-          },
-          {
-            "item": "viz_ex_ap_health",
-            "type": "block",
-            "position": {
-              "x": 20,
-              "y": 110,
-              "w": 335,
-              "h": 170
-            }
-          },
-          {
-            "item": "viz_ex_switch_health",
-            "type": "block",
-            "position": {
-              "x": 375,
-              "y": 110,
-              "w": 335,
-              "h": 170
-            }
-          },
-          {
-            "item": "viz_ex_router_health",
-            "type": "block",
-            "position": {
-              "x": 730,
-              "y": 110,
-              "w": 335,
-              "h": 170
-            }
-          },
-          {
-            "item": "viz_ex_firewall_health",
-            "type": "block",
-            "position": {
-              "x": 1085,
-              "y": 110,
-              "w": 335,
-              "h": 170
-            }
-          },
-          {
-            "item": "viz_ex_device_health_distribution",
-            "type": "block",
-            "position": {
-              "x": 20,
-              "y": 300,
-              "w": 1400,
-              "h": 330
-            }
-          },
-          {
-            "item": "viz_ex_device_inventory",
-            "type": "block",
-            "position": {
-              "x": 20,
-              "y": 650,
-              "w": 690,
-              "h": 350
-            }
-          },
-          {
-            "item": "viz_ex_device_total_radial",
-            "type": "block",
-            "position": {
-              "x": 730,
-              "y": 650,
-              "w": 690,
-              "h": 350
-            }
-          },
-          {
-            "item": "viz_ex_issues_table",
-            "type": "block",
-            "position": {
-              "x": 20,
-              "y": 1020,
-              "w": 1400,
-              "h": 480
-            }
-          },
-          {
-            "item": "viz_ex_issue_detail_modal",
-            "type": "block",
-            "position": {
-              "x": 20,
-              "y": 1020,
-              "w": 1400,
-              "h": 480
-            }
-          },
-          {
-            "item": "input_close_issue",
-            "type": "input",
-            "position": {
-              "x": 1240,
-              "y": 1030,
-              "w": 170,
-              "h": 70
-            }
-          }
-        ]
-      },
-      "layout_client": {
-        "type": "absolute",
-        "options": {
-          "backgroundColor": "#f5f7fb",
-          "display": "auto-scale",
-          "width": 1440,
-          "height": 1930
-        },
-        "structure": [
-          {
-            "item": "viz_header_client",
-            "type": "block",
-            "position": {
-              "x": 20,
-              "y": 0,
-              "w": 1400,
-              "h": 90
-            }
-          },
-          {
-            "item": "viz_client_health_score",
-            "type": "block",
-            "position": {
-              "x": 20,
-              "y": 110,
-              "w": 453,
-              "h": 190
-            }
-          },
-          {
-            "item": "viz_client_total",
-            "type": "block",
-            "position": {
-              "x": 493,
-              "y": 110,
-              "w": 453,
-              "h": 190
-            }
-          },
-          {
-            "item": "viz_client_distribution",
-            "type": "block",
-            "position": {
-              "x": 966,
-              "y": 110,
-              "w": 454,
-              "h": 190
-            }
-          },
-          {
-            "item": "viz_client_health_over_time",
-            "type": "block",
-            "position": {
-              "x": 20,
-              "y": 320,
-              "w": 1400,
-              "h": 380
-            }
-          },
-          {
-            "item": "viz_client_os_distribution",
-            "type": "block",
-            "position": {
-              "x": 20,
-              "y": 720,
-              "w": 690,
-              "h": 340
-            }
-          },
-          {
-            "item": "viz_client_location_distribution",
-            "type": "block",
-            "position": {
-              "x": 730,
-              "y": 720,
-              "w": 690,
-              "h": 340
-            }
-          },
-          {
-            "item": "viz_client_details",
-            "type": "block",
-            "position": {
-              "x": 20,
-              "y": 1080,
-              "w": 1400,
-              "h": 450
-            }
-          },
-          {
-            "item": "viz_client_activity_onboarding",
-            "type": "block",
-            "position": {
-              "x": 20,
-              "y": 1550,
-              "w": 1400,
-              "h": 360
-            }
-          }
-        ]
-      },
-      "layout_about": {
-        "type": "absolute",
-        "options": {
-          "backgroundColor": "#f5f7fb",
-          "display": "auto-scale",
-          "width": 1440,
-          "height": 900
-        },
-        "structure": [
-          {
-            "item": "viz_header_about",
-            "type": "block",
-            "position": {
-              "x": 20,
-              "y": 0,
-              "w": 1400,
-              "h": 90
-            }
-          },
-          {
-            "item": "viz_about_content",
-            "type": "block",
-            "position": {
-              "x": 20,
-              "y": 110,
-              "w": 1400,
-              "h": 760
-            }
-          }
-        ]
-      }
-    },
-    "options": {
-      "showTitleAndDescription": false,
-      "submitButton": false,
-      "submitOnDashboardLoad": true
-    },
-    "tabs": {
-      "items": [
-        {
-          "label": "Overview",
-          "layoutId": "layout_overview"
-        },
-        {
-          "label": "Executive Summary",
-          "layoutId": "layout_exec"
-        },
-        {
-          "label": "Client Summary",
-          "layoutId": "layout_client"
-        },
-        {
-          "label": "About",
-          "layoutId": "layout_about"
-        }
-      ]
-    }
-  },
-  "expressions": {
-    "conditions": {
-      "condition_issue_selected": {
-        "name": "Issue selected",
-        "value": "$selected_issue$ != \"\""
-      }
-    },
-    "eval": {}
-  },
-  "applicationProperties": {
-    "collapseNavigation": false,
-    "hideEdit": true,
-    "hideExport": false
-  }
+	"title": "Statewide Exercise - Modern Dashboard Studio",
+	"description": "Modern Dashboard Studio JSON conversion of statewide_exercise_v1.xml with tabbed layout, refreshed searches, token filters, drilldown detail panels, and enterprise network monitoring visuals.",
+	"inputs": {
+		"input_client_type": {
+			"options": {
+				"defaultValue": "*",
+				"items": [
+					{
+						"label": "All clients",
+						"value": "*"
+					},
+					{
+						"label": "Wireless",
+						"value": "Wireless"
+					},
+					{
+						"label": "Wired",
+						"value": "Wired"
+					}
+				],
+				"token": "client_type_tok"
+			},
+			"title": "Client Type",
+			"type": "input.dropdown"
+		},
+		"input_close_issue": {
+			"containerOptions": {
+				"visibility": {
+					"showConditions": [
+						"condition_issue_selected"
+					]
+				}
+			},
+			"eventHandlers": [
+				{
+					"options": {
+						"tokens": [
+							{
+								"token": "selected_issue",
+								"value": ""
+							},
+							{
+								"token": "selected_issue_priority",
+								"value": ""
+							}
+						]
+					},
+					"type": "drilldown.setToken"
+				}
+			],
+			"options": {
+				"label": "Close Details"
+			},
+			"title": "",
+			"type": "input.button"
+		},
+		"input_refresh_rate": {
+			"options": {
+				"defaultValue": "60s",
+				"items": [
+					{
+						"label": "60 seconds",
+						"value": "60s"
+					},
+					{
+						"label": "5 minutes",
+						"value": "300s"
+					},
+					{
+						"label": "15 minutes",
+						"value": "900s"
+					}
+				],
+				"token": "refresh_tok"
+			},
+			"title": "Refresh",
+			"type": "input.dropdown"
+		},
+		"input_site_filter": {
+			"options": {
+				"defaultValue": "*",
+				"token": "site_tok"
+			},
+			"title": "Site Filter",
+			"type": "input.text"
+		},
+		"input_time_range": {
+			"options": {
+				"defaultValue": "-24h@h,now",
+				"token": "time_tok"
+			},
+			"title": "Time Range",
+			"type": "input.timerange"
+		}
+	},
+	"defaults": {
+		"dataSources": {
+			"ds.search": {
+				"options": {
+					"queryParameters": {
+						"earliest": "$time_tok.earliest$",
+						"latest": "$time_tok.latest$"
+					}
+				}
+			},
+			"ds.spl2": {
+				"options": {
+					"queryParameters": {
+						"earliest": "$time_tok.earliest$",
+						"latest": "$time_tok.latest$"
+					}
+				}
+			},
+			"global": {
+				"options": {
+					"refresh": "$refresh_tok$",
+					"refreshType": "delay"
+				}
+			}
+		},
+		"tokens": {
+			"default": {
+				"client_type_tok": {
+					"value": "*"
+				},
+				"refresh_tok": {
+					"value": "60s"
+				},
+				"selected_client": {
+					"value": ""
+				},
+				"selected_issue": {
+					"value": ""
+				},
+				"selected_issue_priority": {
+					"value": ""
+				},
+				"site_tok": {
+					"value": "*"
+				}
+			}
+		},
+		"visualizations": {
+			"global": {
+				"showLastUpdated": true,
+				"showProgressBar": true
+			}
+		}
+	},
+	"visualizations": {
+		"viz_about_content": {
+			"options": {
+				"backgroundColor": "#ffffff",
+				"fontColor": "#111827",
+				"markdown": "### Purpose\n\nThis Dashboard Studio definition modernizes `statewide_exercise_v1.xml` into a four-tab operational view for statewide network activation exercises.\n\n### Preserved searches\n\nAll SPL data sources embedded in the existing `statewide_exercise_v1.xml` CDATA definition are copied into this JSON. New `ds_mod_*` searches add tokenized filters, reusable base searches, 60-second refresh behavior, issue drilldowns, and the executive health distribution panels.\n\n### Data sources\n\n- `cisco:dnac:clienthealth`: wired and wireless health KPIs, client counts, 24-hour and 7-day trends.\n- `cisco:dnac:client`: SSID, OS, site, traffic, onboarding, and per-client detail tables.\n- `cisco:dnac:devicehealth`: device type KPIs, health distribution, inventory, and total fleet summary.\n- `cisco:dnac:issue`: active issue summaries and row-click detail panels.\n\n### Interaction model\n\n- Global time range controls dashboard searches through `$time_tok$`.\n- Refresh rate defaults to 60 seconds through `$refresh_tok$`.\n- Client Type and Site Filter tokens narrow client distribution/detail searches.\n- Selecting an issue row sets `$selected_issue$` and opens the Issue Detail panel. Use Close Details to clear the token.\n\n### Health color policy\n\n- `>=95%`: green `#16a34a`.\n- `80-95%`: yellow `#eab308`.\n- `<80%`: red `#dc2626`.\n\n### Studio schema notes\n\nDashboard Studio source JSON uses `splunk.*` visualization type IDs. The old `viz.*` syntax is legacy and is migrated by Splunk when opened in current Studio. JSON does not support comments, so implementation notes are encoded here and in visualization descriptions to keep this definition importable."
+			},
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"title": "Metric Reference",
+			"type": "splunk.markdown"
+		},
+		"viz_client_activity_onboarding": {
+			"dataSources": {
+				"primary": "ds_mod_client_activity_7d"
+			},
+			"description": "Daily active clients with average onboarding duration as an overlay.",
+			"options": {
+				"backgroundColor": "#ffffff",
+				"dataValuesDisplay": "all",
+				"legendDisplay": "right",
+				"overlayFields": [
+					"Avg Onboarding (ms)"
+				],
+				"seriesColorsByField": {
+					"Active Clients": "#a855f7",
+					"Avg Onboarding (ms)": "#0ea5e9"
+				},
+				"showOverlayY2Axis": true,
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleText": "Active Clients",
+				"yAxisTitleVisibility": "hide"
+			},
+			"title": "Client Activity and Onboarding",
+			"type": "splunk.bar"
+		},
+		"viz_client_details": {
+			"context": {
+				"healthColorRange": [
+					{
+						"to": 80,
+						"value": "#dc2626"
+					},
+					{
+						"from": 80,
+						"to": 95,
+						"value": "#eab308"
+					},
+					{
+						"from": 95,
+						"value": "#16a34a"
+					}
+				]
+			},
+			"dataSources": {
+				"primary": "ds_mod_client_details"
+			},
+			"description": "Top connected clients by traffic. Select a row to inspect client detail.",
+			"eventHandlers": [
+				{
+					"options": {
+						"tokens": [
+							{
+								"key": "row.Client.value",
+								"token": "selected_client"
+							}
+						]
+					},
+					"type": "drilldown.setToken"
+				}
+			],
+			"options": {
+				"backgroundColor": "#ffffff",
+				"columnFormat": {
+					"Health %": {
+						"rowColors": "> table | seriesByName(\"Health %\") | rangeValue(healthColorRange)"
+					},
+					"Traffic (GB)": {
+						"textOverflow": "break-word"
+					}
+				},
+				"count": 20,
+				"drilldown": "row",
+				"fontSize": "small",
+				"showInternalFields": false
+			},
+			"title": "Wireless Client Details",
+			"type": "splunk.table"
+		},
+		"viz_client_distribution": {
+			"context": {
+				"healthColorRange": [
+					{
+						"to": 80,
+						"value": "#dc2626"
+					},
+					{
+						"from": 80,
+						"to": 95,
+						"value": "#eab308"
+					},
+					{
+						"from": 95,
+						"value": "#16a34a"
+					}
+				]
+			},
+			"dataSources": {
+				"primary": "ds_mod_client_distribution_score"
+			},
+			"description": "Percentage of clients reporting GOOD health.",
+			"options": {
+				"backgroundColor": "#ffffff",
+				"majorColor": "> primary | seriesByName('healthy_pct') | lastPoint() | rangeValue(healthColorRange)",
+				"majorValue": "> primary | seriesByName('healthy_pct') | lastPoint()",
+				"sparklineDisplay": "off",
+				"trendDisplay": "off",
+				"unit": "%"
+			},
+			"title": "Client Distribution",
+			"type": "splunk.singlevalueradial"
+		},
+		"viz_client_health_over_time": {
+			"dataSources": {
+				"primary": "ds_cs_count_over_time"
+			},
+			"description": "Stacked client health distribution across wired and wireless clients.",
+			"options": {
+				"backgroundColor": "#ffffff",
+				"nullValueDisplay": "connect",
+				"seriesColorsByField": {
+					"Fair Count": "#eab308",
+					"Good Count": "#16a34a",
+					"Idle Count": "#94a3b8",
+					"Poor Count": "#dc2626"
+				},
+				"showYMajorGridLines": true,
+				"splitByLayout": "trellis",
+				"stackMode": "stacked",
+				"trellisColumns": 2,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleText": "Clients",
+				"yAxisTitleVisibility": "hide"
+			},
+			"title": "Client Health Over Time",
+			"type": "splunk.area"
+		},
+		"viz_client_health_score": {
+			"context": {
+				"healthColorRange": [
+					{
+						"to": 80,
+						"value": "#dc2626"
+					},
+					{
+						"from": 80,
+						"to": 95,
+						"value": "#eab308"
+					},
+					{
+						"from": 95,
+						"value": "#16a34a"
+					}
+				]
+			},
+			"dataSources": {
+				"primary": "ds_kpi_cs_health"
+			},
+			"description": "Average client health score across wired and wireless clients.",
+			"options": {
+				"backgroundColor": "#ffffff",
+				"majorColor": "> majorValue | rangeValue(healthColorRange)",
+				"majorFontSize": 38,
+				"majorValue": "> primary | seriesByName('Client Health Score') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
+				"showSparklineAreaGraph": true,
+				"showSparklineTooltip": true,
+				"showTrendIndicator": true,
+				"sparklineAreaColor": "> majorValue | rangeValue(healthColorRange)",
+				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
+				"sparklineStrokeColor": "> majorValue | rangeValue(healthColorRange)",
+				"trendDisplay": "percent",
+				"unit": "%"
+			},
+			"title": "Active Client Score",
+			"type": "splunk.singlevalue"
+		},
+		"viz_client_location_distribution": {
+			"dataSources": {
+				"primary": "ds_mod_client_location_dist"
+			},
+			"description": "Top sites by connected client count.",
+			"options": {
+				"backgroundColor": "#ffffff",
+				"dataValuesDisplay": "all",
+				"legendDisplay": "off",
+				"orientation": "horizontal",
+				"seriesColors": [
+					"#2563eb"
+				],
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide"
+			},
+			"title": "Client Distribution by Location",
+			"type": "splunk.bar"
+		},
+		"viz_client_os_distribution": {
+			"dataSources": {
+				"primary": "ds_mod_client_os_dist"
+			},
+			"description": "Operating system breakdown for filtered clients.",
+			"options": {
+				"backgroundColor": "#ffffff",
+				"dataValuesDisplay": "all",
+				"legendDisplay": "off",
+				"orientation": "horizontal",
+				"seriesColors": [
+					"#111827"
+				],
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide"
+			},
+			"title": "Client Distribution by OS",
+			"type": "splunk.bar"
+		},
+		"viz_client_total": {
+			"dataSources": {
+				"primary": "ds_kpi_cs_total"
+			},
+			"description": "Total unique connected clients in the selected time range.",
+			"options": {
+				"backgroundColor": "#ffffff",
+				"majorColor": "#111827",
+				"majorFontSize": 38,
+				"majorValue": "> primary | seriesByName('Total Connected Clients') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
+				"showSparklineAreaGraph": true,
+				"showSparklineTooltip": true,
+				"showTrendIndicator": true,
+				"sparklineAreaColor": "rgba(37,99,235,0.18)",
+				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
+				"sparklineStrokeColor": "#2563eb",
+				"trendDisplay": "percent"
+			},
+			"title": "Total Active Clients",
+			"type": "splunk.singlevalue"
+		},
+		"viz_ex_ap_health": {
+			"context": {
+				"healthColorRange": [
+					{
+						"to": 80,
+						"value": "#dc2626"
+					},
+					{
+						"from": 80,
+						"to": 95,
+						"value": "#eab308"
+					},
+					{
+						"from": 95,
+						"value": "#16a34a"
+					}
+				]
+			},
+			"dataSources": {
+				"primary": "ds_mod_device_health_ap"
+			},
+			"description": "Reachable and managed access points as a percentage of total AP inventory.",
+			"options": {
+				"backgroundColor": "#ffffff",
+				"gaugeColor": "> primary | seriesByName('health_pct') | lastPoint() | rangeValue(healthColorRange)",
+				"labelDisplay": "percentage",
+				"orientation": "horizontal",
+				"value": "> primary | seriesByName('health_pct') | lastPoint()",
+				"valueDisplay": "percentage"
+			},
+			"title": "Access Points",
+			"type": "splunk.fillergauge"
+		},
+		"viz_ex_device_health_distribution": {
+			"dataSources": {
+				"primary": "ds_mod_device_health_distribution"
+			},
+			"description": "Fleet-wide healthy, fair, and poor device distribution.",
+			"options": {
+				"backgroundColor": "#ffffff",
+				"dataValuesDisplay": "all",
+				"legendDisplay": "bottom",
+				"orientation": "horizontal",
+				"seriesColorsByField": {
+					"Fair": "#eab308",
+					"Healthy": "#16a34a",
+					"Poor": "#dc2626"
+				},
+				"showYMajorGridLines": true,
+				"stackMode": "stacked",
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide"
+			},
+			"title": "Device Health Distribution",
+			"type": "splunk.bar"
+		},
+		"viz_ex_device_inventory": {
+			"dataSources": {
+				"primary": "ds_mod_device_inventory_bar"
+			},
+			"description": "Reachable versus attention-needed devices by network role.",
+			"options": {
+				"backgroundColor": "#ffffff",
+				"dataValuesDisplay": "all",
+				"legendDisplay": "bottom",
+				"orientation": "horizontal",
+				"seriesColorsByField": {
+					"Healthy": "#16a34a",
+					"NeedsAttention": "#dc2626"
+				},
+				"showYMajorGridLines": true,
+				"stackMode": "stacked",
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide"
+			},
+			"title": "Device Inventory",
+			"type": "splunk.bar"
+		},
+		"viz_ex_device_total_radial": {
+			"context": {
+				"healthColorRange": [
+					{
+						"to": 80,
+						"value": "#dc2626"
+					},
+					{
+						"from": 80,
+						"to": 95,
+						"value": "#eab308"
+					},
+					{
+						"from": 95,
+						"value": "#16a34a"
+					}
+				]
+			},
+			"dataSources": {
+				"primary": "ds_mod_device_summary_total"
+			},
+			"description": "Total discovered network devices, with radial color based on overall device health.",
+			"options": {
+				"backgroundColor": "#ffffff",
+				"majorColor": "> primary | seriesByName('health_pct') | lastPoint() | rangeValue(healthColorRange)",
+				"majorValue": "> primary | seriesByName('total') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"sparklineDisplay": "off",
+				"trendDisplay": "off"
+			},
+			"title": "Device Summary - Total",
+			"type": "splunk.singlevalueradial"
+		},
+		"viz_ex_firewall_health": {
+			"context": {
+				"healthColorRange": [
+					{
+						"to": 80,
+						"value": "#dc2626"
+					},
+					{
+						"from": 80,
+						"to": 95,
+						"value": "#eab308"
+					},
+					{
+						"from": 95,
+						"value": "#16a34a"
+					}
+				]
+			},
+			"dataSources": {
+				"primary": "ds_mod_device_health_firewalls"
+			},
+			"description": "Reachable and managed firewalls as a percentage of total firewall inventory.",
+			"options": {
+				"backgroundColor": "#ffffff",
+				"gaugeColor": "> primary | seriesByName('health_pct') | lastPoint() | rangeValue(healthColorRange)",
+				"labelDisplay": "percentage",
+				"orientation": "horizontal",
+				"value": "> primary | seriesByName('health_pct') | lastPoint()",
+				"valueDisplay": "percentage"
+			},
+			"title": "Firewalls",
+			"type": "splunk.fillergauge"
+		},
+		"viz_ex_issue_detail_modal": {
+			"containerOptions": {
+				"visibility": {
+					"showConditions": [
+						"condition_issue_selected"
+					]
+				}
+			},
+			"dataSources": {
+				"primary": "ds_mod_selected_issue_detail"
+			},
+			"description": "Row-click detail view for the selected active issue.",
+			"options": {
+				"backgroundColor": "#ffffff",
+				"count": 10,
+				"drilldown": "none",
+				"fontSize": "small",
+				"showInternalFields": false
+			},
+			"title": "Issue Detail",
+			"type": "splunk.table"
+		},
+		"viz_ex_issues_table": {
+			"containerOptions": {
+				"visibility": {
+					"hideConditions": [
+						"condition_issue_selected"
+					]
+				}
+			},
+			"context": {
+				"severityColors": [
+					{
+						"match": "Critical",
+						"value": "rgba(220,38,38,0.22)"
+					},
+					{
+						"match": "Warning",
+						"value": "rgba(234,179,8,0.22)"
+					},
+					{
+						"match": "Notice",
+						"value": "rgba(37,99,235,0.12)"
+					},
+					{
+						"match": "Info",
+						"value": "rgba(22,163,74,0.12)"
+					}
+				]
+			},
+			"dataSources": {
+				"primary": "ds_mod_exec_issues_table"
+			},
+			"description": "Critical and warning alerts requiring attention. Select a row to open details.",
+			"eventHandlers": [
+				{
+					"options": {
+						"tokens": [
+							{
+								"key": "row.Issue.value",
+								"token": "selected_issue"
+							},
+							{
+								"key": "row.Priority.value",
+								"token": "selected_issue_priority"
+							}
+						]
+					},
+					"type": "drilldown.setToken"
+				}
+			],
+			"options": {
+				"backgroundColor": "#ffffff",
+				"columnFormat": {
+					"Devices": {
+						"textOverflow": "break-word"
+					},
+					"Issue": {
+						"textOverflow": "break-word"
+					},
+					"Severity": {
+						"rowBackgroundColors": "> table | seriesByName(\"Severity\") | matchValue(severityColors)",
+						"textOverflow": "break-word"
+					},
+					"Sites": {
+						"textOverflow": "break-word"
+					}
+				},
+				"count": 15,
+				"drilldown": "row",
+				"fontSize": "small",
+				"showInternalFields": false
+			},
+			"title": "Issues",
+			"type": "splunk.table"
+		},
+		"viz_ex_router_health": {
+			"context": {
+				"healthColorRange": [
+					{
+						"to": 80,
+						"value": "#dc2626"
+					},
+					{
+						"from": 80,
+						"to": 95,
+						"value": "#eab308"
+					},
+					{
+						"from": 95,
+						"value": "#16a34a"
+					}
+				]
+			},
+			"dataSources": {
+				"primary": "ds_mod_device_health_routers"
+			},
+			"description": "Reachable and managed routers as a percentage of total router inventory.",
+			"options": {
+				"backgroundColor": "#ffffff",
+				"gaugeColor": "> primary | seriesByName('health_pct') | lastPoint() | rangeValue(healthColorRange)",
+				"labelDisplay": "percentage",
+				"orientation": "horizontal",
+				"value": "> primary | seriesByName('health_pct') | lastPoint()",
+				"valueDisplay": "percentage"
+			},
+			"title": "Routers",
+			"type": "splunk.fillergauge"
+		},
+		"viz_ex_switch_health": {
+			"context": {
+				"healthColorRange": [
+					{
+						"to": 80,
+						"value": "#dc2626"
+					},
+					{
+						"from": 80,
+						"to": 95,
+						"value": "#eab308"
+					},
+					{
+						"from": 95,
+						"value": "#16a34a"
+					}
+				]
+			},
+			"dataSources": {
+				"primary": "ds_mod_device_health_switches"
+			},
+			"description": "Reachable and managed switches as a percentage of total switch inventory.",
+			"options": {
+				"backgroundColor": "#ffffff",
+				"gaugeColor": "> primary | seriesByName('health_pct') | lastPoint() | rangeValue(healthColorRange)",
+				"labelDisplay": "percentage",
+				"orientation": "horizontal",
+				"value": "> primary | seriesByName('health_pct') | lastPoint()",
+				"valueDisplay": "percentage"
+			},
+			"title": "Switches",
+			"type": "splunk.fillergauge"
+		},
+		"viz_header_about": {
+			"options": {
+				"backgroundColor": "#ffffff",
+				"fontColor": "#111827",
+				"fontSize": "small",
+				"markdown": "## About This Dashboard\nSource, design, and operational notes for the statewide network exercise dashboard."
+			},
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"type": "splunk.markdown"
+		},
+		"viz_header_client": {
+			"options": {
+				"backgroundColor": "#ffffff",
+				"fontColor": "#111827",
+				"fontSize": "small",
+				"markdown": "## Client Summary\nComprehensive client health, distribution, activity, and top-client details for operational troubleshooting."
+			},
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"type": "splunk.markdown"
+		},
+		"viz_header_exec": {
+			"options": {
+				"backgroundColor": "#ffffff",
+				"fontColor": "#111827",
+				"fontSize": "small",
+				"markdown": "## Overall Health Summary - Network Devices\nExecutive view of device health, inventory, and active Catalyst Center issues across the statewide environment."
+			},
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"type": "splunk.markdown"
+		},
+		"viz_header_overview": {
+			"options": {
+				"backgroundColor": "#ffffff",
+				"fontColor": "#111827",
+				"fontSize": "small",
+				"markdown": "## General Overview\nMonitor statewide wired and wireless client health across all sites. Use the filters above to narrow client views by site or connection type."
+			},
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"type": "splunk.markdown"
+		},
+		"viz_ov_ssid_bar": {
+			"dataSources": {
+				"primary": "ds_cs_by_ssid"
+			},
+			"description": "Wireless client distribution by SSID for the selected time range.",
+			"options": {
+				"backgroundColor": "#ffffff",
+				"dataValuesDisplay": "all",
+				"legendDisplay": "off",
+				"seriesColors": [
+					"#2563eb"
+				],
+				"showYMajorGridLines": true,
+				"xAxisTitleText": "SSID",
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleText": "Clients",
+				"yAxisTitleVisibility": "hide"
+			},
+			"title": "Client Count per SSID",
+			"type": "splunk.bar"
+		},
+		"viz_ov_week_line": {
+			"dataSources": {
+				"primary": "ds_mod_past_week_client_trends"
+			},
+			"description": "Wireless and wired client counts over the last 7 days.",
+			"options": {
+				"backgroundColor": "#ffffff",
+				"lineWidth": 3,
+				"markerDisplay": "outlined",
+				"nullValueDisplay": "connect",
+				"seriesColorsByField": {
+					"Wired Clients": "#7c3aed",
+					"Wireless Clients": "#2563eb"
+				},
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide"
+			},
+			"title": "Past Week - Client Trends",
+			"type": "splunk.line"
+		},
+		"viz_ov_wired_clients": {
+			"dataSources": {
+				"primary": "ds_kpi_wired_total"
+			},
+			"description": "Total wired clients currently connected.",
+			"options": {
+				"backgroundColor": "#ffffff",
+				"majorColor": "#7c3aed",
+				"majorFontSize": 38,
+				"majorValue": "> primary | seriesByName('Wired Clients') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
+				"showSparklineAreaGraph": true,
+				"showSparklineTooltip": true,
+				"showTrendIndicator": true,
+				"sparklineAreaColor": "rgba(124,58,237,0.18)",
+				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
+				"sparklineStrokeColor": "#7c3aed",
+				"trendDisplay": "percent"
+			},
+			"title": "Wired Clients",
+			"type": "splunk.singlevalue"
+		},
+		"viz_ov_wired_health": {
+			"context": {
+				"healthColorRange": [
+					{
+						"to": 80,
+						"value": "#dc2626"
+					},
+					{
+						"from": 80,
+						"to": 95,
+						"value": "#eab308"
+					},
+					{
+						"from": 95,
+						"value": "#16a34a"
+					}
+				]
+			},
+			"dataSources": {
+				"primary": "ds_kpi_wired_health"
+			},
+			"description": "Wired client health with threshold-colored sparkline.",
+			"options": {
+				"backgroundColor": "#ffffff",
+				"majorColor": "> majorValue | rangeValue(healthColorRange)",
+				"majorFontSize": 38,
+				"majorValue": "> primary | seriesByName('Wired Health') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
+				"showSparklineAreaGraph": true,
+				"showSparklineTooltip": true,
+				"showTrendIndicator": true,
+				"sparklineAreaColor": "> majorValue | rangeValue(healthColorRange)",
+				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
+				"sparklineStrokeColor": "> majorValue | rangeValue(healthColorRange)",
+				"trendDisplay": "percent",
+				"unit": "%"
+			},
+			"title": "Wired Health",
+			"type": "splunk.singlevalue"
+		},
+		"viz_ov_wired_healthy": {
+			"dataSources": {
+				"primary": "ds_wired_trend_24h"
+			},
+			"description": "Wired clients currently in healthy status.",
+			"options": {
+				"backgroundColor": "#ffffff",
+				"majorColor": "#16a34a",
+				"majorFontSize": 38,
+				"majorValue": "> primary | seriesByName('Healthy') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
+				"showSparklineAreaGraph": true,
+				"showSparklineTooltip": true,
+				"showTrendIndicator": true,
+				"sparklineAreaColor": "rgba(37,99,235,0.18)",
+				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
+				"sparklineStrokeColor": "#2563eb",
+				"trendDisplay": "percent"
+			},
+			"title": "Healthy Wired Clients",
+			"type": "splunk.singlevalue"
+		},
+		"viz_ov_wired_trend": {
+			"dataSources": {
+				"primary": "ds_mod_wired_client_trend_health"
+			},
+			"description": "Stacked wired client count with health score and 80/95 threshold overlays.",
+			"options": {
+				"backgroundColor": "#ffffff",
+				"nullValueDisplay": "connect",
+				"overlayFields": [
+					"Wired Health",
+					"Warning Threshold",
+					"Healthy Threshold"
+				],
+				"seriesColorsByField": {
+					"Fair": "#eab308",
+					"Healthy": "#16a34a",
+					"Healthy Threshold": "#16a34a",
+					"No Data": "#94a3b8",
+					"Poor": "#dc2626",
+					"Warning Threshold": "#eab308",
+					"Wired Health": "#7c3aed"
+				},
+				"showOverlayY2Axis": true,
+				"showYMajorGridLines": true,
+				"stackMode": "stacked",
+				"xAxisTitleVisibility": "hide",
+				"y2AxisTitleText": "Health %",
+				"yAxisTitleText": "Clients",
+				"yAxisTitleVisibility": "hide"
+			},
+			"title": "Wired Client Trend",
+			"type": "splunk.area"
+		},
+		"viz_ov_wireless_clients": {
+			"dataSources": {
+				"primary": "ds_kpi_wireless_total"
+			},
+			"description": "Total wireless clients currently connected.",
+			"options": {
+				"backgroundColor": "#ffffff",
+				"majorColor": "#2563eb",
+				"majorFontSize": 38,
+				"majorValue": "> primary | seriesByName('Wireless Clients') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
+				"showSparklineAreaGraph": true,
+				"showSparklineTooltip": true,
+				"showTrendIndicator": true,
+				"sparklineAreaColor": "rgba(37,99,235,0.18)",
+				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
+				"sparklineStrokeColor": "#2563eb",
+				"trendDisplay": "percent"
+			},
+			"title": "Wireless Clients",
+			"type": "splunk.singlevalue"
+		},
+		"viz_ov_wireless_health": {
+			"context": {
+				"healthColorRange": [
+					{
+						"to": 80,
+						"value": "#dc2626"
+					},
+					{
+						"from": 80,
+						"to": 95,
+						"value": "#eab308"
+					},
+					{
+						"from": 95,
+						"value": "#16a34a"
+					}
+				]
+			},
+			"dataSources": {
+				"primary": "ds_kpi_wireless_health"
+			},
+			"description": "Wireless client health with threshold-colored sparkline.",
+			"options": {
+				"backgroundColor": "#ffffff",
+				"majorColor": "> majorValue | rangeValue(healthColorRange)",
+				"majorFontSize": 38,
+				"majorValue": "> primary | seriesByName('Wireless Health') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
+				"showSparklineAreaGraph": true,
+				"showSparklineTooltip": true,
+				"showTrendIndicator": true,
+				"sparklineAreaColor": "> majorValue | rangeValue(healthColorRange)",
+				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
+				"sparklineStrokeColor": "> majorValue | rangeValue(healthColorRange)",
+				"trendDisplay": "percent",
+				"unit": "%"
+			},
+			"title": "Wireless Health",
+			"type": "splunk.singlevalue"
+		},
+		"viz_ov_wireless_healthy": {
+			"dataSources": {
+				"primary": "ds_wireless_trend_24h"
+			},
+			"description": "Wireless clients currently in healthy status.",
+			"options": {
+				"backgroundColor": "#ffffff",
+				"majorColor": "#16a34a",
+				"majorFontSize": 38,
+				"majorValue": "> primary | seriesByName('Healthy') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
+				"showSparklineAreaGraph": true,
+				"showSparklineTooltip": true,
+				"showTrendIndicator": true,
+				"sparklineAreaColor": "rgba(37,99,235,0.18)",
+				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
+				"sparklineStrokeColor": "#2563eb",
+				"trendDisplay": "percent"
+			},
+			"title": "Healthy Wireless Clients",
+			"type": "splunk.singlevalue"
+		},
+		"viz_ov_wireless_trend": {
+			"dataSources": {
+				"primary": "ds_mod_wireless_client_trend_health"
+			},
+			"description": "Stacked wireless client count with health score and 80/95 threshold overlays.",
+			"options": {
+				"backgroundColor": "#ffffff",
+				"nullValueDisplay": "connect",
+				"overlayFields": [
+					"Wireless Health",
+					"Warning Threshold",
+					"Healthy Threshold"
+				],
+				"seriesColorsByField": {
+					"Fair": "#eab308",
+					"Healthy": "#16a34a",
+					"Healthy Threshold": "#16a34a",
+					"No Data": "#94a3b8",
+					"Poor": "#dc2626",
+					"Warning Threshold": "#eab308",
+					"Wireless Health": "#2563eb"
+				},
+				"showOverlayY2Axis": true,
+				"showYMajorGridLines": true,
+				"stackMode": "stacked",
+				"xAxisTitleVisibility": "hide",
+				"y2AxisTitleText": "Health %",
+				"yAxisTitleText": "Clients",
+				"yAxisTitleVisibility": "hide"
+			},
+			"title": "Wireless Client Trend",
+			"type": "splunk.area"
+		}
+	},
+	"dataSources": {
+		"ds_cs_by_ssid": {
+			"name": "Client Summary - ds_client_by_ssid",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" \n| stats dc(macAddress) as clients by connection.ssid \n| rename connection.ssid as ssid ",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_cs_count_over_time": {
+			"name": "Client Summary - ds_client_count_over_time",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRED\" OR clientType=\"WIRELESS\") (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| bin _time\n| stats latest(clientCount) as cc by _time, clientType, scoreType\n| stats sum(cc) as cc by _time, scoreType\n| eval \"Good Count\"=if(scoreType==\"GOOD\",cc,null()), \"Fair Count\"=if(scoreType==\"FAIR\",cc,null()), \"Poor Count\"=if(scoreType==\"POOR\",cc,null()), \"Idle Count\"=if(scoreType==\"IDLE\" OR scoreType==\"NODATA\",cc,null())\n| stats sum(\"Good Count\") as \"Good Count\", sum(\"Fair Count\") as \"Fair Count\", sum(\"Poor Count\") as \"Poor Count\", sum(\"Idle Count\") as \"Idle Count\" by _time",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_cs_health_trend": {
+			"name": "Client Health Score Trend",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\" scoreType=\"ALL\" | timechart fixedrange=false latest(scoreValue) as \"Client Health Score\"",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_cs_total_trend": {
+			"name": "Total Connected Clients Trend",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\" scoreType=\"ALL\" | timechart fixedrange=false latest(clientCount) as \"Total Connected Clients\"",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_kpi_cs_health": {
+			"name": "KPI Client Health Score",
+			"options": {
+				"extend": "ds_cs_health_trend",
+				"query": "| fields _time \"Client Health Score\""
+			},
+			"type": "ds.chain"
+		},
+		"ds_kpi_cs_total": {
+			"name": "KPI Total Connected Clients",
+			"options": {
+				"extend": "ds_cs_total_trend",
+				"query": "| fields _time \"Total Connected Clients\""
+			},
+			"type": "ds.chain"
+		},
+		"ds_kpi_wired_health": {
+			"name": "KPI Wired Health",
+			"options": {
+				"extend": "ds_wired_health_trend",
+				"query": "| fields _time \"Wired Health\""
+			},
+			"type": "ds.chain"
+		},
+		"ds_kpi_wired_total": {
+			"name": "KPI Wired Clients",
+			"options": {
+				"extend": "ds_wired_total_trend",
+				"query": "| fields _time \"Wired Clients\""
+			},
+			"type": "ds.chain"
+		},
+		"ds_kpi_wireless_health": {
+			"name": "KPI Wireless Health",
+			"options": {
+				"extend": "ds_wireless_health_trend",
+				"query": "| fields _time \"Wireless Health\""
+			},
+			"type": "ds.chain"
+		},
+		"ds_kpi_wireless_total": {
+			"name": "KPI Wireless Clients",
+			"options": {
+				"extend": "ds_wireless_total_trend",
+				"query": "| fields _time \"Wireless Clients\""
+			},
+			"type": "ds.chain"
+		},
+		"ds_mod_base_device_health": {
+			"name": "Modern base - Latest device health by DeviceID",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| stats latest(DeviceFamily) as DeviceFamily, latest(Reachability) as Reachability, latest(Manageability) as Manageability by DeviceID\n| eval DeviceType=case(match(DeviceFamily,\"(?i)ap|access.point|unified.ap\"),\"Access Points\", match(DeviceFamily,\"(?i)switch\"),\"Switches\", match(DeviceFamily,\"(?i)router\"),\"Routers\", match(DeviceFamily,\"(?i)firewall|asa|ftd|firepower\"),\"Firewalls\", 1==1,\"Other\")\n| eval healthy=if(Reachability=\"Reachable\" AND match(Manageability,\"^Managed\"),1,0)\n| eval HealthStatus=case(healthy=1,\"Healthy\", Reachability=\"Reachable\",\"Fair\", 1==1,\"Poor\")",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_mod_client_activity_7d": {
+			"name": "Modern - Client activity and onboarding over 7 days",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| eval Site=mvindex(split(siteHierarchy,\"/\"),-1)\n| search Site=\"$site_tok$\" type=\"$client_type_tok$\"\n| bin _time span=1d\n| stats dc(macAddress) as \"Active Clients\", avg(onboarding.avgAuthDuration) as avg_aaa, avg(onboarding.avgDhcpDuration) as avg_dhcp, avg(onboarding.avgAssocDuration) as avg_assoc by _time\n| eval \"Avg Onboarding (ms)\"=round(coalesce(avg_aaa,0)+coalesce(avg_dhcp,0)+coalesce(avg_assoc,0), 2)\n| fields _time \"Active Clients\" \"Avg Onboarding (ms)\"",
+				"queryParameters": {
+					"earliest": "-7d@d",
+					"latest": "now"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_mod_client_details": {
+			"name": "Modern - Client details table with filters",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| eval Site=mvindex(split(siteHierarchy,\"/\"),-1)\n| search Site=\"$site_tok$\" type=\"$client_type_tok$\"\n| stats sum(traffic.usage) as usage, latest(deviceType) as device_type, latest(connection.ssid) as ssid, latest(connection.l3Vn) as vn, latest(connection.apMac) as ap, latest(type) as conn_type, latest(Site) as Site, latest(health.overallScore) as health by macAddress\n| eval usage_gb=tonumber(round(usage/1073741824,2)), ssid=case(isnotnull(ssid) AND ssid!=\"null\" AND ssid!=\"\", ssid, conn_type=\"Wired\" AND isnotnull(vn) AND vn!=\"null\", \"Wired (\".vn.\")\", conn_type=\"Wired\", \"Wired\", 1==1, \"Unknown\"), device_type=if(isnull(device_type) OR device_type=\"null\" OR device_type=\"\", \"Unknown\", device_type), health=round(health*10, 1)\n| where usage_gb > 0\n| sort -usage_gb\n| head 50\n| rename macAddress as Client, device_type as Type, ssid as SSID, ap as AP, usage_gb as \"Traffic (GB)\", health as \"Health %\"\n| table Client Type SSID AP Site \"Traffic (GB)\" \"Health %\"",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_mod_client_distribution_score": {
+			"name": "Modern - Client good-health distribution score",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRED\" OR clientType=\"WIRELESS\") (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| stats latest(clientCount) as clients by scoreType\n| stats sum(eval(if(scoreType=\"GOOD\",clients,0))) as healthy, sum(clients) as total\n| eval healthy_pct=if(total>0, round(healthy/total*100, 1), 0)\n| fields healthy_pct healthy total",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_mod_client_location_dist": {
+			"name": "Modern - Client location distribution with filters",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| eval Site=mvindex(split(siteHierarchy,\"/\"),-1)\n| search Site=\"$site_tok$\" type=\"$client_type_tok$\"\n| where isnotnull(Site) AND Site!=\"null\" AND Site!=\"\"\n| stats dc(macAddress) as Clients by Site\n| sort -Clients\n| head 20",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_mod_client_os_dist": {
+			"name": "Modern - Client OS distribution with filters",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| eval Site=mvindex(split(siteHierarchy,\"/\"),-1)\n| search Site=\"$site_tok$\" type=\"$client_type_tok$\"\n| eval osType=if(isnull(osType) OR osType=\"null\" OR osType=\"\" OR osType=\"Un-Classified Device\", \"Unknown\", osType)\n| stats dc(macAddress) as Clients by osType\n| sort -Clients\n| rename osType as \"OS\"",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_mod_device_health_ap": {
+			"name": "Modern - Access Points health percent",
+			"options": {
+				"extend": "ds_mod_base_device_health",
+				"query": "| search DeviceType=\"Access Points\"\n| stats count as total, sum(healthy) as healthy\n| eval health_pct=if(total>0, round(healthy/total*100, 1), 0)\n| fields health_pct healthy total"
+			},
+			"type": "ds.chain"
+		},
+		"ds_mod_device_health_distribution": {
+			"name": "Modern - Fleet health distribution",
+			"options": {
+				"extend": "ds_mod_base_device_health",
+				"query": "| stats count(eval(HealthStatus=\"Healthy\")) as Healthy, count(eval(HealthStatus=\"Fair\")) as Fair, count(eval(HealthStatus=\"Poor\")) as Poor\n| eval Fleet=\"All Devices\"\n| table Fleet Healthy Fair Poor"
+			},
+			"type": "ds.chain"
+		},
+		"ds_mod_device_health_firewalls": {
+			"name": "Modern - Firewalls health percent",
+			"options": {
+				"extend": "ds_mod_base_device_health",
+				"query": "| search DeviceType=\"Firewalls\"\n| stats count as total, sum(healthy) as healthy\n| eval health_pct=if(total>0, round(healthy/total*100, 1), 0)\n| fields health_pct healthy total"
+			},
+			"type": "ds.chain"
+		},
+		"ds_mod_device_health_routers": {
+			"name": "Modern - Routers health percent",
+			"options": {
+				"extend": "ds_mod_base_device_health",
+				"query": "| search DeviceType=\"Routers\"\n| stats count as total, sum(healthy) as healthy\n| eval health_pct=if(total>0, round(healthy/total*100, 1), 0)\n| fields health_pct healthy total"
+			},
+			"type": "ds.chain"
+		},
+		"ds_mod_device_health_switches": {
+			"name": "Modern - Switches health percent",
+			"options": {
+				"extend": "ds_mod_base_device_health",
+				"query": "| search DeviceType=\"Switches\"\n| stats count as total, sum(healthy) as healthy\n| eval health_pct=if(total>0, round(healthy/total*100, 1), 0)\n| fields health_pct healthy total"
+			},
+			"type": "ds.chain"
+		},
+		"ds_mod_device_inventory_bar": {
+			"name": "Modern - Device inventory by type",
+			"options": {
+				"extend": "ds_mod_base_device_health",
+				"query": "| stats count as Total, sum(healthy) as Healthy by DeviceType\n| eval NeedsAttention=Total-Healthy\n| sort -Total\n| rename DeviceType as \"Device Type\"\n| table \"Device Type\" Healthy NeedsAttention"
+			},
+			"type": "ds.chain"
+		},
+		"ds_mod_device_summary_total": {
+			"name": "Modern - Total device summary",
+			"options": {
+				"extend": "ds_mod_base_device_health",
+				"query": "| stats count as total, sum(healthy) as healthy\n| eval health_pct=if(total>0, round(healthy/total*100, 1), 0)\n| fields total healthy health_pct"
+			},
+			"type": "ds.chain"
+		},
+		"ds_mod_exec_issues_table": {
+			"name": "Modern - Active issues table",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueStatus=\"active\"\n| stats count as Count, latest(_time) as last_seen, values(DeviceName) as Devices, values(SiteName) as Sites by IssueName, IssueSpecificPriority, IssueSpecificCategory\n| eval Severity=case(IssueSpecificPriority=\"P1\",\"Critical\", IssueSpecificPriority=\"P2\",\"Warning\", IssueSpecificPriority=\"P3\",\"Notice\", IssueSpecificPriority=\"P4\",\"Info\", 1==1, coalesce(IssueSpecificPriority,\"Unknown\"))\n| eval Sites=mvjoin(Sites, \", \"), Devices=mvjoin(Devices, \", \"), \"Last Seen\"=strftime(last_seen, \"%Y-%m-%d %H:%M:%S\")\n| rename IssueName as Issue, IssueSpecificPriority as Priority, IssueSpecificCategory as Category\n| table Issue Priority Severity Category Count Sites Devices \"Last Seen\"",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_mod_past_week_client_trends": {
+			"name": "Modern - 7 day wired and wireless client comparison",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRELESS\" OR clientType=\"WIRED\") scoreType=\"ALL\"\n| timechart span=1d latest(clientCount) as Clients by clientType\n| rename WIRELESS as \"Wireless Clients\", WIRED as \"Wired Clients\"",
+				"queryParameters": {
+					"earliest": "-7d@d",
+					"latest": "now"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_mod_selected_issue_detail": {
+			"name": "Modern - Selected issue detail",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueStatus=\"active\" IssueName=\"$selected_issue$\"\n| stats latest(IssueSpecificPriority) as Priority, latest(IssueSpecificDescription) as Description, latest(IssueSpecificSummary) as Summary, latest(IssueSpecificCategory) as Category, latest(_time) as last_seen, values(DeviceName) as Devices, values(SiteName) as Sites by IssueID, IssueName\n| eval Why=coalesce(Description, Summary, \"No description available\"), Sites=mvjoin(Sites, \", \"), Devices=mvjoin(Devices, \", \"), \"Last Seen\"=strftime(last_seen, \"%Y-%m-%d %H:%M:%S\")\n| rename IssueName as Issue\n| table IssueID Issue Priority Category Why Sites Devices \"Last Seen\"",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_mod_wired_client_trend_health": {
+			"name": "Modern - Wired client trend with health threshold overlays",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" (scoreType=\"ALL\" OR scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| timechart latest(eval(if(scoreType=\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType=\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType=\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType=\"IDLE\" OR scoreType=\"NODATA\",clientCount,null()))) as \"No Data\", latest(eval(if(scoreType=\"ALL\",scoreValue,null()))) as \"Wired Health\"\n| eval \"Warning Threshold\"=80, \"Healthy Threshold\"=95",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_mod_wireless_client_trend_health": {
+			"name": "Modern - Wireless client trend with health threshold overlays",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" (scoreType=\"ALL\" OR scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| timechart latest(eval(if(scoreType=\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType=\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType=\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType=\"IDLE\" OR scoreType=\"NODATA\",clientCount,null()))) as \"No Data\", latest(eval(if(scoreType=\"ALL\",scoreValue,null()))) as \"Wireless Health\"\n| eval \"Warning Threshold\"=80, \"Healthy Threshold\"=95",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_wired_health_trend": {
+			"name": "Wired Health Trend",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" scoreType=\"ALL\" | timechart fixedrange=false latest(scoreValue) as \"Wired Health\"",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_wired_total_trend": {
+			"name": "Wired Clients Trend",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" scoreType=\"ALL\" | timechart fixedrange=false latest(clientCount) as \"Wired Clients\"",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_wired_trend_24h": {
+			"name": "Statewide - ds_wired_client_trend_24h",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| timechart latest(eval(if(scoreType==\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType==\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType==\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\",clientCount,null()))) as \"No Data\"",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_wireless_health_trend": {
+			"name": "Wireless Health Trend",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" scoreType=\"ALL\" | timechart fixedrange=false latest(scoreValue) as \"Wireless Health\"",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_wireless_total_trend": {
+			"name": "Wireless Clients Trend",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" scoreType=\"ALL\" | timechart fixedrange=false latest(clientCount) as \"Wireless Clients\"",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_wireless_trend_24h": {
+			"name": "Statewide - ds_wireless_client_trend_24h",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| timechart latest(eval(if(scoreType==\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType==\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType==\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\",clientCount,null()))) as \"No Data\"",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		}
+	},
+	"layout": {
+		"globalInputs": [
+			"input_time_range",
+			"input_refresh_rate",
+			"input_client_type",
+			"input_site_filter"
+		],
+		"layoutDefinitions": {
+			"layout_about": {
+				"options": {
+					"backgroundColor": "#f5f7fb",
+					"display": "auto-scale",
+					"height": 900,
+					"width": 1440
+				},
+				"structure": [
+					{
+						"item": "viz_header_about",
+						"position": {
+							"h": 90,
+							"w": 1400,
+							"x": 20,
+							"y": 0
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_about_content",
+						"position": {
+							"h": 760,
+							"w": 1400,
+							"x": 20,
+							"y": 110
+						},
+						"type": "block"
+					}
+				],
+				"type": "absolute"
+			},
+			"layout_client": {
+				"options": {
+					"backgroundColor": "#f5f7fb",
+					"display": "auto-scale",
+					"height": 1930,
+					"width": 1440
+				},
+				"structure": [
+					{
+						"item": "viz_header_client",
+						"position": {
+							"h": 90,
+							"w": 1400,
+							"x": 20,
+							"y": 0
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_client_health_score",
+						"position": {
+							"h": 190,
+							"w": 453,
+							"x": 20,
+							"y": 110
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_client_total",
+						"position": {
+							"h": 190,
+							"w": 453,
+							"x": 493,
+							"y": 110
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_client_distribution",
+						"position": {
+							"h": 190,
+							"w": 454,
+							"x": 966,
+							"y": 110
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_client_health_over_time",
+						"position": {
+							"h": 380,
+							"w": 1400,
+							"x": 20,
+							"y": 320
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_client_os_distribution",
+						"position": {
+							"h": 340,
+							"w": 690,
+							"x": 20,
+							"y": 720
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_client_location_distribution",
+						"position": {
+							"h": 340,
+							"w": 690,
+							"x": 730,
+							"y": 720
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_client_details",
+						"position": {
+							"h": 450,
+							"w": 1400,
+							"x": 20,
+							"y": 1080
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_client_activity_onboarding",
+						"position": {
+							"h": 360,
+							"w": 1400,
+							"x": 20,
+							"y": 1550
+						},
+						"type": "block"
+					}
+				],
+				"type": "absolute"
+			},
+			"layout_exec": {
+				"options": {
+					"backgroundColor": "#f5f7fb",
+					"display": "auto-scale",
+					"height": 1530,
+					"width": 1440
+				},
+				"structure": [
+					{
+						"item": "viz_header_exec",
+						"position": {
+							"h": 90,
+							"w": 1400,
+							"x": 20,
+							"y": 0
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_ex_ap_health",
+						"position": {
+							"h": 170,
+							"w": 335,
+							"x": 20,
+							"y": 110
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_ex_switch_health",
+						"position": {
+							"h": 170,
+							"w": 335,
+							"x": 375,
+							"y": 110
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_ex_router_health",
+						"position": {
+							"h": 170,
+							"w": 335,
+							"x": 730,
+							"y": 110
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_ex_firewall_health",
+						"position": {
+							"h": 170,
+							"w": 335,
+							"x": 1085,
+							"y": 110
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_ex_device_health_distribution",
+						"position": {
+							"h": 330,
+							"w": 1400,
+							"x": 20,
+							"y": 300
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_ex_device_inventory",
+						"position": {
+							"h": 350,
+							"w": 690,
+							"x": 20,
+							"y": 650
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_ex_device_total_radial",
+						"position": {
+							"h": 350,
+							"w": 690,
+							"x": 730,
+							"y": 650
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_ex_issues_table",
+						"position": {
+							"h": 480,
+							"w": 1400,
+							"x": 20,
+							"y": 1020
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_ex_issue_detail_modal",
+						"position": {
+							"h": 480,
+							"w": 1400,
+							"x": 20,
+							"y": 1020
+						},
+						"type": "block"
+					},
+					{
+						"item": "input_close_issue",
+						"position": {
+							"h": 70,
+							"w": 170,
+							"x": 1240,
+							"y": 1030
+						},
+						"type": "input"
+					}
+				],
+				"type": "absolute"
+			},
+			"layout_overview": {
+				"options": {
+					"backgroundColor": "#f5f7fb",
+					"display": "auto-scale",
+					"height": 1600,
+					"width": 1440
+				},
+				"structure": [
+					{
+						"item": "viz_header_overview",
+						"position": {
+							"h": 90,
+							"w": 1400,
+							"x": 20,
+							"y": 10
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_ov_wireless_health",
+						"position": {
+							"h": 170,
+							"w": 453,
+							"x": 20,
+							"y": 110
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_ov_wireless_clients",
+						"position": {
+							"h": 170,
+							"w": 453,
+							"x": 493,
+							"y": 110
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_ov_wireless_healthy",
+						"position": {
+							"h": 170,
+							"w": 454,
+							"x": 966,
+							"y": 110
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_ov_wired_health",
+						"position": {
+							"h": 170,
+							"w": 453,
+							"x": 20,
+							"y": 300
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_ov_wired_clients",
+						"position": {
+							"h": 170,
+							"w": 453,
+							"x": 493,
+							"y": 300
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_ov_wired_healthy",
+						"position": {
+							"h": 170,
+							"w": 454,
+							"x": 966,
+							"y": 300
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_ov_wireless_trend",
+						"position": {
+							"h": 330,
+							"w": 690,
+							"x": 20,
+							"y": 490
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_ov_wired_trend",
+						"position": {
+							"h": 330,
+							"w": 690,
+							"x": 730,
+							"y": 490
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_ov_ssid_bar",
+						"position": {
+							"h": 360,
+							"w": 1400,
+							"x": 20,
+							"y": 840
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_ov_week_line",
+						"position": {
+							"h": 360,
+							"w": 1400,
+							"x": 20,
+							"y": 1220
+						},
+						"type": "block"
+					}
+				],
+				"type": "absolute"
+			}
+		},
+		"options": {
+			"showTitleAndDescription": false,
+			"submitButton": false,
+			"submitOnDashboardLoad": true
+		},
+		"tabs": {
+			"items": [
+				{
+					"label": "Overview",
+					"layoutId": "layout_overview"
+				},
+				{
+					"label": "Executive Summary",
+					"layoutId": "layout_exec"
+				},
+				{
+					"label": "Client Summary",
+					"layoutId": "layout_client"
+				},
+				{
+					"label": "About",
+					"layoutId": "layout_about"
+				}
+			]
+		}
+	},
+	"expressions": {
+		"conditions": {
+			"condition_issue_selected": {
+				"name": "Issue selected",
+				"value": "$selected_issue$ != \"\""
+			}
+		},
+		"eval": {}
+	},
+	"applicationProperties": {
+		"collapseNavigation": false,
+		"hideEdit": true,
+		"hideExport": false
+	}
 }
-]]></definition>
+    ]]></definition>
 </dashboard>

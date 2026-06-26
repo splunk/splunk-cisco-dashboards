@@ -50,7 +50,13 @@ import {
     sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
 import { BarBreakdownTile } from '@/common/components/florida/BarBreakdownTile';
-import { resolveDeltaField } from '@/common/components/florida/canvasVizOptions';
+import {
+    resolveBaselineField,
+    resolveDeltaField,
+    resolveOverlayLabel,
+    resolveSparkDataField,
+    resolveValueField,
+} from '@/common/components/florida/canvasVizOptions';
 import {
     isFillerGaugeViz,
     isMarkerGaugeViz,
@@ -64,6 +70,8 @@ import { PieTile } from '@/common/components/florida/PieTile';
 import { SingleValueRadialTile } from '@/common/components/florida/SingleValueRadialTile';
 import { SortableMetricCard } from '@/common/components/florida/SortableMetricCard';
 import { TableTile } from '@/common/components/florida/TableTile';
+import { InfoTooltip } from '@/common/components/florida/InfoTooltip';
+import { SplPreviewTooltip } from '@/common/components/florida/SplPreviewTooltip';
 import {
     normalizeDataValuesDisplay,
     sparklineVizTypeFromSplunkViz,
@@ -134,6 +142,12 @@ const TIME_RANGE_OPTIONS: TimeRange[] = [
 const DEFAULT_TIME_RANGE_LABEL = 'Last 24 hours';
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 const DEFAULT_TILE_VIZ = '__default_tile_viz__';
+const DEFAULT_OVERLAY_FIELD = '__default_overlay_field__';
+const NO_OVERLAY_FIELD = '__no_overlay_field__';
+const SPL_PREVIEW_FONT_SCALE = 1.18;
+
+const clampNumber = (value: number, min: number, max: number): number =>
+    Math.min(max, Math.max(min, value));
 
 type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
 type TileSpan = 1 | 2 | 4;
@@ -144,6 +158,7 @@ interface CanvasTile {
     span: TileSpan;
     addedAt: number;
     vizOverride?: string;
+    overlayField?: string | null;
 }
 
 interface PersistedCanvasState {
@@ -158,10 +173,44 @@ interface ObservedNoDataEntry {
     searchName: string;
     category: string;
     subCategory: string;
+    tags: string[];
+    description: string;
+    search: string;
     reason: NoDataReason;
     rangeLabel: string;
     observedAt: string;
 }
+
+type NoDataReportSortKey =
+    | 'stanzaName'
+    | 'searchName'
+    | 'category'
+    | 'subCategory'
+    | 'tags';
+type SortDirection = 'asc' | 'desc';
+type NoDataReportResizeAxis = 'width' | 'height' | 'both';
+
+interface NoDataReportResizeDrag {
+    axis: NoDataReportResizeAxis;
+    startX: number;
+    startY: number;
+    startWidth: number;
+    startHeight: number;
+    horizontalMultiplier: number;
+    verticalMultiplier: number;
+}
+
+const NO_DATA_REPORT_SORT_COLUMNS: Array<{
+    key: NoDataReportSortKey;
+    label: string;
+    thClassName: string;
+}> = [
+    { key: 'stanzaName', label: 'stanza_name', thClassName: 'px-5 py-3' },
+    { key: 'searchName', label: 'search_name', thClassName: 'px-4 py-3' },
+    { key: 'category', label: 'category', thClassName: 'px-4 py-3' },
+    { key: 'subCategory', label: 'sub_category', thClassName: 'px-4 py-3' },
+    { key: 'tags', label: 'tags', thClassName: 'px-4 py-3' },
+];
 
 const TILE_SPAN_CLASS: Record<TileSpan, string> = {
     1: 'md:col-span-1 xl:col-span-1',
@@ -217,6 +266,17 @@ const normalizeTileVizOverride = (value: unknown): string | undefined => {
     return trimmed.slice(0, 64);
 };
 
+const SAFE_OVERLAY_FIELD_PATTERN = /^[A-Za-z_][A-Za-z0-9_.:]{0,127}$/;
+
+const normalizeTileOverlayField = (value: unknown): string | null | undefined => {
+    if (value === null) return null;
+    if (typeof value !== 'string') return undefined;
+    const trimmed = value.trim();
+    if (!trimmed || trimmed === DEFAULT_OVERLAY_FIELD) return undefined;
+    if (trimmed === NO_OVERLAY_FIELD) return null;
+    return SAFE_OVERLAY_FIELD_PATTERN.test(trimmed) ? trimmed : undefined;
+};
+
 const readPersistedState = (): PersistedCanvasState => {
     const fallback: PersistedCanvasState = {
         canvasName: 'Searchbase Canvas',
@@ -249,6 +309,9 @@ const readPersistedState = (): PersistedCanvasState => {
                                   : Date.now(),
                           vizOverride: normalizeTileVizOverride(
                               candidate.vizOverride
+                          ),
+                          overlayField: normalizeTileOverlayField(
+                              candidate.overlayField
                           ),
                       },
                   ];
@@ -289,6 +352,7 @@ const canvasPayloadFromState = (
         span: tile.span,
         addedAt: tile.addedAt,
         vizOverride: normalizeTileVizOverride(tile.vizOverride),
+        overlayField: normalizeTileOverlayField(tile.overlayField),
     })),
 });
 
@@ -321,6 +385,9 @@ const applyCanvasPayload = (
                               ? candidate.addedAt
                               : Date.now(),
                       vizOverride: normalizeTileVizOverride(candidate.vizOverride),
+                      overlayField: normalizeTileOverlayField(
+                          candidate.overlayField
+                      ),
                   },
               ];
           })
@@ -376,6 +443,20 @@ const effectiveTileViz = (
     record: SearchbaseRecord
 ): string | undefined => tile.vizOverride ?? record.defaultViz;
 
+const supportsTileOverlayControl = (viz: string | undefined): boolean => {
+    if (
+        isTableViz(viz) ||
+        isBarBreakdownViz(viz) ||
+        isPieViz(viz) ||
+        isSingleValueRadialViz(viz) ||
+        isFillerGaugeViz(viz) ||
+        isMarkerGaugeViz(viz)
+    ) {
+        return false;
+    }
+    return sparklineVizTypeFromSplunkViz(viz) !== 'singlevalue';
+};
+
 /** Stable key so metric vs table hook trees remount when viz family changes. */
 const searchbaseTileBodyKey = (
     tileId: string,
@@ -419,6 +500,78 @@ const TileVizSelect: React.FC<{
                 {TILE_VIZ_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
                         {option.label}
+                    </option>
+                ))}
+            </select>
+        </label>
+    );
+};
+
+const TileOverlaySelect: React.FC<{
+    tile: CanvasTile;
+    record: SearchbaseRecord;
+    overlayFields: string[];
+    onChangeOverlay: (tileId: string, overlayField?: string | null) => void;
+}> = ({ tile, record, overlayFields, onChangeOverlay }) => {
+    const defaultOverlayField = resolveBaselineField(record.vizOptions);
+    const selectedOverlayField =
+        typeof tile.overlayField === 'string' ? tile.overlayField : undefined;
+    const fieldOptions = Array.from(
+        new Set(
+            [selectedOverlayField, ...overlayFields].filter(
+                (field): field is string =>
+                    typeof field === 'string' && field.length > 0
+            )
+        )
+    ).filter((field) => field !== defaultOverlayField);
+
+    if (!defaultOverlayField && !selectedOverlayField && fieldOptions.length === 0) {
+        return null;
+    }
+
+    const selectedValue =
+        tile.overlayField === undefined
+            ? defaultOverlayField
+                ? DEFAULT_OVERLAY_FIELD
+                : NO_OVERLAY_FIELD
+            : tile.overlayField === null
+            ? NO_OVERLAY_FIELD
+            : tile.overlayField;
+
+    return (
+        <label
+            className="inline-flex min-w-0 items-center gap-1"
+            data-tile-control="true"
+            title="Overlay series"
+        >
+            <SlidersHorizontal className="h-3.5 w-3.5 flex-shrink-0" />
+            <select
+                value={selectedValue}
+                aria-label={`Overlay series for ${record.searchName}`}
+                onPointerDown={(event) => event.stopPropagation()}
+                onChange={(event) => {
+                    const next = event.target.value;
+                    if (next === DEFAULT_OVERLAY_FIELD) {
+                        onChangeOverlay(tile.id, undefined);
+                        return;
+                    }
+                    if (next === NO_OVERLAY_FIELD) {
+                        onChangeOverlay(tile.id, null);
+                        return;
+                    }
+                    onChangeOverlay(tile.id, next);
+                }}
+                className="h-6 max-w-[152px] rounded border border-transparent bg-transparent px-1 text-[10px] font-black uppercase text-slate-500 outline-none transition hover:border-slate-300 hover:bg-white focus:border-sky-300 focus:bg-white focus:ring-1 focus:ring-sky-300 dark:text-slate-300 dark:hover:border-slate-700 dark:hover:bg-slate-900 dark:focus:border-sky-700 dark:focus:bg-slate-900 dark:focus:ring-sky-800"
+            >
+                {defaultOverlayField && (
+                    <option value={DEFAULT_OVERLAY_FIELD}>
+                        Overlay: default ({defaultOverlayField})
+                    </option>
+                )}
+                <option value={NO_OVERLAY_FIELD}>Overlay: none</option>
+                {fieldOptions.map((field) => (
+                    <option key={field} value={field}>
+                        Overlay: {field}
                     </option>
                 ))}
             </select>
@@ -472,6 +625,13 @@ const buildObservedNoDataReportSearch = (
                     `row=${index + 1},${splunkStringLiteral(String(entry[field]))}`
             )
             .join(',');
+    const caseTags = (): string =>
+        sorted
+            .map(
+                (entry, index) =>
+                    `row=${index + 1},${splunkStringLiteral(entry.tags.join(', '))}`
+            )
+            .join(',');
 
     return [
         `| makeresults count=${sorted.length}`,
@@ -480,6 +640,7 @@ const buildObservedNoDataReportSearch = (
         `| eval search_name=case(${caseFor('searchName')})`,
         `| eval category=case(${caseFor('category')})`,
         `| eval sub_category=case(${caseFor('subCategory')})`,
+        `| eval tags=case(${caseTags()})`,
         `| eval reason=case(${sorted
             .map(
                 (entry, index) =>
@@ -490,8 +651,7 @@ const buildObservedNoDataReportSearch = (
             .join(',')})`,
         `| eval time_range=case(${caseFor('rangeLabel')})`,
         `| eval observed_at=case(${caseFor('observedAt')})`,
-        '| table stanza_name search_name category sub_category reason time_range observed_at',
-        '| sort stanza_name',
+        '| table stanza_name search_name category sub_category tags reason time_range observed_at',
     ].join('\n');
 };
 
@@ -702,7 +862,10 @@ interface SearchbaseCanvasTileProps {
     onRemove: (tileId: string) => void;
     onCycleSize: (tileId: string) => void;
     onChangeViz: (tileId: string, vizOverride?: string) => void;
+    overlayFields: string[];
+    onChangeOverlay: (tileId: string, overlayField?: string | null) => void;
     onOpenDetailTable: (config: SearchbaseDetailTableConfig) => void;
+    onOverlayFieldsChange: (tileId: string, fields: string[]) => void;
     onNoDataObservation: (
         tileId: string,
         entry: ObservedNoDataEntry | null
@@ -753,6 +916,7 @@ interface SearchbaseTileBodyProps {
     onOpenDrilldown?: () => void;
     drilldownTitle?: string;
     presentationMode?: boolean;
+    onOverlayFieldsChange?: (tileId: string, fields: string[]) => void;
     onNoDataObservation: (entry: ObservedNoDataEntry | null) => void;
 }
 
@@ -826,6 +990,9 @@ const observedNoDataEntry = (
     searchName: record.searchName,
     category: record.category,
     subCategory: record.subCategory,
+    tags: record.tags,
+    description: plainTextFromHtml(record.description),
+    search: record.search,
     reason,
     rangeLabel: rangeLabel ?? '',
     observedAt: new Date().toISOString(),
@@ -913,26 +1080,26 @@ const SearchbaseNoDataPanel: React.FC<{
                 </p>
             </div>
 
-            {!presentationMode && (
-                <div className="mt-auto flex flex-wrap gap-2 pt-4">
+            <div className="mt-auto flex flex-wrap gap-2 pt-4">
+                <button
+                    type="button"
+                    onClick={onOpenSearch}
+                    className="inline-flex items-center gap-1 rounded-md bg-slate-900 px-2.5 py-1.5 text-xs font-black text-white transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-sky-200"
+                >
+                    <Search className="h-3.5 w-3.5" />
+                    Open in Search
+                </button>
+                {onOpenDrilldown && (
                     <button
                         type="button"
-                        onClick={onOpenSearch}
-                        className="inline-flex items-center gap-1 rounded-md bg-slate-900 px-2.5 py-1.5 text-xs font-black text-white transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-sky-200"
+                        onClick={onOpenDrilldown}
+                        className="inline-flex items-center gap-1 rounded-md border border-sky-200 bg-white px-2.5 py-1.5 text-xs font-black text-sky-700 transition hover:border-sky-300 hover:bg-sky-50 focus:outline-none focus:ring-2 focus:ring-sky-300 dark:border-sky-900 dark:bg-slate-950 dark:text-sky-200 dark:hover:bg-sky-950"
                     >
-                        <Search className="h-3.5 w-3.5" />
-                        Open in Search
+                        <Table2 className="h-3.5 w-3.5" />
+                        {drilldownTitle ?? 'View detail'}
                     </button>
-                    {onOpenDrilldown && (
-                        <button
-                            type="button"
-                            onClick={onOpenDrilldown}
-                            className="inline-flex items-center gap-1 rounded-md border border-sky-200 bg-white px-2.5 py-1.5 text-xs font-black text-sky-700 transition hover:border-sky-300 hover:bg-sky-50 focus:outline-none focus:ring-2 focus:ring-sky-300 dark:border-sky-900 dark:bg-slate-950 dark:text-sky-200 dark:hover:bg-sky-950"
-                        >
-                            <Table2 className="h-3.5 w-3.5" />
-                            {drilldownTitle ?? 'View detail'}
-                        </button>
-                    )}
+                )}
+                {!presentationMode && (
                     <button
                         type="button"
                         onClick={onConfigure}
@@ -941,8 +1108,8 @@ const SearchbaseNoDataPanel: React.FC<{
                         <Settings2 className="h-3.5 w-3.5" />
                         Replace
                     </button>
-                </div>
-            )}
+                )}
+            </div>
         </div>
     );
 };
@@ -960,6 +1127,7 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
     onOpenDrilldown,
     drilldownTitle,
     presentationMode = false,
+    onOverlayFieldsChange,
     onNoDataObservation,
 }) => {
     // `viz_options.deltaField` (new in Build 1224) names the SPL
@@ -968,6 +1136,18 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
     // `changeField`, which `useMetric` already supports — the only
     // new wiring is the resolver call.
     const deltaFieldOverride = resolveDeltaField(record.vizOptions) ?? undefined;
+    const defaultOverlayField = resolveBaselineField(record.vizOptions) ?? undefined;
+    const selectedOverlayField =
+        tile.overlayField === null
+            ? undefined
+            : tile.overlayField ?? defaultOverlayField;
+    const overlayLabel =
+        selectedOverlayField === defaultOverlayField
+            ? resolveOverlayLabel(record.vizOptions) ?? selectedOverlayField
+            : selectedOverlayField;
+    const valueFieldOverride = resolveValueField(record.vizOptions) ?? undefined;
+    const sparkDataFieldOverride =
+        resolveSparkDataField(record.vizOptions) ?? undefined;
 
     const metricConfig = useMemo<MetricConfig>(
         () => ({
@@ -980,7 +1160,11 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
             description,
             spl: record.search,
             color,
+            valueField: valueFieldOverride,
+            sparkDataField: sparkDataFieldOverride,
             changeField: deltaFieldOverride,
+            baselineField: selectedOverlayField,
+            overlayLabel,
             thresholdNote: 'Searchbase canvas tile.',
             suppressMockOnEmpty: true,
             mock: {
@@ -995,16 +1179,30 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
             color,
             deltaFieldOverride,
             description,
+            overlayLabel,
             record.category,
             record.id,
             record.search,
             record.searchName,
             record.subCategory,
+            selectedOverlayField,
+            sparkDataFieldOverride,
             tile.id,
+            valueFieldOverride,
         ]
     );
 
     const metric = useMetric(metricConfig, range, refreshToken);
+    const availableOverlayFieldsKey = metric.availableOverlayFields.join('\u0001');
+
+    useEffect(() => {
+        onOverlayFieldsChange?.(tile.id, metric.availableOverlayFields);
+    }, [
+        availableOverlayFieldsKey,
+        metric.availableOverlayFields,
+        onOverlayFieldsChange,
+        tile.id,
+    ]);
 
     useEffect(() => {
         if (metric.source === 'live' && metric.noDataReason === 'empty_rows') {
@@ -1050,9 +1248,9 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
         description,
         descriptionFootnote: record.id,
         thresholdNote: 'Searchbase canvas tile.',
-        onOpenInSearch: presentationMode ? undefined : onOpenSearch,
+        onOpenInSearch: onOpenSearch,
         onConfigure: presentationMode ? undefined : onConfigure,
-        onOpenDetailTable: presentationMode ? undefined : onOpenDrilldown,
+        onOpenDetailTable: onOpenDrilldown,
         detailTableTitle: drilldownTitle ?? 'View detail',
         isCustomized: presentationMode ? false : (true as const),
         className: 'h-full',
@@ -1091,7 +1289,7 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
             description={description}
             descriptionFootnote={record.id}
             thresholdNote="Searchbase canvas tile."
-            onOpenInSearch={presentationMode ? undefined : onOpenSearch}
+            onOpenInSearch={onOpenSearch}
             onConfigure={presentationMode ? undefined : onConfigure}
             isCustomized={!presentationMode}
             className="h-full"
@@ -1099,7 +1297,7 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
             change={metric.change}
             sparkData={metric.sparkData}
             previousData={metric.previousSparkData}
-            previousLabel="Prev"
+            previousLabel={overlayLabel ?? 'Prev'}
             sparkTimestamps={metric.sparkTimestamps}
             timeRange={range}
             color={color}
@@ -1111,7 +1309,7 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
             dataValuesDisplay={normalizeDataValuesDisplay(
                 record.vizOptions?.dataValuesDisplay
             )}
-            onOpenDetailTable={presentationMode ? undefined : onOpenDrilldown}
+            onOpenDetailTable={onOpenDrilldown}
             detailTableTitle={drilldownTitle ?? 'View detail'}
         />
     );
@@ -1127,6 +1325,8 @@ const SearchbaseTableTileBody: React.FC<
     description,
     onConfigure,
     onOpenSearch,
+    onOpenDrilldown,
+    drilldownTitle,
     variant,
     presentationMode = false,
     onNoDataObservation,
@@ -1170,6 +1370,8 @@ const SearchbaseTableTileBody: React.FC<
                 failureHttpStatus={table.failureHttpStatus}
                 onConfigure={onConfigure}
                 onOpenSearch={onOpenSearch}
+                onOpenDrilldown={onOpenDrilldown}
+                drilldownTitle={drilldownTitle}
                 presentationMode={presentationMode}
             />
         );
@@ -1181,7 +1383,9 @@ const SearchbaseTableTileBody: React.FC<
         description,
         descriptionFootnote: record.id,
         thresholdNote: 'Searchbase canvas tile.',
-        onOpenInSearch: presentationMode ? undefined : onOpenSearch,
+        onOpenInSearch: onOpenSearch,
+        onOpenDetailTable: onOpenDrilldown,
+        detailTableTitle: drilldownTitle ?? 'View detail',
         onConfigure: presentationMode ? undefined : onConfigure,
         isCustomized: !presentationMode,
         className: 'h-full',
@@ -1237,7 +1441,10 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
     onRemove,
     onCycleSize,
     onChangeViz,
+    overlayFields,
+    onChangeOverlay,
     onOpenDetailTable,
+    onOverlayFieldsChange,
     onNoDataObservation,
     onStop,
     onRefresh,
@@ -1291,6 +1498,10 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                         description={description}
                         onConfigure={() => onConfigure(tile.id)}
                         onOpenSearch={openSearch}
+                        onOpenDrilldown={
+                            detailTableConfig ? openDrilldown : undefined
+                        }
+                        drilldownTitle={detailTableConfig?.buttonTitle}
                         presentationMode={presentationMode}
                         variant="table"
                         onNoDataObservation={(entry) =>
@@ -1309,6 +1520,10 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                         description={description}
                         onConfigure={() => onConfigure(tile.id)}
                         onOpenSearch={openSearch}
+                        onOpenDrilldown={
+                            detailTableConfig ? openDrilldown : undefined
+                        }
+                        drilldownTitle={detailTableConfig?.buttonTitle}
                         presentationMode={presentationMode}
                         variant="bar"
                         onNoDataObservation={(entry) =>
@@ -1327,6 +1542,10 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                         description={description}
                         onConfigure={() => onConfigure(tile.id)}
                         onOpenSearch={openSearch}
+                        onOpenDrilldown={
+                            detailTableConfig ? openDrilldown : undefined
+                        }
+                        drilldownTitle={detailTableConfig?.buttonTitle}
                         presentationMode={presentationMode}
                         variant="pie"
                         onNoDataObservation={(entry) =>
@@ -1350,6 +1569,7 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                         }
                         drilldownTitle={detailTableConfig?.buttonTitle}
                         presentationMode={presentationMode}
+                        onOverlayFieldsChange={onOverlayFieldsChange}
                         onNoDataObservation={(entry) =>
                             onNoDataObservation(tile.id, entry)
                         }
@@ -1363,6 +1583,14 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                         record={record}
                         onChangeViz={onChangeViz}
                     />
+                    {supportsTileOverlayControl(viz) && (
+                        <TileOverlaySelect
+                            tile={tile}
+                            record={record}
+                            overlayFields={overlayFields}
+                            onChangeOverlay={onChangeOverlay}
+                        />
+                    )}
                     <span className="ml-auto flex items-center gap-1">
                         <button
                             type="button"
@@ -1512,23 +1740,25 @@ const SearchbasePreviewTile: React.FC<ResolvedSearchbaseCanvasTileProps> = ({
                 )}
             </div>
 
-            {!presentationMode && (
-                <div className="flex items-center gap-2 border-t border-slate-100 px-2 py-1.5 text-[10px] font-semibold text-slate-500 dark:border-slate-700 dark:text-slate-300">
+            <div className="flex items-center gap-2 border-t border-slate-100 px-2 py-1.5 text-[10px] font-semibold text-slate-500 dark:border-slate-700 dark:text-slate-300">
+                {!presentationMode && (
                     <TileVizSelect
                         tile={tile}
                         record={record}
                         onChangeViz={onChangeViz}
                     />
-                    <span className="ml-auto flex items-center gap-1">
-                        <button
-                            type="button"
-                            onClick={openSearch}
-                            title="Open in Search"
-                            aria-label={`Open ${record.searchName} in Search`}
-                            className="rounded p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-sky-300"
-                        >
-                            <Search className="h-3.5 w-3.5" />
-                        </button>
+                )}
+                <span className="ml-auto flex items-center gap-1">
+                    <button
+                        type="button"
+                        onClick={openSearch}
+                        title="Open in Search"
+                        aria-label={`Open ${record.searchName} in Search`}
+                        className="rounded p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-sky-300"
+                    >
+                        <Search className="h-3.5 w-3.5" />
+                    </button>
+                    {!presentationMode && (
                         <button
                             type="button"
                             onClick={() => onConfigure(tile.id)}
@@ -1538,38 +1768,42 @@ const SearchbasePreviewTile: React.FC<ResolvedSearchbaseCanvasTileProps> = ({
                         >
                             <Settings2 className="h-3.5 w-3.5" />
                         </button>
-                        {detailTableConfig && (
-                            <button
-                                type="button"
-                                onClick={openDrilldown}
-                                title={detailTableConfig.buttonTitle}
-                                aria-label={detailTableConfig.buttonTitle}
-                                className="rounded p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-sky-300"
-                            >
-                                <Table2 className="h-3.5 w-3.5" />
-                            </button>
-                        )}
+                    )}
+                    {detailTableConfig && (
                         <button
                             type="button"
-                            onClick={() => onCycleSize(tile.id)}
-                            title={`Tile size: ${TILE_SPAN_LABEL[tile.span]}`}
-                            aria-label={`Tile size: ${TILE_SPAN_LABEL[tile.span]}`}
+                            onClick={openDrilldown}
+                            title={detailTableConfig.buttonTitle}
+                            aria-label={detailTableConfig.buttonTitle}
                             className="rounded p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-sky-300"
                         >
-                            <Maximize2 className="h-3.5 w-3.5" />
+                            <Table2 className="h-3.5 w-3.5" />
                         </button>
-                        <button
-                            type="button"
-                            onClick={() => onRemove(tile.id)}
-                            title="Remove tile"
-                            aria-label="Remove tile"
-                            className="rounded p-1 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 focus:outline-none focus:ring-1 focus:ring-rose-400 dark:hover:bg-rose-950/40 dark:hover:text-rose-300"
-                        >
-                            <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                    </span>
-                </div>
-            )}
+                    )}
+                    {!presentationMode && (
+                        <>
+                            <button
+                                type="button"
+                                onClick={() => onCycleSize(tile.id)}
+                                title={`Tile size: ${TILE_SPAN_LABEL[tile.span]}`}
+                                aria-label={`Tile size: ${TILE_SPAN_LABEL[tile.span]}`}
+                                className="rounded p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-sky-300"
+                            >
+                                <Maximize2 className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => onRemove(tile.id)}
+                                title="Remove tile"
+                                aria-label="Remove tile"
+                                className="rounded p-1 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 focus:outline-none focus:ring-1 focus:ring-rose-400 dark:hover:bg-rose-950/40 dark:hover:text-rose-300"
+                            >
+                                <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                        </>
+                    )}
+                </span>
+            </div>
         </div>
     );
 };
@@ -1693,7 +1927,7 @@ const SearchbaseDetailTableModal: React.FC<{
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
-            className="fixed inset-0 z-[1700] flex items-center justify-center p-4"
+            className="fixed inset-0 z-[2200] flex items-center justify-center p-4"
             onClick={(event) => {
                 if (event.target === event.currentTarget) onClose();
             }}
@@ -1833,6 +2067,18 @@ const NoDataReportModal: React.FC<{
     range: TimeRange;
     onClose: () => void;
 }> = ({ entries, entryByName, range, onClose }) => {
+    const dialogRef = useRef<HTMLDivElement | null>(null);
+    const resizeDragRef = useRef<NoDataReportResizeDrag | null>(null);
+    const [dialogPixels, setDialogPixels] = useState({ width: 0, height: 0 });
+    const [manualDialogSize, setManualDialogSize] = useState<{
+        width?: number;
+        height?: number;
+    }>({});
+    const [sortConfig, setSortConfig] = useState<{
+        key: NoDataReportSortKey;
+        direction: SortDirection;
+    }>({ key: 'stanzaName', direction: 'asc' });
+
     useEffect(() => {
         const onKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape') onClose();
@@ -1841,20 +2087,209 @@ const NoDataReportModal: React.FC<{
         return () => window.removeEventListener('keydown', onKeyDown);
     }, [onClose]);
 
-    const rows = useMemo(
-        () =>
-            [...entries].sort(
-                (a, b) =>
-                    a.stanzaName.localeCompare(b.stanzaName) ||
-                    a.searchName.localeCompare(b.searchName)
-            ),
-        [entries]
+    useEffect(() => {
+        const updateDialogPixels = () => {
+            if (!dialogRef.current) return;
+            const rect = dialogRef.current.getBoundingClientRect();
+            setDialogPixels((current) =>
+                Math.abs(current.width - rect.width) < 1 &&
+                Math.abs(current.height - rect.height) < 1
+                    ? current
+                    : { width: rect.width, height: rect.height }
+            );
+        };
+
+        updateDialogPixels();
+
+        if (typeof ResizeObserver === 'undefined') {
+            window.addEventListener('resize', updateDialogPixels);
+            return () => window.removeEventListener('resize', updateDialogPixels);
+        }
+
+        const observer = new ResizeObserver(updateDialogPixels);
+        if (dialogRef.current) observer.observe(dialogRef.current);
+        return () => observer.disconnect();
+    }, []);
+
+    useEffect(() => {
+        const onPointerMove = (event: PointerEvent) => {
+            const drag = resizeDragRef.current;
+            if (!drag) return;
+
+            const maxWidth = Math.max(320, window.innerWidth - 32);
+            const maxHeight = Math.max(320, window.innerHeight - 32);
+            const minWidth = Math.min(760, maxWidth);
+            const minHeight = Math.min(360, maxHeight);
+            const deltaX = event.clientX - drag.startX;
+            const deltaY = event.clientY - drag.startY;
+
+            setManualDialogSize((current) => ({
+                width:
+                    drag.axis === 'height'
+                        ? current.width
+                        : clampNumber(
+                              drag.startWidth + deltaX * drag.horizontalMultiplier,
+                              minWidth,
+                              maxWidth
+                          ),
+                height:
+                    drag.axis === 'width'
+                        ? current.height
+                        : clampNumber(
+                              drag.startHeight + deltaY * drag.verticalMultiplier,
+                              minHeight,
+                              maxHeight
+                          ),
+            }));
+        };
+
+        const onPointerUp = () => {
+            if (!resizeDragRef.current) return;
+            resizeDragRef.current = null;
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
+
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+        window.addEventListener('pointercancel', onPointerUp);
+        return () => {
+            window.removeEventListener('pointermove', onPointerMove);
+            window.removeEventListener('pointerup', onPointerUp);
+            window.removeEventListener('pointercancel', onPointerUp);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
+    }, []);
+
+    const startDialogResize = useCallback(
+        (
+            event: React.PointerEvent<HTMLElement>,
+            axis: NoDataReportResizeAxis,
+            horizontalMultiplier: number,
+            verticalMultiplier: number
+        ) => {
+            if (!dialogRef.current) return;
+            event.preventDefault();
+            event.stopPropagation();
+
+            const rect = dialogRef.current.getBoundingClientRect();
+            resizeDragRef.current = {
+                axis,
+                startX: event.clientX,
+                startY: event.clientY,
+                startWidth: rect.width,
+                startHeight: rect.height,
+                horizontalMultiplier,
+                verticalMultiplier,
+            };
+            document.body.style.cursor =
+                axis === 'both'
+                    ? 'nwse-resize'
+                    : axis === 'width'
+                      ? 'ew-resize'
+                      : 'ns-resize';
+            document.body.style.userSelect = 'none';
+        },
+        []
     );
+
+    const toggleSort = useCallback((key: NoDataReportSortKey) => {
+        setSortConfig((current) =>
+            current.key === key
+                ? {
+                      key,
+                      direction: current.direction === 'asc' ? 'desc' : 'asc',
+                  }
+                : { key, direction: 'asc' }
+        );
+    }, []);
+
+    const rows = useMemo(() => {
+        const valueFor = (
+            entry: ObservedNoDataEntry,
+            key: NoDataReportSortKey
+        ): string => {
+            if (key === 'tags') {
+                return (entryByName.get(entry.searchName)?.tags ?? entry.tags).join(', ');
+            }
+            return entry[key] ?? '';
+        };
+
+        return [...entries].sort((a, b) => {
+            const direction = sortConfig.direction === 'asc' ? 1 : -1;
+            const primary =
+                valueFor(a, sortConfig.key).localeCompare(
+                    valueFor(b, sortConfig.key),
+                    undefined,
+                    { numeric: true, sensitivity: 'base' }
+                ) * direction;
+            return (
+                primary ||
+                a.stanzaName.localeCompare(b.stanzaName) ||
+                a.searchName.localeCompare(b.searchName)
+            );
+        });
+    }, [entries, entryByName, sortConfig]);
     const reportSearch = useMemo(
         () => buildObservedNoDataReportSearch(rows),
         [rows]
     );
     const reportUrl = splunkSearchAppUrl(reportSearch, range);
+    const splPreviewMaxWidth = useMemo(() => {
+        const viewportMax =
+            typeof window === 'undefined' ? 1180 : Math.max(320, window.innerWidth - 48);
+        const scaledWidth = 760 + Math.max(0, dialogPixels.width - 1080) * 0.5;
+        return clampNumber(scaledWidth, 760, Math.min(1180, viewportMax));
+    }, [dialogPixels.width]);
+    const dialogStyle = useMemo(
+        () =>
+            ({
+                width: manualDialogSize.width
+                    ? `${manualDialogSize.width}px`
+                    : 'min(96vw, 1680px)',
+                height: manualDialogSize.height
+                    ? `${manualDialogSize.height}px`
+                    : 'min(88vh, 900px)',
+                minWidth: 'min(760px, calc(100vw - 2rem))',
+                minHeight: 'min(360px, calc(100vh - 2rem))',
+                maxWidth: 'calc(100vw - 2rem)',
+                maxHeight: 'calc(100vh - 2rem)',
+                resize: 'both',
+            }) as React.CSSProperties,
+        [manualDialogSize.height, manualDialogSize.width]
+    );
+    const renderSortHeader = (column: (typeof NO_DATA_REPORT_SORT_COLUMNS)[number]) => {
+        const active = sortConfig.key === column.key;
+        const ariaSort = active
+            ? sortConfig.direction === 'asc'
+                ? 'ascending'
+                : 'descending'
+            : 'none';
+
+        return (
+            <th key={column.key} className={column.thClassName} aria-sort={ariaSort}>
+                <button
+                    type="button"
+                    onClick={() => toggleSort(column.key)}
+                    className={cn(
+                        'inline-flex items-center gap-1.5 rounded px-1 py-0.5 text-left transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-slate-100',
+                        active && 'text-slate-900 dark:text-slate-100'
+                    )}
+                >
+                    <span>{column.label}</span>
+                    <ChevronDown
+                        className={cn(
+                            'h-3.5 w-3.5 transition-transform',
+                            active
+                                ? sortConfig.direction === 'asc' && 'rotate-180'
+                                : 'opacity-25'
+                        )}
+                    />
+                </button>
+            </th>
+        );
+    };
 
     return (
         <div
@@ -1867,8 +2302,13 @@ const NoDataReportModal: React.FC<{
             }}
         >
             <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm" />
-            <div className="relative w-full max-w-6xl max-h-[88vh] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-950">
-                <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
+            <div
+                ref={dialogRef}
+                className="relative flex overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-950"
+                style={dialogStyle}
+            >
+                <div className="flex min-h-0 w-full flex-col">
+                <div className="flex flex-shrink-0 items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
                     <div>
                         <div className="flex items-center gap-2">
                             <Table2 className="h-4 w-4 text-sky-600 dark:text-sky-300" />
@@ -1906,13 +2346,11 @@ const NoDataReportModal: React.FC<{
                     </div>
                 </div>
 
-                <div className="max-h-[calc(88vh-90px)] overflow-auto">
-                    <table className="w-full min-w-[900px] text-sm">
+                <div className="min-h-0 flex-1 overflow-auto">
+                    <table className="w-full min-w-[1180px] text-sm">
                         <thead className="sticky top-0 z-10 border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
                             <tr className="text-left text-xs font-bold text-slate-500 dark:text-slate-400">
-                                <th className="px-5 py-3">stanza_name</th>
-                                <th className="px-4 py-3">search_name</th>
-                                <th className="px-4 py-3">category</th>
+                                {NO_DATA_REPORT_SORT_COLUMNS.map(renderSortHeader)}
                                 <th className="px-4 py-3">reason</th>
                                 <th className="px-4 py-3">time_range</th>
                                 <th className="px-4 py-3 text-right">action</th>
@@ -1922,7 +2360,7 @@ const NoDataReportModal: React.FC<{
                             {rows.length === 0 ? (
                                 <tr>
                                     <td
-                                        colSpan={6}
+                                        colSpan={8}
                                         className="px-5 py-10 text-center text-sm text-slate-500 dark:text-slate-400"
                                     >
                                         Run tiles first; searches that complete with 0 rows
@@ -1932,6 +2370,11 @@ const NoDataReportModal: React.FC<{
                             ) : (
                                 rows.map((row) => {
                                     const record = entryByName.get(row.searchName);
+                                    const searchDescription =
+                                        (record ? recordPlainText(record) : row.description) ||
+                                        'No description available';
+                                    const searchSpl = record?.search ?? row.search;
+                                    const tags = record?.tags ?? row.tags;
                                     return (
                                         <tr
                                             key={`${row.tileId}-${row.observedAt}`}
@@ -1941,12 +2384,59 @@ const NoDataReportModal: React.FC<{
                                                 {row.stanzaName}
                                             </td>
                                             <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
-                                                {row.searchName}
+                                                <div className="flex items-start gap-2">
+                                                    <span>{row.searchName}</span>
+                                                    <InfoTooltip
+                                                        title={row.searchName}
+                                                        description={searchDescription}
+                                                        footnote={row.stanzaName}
+                                                        anchor="right"
+                                                        iconAriaLabel={`Show description for ${row.searchName}`}
+                                                        className="mt-0.5 flex-none"
+                                                        iconClassName="text-sky-600 hover:text-sky-700 focus:text-sky-700 dark:text-sky-300 dark:hover:text-sky-200 dark:focus:text-sky-200"
+                                                    />
+                                                    <SplPreviewTooltip
+                                                        title={row.searchName}
+                                                        spl={searchSpl}
+                                                        footnote={row.stanzaName}
+                                                        anchor="left"
+                                                        iconAriaLabel={`Preview SPL for ${row.searchName}`}
+                                                        className="mt-0.5 flex-none"
+                                                        iconClassName="text-indigo-600 hover:text-indigo-700 focus:text-indigo-700 dark:text-indigo-300 dark:hover:text-indigo-200 dark:focus:text-indigo-200"
+                                                        fontScale={SPL_PREVIEW_FONT_SCALE}
+                                                        maxWidth={splPreviewMaxWidth}
+                                                    />
+                                                </div>
                                             </td>
                                             <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
-                                                {[row.category, row.subCategory]
-                                                    .filter(Boolean)
-                                                    .join(' / ') || '-'}
+                                                {row.category || '-'}
+                                            </td>
+                                            <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
+                                                {row.subCategory || '-'}
+                                            </td>
+                                            <td
+                                                className="px-4 py-3 text-slate-600 dark:text-slate-300"
+                                                title={tags.join(', ') || 'No tags'}
+                                            >
+                                                {tags.length > 0 ? (
+                                                    <div className="flex max-w-[220px] flex-wrap gap-1">
+                                                        {tags.slice(0, 4).map((tag) => (
+                                                            <span
+                                                                key={tag}
+                                                                className="rounded border border-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 dark:border-slate-700 dark:text-slate-300"
+                                                            >
+                                                                {tag}
+                                                            </span>
+                                                        ))}
+                                                        {tags.length > 4 && (
+                                                            <span className="rounded border border-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 dark:border-slate-700 dark:text-slate-500">
+                                                                +{tags.length - 4}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    '-'
+                                                )}
                                             </td>
                                             <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
                                                 {noDataReasonLabel(row.reason)}
@@ -1978,6 +2468,45 @@ const NoDataReportModal: React.FC<{
                         </tbody>
                     </table>
                 </div>
+                </div>
+                <button
+                    type="button"
+                    tabIndex={-1}
+                    aria-label="Resize no data report from the left edge"
+                    onPointerDown={(event) => startDialogResize(event, 'width', -1, 0)}
+                    className="absolute bottom-10 left-0 top-14 z-20 w-2 cursor-ew-resize rounded-l-lg transition-colors hover:bg-sky-400/20"
+                />
+                <button
+                    type="button"
+                    tabIndex={-1}
+                    aria-label="Resize no data report from the right edge"
+                    onPointerDown={(event) => startDialogResize(event, 'width', 1, 0)}
+                    className="absolute bottom-10 right-0 top-14 z-20 w-2 cursor-ew-resize rounded-r-lg transition-colors hover:bg-sky-400/20"
+                />
+                <button
+                    type="button"
+                    tabIndex={-1}
+                    aria-label="Resize no data report from the top edge"
+                    onPointerDown={(event) => startDialogResize(event, 'height', 0, -1)}
+                    className="absolute left-10 right-10 top-0 z-20 h-2 cursor-ns-resize rounded-t-lg transition-colors hover:bg-sky-400/20"
+                />
+                <button
+                    type="button"
+                    tabIndex={-1}
+                    aria-label="Resize no data report from the bottom edge"
+                    onPointerDown={(event) => startDialogResize(event, 'height', 0, 1)}
+                    className="absolute bottom-0 left-10 right-10 z-20 h-2 cursor-ns-resize transition-colors hover:bg-sky-400/20"
+                />
+                <button
+                    type="button"
+                    tabIndex={-1}
+                    aria-label="Resize no data report from the corner"
+                    onPointerDown={(event) => startDialogResize(event, 'both', 1, 1)}
+                    className="absolute bottom-0 right-0 z-30 h-8 w-8 cursor-nwse-resize rounded-br-lg transition-colors hover:bg-sky-400/20"
+                >
+                    <span className="pointer-events-none absolute bottom-1 right-1 h-3 w-3 border-b border-r border-slate-400 dark:border-slate-500" />
+                    <span className="pointer-events-none absolute bottom-2 right-2 h-2 w-2 border-b border-r border-slate-300 dark:border-slate-600" />
+                </button>
             </div>
         </div>
     );
@@ -2100,7 +2629,7 @@ const SearchableFilterSelect: React.FC<SearchableFilterSelectProps> = ({
                         setOpen(false);
                     }
                 }}
-                className="flex h-11 w-full items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-left text-sm text-slate-700 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
+                className="flex h-10 w-full items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-left text-sm text-slate-700 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
             >
                 <span className="min-w-0 flex-1 truncate">{selectedLabel}</span>
                 <ChevronDown
@@ -2193,6 +2722,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
     const [vizType, setVizType] = useState(ALL);
     const [tagInput, setTagInput] = useState('');
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
+    const [filtersCollapsed, setFiltersCollapsed] = useState(true);
     const [selectedNames, setSelectedNames] = useState<Set<string>>(
         () => new Set()
     );
@@ -2204,6 +2734,12 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
         }
         return counts;
     }, [canvasTiles]);
+
+    useEffect(() => {
+        if (open) {
+            setFiltersCollapsed(true);
+        }
+    }, [open]);
 
     const blockedSearchNames = useMemo(() => {
         const names = new Set<string>();
@@ -2388,14 +2924,30 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
         [blockedSearchNames, filteredRecords]
     );
 
+    const activeFilterChips = useMemo(() => {
+        const chips: Array<{ id: string; label: string }> = [];
+        if (app !== APP_NAME) {
+            chips.push({
+                id: `app-${app}`,
+                label: app === ALL ? 'All apps' : `App: ${app}`,
+            });
+        }
+        if (includeHiddenSearches) {
+            chips.push({ id: 'hidden', label: 'Hidden included' });
+        }
+        if (category !== ALL) chips.push({ id: `category-${category}`, label: category });
+        if (subCategory !== ALL) {
+            chips.push({ id: `sub-category-${subCategory}`, label: subCategory });
+        }
+        if (vizType !== ALL) {
+            chips.push({ id: `viz-${vizType}`, label: vizFilterLabel(vizType) });
+        }
+        for (const tag of selectedTags) chips.push({ id: `tag-${tag}`, label: tag });
+        return chips;
+    }, [app, category, includeHiddenSearches, selectedTags, subCategory, vizType]);
+
     const hasActiveFilters =
-        query.trim().length > 0 ||
-        app !== APP_NAME ||
-        includeHiddenSearches ||
-        category !== ALL ||
-        subCategory !== ALL ||
-        vizType !== ALL ||
-        selectedTags.length > 0;
+        query.trim().length > 0 || activeFilterChips.length > 0;
 
     const resetFilters = () => {
         setQuery('');
@@ -2429,7 +2981,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
     const replaceMode = replaceTileId !== null;
 
     return (
-        <aside className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[520px] flex-col border-l border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-950">
+        <aside className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[560px] flex-col border-l border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-950">
             <div className="flex items-center gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
                 <div className="flex h-10 w-10 items-center justify-center rounded-md bg-sky-50 text-sky-600 dark:bg-sky-950 dark:text-sky-300">
                     <SlidersHorizontal className="h-5 w-5" />
@@ -2453,26 +3005,37 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                 </button>
             </div>
 
-            <div className="border-b border-slate-200 p-4 dark:border-slate-800">
+            <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-800">
                 <label className="relative block">
                     <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                     <input
                         value={query}
                         onChange={(event) => setQuery(event.target.value)}
                         placeholder="Filter by name, description, or tag..."
-                        className="h-12 w-full rounded-md border border-slate-300 bg-white pl-10 pr-3 text-base text-slate-900 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
+                        className="h-11 w-full rounded-md border border-slate-300 bg-white pl-10 pr-3 text-sm font-medium text-slate-900 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
                     />
                 </label>
 
-                <div className="mt-4 flex items-center gap-2">
-                    <div className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-2 text-xs font-black uppercase tracking-[0.18em] text-slate-800 dark:bg-slate-800 dark:text-slate-100">
+                <div className="mt-3 flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setFiltersCollapsed((current) => !current)}
+                        aria-expanded={!filtersCollapsed}
+                        className="inline-flex min-w-0 items-center gap-2 rounded-md bg-slate-100 px-3 py-2 text-xs font-black uppercase tracking-[0.16em] text-slate-800 transition hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-300 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus:ring-sky-800"
+                    >
                         <span>Filters</span>
                         {hasActiveFilters && (
                             <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] tracking-normal text-sky-700 dark:bg-sky-900 dark:text-sky-200">
                                 active
                             </span>
                         )}
-                    </div>
+                        <ChevronDown
+                            className={cn(
+                                'h-4 w-4 flex-shrink-0 text-slate-500 transition-transform dark:text-slate-300',
+                                filtersCollapsed && '-rotate-90'
+                            )}
+                        />
+                    </button>
                     <button
                         type="button"
                         onClick={resetFilters}
@@ -2482,119 +3045,141 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                     </button>
                 </div>
 
-                <div className="mt-3 grid grid-cols-[88px_minmax(0,1fr)] gap-x-3 gap-y-3">
-                    <label className="self-center text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
-                        App
-                    </label>
-                    <select
-                        value={app}
-                        onChange={(event) => setApp(event.target.value)}
-                        className="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
-                    >
-                        <option value={ALL}>All apps</option>
-                        {appOptions.map((option) => (
-                            <option key={option} value={option}>
-                                {option}
-                            </option>
-                        ))}
-                    </select>
-
-                    <label className="self-center text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
-                        Hidden
-                    </label>
-                    <label className="flex h-11 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
-                        <input
-                            type="checkbox"
-                            checked={includeHiddenSearches}
-                            onChange={(event) =>
-                                onIncludeHiddenSearchesChange(event.target.checked)
-                            }
-                            className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-950"
-                        />
-                        <span>Show hidden searches</span>
-                    </label>
-
-                    <label className="self-center text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
-                        Category
-                    </label>
-                    <SearchableFilterSelect
-                        value={category}
-                        options={categoryOptions}
-                        allLabel="All categories"
-                        searchPlaceholder="Search categories..."
-                        ariaLabel="Category"
-                        onChange={setCategory}
-                    />
-
-                    <label className="self-center text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
-                        Sub-cat
-                    </label>
-                    <SearchableFilterSelect
-                        value={subCategory}
-                        options={subCategoryOptions}
-                        allLabel="All sub-categories"
-                        searchPlaceholder="Search sub-categories..."
-                        ariaLabel="Sub-category"
-                        onChange={setSubCategory}
-                    />
-
-                    <label className="self-center text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
-                        Viz
-                    </label>
-                    <select
-                        value={vizType}
-                        onChange={(event) => setVizType(event.target.value)}
-                        className="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
-                    >
-                        <option value={ALL}>All viz types</option>
-                        {vizTypeOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                                {option.label} ({option.count})
-                            </option>
-                        ))}
-                    </select>
-                </div>
-
-                <div className="mt-4">
-                    <label className="relative block">
-                        <input
-                            value={tagInput}
-                            onChange={(event) => setTagInput(event.target.value)}
-                            placeholder="Filter by tag..."
-                            className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
-                        />
-                    </label>
-                    {(selectedTags.length > 0 || tagOptions.length > 0) && (
-                        <div className="mt-2 flex max-h-24 flex-wrap gap-1 overflow-y-auto">
-                            {selectedTags.map((tag) => (
-                                <button
-                                    key={tag}
-                                    type="button"
-                                    onClick={() =>
-                                        setSelectedTags((current) =>
-                                            current.filter((value) => value !== tag)
-                                        )
-                                    }
-                                    className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-1 text-[11px] font-bold text-sky-700 hover:bg-sky-200 dark:bg-sky-900 dark:text-sky-100 dark:hover:bg-sky-800"
+                {filtersCollapsed ? (
+                    activeFilterChips.length > 0 && (
+                        <div className="mt-2 flex max-h-14 flex-wrap gap-1 overflow-y-auto">
+                            {activeFilterChips.slice(0, 10).map((chip) => (
+                                <span
+                                    key={chip.id}
+                                    className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-[11px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                                 >
-                                    {tag}
-                                    <X className="h-3 w-3" />
-                                </button>
+                                    {chip.label}
+                                </span>
                             ))}
-                            {tagOptions.map(({ tag, count }) => (
-                                <button
-                                    key={tag}
-                                    type="button"
-                                    onClick={() => selectTag(tag)}
-                                    className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-500 hover:border-sky-300 hover:text-sky-600 dark:border-slate-700 dark:text-slate-400 dark:hover:border-sky-700 dark:hover:text-sky-300"
-                                >
-                                    {tag}
-                                    <span className="text-slate-400">{count}</span>
-                                </button>
-                            ))}
+                            {activeFilterChips.length > 10 && (
+                                <span className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-[11px] font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                                    +{activeFilterChips.length - 10}
+                                </span>
+                            )}
                         </div>
-                    )}
-                </div>
+                    )
+                ) : (
+                    <>
+                        <div className="mt-3 grid grid-cols-[76px_minmax(0,1fr)] gap-x-3 gap-y-2.5">
+                            <label className="self-center text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                                App
+                            </label>
+                            <select
+                                value={app}
+                                onChange={(event) => setApp(event.target.value)}
+                                className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
+                            >
+                                <option value={ALL}>All apps</option>
+                                {appOptions.map((option) => (
+                                    <option key={option} value={option}>
+                                        {option}
+                                    </option>
+                                ))}
+                            </select>
+
+                            <label className="self-center text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                                Hidden
+                            </label>
+                            <label className="flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+                                <input
+                                    type="checkbox"
+                                    checked={includeHiddenSearches}
+                                    onChange={(event) =>
+                                        onIncludeHiddenSearchesChange(event.target.checked)
+                                    }
+                                    className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-950"
+                                />
+                                <span>Show hidden searches</span>
+                            </label>
+
+                            <label className="self-center text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                                Category
+                            </label>
+                            <SearchableFilterSelect
+                                value={category}
+                                options={categoryOptions}
+                                allLabel="All categories"
+                                searchPlaceholder="Search categories..."
+                                ariaLabel="Category"
+                                onChange={setCategory}
+                            />
+
+                            <label className="self-center text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                                Sub-cat
+                            </label>
+                            <SearchableFilterSelect
+                                value={subCategory}
+                                options={subCategoryOptions}
+                                allLabel="All sub-categories"
+                                searchPlaceholder="Search sub-categories..."
+                                ariaLabel="Sub-category"
+                                onChange={setSubCategory}
+                            />
+
+                            <label className="self-center text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                                Viz
+                            </label>
+                            <select
+                                value={vizType}
+                                onChange={(event) => setVizType(event.target.value)}
+                                className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
+                            >
+                                <option value={ALL}>All viz types</option>
+                                {vizTypeOptions.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label} ({option.count})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="mt-3">
+                            <label className="relative block">
+                                <input
+                                    value={tagInput}
+                                    onChange={(event) => setTagInput(event.target.value)}
+                                    placeholder="Filter by tag..."
+                                    className="h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
+                                />
+                            </label>
+                            {(selectedTags.length > 0 || tagOptions.length > 0) && (
+                                <div className="mt-2 flex max-h-20 flex-wrap gap-1 overflow-y-auto">
+                                    {selectedTags.map((tag) => (
+                                        <button
+                                            key={tag}
+                                            type="button"
+                                            onClick={() =>
+                                                setSelectedTags((current) =>
+                                                    current.filter((value) => value !== tag)
+                                                )
+                                            }
+                                            className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-1 text-[11px] font-bold text-sky-700 hover:bg-sky-200 dark:bg-sky-900 dark:text-sky-100 dark:hover:bg-sky-800"
+                                        >
+                                            {tag}
+                                            <X className="h-3 w-3" />
+                                        </button>
+                                    ))}
+                                    {tagOptions.map(({ tag, count }) => (
+                                        <button
+                                            key={tag}
+                                            type="button"
+                                            onClick={() => selectTag(tag)}
+                                            className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-500 hover:border-sky-300 hover:text-sky-600 dark:border-slate-700 dark:text-slate-400 dark:hover:border-sky-700 dark:hover:text-sky-300"
+                                        >
+                                            {tag}
+                                            <span className="text-slate-400">{count}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </>
+                )}
             </div>
 
             <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 px-4 py-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
@@ -2784,6 +3369,9 @@ const SearchbaseCanvasPage: React.FC = () => {
     const [observedNoDataByTile, setObservedNoDataByTile] = useState<
         Map<string, ObservedNoDataEntry>
     >(() => new Map());
+    const [overlayFieldsByTile, setOverlayFieldsByTile] = useState<
+        Map<string, string[]>
+    >(() => new Map());
     const [savedCanvases, setSavedCanvases] = useState<SearchbaseCanvasSummary[]>(
         []
     );
@@ -2890,6 +3478,7 @@ const SearchbaseCanvasPage: React.FC = () => {
 
     useEffect(() => {
         setObservedNoDataByTile(new Map());
+        setOverlayFieldsByTile(new Map());
     }, [rangeLabel]);
 
     const entryByName = useMemo(() => {
@@ -3028,6 +3617,26 @@ const SearchbaseCanvasPage: React.FC = () => {
         []
     );
 
+    const updateOverlayFields = useCallback((tileId: string, fields: string[]) => {
+        const nextFields = fields.filter((field) => normalizeTileOverlayField(field));
+        setOverlayFieldsByTile((current) => {
+            const previous = current.get(tileId) ?? [];
+            if (
+                previous.length === nextFields.length &&
+                previous.every((field, index) => field === nextFields[index])
+            ) {
+                return current;
+            }
+            const next = new Map(current);
+            if (nextFields.length === 0) {
+                next.delete(tileId);
+            } else {
+                next.set(tileId, nextFields);
+            }
+            return next;
+        });
+    }, []);
+
     const saveCanvasWithName = useCallback(
         async (name: string) => {
             const trimmed = name.trim();
@@ -3099,6 +3708,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                 setTileSearchQuery('');
                 setRunningTileIds(new Set());
                 setObservedNoDataByTile(new Map());
+                setOverlayFieldsByTile(new Map());
                 setBrowserOpen(next.tiles.length === 0);
                 setReplaceTileId(null);
                 setActiveSavedCanvasName(name);
@@ -3164,12 +3774,22 @@ const SearchbaseCanvasPage: React.FC = () => {
                     replaced = true;
                     return current.map((tile) =>
                         tile.id === replaceTileId
-                            ? { ...tile, searchName: record.searchName }
+                            ? {
+                                  ...tile,
+                                  searchName: record.searchName,
+                                  overlayField: undefined,
+                              }
                             : tile
                     );
                 });
                 if (!replaced) return;
                 clearObservedNoData([replaceTileId]);
+                setOverlayFieldsByTile((current) => {
+                    if (!current.has(replaceTileId)) return current;
+                    const next = new Map(current);
+                    next.delete(replaceTileId);
+                    return next;
+                });
                 setRunningTileIds((current) => {
                     const next = new Set(current);
                     next.add(replaceTileId);
@@ -3241,6 +3861,12 @@ const SearchbaseCanvasPage: React.FC = () => {
             if (!(tileId in current)) return current;
             const next = { ...current };
             delete next[tileId];
+            return next;
+        });
+        setOverlayFieldsByTile((current) => {
+            if (!current.has(tileId)) return current;
+            const next = new Map(current);
+            next.delete(tileId);
             return next;
         });
         clearObservedNoData([tileId]);
@@ -3478,6 +4104,22 @@ const SearchbaseCanvasPage: React.FC = () => {
         []
     );
 
+    const changeTileOverlay = useCallback(
+        (tileId: string, overlayField?: string | null) => {
+            setTiles((current) =>
+                current.map((tile) =>
+                    tile.id === tileId
+                        ? {
+                              ...tile,
+                              overlayField: normalizeTileOverlayField(overlayField),
+                          }
+                        : tile
+                )
+            );
+        },
+        []
+    );
+
     const handleDragEnd = useCallback((event: DragEndEvent) => {
         const { active, over } = event;
         if (!over || active.id === over.id) return;
@@ -3493,6 +4135,7 @@ const SearchbaseCanvasPage: React.FC = () => {
         setTiles([]);
         setRunningTileIds(new Set());
         setObservedNoDataByTile(new Map());
+        setOverlayFieldsByTile(new Map());
         setPageIndex(0);
         setTileSearchQuery('');
         setBrowserOpen(true);
@@ -3515,6 +4158,7 @@ const SearchbaseCanvasPage: React.FC = () => {
         setTiles([]);
         setRunningTileIds(new Set());
         setObservedNoDataByTile(new Map());
+        setOverlayFieldsByTile(new Map());
         setPageIndex(0);
         setTileSearchQuery('');
         setBrowserOpen(false);
@@ -3568,7 +4212,10 @@ const SearchbaseCanvasPage: React.FC = () => {
                 onRemove={removeTile}
                 onCycleSize={cycleSize}
                 onChangeViz={changeTileViz}
+                overlayFields={overlayFieldsByTile.get(tile.id) ?? []}
+                onChangeOverlay={changeTileOverlay}
                 onOpenDetailTable={setActiveDetailTable}
+                onOverlayFieldsChange={updateOverlayFields}
                 onNoDataObservation={updateNoDataObservation}
             />
         );
@@ -3624,8 +4271,11 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 </button>
                             )}
                             <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                                <span className="inline-flex h-6 items-center rounded-md border border-slate-200 bg-slate-50 px-2 text-xs font-bold text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
-                                    {tiles.length.toLocaleString()} tiles
+                                <span
+                                    className="inline-flex h-6 items-center rounded-md border border-slate-200 bg-slate-50 px-2 text-xs font-bold text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+                                    title="Total tiles on this canvas"
+                                >
+                                    {tiles.length.toLocaleString()} canvas tiles
                                 </span>
                                 <span
                                     className={cn(
@@ -3634,21 +4284,29 @@ const SearchbaseCanvasPage: React.FC = () => {
                                             ? 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-200'
                                             : 'border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300'
                                     )}
+                                    title="Tiles currently dispatching or awaiting results"
                                 >
-                                    {runningTileIds.size.toLocaleString()} running
+                                    {runningTileIds.size.toLocaleString()} running now
                                 </span>
-                                <span
+                                <button
+                                    type="button"
+                                    onClick={() => setNoDataReportOpen(true)}
                                     className={cn(
-                                        'inline-flex h-6 items-center rounded-md border px-2 text-xs font-bold',
+                                        'inline-flex h-6 items-center rounded-md border px-2 text-xs font-bold transition focus:outline-none focus:ring-2 focus:ring-amber-300',
                                         observedNoDataRows.length > 0
-                                            ? 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200'
-                                            : 'border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300'
+                                            ? 'border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300 hover:bg-amber-100 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200 dark:hover:bg-amber-900'
+                                            : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
                                     )}
+                                    title="Open no data report"
+                                    aria-label={`Open no data report. ${observedNoDataRows.length.toLocaleString()} observed no-data tiles.`}
                                 >
                                     {observedNoDataRows.length.toLocaleString()} no data
-                                </span>
-                                <span className="inline-flex h-6 items-center rounded-md border border-slate-200 bg-slate-50 px-2 text-xs font-bold text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
-                                    {records.length.toLocaleString()} searches
+                                </button>
+                                <span
+                                    className="inline-flex h-6 items-center rounded-md border border-slate-200 bg-slate-50 px-2 text-xs font-bold text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+                                    title="Loaded searches available in the catalogue"
+                                >
+                                    {records.length.toLocaleString()} in catalogue
                                 </span>
                             </div>
                         </div>

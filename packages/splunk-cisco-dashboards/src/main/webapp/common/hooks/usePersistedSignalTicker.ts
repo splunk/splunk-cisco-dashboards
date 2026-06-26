@@ -20,6 +20,7 @@ export interface SignalTickerItem {
 
 export interface SignalTickerConfig {
     enabled: boolean;
+    showPriorityDrilldown: boolean;
     rows: SignalTickerRows;
     speed: SignalTickerSpeed;
     density: SignalTickerDensity;
@@ -36,67 +37,110 @@ const UNIT_PATTERN = /^[%A-Za-z0-9_./ -]{1,16}$/;
 
 const DEFAULT_SIGNAL_TICKER_CONFIG: SignalTickerConfig = {
     enabled: true,
+    showPriorityDrilldown: false,
     rows: 1,
     speed: 5,
     density: 'compact',
     items: [
         {
-            id: 'event_ops_feeds_active',
-            searchName: 'Cisco Live - Event Ops - Onboarding Gap Summary KPI',
-            label: 'Feeds active',
-            valueField: 'active_integrations',
-            thresholdWarning: 12,
-            thresholdCritical: 8,
-            thresholdDirection: 'higher_is_better',
-        },
-        {
-            id: 'catalyst_active_issues',
-            searchName: 'Catalyst Center - Event Ops - Active Issues Readiness',
-            label: 'Active issues',
-            valueField: 'total_issues',
-            thresholdWarning: 50,
-            thresholdCritical: 250,
+            id: 'thousandeyes_stream_age',
+            searchName:
+                'Feed Monitor - ThousandEyes - Stream Staleness (Signal Rail KPI)',
+            label: 'TE stream age',
+            valueField: 'age_minutes',
+            thresholdWarning: 30,
+            thresholdCritical: 90,
             thresholdDirection: 'lower_is_better',
+            thresholdUnit: 'm',
         },
         {
-            id: 'catalyst_compliance_ready',
-            searchName: 'Catalyst Center - Event Ops - Compliance Readiness',
-            label: 'Compliance ready',
-            valueField: 'pct',
-            thresholdWarning: 95,
-            thresholdCritical: 80,
-            thresholdDirection: 'higher_is_better',
-            thresholdUnit: '%',
+            id: 'ftd_firewall_age',
+            searchName:
+                'Feed Monitor - FTD Firewall - Stream Staleness (Signal Rail KPI)',
+            label: 'FTD feed age',
+            valueField: 'age_minutes',
+            thresholdWarning: 30,
+            thresholdCritical: 90,
+            thresholdDirection: 'lower_is_better',
+            thresholdUnit: 'm',
         },
         {
-            id: 'fmc_ips_ready',
-            searchName: 'FMC - Event Ops - eStreamer IPS Readiness',
-            label: 'IPS telemetry',
-            valueField: 'count',
-            thresholdWarning: 1,
-            thresholdCritical: 1,
-            thresholdDirection: 'higher_is_better',
+            id: 'fmc_estreamer_age',
+            searchName:
+                'Feed Monitor - FMC eStreamer - IPS Feed Staleness (Signal Rail KPI)',
+            label: 'FMC IPS age',
+            valueField: 'age_minutes',
+            thresholdWarning: 60,
+            thresholdCritical: 180,
+            thresholdDirection: 'lower_is_better',
+            thresholdUnit: 'm',
         },
         {
-            id: 'thousandeyes_feed_ready',
-            searchName: 'ThousandEyes - Event Ops - Feed Health Readiness',
-            label: 'ThousandEyes feed',
-            valueField: 'count',
-            thresholdWarning: 1,
-            thresholdCritical: 1,
-            thresholdDirection: 'higher_is_better',
+            id: 'ise_syslog_age',
+            searchName:
+                'Feed Monitor - ISE - RADIUS Syslog Staleness (Signal Rail KPI)',
+            label: 'ISE syslog age',
+            valueField: 'age_minutes',
+            thresholdWarning: 30,
+            thresholdCritical: 90,
+            thresholdDirection: 'lower_is_better',
+            thresholdUnit: 'm',
         },
         {
-            id: 'duo_auth_ready',
-            searchName: 'Duo - Event Ops - Authentication Volume Readiness',
-            label: 'Duo auth',
-            valueField: 'count',
-            thresholdWarning: 1,
-            thresholdCritical: 1,
-            thresholdDirection: 'higher_is_better',
+            id: 'catalyst_center_age',
+            searchName:
+                'Feed Monitor - Catalyst Center - API Feed Staleness (Signal Rail KPI)',
+            label: 'Catalyst API age',
+            valueField: 'age_minutes',
+            thresholdWarning: 60,
+            thresholdCritical: 180,
+            thresholdDirection: 'lower_is_better',
+            thresholdUnit: 'm',
+        },
+        {
+            id: 'spaces_firehose_age',
+            searchName:
+                'Feed Monitor - Cisco Spaces - Firehose Staleness (Signal Rail KPI)',
+            label: 'Spaces feed age',
+            valueField: 'age_minutes',
+            thresholdWarning: 90,
+            thresholdCritical: 240,
+            thresholdDirection: 'lower_is_better',
+            thresholdUnit: 'm',
         },
     ],
 };
+
+const LEGACY_FACTORY_SIGNAL_TICKER_ID_SETS = [
+    new Set([
+        'event_ops_feeds_active',
+        'catalyst_active_issues',
+        'catalyst_compliance_ready',
+        'fmc_ips_ready',
+        'thousandeyes_feed_ready',
+        'duo_auth_ready',
+    ]),
+    // Build 2026-06-16 briefly defaulted the Signal Rail to the same
+    // searchbase entries used by the factory Overview section tiles.
+    // Treat that exact six-item selection as a factory preset so it
+    // migrates to the dedicated feed-monitor rail without replacing a
+    // genuinely customized operator rail.
+    new Set([
+        'critical_sites_available',
+        'network_health',
+        'active_issues',
+        'xdr_critical',
+        'failed_auth',
+        'threat_sources',
+    ]),
+];
+
+const RENAMED_SEARCH_NAMES = new Map([
+    [
+        'Cisco Live - Event Ops - Onboarding Gap Summary KPI',
+        'Event Ops - Onboarding Gap Summary KPI',
+    ],
+]);
 
 const LEGACY_SPEED_MAP: Record<string, SignalTickerSpeed> = {
     slow: 3,
@@ -213,6 +257,10 @@ const sanitizeConfig = (raw: unknown): SignalTickerConfig | null => {
         typeof source.enabled === 'boolean'
             ? source.enabled
             : DEFAULT_SIGNAL_TICKER_CONFIG.enabled;
+    const showPriorityDrilldown =
+        typeof source.showPriorityDrilldown === 'boolean'
+            ? source.showPriorityDrilldown
+            : DEFAULT_SIGNAL_TICKER_CONFIG.showPriorityDrilldown;
     const rows: SignalTickerRows = source.rows === 2 ? 2 : 1;
     const speed = sanitizeSpeed(source.speed);
     const density: SignalTickerDensity =
@@ -227,7 +275,32 @@ const sanitizeConfig = (raw: unknown): SignalTickerConfig | null => {
         items.push(item);
         if (items.length >= 24) break;
     }
-    return { enabled, rows, speed, density, items };
+    return { enabled, showPriorityDrilldown, rows, speed, density, items };
+};
+
+const isLegacyFactorySignalTickerConfig = (config: SignalTickerConfig): boolean =>
+    LEGACY_FACTORY_SIGNAL_TICKER_ID_SETS.some(
+        (ids) =>
+            config.items.length === ids.size &&
+            config.items.every((item) => ids.has(item.id))
+    );
+
+const migrateSignalTickerConfig = (
+    config: SignalTickerConfig
+): SignalTickerConfig => {
+    if (isLegacyFactorySignalTickerConfig(config)) {
+        return DEFAULT_SIGNAL_TICKER_CONFIG;
+    }
+
+    let changed = false;
+    const items = config.items.map((item) => {
+        const searchName = RENAMED_SEARCH_NAMES.get(item.searchName);
+        if (!searchName) return item;
+        changed = true;
+        return { ...item, searchName };
+    });
+
+    return changed ? { ...config, items } : config;
 };
 
 const readFromStorage = (): SignalTickerConfig => {
@@ -241,7 +314,10 @@ const readFromStorage = (): SignalTickerConfig => {
         if (!parsed || parsed.v !== STORAGE_VERSION) {
             return DEFAULT_SIGNAL_TICKER_CONFIG;
         }
-        return sanitizeConfig(parsed.config) ?? DEFAULT_SIGNAL_TICKER_CONFIG;
+        const sanitized = sanitizeConfig(parsed.config);
+        return sanitized
+            ? migrateSignalTickerConfig(sanitized)
+            : DEFAULT_SIGNAL_TICKER_CONFIG;
     } catch {
         return DEFAULT_SIGNAL_TICKER_CONFIG;
     }

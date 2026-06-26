@@ -273,11 +273,17 @@ const BackgroundButton = (props) => {
                     ></Button>
                 </Modal.Footer>
             </Modal>
-            <Tooltip content="Add a background/theme">
+            <Tooltip content="Cisco extension: choose dashboard background/theme">
                 <Button
                     style={{ maxWidth: 32 }}
                     appearance="subtle"
-                    icon={<Palette width={20} height={20}></Palette>}
+                    icon={
+                        <Palette
+                            width={20}
+                            height={20}
+                            style={{ color: props.iconColor || '#26afac' }}
+                        />
+                    }
                     onClick={() => {
                         setNewBG(undefined);
                         setOpenChangeBackgroundModal(true);

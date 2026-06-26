@@ -30,7 +30,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { ExternalLink, Settings2 } from 'lucide-react';
+import { ExternalLink, Settings2, Table2 } from 'lucide-react';
 import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
 import { cn } from '@/common/lib/utils';
 import type { DataSource, NoDataReason } from '@/common/hooks/useMetric';
@@ -49,6 +49,8 @@ interface BarBreakdownTileProps {
     columns: ReadonlyArray<string>;
     source?: DataSource;
     onOpenInSearch?: () => void;
+    onOpenDetailTable?: () => void;
+    detailTableTitle?: string;
     onConfigure?: () => void;
     isCustomized?: boolean;
     noDataReason?: NoDataReason;
@@ -171,6 +173,8 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
     columns,
     source,
     onOpenInSearch,
+    onOpenDetailTable,
+    detailTableTitle,
     onConfigure,
     isCustomized = false,
     noDataReason,
@@ -287,6 +291,18 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                                 className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
                             >
                                 <ExternalLink className="w-3 h-3 stroke-[2.5px]" />
+                            </button>
+                        )}
+                        {onOpenDetailTable && (
+                            <button
+                                type="button"
+                                onClick={onOpenDetailTable}
+                                title={detailTableTitle ?? 'View detail table'}
+                                aria-label={detailTableTitle ?? `View ${label} detail table`}
+                                data-tile-control="true"
+                                className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
+                            >
+                                <Table2 className="w-3 h-3 stroke-[2.5px]" />
                             </button>
                         )}
                         {onConfigure && (

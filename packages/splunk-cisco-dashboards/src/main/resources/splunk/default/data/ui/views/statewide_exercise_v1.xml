@@ -1,10 +1,10 @@
 
 <dashboard version="2" theme="light">
- <label>Network Activation Report v2</label>
- <description>Client health and Catalyst Center reports network activation operations.</description>
- <definition><![CDATA[
+    <label>Network Activation Report</label>
+    <description>Client health and Catalyst Center reports network activation operations.</description>
+    <definition><![CDATA[
 {
-	"title": "Network Activation Report v2",
+	"title": "Network Activation Report",
 	"description": "Client health and Catalyst Center reports network activation operations.",
 	"inputs": {
 		"input_time_range": {
@@ -273,7 +273,7 @@
 			},
 			"description": "Client count over time colored by health status",
 			"options": {
-				"nullValueDisplay": "zero",
+				"nullValueDisplay": "connect",
 				"seriesColorsByField": {
 					"Fair Count": "#E5A823",
 					"Good Count": "#6EBE4A",
@@ -380,6 +380,8 @@
 				"majorColor": "#049FD9",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('Client Health Score') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
@@ -389,8 +391,7 @@
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
 				"unit": "%",
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Client Health Score",
 			"type": "splunk.singlevalue"
@@ -516,6 +517,8 @@
 				"majorColor": "#049FD9",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('Total Connected Clients') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
@@ -524,8 +527,7 @@
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Total Connected Clients",
 			"type": "splunk.singlevalue"
@@ -612,6 +614,8 @@
 				"majorColor": "#049FD9",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('AP Reachability') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
@@ -621,8 +625,7 @@
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
 				"unit": "%",
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "AP Reachability",
 			"type": "splunk.singlevalue"
@@ -648,6 +651,8 @@
 				"majorColor": "#049FD9",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('Access Points') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
@@ -656,8 +661,7 @@
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Access Points",
 			"type": "splunk.singlevalue"
@@ -707,6 +711,8 @@
 				"majorColor": "#049FD9",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('Client Health') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
@@ -715,9 +721,7 @@
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"unit": "%",
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"unit": "%"
 			},
 			"title": "Client Health",
 			"type": "splunk.singlevalue"
@@ -796,6 +800,8 @@
 				"majorColor": "#049FD9",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('Healthy Devices') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
@@ -804,8 +810,7 @@
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Healthy Devices",
 			"type": "splunk.singlevalue"
@@ -866,21 +871,6 @@
 			"type": "splunk.pie"
 		},
 		"viz_ex_issue_table": {
-			"dataSources": {
-				"primary": "ds_exec_top_issues_table"
-			},
-			"description": "Top open issues by severity and affected device count",
-			"options": {
-				"count": 15,
-				"fontSize": "small",
-				"columnFormat": {
-					"Priority": {
-						"rowBackgroundColors": "> table | seriesByName(\"Priority\") | matchValue(viz_ex_issue_table_Priority_colors)"
-					}
-				}
-			},
-			"title": "Top Open Issues",
-			"type": "splunk.table",
 			"context": {
 				"viz_ex_issue_table_Priority_colors": [
 					{
@@ -900,7 +890,22 @@
 						"value": "rgba(110,190,74,0.15)"
 					}
 				]
-			}
+			},
+			"dataSources": {
+				"primary": "ds_exec_top_issues_table"
+			},
+			"description": "Top open issues by severity and affected device count",
+			"options": {
+				"columnFormat": {
+					"Priority": {
+						"rowBackgroundColors": "> table | seriesByName(\"Priority\") | matchValue(viz_ex_issue_table_Priority_colors)"
+					}
+				},
+				"count": 15,
+				"fontSize": "small"
+			},
+			"title": "Top Open Issues",
+			"type": "splunk.table"
 		},
 		"viz_ex_issue_trend": {
 			"dataSources": {
@@ -911,7 +916,8 @@
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
 				"xAxisVisibility": "show",
-				"yAxisTitleText": "Issues"
+				"yAxisTitleText": "Issues",
+				"nullValueDisplay": "connect"
 			},
 			"title": "Total Issue Trend",
 			"type": "splunk.area"
@@ -937,6 +943,8 @@
 				"majorColor": "#049FD9",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('Network Health') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
@@ -946,8 +954,7 @@
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
 				"unit": "%",
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Network Health",
 			"type": "splunk.singlevalue"
@@ -1001,10 +1008,10 @@
 			"options": {
 				"majorColor": "#D64550",
 				"majorValue": "> primary | seriesByName('p1') | lastPoint()",
-				"sparklineDisplay": "off",
-				"trendDisplay": "off",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"sparklineDisplay": "off",
+				"trendDisplay": "off"
 			},
 			"title": "P1",
 			"type": "splunk.singlevalue"
@@ -1017,10 +1024,10 @@
 			"options": {
 				"majorColor": "#E5A823",
 				"majorValue": "> primary | seriesByName('p2') | lastPoint()",
-				"sparklineDisplay": "off",
-				"trendDisplay": "off",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"sparklineDisplay": "off",
+				"trendDisplay": "off"
 			},
 			"title": "P2",
 			"type": "splunk.singlevalue"
@@ -1033,10 +1040,10 @@
 			"options": {
 				"majorColor": "#049FD9",
 				"majorValue": "> primary | seriesByName('p3') | lastPoint()",
-				"sparklineDisplay": "off",
-				"trendDisplay": "off",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"sparklineDisplay": "off",
+				"trendDisplay": "off"
 			},
 			"title": "P3",
 			"type": "splunk.singlevalue"
@@ -1049,10 +1056,10 @@
 			"options": {
 				"majorColor": "#6E6E6E",
 				"majorValue": "> primary | seriesByName('p4') | lastPoint()",
-				"sparklineDisplay": "off",
-				"trendDisplay": "off",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"sparklineDisplay": "off",
+				"trendDisplay": "off"
 			},
 			"title": "P4",
 			"type": "splunk.singlevalue"
@@ -1103,9 +1110,10 @@
 			"options": {
 				"majorColor": "#049FD9",
 				"majorValue": "> primary | seriesByName('Open') | lastPoint()",
-				"unit": "",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"unit": "",
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Open Issues",
 			"type": "splunk.singlevalue"
@@ -1118,9 +1126,10 @@
 			"options": {
 				"majorColor": "#049FD9",
 				"majorValue": "> primary | seriesByName('Resolved') | lastPoint()",
-				"unit": "",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"unit": "",
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Resolved Issues",
 			"type": "splunk.singlevalue"
@@ -1133,9 +1142,10 @@
 			"options": {
 				"majorColor": "#049FD9",
 				"majorValue": "> primary | seriesByName('Total') | lastPoint()",
-				"unit": "",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"unit": "",
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Total Issues",
 			"type": "splunk.singlevalue"
@@ -1180,7 +1190,8 @@
 			"options": {
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Mbps"
+				"yAxisTitleText": "Mbps",
+				"nullValueDisplay": "connect"
 			},
 			"title": "Internet — Bandwidth by Protocol",
 			"type": "splunk.area"
@@ -1205,7 +1216,8 @@
 			"options": {
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Mbps"
+				"yAxisTitleText": "Mbps",
+				"nullValueDisplay": "connect"
 			},
 			"title": "Public Internet — Bandwidth by Protocol",
 			"type": "splunk.area"
@@ -1226,7 +1238,8 @@
 			"options": {
 				"xAxisTitleVisibility": "hide",
 				"xAxisVisibility": "show",
-				"yAxisTitleText": "Clients"
+				"yAxisTitleText": "Clients",
+				"nullValueDisplay": "connect"
 			},
 			"title": "Client Count per SSID",
 			"type": "splunk.line"
@@ -1239,7 +1252,8 @@
 			"options": {
 				"xAxisTitleVisibility": "hide",
 				"xAxisVisibility": "show",
-				"yAxisTitleText": "Clients"
+				"yAxisTitleText": "Clients",
+				"nullValueDisplay": "connect"
 			},
 			"title": "Client Count per SSID — Past Week",
 			"type": "splunk.line"
@@ -1272,7 +1286,8 @@
 				},
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Clients"
+				"yAxisTitleText": "Clients",
+				"nullValueDisplay": "connect"
 			},
 			"title": "Wired Client Trend",
 			"type": "splunk.area"
@@ -1291,7 +1306,8 @@
 				},
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Clients"
+				"yAxisTitleText": "Clients",
+				"nullValueDisplay": "connect"
 			},
 			"title": "Wired Clients — Past Week",
 			"type": "splunk.area"
@@ -1317,6 +1333,8 @@
 				"majorColor": "#049FD9",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('Wired Health') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
@@ -1326,8 +1344,7 @@
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
 				"unit": "%",
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Wired Health",
 			"type": "splunk.singlevalue"
@@ -1341,10 +1358,10 @@
 				"majorColor": "#049FD9",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('healthy') | lastPoint()",
-				"sparklineDisplay": "off",
-				"trendDisplay": "off",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"sparklineDisplay": "off",
+				"trendDisplay": "off"
 			},
 			"title": "Healthy",
 			"type": "splunk.singlevalue"
@@ -1370,6 +1387,8 @@
 				"majorColor": "#049FD9",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('Wired Clients') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
@@ -1378,8 +1397,7 @@
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Wired Clients",
 			"type": "splunk.singlevalue"
@@ -1398,7 +1416,8 @@
 				},
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Clients"
+				"yAxisTitleText": "Clients",
+				"nullValueDisplay": "connect"
 			},
 			"title": "Wireless Client Trend",
 			"type": "splunk.area"
@@ -1417,7 +1436,8 @@
 				},
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Clients"
+				"yAxisTitleText": "Clients",
+				"nullValueDisplay": "connect"
 			},
 			"title": "Wireless Clients — Past Week",
 			"type": "splunk.area"
@@ -1443,6 +1463,8 @@
 				"majorColor": "#049FD9",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('Wireless Health') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
@@ -1452,8 +1474,7 @@
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
 				"unit": "%",
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Wireless Health",
 			"type": "splunk.singlevalue"
@@ -1467,10 +1488,10 @@
 				"majorColor": "#049FD9",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('healthy') | lastPoint()",
-				"sparklineDisplay": "off",
-				"trendDisplay": "off",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"sparklineDisplay": "off",
+				"trendDisplay": "off"
 			},
 			"title": "Healthy",
 			"type": "splunk.singlevalue"
@@ -1496,6 +1517,8 @@
 				"majorColor": "#049FD9",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('Wireless Clients') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
@@ -1504,8 +1527,7 @@
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"sparklineNullValueDisplay": "connect"
 			},
 			"title": "Wireless Clients",
 			"type": "splunk.singlevalue"
@@ -2767,7 +2789,7 @@
 							"h": 70,
 							"w": 198,
 							"x": 30,
-							"y": -8
+							"y": 10
 						},
 						"type": "input"
 					},
@@ -3198,7 +3220,7 @@
 							"h": 70,
 							"w": 198,
 							"x": 30,
-							"y": -8
+							"y": 10
 						},
 						"type": "input"
 					},
@@ -3493,7 +3515,7 @@
 							"h": 70,
 							"w": 198,
 							"x": 30,
-							"y": -8
+							"y": 10
 						},
 						"type": "input"
 					},
@@ -3561,14 +3583,10 @@
 			]
 		}
 	},
-	"expressions": {
-		"conditions": {},
-		"eval": {}
-	},
 	"applicationProperties": {
 		"collapseNavigation": false,
 		"hideEdit": true
 	}
 }
-]]></definition>
+    ]]></definition>
 </dashboard>

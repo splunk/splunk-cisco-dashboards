@@ -24,6 +24,10 @@
 #   SPLUNK_HOME=/opt/10 ./build.sh --no-build --install --auth admin:pw2      # -> /opt/10
 #   SPLUNK_HOME=/opt/9  ./build.sh --no-build --deploy --restart --auth a:b   # -> /opt/9 (filesystem) + restart
 #
+# Watch-mode workflow (keeps splunkd install, skips full webpack rebuild):
+#   cd packages/splunk-cisco-dashboards && yarn start     # terminal 1; maintains stage/
+#   SPLUNK_HOME=/opt/10 ./build.sh --fast --install --auth admin:pw
+#
 # --install vs --deploy (mutually exclusive; mirrors ta_cisco_common/build.sh
 # and field-solutions-demo-data-gen/build.sh):
 #   --install: splunkd handles extraction. Auth required. Slower but
@@ -59,6 +63,7 @@ DIST_DIR="${ROOT_DIR}/dist"
 do_install=0
 do_deploy=0
 no_build=0
+from_stage=0
 restart_after_install=0
 verbose=0
 splunk_bin_override=""
@@ -158,6 +163,11 @@ Other options:
                          --install or --deploy. Lets you fan one build
                          out to multiple Splunk instances with different
                          credentials without rebuilding each time.
+  --fast, --from-stage   Package the current packages/<app>/stage directory
+                         without running clean_build.sh or webpack. Designed
+                         for use with a long-running 'yarn start' watcher.
+                         Still creates a fresh tarball and can still use
+                         --install, so splunkd remains the installer.
   --auth user:pass       Splunk CLI credentials. Passed through as
                          '-auth user:pass'. Aliases: -auth, --auth=user:pass.
   --restart              Restart Splunk after install/deploy.
@@ -180,6 +190,10 @@ Examples:
   ./build.sh
   ./build.sh --no-build --install --auth admin:pw1
   SPLUNK_HOME=/opt/10 ./build.sh --no-build --install --auth admin:pw2
+
+  # Keep webpack watch running, then package current stage/ and install via splunkd:
+  cd packages/splunk-cisco-dashboards && yarn start
+  SPLUNK_HOME=/opt/10 ./build.sh --fast --install --auth admin:pw
 EOF
 }
 
@@ -198,6 +212,10 @@ while [[ $# -gt 0 ]]; do
             # thing: reuse the newest dist/<app>-*.tar.gz instead of running
             # the yarn pipeline.
             no_build=1
+            shift
+            ;;
+        --fast|--from-stage|--stage)
+            from_stage=1
             shift
             ;;
         -v|--verbose)
@@ -287,6 +305,13 @@ if [[ "$no_build" -eq 1 && "$do_install" -eq 0 && "$do_deploy" -eq 0 ]]; then
     exit 2
 fi
 
+if [[ "$from_stage" -eq 1 && "$no_build" -eq 1 ]]; then
+    echo "ERROR: --from-stage and --no-build are mutually exclusive." >&2
+    echo "       --from-stage creates a fresh tarball from stage/." >&2
+    echo "       --no-build reuses the newest tarball already in dist/." >&2
+    exit 2
+fi
+
 # Validate install-mode prerequisites BEFORE the (potentially slow) build
 # step so users get the error in milliseconds, not minutes.
 if [[ "$do_install" -eq 1 ]]; then
@@ -323,6 +348,9 @@ fi
 
 if [[ "$no_build" -eq 1 ]]; then
     hdr "Reusing existing tarball (--no-build)..."
+elif [[ "$from_stage" -eq 1 ]]; then
+    hdr "Packaging current stage/ (--from-stage)..."
+    run_quietly bash "${APP_DIR}/bin/package_app.sh" --from-stage
 else
     hdr "Packaging ${APP_NAME}..."
     run_quietly bash -c "cd '$APP_DIR' && yarn run package:app"
@@ -461,6 +489,9 @@ else
 fi
 if [[ "$no_build" -eq 1 ]]; then
     mode_label="--no-build (reused dist/) + ${mode_label}"
+fi
+if [[ "$from_stage" -eq 1 ]]; then
+    mode_label="--from-stage (packaged existing stage/) + ${mode_label}"
 fi
 
 echo ""

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import '../../common/styles/commonstyles.css';
 import Button from '@splunk/react-ui/Button';
 import Select from '@splunk/react-ui/Select';
@@ -20,6 +20,31 @@ const ALL_APPS = '__all_apps__';
 const ALL_CATEGORIES = '__all_categories__';
 const ALL_SUB_CATEGORIES = '__all_sub_categories__';
 const DEFAULT_APP_SCOPE = 'splunk-cisco-dashboards';
+const KPI_MENU_WIDTH = 560;
+const MENU_VIEWPORT_MARGIN = 12;
+const CONFIG_PANEL_MIN_WIDTH = 240;
+const CONFIG_PANEL_MIN_HEIGHT = 300;
+
+const getConfigurationPanelLeft = () => {
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+    const elements = Array.from(document.querySelectorAll('aside, section, div'));
+
+    return elements.reduce((panelLeft, element) => {
+        const rect = element.getBoundingClientRect();
+
+        if (
+            rect.width < CONFIG_PANEL_MIN_WIDTH ||
+            rect.height < CONFIG_PANEL_MIN_HEIGHT ||
+            rect.left < viewportWidth * 0.45 ||
+            rect.right < viewportWidth - 40 ||
+            !element.textContent.includes('Configuration')
+        ) {
+            return panelLeft;
+        }
+
+        return Math.min(panelLeft, rect.left);
+    }, viewportWidth);
+};
 
 const equalArrays = (a, b) => {
     if (a.length !== b.length) return false;
@@ -60,14 +85,60 @@ export default function DropdownWithSearch({
     onSelect,
     searches,
 }) {
+    const dropdownRef = useRef(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedApp, setSelectedApp] = useState(DEFAULT_APP_SCOPE);
     const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES);
     const [selectedSubCategory, setSelectedSubCategory] = useState(ALL_SUB_CATEGORIES);
     const [selectedTags, setSelectedTags] = useState([]);
     const [isOpen, setIsOpen] = useState(false);
+    const [menuPosition, setMenuPosition] = useState(undefined);
     const [selection, setSelection] = useState([]);
     const [confirmationOpen, setConfirmationOpen] = useState(false);
+
+    const updateMenuPosition = useCallback(() => {
+        if (!isOpen || !dropdownRef.current) return;
+
+        const rect = dropdownRef.current.getBoundingClientRect();
+        const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+        const maxMenuWidth = Math.max(320, viewportWidth - MENU_VIEWPORT_MARGIN * 2);
+        const menuWidth = Math.min(KPI_MENU_WIDTH, maxMenuWidth);
+        const configurationPanelLeft = getConfigurationPanelLeft();
+        const availableRight =
+            configurationPanelLeft < viewportWidth
+                ? Math.max(
+                      MENU_VIEWPORT_MARGIN + menuWidth,
+                      configurationPanelLeft - MENU_VIEWPORT_MARGIN,
+                  )
+                : viewportWidth - MENU_VIEWPORT_MARGIN;
+        const preferredLeft = rect.left - 11;
+        const left = Math.max(
+            MENU_VIEWPORT_MARGIN,
+            Math.min(preferredLeft, availableRight - menuWidth),
+        );
+
+        setMenuPosition({
+            left,
+            top: rect.bottom + 5,
+            width: menuWidth,
+        });
+    }, [isOpen]);
+
+    useLayoutEffect(() => {
+        if (!isOpen) {
+            setMenuPosition(undefined);
+            return undefined;
+        }
+
+        updateMenuPosition();
+        window.addEventListener('resize', updateMenuPosition);
+        window.addEventListener('scroll', updateMenuPosition, true);
+
+        return () => {
+            window.removeEventListener('resize', updateMenuPosition);
+            window.removeEventListener('scroll', updateMenuPosition, true);
+        };
+    }, [isOpen, updateMenuPosition]);
 
     const updateSelection = (item) => {
         if (selection.includes(item)) setSelection((prev) => prev.filter((it) => it !== item));
@@ -195,7 +266,7 @@ export default function DropdownWithSearch({
                     </div>
                 </Modal.Footer>
             </Modal>
-            <div className="dropdown" style={style}>
+            <div ref={dropdownRef} className="dropdown" style={style}>
                 <Button
                     appearance={appearance}
                     onClick={() => setIsOpen(!isOpen)}
@@ -204,7 +275,20 @@ export default function DropdownWithSearch({
                 />
 
                 {isOpen && (
-                    <div className="dropdown-menu dropdown-kpi-menu">
+                    <div
+                        className="dropdown-menu dropdown-kpi-menu"
+                        style={
+                            menuPosition
+                                ? {
+                                      left: menuPosition.left,
+                                      marginLeft: 0,
+                                      position: 'fixed',
+                                      top: menuPosition.top,
+                                      width: menuPosition.width,
+                                  }
+                                : undefined
+                        }
+                    >
                         <div className="dropdown-kpi-filter-shell">
                             <Text
                                 className="dropdown-search dropdown-kpi-search"

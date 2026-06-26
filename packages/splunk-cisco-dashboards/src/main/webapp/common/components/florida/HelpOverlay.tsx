@@ -65,9 +65,13 @@ const CUSTOMIZATION_SCOPE: ScopeRow[] = [
         action: '"Factory reset" button (picker footer)',
         scope: 'Clears every customisation across the whole dashboard',
     },
+    {
+        action: 'Signal Rail settings',
+        scope: 'Rail selection, speed, rows, and density only',
+    },
 ];
 
-export const HelpOverlay: React.FC<HelpOverlayProps> = ({ open, onClose, shortcuts }) => {
+export const HelpOverlay = React.memo<HelpOverlayProps>(({ open, onClose, shortcuts }) => {
     return (
         <AnimatePresence>
             {open && (
@@ -223,4 +227,6 @@ export const HelpOverlay: React.FC<HelpOverlayProps> = ({ open, onClose, shortcu
             )}
         </AnimatePresence>
     );
-};
+});
+
+HelpOverlay.displayName = 'HelpOverlay';

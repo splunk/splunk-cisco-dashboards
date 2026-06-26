@@ -26,6 +26,7 @@ export interface SavedSearchbaseCanvasTile {
     span: TileSpan;
     addedAt: number;
     vizOverride?: string;
+    overlayField?: string | null;
 }
 
 export interface SavedSearchbaseCanvasPayload {
@@ -94,6 +95,16 @@ const normalizeVizOverride = (value: unknown): string | undefined => {
     const trimmed = value.trim().toLowerCase();
     if (!trimmed || !trimmed.startsWith('splunk.')) return undefined;
     return trimmed.slice(0, 64);
+};
+
+const SAFE_FIELD_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_.:]{0,127}$/;
+
+const normalizeOverlayField = (value: unknown): string | null | undefined => {
+    if (value === null) return null;
+    if (typeof value !== 'string') return undefined;
+    const trimmed = value.trim();
+    if (!trimmed) return undefined;
+    return SAFE_FIELD_NAME_PATTERN.test(trimmed) ? trimmed : undefined;
 };
 
 const assertValidName = (name: string): void => {
@@ -201,6 +212,7 @@ const sanitizePayload = (raw: unknown): SavedSearchbaseCanvasPayload => {
                               ? candidate.addedAt
                               : Date.now(),
                       vizOverride: normalizeVizOverride(candidate.vizOverride),
+                      overlayField: normalizeOverlayField(candidate.overlayField),
                   },
               ];
           })

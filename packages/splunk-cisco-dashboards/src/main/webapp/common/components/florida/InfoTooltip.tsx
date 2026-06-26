@@ -80,6 +80,8 @@ interface InfoTooltipProps {
      * makes the purpose obvious. Defaults to "What does this mean?".
      */
     iconAriaLabel?: string;
+    /** Optional classes applied to the icon button itself. */
+    iconClassName?: string;
     className?: string;
 }
 
@@ -154,6 +156,7 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
     footnote,
     anchor = 'auto',
     iconAriaLabel = 'What does this mean?',
+    iconClassName,
     className,
 }) => {
     // The THRESHOLDS section is rendered when *either* the structured
@@ -367,7 +370,10 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
                 ref={triggerRef}
                 type="button"
                 aria-label={iconAriaLabel}
-                className="p-0.5 -my-0.5 text-slate-300 hover:text-sky-600 focus:text-sky-600 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
+                className={cn(
+                    'p-0.5 -my-0.5 text-slate-300 hover:text-sky-600 focus:text-sky-600 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400',
+                    iconClassName
+                )}
             >
                 <Info className="w-3 h-3 stroke-[2.5px]" />
             </button>

@@ -65,7 +65,7 @@
  * `discoverTopology()` which composes both into a single graph.
  */
 
-import { runSearch } from './splunkSearchService';
+import { runSearch } from "./splunkSearchService";
 
 /** Device family normalised to canvas shape ids. Add new ids when the
  *  shape library grows (e.g. `voice_gateway`, `siem`). The
@@ -77,205 +77,205 @@ import { runSearch } from './splunkSearchService';
  *  Florida DEM v8 reference repeatedly used. Anything unrecognised
  *  falls back to `generic`. */
 export type DeviceShapeId =
-    // --- Core network ---
-    | 'switch'
-    | 'l3_switch'
-    | 'stack'
-    | 'router'
-    | 'hub' // Build 115.5 — multi-port concentrator
-    | 'gateway' // Build 115.5 — SD-WAN edge / edge gateway
-    | 'proxy' // Build 115.5 — forward / reverse proxy
-    | 'wlc'
-    | 'access_point'
-    | 'load_balancer'
-    | 'f5_load_balancer'
-    | 'modular_chassis_switch'
-    | 'nexus_aci_fabric'
-    | 'sdwan_controller'
-    | 'custom_stencil'
-    // --- Security ---
-    | 'firewall'
-    | 'palo_alto_firewall'
-    | 'fortinet_firewall'
-    | 'waf' // Build 115.5 — web app firewall
-    | 'vpn_concentrator'
-    | 'ids_ips'
-    | 'siem' // Build 115.5 — SIEM / SOC analytics
-    | 'ca' // Build 115.5 — certificate authority
-    | 'bastion' // Build 115.5 — bastion / jump host
-    // --- Servers & infrastructure ---
-    | 'server'
-    | 'web_server' // Build 115.5
-    | 'app_server' // Build 115.5
-    | 'dns_server' // Build 115.5
-    | 'dhcp_server' // Build 115.5
-    | 'mainframe' // Build 115.5
-    | 'container' // Build 115.5 — Docker / Kubernetes pod
-    | 'vm' // Build 115.5 — virtual machine / hypervisor
-    | 'database'
-    // --- Storage ---
-    | 'storage'
-    | 'nas' // Build 115.5
-    | 'san' // Build 115.5
-    | 'backup' // Build 115.5
-    // --- End-user / IoT ---
-    | 'laptop' // Build 115.5
-    | 'mobile_phone' // Build 115.5
-    | 'ip_phone'
-    | 'printer' // Build 115.5
-    | 'camera' // Build 115.5
-    | 'iot_sensor' // Build 115.5
-    // --- Edge / cloud ---
-    | 'internet'
-    | 'cloud'
-    // Build 115.2 — "users" archetype for human populations.
-    | 'users'
-    // --- Splunk platform ---
-    | 'splunk_search_head'
-    | 'splunk_search_head_cluster'
-    | 'splunk_indexer'
-    | 'splunk_indexer_cluster'
-    | 'splunk_heavy_forwarder'
-    | 'splunk_universal_forwarder'
-    | 'splunk_intermediate_forwarder'
-    | 'splunk_cluster_manager'
-    | 'splunk_deployer'
-    | 'splunk_license_manager'
-    | 'splunk_monitoring_console'
-    | 'splunk_deployment_server'
-    | 'splunk_data_collection'
-    | 'splunk_edge_processor'
-    | 'splunk_sc4s'
-    // --- Places ---
-    | 'branch_office' // Build 115.5
-    | 'datacenter' // Build 115.5
-    // --- Official Cisco icon set ---
-    | 'cisco_router'
-    | 'cisco_switch'
-    | 'cisco_l3_switch'
-    | 'cisco_stack'
-    | 'cisco_wlc'
-    | 'cisco_access_point'
-    | 'cisco_firewall'
-    | 'cisco_server'
-    | 'cisco_cloud'
-    | 'cisco_data_center'
-    | 'generic';
+  // --- Core network ---
+  | "switch"
+  | "l3_switch"
+  | "stack"
+  | "router"
+  | "hub" // Build 115.5 — multi-port concentrator
+  | "gateway" // Build 115.5 — SD-WAN edge / edge gateway
+  | "proxy" // Build 115.5 — forward / reverse proxy
+  | "wlc"
+  | "access_point"
+  | "load_balancer"
+  | "f5_load_balancer"
+  | "modular_chassis_switch"
+  | "nexus_aci_fabric"
+  | "sdwan_controller"
+  | "custom_stencil"
+  // --- Security ---
+  | "firewall"
+  | "palo_alto_firewall"
+  | "fortinet_firewall"
+  | "waf" // Build 115.5 — web app firewall
+  | "vpn_concentrator"
+  | "ids_ips"
+  | "siem" // Build 115.5 — SIEM / SOC analytics
+  | "ca" // Build 115.5 — certificate authority
+  | "bastion" // Build 115.5 — bastion / jump host
+  // --- Servers & infrastructure ---
+  | "server"
+  | "web_server" // Build 115.5
+  | "app_server" // Build 115.5
+  | "dns_server" // Build 115.5
+  | "dhcp_server" // Build 115.5
+  | "mainframe" // Build 115.5
+  | "container" // Build 115.5 — Docker / Kubernetes pod
+  | "vm" // Build 115.5 — virtual machine / hypervisor
+  | "database"
+  // --- Storage ---
+  | "storage"
+  | "nas" // Build 115.5
+  | "san" // Build 115.5
+  | "backup" // Build 115.5
+  // --- End-user / IoT ---
+  | "laptop" // Build 115.5
+  | "mobile_phone" // Build 115.5
+  | "ip_phone"
+  | "printer" // Build 115.5
+  | "camera" // Build 115.5
+  | "iot_sensor" // Build 115.5
+  // --- Edge / cloud ---
+  | "internet"
+  | "cloud"
+  // Build 115.2 — "users" archetype for human populations.
+  | "users"
+  // --- Splunk platform ---
+  | "splunk_search_head"
+  | "splunk_search_head_cluster"
+  | "splunk_indexer"
+  | "splunk_indexer_cluster"
+  | "splunk_heavy_forwarder"
+  | "splunk_universal_forwarder"
+  | "splunk_intermediate_forwarder"
+  | "splunk_cluster_manager"
+  | "splunk_deployer"
+  | "splunk_license_manager"
+  | "splunk_monitoring_console"
+  | "splunk_deployment_server"
+  | "splunk_data_collection"
+  | "splunk_edge_processor"
+  | "splunk_sc4s"
+  // --- Places ---
+  | "branch_office" // Build 115.5
+  | "datacenter" // Build 115.5
+  // --- Official Cisco icon set ---
+  | "cisco_router"
+  | "cisco_switch"
+  | "cisco_l3_switch"
+  | "cisco_stack"
+  | "cisco_wlc"
+  | "cisco_access_point"
+  | "cisco_firewall"
+  | "cisco_server"
+  | "cisco_cloud"
+  | "cisco_data_center"
+  | "generic";
 
 /** Health status normalised across all node sources. Mirrors the
  *  topology map's traffic-light convention so the same colour palette
  *  applies. */
-export type HealthStatus = 'healthy' | 'warning' | 'critical' | 'unknown';
+export type HealthStatus = "healthy" | "warning" | "critical" | "unknown";
 
 export interface TopologyDiscoveredNode {
-    /** Lowercased device_name from asset_inventory; stable join key. */
-    id: string;
-    /** Human label (often the FQDN or the full device_name). */
-    label: string;
-    /** Short alias for compact display (the `device_name_short`
-     *  column from asset_inventory, falling back to the full name
-     *  with the first dot-segment kept). */
-    shortLabel: string;
-    /** Canvas shape selector. Driven from device_type/device_family
-     *  via `mapDeviceTypeToShape`. */
-    shape: DeviceShapeId;
-    /** Health status derived from health_score and compliance_status.
-     *  Always defined; defaults to 'unknown' when neither field is
-     *  available. */
-    status: HealthStatus;
-    /** Numeric health score (0-100) when available, else undefined. */
-    healthScore?: number;
-    /** Comma-separated source provenance from the asset_inventory
-     *  cascade (e.g. "Catalyst Center, ISE NAD"). Surfaced in the
-     *  shape's debug overlay. */
-    managementSource?: string;
-    /** Build 115: canonical vendor name (e.g. `Cisco`, `F5`,
-     *  `Cisco Meraki`). Derived from `management_source` because
-     *  asset_inventory.csv doesn't carry an explicit vendor
-     *  column — see `deriveVendor()`. Surfaced on the device
-     *  card so operators can tell a Cisco WLC from a F5 ADC at
-     *  a glance. */
-    vendor?: string;
-    /** Build 115: device model identifier. Pulled from
-     *  asset_inventory.csv's `platform_id` column (e.g.
-     *  `WS-C6504-E`, `9300-48UXM`, `BIG-IP i5800`). When absent
-     *  we fall back to `device_series` — never make one up. */
-    model?: string;
-    /** Build 115: device serial number from asset_inventory.csv.
-     *  Not displayed on the small card by default (too noisy)
-     *  but available in the inspector and for click-through
-     *  flows that need a stable hardware identifier. */
-    serialNumber?: string;
-    /** Build 115.13 — operator-supplied IP / management address
-     *  override. Surfaces as the bottom row of the device card
-     *  when the page-level "Show IPs" toggle is on. Falls back
-     *  to `raw.ip_address` (asset_inventory) /
-     *  `raw.management_ip` (splunk_inventory) at render time
-     *  when this field is unset, so unbound shapes the operator
-     *  has typed an IP into still display, and bound shapes
-     *  show the inventory IP automatically. */
-    ipAddress?: string;
-    /** DNAC site UUID for parent-zone resolution; matched against
-     *  `site_topology_lookup.id`. */
-    siteId?: string;
-    /** Best-effort site label (location string from
-     *  asset_inventory; resolved to `site_topology_lookup.name`
-     *  when the UUID is parseable). */
-    siteLabel?: string;
-    /** Raw row preserved for popovers and click-through actions
-     *  (open-in-search, deep links). Treat as opaque. */
-    raw: Record<string, unknown>;
-    /** Build 115.4 — which inventory feed produced this node.
-     *  `cisco`  → asset_inventory.csv (Catalyst Center, Meraki,
-     *             ASA/FTD, ISE, F5, IOS syslog, AD, DHCP).
-     *  `splunk` → splunk_inventory.csv (search heads, indexers,
-     *             SHC members, cluster managers, deployment
-     *             servers, IDMs, heavy/universal forwarders,
-     *             ES/ITSI search heads).
-     *  Drives the InventoryTab's "All / Cisco / Splunk" filter
-     *  chips. Optional so older callers and tests can omit it. */
-    provenance?: 'cisco' | 'splunk';
+  /** Lowercased device_name from asset_inventory; stable join key. */
+  id: string;
+  /** Human label (often the FQDN or the full device_name). */
+  label: string;
+  /** Short alias for compact display (the `device_name_short`
+   *  column from asset_inventory, falling back to the full name
+   *  with the first dot-segment kept). */
+  shortLabel: string;
+  /** Canvas shape selector. Driven from device_type/device_family
+   *  via `mapDeviceTypeToShape`. */
+  shape: DeviceShapeId;
+  /** Health status derived from health_score and compliance_status.
+   *  Always defined; defaults to 'unknown' when neither field is
+   *  available. */
+  status: HealthStatus;
+  /** Numeric health score (0-100) when available, else undefined. */
+  healthScore?: number;
+  /** Comma-separated source provenance from the asset_inventory
+   *  cascade (e.g. "Catalyst Center, ISE NAD"). Surfaced in the
+   *  shape's debug overlay. */
+  managementSource?: string;
+  /** Build 115: canonical vendor name (e.g. `Cisco`, `F5`,
+   *  `Cisco Meraki`). Derived from `management_source` because
+   *  asset_inventory.csv doesn't carry an explicit vendor
+   *  column — see `deriveVendor()`. Surfaced on the device
+   *  card so operators can tell a Cisco WLC from a F5 ADC at
+   *  a glance. */
+  vendor?: string;
+  /** Build 115: device model identifier. Pulled from
+   *  asset_inventory.csv's `platform_id` column (e.g.
+   *  `WS-C6504-E`, `9300-48UXM`, `BIG-IP i5800`). When absent
+   *  we fall back to `device_series` — never make one up. */
+  model?: string;
+  /** Build 115: device serial number from asset_inventory.csv.
+   *  Not displayed on the small card by default (too noisy)
+   *  but available in the inspector and for click-through
+   *  flows that need a stable hardware identifier. */
+  serialNumber?: string;
+  /** Build 115.13 — operator-supplied IP / management address
+   *  override. Surfaces as the bottom row of the device card
+   *  when the page-level "Show IPs" toggle is on. Falls back
+   *  to `raw.ip_address` (asset_inventory) /
+   *  `raw.management_ip` (splunk_inventory) at render time
+   *  when this field is unset, so unbound shapes the operator
+   *  has typed an IP into still display, and bound shapes
+   *  show the inventory IP automatically. */
+  ipAddress?: string;
+  /** DNAC site UUID for parent-zone resolution; matched against
+   *  `site_topology_lookup.id`. */
+  siteId?: string;
+  /** Best-effort site label (location string from
+   *  asset_inventory; resolved to `site_topology_lookup.name`
+   *  when the UUID is parseable). */
+  siteLabel?: string;
+  /** Raw row preserved for popovers and click-through actions
+   *  (open-in-search, deep links). Treat as opaque. */
+  raw: Record<string, unknown>;
+  /** Build 115.4 — which inventory feed produced this node.
+   *  `cisco`  → asset_inventory.csv (Catalyst Center, Meraki,
+   *             ASA/FTD, ISE, F5, IOS syslog, AD, DHCP).
+   *  `splunk` → splunk_inventory (search heads, indexers,
+   *             SHC members, cluster managers, deployment
+   *             servers, IDMs, heavy/universal forwarders,
+   *             ES/ITSI search heads).
+   *  Drives the InventoryTab's "All / Cisco / Splunk" filter
+   *  chips. Optional so older callers and tests can omit it. */
+  provenance?: "cisco" | "splunk";
 }
 
 export interface TopologyDiscoveredZone {
-    /** DNAC site UUID. */
-    id: string;
-    /** Display name from `nameHierarchy`. */
-    name: string;
-    /** Parent zone UUID for hierarchical nesting; null at the root. */
-    parentId: string | null;
-    /** `global`, `area`, `building`, `floor`. We typically render
-     *  `building` and `floor` as React Flow parent nodes; `area`
-     *  and `global` are virtual roots. */
-    type: 'global' | 'area' | 'building' | 'floor' | 'unknown';
+  /** DNAC site UUID. */
+  id: string;
+  /** Display name from `nameHierarchy`. */
+  name: string;
+  /** Parent zone UUID for hierarchical nesting; null at the root. */
+  parentId: string | null;
+  /** `global`, `area`, `building`, `floor`. We typically render
+   *  `building` and `floor` as React Flow parent nodes; `area`
+   *  and `global` are virtual roots. */
+  type: "global" | "area" | "building" | "floor" | "unknown";
 }
 
 export interface TopologyDiscoveredEdge {
-    /** Stable id for React Flow keying. Format
-     *  `${sourceId}__${targetId}__${kind}`. */
-    id: string;
-    sourceId: string;
-    targetId: string;
-    /** What kind of relationship the edge represents. The shape
-     *  library renders each kind with its own line style:
-     *    - physical: solid (port-to-port from CDP/LLDP, future)
-     *    - synthetic_a2a: dashed (TE A2A measurement)
-     *    - logical: dotted (BGP/OSPF/EIGRP adjacency, future)
-     */
-    kind: 'physical' | 'synthetic_a2a' | 'logical';
-    status: HealthStatus;
-    /** Free-form midpoint label (e.g. `100 Mbps`, `latency 12 ms`). */
-    label?: string;
-    raw?: Record<string, unknown>;
+  /** Stable id for React Flow keying. Format
+   *  `${sourceId}__${targetId}__${kind}`. */
+  id: string;
+  sourceId: string;
+  targetId: string;
+  /** What kind of relationship the edge represents. The shape
+   *  library renders each kind with its own line style:
+   *    - physical: solid (port-to-port from CDP/LLDP, future)
+   *    - synthetic_a2a: dashed (TE A2A measurement)
+   *    - logical: dotted (BGP/OSPF/EIGRP adjacency, future)
+   */
+  kind: "physical" | "synthetic_a2a" | "logical";
+  status: HealthStatus;
+  /** Free-form midpoint label (e.g. `100 Mbps`, `latency 12 ms`). */
+  label?: string;
+  raw?: Record<string, unknown>;
 }
 
 export interface DiscoveredTopology {
-    nodes: TopologyDiscoveredNode[];
-    edges: TopologyDiscoveredEdge[];
-    zones: TopologyDiscoveredZone[];
-    /** When the snapshot was assembled in browser-local time;
-     *  surfaced in the canvas footer for "freshness at a glance". */
-    fetchedAt: string;
+  nodes: TopologyDiscoveredNode[];
+  edges: TopologyDiscoveredEdge[];
+  zones: TopologyDiscoveredZone[];
+  /** When the snapshot was assembled in browser-local time;
+   *  surfaced in the canvas footer for "freshness at a glance". */
+  fetchedAt: string;
 }
 
 /**
@@ -287,118 +287,149 @@ export interface DiscoveredTopology {
  * silently dropping the node.
  */
 const mapDeviceTypeToShape = (
-    deviceType: string | undefined,
-    deviceFamily: string | undefined
+  deviceType: string | undefined,
+  deviceFamily: string | undefined,
 ): DeviceShapeId => {
-    const t = (deviceType ?? '').toLowerCase();
-    const f = (deviceFamily ?? '').toLowerCase();
+  const t = (deviceType ?? "").toLowerCase();
+  const f = (deviceFamily ?? "").toLowerCase();
 
-    // Build 115 — most-specific matches first. The order below is
-    // intentional: a "Catalyst 9300 stack" should land on `stack`,
-    // not on `switch`, even though "stack" appears in the family
-    // string and "9300" matches L3-switch patterns.
-    if (t === 'stack' || f.includes('stack')) return 'stack';
-    if (f.includes('big-ip') || f.includes('f5')) {
-        return 'f5_load_balancer';
-    }
-    if (t === 'load balancer' || f.includes('netscaler') || f.includes('a10') || f.includes('avi')) {
-        return 'load_balancer';
-    }
-    if (
-        f.includes('catalyst 450') ||
-        f.includes('catalyst 650') ||
-        f.includes('ws-c450') ||
-        f.includes('ws-c650') ||
-        f.includes('4507') ||
-        f.includes('6504')
-    ) {
-        return 'modular_chassis_switch';
-    }
-    if (f.includes('nexus') || f.includes('aci') || f.includes('apic')) {
-        return 'nexus_aci_fabric';
-    }
-    if (
-        f.includes('sd-wan') ||
-        f.includes('sdwan') ||
-        f.includes('vmanage') ||
-        f.includes('vsmart') ||
-        f.includes('vbond')
-    ) {
-        return 'sdwan_controller';
-    }
-    if (t === 'vpn' || t === 'vpn concentrator' || f.includes('anyconnect') || f.includes('vpn')) {
-        return 'vpn_concentrator';
-    }
-    if (
-        t === 'ids' ||
-        t === 'ips' ||
-        t === 'sensor' ||
-        f.includes('stealthwatch') ||
-        f.includes('snort') ||
-        f.includes('secure network analytics') ||
-        f.includes('intrusion')
-    ) {
-        return 'ids_ips';
-    }
-    if (t === 'database' || t === 'db' || f.includes('oracle') || f.includes('mysql') || f.includes('postgres')) {
-        return 'database';
-    }
-    if (t === 'storage' || f.includes('san') || f.includes('nas') || f.includes('netapp') || f.includes('emc')) {
-        return 'storage';
-    }
-    if (t === 'phone' || t === 'ip phone' || t === 'voip' || f.includes('cucm') || f.includes('ip phone')) {
-        return 'ip_phone';
-    }
-    if (t === 'internet' || f.includes('internet')) return 'internet';
-    // Build 115.2 — "users" archetype. Asset_inventory rarely
-    // carries human populations directly; the typical path is an
-    // operator hand-dropping the shape from the palette. We still
-    // recognise a few common patterns in case a customer feed
-    // tags identity-broker records or VDI pools as `users` /
-    // `enduser` so they auto-render with the right glyph.
-    if (
-        t === 'users' ||
-        t === 'user' ||
-        t === 'enduser' ||
-        t === 'end user' ||
-        f.includes('end user') ||
-        f.includes('enduser')
-    ) {
-        return 'users';
-    }
+  // Build 115 — most-specific matches first. The order below is
+  // intentional: a "Catalyst 9300 stack" should land on `stack`,
+  // not on `switch`, even though "stack" appears in the family
+  // string and "9300" matches L3-switch patterns.
+  if (t === "stack" || f.includes("stack")) return "stack";
+  if (f.includes("big-ip") || f.includes("f5")) {
+    return "f5_load_balancer";
+  }
+  if (
+    t === "load balancer" ||
+    f.includes("netscaler") ||
+    f.includes("a10") ||
+    f.includes("avi")
+  ) {
+    return "load_balancer";
+  }
+  if (
+    f.includes("catalyst 450") ||
+    f.includes("catalyst 650") ||
+    f.includes("ws-c450") ||
+    f.includes("ws-c650") ||
+    f.includes("4507") ||
+    f.includes("6504")
+  ) {
+    return "modular_chassis_switch";
+  }
+  if (f.includes("nexus") || f.includes("aci") || f.includes("apic")) {
+    return "nexus_aci_fabric";
+  }
+  if (
+    f.includes("sd-wan") ||
+    f.includes("sdwan") ||
+    f.includes("vmanage") ||
+    f.includes("vsmart") ||
+    f.includes("vbond")
+  ) {
+    return "sdwan_controller";
+  }
+  if (
+    t === "vpn" ||
+    t === "vpn concentrator" ||
+    f.includes("anyconnect") ||
+    f.includes("vpn")
+  ) {
+    return "vpn_concentrator";
+  }
+  if (
+    t === "ids" ||
+    t === "ips" ||
+    t === "sensor" ||
+    f.includes("stealthwatch") ||
+    f.includes("snort") ||
+    f.includes("secure network analytics") ||
+    f.includes("intrusion")
+  ) {
+    return "ids_ips";
+  }
+  if (
+    t === "database" ||
+    t === "db" ||
+    f.includes("oracle") ||
+    f.includes("mysql") ||
+    f.includes("postgres")
+  ) {
+    return "database";
+  }
+  if (
+    t === "storage" ||
+    f.includes("san") ||
+    f.includes("nas") ||
+    f.includes("netapp") ||
+    f.includes("emc")
+  ) {
+    return "storage";
+  }
+  if (
+    t === "phone" ||
+    t === "ip phone" ||
+    t === "voip" ||
+    f.includes("cucm") ||
+    f.includes("ip phone")
+  ) {
+    return "ip_phone";
+  }
+  if (t === "internet" || f.includes("internet")) return "internet";
+  // Build 115.2 — "users" archetype. Asset_inventory rarely
+  // carries human populations directly; the typical path is an
+  // operator hand-dropping the shape from the palette. We still
+  // recognise a few common patterns in case a customer feed
+  // tags identity-broker records or VDI pools as `users` /
+  // `enduser` so they auto-render with the right glyph.
+  if (
+    t === "users" ||
+    t === "user" ||
+    t === "enduser" ||
+    t === "end user" ||
+    f.includes("end user") ||
+    f.includes("enduser")
+  ) {
+    return "users";
+  }
 
-    if (t === 'router' || f.includes('router') || /asr|isr|csr/.test(f)) return 'router';
-    if (
-        t === 'firewall' ||
-        f.includes('palo alto') ||
-        f.includes('pan-os') ||
-        f.includes('fortinet') ||
-        f.includes('fortigate') ||
-        f.includes('asa') ||
-        f.includes('ftd') ||
-        f.includes('firepower')
-    ) {
-        if (f.includes('palo alto') || f.includes('pan-os')) {
-            return 'palo_alto_firewall';
-        }
-        if (f.includes('fortinet') || f.includes('fortigate')) {
-            return 'fortinet_firewall';
-        }
-        return 'firewall';
+  if (t === "router" || f.includes("router") || /asr|isr|csr/.test(f))
+    return "router";
+  if (
+    t === "firewall" ||
+    f.includes("palo alto") ||
+    f.includes("pan-os") ||
+    f.includes("fortinet") ||
+    f.includes("fortigate") ||
+    f.includes("asa") ||
+    f.includes("ftd") ||
+    f.includes("firepower")
+  ) {
+    if (f.includes("palo alto") || f.includes("pan-os")) {
+      return "palo_alto_firewall";
     }
-    if (t === 'wlc' || f.includes('wireless controller') || /^c?9800/i.test(f)) return 'wlc';
-    if (t === 'ap' || f.includes('access point') || f === 'unified ap') return 'access_point';
-    // L3 switches: name-driven heuristic — Catalyst 9500/9600/9300X
-    // commonly run as L3 switches in customer environments. We bias
-    // toward L3 only when the family explicitly suggests it; mixed
-    // C9300/C9200 deployments still render as the generic L2 shape
-    // unless asset_inventory carries an explicit `l3_capable` field
-    // we can read here in a later build.
-    if (t === 'switch' && /9500|9600/.test(f)) return 'l3_switch';
-    if (t === 'switch' || f.includes('switch')) return 'switch';
-    if (t === 'server' || f.includes('server')) return 'server';
-    if (t === 'cloud' || f.includes('cloud')) return 'cloud';
-    return 'generic';
+    if (f.includes("fortinet") || f.includes("fortigate")) {
+      return "fortinet_firewall";
+    }
+    return "firewall";
+  }
+  if (t === "wlc" || f.includes("wireless controller") || /^c?9800/i.test(f))
+    return "wlc";
+  if (t === "ap" || f.includes("access point") || f === "unified ap")
+    return "access_point";
+  // L3 switches: name-driven heuristic — Catalyst 9500/9600/9300X
+  // commonly run as L3 switches in customer environments. We bias
+  // toward L3 only when the family explicitly suggests it; mixed
+  // C9300/C9200 deployments still render as the generic L2 shape
+  // unless asset_inventory carries an explicit `l3_capable` field
+  // we can read here in a later build.
+  if (t === "switch" && /9500|9600/.test(f)) return "l3_switch";
+  if (t === "switch" || f.includes("switch")) return "switch";
+  if (t === "server" || f.includes("server")) return "server";
+  if (t === "cloud" || f.includes("cloud")) return "cloud";
+  return "generic";
 };
 
 /** Build 115: derive a vendor label from `management_source`. The
@@ -411,22 +442,28 @@ const mapDeviceTypeToShape = (
  *  sources is Cisco. Returning `undefined` for "no provenance at
  *  all" keeps the shape card tidy when we genuinely don't know. */
 const deriveVendor = (
-    managementSource: string | undefined
+  managementSource: string | undefined,
 ): string | undefined => {
-    if (!managementSource) return undefined;
-    const s = managementSource.toLowerCase();
-    if (s.includes('f5')) return 'F5';
-    if (s.includes('meraki')) return 'Cisco Meraki';
-    if (s.includes('catalyst center')) return 'Cisco';
-    if (s.includes('ise')) return 'Cisco';
-    if (s.includes('ios') || s.includes('asa') || s.includes('ftd') || s.includes('firepower'))
-        return 'Cisco';
-    if (s.includes('windows') || s.includes('active directory')) return 'Microsoft';
-    if (s.includes('palo')) return 'Palo Alto';
-    if (s.includes('fortinet') || s.includes('fortigate')) return 'Fortinet';
-    if (s.includes('arista')) return 'Arista';
-    if (s.includes('juniper')) return 'Juniper';
-    return 'Cisco';
+  if (!managementSource) return undefined;
+  const s = managementSource.toLowerCase();
+  if (s.includes("f5")) return "F5";
+  if (s.includes("meraki")) return "Cisco Meraki";
+  if (s.includes("catalyst center")) return "Cisco";
+  if (s.includes("ise")) return "Cisco";
+  if (
+    s.includes("ios") ||
+    s.includes("asa") ||
+    s.includes("ftd") ||
+    s.includes("firepower")
+  )
+    return "Cisco";
+  if (s.includes("windows") || s.includes("active directory"))
+    return "Microsoft";
+  if (s.includes("palo")) return "Palo Alto";
+  if (s.includes("fortinet") || s.includes("fortigate")) return "Fortinet";
+  if (s.includes("arista")) return "Arista";
+  if (s.includes("juniper")) return "Juniper";
+  return "Cisco";
 };
 
 /**
@@ -438,33 +475,33 @@ const deriveVendor = (
  * green.
  */
 const mapHealthStatus = (
-    healthScore: number | undefined,
-    complianceStatus: string | undefined
+  healthScore: number | undefined,
+  complianceStatus: string | undefined,
 ): HealthStatus => {
-    if (typeof healthScore === 'number' && Number.isFinite(healthScore)) {
-        if (healthScore >= 90) return 'healthy';
-        if (healthScore >= 50) return 'warning';
-        return 'critical';
-    }
-    const c = (complianceStatus ?? '').toLowerCase();
-    if (c === 'compliant') return 'healthy';
-    if (c === 'non-compliant' || c === 'non_compliant') return 'warning';
-    return 'unknown';
+  if (typeof healthScore === "number" && Number.isFinite(healthScore)) {
+    if (healthScore >= 90) return "healthy";
+    if (healthScore >= 50) return "warning";
+    return "critical";
+  }
+  const c = (complianceStatus ?? "").toLowerCase();
+  if (c === "compliant") return "healthy";
+  if (c === "non-compliant" || c === "non_compliant") return "warning";
+  return "unknown";
 };
 
 const optionalString = (raw: unknown): string | undefined => {
-    if (typeof raw !== 'string') return undefined;
-    const trimmed = raw.trim();
-    return trimmed.length > 0 ? trimmed : undefined;
+  if (typeof raw !== "string") return undefined;
+  const trimmed = raw.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
 };
 
 const optionalNumber = (raw: unknown): number | undefined => {
-    if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
-    if (typeof raw === 'string' && raw.trim().length > 0) {
-        const parsed = Number(raw);
-        return Number.isFinite(parsed) ? parsed : undefined;
-    }
-    return undefined;
+  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+  if (typeof raw === "string" && raw.trim().length > 0) {
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
 };
 
 /**
@@ -476,77 +513,79 @@ const optionalNumber = (raw: unknown): number | undefined => {
  * still renders the synthetic-edge layer alone).
  */
 const inputlookup = async (
-    name: string
+  name: string,
 ): Promise<Array<Record<string, unknown>>> => {
-    const safeName = String(name).trim();
-    if (!/^[A-Za-z0-9_\-.]+$/.test(safeName)) {
-        throw new Error(`Invalid lookup name: ${safeName}`);
-    }
-    const res = await runSearch({
-        spl: `| inputlookup ${safeName}`,
-        earliestTime: '-1m',
-        latestTime: 'now',
-        tag: `topology_${safeName}`,
-    });
-    // `runSearch` is JS-typed and returns `Array<Object>`. Each row
-    // is in fact a flat key/value bag — cast through `unknown` so
-    // downstream callers can index by string without TS friction.
-    return Array.isArray(res?.results)
-        ? (res.results as unknown as Array<Record<string, unknown>>)
-        : [];
+  const safeName = String(name).trim();
+  if (!/^[A-Za-z0-9_\-.]+$/.test(safeName)) {
+    throw new Error(`Invalid lookup name: ${safeName}`);
+  }
+  const res = await runSearch({
+    spl: `| inputlookup ${safeName}`,
+    earliestTime: "-1m",
+    latestTime: "now",
+    tag: `topology_${safeName}`,
+  });
+  // `runSearch` is JS-typed and returns `Array<Object>`. Each row
+  // is in fact a flat key/value bag — cast through `unknown` so
+  // downstream callers can index by string without TS friction.
+  return Array.isArray(res?.results)
+    ? (res.results as unknown as Array<Record<string, unknown>>)
+    : [];
 };
 
-export const fetchAssetInventory = async (): Promise<TopologyDiscoveredNode[]> => {
-    const rows = await inputlookup('asset_inventory');
-    const nodes: TopologyDiscoveredNode[] = [];
-    for (const row of rows) {
-        const name = optionalString(row['device_name']);
-        if (!name) continue;
-        const id = name.toLowerCase();
-        const shortLabel =
-            optionalString(row['device_name_short']) ??
-            (id.includes('.') ? id.split('.')[0] : id);
-        const deviceType = optionalString(row['device_type']);
-        const deviceFamily = optionalString(row['device_family']);
-        const healthScore = optionalNumber(row['health_score']);
-        const compliance = optionalString(row['compliance_status']);
-        const siteLabel = optionalString(row['location']);
-        const managementSource = optionalString(row['management_source']);
-        nodes.push({
-            id,
-            label: name,
-            shortLabel,
-            shape: mapDeviceTypeToShape(deviceType, deviceFamily),
-            status: mapHealthStatus(healthScore, compliance),
-            healthScore,
-            managementSource,
-            // Build 115: vendor / model / serial threaded through
-            // so the shape card and inspector can show "Cisco ·
-            // WS-C6504-E" without the consumer re-deriving from
-            // `raw`. Falls through to undefined when the upstream
-            // row is missing the source field.
-            vendor: deriveVendor(managementSource),
-            model:
-                optionalString(row['platform_id']) ??
-                optionalString(row['device_series']),
-            serialNumber: optionalString(row['serial_number']),
-            siteLabel,
-            raw: row,
-            provenance: 'cisco',
-        });
-    }
-    // Sort deterministically so layouts are stable across reloads
-    // (operators dragging a node and refreshing the page should see
-    // it in the same place even before override persistence kicks
-    // in for newly-discovered nodes).
-    nodes.sort((a, b) => a.id.localeCompare(b.id));
-    return nodes;
+export const fetchAssetInventory = async (): Promise<
+  TopologyDiscoveredNode[]
+> => {
+  const rows = await inputlookup("asset_inventory");
+  const nodes: TopologyDiscoveredNode[] = [];
+  for (const row of rows) {
+    const name = optionalString(row["device_name"]);
+    if (!name) continue;
+    const id = name.toLowerCase();
+    const shortLabel =
+      optionalString(row["device_name_short"]) ??
+      (id.includes(".") ? id.split(".")[0] : id);
+    const deviceType = optionalString(row["device_type"]);
+    const deviceFamily = optionalString(row["device_family"]);
+    const healthScore = optionalNumber(row["health_score"]);
+    const compliance = optionalString(row["compliance_status"]);
+    const siteLabel = optionalString(row["location"]);
+    const managementSource = optionalString(row["management_source"]);
+    nodes.push({
+      id,
+      label: name,
+      shortLabel,
+      shape: mapDeviceTypeToShape(deviceType, deviceFamily),
+      status: mapHealthStatus(healthScore, compliance),
+      healthScore,
+      managementSource,
+      // Build 115: vendor / model / serial threaded through
+      // so the shape card and inspector can show "Cisco ·
+      // WS-C6504-E" without the consumer re-deriving from
+      // `raw`. Falls through to undefined when the upstream
+      // row is missing the source field.
+      vendor: deriveVendor(managementSource),
+      model:
+        optionalString(row["platform_id"]) ??
+        optionalString(row["device_series"]),
+      serialNumber: optionalString(row["serial_number"]),
+      siteLabel,
+      raw: row,
+      provenance: "cisco",
+    });
+  }
+  // Sort deterministically so layouts are stable across reloads
+  // (operators dragging a node and refreshing the page should see
+  // it in the same place even before override persistence kicks
+  // in for newly-discovered nodes).
+  nodes.sort((a, b) => a.id.localeCompare(b.id));
+  return nodes;
 };
 
 /* ───────────────────────  Splunk inventory  ───────────────────────
  *
  * Build 115.4 — second inventory feed for the Network Diagram
- * authoring page. Reads `splunk_inventory.csv` (populated daily
+ * authoring page. Reads `splunk_inventory` (populated daily
  * by the [Splunk Inventory - Build Lookup] saved search) and
  * normalises each row into a `TopologyDiscoveredNode` with the
  * same shape as the Cisco asset_inventory feed, so the page can
@@ -576,48 +615,53 @@ export const fetchAssetInventory = async (): Promise<TopologyDiscoveredNode[]> =
  *  Bind-to-host flows. Falls through to `'generic'` so an unknown
  *  role still renders something rather than blanking the canvas. */
 const mapSplunkRoleToShape = (
-    primaryRole: string | undefined,
-    rolesCsv: string | undefined,
-    name: string | undefined
+  primaryRole: string | undefined,
+  rolesCsv: string | undefined,
+  name: string | undefined,
 ): DeviceShapeId => {
-    const p = (primaryRole ?? '').toLowerCase();
-    const r = (rolesCsv ?? '').toLowerCase();
-    const n = (name ?? '').toLowerCase();
+  const p = (primaryRole ?? "").toLowerCase();
+  const r = (rolesCsv ?? "").toLowerCase();
+  const n = (name ?? "").toLowerCase();
 
-    // Build 1177 — Splunk roles now use Splunk-specific glyphs
-    // instead of generic server/database cards.
-    if (
-        p === 'indexer' ||
-        n.startsWith('idx-') ||
-        n.startsWith('idxc-') ||
-        r.includes('cluster_slave') ||
-        r.includes('search_peer')
-    ) {
-        return 'splunk_indexer';
-    }
-    if (p === 'search_head_cluster' || r.includes('shc_captain')) {
-        return 'splunk_search_head_cluster';
-    }
-    if (p === 'search_head' || p === 'cluster_search_head' || n.startsWith('sh-')) {
-        return 'splunk_search_head';
-    }
-    if (p === 'cluster_manager') return 'splunk_cluster_manager';
-    if (p === 'deployment_server') return 'splunk_deployment_server';
-    if (p === 'license_manager') return 'splunk_license_manager';
-    if (p === 'monitoring_console') return 'splunk_monitoring_console';
-    if (p === 'heavy_forwarder' || n.startsWith('hf-')) return 'splunk_heavy_forwarder';
-    if (p === 'universal_forwarder' || n.startsWith('uf-')) {
-        return 'splunk_universal_forwarder';
-    }
-    if (
-        p === 'intermediate_forwarder' ||
-        p === 'intermediary_forwarder' ||
-        n.startsWith('if-')
-    ) {
-        return 'splunk_intermediate_forwarder';
-    }
-    if (p === 'idm' || n.startsWith('idm-')) return 'splunk_data_collection';
-    return 'server';
+  // Build 1177 — Splunk roles now use Splunk-specific glyphs
+  // instead of generic server/database cards.
+  if (
+    p === "indexer" ||
+    n.startsWith("idx-") ||
+    n.startsWith("idxc-") ||
+    r.includes("cluster_slave") ||
+    r.includes("search_peer")
+  ) {
+    return "splunk_indexer";
+  }
+  if (p === "search_head_cluster" || r.includes("shc_captain")) {
+    return "splunk_search_head_cluster";
+  }
+  if (
+    p === "search_head" ||
+    p === "cluster_search_head" ||
+    n.startsWith("sh-")
+  ) {
+    return "splunk_search_head";
+  }
+  if (p === "cluster_manager") return "splunk_cluster_manager";
+  if (p === "deployment_server") return "splunk_deployment_server";
+  if (p === "license_manager") return "splunk_license_manager";
+  if (p === "monitoring_console") return "splunk_monitoring_console";
+  if (p === "heavy_forwarder" || n.startsWith("hf-"))
+    return "splunk_heavy_forwarder";
+  if (p === "universal_forwarder" || n.startsWith("uf-")) {
+    return "splunk_universal_forwarder";
+  }
+  if (
+    p === "intermediate_forwarder" ||
+    p === "intermediary_forwarder" ||
+    n.startsWith("if-")
+  ) {
+    return "splunk_intermediate_forwarder";
+  }
+  if (p === "idm" || n.startsWith("idm-")) return "splunk_data_collection";
+  return "server";
 };
 
 /** Derive a friendly model string from the Splunk row. Goes for
@@ -629,44 +673,50 @@ const mapSplunkRoleToShape = (
  *  string lives in `version` and is exposed via `raw` for
  *  inspector hover. */
 const deriveSplunkModel = (
-    primaryRole: string | undefined,
-    indexClusterLabel: string | undefined,
-    shClusterLabel: string | undefined,
-    isEs: boolean,
-    isItsi: boolean
+  primaryRole: string | undefined,
+  indexClusterLabel: string | undefined,
+  shClusterLabel: string | undefined,
+  isEs: boolean,
+  isItsi: boolean,
 ): string => {
-    const p = (primaryRole ?? '').toLowerCase();
-    if (indexClusterLabel) return `Indexer Cluster · ${indexClusterLabel}`;
-    if (shClusterLabel) {
-        const flavour = isItsi ? 'ITSI SHC' : isEs ? 'ES SHC' : 'SHC';
-        return `${flavour} · ${shClusterLabel}`;
-    }
-    switch (p) {
-        case 'indexer':
-            return 'Indexer';
-        case 'cluster_manager':
-            return 'Cluster Manager';
-        case 'search_head':
-        case 'cluster_search_head':
-            return isItsi ? 'ITSI Search Head' : isEs ? 'ES Search Head' : 'Search Head';
-        case 'search_head_cluster':
-            return isItsi ? 'ITSI SHC' : isEs ? 'ES SHC' : 'Search Head Cluster';
-        case 'license_manager':
-            return 'License Manager';
-        case 'deployment_server':
-            return 'Deployment Server';
-        case 'heavy_forwarder':
-            return 'Heavy Forwarder';
-        case 'universal_forwarder':
-            return 'Universal Forwarder';
-        case 'intermediate_forwarder':
-        case 'intermediary_forwarder':
-            return 'Intermediate Forwarder';
-        case 'idm':
-            return 'Inputs Data Manager';
-        default:
-            return primaryRole && primaryRole.length > 0 ? primaryRole : 'Splunk Host';
-    }
+  const p = (primaryRole ?? "").toLowerCase();
+  if (indexClusterLabel) return `Indexer Cluster · ${indexClusterLabel}`;
+  if (shClusterLabel) {
+    const flavour = isItsi ? "ITSI SHC" : isEs ? "ES SHC" : "SHC";
+    return `${flavour} · ${shClusterLabel}`;
+  }
+  switch (p) {
+    case "indexer":
+      return "Indexer";
+    case "cluster_manager":
+      return "Cluster Manager";
+    case "search_head":
+    case "cluster_search_head":
+      return isItsi
+        ? "ITSI Search Head"
+        : isEs
+          ? "ES Search Head"
+          : "Search Head";
+    case "search_head_cluster":
+      return isItsi ? "ITSI SHC" : isEs ? "ES SHC" : "Search Head Cluster";
+    case "license_manager":
+      return "License Manager";
+    case "deployment_server":
+      return "Deployment Server";
+    case "heavy_forwarder":
+      return "Heavy Forwarder";
+    case "universal_forwarder":
+      return "Universal Forwarder";
+    case "intermediate_forwarder":
+    case "intermediary_forwarder":
+      return "Intermediate Forwarder";
+    case "idm":
+      return "Inputs Data Manager";
+    default:
+      return primaryRole && primaryRole.length > 0
+        ? primaryRole
+        : "Splunk Host";
+  }
 };
 
 /** Read `splunk_inventory.csv` (populated by the daily saved
@@ -674,102 +724,106 @@ const deriveSplunkModel = (
  *  with no `host_name` are skipped (defensive — should never
  *  happen with the saved-search projection, but a hand-edit of
  *  the lookup CSV could leave one). */
-export const fetchSplunkInventory = async (): Promise<TopologyDiscoveredNode[]> => {
-    const rows = await inputlookup('splunk_inventory');
-    const nodes: TopologyDiscoveredNode[] = [];
-    for (const row of rows) {
-        const hostName = optionalString(row['host_name']);
-        if (!hostName) continue;
-        const id = hostName.toLowerCase();
-        const name = optionalString(row['name']);
-        // `host_name` is Splunk's default host name: the value used
-        // when Splunk indexes its own instance data. Keep that as the
-        // primary display and drag label instead of the synthetic
-        // role ordinal (`idx-01`, `shc-01`) generated by the lookup
-        // builder.
-        const label = hostName;
-        const shortLabel = hostName;
-        const primaryRole = optionalString(row['primary_role']);
-        const rolesCsv = optionalString(row['role']);
-        const indexClusterLabel = optionalString(row['index_cluster_label']);
-        const shClusterLabel = optionalString(row['sh_cluster_label']);
-        const isEs = optionalString(row['is_es']) === 'yes';
-        const isItsi = optionalString(row['is_itsi']) === 'yes';
-        const isConnected = optionalString(row['is_connected']) === 'yes';
-        const env = optionalString(row['env']);
-        const version = optionalString(row['version']);
-        const model = deriveSplunkModel(
-            primaryRole,
-            indexClusterLabel,
-            shClusterLabel,
-            isEs,
-            isItsi
-        );
-        const shape = mapSplunkRoleToShape(primaryRole, rolesCsv, name);
-        // Health: `is_connected` is the strongest live signal we
-        // have. There's no equivalent of Catalyst Center's
-        // health_score in Splunk's introspection feed; "no signal
-        // for 24h" already means the host isn't writing
-        // _introspection / _internal, so anything missing from the
-        // saved-search output is implicitly unknown.
-        const status: HealthStatus = isConnected ? 'healthy' : 'unknown';
-        nodes.push({
-            id,
-            label,
-            shortLabel,
-            shape,
-            status,
-            // managementSource doubles as the inventory-source
-            // facet in the InventoryTab. Format mirrors the
-            // Cisco rows ("Catalyst Center", "Meraki Dashboard")
-            // so the existing FilterDropdown picks it up
-            // without any code changes.
-            managementSource: env === 'Cloud' ? 'Splunk Cloud' : 'Splunk Enterprise',
-            vendor: 'Splunk',
-            model,
-            // No serial number on Splunk hosts — software, not
-            // hardware. Leave undefined.
-            serialNumber: undefined,
-            siteLabel: undefined,
-            raw: {
-                ...row,
-                // Surface the Splunk-version string under the
-                // same key the inspector hover already reads
-                // for "platform_id"-style hints, so a bound
-                // host shows "Splunk 9.2.1" without any new UI.
-                platform_id: version,
-                device_type: shape,
-            },
-            provenance: 'splunk',
-        });
-    }
-    nodes.sort((a, b) => a.id.localeCompare(b.id));
-    return nodes;
+export const fetchSplunkInventory = async (): Promise<
+  TopologyDiscoveredNode[]
+> => {
+  const rows = await inputlookup("splunk_inventory");
+  const nodes: TopologyDiscoveredNode[] = [];
+  for (const row of rows) {
+    const hostName = optionalString(row["host_name"]);
+    if (!hostName) continue;
+    const id = hostName.toLowerCase();
+    const name = optionalString(row["name"]);
+    // `host_name` is Splunk's default host name: the value used
+    // when Splunk indexes its own instance data. Keep that as the
+    // primary display and drag label instead of the synthetic
+    // role ordinal (`idx-01`, `shc-01`) generated by the lookup
+    // builder.
+    const label = hostName;
+    const shortLabel = hostName;
+    const primaryRole = optionalString(row["primary_role"]);
+    const rolesCsv = optionalString(row["role"]);
+    const indexClusterLabel = optionalString(row["index_cluster_label"]);
+    const shClusterLabel = optionalString(row["sh_cluster_label"]);
+    const isEs = optionalString(row["is_es"]) === "yes";
+    const isItsi = optionalString(row["is_itsi"]) === "yes";
+    const isConnected = optionalString(row["is_connected"]) === "yes";
+    const env = optionalString(row["env"]);
+    const version = optionalString(row["version"]);
+    const model = deriveSplunkModel(
+      primaryRole,
+      indexClusterLabel,
+      shClusterLabel,
+      isEs,
+      isItsi,
+    );
+    const shape = mapSplunkRoleToShape(primaryRole, rolesCsv, name);
+    // Health: `is_connected` is the strongest live signal we
+    // have. There's no equivalent of Catalyst Center's
+    // health_score in Splunk's introspection feed; "no signal
+    // for 24h" already means the host isn't writing
+    // _introspection / _internal, so anything missing from the
+    // saved-search output is implicitly unknown.
+    const status: HealthStatus = isConnected ? "healthy" : "unknown";
+    nodes.push({
+      id,
+      label,
+      shortLabel,
+      shape,
+      status,
+      // managementSource doubles as the inventory-source
+      // facet in the InventoryTab. Format mirrors the
+      // Cisco rows ("Catalyst Center", "Meraki Dashboard")
+      // so the existing FilterDropdown picks it up
+      // without any code changes.
+      managementSource: env === "Cloud" ? "Splunk Cloud" : "Splunk Enterprise",
+      vendor: "Splunk",
+      model,
+      // No serial number on Splunk hosts — software, not
+      // hardware. Leave undefined.
+      serialNumber: undefined,
+      siteLabel: undefined,
+      raw: {
+        ...row,
+        // Surface the Splunk-version string under the
+        // same key the inspector hover already reads
+        // for "platform_id"-style hints, so a bound
+        // host shows "Splunk 9.2.1" without any new UI.
+        platform_id: version,
+        device_type: shape,
+      },
+      provenance: "splunk",
+    });
+  }
+  nodes.sort((a, b) => a.id.localeCompare(b.id));
+  return nodes;
 };
 
-export const fetchSiteTopology = async (): Promise<TopologyDiscoveredZone[]> => {
-    const rows = await inputlookup('site_topology_lookup');
-    const zones: TopologyDiscoveredZone[] = [];
-    for (const row of rows) {
-        const id = optionalString(row['id']);
-        const name = optionalString(row['name']) ?? id;
-        if (!id || !name) continue;
-        const typeRaw = (optionalString(row['type']) ?? '').toLowerCase();
-        const type: TopologyDiscoveredZone['type'] =
-            typeRaw === 'global' ||
-            typeRaw === 'area' ||
-            typeRaw === 'building' ||
-            typeRaw === 'floor'
-                ? typeRaw
-                : 'unknown';
-        zones.push({
-            id,
-            name,
-            parentId: optionalString(row['parentId']) ?? null,
-            type,
-        });
-    }
-    return zones;
+export const fetchSiteTopology = async (): Promise<
+  TopologyDiscoveredZone[]
+> => {
+  const rows = await inputlookup("site_topology_lookup");
+  const zones: TopologyDiscoveredZone[] = [];
+  for (const row of rows) {
+    const id = optionalString(row["id"]);
+    const name = optionalString(row["name"]) ?? id;
+    if (!id || !name) continue;
+    const typeRaw = (optionalString(row["type"]) ?? "").toLowerCase();
+    const type: TopologyDiscoveredZone["type"] =
+      typeRaw === "global" ||
+      typeRaw === "area" ||
+      typeRaw === "building" ||
+      typeRaw === "floor"
+        ? typeRaw
+        : "unknown";
+    zones.push({
+      id,
+      name,
+      parentId: optionalString(row["parentId"]) ?? null,
+      type,
+    });
+  }
+  return zones;
 };
 
 /**
@@ -781,14 +835,14 @@ export const fetchSiteTopology = async (): Promise<TopologyDiscoveredZone[]> => 
  * shape-level live data refreshes.
  */
 export const discoverTopology = async (): Promise<DiscoveredTopology> => {
-    const [nodes, zones] = await Promise.all([
-        fetchAssetInventory().catch(() => [] as TopologyDiscoveredNode[]),
-        fetchSiteTopology().catch(() => [] as TopologyDiscoveredZone[]),
-    ]);
-    return {
-        nodes,
-        edges: [],
-        zones,
-        fetchedAt: new Date().toISOString(),
-    };
+  const [nodes, zones] = await Promise.all([
+    fetchAssetInventory().catch(() => [] as TopologyDiscoveredNode[]),
+    fetchSiteTopology().catch(() => [] as TopologyDiscoveredZone[]),
+  ]);
+  return {
+    nodes,
+    edges: [],
+    zones,
+    fetchedAt: new Date().toISOString(),
+  };
 };

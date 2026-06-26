@@ -35,6 +35,7 @@ import LayoutOverview from '@splunk/react-icons/LayoutOverview';
 
 import { default as SplunkControlGroup } from '@splunk/react-ui/ControlGroup';
 import Modal from '@splunk/react-ui/Modal';
+import Tooltip from '@splunk/react-ui/Tooltip';
 import Select from '@splunk/react-ui/Select';
 import Text from '@splunk/react-ui/Text';
 import TabLayout from '@splunk/react-ui/TabLayout';
@@ -79,6 +80,7 @@ import SplunkThemeProvider from '@splunk/themes/SplunkThemeProvider';
 import { isVersionLower, getServerInfo } from '../../common/lib/splunk';
 import Paintbrush from '@splunk/react-icons/Paintbrush';
 import BackgroundButton from './BackgroundButton';
+import SpaceManagerButton from './SpaceManager/SpaceManagerButton';
 import useDashboardStore from '../../common/state/dashboardStore';
 import createSEIIconRegistry from '../../common/udf/IconProviders/createSEIIconRegistry';
 import { resolveSearchbaseDefinitionForNativeStudio } from './searchbaseDefinitionUtils';
@@ -236,6 +238,16 @@ async function updateDash(dashName, jsonDefinition, app, owner, description, lab
     data.status = response.status;
     return data;
 }
+
+const getDefinitionTextValue = (definition, key, fallback = '') => {
+    const value = definition?.[key];
+    if (typeof value !== 'string') {
+        return fallback;
+    }
+
+    const trimmedValue = value.trim();
+    return trimmedValue || fallback;
+};
 
 export const AbsolutSVG = () => {
     return (
@@ -676,6 +688,7 @@ const DashboardStudioEditor = ({
     const cloneModalToggle = useRef();
     const [openDashboardModal, setOpenDashboardModal] = useState(false);
     const [openConvertModal, setOpenConvertModal] = useState(false);
+    const [openBackToManagerModal, setOpenBackToManagerModal] = useState(false);
     const [activeModeId, setActiveModeId] = useState('create');
     const [gridLayout, setGridLayout] = useState('absolute');
     const [dashboardTitle, setDashboardTitle] = useState('');
@@ -817,6 +830,7 @@ const DashboardStudioEditor = ({
         () => !isEqual(currentDashboard ? JSON.parse(currentDashboard.data) : {}, editedDefinition),
         [currentDashboard, editedDefinition],
     );
+    const hasPendingDashboardChanges = isDirty || unsavedDefinition;
 
     const source = useMemo(() => {
         return editedDefinition;
@@ -839,39 +853,39 @@ const DashboardStudioEditor = ({
 
     const handleSaveClick = useCallback(() => {
         const saveDashboard = async () => {
-            const {
-                definition: definitionToSave,
-                convertedDataSources,
-                convertedInputs,
-            } = await resolveSearchbaseDefinitionForNativeStudio(editedDefinition);
+            const definitionToSave = cloneDeep(editedDefinition);
+            const dashboardLabel = getDefinitionTextValue(
+                definitionToSave,
+                'title',
+                currentDashboard.label || dashID,
+            );
+            const dashboardDescription =
+                typeof definitionToSave?.description === 'string'
+                    ? definitionToSave.description
+                    : currentDashboard.description || '';
 
             const response = await updateDash(
                 dashID,
                 JSON.stringify(definitionToSave, null, 4),
                 currentDashboard.app,
                 currentDashboard.author,
-                currentDashboard.description,
-                currentDashboard.label,
+                dashboardDescription,
+                dashboardLabel,
                 currentDashboard.tag,
             );
 
             if (response.status >= 200 && response.status <= 299) {
                 console.log(response);
-                if (convertedDataSources > 0 || convertedInputs > 0) {
-                    dashboardApiElem.current?.updateDefinition(definitionToSave);
-                    setEditedDefinition(definitionToSave);
-                }
                 makeCreateToast(Toaster)({
-                    message:
-                        convertedDataSources > 0
-                            ? `Dashboard saved successfully. Searchbase data sources were converted for menu launch.`
-                            : `Dashboard saved successfully...`,
+                    message: `Dashboard saved successfully...`,
                     type: TOAST_TYPES.SUCCESS,
                 });
                 setUnsavedDefinition(false);
                 setCurrentDashboard((prev) => {
                     let newDs = cloneDeep(prev);
                     newDs.data = JSON.stringify(definitionToSave);
+                    newDs.label = dashboardLabel;
+                    newDs.description = dashboardDescription;
                     return newDs;
                 });
                 if (onDashboardSaved) onDashboardSaved();
@@ -889,7 +903,7 @@ const DashboardStudioEditor = ({
         saveDashboard().catch((error) => {
             console.error(error);
             makeCreateToast(Toaster)({
-                message: `An error occured while resolving searchbase data sources... ${error.message}`,
+                message: `An error occured while saving the dashboard... ${error.message}`,
                 type: TOAST_TYPES.ERROR,
             });
         });
@@ -930,6 +944,15 @@ const DashboardStudioEditor = ({
         },
         [unsavedDefinition],
     );
+
+    const returnToDashboardManager = useCallback(() => {
+        setOpenBackToManagerModal(false);
+        navigate('/');
+    }, [navigate]);
+
+    const handleBackToManagerClick = useCallback(() => {
+        setOpenBackToManagerModal(true);
+    }, []);
 
     const handleDefinitionChange = useCallback((newDefinition) => {
         if (serverInfo?.isSplunkCloud) {
@@ -1065,41 +1088,50 @@ const DashboardStudioEditor = ({
             edit: [
                 <HistoryGroup key="historyGroup" />,
                 <VisualizationGroup key="visualization" />,
-                <BackgroundButton key="backgroundButton"></BackgroundButton>,
-                <InsightKpiButton key="insightKpi" />,
                 <SidebarControlGroup key="sidebarControlGroup" />,
                 <EditorGroup key="editorGroup" sourceButtonOnClick={handleEnterSourceMode} />,
+                <ItemGroup key="customExtensionToolbar" borders={false}>
+                    <span
+                        className="dashboardbuilder-custom-toolbar-separator"
+                        aria-hidden="true"
+                    />
+                    <BackgroundButton key="backgroundButton" iconColor="#26afac" />
+                    <InsightKpiButton key="insightKpi" />
+                    <SpaceManagerButton key="spaceManager" />
+                </ItemGroup>,
                 <ItemGroup key="sideToolbar" align="right" borders={false}>
                     <ModeSwitch key="modeSwitch" />
                     <SaveButton key="save" onClick={handleSaveClick} isDirty={isDirty} />
                     {showClose && (
-                        <Button
-                            style={{ marginLeft: 5 }}
-                            label="Close"
-                            appearance="destructive"
-                            onClick={() => {
-                                if (isDirty) {
-                                    const confirmLeave = window.confirm(
-                                        'Leave dashboard without saving?',
-                                    );
-                                    if (confirmLeave) {
-                                        navigate('/');
-                                    }
-                                } else {
-                                    navigate('/');
-                                }
-                            }}
-                        ></Button>
+                        <Tooltip
+                            key="backToManagerTooltip"
+                            content="Return to Dashboard Manager"
+                        >
+                            <Button
+                                style={{ marginLeft: 5 }}
+                                label="Back to Manager"
+                                appearance="default"
+                                aria-label="Back to Manager"
+                                onClick={handleBackToManagerClick}
+                            ></Button>
+                        </Tooltip>
                     )}
                 </ItemGroup>,
             ],
             editconvert: [
                 <HistoryGroup key="historyGroup" />,
                 <VisualizationGroup key="visualization" />,
-                <BackgroundButton key="backgroundButton"></BackgroundButton>,
-                <InsightKpiButton key="insightKpi" />,
                 <SidebarControlGroup key="sidebarControlGroup" />,
                 <EditorGroup key="editorGroup" sourceButtonOnClick={handleEnterSourceMode} />,
+                <ItemGroup key="customExtensionToolbar" borders={false}>
+                    <span
+                        className="dashboardbuilder-custom-toolbar-separator"
+                        aria-hidden="true"
+                    />
+                    <BackgroundButton key="backgroundButton" iconColor="#26afac" />
+                    <InsightKpiButton key="insightKpi" />
+                    <SpaceManagerButton key="spaceManager" />
+                </ItemGroup>,
                 <ItemGroup key="sideToolbar" align="right" borders={false}>
                     <Button
                         style={{ marginRight: 10 }}
@@ -1108,16 +1140,28 @@ const DashboardStudioEditor = ({
                     ></Button>
                     <ModeSwitch key="modeSwitch" />
                     <SaveButton key="save" onClick={handleSaveClick} isDirty={isDirty} />
-                    <Button
-                        style={{ marginLeft: 5 }}
-                        label="Close"
-                        appearance="destructive"
-                        onClick={() => navigate('/')}
-                    ></Button>
+                    <Tooltip key="backToManagerTooltip" content="Return to Dashboard Manager">
+                        <Button
+                            style={{ marginLeft: 5 }}
+                            label="Back to Manager"
+                            appearance="default"
+                            aria-label="Back to Manager"
+                            onClick={handleBackToManagerClick}
+                        ></Button>
+                    </Tooltip>
                 </ItemGroup>,
             ],
         }),
-        [currentDashboard, editedDefinition, setIsCodeEditable],
+        [
+            currentDashboard,
+            editedDefinition,
+            handleBackToManagerClick,
+            handleEnterSourceMode,
+            handleSaveClick,
+            isDirty,
+            setIsCodeEditable,
+            showClose,
+        ],
     );
 
     /*
@@ -1296,7 +1340,7 @@ const DashboardStudioEditor = ({
                 // Cancel the event
                 e.preventDefault();
                 // Chrome requires returnValue to be set
-                const msg = 'Leave dashboard without saving?';
+                const msg = 'Leave Dashboard Builder without saving?';
                 e.returnValue = msg;
                 return msg;
             }
@@ -1394,7 +1438,7 @@ const DashboardStudioEditor = ({
             jsonDefinition.title = dashboardTitle;
             jsonDefinition.layout.type = gridLayout;
 
-            addDash(dashid, JSON.stringify(jsonDefinition)).then((response) => {
+            addDash(dashid, JSON.stringify(jsonDefinition), dashboardTitle).then((response) => {
                 if (response.status >= 200 && response.status <= 299) {
                     console.log(response);
                     syncDashboardManagerNavigation([
@@ -1496,6 +1540,30 @@ const DashboardStudioEditor = ({
                         onClick={() => setOpenConvertModal(false)}
                     />
                     <Button appearance="primary" label="Convert" onClick={convertDashboard} />
+                </Modal.Footer>
+            </Modal>
+            <Modal
+                open={openBackToManagerModal}
+                style={{ width: '460px' }}
+                onRequestClose={() => setOpenBackToManagerModal(false)}
+            >
+                <Modal.Header title="Back to Dashboard Manager?" />
+                <Modal.Body>
+                    {hasPendingDashboardChanges
+                        ? 'This will return you to Dashboard Manager. Unsaved changes may be lost.'
+                        : 'This will return you to Dashboard Manager.'}
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button
+                        appearance="secondary"
+                        label="Stay"
+                        onClick={() => setOpenBackToManagerModal(false)}
+                    />
+                    <Button
+                        appearance="destructive"
+                        label="Back to Manager"
+                        onClick={returnToDashboardManager}
+                    />
                 </Modal.Footer>
             </Modal>
             <Modal
