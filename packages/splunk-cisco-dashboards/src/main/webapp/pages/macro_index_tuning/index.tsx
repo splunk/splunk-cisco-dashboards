@@ -8,6 +8,8 @@ import React, {
 import {
   AlertTriangle,
   Check,
+  ChevronDown,
+  ChevronRight,
   ClipboardCopy,
   ExternalLink,
   Loader2,
@@ -17,6 +19,7 @@ import {
   Search,
 } from "lucide-react";
 import { getDefaultFetchInit } from "@splunk/splunk-utils/fetch";
+import TimeRangeDropdown from "@splunk/react-time-range/Dropdown";
 
 import {
   getSearchAppContext,
@@ -25,6 +28,7 @@ import {
 } from "@/common/services/splunkSearchService";
 import { getSearchbaseCatalogue } from "@/common/services/searchbaseCatalogue";
 import { splunkSearchAppUrl } from "@/common/lib/splunkSearchUrl";
+import timeParser from "../dashboardbuilder/custominput/timeparser";
 
 const APP_NAME = "splunk-cisco-dashboards";
 const CIM_APP_NAME = "Splunk_SA_CIM";
@@ -77,9 +81,9 @@ const THOUSAND_EYES_MODEL_MACRO_NAMES = [
 ] as const;
 const TARGET_APP_ORDER = [
   APP_NAME,
-  CIM_APP_NAME,
   CISCO_SECURITY_APP_NAME,
   THOUSAND_EYES_APP_NAME,
+  CIM_APP_NAME,
 ] as const;
 const TARGET_APP_LABELS: Record<string, string> = {
   [APP_NAME]: "SCD",
@@ -99,6 +103,23 @@ type ScanState = "idle" | "loading" | "ready" | "error";
 type SaveState = "idle" | "saving" | "saved" | "error";
 type CopyState = "idle" | "copied" | "selected" | "error";
 type DefinitionFormat = "indexIn" | "indexOr";
+
+interface SearchTimeRange {
+  earliest: string;
+  latest: string;
+}
+
+interface TimeRangeChange {
+  earliest?: string | null;
+  latest?: string | null;
+}
+
+interface TimeParseResult {
+  error?: Record<string, unknown>;
+  iso?: string;
+  time?: string;
+  displayValue?: string;
+}
 
 interface TunableMacroConfig {
   macro: string;
@@ -145,10 +166,19 @@ const TUNABLE_MACRO_CONFIGS: TunableMacroConfig[] = [
   ...CISCO_SECURITY_MODEL_MACRO_CONFIGS,
   ...THOUSAND_EYES_MODEL_MACRO_CONFIGS,
 ];
+const FAST_TUNING_MACRO_CONFIGS: TunableMacroConfig[] = [
+  ...INDEX_MACRO_CONFIGS,
+  ...CISCO_SECURITY_MODEL_MACRO_CONFIGS,
+  ...THOUSAND_EYES_MODEL_MACRO_CONFIGS,
+];
 const TUNABLE_MACRO_NAME_SET = new Set<string>(
   TUNABLE_MACRO_CONFIGS.map((config) => config.macro),
 );
+const FAST_TUNING_MACRO_NAME_SET = new Set<string>(
+  FAST_TUNING_MACRO_CONFIGS.map((config) => config.macro),
+);
 const INDEX_MACRO_NAME_SET = new Set<string>(INDEX_MACRO_NAMES);
+const CIM_MACRO_NAME_SET = new Set<string>(CIM_MACRO_NAMES);
 const MACRO_CONFIG_BY_NAME = new Map<string, TunableMacroConfig>(
   TUNABLE_MACRO_CONFIGS.map((config) => [config.macro, config]),
 );
@@ -168,24 +198,62 @@ interface EditableMacroRow extends MacroRow {
   draftDefinition: string;
 }
 
+interface RowGroup {
+  targetApp: string;
+  rows: EditableMacroRow[];
+}
+
 interface SaveStatus {
   state: SaveState;
   message?: string;
 }
 
-const TIME_RANGE_OPTIONS = [
-  { value: "-24h@h", label: "Last 24 hours" },
-  { value: "-7d@d", label: "Last 7 days" },
-  { value: "-30d@d", label: "Last 30 days" },
-  { value: "0", label: "All time" },
+const DEFAULT_FAST_TIME_RANGE: SearchTimeRange = {
+  earliest: "-7d@d",
+  latest: "now",
+};
+const DEFAULT_CIM_TIME_RANGE: SearchTimeRange = {
+  earliest: "-4h@h",
+  latest: "now",
+};
+const TIME_PRESETS = [
+  { label: "Today", earliest: "@d", latest: "now" },
+  { label: "Week to date", earliest: "@w0", latest: "now" },
+  { label: "Business week to date", earliest: "@w1", latest: "now" },
+  { label: "Month to date", earliest: "@mon", latest: "now" },
+  { label: "Year to date", earliest: "@y", latest: "now" },
+  { label: "Yesterday", earliest: "-1d@d", latest: "@d" },
+  { label: "Previous week", earliest: "-7d@w0", latest: "@w0" },
+  { label: "Previous business week", earliest: "-6d@w1", latest: "-1d@w6" },
+  { label: "Previous month", earliest: "-1mon@mon", latest: "@mon" },
+  { label: "Previous year", earliest: "-1y@y", latest: "@y" },
+  { label: "Last 15 minutes", earliest: "-15m", latest: "now" },
+  { label: "Last 60 minutes", earliest: "-60m@m", latest: "now" },
+  { label: "Last 4 hours", earliest: "-4h@m", latest: "now" },
+  { label: "Last 24 hours", earliest: "-24h@h", latest: "now" },
+  { label: "Last 7 days", earliest: "-7d@d", latest: "now" },
+  { label: "Last 30 days", earliest: "-30d@d", latest: "now" },
+  { label: "All time", earliest: "0", latest: "now" },
 ];
+
+const CIM_DISCOVERY_SEARCH = [
+  "search index=* tag=authentication NOT (action=success user=*$)",
+  '| eval sourcetype=coalesce(sourcetype, "(unknown sourcetype)")',
+  "| stats count by index, sourcetype",
+  `| eval macro="cim_Authentication_indexes", target_app="${CIM_APP_NAME}", definition_format="indexOr"`,
+  "| append [ search index=* tag=network tag=communicate",
+  '| eval sourcetype=coalesce(sourcetype, "(unknown sourcetype)")',
+  "| stats count by index, sourcetype",
+  `| eval macro="cim_Network_Traffic_indexes", target_app="${CIM_APP_NAME}", definition_format="indexOr" ]`,
+  "| stats values(index) as indexes, values(sourcetype) as sourcetypes, dc(sourcetype) as sourcetype_count, sum(count) as events by macro, target_app, definition_format",
+  '| eval definition="(index=".mvjoin(indexes, " OR index=").")"',
+  "| table macro, target_app, definition_format, definition, indexes, sourcetypes, sourcetype_count, events",
+].join("\n");
 
 const lightButtonBase =
   "inline-flex h-10 min-h-10 items-center justify-center gap-2 rounded-md border px-3 text-sm font-semibold leading-none transition disabled:cursor-not-allowed disabled:opacity-55";
 const compactButtonBase =
   "inline-flex h-8 min-h-8 items-center justify-center gap-2 rounded border px-3 text-sm font-semibold leading-none transition disabled:cursor-not-allowed disabled:opacity-55";
-const toolbarSelectBase =
-  "mb-0 block h-10 min-h-10 rounded-md border border-slate-300 bg-white px-3 pr-9 text-sm font-normal leading-none text-slate-800";
 const tableSearchInputBase =
   "h-10 min-h-10 w-full rounded-md border border-slate-300 bg-white py-0 pl-9 pr-3 text-sm leading-none text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-100";
 
@@ -204,7 +272,7 @@ const normalizeMultiValue = (value: unknown): string[] => {
       .filter(Boolean);
   }
   return normalizeText(value)
-    .split(",")
+    .split(/[,\r\n]+/)
     .map((item) => item.trim())
     .filter(Boolean);
 };
@@ -335,6 +403,66 @@ const buildMacroStanza = (macro: string, definition: string): string =>
 
 const macroStatusKey = (row: Pick<EditableMacroRow, "targetApp" | "macro">) =>
   `${row.targetApp}:${row.macro}`;
+
+const buildExpectedEditableRows = (
+  configs: readonly TunableMacroConfig[],
+  parsedRows: readonly MacroRow[],
+  currentDefinitions: Record<string, string>,
+): EditableMacroRow[] => {
+  const scannedByMacro = new Map(
+    parsedRows.map((row) => [macroStatusKey(row), row]),
+  );
+
+  return configs.map((config) => {
+    const scanned = scannedByMacro.get(`${config.targetApp}:${config.macro}`);
+    const fallbackDefinition =
+      currentDefinitions[`${config.targetApp}:${config.macro}`] ||
+      scanned?.definition ||
+      formatIndexDefinition(
+        [],
+        config.definitionFormat,
+        config.definitionSuffix,
+      );
+    const draftDefinition = scanned?.definition || fallbackDefinition;
+
+    return {
+      macro: config.macro,
+      targetApp: config.targetApp,
+      definitionFormat: config.definitionFormat,
+      definition: draftDefinition,
+      indexes: scanned?.indexes?.length
+        ? scanned.indexes
+        : extractIndexTokens(fallbackDefinition),
+      sourcetypes: scanned?.sourcetypes || [],
+      sourcetypeCount: scanned?.sourcetypeCount || 0,
+      events: scanned?.events || 0,
+      draftDefinition,
+    };
+  });
+};
+
+const groupRowsByTargetApp = (rows: EditableMacroRow[]): RowGroup[] => {
+  const rowsByApp = rows.reduce<Map<string, EditableMacroRow[]>>(
+    (groups, row) => {
+      const appRows = groups.get(row.targetApp) || [];
+      appRows.push(row);
+      groups.set(row.targetApp, appRows);
+      return groups;
+    },
+    new Map<string, EditableMacroRow[]>(),
+  );
+
+  const orderedGroups = TARGET_APP_ORDER.flatMap((targetApp) => {
+    const appRows = rowsByApp.get(targetApp);
+    rowsByApp.delete(targetApp);
+    return appRows?.length ? [{ targetApp, rows: appRows }] : [];
+  });
+  const extraGroups = Array.from(rowsByApp.entries()).map(
+    ([targetApp, appRows]) => ({ targetApp, rows: appRows }),
+  );
+
+  return [...orderedGroups, ...extraGroups];
+};
 
 const rowMatchesFilter = (row: EditableMacroRow, terms: string[]): boolean => {
   if (!terms.length) return true;
@@ -483,6 +611,18 @@ const copyTextToClipboard = async (text: string): Promise<void> => {
   }
 };
 
+const normalizeTimeParseResult = (
+  result: TimeParseResult,
+  fallbackTime: string,
+): TimeParseResult => ({
+  error: result.error
+    ? { message: String(result.error.message || result.error) }
+    : undefined,
+  iso: result.iso,
+  time: result.time || fallbackTime,
+  displayValue: result.displayValue,
+});
+
 function CopyButton({
   text,
   label,
@@ -551,10 +691,12 @@ function FieldPills({
   values,
   tone = "slate",
   expandable = false,
+  valueLabel = "values",
 }: {
   values: string[];
   tone?: "slate" | "sky";
   expandable?: boolean;
+  valueLabel?: string;
 }): JSX.Element {
   const [expanded, setExpanded] = useState(false);
   const canExpand = expandable && values.length > 6;
@@ -581,7 +723,7 @@ function FieldPills({
           type="button"
           onClick={() => setExpanded(true)}
           className="rounded border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-sky-700 hover:border-sky-400 hover:bg-sky-50"
-          title={`Show ${extra} more sourcetypes`}
+          title={`Show ${extra} more ${valueLabel}`}
         >
           +{extra}
         </button>
@@ -604,13 +746,92 @@ function FieldPills({
   );
 }
 
+function useTimeRangeParser(): {
+  parseEarliest: TimeParseResult | undefined;
+  parseLatest: TimeParseResult | undefined;
+  handleRequestParseEarliest: (time: string) => void;
+  handleRequestParseLatest: (time: string) => void;
+} {
+  const [parseEarliest, setParseEarliest] = useState<TimeParseResult>();
+  const [parseLatest, setParseLatest] = useState<TimeParseResult>();
+  const mountedRef = useRef(true);
+  const earliestRequestRef = useRef(0);
+  const latestRequestRef = useRef(0);
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const handleRequestParseEarliest = useCallback((time: string) => {
+    const requestId = earliestRequestRef.current + 1;
+    earliestRequestRef.current = requestId;
+    void timeParser(time, "en_US")
+      .then((result: TimeParseResult) => {
+        if (!mountedRef.current || requestId !== earliestRequestRef.current) {
+          return;
+        }
+        setParseEarliest(normalizeTimeParseResult(result, time));
+      })
+      .catch(() => {
+        if (!mountedRef.current || requestId !== earliestRequestRef.current) {
+          return;
+        }
+        setParseEarliest({
+          error: { message: "The time string could not be parsed" },
+          time,
+        });
+      });
+  }, []);
+
+  const handleRequestParseLatest = useCallback((time: string) => {
+    const requestId = latestRequestRef.current + 1;
+    latestRequestRef.current = requestId;
+    void timeParser(time || "now", "en_US")
+      .then((result: TimeParseResult) => {
+        if (!mountedRef.current || requestId !== latestRequestRef.current) {
+          return;
+        }
+        setParseLatest(normalizeTimeParseResult(result, time));
+      })
+      .catch(() => {
+        if (!mountedRef.current || requestId !== latestRequestRef.current) {
+          return;
+        }
+        setParseLatest({
+          error: { message: "The time string could not be parsed" },
+          time,
+        });
+      });
+  }, []);
+
+  return {
+    parseEarliest,
+    parseLatest,
+    handleRequestParseEarliest,
+    handleRequestParseLatest,
+  };
+}
+
 export default function MacroIndexTuningPage(): JSX.Element {
   const [rows, setRows] = useState<EditableMacroRow[]>([]);
+  const [cimRows, setCimRows] = useState<EditableMacroRow[]>([]);
   const [scanState, setScanState] = useState<ScanState>("idle");
+  const [cimScanState, setCimScanState] = useState<ScanState>("idle");
   const [error, setError] = useState<string>("");
+  const [cimError, setCimError] = useState<string>("");
   const [searchSpl, setSearchSpl] = useState<string>("");
-  const [timeRange, setTimeRange] = useState(TIME_RANGE_OPTIONS[2].value);
+  const [timeRange, setTimeRange] = useState<SearchTimeRange>(
+    DEFAULT_FAST_TIME_RANGE,
+  );
+  const [cimTimeRange, setCimTimeRange] = useState<SearchTimeRange>(
+    DEFAULT_CIM_TIME_RANGE,
+  );
   const [filterText, setFilterText] = useState("");
+  const [collapsedRowGroups, setCollapsedRowGroups] = useState<
+    Record<string, boolean>
+  >({});
   const [saveStatuses, setSaveStatuses] = useState<Record<string, SaveStatus>>(
     {},
   );
@@ -619,18 +840,22 @@ export default function MacroIndexTuningPage(): JSX.Element {
   );
   const [adhocStatus, setAdhocStatus] = useState<SaveStatus>({ state: "idle" });
   const abortRef = useRef<AbortController | null>(null);
+  const cimAbortRef = useRef<AbortController | null>(null);
   const searchSplRef = useRef<string>("");
   const macroPreviewRef = useRef<HTMLTextAreaElement>(null);
+  const fastTimeParser = useTimeRangeParser();
+  const cimTimeParser = useTimeRangeParser();
+  const allRows = useMemo(() => [...rows, ...cimRows], [cimRows, rows]);
 
   const generatedMacroStanzasByApp = useMemo<Record<string, string>>(
     () =>
       Object.fromEntries(
         TARGET_APP_ORDER.map((targetApp) => [
           targetApp,
-          buildMacroStanzas(rows, targetApp),
+          buildMacroStanzas(allRows, targetApp),
         ]),
       ),
-    [rows],
+    [allRows],
   );
   const macroStanzas = useMemo(
     () => {
@@ -650,14 +875,15 @@ export default function MacroIndexTuningPage(): JSX.Element {
     [adhocDefinition, generatedMacroStanzasByApp],
   );
   const hasUnknown = rows.some((row) => row.macro === "unknown");
-  const tunableRows = rows.filter((row) =>
-    TUNABLE_MACRO_NAME_SET.has(row.macro),
+  const fastTunableRows = rows.filter((row) =>
+    FAST_TUNING_MACRO_NAME_SET.has(row.macro),
   );
+  const cimMacroRows = cimRows.filter((row) =>
+    CIM_MACRO_NAME_SET.has(row.macro),
+  );
+  const tunableRows = [...fastTunableRows, ...cimMacroRows];
   const indexMacroRows = tunableRows.filter((row) =>
     INDEX_MACRO_NAME_SET.has(row.macro),
-  );
-  const cimMacroRows = tunableRows.filter(
-    (row) => row.targetApp === CIM_APP_NAME,
   );
   const modelMacroRows = tunableRows.filter(
     (row) =>
@@ -673,6 +899,15 @@ export default function MacroIndexTuningPage(): JSX.Element {
     () => rows.filter((row) => rowMatchesFilter(row, filterTerms)),
     [filterTerms, rows],
   );
+  const filteredCimRows = useMemo(
+    () => cimRows.filter((row) => rowMatchesFilter(row, filterTerms)),
+    [cimRows, filterTerms],
+  );
+  const filteredRowGroups = useMemo(
+    () => groupRowsByTargetApp(filteredRows),
+    [filteredRows],
+  );
+  const isCimGroupCollapsed = Boolean(collapsedRowGroups[CIM_APP_NAME]);
   const totalEvents = rows
     .filter((row) => row.targetApp === APP_NAME)
     .reduce((sum, row) => sum + row.events, 0);
@@ -689,12 +924,17 @@ export default function MacroIndexTuningPage(): JSX.Element {
     0,
   );
   const isLoading = scanState === "loading";
+  const isCimLoading = cimScanState === "loading";
   const isSavingAll = Object.values(saveStatuses).some(
     (status) => status.state === "saving",
   );
   const openSearchUrl = searchSpl
-    ? splunkSearchAppUrl(searchSpl, { earliest: timeRange, latest: "now" })
+    ? splunkSearchAppUrl(searchSpl, timeRange)
     : "";
+  const openCimSearchUrl = splunkSearchAppUrl(
+    CIM_DISCOVERY_SEARCH,
+    cimTimeRange,
+  );
   const macrosManagerUrl = splunkManagerUrl("data/macros");
   const externalMacroManagerLinks = TARGET_APP_ORDER.filter(
     (targetApp) => targetApp !== APP_NAME,
@@ -702,6 +942,26 @@ export default function MacroIndexTuningPage(): JSX.Element {
     targetApp,
     href: splunkAppManagerUrl(targetApp, "data/macros"),
   }));
+
+  const handleFastTimeRangeChange = useCallback(
+    (_event: React.SyntheticEvent, data?: TimeRangeChange) => {
+      setTimeRange((current) => ({
+        earliest: data?.earliest ?? current.earliest,
+        latest: data?.latest ?? current.latest,
+      }));
+    },
+    [],
+  );
+
+  const handleCimTimeRangeChange = useCallback(
+    (_event: React.SyntheticEvent, data?: TimeRangeChange) => {
+      setCimTimeRange((current) => ({
+        earliest: data?.earliest ?? current.earliest,
+        latest: data?.latest ?? current.latest,
+      }));
+    },
+    [],
+  );
 
   const loadTuningSearch = useCallback(async (): Promise<string> => {
     if (searchSplRef.current) return searchSplRef.current;
@@ -733,54 +993,28 @@ export default function MacroIndexTuningPage(): JSX.Element {
       const spl = await loadTuningSearch();
       const result = await runSearch({
         spl,
-        earliestTime: timeRange,
-        latestTime: "now",
+        earliestTime: timeRange.earliest,
+        latestTime: timeRange.latest,
         count: 0,
         tag: TUNING_SEARCHBASE_ID,
         signal: controller.signal,
       });
       const currentDefinitions =
-        await loadMacroDefinitions(TUNABLE_MACRO_CONFIGS);
+        await loadMacroDefinitions(FAST_TUNING_MACRO_CONFIGS);
       const parsed = ((result.results || []) as Record<string, unknown>[])
         .map(parseSearchResult)
-        .filter((row): row is MacroRow => Boolean(row))
-        .map((row) => ({
-          ...row,
-          draftDefinition: row.definition,
-        }));
-      const scannedByMacro = new Map(
-        parsed.map((row) => [macroStatusKey(row), row]),
+        .filter((row): row is MacroRow => Boolean(row));
+      const expectedRows = buildExpectedEditableRows(
+        FAST_TUNING_MACRO_CONFIGS,
+        parsed,
+        currentDefinitions,
       );
-      const expectedRows = TUNABLE_MACRO_CONFIGS.map((config) => {
-        const scanned = scannedByMacro.get(
-          `${config.targetApp}:${config.macro}`,
-        );
-        const fallbackDefinition =
-          currentDefinitions[`${config.targetApp}:${config.macro}`] ||
-          scanned?.definition ||
-          formatIndexDefinition(
-            [],
-            config.definitionFormat,
-            config.definitionSuffix,
-          );
-        const draftDefinition = scanned?.definition || fallbackDefinition;
-
-        return {
-          macro: config.macro,
-          targetApp: config.targetApp,
-          definitionFormat: config.definitionFormat,
-          definition: draftDefinition,
-          indexes: scanned?.indexes?.length
-            ? scanned.indexes
-            : extractIndexTokens(fallbackDefinition),
-          sourcetypes: scanned?.sourcetypes || [],
-          sourcetypeCount: scanned?.sourcetypeCount || 0,
-          events: scanned?.events || 0,
-          draftDefinition,
-        };
-      });
       const extraRows = parsed
-        .filter((row) => !TUNABLE_MACRO_NAME_SET.has(row.macro))
+        .filter(
+          (row) =>
+            !FAST_TUNING_MACRO_NAME_SET.has(row.macro) &&
+            !CIM_MACRO_NAME_SET.has(row.macro),
+        )
         .map((row) => ({
           ...row,
           draftDefinition: row.definition,
@@ -793,7 +1027,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
       setRows([]);
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [loadTuningSearch, timeRange]);
+  }, [loadTuningSearch, timeRange.earliest, timeRange.latest]);
 
   useEffect(() => {
     void runScan();
@@ -801,6 +1035,56 @@ export default function MacroIndexTuningPage(): JSX.Element {
       abortRef.current?.abort();
     };
   }, [runScan]);
+
+  const loadCimMacroRows = useCallback(async () => {
+    const currentDefinitions = await loadMacroDefinitions(CIM_MACRO_CONFIGS);
+    setCimRows(
+      buildExpectedEditableRows(CIM_MACRO_CONFIGS, [], currentDefinitions),
+    );
+  }, []);
+
+  const runCimDiscovery = useCallback(async () => {
+    cimAbortRef.current?.abort();
+    const controller = new AbortController();
+    cimAbortRef.current = controller;
+    setCimScanState("loading");
+    setCimError("");
+    setSaveStatuses({});
+
+    try {
+      const result = await runSearch({
+        spl: CIM_DISCOVERY_SEARCH,
+        earliestTime: cimTimeRange.earliest,
+        latestTime: cimTimeRange.latest,
+        count: 0,
+        tag: `${TUNING_SEARCHBASE_ID}:cim`,
+        signal: controller.signal,
+      });
+      const currentDefinitions = await loadMacroDefinitions(CIM_MACRO_CONFIGS);
+      const parsed = ((result.results || []) as Record<string, unknown>[])
+        .map(parseSearchResult)
+        .filter((row): row is MacroRow => Boolean(row));
+      setCimRows(
+        buildExpectedEditableRows(
+          CIM_MACRO_CONFIGS,
+          parsed,
+          currentDefinitions,
+        ),
+      );
+      setCimScanState("ready");
+    } catch (err) {
+      if (isAbortError(err)) return;
+      setCimScanState("error");
+      setCimError(err instanceof Error ? err.message : String(err));
+    }
+  }, [cimTimeRange.earliest, cimTimeRange.latest]);
+
+  useEffect(() => {
+    void loadCimMacroRows();
+    return () => {
+      cimAbortRef.current?.abort();
+    };
+  }, [loadCimMacroRows]);
 
   const loadAdhocMacro = useCallback(async () => {
     setAdhocStatus({ state: "saving", message: "Loading current macro" });
@@ -823,7 +1107,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
 
   const updateDraftDefinition = useCallback(
     (rowKey: string, definition: string) => {
-      setRows((current) =>
+      const updateRows = (current: EditableMacroRow[]) =>
         current.map((row) =>
           macroStatusKey(row) === rowKey
             ? {
@@ -831,8 +1115,9 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 draftDefinition: definition,
               }
             : row,
-        ),
-      );
+        );
+      setRows(updateRows);
+      setCimRows(updateRows);
       setSaveStatuses((current) => ({
         ...current,
         [rowKey]: { state: "idle" },
@@ -889,6 +1174,128 @@ export default function MacroIndexTuningPage(): JSX.Element {
     }
   }, [adhocDefinition]);
 
+  const toggleRowGroup = useCallback((targetApp: string) => {
+    setCollapsedRowGroups((current) => ({
+      ...current,
+      [targetApp]: !current[targetApp],
+    }));
+  }, []);
+
+  const renderEditableRow = (row: EditableMacroRow) => {
+    const status = saveStatuses[macroStatusKey(row)] || {
+      state: "idle",
+    };
+    const isUnknown = row.macro === "unknown";
+    const isSaving = status.state === "saving";
+    return (
+      <tr
+        key={macroStatusKey(row)}
+        className="border-b border-slate-100 align-top"
+      >
+        <td className="px-4 py-3">
+          <div
+            className={`font-mono text-sm font-bold ${
+              isUnknown ? "text-amber-700" : "text-sky-800"
+            }`}
+          >
+            {row.macro}
+          </div>
+          <div className="mt-1 text-xs text-slate-500">
+            {row.sourcetypeCount
+              ? `${formatNumber(row.sourcetypeCount)} sourcetypes`
+              : "No matching sourcetypes"}
+          </div>
+          <div className="mt-1 text-xs text-slate-500">
+            {row.targetApp}/local/macros.conf
+          </div>
+        </td>
+        <td className="px-4 py-3">
+          <input
+            value={row.draftDefinition}
+            onChange={(event) =>
+              updateDraftDefinition(macroStatusKey(row), event.target.value)
+            }
+            disabled={isUnknown}
+            className="h-9 w-full rounded border border-slate-300 bg-white px-2 font-mono text-xs text-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
+          />
+          {status.state === "error" && status.message && (
+            <div className="mt-1 text-xs text-red-700">{status.message}</div>
+          )}
+          {status.state === "saved" && (
+            <div className="mt-1 text-xs font-semibold text-emerald-700">
+              Saved
+            </div>
+          )}
+        </td>
+        <td className="px-4 py-3">
+          <FieldPills
+            values={row.indexes}
+            tone="sky"
+            expandable
+            valueLabel="indexes"
+          />
+        </td>
+        <td className="px-4 py-3">
+          <FieldPills
+            values={row.sourcetypes}
+            expandable
+            valueLabel="sourcetypes"
+          />
+        </td>
+        <td className="px-4 py-3 text-right font-mono text-sm text-slate-700">
+          {formatNumber(row.events)}
+        </td>
+        <td className="px-4 py-3 text-right">
+          <button
+            type="button"
+            onClick={() => saveOne(row)}
+            disabled={isUnknown || isSaving || !row.draftDefinition.trim()}
+            className={`${compactButtonBase} border-slate-300 bg-white text-slate-700 hover:border-emerald-500 hover:text-emerald-700`}
+          >
+            {isSaving ? (
+              <Loader2 size={15} className="animate-spin" />
+            ) : (
+              <Save size={15} />
+            )}
+            Save
+          </button>
+        </td>
+      </tr>
+    );
+  };
+
+  const renderTableRows = (rowGroups: RowGroup[]) =>
+    rowGroups.map(({ targetApp, rows: appRows }) => {
+      const isCollapsed = Boolean(collapsedRowGroups[targetApp]);
+      return (
+        <React.Fragment key={targetApp}>
+          <tr className="border-b border-slate-200 bg-slate-100">
+            <td colSpan={6} className="p-0">
+              <button
+                type="button"
+                onClick={() => toggleRowGroup(targetApp)}
+                aria-expanded={!isCollapsed}
+                className="flex h-9 w-full items-center gap-2 px-4 text-left text-xs font-bold uppercase tracking-wide text-slate-600 hover:bg-slate-200"
+              >
+                {isCollapsed ? (
+                  <ChevronRight size={15} className="shrink-0" />
+                ) : (
+                  <ChevronDown size={15} className="shrink-0" />
+                )}
+                <span className="min-w-0 truncate">
+                  {targetApp}/local/macros.conf
+                </span>
+                <span className="ml-auto shrink-0 rounded bg-white px-2 py-0.5 text-[11px] font-semibold normal-case tracking-normal text-slate-500">
+                  {formatNumber(appRows.length)} macros
+                </span>
+              </button>
+            </td>
+          </tr>
+          {!isCollapsed && appRows.map(renderEditableRow)}
+        </React.Fragment>
+      );
+    });
+
   return (
     <main className="min-h-screen bg-[#f4f6f8] px-6 py-5 text-slate-800">
       <section className="mb-4 border-b border-slate-200 pb-4">
@@ -898,10 +1305,9 @@ export default function MacroIndexTuningPage(): JSX.Element {
               Macro Index Tuning
             </h1>
             <p className="mt-1 max-w-3xl text-sm text-slate-600">
-              Scan your Splunk indexes for Cisco and related sourcetypes, map
-              the detected data into the dashboard index macros and selected
-              data model app macros, then review and save the generated macro
-              definitions so searches run against the right indexes.
+              Scan known Cisco sourcetypes for fast dashboard macro tuning,
+              then run CIM data model discovery separately when you need the
+              slower tag-based index search.
             </p>
             <p className="mt-1 max-w-3xl text-xs text-slate-500">
               Powered by searchbase entry{" "}
@@ -912,24 +1318,23 @@ export default function MacroIndexTuningPage(): JSX.Element {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <label
-              htmlFor="macro-index-tuning-range"
-              className="mb-0 flex h-10 items-center gap-3 text-sm font-semibold text-slate-700"
-            >
-              Range
-              <select
-                id="macro-index-tuning-range"
-                value={timeRange}
-                onChange={(event) => setTimeRange(event.target.value)}
-                className={`${toolbarSelectBase} w-[220px]`}
-              >
-                {TIME_RANGE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="flex h-10 items-center gap-3 text-sm font-semibold text-slate-700">
+              <span>Range</span>
+              <TimeRangeDropdown
+                earliest={timeRange.earliest}
+                latest={timeRange.latest}
+                onChange={handleFastTimeRangeChange}
+                realTimeDisabled
+                presets={TIME_PRESETS}
+                onRequestParseEarliest={
+                  fastTimeParser.handleRequestParseEarliest
+                }
+                onRequestParseLatest={fastTimeParser.handleRequestParseLatest}
+                parseEarliest={fastTimeParser.parseEarliest}
+                parseLatest={fastTimeParser.parseLatest}
+                labelMaxChars={32}
+              />
+            </div>
             <button
               type="button"
               onClick={runScan}
@@ -941,7 +1346,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               ) : (
                 <Play size={16} />
               )}
-              {isLoading ? "Running" : "Run scan"}
+              {isLoading ? "Running" : "Run fast scan"}
             </button>
             <a
               href={openSearchUrl || undefined}
@@ -958,7 +1363,9 @@ export default function MacroIndexTuningPage(): JSX.Element {
             <button
               type="button"
               onClick={saveAll}
-              disabled={!rowsToSave.length || isLoading || isSavingAll}
+              disabled={
+                !rowsToSave.length || isLoading || isCimLoading || isSavingAll
+              }
               className={`${lightButtonBase} border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700`}
             >
               {isSavingAll ? (
@@ -1144,7 +1551,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
             <div className="flex shrink-0 items-center gap-2">
               <Search size={17} className="text-sky-700" />
               <h2 className="m-0 text-base font-bold text-slate-900">
-                Generated macro definitions
+                Fast macro definitions
               </h2>
             </div>
             <label
@@ -1232,90 +1639,134 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   </th>
                 </tr>
               </thead>
-              <tbody>
-                {filteredRows.map((row) => {
-                  const status = saveStatuses[macroStatusKey(row)] || {
-                    state: "idle",
-                  };
-                  const isUnknown = row.macro === "unknown";
-                  const isSaving = status.state === "saving";
-                  return (
-                    <tr
-                      key={macroStatusKey(row)}
-                      className="border-b border-slate-100 align-top"
-                    >
-                      <td className="px-4 py-3">
-                        <div
-                          className={`font-mono text-sm font-bold ${
-                            isUnknown ? "text-amber-700" : "text-sky-800"
-                          }`}
-                        >
-                          {row.macro}
-                        </div>
-                        <div className="mt-1 text-xs text-slate-500">
-                          {row.sourcetypeCount
-                            ? `${formatNumber(row.sourcetypeCount)} sourcetypes`
-                            : "No matching sourcetypes"}
-                        </div>
-                        <div className="mt-1 text-xs text-slate-500">
-                          {row.targetApp}/local/macros.conf
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <input
-                          value={row.draftDefinition}
-                          onChange={(event) =>
-                            updateDraftDefinition(
-                              macroStatusKey(row),
-                              event.target.value,
-                            )
-                          }
-                          disabled={isUnknown}
-                          className="h-9 w-full rounded border border-slate-300 bg-white px-2 font-mono text-xs text-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
-                        />
-                        {status.state === "error" && status.message && (
-                          <div className="mt-1 text-xs text-red-700">
-                            {status.message}
-                          </div>
-                        )}
-                        {status.state === "saved" && (
-                          <div className="mt-1 text-xs font-semibold text-emerald-700">
-                            Saved
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <FieldPills values={row.indexes} tone="sky" />
-                      </td>
-                      <td className="px-4 py-3">
-                        <FieldPills values={row.sourcetypes} expandable />
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono text-sm text-slate-700">
-                        {formatNumber(row.events)}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <button
-                          type="button"
-                          onClick={() => saveOne(row)}
-                          disabled={
-                            isUnknown || isSaving || !row.draftDefinition.trim()
-                          }
-                          className={`${compactButtonBase} border-slate-300 bg-white text-slate-700 hover:border-emerald-500 hover:text-emerald-700`}
-                        >
-                          {isSaving ? (
-                            <Loader2 size={15} className="animate-spin" />
-                          ) : (
-                            <Save size={15} />
-                          )}
-                          Save
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
+              <tbody>{renderTableRows(filteredRowGroups)}</tbody>
             </table>
           </div>
+        )}
+      </section>
+
+      <section className="mb-4 border border-slate-200 bg-white">
+        <div className="grid gap-3 border-b border-slate-200 px-4 py-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
+          <div className="min-w-0">
+            <button
+              type="button"
+              onClick={() => toggleRowGroup(CIM_APP_NAME)}
+              aria-expanded={!isCimGroupCollapsed}
+              className="flex h-9 max-w-full items-center gap-2 text-left text-xs font-bold uppercase tracking-wide text-slate-600 hover:text-sky-700"
+            >
+              {isCimGroupCollapsed ? (
+                <ChevronRight size={15} className="shrink-0" />
+              ) : (
+                <ChevronDown size={15} className="shrink-0" />
+              )}
+              <span className="min-w-0 truncate">
+                {CIM_APP_NAME}/local/macros.conf
+              </span>
+              <span className="shrink-0 rounded bg-slate-100 px-2 py-0.5 text-[11px] font-semibold normal-case tracking-normal text-slate-500">
+                {formatNumber(cimMacroRows.length)} macros
+              </span>
+            </button>
+            {!isCimGroupCollapsed && (
+              <p className="mt-1 text-sm text-slate-600">
+                CIM data model discovery. Discover Splunk_SA_CIM index macros
+                with tag-based searches only when needed.
+              </p>
+            )}
+          </div>
+          <div className="flex min-w-0 flex-wrap items-center gap-2 xl:justify-end">
+            <div className="flex h-10 items-center gap-2 text-sm font-semibold text-slate-700">
+              <span>CIM range</span>
+              <TimeRangeDropdown
+                earliest={cimTimeRange.earliest}
+                latest={cimTimeRange.latest}
+                onChange={handleCimTimeRangeChange}
+                realTimeDisabled
+                presets={TIME_PRESETS}
+                onRequestParseEarliest={cimTimeParser.handleRequestParseEarliest}
+                onRequestParseLatest={cimTimeParser.handleRequestParseLatest}
+                parseEarliest={cimTimeParser.parseEarliest}
+                parseLatest={cimTimeParser.parseLatest}
+                labelMaxChars={28}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={runCimDiscovery}
+              disabled={isCimLoading}
+              className={`${lightButtonBase} border-sky-600 bg-sky-600 text-white hover:bg-sky-700`}
+            >
+              {isCimLoading ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Play size={16} />
+              )}
+              {isCimLoading ? "Running" : "Run CIM discovery"}
+            </button>
+            <a
+              href={openCimSearchUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`${lightButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
+            >
+              <ExternalLink size={16} />
+              Open CIM Search
+            </a>
+          </div>
+        </div>
+
+        {!isCimGroupCollapsed && (
+          <>
+            {cimError && (
+              <div className="flex items-start gap-2 border-b border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                <AlertTriangle className="mt-0.5 shrink-0" size={17} />
+                <div>
+                  <div className="font-bold">CIM discovery failed.</div>
+                  <div>{cimError}</div>
+                </div>
+              </div>
+            )}
+
+            {isCimLoading && cimRows.length === 0 ? (
+              <div className="flex min-h-[180px] items-center justify-center gap-3 text-sm text-slate-600">
+                <Loader2 size={18} className="animate-spin text-sky-700" />
+                Discovering CIM indexes...
+              </div>
+            ) : cimRows.length === 0 ? (
+              <div className="min-h-[160px] px-4 py-12 text-center text-sm text-slate-500">
+                No CIM macro rows loaded.
+              </div>
+            ) : filteredCimRows.length === 0 ? (
+              <div className="min-h-[160px] px-4 py-12 text-center text-sm text-slate-500">
+                No CIM macro rows match the current search.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full border-collapse text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                      <th className="w-[190px] px-4 py-3 font-bold">Macro</th>
+                      <th className="min-w-[330px] px-4 py-3 font-bold">
+                        Definition
+                      </th>
+                      <th className="min-w-[220px] px-4 py-3 font-bold">
+                        Indexes
+                      </th>
+                      <th className="min-w-[260px] px-4 py-3 font-bold">
+                        Sourcetypes
+                      </th>
+                      <th className="w-[110px] px-4 py-3 text-right font-bold">
+                        Events
+                      </th>
+                      <th className="w-[130px] px-4 py-3 text-right font-bold">
+                        Action
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>{filteredCimRows.map(renderEditableRow)}</tbody>
+                </table>
+              </div>
+            )}
+          </>
         )}
       </section>
 
@@ -1337,14 +1788,25 @@ export default function MacroIndexTuningPage(): JSX.Element {
           />
         </div>
 
-        <details className="border border-slate-200 bg-white">
-          <summary className="cursor-pointer border-b border-slate-200 px-4 py-3 text-base font-bold text-slate-900">
-            Search SPL
-          </summary>
-          <pre className="m-0 max-h-[320px] overflow-auto whitespace-pre-wrap break-words p-4 font-mono text-xs leading-relaxed text-slate-800">
-            {searchSpl || "# Loading searchbase SPL..."}
-          </pre>
-        </details>
+        <div className="grid gap-4">
+          <details className="border border-slate-200 bg-white">
+            <summary className="cursor-pointer border-b border-slate-200 px-4 py-3 text-base font-bold text-slate-900">
+              Fast scan SPL
+            </summary>
+            <pre className="m-0 max-h-[220px] overflow-auto whitespace-pre-wrap break-words p-4 font-mono text-xs leading-relaxed text-slate-800">
+              {searchSpl || "# Loading searchbase SPL..."}
+            </pre>
+          </details>
+
+          <details className="border border-slate-200 bg-white">
+            <summary className="cursor-pointer border-b border-slate-200 px-4 py-3 text-base font-bold text-slate-900">
+              CIM discovery SPL
+            </summary>
+            <pre className="m-0 max-h-[220px] overflow-auto whitespace-pre-wrap break-words p-4 font-mono text-xs leading-relaxed text-slate-800">
+              {CIM_DISCOVERY_SEARCH}
+            </pre>
+          </details>
+        </div>
       </section>
     </main>
   );

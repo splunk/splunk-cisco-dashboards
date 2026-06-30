@@ -48,7 +48,7 @@
 			"dataSources": {
 				"primary": "ds_act_compare_chart"
 			},
-			"description": "People / unique users / unique devices: baseline week vs exercise week.",
+			"description": "People / unique users / unique devices: first half vs second half of the selected time range.",
 			"options": {
 				"backgroundColor": "transparent",
 				"legendDisplay": "bottom",
@@ -66,7 +66,7 @@
 			"dataSources": {
 				"primary": "ds_act_compare_kpi"
 			},
-			"description": "Surge multiplier — Op Florida Ready vs the prior baseline week.",
+			"description": "Surge multiplier — second half vs first half of the selected time range.",
 			"options": {
 				"backgroundColor": "transparent",
 				"majorColor": "> primary | seriesByName('multiplier') | lastPoint() | rangeValue(thresholds=[1.5, 3], colors=[\"#9E9E9E\", \"#FF8C25\", \"#D64550\"])",
@@ -1195,10 +1195,10 @@
 		"ds_act_compare_chart": {
 			"name": "Baseline week vs Exercise window - by metric",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" (eventType=\"DEVICE_COUNT\" OR eventType=\"USER_PRESENCE\" OR eventType=\"DEVICE_PRESENCE\")\n| eval phase=case(_time>=strptime(\"2026-04-13 00:00:00\",\"%Y-%m-%d %H:%M:%S\") AND _time<strptime(\"2026-04-16 00:00:00\",\"%Y-%m-%d %H:%M:%S\"), \"Exercise (Apr 13-15)\",\n _time>=strptime(\"2026-04-06 00:00:00\",\"%Y-%m-%d %H:%M:%S\") AND _time<strptime(\"2026-04-13 00:00:00\",\"%Y-%m-%d %H:%M:%S\"), \"Baseline (week before)\")\n| where isnotnull(phase)\n| eval metric=case(eventType=\"DEVICE_COUNT\", \"People in buildings (avg/hr)\",\n eventType=\"USER_PRESENCE\", \"Active users (portfolio)\",\n eventType=\"DEVICE_PRESENCE\", \"Unique devices (per event)\")\n| eval value=case(eventType=\"DEVICE_COUNT\", 'deviceCounts.associatedCount',\n eventType=\"USER_PRESENCE\", 'userPresence.activeUsersCount.totalUsers',\n eventType=\"DEVICE_PRESENCE\", 1)\n| bin _time span=1h \n| stats max(value) as value by phase metric _time\n| stats avg(value) as value by phase metric\n| eval value=round(value, 2)\n| xyseries metric phase value",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" (eventType=\"DEVICE_COUNT\" OR eventType=\"DEVICE_ASSOCIATION\")\n| addinfo\n| eval split_time=info_min_time+((info_max_time-info_min_time)/2)\n| eval phase=if(_time<split_time, \"Baseline (first half)\", \"Exercise (second half)\")\n| eval people=if(eventType=\"DEVICE_COUNT\", coalesce('deviceCounts.userCount', 'deviceCounts.associatedCount', 'deviceCounts.deviceCount'), null())\n| eval assoc_mac=if(eventType=\"DEVICE_ASSOCIATION\" AND 'deviceAssociation.event'=\"ASSOCIATE\", lower('deviceAssociation.device.macAddress'), null())\n| eval assoc_user=if(eventType=\"DEVICE_ASSOCIATION\" AND 'deviceAssociation.event'=\"ASSOCIATE\", coalesce('deviceAssociation.userName', 'deviceAssociation.username', 'deviceAssociation.user.name'), null())\n| bin _time span=1h\n| stats max(people) as people, dc(assoc_user) as unique_users, dc(assoc_mac) as unique_devices by phase _time\n| eval unique_users=if(unique_users>0, unique_users, unique_devices)\n| stats avg(people) as \"People in buildings (avg/hr)\", avg(unique_users) as \"Unique users (avg/hr)\", avg(unique_devices) as \"Unique devices (avg/hr)\" by phase\n| untable phase metric value\n| eval value=round(value, 2)\n| xyseries metric phase value",
 				"queryParameters": {
-					"earliest": "-30d@d",
-					"latest": "now"
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
 				}
 			},
 			"type": "ds.search"
@@ -1206,7 +1206,7 @@
 		"ds_act_compare_kpi": {
 			"name": "Spaces baseline × exercise — surge multiplier",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\"\n| eval people='deviceCounts.associatedCount'\n| where isnotnull(people) AND people>0\n| bin _time span=1h \n| stats max(people) as people by _time\n| eval phase=case(_time>=strptime(\"2026-04-13 00:00:00\",\"%Y-%m-%d %H:%M:%S\") AND _time<strptime(\"2026-04-16 00:00:00\",\"%Y-%m-%d %H:%M:%S\"), \"exercise\",\n _time>=strptime(\"2026-04-06 00:00:00\",\"%Y-%m-%d %H:%M:%S\") AND _time<strptime(\"2026-04-13 00:00:00\",\"%Y-%m-%d %H:%M:%S\"), \"baseline\")\n| where isnotnull(phase)\n| stats avg(people) as avg_people by phase\n| eval avg_people=round(avg_people, 2)\n| xyseries phase phase avg_people\n| eval multiplier=if(isnotnull(baseline) AND baseline>0, round(exercise/baseline, 2), 0)\n| fields multiplier",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\"\n| addinfo\n| eval split_time=info_min_time+((info_max_time-info_min_time)/2)\n| eval people=coalesce('deviceCounts.userCount', 'deviceCounts.associatedCount', 'deviceCounts.deviceCount')\n| where isnotnull(people) AND people>0\n| eval phase=if(_time<split_time, \"baseline\", \"exercise\")\n| bin _time span=1h\n| stats max(people) as people by phase _time\n| stats avg(people) as avg_people by phase\n| eval avg_people=round(avg_people, 2)\n| xyseries phase phase avg_people\n| eval multiplier=if(isnotnull(baseline) AND baseline>0 AND isnotnull(exercise), round(exercise/baseline, 2), null())\n| fields multiplier",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1283,7 +1283,7 @@
 		"ds_activation_surge": {
 			"name": "Spaces — occupancy surge + Op Florida Ready annotations",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR\n| eval users='deviceCounts.userCount',\n associated='deviceCounts.associatedCount',\n devices='deviceCounts.deviceCount',\n pct='deviceCounts.estimatedCapacityPercentage',\n floor='deviceCounts.location.name',\n building='deviceCounts.location.parent.name',\n city='deviceCounts.location.parent.parent.name'\n| bin _time span=1h \n| stats max(users) as users by _time, floor, city\n| eventstats avg(users) as baseline_avg, stdev(users) as baseline_std by floor\n| eval surge_threshold=baseline_avg + 2*baseline_std\n| where users > surge_threshold AND users >= 5\n| eval surge_pct=round((users-baseline_avg)/baseline_avg*100, 2)\n| eval _time_str=strftime(_time, \"%Y-%m-%d %H:%M\")\n| table _time_str, city, floor, users, baseline_avg, surge_pct\n| rename _time_str as \"Time\", city as \"City\", floor as \"Floor\", users as \"Users\", baseline_avg as \"Baseline\", surge_pct as \"Surge %\"",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR\n| eval users=coalesce('deviceCounts.userCount', 'deviceCounts.associatedCount', 'deviceCounts.deviceCount'),\n floor='deviceCounts.location.name'\n| where isnotnull(users)\n| bin _time span=1h\n| stats max(users) as users by _time, floor\n| stats sum(users) as Occupancy by _time\n| eval Occupancy=round(Occupancy, 2)\n| fields _time Occupancy",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
