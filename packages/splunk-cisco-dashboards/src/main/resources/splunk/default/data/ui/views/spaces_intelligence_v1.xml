@@ -1195,7 +1195,7 @@
 		"ds_act_compare_chart": {
 			"name": "Baseline week vs Exercise window - by metric",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" (eventType=\"DEVICE_COUNT\" OR eventType=\"USER_PRESENCE\" OR eventType=\"DEVICE_PRESENCE\")\n| eval phase=case(_time>=strptime(\"2026-04-13 00:00:00\",\"%Y-%m-%d %H:%M:%S\") AND _time<strptime(\"2026-04-16 00:00:00\",\"%Y-%m-%d %H:%M:%S\"), \"Exercise (Apr 13-15)\",\n _time>=strptime(\"2026-04-06 00:00:00\",\"%Y-%m-%d %H:%M:%S\") AND _time<strptime(\"2026-04-13 00:00:00\",\"%Y-%m-%d %H:%M:%S\"), \"Baseline (week before)\")\n| where isnotnull(phase)\n| eval metric=case(eventType=\"DEVICE_COUNT\", \"People in buildings (avg/hr)\",\n eventType=\"USER_PRESENCE\", \"Active users (portfolio)\",\n eventType=\"DEVICE_PRESENCE\", \"Unique devices (per event)\")\n| eval value=case(eventType=\"DEVICE_COUNT\", 'deviceCounts.associatedCount',\n eventType=\"USER_PRESENCE\", 'userPresence.activeUsersCount.totalUsers',\n eventType=\"DEVICE_PRESENCE\", 1)\n| bin _time \n| stats max(value) as value by phase metric _time\n| stats avg(value) as value by phase metric\n| eval value=round(value, 2)\n| xyseries metric phase value",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" (eventType=\"DEVICE_COUNT\" OR eventType=\"USER_PRESENCE\" OR eventType=\"DEVICE_PRESENCE\")\n| eval phase=case(_time>=strptime(\"2026-04-13 00:00:00\",\"%Y-%m-%d %H:%M:%S\") AND _time<strptime(\"2026-04-16 00:00:00\",\"%Y-%m-%d %H:%M:%S\"), \"Exercise (Apr 13-15)\",\n _time>=strptime(\"2026-04-06 00:00:00\",\"%Y-%m-%d %H:%M:%S\") AND _time<strptime(\"2026-04-13 00:00:00\",\"%Y-%m-%d %H:%M:%S\"), \"Baseline (week before)\")\n| where isnotnull(phase)\n| eval metric=case(eventType=\"DEVICE_COUNT\", \"People in buildings (avg/hr)\",\n eventType=\"USER_PRESENCE\", \"Active users (portfolio)\",\n eventType=\"DEVICE_PRESENCE\", \"Unique devices (per event)\")\n| eval value=case(eventType=\"DEVICE_COUNT\", 'deviceCounts.associatedCount',\n eventType=\"USER_PRESENCE\", 'userPresence.activeUsersCount.totalUsers',\n eventType=\"DEVICE_PRESENCE\", 1)\n| bin _time span=1h \n| stats max(value) as value by phase metric _time\n| stats avg(value) as value by phase metric\n| eval value=round(value, 2)\n| xyseries metric phase value",
 				"queryParameters": {
 					"earliest": "-30d@d",
 					"latest": "now"
@@ -1206,7 +1206,7 @@
 		"ds_act_compare_kpi": {
 			"name": "Spaces baseline × exercise — surge multiplier",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\"\n| eval people='deviceCounts.associatedCount'\n| where isnotnull(people) AND people>0\n| bin _time \n| stats max(people) as people by _time\n| eval phase=case(_time>=strptime(\"2026-04-13 00:00:00\",\"%Y-%m-%d %H:%M:%S\") AND _time<strptime(\"2026-04-16 00:00:00\",\"%Y-%m-%d %H:%M:%S\"), \"exercise\",\n _time>=strptime(\"2026-04-06 00:00:00\",\"%Y-%m-%d %H:%M:%S\") AND _time<strptime(\"2026-04-13 00:00:00\",\"%Y-%m-%d %H:%M:%S\"), \"baseline\")\n| where isnotnull(phase)\n| stats avg(people) as avg_people by phase\n| eval avg_people=round(avg_people, 2)\n| xyseries phase phase avg_people\n| eval multiplier=if(isnotnull(baseline) AND baseline>0, round(exercise/baseline, 2), 0)\n| fields multiplier",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\"\n| eval people='deviceCounts.associatedCount'\n| where isnotnull(people) AND people>0\n| bin _time span=1h \n| stats max(people) as people by _time\n| eval phase=case(_time>=strptime(\"2026-04-13 00:00:00\",\"%Y-%m-%d %H:%M:%S\") AND _time<strptime(\"2026-04-16 00:00:00\",\"%Y-%m-%d %H:%M:%S\"), \"exercise\",\n _time>=strptime(\"2026-04-06 00:00:00\",\"%Y-%m-%d %H:%M:%S\") AND _time<strptime(\"2026-04-13 00:00:00\",\"%Y-%m-%d %H:%M:%S\"), \"baseline\")\n| where isnotnull(phase)\n| stats avg(people) as avg_people by phase\n| eval avg_people=round(avg_people, 2)\n| xyseries phase phase avg_people\n| eval multiplier=if(isnotnull(baseline) AND baseline>0, round(exercise/baseline, 2), 0)\n| fields multiplier",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1250,7 +1250,7 @@
 		"ds_activation_kpi_peak": {
 			"name": "Peak users",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR\n| eval users='deviceCounts.userCount',\n associated='deviceCounts.associatedCount',\n devices='deviceCounts.deviceCount',\n pct='deviceCounts.estimatedCapacityPercentage',\n floor='deviceCounts.location.name',\n building='deviceCounts.location.parent.name',\n city='deviceCounts.location.parent.parent.name'\n| bin _time \n| stats max(users) as peak by _time, floor\n| stats max(peak) as \"Peak Users\"",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR\n| eval users='deviceCounts.userCount',\n associated='deviceCounts.associatedCount',\n devices='deviceCounts.deviceCount',\n pct='deviceCounts.estimatedCapacityPercentage',\n floor='deviceCounts.location.name',\n building='deviceCounts.location.parent.name',\n city='deviceCounts.location.parent.parent.name'\n| bin _time span=1h \n| stats max(users) as peak by _time, floor\n| stats max(peak) as \"Peak Users\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1283,7 +1283,7 @@
 		"ds_activation_surge": {
 			"name": "Spaces — occupancy surge + Op Florida Ready annotations",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR\n| eval users='deviceCounts.userCount',\n associated='deviceCounts.associatedCount',\n devices='deviceCounts.deviceCount',\n pct='deviceCounts.estimatedCapacityPercentage',\n floor='deviceCounts.location.name',\n building='deviceCounts.location.parent.name',\n city='deviceCounts.location.parent.parent.name'\n| bin _time \n| stats max(users) as users by _time, floor, city\n| eventstats avg(users) as baseline_avg, stdev(users) as baseline_std by floor\n| eval surge_threshold=baseline_avg + 2*baseline_std\n| where users > surge_threshold AND users >= 5\n| eval surge_pct=round((users-baseline_avg)/baseline_avg*100, 2)\n| eval _time_str=strftime(_time, \"%Y-%m-%d %H:%M\")\n| table _time_str, city, floor, users, baseline_avg, surge_pct\n| rename _time_str as \"Time\", city as \"City\", floor as \"Floor\", users as \"Users\", baseline_avg as \"Baseline\", surge_pct as \"Surge %\"",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR\n| eval users='deviceCounts.userCount',\n associated='deviceCounts.associatedCount',\n devices='deviceCounts.deviceCount',\n pct='deviceCounts.estimatedCapacityPercentage',\n floor='deviceCounts.location.name',\n building='deviceCounts.location.parent.name',\n city='deviceCounts.location.parent.parent.name'\n| bin _time span=1h \n| stats max(users) as users by _time, floor, city\n| eventstats avg(users) as baseline_avg, stdev(users) as baseline_std by floor\n| eval surge_threshold=baseline_avg + 2*baseline_std\n| where users > surge_threshold AND users >= 5\n| eval surge_pct=round((users-baseline_avg)/baseline_avg*100, 2)\n| eval _time_str=strftime(_time, \"%Y-%m-%d %H:%M\")\n| table _time_str, city, floor, users, baseline_avg, surge_pct\n| rename _time_str as \"Time\", city as \"City\", floor as \"Floor\", users as \"Users\", baseline_avg as \"Baseline\", surge_pct as \"Surge %\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1371,7 +1371,7 @@
 		"ds_capacity_predict": {
 			"name": "Occupancy forecast (24-hour prediction)",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR\n| eval users='deviceCounts.userCount',\n associated='deviceCounts.associatedCount',\n devices='deviceCounts.deviceCount',\n pct='deviceCounts.estimatedCapacityPercentage',\n floor='deviceCounts.location.name',\n building='deviceCounts.location.parent.name',\n city='deviceCounts.location.parent.parent.name'\n| bin _time \n| stats max(users) as users by _time, floor\n| stats sum(users) as users by _time\n| timechart max(eval(round(users, 2))) as users\n| predict users as predicted future_timespan=24\n| rename \"upper95(prediction(users))\" as upper95,\n \"lower95(prediction(users))\" as lower95\n| eval users=round(users, 2),\n predicted=round(predicted, 2),\n upper95=round(upper95, 2),\n lower95=round(lower95, 2)",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR\n| eval users='deviceCounts.userCount',\n associated='deviceCounts.associatedCount',\n devices='deviceCounts.deviceCount',\n pct='deviceCounts.estimatedCapacityPercentage',\n floor='deviceCounts.location.name',\n building='deviceCounts.location.parent.name',\n city='deviceCounts.location.parent.parent.name'\n| bin _time span=1h \n| stats max(users) as users by _time, floor\n| stats sum(users) as users by _time\n| timechart span=1h max(eval(round(users, 2))) as users\n| predict users as predicted future_timespan=24\n| rename \"upper95(prediction(users))\" as upper95,\n \"lower95(prediction(users))\" as lower95\n| eval users=round(users, 2),\n predicted=round(predicted, 2),\n upper95=round(upper95, 2),\n lower95=round(lower95, 2)",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1382,7 +1382,7 @@
 		"ds_capacity_trend": {
 			"name": "Capacity % by floor over time",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR\n| eval users='deviceCounts.userCount',\n associated='deviceCounts.associatedCount',\n devices='deviceCounts.deviceCount',\n pct='deviceCounts.estimatedCapacityPercentage',\n floor='deviceCounts.location.name',\n building='deviceCounts.location.parent.name',\n city='deviceCounts.location.parent.parent.name'\n| where isnotnull(pct)\n| bin _time \n| stats max(pct) as pct by _time, floor, building\n| timechart useother=t max(eval(round(pct, 2))) as \"Capacity %\" by floor where max in top10",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR\n| eval users='deviceCounts.userCount',\n associated='deviceCounts.associatedCount',\n devices='deviceCounts.deviceCount',\n pct='deviceCounts.estimatedCapacityPercentage',\n floor='deviceCounts.location.name',\n building='deviceCounts.location.parent.name',\n city='deviceCounts.location.parent.parent.name'\n| where isnotnull(pct)\n| bin _time span=1h \n| stats max(pct) as pct by _time, floor, building\n| timechart span=1h useother=t max(eval(round(pct, 2))) as \"Capacity %\" by floor where max in top10",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1393,7 +1393,7 @@
 		"ds_client_health_by_site": {
 			"name": "Client health score by site over time",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" connectionStatus=\"connected\"\n| eval siteHierarchy=`dnac_site_normalize(siteHierarchy)`,\n health='health.overallScore'\n| where siteHierarchy!=\"\" AND isnotnull(health) AND health>0\n| bin _time\n| stats avg(health) as health by _time, siteHierarchy\n| timechart useother=t avg(eval(round(health, 2))) as \"Client Health\" by siteHierarchy where max in top10",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" connectionStatus=\"connected\"\n| eval siteHierarchy=`dnac_site_normalize(siteHierarchy)`,\n health='health.overallScore'\n| where siteHierarchy!=\"\" AND isnotnull(health) AND health>0\n| bin _time span=1h\n| stats avg(health) as health by _time, siteHierarchy\n| timechart span=1h useother=t avg(eval(round(health, 2))) as \"Client Health\" by siteHierarchy where max in top10",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1415,7 +1415,7 @@
 		"ds_convergence_health": {
 			"name": "Convergence health scores",
 			"options": {
-				"query": "`index_catalyst` (sourcetype=\"cisco:dnac:networkhealth\" category=\"All\") OR (sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\")\n| eval metric=case(sourcetype=\"cisco:dnac:networkhealth\", \"network_health\",\n sourcetype=\"cisco:dnac:clienthealth\", \"client_health\"),\n value=case(sourcetype=\"cisco:dnac:networkhealth\", healthScore,\n sourcetype=\"cisco:dnac:clienthealth\", scoreValue)\n| bin _time \n| stats latest(eval(if(metric=\"network_health\", value, null()))) as \"Network Health\",\n latest(eval(if(metric=\"client_health\", value, null()))) as \"Client Health\" by _time\n| eval \"Network Health\"=round('Network Health', 2),\n \"Client Health\"=round('Client Health', 2)",
+				"query": "`index_catalyst` (sourcetype=\"cisco:dnac:networkhealth\" category=\"All\") OR (sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\")\n| eval metric=case(sourcetype=\"cisco:dnac:networkhealth\", \"network_health\",\n sourcetype=\"cisco:dnac:clienthealth\", \"client_health\"),\n value=case(sourcetype=\"cisco:dnac:networkhealth\", healthScore,\n sourcetype=\"cisco:dnac:clienthealth\", scoreValue)\n| bin _time span=1h \n| stats latest(eval(if(metric=\"network_health\", value, null()))) as \"Network Health\",\n latest(eval(if(metric=\"client_health\", value, null()))) as \"Client Health\" by _time\n| eval \"Network Health\"=round('Network Health', 2),\n \"Client Health\"=round('Client Health', 2)",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1437,7 +1437,7 @@
 		"ds_convergence_timeline": {
 			"name": "Convergence Occupancy and Network and Client health",
 			"options": {
-				"query": "`index_catalyst` OR `index_spaces` (sourcetype=\"cisco:dnac:networkhealth\" category=\"All\") OR (sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\") OR (sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR)\n| eval metric_type=case(sourcetype=\"cisco:dnac:networkhealth\", \"network_health\",\n sourcetype=\"cisco:dnac:clienthealth\", \"client_health\",\n sourcetype=\"cisco:spaces:firehose\", \"occupancy\"),\n value=case(sourcetype=\"cisco:dnac:networkhealth\", healthScore,\n sourcetype=\"cisco:dnac:clienthealth\", scoreValue,\n sourcetype=\"cisco:spaces:firehose\", 'deviceCounts.userCount')\n| bin _time \n| stats max(eval(if(metric_type=\"occupancy\", value, null()))) as Occupancy,\n latest(eval(if(metric_type=\"network_health\", value, null()))) as \"Network Health\",\n latest(eval(if(metric_type=\"client_health\", value, null()))) as \"Client Health\" by _time\n| eval Occupancy=round(Occupancy, 2),\n \"Network Health\"=round('Network Health', 2),\n \"Client Health\"=round('Client Health', 2)",
+				"query": "`index_catalyst` OR `index_spaces` (sourcetype=\"cisco:dnac:networkhealth\" category=\"All\") OR (sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\") OR (sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR)\n| eval metric_type=case(sourcetype=\"cisco:dnac:networkhealth\", \"network_health\",\n sourcetype=\"cisco:dnac:clienthealth\", \"client_health\",\n sourcetype=\"cisco:spaces:firehose\", \"occupancy\"),\n value=case(sourcetype=\"cisco:dnac:networkhealth\", healthScore,\n sourcetype=\"cisco:dnac:clienthealth\", scoreValue,\n sourcetype=\"cisco:spaces:firehose\", 'deviceCounts.userCount')\n| bin _time span=1h \n| stats max(eval(if(metric_type=\"occupancy\", value, null()))) as Occupancy,\n latest(eval(if(metric_type=\"network_health\", value, null()))) as \"Network Health\",\n latest(eval(if(metric_type=\"client_health\", value, null()))) as \"Client Health\" by _time\n| eval Occupancy=round(Occupancy, 2),\n \"Network Health\"=round('Network Health', 2),\n \"Client Health\"=round('Client Health', 2)",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1503,7 +1503,7 @@
 		"ds_env_occupancy_overlay": {
 			"name": "Occupancy vs temperature overlay",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" (eventType=\"DEVICE_COUNT\" OR eventType=\"WEBEX_TELEMETRY\")\n| eval users=if(eventType=\"DEVICE_COUNT\", 'deviceCounts.userCount', null()),\n temp=if(eventType=\"WEBEX_TELEMETRY\", 'webexTelemetryUpdate.telemetries{}.ambientTemp', null())\n| where isnotnull(users) OR isnotnull(temp)\n| eval temp_f=if(isnotnull(temp), round(temp*9/5+32, 2), null())\n| bin _time \n| stats max(users) as Users, avg(temp_f) as temp_avg by _time\n| eval Users=round(Users, 2),\n \"Temperature (F)\"=round(temp_avg, 2)\n| fields _time Users \"Temperature (F)\" ",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" (eventType=\"DEVICE_COUNT\" OR eventType=\"WEBEX_TELEMETRY\")\n| eval users=if(eventType=\"DEVICE_COUNT\", 'deviceCounts.userCount', null()),\n temp=if(eventType=\"WEBEX_TELEMETRY\", 'webexTelemetryUpdate.telemetries{}.ambientTemp', null())\n| where isnotnull(users) OR isnotnull(temp)\n| eval temp_f=if(isnotnull(temp), round(temp*9/5+32, 2), null())\n| bin _time span=1h \n| stats max(users) as Users, avg(temp_f) as temp_avg by _time\n| eval Users=round(Users, 2),\n \"Temperature (F)\"=round(temp_avg, 2)\n| fields _time Users \"Temperature (F)\" ",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1514,7 +1514,7 @@
 		"ds_env_scatter": {
 			"name": "Temperature vs users scatter",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" (eventType=\"DEVICE_COUNT\" OR eventType=\"WEBEX_TELEMETRY\")\n| eval users=if(eventType=\"DEVICE_COUNT\", 'deviceCounts.userCount', null()),\n temp=if(eventType=\"WEBEX_TELEMETRY\", 'webexTelemetryUpdate.telemetries{}.ambientTemp', null())\n| where isnotnull(users) OR isnotnull(temp)\n| eval temp_f=if(isnotnull(temp), round(temp*9/5+32, 2), null())\n| bin _time \n| stats max(users) as users, avg(temp_f) as temp_f by _time\n| where isnotnull(users) AND isnotnull(temp_f)\n| eval users=round(users, 2), temp_f=round(temp_f, 2)\n| table users temp_f",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" (eventType=\"DEVICE_COUNT\" OR eventType=\"WEBEX_TELEMETRY\")\n| eval users=if(eventType=\"DEVICE_COUNT\", 'deviceCounts.userCount', null()),\n temp=if(eventType=\"WEBEX_TELEMETRY\", 'webexTelemetryUpdate.telemetries{}.ambientTemp', null())\n| where isnotnull(users) OR isnotnull(temp)\n| eval temp_f=if(isnotnull(temp), round(temp*9/5+32, 2), null())\n| bin _time span=1h \n| stats max(users) as users, avg(temp_f) as temp_f by _time\n| where isnotnull(users) AND isnotnull(temp_f)\n| eval users=round(users, 2), temp_f=round(temp_f, 2)\n| table users temp_f",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1580,7 +1580,7 @@
 		"ds_issues_with_occupancy": {
 			"name": "Issues by severity and Occupancy overlay",
 			"options": {
-				"query": "`index_catalyst` OR `index_spaces` (sourcetype=\"cisco:dnac:issue\") OR (sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR)\n| eval metric=case(sourcetype=\"cisco:dnac:issue\", \"issue\",\n sourcetype=\"cisco:spaces:firehose\", \"occupancy\"),\n severity=if(metric=\"issue\", IssueSpecificSeverity, null()),\n users=if(metric=\"occupancy\", 'deviceCounts.userCount', null())\n| bin _time \n| stats dc(eval(if(metric=\"issue\" AND severity=\"HIGH\", IssueID, null()))) as High,\n dc(eval(if(metric=\"issue\" AND severity=\"MEDIUM\", IssueID, null()))) as Medium,\n dc(eval(if(metric=\"issue\" AND severity=\"LOW\", IssueID, null()))) as Low,\n max(users) as Occupancy by _time\n| eval Occupancy=round(Occupancy, 2)",
+				"query": "`index_catalyst` OR `index_spaces` (sourcetype=\"cisco:dnac:issue\") OR (sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR)\n| eval metric=case(sourcetype=\"cisco:dnac:issue\", \"issue\",\n sourcetype=\"cisco:spaces:firehose\", \"occupancy\"),\n severity=if(metric=\"issue\", IssueSpecificSeverity, null()),\n users=if(metric=\"occupancy\", 'deviceCounts.userCount', null())\n| bin _time span=1h \n| stats dc(eval(if(metric=\"issue\" AND severity=\"HIGH\", IssueID, null()))) as High,\n dc(eval(if(metric=\"issue\" AND severity=\"MEDIUM\", IssueID, null()))) as Medium,\n dc(eval(if(metric=\"issue\" AND severity=\"LOW\", IssueID, null()))) as Low,\n max(users) as Occupancy by _time\n| eval Occupancy=round(Occupancy, 2)",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1591,7 +1591,7 @@
 		"ds_kpi_avg_week": {
 			"name": "Avg users (period)",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR\n| eval users='deviceCounts.userCount',\n associated='deviceCounts.associatedCount',\n devices='deviceCounts.deviceCount',\n pct='deviceCounts.estimatedCapacityPercentage',\n floor='deviceCounts.location.name',\n building='deviceCounts.location.parent.name',\n city='deviceCounts.location.parent.parent.name'\n| bin _time \n| stats max(users) as peak by _time, floor\n| stats avg(peak) as \"Avg Concurrent Users\"\n| eval \"Avg Concurrent Users\"=round('Avg Concurrent Users', 0)",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR\n| eval users='deviceCounts.userCount',\n associated='deviceCounts.associatedCount',\n devices='deviceCounts.deviceCount',\n pct='deviceCounts.estimatedCapacityPercentage',\n floor='deviceCounts.location.name',\n building='deviceCounts.location.parent.name',\n city='deviceCounts.location.parent.parent.name'\n| bin _time span=1h \n| stats max(users) as peak by _time, floor\n| stats avg(peak) as \"Avg Concurrent Users\"\n| eval \"Avg Concurrent Users\"=round('Avg Concurrent Users', 0)",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1602,7 +1602,7 @@
 		"ds_kpi_peak_today": {
 			"name": "Peak users today",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR\n| eval users='deviceCounts.userCount',\n associated='deviceCounts.associatedCount',\n devices='deviceCounts.deviceCount',\n pct='deviceCounts.estimatedCapacityPercentage',\n floor='deviceCounts.location.name',\n building='deviceCounts.location.parent.name',\n city='deviceCounts.location.parent.parent.name'\n| bin _time \n| stats max(users) as peak by _time, floor\n| stats max(peak) as \"Peak Concurrent Users\"",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR\n| eval users='deviceCounts.userCount',\n associated='deviceCounts.associatedCount',\n devices='deviceCounts.deviceCount',\n pct='deviceCounts.estimatedCapacityPercentage',\n floor='deviceCounts.location.name',\n building='deviceCounts.location.parent.name',\n city='deviceCounts.location.parent.parent.name'\n| bin _time span=1h \n| stats max(users) as peak by _time, floor\n| stats max(peak) as \"Peak Concurrent Users\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1635,7 +1635,7 @@
 		"ds_net_kpi_client_health": {
 			"name": "KPI Client health score",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\"\n| bin _time \n| stats latest(scoreValue) as \"Client Health\" by _time\n| eval \"Client Health\"=round('Client Health', 2)",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\"\n| bin _time span=1h \n| stats latest(scoreValue) as \"Client Health\" by _time\n| eval \"Client Health\"=round('Client Health', 2)",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1657,7 +1657,7 @@
 		"ds_net_kpi_health": {
 			"name": "KPI Network health score",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:networkhealth\" category=\"All\"\n| bin _time \n| stats latest(healthScore) as \"Network Health\" by _time\n| eval \"Network Health\"=round('Network Health', 2)",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:networkhealth\" category=\"All\"\n| bin _time span=1h \n| stats latest(healthScore) as \"Network Health\" by _time\n| eval \"Network Health\"=round('Network Health', 2)",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1679,7 +1679,7 @@
 		"ds_occupancy_vs_health": {
 			"name": "Scatter Occupancy vs Client Health",
 			"options": {
-				"query": "`index_catalyst` OR `index_spaces` (sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\") OR (sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR)\n| eval metric=case(sourcetype=\"cisco:dnac:clienthealth\", \"health\",\n sourcetype=\"cisco:spaces:firehose\", \"occupancy\"),\n value=case(sourcetype=\"cisco:dnac:clienthealth\", scoreValue,\n sourcetype=\"cisco:spaces:firehose\", 'deviceCounts.userCount')\n| bin _time \n| stats max(eval(if(metric=\"occupancy\", value, null()))) as occupancy,\n latest(eval(if(metric=\"health\", value, null()))) as client_health by _time\n| where isnotnull(occupancy) AND isnotnull(client_health)\n| eval occupancy=round(occupancy, 2),\n client_health=round(client_health, 2)\n| table occupancy client_health",
+				"query": "`index_catalyst` OR `index_spaces` (sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\") OR (sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR)\n| eval metric=case(sourcetype=\"cisco:dnac:clienthealth\", \"health\",\n sourcetype=\"cisco:spaces:firehose\", \"occupancy\"),\n value=case(sourcetype=\"cisco:dnac:clienthealth\", scoreValue,\n sourcetype=\"cisco:spaces:firehose\", 'deviceCounts.userCount')\n| bin _time span=1h \n| stats max(eval(if(metric=\"occupancy\", value, null()))) as occupancy,\n latest(eval(if(metric=\"health\", value, null()))) as client_health by _time\n| where isnotnull(occupancy) AND isnotnull(client_health)\n| eval occupancy=round(occupancy, 2),\n client_health=round(client_health, 2)\n| table occupancy client_health",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1690,7 +1690,7 @@
 		"ds_onboarding_vs_occupancy": {
 			"name": "Onboarding time vs Occupancy",
 			"options": {
-				"query": "`index_catalyst` OR `index_spaces` (sourcetype=\"cisco:dnac:client\") OR (sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR)\n| eval metric=case(sourcetype=\"cisco:dnac:client\", \"onboard\",\n sourcetype=\"cisco:spaces:firehose\", \"occupancy\"),\n onboard_ms=if(metric=\"onboard\", 'onboarding.avgRunDuration', null()),\n users=if(metric=\"occupancy\", 'deviceCounts.userCount', null())\n| bin _time \n| stats max(users) as Occupancy, avg(onboard_ms) as onboard_avg by _time\n| where isnotnull(Occupancy)\n| eval Occupancy=round(Occupancy, 2),\n \"Avg Onboarding (ms)\"=round(onboard_avg, 2)\n| fields _time Occupancy \"Avg Onboarding (ms)\" ",
+				"query": "`index_catalyst` OR `index_spaces` (sourcetype=\"cisco:dnac:client\") OR (sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR)\n| eval metric=case(sourcetype=\"cisco:dnac:client\", \"onboard\",\n sourcetype=\"cisco:spaces:firehose\", \"occupancy\"),\n onboard_ms=if(metric=\"onboard\", 'onboarding.avgRunDuration', null()),\n users=if(metric=\"occupancy\", 'deviceCounts.userCount', null())\n| bin _time span=1h \n| stats max(users) as Occupancy, avg(onboard_ms) as onboard_avg by _time\n| where isnotnull(Occupancy)\n| eval Occupancy=round(Occupancy, 2),\n \"Avg Onboarding (ms)\"=round(onboard_avg, 2)\n| fields _time Occupancy \"Avg Onboarding (ms)\" ",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1822,7 +1822,7 @@
 		"ds_user_count_city": {
 			"name": "Users by city over time",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR\n| eval users='deviceCounts.userCount',\n associated='deviceCounts.associatedCount',\n devices='deviceCounts.deviceCount',\n pct='deviceCounts.estimatedCapacityPercentage',\n floor='deviceCounts.location.name',\n building='deviceCounts.location.parent.name',\n city='deviceCounts.location.parent.parent.name'\n| where isnotnull(users) AND isnotnull(city)\n| bin _time \n| stats max(users) as peak by _time, city\n| stats max(peak) as \"Peak Users\" by city\n| sort - \"Peak Users\"",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR\n| eval users='deviceCounts.userCount',\n associated='deviceCounts.associatedCount',\n devices='deviceCounts.deviceCount',\n pct='deviceCounts.estimatedCapacityPercentage',\n floor='deviceCounts.location.name',\n building='deviceCounts.location.parent.name',\n city='deviceCounts.location.parent.parent.name'\n| where isnotnull(users) AND isnotnull(city)\n| bin _time span=1h \n| stats max(users) as peak by _time, city\n| stats max(peak) as \"Peak Users\" by city\n| sort - \"Peak Users\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1833,7 +1833,7 @@
 		"ds_visitor_daily": {
 			"name": "Daily visitors with 7-day forecast",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_ASSOCIATION\" deviceAssociation.event=\"ASSOCIATE\"\n| eval mac='deviceAssociation.device.macAddress',\n ssid='deviceAssociation.ssid'\n| bin _time \n| stats dc(mac) as \"Unique Devices\" by _time\n| predict \"Unique Devices\" future_timespan=7",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_ASSOCIATION\" deviceAssociation.event=\"ASSOCIATE\"\n| eval mac='deviceAssociation.device.macAddress',\n ssid='deviceAssociation.ssid'\n| bin _time span=1d \n| stats dc(mac) as \"Unique Devices\" by _time\n| predict \"Unique Devices\" future_timespan=7",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1855,7 +1855,7 @@
 		"ds_week_compare": {
 			"name": "This week vs last week",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR\n| eval users='deviceCounts.userCount',\n associated='deviceCounts.associatedCount',\n devices='deviceCounts.deviceCount',\n pct='deviceCounts.estimatedCapacityPercentage',\n floor='deviceCounts.location.name',\n building='deviceCounts.location.parent.name',\n city='deviceCounts.location.parent.parent.name'\n| bin _time \n| stats max(users) as peak by _time, floor\n| eval week=if(_time>=relative_time(now(), \"-7d\"), \"This Week\", \"Last Week\")\n| stats avg(peak) as \"Avg Peak Users\" by week\n| eval \"Avg Peak Users\"=round('Avg Peak Users', 0)",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR\n| eval users='deviceCounts.userCount',\n associated='deviceCounts.associatedCount',\n devices='deviceCounts.deviceCount',\n pct='deviceCounts.estimatedCapacityPercentage',\n floor='deviceCounts.location.name',\n building='deviceCounts.location.parent.name',\n city='deviceCounts.location.parent.parent.name'\n| bin _time span=1h \n| stats max(users) as peak by _time, floor\n| eval week=if(_time>=relative_time(now(), \"-7d\"), \"This Week\", \"Last Week\")\n| stats avg(peak) as \"Avg Peak Users\" by week\n| eval \"Avg Peak Users\"=round('Avg Peak Users', 0)",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1866,7 +1866,7 @@
 		"ds_wifi_quality": {
 			"name": "WiFi RSSI by SSID over time",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" connectionStatus=\"connected\"\n| eval rssi='connection.rssi',\n ssid='connection.ssid',\n band='connection.band',\n snr='connection.snr'\n| where isnotnull(rssi) AND rssi<0\n| bin _time \n| stats avg(rssi) as avg_rssi, avg(snr) as avg_snr by _time, ssid\n| timechart useother=t avg(eval(round(avg_rssi, 2))) as \"Avg RSSI (dBm)\" by ssid where max in top10",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" connectionStatus=\"connected\"\n| eval rssi='connection.rssi',\n ssid='connection.ssid',\n band='connection.band',\n snr='connection.snr'\n| where isnotnull(rssi) AND rssi<0\n| bin _time span=1h \n| stats avg(rssi) as avg_rssi, avg(snr) as avg_snr by _time, ssid\n| timechart span=1h useother=t avg(eval(round(avg_rssi, 2))) as \"Avg RSSI (dBm)\" by ssid where max in top10",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1877,7 +1877,7 @@
 		"ds_wifi_with_occupancy": {
 			"name": "WiFi RSSI and Occupancy overlay",
 			"options": {
-				"query": "`index_catalyst` OR `index_spaces` (sourcetype=\"cisco:dnac:client\" connectionStatus=\"connected\") OR (sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR)\n| eval metric=case(sourcetype=\"cisco:dnac:client\", \"wifi\",\n sourcetype=\"cisco:spaces:firehose\", \"occupancy\"),\n rssi=if(metric=\"wifi\", 'connection.rssi', null()),\n users=if(metric=\"occupancy\", 'deviceCounts.userCount', null())\n| where (metric=\"wifi\" AND isnotnull(rssi) AND rssi<0) OR metric=\"occupancy\"\n| bin _time \n| stats avg(rssi) as rssi_avg, max(users) as Occupancy by _time\n| eval \"Avg RSSI (dBm)\"=round(rssi_avg, 2),\n Occupancy=round(Occupancy, 2)\n| fields _time \"Avg RSSI (dBm)\" Occupancy",
+				"query": "`index_catalyst` OR `index_spaces` (sourcetype=\"cisco:dnac:client\" connectionStatus=\"connected\") OR (sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR)\n| eval metric=case(sourcetype=\"cisco:dnac:client\", \"wifi\",\n sourcetype=\"cisco:spaces:firehose\", \"occupancy\"),\n rssi=if(metric=\"wifi\", 'connection.rssi', null()),\n users=if(metric=\"occupancy\", 'deviceCounts.userCount', null())\n| where (metric=\"wifi\" AND isnotnull(rssi) AND rssi<0) OR metric=\"occupancy\"\n| bin _time span=1h \n| stats avg(rssi) as rssi_avg, max(users) as Occupancy by _time\n| eval \"Avg RSSI (dBm)\"=round(rssi_avg, 2),\n Occupancy=round(Occupancy, 2)\n| fields _time \"Avg RSSI (dBm)\" Occupancy",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"

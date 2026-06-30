@@ -1061,7 +1061,7 @@
 		"ds_cs_count_over_time": {
 			"name": "Client Summary - ds_client_count_over_time",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRED\" OR clientType=\"WIRELESS\") (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| bin _time\n| stats latest(clientCount) as cc by _time, clientType, scoreType\n| stats sum(cc) as cc by _time, scoreType\n| eval \"Good Count\"=if(scoreType==\"GOOD\",cc,null()), \"Fair Count\"=if(scoreType==\"FAIR\",cc,null()), \"Poor Count\"=if(scoreType==\"POOR\",cc,null()), \"Idle Count\"=if(scoreType==\"IDLE\" OR scoreType==\"NODATA\",cc,null())\n| stats sum(\"Good Count\") as \"Good Count\", sum(\"Fair Count\") as \"Fair Count\", sum(\"Poor Count\") as \"Poor Count\", sum(\"Idle Count\") as \"Idle Count\" by _time",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRED\" OR clientType=\"WIRELESS\") (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| bin _time span=15m\n| stats latest(clientCount) as cc by _time, clientType, scoreType\n| stats sum(cc) as cc by _time, scoreType\n| eval \"Good Count\"=if(scoreType==\"GOOD\",cc,null()), \"Fair Count\"=if(scoreType==\"FAIR\",cc,null()), \"Poor Count\"=if(scoreType==\"POOR\",cc,null()), \"Idle Count\"=if(scoreType==\"IDLE\" OR scoreType==\"NODATA\",cc,null())\n| stats sum(\"Good Count\") as \"Good Count\", sum(\"Fair Count\") as \"Fair Count\", sum(\"Poor Count\") as \"Poor Count\", sum(\"Idle Count\") as \"Idle Count\" by _time",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"

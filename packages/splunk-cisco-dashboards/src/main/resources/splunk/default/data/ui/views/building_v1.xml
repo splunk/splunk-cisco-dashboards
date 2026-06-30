@@ -869,7 +869,7 @@
 		"ds_device_presence_trend": {
 			"name": "Device Presence Trend",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_PRESENCE\" devicePresence.location.inferredLocationTypes{}=FLOOR | eval active='devicePresence.activeDevicesCount', floor='devicePresence.location.name', city='devicePresence.location.parent.parent.name' | bin _time | stats max(active) as active by _time, floor, city | timechart fixedrange=false sum(active) by city",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_PRESENCE\" devicePresence.location.inferredLocationTypes{}=FLOOR | eval active='devicePresence.activeDevicesCount', floor='devicePresence.location.name', city='devicePresence.location.parent.parent.name' | bin _time span=15m | stats max(active) as active by _time, floor, city | timechart span=15m fixedrange=false sum(active) by city",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -934,7 +934,7 @@
 		"ds_occupancy_trend": {
 			"name": "Rooms Occupied Trend",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"SPACE_OCCUPANCY\" \"spaceOccupancy.space.type\"=ROOM | bin _time | stats max(spaceOccupancy.space.capacity) as capacity, max(spaceOccupancy.peakPeopleCount) as peakPeopleCount, latest(spaceOccupancy.peoplePresence) as peoplePresence by _time, spaceOccupancy.space.floorId, spaceOccupancy.space.name | eval occupied=if(peoplePresence==\"true\" OR peakPeopleCount>0, 1, 0) | stats dc(spaceOccupancy.space.name) as total_rooms, sum(occupied) as rooms_occupied by _time | eval score=if(total_rooms>0, round(rooms_occupied/total_rooms*100, 2), 0) | timechart fixedrange=false max(score) as \"Rooms Occupied\"",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"SPACE_OCCUPANCY\" \"spaceOccupancy.space.type\"=ROOM | bin _time span=15m | stats max(spaceOccupancy.space.capacity) as capacity, max(spaceOccupancy.peakPeopleCount) as peakPeopleCount, latest(spaceOccupancy.peoplePresence) as peoplePresence by _time, spaceOccupancy.space.floorId, spaceOccupancy.space.name | eval occupied=if(peoplePresence==\"true\" OR peakPeopleCount>0, 1, 0) | stats dc(spaceOccupancy.space.name) as total_rooms, sum(occupied) as rooms_occupied by _time | eval score=if(total_rooms>0, round(rooms_occupied/total_rooms*100, 2), 0) | timechart span=15m fixedrange=false max(score) as \"Rooms Occupied\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1038,7 +1038,7 @@
 		"ds_webex_people_trend": {
 			"name": "Webex People Count Trend",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"WEBEX_TELEMETRY\" | eval people='webexTelemetryUpdate.telemetries{}.peopleCount', device='webexTelemetryUpdate.deviceInfo.serialNumber', location=coalesce('webexTelemetryUpdate.location.parent.name', 'webexTelemetryUpdate.location.name') | where isnotnull(people) AND people >= 0 AND isnotnull(location) | bin _time | stats max(people) as people by _time, device, location | timechart fixedrange=false sum(people) as \"People Detected\" by location",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"WEBEX_TELEMETRY\" | eval people='webexTelemetryUpdate.telemetries{}.peopleCount', device='webexTelemetryUpdate.deviceInfo.serialNumber', location=coalesce('webexTelemetryUpdate.location.parent.name', 'webexTelemetryUpdate.location.name') | where isnotnull(people) AND people >= 0 AND isnotnull(location) | bin _time span=15m | stats max(people) as people by _time, device, location | timechart span=15m fixedrange=false sum(people) as \"People Detected\" by location",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"

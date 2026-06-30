@@ -1650,9 +1650,19 @@
 				"primary": "ds_te_alerts_table"
 			},
 			"description": "Most recent 20 ThousandEyes alerts with deep-link permalinks",
+			"eventHandlers": [
+				{
+					"options": {
+						"newTab": true,
+						"url": "$row.Permalink.value$"
+					},
+					"type": "drilldown.customUrl"
+				}
+			],
 			"options": {
 				"backgroundColor": "transparent",
 				"count": 20,
+				"drilldown": "row",
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
@@ -2205,7 +2215,7 @@
 		"ds_config_trend": {
 			"name": "IT Health - Config Change Trend",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:audit:logs\" name=\"AUDIT_LOG\"\n userId!=\"system\" userId!=\"SYSTEM\" userId!=\"dnac-svc\" userId!=\"license-management\" userId!=\"localhost\" userId!=\"null\"\n NOT description=\"*read-only commands*\"\n NOT description=\"*preview*\"\n NOT description=\"Service request processing completed*\"\n NOT description=\"Going to deploy*\"\n| where (parentInstanceId=\"null\" OR parentInstanceId=\"\" OR isnull(parentInstanceId))\n| where NOT (description LIKE \"Executing command%display%\")\n| eval admin=coalesce(adminName, userId, \"unknown\")\n| bin _time as bucket\n| eval session = admin . \"|\" . bucket\n| timechart fixedrange=false dc(session) as workflows by admin",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:audit:logs\" name=\"AUDIT_LOG\"\n userId!=\"system\" userId!=\"SYSTEM\" userId!=\"dnac-svc\" userId!=\"license-management\" userId!=\"localhost\" userId!=\"null\"\n NOT description=\"*read-only commands*\"\n NOT description=\"*preview*\"\n NOT description=\"Service request processing completed*\"\n NOT description=\"Going to deploy*\"\n| where (parentInstanceId=\"null\" OR parentInstanceId=\"\" OR isnull(parentInstanceId))\n| where NOT (description LIKE \"Executing command%display%\")\n| eval admin=coalesce(adminName, userId, \"unknown\")\n| bin span=15m _time as bucket\n| eval session = admin . \"|\" . bucket\n| timechart span=15m fixedrange=false dc(session) as workflows by admin",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2864,7 +2874,7 @@
 		"ds_uxh_client_trend": {
 			"name": "IT Health - User Experience - ds_uxh_client_trend",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRED\" OR clientType=\"WIRELESS\") (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\")\n| bin _time\n| stats latest(clientCount) as cc by _time, clientType, scoreType\n| stats sum(cc) as cc by _time, scoreType\n| eval Good=if(scoreType==\"GOOD\",cc,null()), Fair=if(scoreType==\"FAIR\",cc,null()), Poor=if(scoreType==\"POOR\",cc,null())\n| stats sum(Good) as Good, sum(Fair) as Fair, sum(Poor) as Poor by _time",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRED\" OR clientType=\"WIRELESS\") (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\")\n| bin _time span=15m\n| stats latest(clientCount) as cc by _time, clientType, scoreType\n| stats sum(cc) as cc by _time, scoreType\n| eval Good=if(scoreType==\"GOOD\",cc,null()), Fair=if(scoreType==\"FAIR\",cc,null()), Poor=if(scoreType==\"POOR\",cc,null())\n| stats sum(Good) as Good, sum(Fair) as Fair, sum(Poor) as Poor by _time",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"

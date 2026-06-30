@@ -787,7 +787,7 @@
 		"ds_dashboard_usage": {
 			"type": "ds.search",
 			"options": {
-				"query": "index=_internal sourcetype=splunk_web_access user!=\"-\" app=* view=* \n| bin _time \n| stats dc(user) as daily_users values(user) as Users by _time, app, view \n| stats sparkline(sum(daily_users), 1d) as trend, dc(user) as \"Unique Users\", values(Users) as Users by app, view \n| rename app as App, view as Dashboard \n| sort - \"Unique Users\"",
+				"query": "index=_internal sourcetype=splunk_web_access user!=\"-\" app=* view=* \n| bin _time span=1d \n| stats dc(user) as daily_users values(user) as Users by _time, app, view \n| stats sparkline(sum(daily_users), 1d) as trend, dc(user) as \"Unique Users\", values(Users) as Users by app, view \n| rename app as App, view as Dashboard \n| sort - \"Unique Users\"",
 				"queryParameters": {
 					"earliest": "-30d@d",
 					"latest": "now"

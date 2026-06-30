@@ -1566,15 +1566,13 @@
 		"ds_security_events": {
 			"name": "Security Resilience - ds_security_events",
 			"options": {
-				"app": "splunk-cisco-dashboards",
+				"query": "(`index_firewall` sourcetype=\"cisco:asa\" (\"Deny\" OR \"denied\" OR \"Teardown\")) OR (`index_identity` sourcetype=\"cisco:ise:syslog\" \"5400\") OR (`index_security` (sourcetype=\"cisco:cloud_security:dns\" OR sourcetype=\"cisco:cloud_security:firewall\") action=\"Blocked\") OR (`index_firewall` (sourcetype=\"cisco:estreamer:data\" OR sourcetype=\"cisco:sfw:estreamer\")) OR (`index_catalyst` sourcetype=\"cisco:dnac:audit:logs\" name=\"LOGIN_USER_EVENT\") OR (`index_windows` sourcetype=\"*WinEventLog\" (EventCode=4625 OR EventCode=4740 OR EventCode=4672))\n| eval Source=case(sourcetype==\"cisco:asa\",\"ASA\", sourcetype==\"cisco:ise:syslog\",\"ISE\", match(sourcetype,\"estreamer\"),\"Firepower\", match(sourcetype,\"cloud_security:dns\"),\"Umbrella DNS\", match(sourcetype,\"cloud_security:firewall\"),\"Umbrella FW\", match(sourcetype,\"dnac:audit\"),\"DNAC\", sourcetype==\"XmlWinEventLog\",\"Active Directory\", 1==1,sourcetype)\n| eval Event=case(sourcetype==\"cisco:asa\" AND match(_raw,\"(?i)deny\"),\"Firewall Deny\", sourcetype==\"cisco:asa\" AND match(_raw,\"(?i)teardown\"),\"Connection Teardown\", sourcetype==\"cisco:ise:syslog\",\"Authentication Failure\", match(sourcetype,\"estreamer\"),\"Intrusion Event\", match(sourcetype,\"cloud_security:dns\"),\"DNS Blocked\", match(sourcetype,\"cloud_security:firewall\"),\"Web Blocked\", match(sourcetype,\"dnac:audit\"),\"Login Attempt\", EventCode==4625,\"Logon Failed\", EventCode==4740,\"Account Lockout\", EventCode==4672,\"Privileged Logon\", 1==1,\"Security Event\")\n| eval Severity=case(match(_raw,\"(?i)(crit|emerg|alert)\"),\"Critical\", match(_raw,\"(?i)(err|deny|denied|block|5400)\") OR EventCode==4625 OR EventCode==4740,\"High\", match(_raw,\"(?i)(warn)\") OR EventCode==4672,\"Medium\", 1==1,\"Low\")\n| eval src=coalesce(src_ip, src, Source_Network_Address, \"—\"), dest=coalesce(dest_ip, dest, dst, Target_Server_Name, \"—\")\n| stats count as Count, latest(_time) as _time, values(src) as \"Source IP\", values(dest) as Destination by Source, Event, Severity\n| eval Time=strftime(_time, \"%Y-%m-%d %H:%M:%S\"), \"Source IP\"=mvindex('Source IP', 0, 4), Destination=mvindex(Destination, 0, 4)\n| sort -_time\n| table Time Source Event Severity \"Source IP\" Destination Count",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
-				},
-				"ref": "Security Resilience - ds_security_events",
-				"useSavedTimeRange": false
+				}
 			},
-			"type": "ds.savedSearch"
+			"type": "ds.search"
 		},
 		"ds_unauth_wireless_trend": {
 			"name": "Unauthorized Wireless Trend",
