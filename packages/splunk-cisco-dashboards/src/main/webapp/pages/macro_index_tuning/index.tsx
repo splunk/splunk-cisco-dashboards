@@ -27,12 +27,16 @@ import { getSearchbaseCatalogue } from "@/common/services/searchbaseCatalogue";
 import { splunkSearchAppUrl } from "@/common/lib/splunkSearchUrl";
 
 const APP_NAME = "splunk-cisco-dashboards";
+const CIM_APP_NAME = "Splunk_SA_CIM";
+const CISCO_SECURITY_APP_NAME = "CiscoSecurityCloud";
+const THOUSAND_EYES_APP_NAME = "ta_cisco_thousandeyes";
 const TUNING_SEARCHBASE_ID = "admin_macro_index_tuning";
 const TUNING_SEARCH_NAME = "Admin - Macro Index Tuning";
 const ADHOC_MACRO_NAME = "scd_summariesonly";
 const DEFAULT_SUMMARIESONLY_DEFINITION =
   "summariesonly=false allow_old_summaries=false fillnull_value=null";
-const DEFAULT_INDEX_DEFINITION = "index IN (*)";
+const DEFAULT_INDEX_IN_DEFINITION = "index IN (*)";
+const DEFAULT_INDEX_OR_DEFINITION = "(index=*)";
 const INDEX_MACRO_NAMES = [
   "index_catalyst",
   "index_firewall",
@@ -53,14 +57,106 @@ const INDEX_MACRO_NAMES = [
   "index_dc",
   "index_nvm",
 ] as const;
-const INDEX_MACRO_NAME_SET = new Set<string>(INDEX_MACRO_NAMES);
+const CIM_MACRO_NAMES = [
+  "cim_Authentication_indexes",
+  "cim_Network_Traffic_indexes",
+] as const;
+const CISCO_SECURITY_MODEL_MACRO_NAMES = [
+  "nvm_sysdata_index",
+  "nvm_process_index",
+  "nvm_flowdata_index",
+  "nvm_combined_index",
+] as const;
+const THOUSAND_EYES_MODEL_MACRO_NAMES = [
+  "stream_index",
+  "path_viz_index",
+  "activity_index",
+  "event_index",
+  "trace_index",
+  "alert_index",
+] as const;
+const TARGET_APP_ORDER = [
+  APP_NAME,
+  CIM_APP_NAME,
+  CISCO_SECURITY_APP_NAME,
+  THOUSAND_EYES_APP_NAME,
+] as const;
+const TARGET_APP_LABELS: Record<string, string> = {
+  [APP_NAME]: "SCD",
+  [CIM_APP_NAME]: "CIM",
+  [CISCO_SECURITY_APP_NAME]: "Cisco Security",
+  [THOUSAND_EYES_APP_NAME]: "ThousandEyes",
+};
+const CISCO_SECURITY_DEFINITION_SUFFIXES: Record<string, string> = {
+  nvm_sysdata_index: 'sourcetype="cisco:nvm:sysdata:v2"',
+  nvm_process_index: 'sourcetype="cisco:nvm:processinfodata:v2"',
+  nvm_flowdata_index: 'sourcetype="cisco:nvm:flowdata:v2"',
+  nvm_combined_index:
+    '(sourcetype="cisco:nvm:flowdata:v2" OR sourcetype="cisco:nvm:processinfodata:v2")',
+};
 
 type ScanState = "idle" | "loading" | "ready" | "error";
 type SaveState = "idle" | "saving" | "saved" | "error";
 type CopyState = "idle" | "copied" | "selected" | "error";
+type DefinitionFormat = "indexIn" | "indexOr";
+
+interface TunableMacroConfig {
+  macro: string;
+  targetApp: string;
+  definitionFormat: DefinitionFormat;
+  definitionSuffix?: string;
+  family: "scd" | "cim" | "ciscoSecurity" | "thousandEyes";
+}
+
+const INDEX_MACRO_CONFIGS: TunableMacroConfig[] = INDEX_MACRO_NAMES.map(
+  (macro) => ({
+    macro,
+    targetApp: APP_NAME,
+    definitionFormat: "indexIn",
+    family: "scd",
+  }),
+);
+const CIM_MACRO_CONFIGS: TunableMacroConfig[] = CIM_MACRO_NAMES.map(
+  (macro) => ({
+    macro,
+    targetApp: CIM_APP_NAME,
+    definitionFormat: "indexOr",
+    family: "cim",
+  }),
+);
+const CISCO_SECURITY_MODEL_MACRO_CONFIGS: TunableMacroConfig[] =
+  CISCO_SECURITY_MODEL_MACRO_NAMES.map((macro) => ({
+    macro,
+    targetApp: CISCO_SECURITY_APP_NAME,
+    definitionFormat: "indexOr",
+    definitionSuffix: CISCO_SECURITY_DEFINITION_SUFFIXES[macro],
+    family: "ciscoSecurity",
+  }));
+const THOUSAND_EYES_MODEL_MACRO_CONFIGS: TunableMacroConfig[] =
+  THOUSAND_EYES_MODEL_MACRO_NAMES.map((macro) => ({
+    macro,
+    targetApp: THOUSAND_EYES_APP_NAME,
+    definitionFormat: "indexOr",
+    family: "thousandEyes",
+  }));
+const TUNABLE_MACRO_CONFIGS: TunableMacroConfig[] = [
+  ...INDEX_MACRO_CONFIGS,
+  ...CIM_MACRO_CONFIGS,
+  ...CISCO_SECURITY_MODEL_MACRO_CONFIGS,
+  ...THOUSAND_EYES_MODEL_MACRO_CONFIGS,
+];
+const TUNABLE_MACRO_NAME_SET = new Set<string>(
+  TUNABLE_MACRO_CONFIGS.map((config) => config.macro),
+);
+const INDEX_MACRO_NAME_SET = new Set<string>(INDEX_MACRO_NAMES);
+const MACRO_CONFIG_BY_NAME = new Map<string, TunableMacroConfig>(
+  TUNABLE_MACRO_CONFIGS.map((config) => [config.macro, config]),
+);
 
 interface MacroRow {
   macro: string;
+  targetApp: string;
+  definitionFormat: DefinitionFormat;
   definition: string;
   indexes: string[];
   sourcetypes: string[];
@@ -118,11 +214,28 @@ const normalizeNumber = (value: unknown): number => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const getMacroConfig = (macro: string): TunableMacroConfig | undefined =>
+  MACRO_CONFIG_BY_NAME.get(macro);
+
+const getTargetAppLabel = (targetApp: string): string =>
+  TARGET_APP_LABELS[targetApp] || targetApp;
+
+const normalizeDefinitionFormat = (value: unknown): DefinitionFormat => {
+  const normalized = normalizeText(value).trim();
+  return normalized === "indexOr" ? "indexOr" : "indexIn";
+};
+
 const parseSearchResult = (row: Record<string, unknown>): MacroRow | null => {
   const macro = normalizeText(row.macro).trim();
   if (!macro) return null;
+  const config = getMacroConfig(macro);
+  const rowTargetApp = normalizeText(row.target_app ?? row.app).trim();
   return {
     macro,
+    targetApp: config?.targetApp || rowTargetApp || APP_NAME,
+    definitionFormat:
+      config?.definitionFormat ||
+      normalizeDefinitionFormat(row.definition_format),
     definition: normalizeText(row.definition).trim(),
     indexes: normalizeMultiValue(row.indexes),
     sourcetypes: normalizeMultiValue(row.sourcetypes),
@@ -144,6 +257,9 @@ const getSplunkLocale = (): string => {
 
 const splunkManagerUrl = (managerPage: string): string =>
   `/${getSplunkLocale()}/manager/${APP_NAME}/${managerPage}`;
+
+const splunkAppManagerUrl = (app: string, managerPage: string): string =>
+  `/${getSplunkLocale()}/manager/${encodeURIComponent(app)}/${managerPage}`;
 
 const cleanIndexToken = (value: string): string =>
   value
@@ -174,11 +290,37 @@ const extractIndexTokens = (definition: string): string[] => {
   return Array.from(tokens);
 };
 
-const buildMacroStanzas = (rows: EditableMacroRow[]): string =>
+const formatIndexDefinition = (
+  indexes: string[],
+  definitionFormat: DefinitionFormat,
+  definitionSuffix = "",
+): string => {
+  const tokens = indexes.map(cleanIndexToken).filter(Boolean);
+  const suffix = definitionSuffix.trim()
+    ? ` ${definitionSuffix.trim()}`
+    : "";
+  if (!tokens.length) {
+    const defaultDefinition = definitionFormat === "indexOr"
+      ? DEFAULT_INDEX_OR_DEFINITION
+      : DEFAULT_INDEX_IN_DEFINITION;
+    return `${defaultDefinition}${suffix}`;
+  }
+  if (definitionFormat === "indexOr") {
+    return `(${tokens.map((index) => `index=${index}`).join(" OR ")})${suffix}`;
+  }
+  return `index IN (${tokens.join(", ")})${suffix}`;
+};
+
+const buildMacroStanzas = (
+  rows: EditableMacroRow[],
+  targetApp: string,
+): string =>
   rows
     .filter(
       (row) =>
-        INDEX_MACRO_NAME_SET.has(row.macro) && row.draftDefinition.trim(),
+        row.targetApp === targetApp &&
+        TUNABLE_MACRO_NAME_SET.has(row.macro) &&
+        row.draftDefinition.trim(),
     )
     .map(
       (row) =>
@@ -191,10 +333,14 @@ const buildMacroStanza = (macro: string, definition: string): string =>
     ? `[${macro}]\ndefinition = ${definition.trim()}\niseval = 0`
     : "";
 
+const macroStatusKey = (row: Pick<EditableMacroRow, "targetApp" | "macro">) =>
+  `${row.targetApp}:${row.macro}`;
+
 const rowMatchesFilter = (row: EditableMacroRow, terms: string[]): boolean => {
   if (!terms.length) return true;
   const haystack = [
     row.macro,
+    row.targetApp,
     row.definition,
     row.draftDefinition,
     ...row.indexes,
@@ -220,8 +366,11 @@ const extractSplunkError = (payload: unknown): string | null => {
   return typeof text === "string" && text.trim() ? text.trim() : null;
 };
 
-const macroConfigUrl = (macro: string): string => {
-  const app = encodeURIComponent(getSearchAppContext());
+const macroConfigUrl = (
+  macro: string,
+  targetApp = getSearchAppContext(),
+): string => {
+  const app = encodeURIComponent(targetApp);
   return `/en-US/splunkd/__raw/servicesNS/nobody/${app}/configs/conf-macros/${encodeURIComponent(
     macro,
   )}?output_mode=json`;
@@ -230,8 +379,9 @@ const macroConfigUrl = (macro: string): string => {
 const saveMacroDefinition = async (
   macro: string,
   definition: string,
+  targetApp = APP_NAME,
 ): Promise<void> => {
-  const response = await fetch(macroConfigUrl(macro), {
+  const response = await fetch(macroConfigUrl(macro, targetApp), {
     ...getDefaultFetchInit(),
     method: "POST",
     body: new URLSearchParams({
@@ -255,8 +405,11 @@ const saveMacroDefinition = async (
   }
 };
 
-const loadMacroDefinition = async (macro: string): Promise<string> => {
-  const response = await fetch(macroConfigUrl(macro), {
+const loadMacroDefinition = async (
+  macro: string,
+  targetApp = APP_NAME,
+): Promise<string> => {
+  const response = await fetch(macroConfigUrl(macro, targetApp), {
     ...getDefaultFetchInit(),
     method: "GET",
   });
@@ -283,14 +436,17 @@ const loadMacroDefinition = async (macro: string): Promise<string> => {
 };
 
 const loadMacroDefinitions = async (
-  macros: readonly string[],
+  configs: readonly TunableMacroConfig[],
 ): Promise<Record<string, string>> => {
   const pairs = await Promise.all(
-    macros.map(async (macro) => {
+    configs.map(async (config) => {
       try {
-        return [macro, await loadMacroDefinition(macro)] as const;
+        return [
+          `${config.targetApp}:${config.macro}`,
+          await loadMacroDefinition(config.macro, config.targetApp),
+        ] as const;
       } catch {
-        return [macro, ""] as const;
+        return [`${config.targetApp}:${config.macro}`, ""] as const;
       }
     }),
   );
@@ -466,22 +622,49 @@ export default function MacroIndexTuningPage(): JSX.Element {
   const searchSplRef = useRef<string>("");
   const macroPreviewRef = useRef<HTMLTextAreaElement>(null);
 
-  const generatedMacroStanzas = useMemo(() => buildMacroStanzas(rows), [rows]);
-  const macroStanzas = useMemo(
+  const generatedMacroStanzasByApp = useMemo<Record<string, string>>(
     () =>
-      [
-        buildMacroStanza(ADHOC_MACRO_NAME, adhocDefinition),
-        generatedMacroStanzas,
-      ]
-        .filter(Boolean)
-        .join("\n\n"),
-    [adhocDefinition, generatedMacroStanzas],
+      Object.fromEntries(
+        TARGET_APP_ORDER.map((targetApp) => [
+          targetApp,
+          buildMacroStanzas(rows, targetApp),
+        ]),
+      ),
+    [rows],
+  );
+  const macroStanzas = useMemo(
+    () => {
+      const sections = TARGET_APP_ORDER.flatMap((targetApp) => {
+        const parts = [
+          targetApp === APP_NAME
+            ? buildMacroStanza(ADHOC_MACRO_NAME, adhocDefinition)
+            : "",
+          generatedMacroStanzasByApp[targetApp] || "",
+        ].filter(Boolean);
+        return parts.length
+          ? [`# ${targetApp}/local/macros.conf\n${parts.join("\n\n")}`]
+          : [];
+      });
+      return sections.join("\n\n");
+    },
+    [adhocDefinition, generatedMacroStanzasByApp],
   );
   const hasUnknown = rows.some((row) => row.macro === "unknown");
-  const indexMacroRows = rows.filter((row) =>
+  const tunableRows = rows.filter((row) =>
+    TUNABLE_MACRO_NAME_SET.has(row.macro),
+  );
+  const indexMacroRows = tunableRows.filter((row) =>
     INDEX_MACRO_NAME_SET.has(row.macro),
   );
-  const rowsToSave = indexMacroRows.filter((row) => row.draftDefinition.trim());
+  const cimMacroRows = tunableRows.filter(
+    (row) => row.targetApp === CIM_APP_NAME,
+  );
+  const modelMacroRows = tunableRows.filter(
+    (row) =>
+      row.targetApp === CISCO_SECURITY_APP_NAME ||
+      row.targetApp === THOUSAND_EYES_APP_NAME,
+  );
+  const rowsToSave = tunableRows.filter((row) => row.draftDefinition.trim());
   const filterTerms = useMemo(
     () => filterText.trim().toLowerCase().split(/\s+/).filter(Boolean),
     [filterText],
@@ -490,8 +673,18 @@ export default function MacroIndexTuningPage(): JSX.Element {
     () => rows.filter((row) => rowMatchesFilter(row, filterTerms)),
     [filterTerms, rows],
   );
-  const totalEvents = rows.reduce((sum, row) => sum + row.events, 0);
+  const totalEvents = rows
+    .filter((row) => row.targetApp === APP_NAME)
+    .reduce((sum, row) => sum + row.events, 0);
   const totalIndexValues = indexMacroRows.reduce(
+    (sum, row) => sum + extractIndexTokens(row.draftDefinition).length,
+    0,
+  );
+  const totalCimIndexValues = cimMacroRows.reduce(
+    (sum, row) => sum + extractIndexTokens(row.draftDefinition).length,
+    0,
+  );
+  const totalModelIndexValues = modelMacroRows.reduce(
     (sum, row) => sum + extractIndexTokens(row.draftDefinition).length,
     0,
   );
@@ -503,6 +696,12 @@ export default function MacroIndexTuningPage(): JSX.Element {
     ? splunkSearchAppUrl(searchSpl, { earliest: timeRange, latest: "now" })
     : "";
   const macrosManagerUrl = splunkManagerUrl("data/macros");
+  const externalMacroManagerLinks = TARGET_APP_ORDER.filter(
+    (targetApp) => targetApp !== APP_NAME,
+  ).map((targetApp) => ({
+    targetApp,
+    href: splunkAppManagerUrl(targetApp, "data/macros"),
+  }));
 
   const loadTuningSearch = useCallback(async (): Promise<string> => {
     if (searchSplRef.current) return searchSplRef.current;
@@ -540,30 +739,36 @@ export default function MacroIndexTuningPage(): JSX.Element {
         tag: TUNING_SEARCHBASE_ID,
         signal: controller.signal,
       });
-      const currentDefinitions = await loadMacroDefinitions(INDEX_MACRO_NAMES);
+      const currentDefinitions =
+        await loadMacroDefinitions(TUNABLE_MACRO_CONFIGS);
       const parsed = ((result.results || []) as Record<string, unknown>[])
         .map(parseSearchResult)
         .filter((row): row is MacroRow => Boolean(row))
-        .sort((left, right) => {
-          if (left.macro === "unknown") return 1;
-          if (right.macro === "unknown") return -1;
-          return left.macro.localeCompare(right.macro);
-        })
         .map((row) => ({
           ...row,
           draftDefinition: row.definition,
         }));
-      const scannedByMacro = new Map(parsed.map((row) => [row.macro, row]));
-      const expectedRows = INDEX_MACRO_NAMES.map((macro) => {
-        const scanned = scannedByMacro.get(macro);
+      const scannedByMacro = new Map(
+        parsed.map((row) => [macroStatusKey(row), row]),
+      );
+      const expectedRows = TUNABLE_MACRO_CONFIGS.map((config) => {
+        const scanned = scannedByMacro.get(
+          `${config.targetApp}:${config.macro}`,
+        );
         const fallbackDefinition =
-          currentDefinitions[macro] ||
+          currentDefinitions[`${config.targetApp}:${config.macro}`] ||
           scanned?.definition ||
-          DEFAULT_INDEX_DEFINITION;
+          formatIndexDefinition(
+            [],
+            config.definitionFormat,
+            config.definitionSuffix,
+          );
         const draftDefinition = scanned?.definition || fallbackDefinition;
 
         return {
-          macro,
+          macro: config.macro,
+          targetApp: config.targetApp,
+          definitionFormat: config.definitionFormat,
           definition: draftDefinition,
           indexes: scanned?.indexes?.length
             ? scanned.indexes
@@ -575,7 +780,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
         };
       });
       const extraRows = parsed
-        .filter((row) => !INDEX_MACRO_NAME_SET.has(row.macro))
+        .filter((row) => !TUNABLE_MACRO_NAME_SET.has(row.macro))
         .map((row) => ({
           ...row,
           draftDefinition: row.definition,
@@ -600,7 +805,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
   const loadAdhocMacro = useCallback(async () => {
     setAdhocStatus({ state: "saving", message: "Loading current macro" });
     try {
-      const definition = await loadMacroDefinition(ADHOC_MACRO_NAME);
+      const definition = await loadMacroDefinition(ADHOC_MACRO_NAME, APP_NAME);
       setAdhocDefinition(definition || DEFAULT_SUMMARIESONLY_DEFINITION);
       setAdhocStatus({ state: "idle" });
     } catch (err) {
@@ -617,10 +822,10 @@ export default function MacroIndexTuningPage(): JSX.Element {
   }, [loadAdhocMacro]);
 
   const updateDraftDefinition = useCallback(
-    (macro: string, definition: string) => {
+    (rowKey: string, definition: string) => {
       setRows((current) =>
         current.map((row) =>
-          row.macro === macro
+          macroStatusKey(row) === rowKey
             ? {
                 ...row,
                 draftDefinition: definition,
@@ -630,7 +835,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
       );
       setSaveStatuses((current) => ({
         ...current,
-        [macro]: { state: "idle" },
+        [rowKey]: { state: "idle" },
       }));
     },
     [],
@@ -642,18 +847,18 @@ export default function MacroIndexTuningPage(): JSX.Element {
     if (!definition) return;
     setSaveStatuses((current) => ({
       ...current,
-      [row.macro]: { state: "saving" },
+      [macroStatusKey(row)]: { state: "saving" },
     }));
     try {
-      await saveMacroDefinition(row.macro, definition);
+      await saveMacroDefinition(row.macro, definition, row.targetApp);
       setSaveStatuses((current) => ({
         ...current,
-        [row.macro]: { state: "saved", message: "Saved" },
+        [macroStatusKey(row)]: { state: "saved", message: "Saved" },
       }));
     } catch (err) {
       setSaveStatuses((current) => ({
         ...current,
-        [row.macro]: {
+        [macroStatusKey(row)]: {
           state: "error",
           message: err instanceof Error ? err.message : String(err),
         },
@@ -674,7 +879,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
     if (!definition) return;
     setAdhocStatus({ state: "saving" });
     try {
-      await saveMacroDefinition(ADHOC_MACRO_NAME, definition);
+      await saveMacroDefinition(ADHOC_MACRO_NAME, definition, APP_NAME);
       setAdhocStatus({ state: "saved", message: "Saved" });
     } catch (err) {
       setAdhocStatus({
@@ -694,9 +899,9 @@ export default function MacroIndexTuningPage(): JSX.Element {
             </h1>
             <p className="mt-1 max-w-3xl text-sm text-slate-600">
               Scan your Splunk indexes for Cisco and related sourcetypes, map
-              the detected data into the dashboard index macros, then review and
-              save the generated macro definitions so dashboard searches run
-              against the right indexes.
+              the detected data into the dashboard index macros and selected
+              data model app macros, then review and save the generated macro
+              definitions so searches run against the right indexes.
             </p>
             <p className="mt-1 max-w-3xl text-xs text-slate-500">
               Powered by searchbase entry{" "}
@@ -839,16 +1044,16 @@ export default function MacroIndexTuningPage(): JSX.Element {
         </div>
       </section>
 
-      <section className="mb-4 grid gap-3 md:grid-cols-4">
+      <section className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
         <div className="border border-slate-200 bg-white px-4 py-3">
           <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Macros
           </div>
           <div className="mt-1 text-2xl font-bold text-slate-900">
-            {formatNumber(indexMacroRows.length)}
+            {formatNumber(tunableRows.length)}
           </div>
           <div className="mt-1 text-xs text-slate-500">
-            default index macros
+            tunable index macros
           </div>
         </div>
         <div className="border border-slate-200 bg-white px-4 py-3">
@@ -859,7 +1064,29 @@ export default function MacroIndexTuningPage(): JSX.Element {
             {formatNumber(totalIndexValues)}
           </div>
           <div className="mt-1 text-xs text-slate-500">
-            across macro definitions
+            SCD macro definitions
+          </div>
+        </div>
+        <div className="border border-slate-200 bg-white px-4 py-3">
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            CIM indexes
+          </div>
+          <div className="mt-1 text-2xl font-bold text-slate-900">
+            {formatNumber(totalCimIndexValues)}
+          </div>
+          <div className="mt-1 text-xs text-slate-500">
+            Splunk_SA_CIM definitions
+          </div>
+        </div>
+        <div className="border border-slate-200 bg-white px-4 py-3">
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Model indexes
+          </div>
+          <div className="mt-1 text-2xl font-bold text-slate-900">
+            {formatNumber(totalModelIndexValues)}
+          </div>
+          <div className="mt-1 text-xs text-slate-500">
+            Cisco model app definitions
           </div>
         </div>
         <div className="border border-slate-200 bg-white px-4 py-3">
@@ -912,17 +1139,17 @@ export default function MacroIndexTuningPage(): JSX.Element {
       )}
 
       <section className="mb-4 border border-slate-200 bg-white">
-        <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-2">
-            <Search size={17} className="text-sky-700" />
-            <h2 className="m-0 text-base font-bold text-slate-900">
-              Generated macro definitions
-            </h2>
-          </div>
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 lg:justify-end">
+        <div className="grid gap-3 border-b border-slate-200 px-4 py-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="flex shrink-0 items-center gap-2">
+              <Search size={17} className="text-sky-700" />
+              <h2 className="m-0 text-base font-bold text-slate-900">
+                Generated macro definitions
+              </h2>
+            </div>
             <label
               htmlFor="macro-index-tuning-search"
-              className="relative min-w-[260px] flex-1 lg:max-w-[420px]"
+              className="relative min-w-0 w-full sm:min-w-[260px] sm:max-w-[420px]"
             >
               <span className="sr-only">
                 Search macro, definition, indexes, and sourcetypes
@@ -940,6 +1167,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 className={tableSearchInputBase}
               />
             </label>
+          </div>
+          <div className="flex min-w-0 flex-wrap items-center gap-2 xl:justify-end">
             <CopyButton
               text={macroStanzas}
               label="Copy macros.conf"
@@ -952,8 +1181,20 @@ export default function MacroIndexTuningPage(): JSX.Element {
               className={`${lightButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
             >
               <ExternalLink size={16} />
-              Open macros
+              Open SCD macros
             </a>
+            {externalMacroManagerLinks.map(({ targetApp, href }) => (
+              <a
+                key={targetApp}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`${lightButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
+              >
+                <ExternalLink size={16} />
+                Open {getTargetAppLabel(targetApp)} macros
+              </a>
+            ))}
           </div>
         </div>
 
@@ -993,12 +1234,14 @@ export default function MacroIndexTuningPage(): JSX.Element {
               </thead>
               <tbody>
                 {filteredRows.map((row) => {
-                  const status = saveStatuses[row.macro] || { state: "idle" };
+                  const status = saveStatuses[macroStatusKey(row)] || {
+                    state: "idle",
+                  };
                   const isUnknown = row.macro === "unknown";
                   const isSaving = status.state === "saving";
                   return (
                     <tr
-                      key={row.macro}
+                      key={macroStatusKey(row)}
                       className="border-b border-slate-100 align-top"
                     >
                       <td className="px-4 py-3">
@@ -1014,12 +1257,18 @@ export default function MacroIndexTuningPage(): JSX.Element {
                             ? `${formatNumber(row.sourcetypeCount)} sourcetypes`
                             : "No matching sourcetypes"}
                         </div>
+                        <div className="mt-1 text-xs text-slate-500">
+                          {row.targetApp}/local/macros.conf
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <input
                           value={row.draftDefinition}
                           onChange={(event) =>
-                            updateDraftDefinition(row.macro, event.target.value)
+                            updateDraftDefinition(
+                              macroStatusKey(row),
+                              event.target.value,
+                            )
                           }
                           disabled={isUnknown}
                           className="h-9 w-full rounded border border-slate-300 bg-white px-2 font-mono text-xs text-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
