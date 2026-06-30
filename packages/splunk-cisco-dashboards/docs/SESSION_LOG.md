@@ -12973,7 +12973,7 @@ User chooses one of these for the next active thread:
    visible link-health data on the map in the meantime.
 5. **Local untracked changes still uncommitted**:
    - `app.conf` build-number bump (`50` → `60`)
-   - `macros.conf` edit to `[summariesonly]`
+   - `macros.conf` edit to `[scd_summariesonly]`
      (`allow_old_summaries=false fillnull_value=null`)
    - `props.conf` (currently focused; appears to have an
      untracked diff header on line 1 that we noted but

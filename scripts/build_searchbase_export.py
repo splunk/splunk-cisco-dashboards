@@ -64,7 +64,7 @@ MACRO_CALL = re.compile(r"`([A-Za-z_][\w-]*)(?:\([^`]*\))?`")
 
 # Safe, no-argument macros we can inline during export.
 KNOWN_EXPANDABLE_MACROS = {
-    "summariesonly": "summariesonly=false allow_old_summaries=false fillnull_value=null",
+    "scd_summariesonly": "summariesonly=false allow_old_summaries=false fillnull_value=null",
 }
 
 # Detect explicit index assignments and collapse customer-specific index names
