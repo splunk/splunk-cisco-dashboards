@@ -9673,7 +9673,7 @@ related_info, viz_options with severity-aware colors) so the
 catalogue audit and KPI picker preview both render cleanly.
 
 ```spl
-| tstats `summariesonly` count
+| tstats `scd_summariesonly` count
     FROM datamodel="Cisco_ThousandEyes.Alerts"
     BY Alerts.severity
 | rename Alerts.severity AS Severity
@@ -9685,7 +9685,7 @@ Notes on the SPL:
 * Cleaned `WHERE BY` (invalid SPL — likely a copy-paste artifact
   in the original brief) to plain `BY`. No other filters: the
   tile shows every severity bucket the TE org emits.
-* `summariesonly` keeps the tile fast on busy installs; it
+* `scd_summariesonly` keeps the tile fast on busy installs; it
   short-circuits to empty if the DM acceleration isn&#39;t built
   rather than running a slow uncached fallback.
 * `rename Alerts.severity AS Severity` because the React tile
@@ -11403,7 +11403,7 @@ Applied the same agent-location-match pattern to both remaining
 stanzas:
 
 ```
-| tstats `summariesonly` avg(...) AS latencyS,
+| tstats `scd_summariesonly` avg(...) AS latencyS,
     latest(Test_Metrics.thousandeyes.source.agent.location) as sourceLocation,
     latest(Test_Metrics.thousandeyes.target.agent.location) as targetLocation,
     latest(Test_Metrics.thousandeyes.test.name) as teTestName
@@ -13080,7 +13080,7 @@ bar on the customer stack to verify the TE Priority 2
 branch returns rows and the units look right:
 
 ```
-| tstats `summariesonly`
+| tstats `scd_summariesonly`
     avg(Test_Metrics.metric_name:network.latency) as _latencyS,
     avg(Test_Metrics.metric_name:network.loss) as lossPct,
     avg(Test_Metrics.metric_name:network.jitter) as jitterMs,
@@ -13103,7 +13103,7 @@ Expected: one row per real source/target agent pair on the
 TLH-BLA test, with single-digit-to-low-double-digit
 `latencyMs`, near-zero `lossPct`, low `jitterMs`. If the
 table is empty, the data model isn't populating those
-metrics for that test (or `summariesonly` macro setup
+metrics for that test (or `scd_summariesonly` macro setup
 needs revisiting). If `latencyMs` is in the thousands, the
 unit assumption was wrong and we should drop the `*1000`.
 

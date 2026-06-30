@@ -826,7 +826,7 @@
 		"ds_failed_logons_trend": {
 			"name": "Failed Auth Trend",
 			"options": {
-				"query": "| tstats `summariesonly` dc(Authentication.user) as count from datamodel=Authentication where Authentication.action=\"failure\" by _time span=auto",
+				"query": "| tstats `scd_summariesonly` dc(Authentication.user) as count from datamodel=Authentication where Authentication.action=\"failure\" by _time span=auto",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -845,7 +845,7 @@
 		"ds_fw_blocked_trend": {
 			"name": "FW Blocked Trend",
 			"options": {
-				"query": "| tstats `summariesonly` count from datamodel=Network_Traffic where All_Traffic.action=\"blocked\" by _time span=auto | rename count as blocked",
+				"query": "| tstats `scd_summariesonly` count from datamodel=Network_Traffic where All_Traffic.action=\"blocked\" by _time span=auto | rename count as blocked",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -913,7 +913,7 @@
 		"ds_te_health_trend": {
 			"name": "ThousandEyes Trend",
 			"options": {
-				"query": "| tstats `summariesonly` avg(Test_Metrics.metric_name:network.loss) as loss, avg(Test_Metrics.metric_name:network.latency) as latency FROM datamodel=\"Cisco_ThousandEyes.Test_Metrics\" by _time span=auto | eval score=round(100 - coalesce(latency,0)/2 - coalesce(loss,0)*10, 2) | fields _time score",
+				"query": "| tstats `scd_summariesonly` avg(Test_Metrics.metric_name:network.loss) as loss, avg(Test_Metrics.metric_name:network.latency) as latency FROM datamodel=\"Cisco_ThousandEyes.Test_Metrics\" by _time span=auto | eval score=round(100 - coalesce(latency,0)/2 - coalesce(loss,0)*10, 2) | fields _time score",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -932,7 +932,7 @@
 		"ds_threat_sources_trend": {
 			"name": "Threat Sources Trend",
 			"options": {
-				"query": "| tstats `summariesonly` dc(All_Traffic.src) as sources from datamodel=Network_Traffic where All_Traffic.action=\"blocked\" by _time span=auto",
+				"query": "| tstats `scd_summariesonly` dc(All_Traffic.src) as sources from datamodel=Network_Traffic where All_Traffic.action=\"blocked\" by _time span=auto",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"

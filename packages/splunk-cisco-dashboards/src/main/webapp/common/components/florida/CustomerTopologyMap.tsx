@@ -2907,10 +2907,10 @@ const TILE_LAYER_PRESETS: TileLayerPreset[] = [
         label: 'Navigation',
         badge: 'Nav',
         light:
-            'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-        dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-        attribution:
-            '&copy; OpenStreetMap contributors &copy; CARTO',
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+        dark:
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+        attribution: 'Tiles &copy; Esri',
     },
 ];
 

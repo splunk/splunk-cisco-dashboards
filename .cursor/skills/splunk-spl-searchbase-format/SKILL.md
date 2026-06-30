@@ -56,7 +56,7 @@ This style matches the upstream `searchbase` app (`~/repo/searchbase`). Keep the
 ### Canonical example (one pipe per line)
 
 ```spl
-search = | tstats `summariesonly` avg(Test_Metrics.metric_name:http.server.request.availability) AS avg_avail FROM datamodel="Cisco_ThousandEyes.Test_Metrics" WHERE Test_Metrics.metric_name:http.server.request.availability="*" Test_Metrics.thousandeyes.test.type="http-server" BY _time span=1h, Test_Metrics.server.address, Test_Metrics.thousandeyes.test.name\
+search = | tstats `scd_summariesonly` avg(Test_Metrics.metric_name:http.server.request.availability) AS avg_avail FROM datamodel="Cisco_ThousandEyes.Test_Metrics" WHERE Test_Metrics.metric_name:http.server.request.availability="*" Test_Metrics.thousandeyes.test.type="http-server" BY _time span=1h, Test_Metrics.server.address, Test_Metrics.thousandeyes.test.name\
 | rename Test_Metrics.server.address AS site\
 | stats avg(avg_avail) AS site_avail BY _time, site\
 | eval available = if(site_avail >= 99.5, 1, 0)\

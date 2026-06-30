@@ -1105,7 +1105,7 @@
 		"ds_failed_detail_sources": {
 			"name": "Security Resilience - ds_failed_detail_sources",
 			"options": {
-				"query": "| tstats `summariesonly` count from datamodel=Authentication where Authentication.action=\"failure\" Authentication.src!=\"\" Authentication.src!=\"-\" Authentication.src!=\"::1\" Authentication.src!=\"127.0.0.1\" sourcetype=\"*WinEventLog\" BY Authentication.src\n| rename Authentication.src as \"Source IP\", count as Failures\n| sort -Failures\n| head 10",
+				"query": "| tstats `scd_summariesonly` count from datamodel=Authentication where Authentication.action=\"failure\" Authentication.src!=\"\" Authentication.src!=\"-\" Authentication.src!=\"::1\" Authentication.src!=\"127.0.0.1\" sourcetype=\"*WinEventLog\" BY Authentication.src\n| rename Authentication.src as \"Source IP\", count as Failures\n| sort -Failures\n| head 10",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1116,7 +1116,7 @@
 		"ds_failed_detail_users": {
 			"name": "Security Resilience - ds_failed_detail_users",
 			"options": {
-				"query": "| tstats `summariesonly` count from datamodel=Authentication where Authentication.action=\"failure\" sourcetype=\"*WinEventLog\" BY Authentication.user\n| rename Authentication.user as User, count as Failures\n| where NOT match(User, \"\\$$\")\n| sort -Failures\n| head 10",
+				"query": "| tstats `scd_summariesonly` count from datamodel=Authentication where Authentication.action=\"failure\" sourcetype=\"*WinEventLog\" BY Authentication.user\n| rename Authentication.user as User, count as Failures\n| where NOT match(User, \"\\$$\")\n| sort -Failures\n| head 10",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1127,7 +1127,7 @@
 		"ds_failed_logons": {
 			"name": "Executive Dashboard - ds_failed_logons",
 			"options": {
-				"query": "| tstats `summariesonly` dc(Authentication.user) as count from datamodel=Authentication where Authentication.action=\"failure\"",
+				"query": "| tstats `scd_summariesonly` dc(Authentication.user) as count from datamodel=Authentication where Authentication.action=\"failure\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1146,7 +1146,7 @@
 		"ds_failed_logons_trend": {
 			"name": "Failed Logons Trend",
 			"options": {
-				"query": "| tstats `summariesonly` dc(Authentication.user) as count from datamodel=Authentication where Authentication.action=\"failure\" by _time | timechart fixedrange=false sum(count) as \"Failed (ISE+AD)\"",
+				"query": "| tstats `scd_summariesonly` dc(Authentication.user) as count from datamodel=Authentication where Authentication.action=\"failure\" by _time | timechart fixedrange=false sum(count) as \"Failed (ISE+AD)\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1157,7 +1157,7 @@
 		"ds_fw_allowed": {
 			"name": "Security Resilience - ds_fw_allowed",
 			"options": {
-				"query": "| tstats `summariesonly` count from datamodel=Network_Traffic where All_Traffic.action=\"allowed\" by All_Traffic.src, All_Traffic.dest, All_Traffic.dest_port\n| stats count as allowed",
+				"query": "| tstats `scd_summariesonly` count from datamodel=Network_Traffic where All_Traffic.action=\"allowed\" by All_Traffic.src, All_Traffic.dest, All_Traffic.dest_port\n| stats count as allowed",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1168,7 +1168,7 @@
 		"ds_fw_allowed_trend": {
 			"name": "Firewall Allowed Trend",
 			"options": {
-				"query": "| tstats `summariesonly` count from datamodel=Network_Traffic where All_Traffic.action=\"allowed\" by _time \n| timechart sum(count) as \"Allowed\" fixedrange=false ",
+				"query": "| tstats `scd_summariesonly` count from datamodel=Network_Traffic where All_Traffic.action=\"allowed\" by _time \n| timechart sum(count) as \"Allowed\" fixedrange=false ",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1179,7 +1179,7 @@
 		"ds_fw_blocked": {
 			"name": "Executive Dashboard - ds_fw_blocked",
 			"options": {
-				"query": "| tstats `summariesonly` count from datamodel=Network_Traffic where All_Traffic.action=\"blocked\" by All_Traffic.src, All_Traffic.dest, All_Traffic.dest_port\n| stats count as blocked",
+				"query": "| tstats `scd_summariesonly` count from datamodel=Network_Traffic where All_Traffic.action=\"blocked\" by All_Traffic.src, All_Traffic.dest, All_Traffic.dest_port\n| stats count as blocked",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1190,7 +1190,7 @@
 		"ds_fw_blocked_trend": {
 			"name": "Firewall Blocked Trend",
 			"options": {
-				"query": "| tstats `summariesonly` count from datamodel=Network_Traffic where All_Traffic.action=\"blocked\" by _time \n| timechart sum(count) as \"Blocked\" fixedrange=false",
+				"query": "| tstats `scd_summariesonly` count from datamodel=Network_Traffic where All_Traffic.action=\"blocked\" by _time \n| timechart sum(count) as \"Blocked\" fixedrange=false",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1201,7 +1201,7 @@
 		"ds_fw_top_blocked": {
 			"name": "Security Resilience - ds_fw_top_blocked",
 			"options": {
-				"query": "| tstats `summariesonly` count as blocked_connections from datamodel=Network_Traffic where All_Traffic.action=\"blocked\" by All_Traffic.dest\n| rename All_Traffic.dest as \"Destination IP\", blocked_connections as \"Blocked Connections\"\n| where isnotnull('Destination IP')\n| sort -\"Blocked Connections\"\n| head 10",
+				"query": "| tstats `scd_summariesonly` count as blocked_connections from datamodel=Network_Traffic where All_Traffic.action=\"blocked\" by All_Traffic.dest\n| rename All_Traffic.dest as \"Destination IP\", blocked_connections as \"Blocked Connections\"\n| where isnotnull('Destination IP')\n| sort -\"Blocked Connections\"\n| head 10",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1231,7 +1231,7 @@
 		"ds_identity_trend": {
 			"name": "Security Resilience - ds_identity_trend",
 			"options": {
-				"query": "| tstats `summariesonly` count from datamodel=Authentication BY _time Authentication.action, sourcetype\n| rename Authentication.action as action\n| eval evt=case( action==\"success\" AND sourcetype==\"cisco:ise:syslog\",\"ISE_Pass\", action==\"failure\" AND sourcetype==\"cisco:ise:syslog\",\"ISE_Fail\", action==\"success\",\"AD_Success\", action==\"failure\",\"AD_Failure\", action==\"lockout\",\"Lockout\", 1==1,\"Other\")\n| timechart count by evt",
+				"query": "| tstats `scd_summariesonly` count from datamodel=Authentication BY _time Authentication.action, sourcetype\n| rename Authentication.action as action\n| eval evt=case( action==\"success\" AND sourcetype==\"cisco:ise:syslog\",\"ISE_Pass\", action==\"failure\" AND sourcetype==\"cisco:ise:syslog\",\"ISE_Fail\", action==\"success\",\"AD_Success\", action==\"failure\",\"AD_Failure\", action==\"lockout\",\"Lockout\", 1==1,\"Other\")\n| timechart count by evt",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1242,7 +1242,7 @@
 		"ds_ids_alerts": {
 			"name": "Security Resilience - ds_ids_alerts",
 			"options": {
-				"query": "| tstats `summariesonly` count FROM datamodel=Cisco_Security WHERE nodename=Cisco_Security.Secure_Firewall_Dataset.Intrusion_Events",
+				"query": "| tstats `scd_summariesonly` count FROM datamodel=Cisco_Security WHERE nodename=Cisco_Security.Secure_Firewall_Dataset.Intrusion_Events",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1253,7 +1253,7 @@
 		"ds_ids_trend": {
 			"name": "IDS/IPS Alerts Trend",
 			"options": {
-				"query": "| tstats `summariesonly` count FROM datamodel=Cisco_Security WHERE nodename=Cisco_Security.Secure_Firewall_Dataset.Intrusion_Events by _time | timechart fixedrange=false sum(count) as \"IDS/IPS Alerts\"",
+				"query": "| tstats `scd_summariesonly` count FROM datamodel=Cisco_Security WHERE nodename=Cisco_Security.Secure_Firewall_Dataset.Intrusion_Events by _time | timechart fixedrange=false sum(count) as \"IDS/IPS Alerts\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1319,7 +1319,7 @@
 		"ds_ise_trend": {
 			"name": "ISE Auth Trend",
 			"options": {
-				"query": "| tstats `summariesonly` count from datamodel=Authentication where sourcetype=\"cisco:ise:syslog\" BY _time Authentication.action \n| rename Authentication.action as result \n| where result IN (\"success\",\"failure\") \n| timechart fixedrange=false sum(count) as count by result",
+				"query": "| tstats `scd_summariesonly` count from datamodel=Authentication where sourcetype=\"cisco:ise:syslog\" BY _time Authentication.action \n| rename Authentication.action as result \n| where result IN (\"success\",\"failure\") \n| timechart fixedrange=false sum(count) as count by result",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1437,7 +1437,7 @@
 		"ds_lockouts": {
 			"name": "Security Resilience - ds_lockouts",
 			"options": {
-				"query": "| tstats `summariesonly` dc(Authentication.user) as count from datamodel=Authentication where Authentication.action=\"lockout\"",
+				"query": "| tstats `scd_summariesonly` dc(Authentication.user) as count from datamodel=Authentication where Authentication.action=\"lockout\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1448,7 +1448,7 @@
 		"ds_lockouts_trend": {
 			"name": "Lockouts Trend",
 			"options": {
-				"query": "| tstats `summariesonly` dc(Authentication.user) as count from datamodel=Authentication where Authentication.action=\"lockout\" by _time | timechart fixedrange=false sum(count) as \"Lockouts (AD)\"",
+				"query": "| tstats `scd_summariesonly` dc(Authentication.user) as count from datamodel=Authentication where Authentication.action=\"lockout\" by _time | timechart fixedrange=false sum(count) as \"Lockouts (AD)\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1459,7 +1459,7 @@
 		"ds_priv_detail": {
 			"name": "Security Resilience - ds_priv_detail",
 			"options": {
-				"query": "| tstats `summariesonly` count from datamodel=Authentication where Authentication.signature_id=4672 sourcetype=\"*WinEventLog\" BY Authentication.user\n| rename Authentication.user as User, count as \"Priv Logons\"\n| sort -\"Priv Logons\"",
+				"query": "| tstats `scd_summariesonly` count from datamodel=Authentication where Authentication.signature_id=4672 sourcetype=\"*WinEventLog\" BY Authentication.user\n| rename Authentication.user as User, count as \"Priv Logons\"\n| sort -\"Priv Logons\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1481,7 +1481,7 @@
 		"ds_privileged_logons": {
 			"name": "Security Resilience - ds_privileged_logons",
 			"options": {
-				"query": "| tstats `summariesonly` count from datamodel=Authentication where (Authentication.signature_id=4672 OR Authentication.signature_id=4673) sourcetype=\"*WinEventLog\"",
+				"query": "| tstats `scd_summariesonly` count from datamodel=Authentication where (Authentication.signature_id=4672 OR Authentication.signature_id=4673) sourcetype=\"*WinEventLog\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1492,7 +1492,7 @@
 		"ds_privileged_trend": {
 			"name": "Privileged Logons Trend",
 			"options": {
-				"query": "| tstats `summariesonly` count from datamodel=Authentication where (Authentication.signature_id=4672 OR Authentication.signature_id=4673) sourcetype=\"*WinEventLog\" by _time | timechart fixedrange=false sum(count) as \"Privileged (AD)\"",
+				"query": "| tstats `scd_summariesonly` count from datamodel=Authentication where (Authentication.signature_id=4672 OR Authentication.signature_id=4673) sourcetype=\"*WinEventLog\" by _time | timechart fixedrange=false sum(count) as \"Privileged (AD)\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"

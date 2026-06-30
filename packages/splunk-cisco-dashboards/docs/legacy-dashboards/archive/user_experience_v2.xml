@@ -570,7 +570,7 @@
 		"ds_te_agent_perf": {
 			"name": "ThousandEyes Agent Performance",
 			"options": {
-				"query": "| tstats `summariesonly` avg(Test_Metrics.metric_name:network.latency) as latency, avg(Test_Metrics.metric_name:network.loss) as loss, avg(Test_Metrics.metric_name:network.jitter) as jitter, dc(Test_Metrics.thousandeyes.test.name) as tests FROM datamodel=\"Cisco_ThousandEyes.Test_Metrics\" BY Test_Metrics.thousandeyes.source.agent.name | rename Test_Metrics.thousandeyes.source.agent.name as Agent | eval latency=round(latency,1), loss=round(loss,2), jitter=round(jitter,1), Status=case(loss>=5 OR latency>=200, \"Critical\", loss>=1 OR latency>=100, \"Degraded\", 1==1, \"Healthy\") | table Agent tests latency loss jitter Status | rename tests as Tests, latency as \"Latency (ms)\", loss as \"Loss %\", jitter as \"Jitter (ms)\" | sort Agent",
+				"query": "| tstats `scd_summariesonly` avg(Test_Metrics.metric_name:network.latency) as latency, avg(Test_Metrics.metric_name:network.loss) as loss, avg(Test_Metrics.metric_name:network.jitter) as jitter, dc(Test_Metrics.thousandeyes.test.name) as tests FROM datamodel=\"Cisco_ThousandEyes.Test_Metrics\" BY Test_Metrics.thousandeyes.source.agent.name | rename Test_Metrics.thousandeyes.source.agent.name as Agent | eval latency=round(latency,1), loss=round(loss,2), jitter=round(jitter,1), Status=case(loss>=5 OR latency>=200, \"Critical\", loss>=1 OR latency>=100, \"Degraded\", 1==1, \"Healthy\") | table Agent tests latency loss jitter Status | rename tests as Tests, latency as \"Latency (ms)\", loss as \"Loss %\", jitter as \"Jitter (ms)\" | sort Agent",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"

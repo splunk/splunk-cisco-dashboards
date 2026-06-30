@@ -42,7 +42,7 @@ single or double quotes**. The bareword form is the only correct form.
 
 | timechart dc(macAddress) as clients by connection.ssid
 
-| tstats `summariesonly` count from datamodel=Network_Traffic
+| tstats `scd_summariesonly` count from datamodel=Network_Traffic
     where All_Traffic.action="blocked" by All_Traffic.src
 
 | rename thousandeyes.test.id as teTestId

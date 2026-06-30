@@ -2698,7 +2698,7 @@
 		"ds_te_alerts_summary": {
 			"name": "IT Health - ThousandEyes Alerts Summary by Severity",
 			"options": {
-				"query": "| tstats `summariesonly` count\nFROM datamodel=\"Cisco_ThousandEyes.Alerts\"\nBY Alerts.severity\n| rename Alerts.severity AS Severity\n| sort - count",
+				"query": "| tstats `scd_summariesonly` count\nFROM datamodel=\"Cisco_ThousandEyes.Alerts\"\nBY Alerts.severity\n| rename Alerts.severity AS Severity\n| sort - count",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2709,7 +2709,7 @@
 		"ds_te_alerts_table": {
 			"name": "IT Health - ThousandEyes Active Alerts (Recent 20)",
 			"options": {
-				"query": "| tstats `summariesonly` count, values(Alerts.triggerTime) as triggerTime, values(Alerts.accountId) as accountId, values(Alerts.organizationId) as organizationId, values(Alerts.testId) as testId, values(Alerts.testName) as testName, values(Alerts.testType) as testType, values(Alerts.permalink) as permalink, values(Alerts.expression) as expression, values(Alerts.severity) as severity\nFROM datamodel=\"Cisco_ThousandEyes.Alerts\"\nBY _time, Alerts.alertId\n| eval \"Trigger Time\"=coalesce(strftime(triggerTime, \"%Y-%m-%d %H:%M:%S\"), strftime(_time, \"%Y-%m-%d %H:%M:%S\"))\n| rename accountId AS \"Account ID\", organizationId AS \"Org ID\", testId AS \"Test ID\", testName AS \"Test Name\", testType AS \"Test Type\", permalink AS \"Permalink\", expression AS \"Expression\", severity AS \"Severity\", Alerts.alertId AS \"Alert ID\"\n| sort 0 - \"Trigger Time\"\n| fields - _time, triggerTime, count\n| head 20\n| table \"Trigger Time\", \"Account ID\", \"Org ID\", \"Test ID\", \"Test Name\", \"Test Type\", \"Permalink\", \"Expression\", \"Severity\", \"Alert ID\"",
+				"query": "| tstats `scd_summariesonly` count, values(Alerts.triggerTime) as triggerTime, values(Alerts.accountId) as accountId, values(Alerts.organizationId) as organizationId, values(Alerts.testId) as testId, values(Alerts.testName) as testName, values(Alerts.testType) as testType, values(Alerts.permalink) as permalink, values(Alerts.expression) as expression, values(Alerts.severity) as severity\nFROM datamodel=\"Cisco_ThousandEyes.Alerts\"\nBY _time, Alerts.alertId\n| eval \"Trigger Time\"=coalesce(strftime(triggerTime, \"%Y-%m-%d %H:%M:%S\"), strftime(_time, \"%Y-%m-%d %H:%M:%S\"))\n| rename accountId AS \"Account ID\", organizationId AS \"Org ID\", testId AS \"Test ID\", testName AS \"Test Name\", testType AS \"Test Type\", permalink AS \"Permalink\", expression AS \"Expression\", severity AS \"Severity\", Alerts.alertId AS \"Alert ID\"\n| sort 0 - \"Trigger Time\"\n| fields - _time, triggerTime, count\n| head 20\n| table \"Trigger Time\", \"Account ID\", \"Org ID\", \"Test ID\", \"Test Name\", \"Test Type\", \"Permalink\", \"Expression\", \"Severity\", \"Alert ID\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2720,7 +2720,7 @@
 		"ds_te_alerts_timeline": {
 			"name": "IT Health - ThousandEyes Alerts Timeline",
 			"options": {
-				"query": "| tstats `summariesonly` count\nFROM datamodel=\"Cisco_ThousandEyes.Alerts\"\nBY Alerts.severity, _time span=1h\n| rename Alerts.severity AS Severity\n| timechart span=1h sum(count) AS count BY Severity",
+				"query": "| tstats `scd_summariesonly` count\nFROM datamodel=\"Cisco_ThousandEyes.Alerts\"\nBY Alerts.severity, _time span=1h\n| rename Alerts.severity AS Severity\n| timechart span=1h sum(count) AS count BY Severity",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2731,7 +2731,7 @@
 		"ds_te_endpoint_traces": {
 			"name": "IT Health - ThousandEyes Endpoint Trace Health",
 			"options": {
-				"query": "index=* sourcetype=\"cisco:thousandeyes:trace\"\n| eval is_parent=if(parent_span_id==\"\", 1, 0)\n| eval parent_key=if(is_parent==1, span_id, parent_span_id)\n| eval http_code_num = if(is_parent==1, 0, attributes.http.response.code)\n| eval agent_name = 'thousandeyes.source.agent.name'\n| eval permalink = 'thousandeyes.permalink'\n| eventstats count as spans_count count(eval('attributes.http.response.code'>399)) as error_count count(eval('attributes.http.response.code'>=500 AND 'attributes.http.response.code'<600)) as error_5xx_count min(start_time) as min_start_time max(end_time) as max_end_time by trace_id, parent_key\n| where is_parent==1\n| eval duration=round((max_end_time - min_start_time)/1000000) . \" ms\"\n| eval started_at_epoch = round(min_start_time / 1000000000)\n| eval timestamp = strftime(started_at_epoch, \"%a, %b %d %Y %I:%M:%S %p %Z\")\n| eval spans_count=spans_count-1\n| where (max_end_time - min_start_time)/1000000 >= 0\n| rename name as endpoint\n| rename thousandeyes.account.id as account_id\n| rename thousandeyes.test.name as test_name\n| dedup trace_id\n| table trace_id endpoint timestamp error_count spans_count duration agent_name account_id test_name permalink _raw",
+				"query": "`index_thousandeyes` sourcetype=\"cisco:thousandeyes:trace\"\n| eval parent_id=coalesce(parent_span_id, \"\")\n| eval start_ns_raw=tonumber(coalesce(start_time, startTimeUnixNano, start_time_unix_nano, startTime))\n| eval end_ns_raw=tonumber(coalesce(end_time, endTimeUnixNano, end_time_unix_nano, endTime))\n| eval start_ns=if(start_ns_raw>0, start_ns_raw, null())\n| eval end_ns=if(end_ns_raw>0, end_ns_raw, null())\n| eval http_status=tonumber(coalesce('attributes.http.response.code', 'http.response.status_code', 'http.status_code'))\n| eval endpoint=coalesce(name, endpoint, 'span.name', 'http.target', 'url.path', 'server.address', \"Unknown endpoint\")\n| eval agent_name=coalesce('thousandeyes.source.agent.name', 'source.agent.name', 'agent.name')\n| eval account_id=coalesce('thousandeyes.account.id', account_id, aid)\n| eval test_name=coalesce('thousandeyes.test.name', 'test.name')\n| eval permalink=coalesce('thousandeyes.permalink', permalink)\n| eventstats count as span_count count(eval(http_status>=400)) as error_count count(eval(http_status>=500 AND http_status<600)) as error_5xx_count min(start_ns) as trace_start_ns max(end_ns) as trace_end_ns min(_time) as first_event_time by trace_id\n| eval root_rank=case(parent_id=\"\" OR lower(parent_id)=\"null\", 1, start_ns=trace_start_ns OR _time=first_event_time, 2, 1==1, 3)\n| where root_rank<3\n| eval duration_ms=if(isnotnull(trace_start_ns) AND isnotnull(trace_end_ns) AND trace_end_ns>=trace_start_ns, round((trace_end_ns-trace_start_ns)/1000000, 0), null())\n| eval started_at_epoch=coalesce(round(trace_start_ns/1000000000), first_event_time)\n| eval \"Started\"=strftime(started_at_epoch, \"%Y-%m-%d %H:%M:%S %Z\")\n| eval \"Duration\"=if(isnotnull(duration_ms), duration_ms . \" ms\", \"n/a\")\n| sort 0 trace_id root_rank start_ns\n| dedup trace_id\n| sort 0 - error_count - duration_ms\n| rename trace_id as \"Trace ID\", endpoint as \"Endpoint\", error_count as \"HTTP Errors\", error_5xx_count as \"HTTP 5xx\", span_count as \"Span Count\", agent_name as \"Agent\", account_id as \"Account ID\", test_name as \"Test Name\", permalink as \"Trace Link\"\n| table \"Trace ID\", \"Endpoint\", \"Started\", \"HTTP Errors\", \"HTTP 5xx\", \"Span Count\", \"Duration\", \"Agent\", \"Account ID\", \"Test Name\", \"Trace Link\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2742,7 +2742,7 @@
 		"ds_te_network_jitter": {
 			"name": "IT Health - ThousandEyes Network Jitter",
 			"options": {
-				"query": "| tstats `summariesonly` avg(Test_Metrics.metric_name:network.jitter) as avg_jitter\nFROM datamodel=\"Cisco_ThousandEyes.Test_Metrics\"\nWHERE Test_Metrics.metric_name:network.jitter=\"*\"\nTest_Metrics.thousandeyes.test.type IN (\"agent-to-server\",\"agent-to-agent\")\nBY _time, Test_Metrics.server.address\n| timechart eval(round(avg(avg_jitter), 2)) as avg_jitter BY Test_Metrics.server.address\n| sort 0 - avg_jitter",
+				"query": "| tstats `scd_summariesonly` avg(Test_Metrics.metric_name:network.jitter) as avg_jitter\nFROM datamodel=\"Cisco_ThousandEyes.Test_Metrics\"\nWHERE Test_Metrics.metric_name:network.jitter=\"*\"\nTest_Metrics.thousandeyes.test.type IN (\"agent-to-server\",\"agent-to-agent\")\nBY _time, Test_Metrics.server.address\n| timechart eval(round(avg(avg_jitter), 2)) as avg_jitter BY Test_Metrics.server.address\n| sort 0 - avg_jitter",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2753,7 +2753,7 @@
 		"ds_te_network_latency": {
 			"name": "IT Health - ThousandEyes Network Latency",
 			"options": {
-				"query": "| tstats `summariesonly` avg(Test_Metrics.metric_name:network.latency) as avg_latency\nFROM datamodel=\"Cisco_ThousandEyes.Test_Metrics\"\nWHERE Test_Metrics.metric_name:network.latency=\"*\"\nTest_Metrics.thousandeyes.test.type IN (\"agent-to-server\",\"agent-to-agent\")\nBY _time, Test_Metrics.server.address\n| timechart eval(round(avg(avg_latency), 2)) as avg_latency BY Test_Metrics.server.address\n| sort 0 - avg_latency",
+				"query": "| tstats `scd_summariesonly` avg(Test_Metrics.metric_name:network.latency) as avg_latency\nFROM datamodel=\"Cisco_ThousandEyes.Test_Metrics\"\nWHERE Test_Metrics.metric_name:network.latency=\"*\"\nTest_Metrics.thousandeyes.test.type IN (\"agent-to-server\",\"agent-to-agent\")\nBY _time, Test_Metrics.server.address\n| timechart eval(round(avg(avg_latency), 2)) as avg_latency BY Test_Metrics.server.address\n| sort 0 - avg_latency",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2764,7 +2764,7 @@
 		"ds_te_network_loss": {
 			"name": "IT Health - ThousandEyes Network Loss",
 			"options": {
-				"query": "| tstats `summariesonly` avg(Test_Metrics.metric_name:network.loss) as avg_loss\nFROM datamodel=\"Cisco_ThousandEyes.Test_Metrics\"\nWHERE Test_Metrics.metric_name:network.loss=\"*\"\nTest_Metrics.thousandeyes.test.type IN (\"agent-to-server\",\"agent-to-agent\")\nBY _time, Test_Metrics.server.address\n| timechart eval(round(avg(avg_loss), 2)) as avg_loss BY Test_Metrics.server.address\n| sort 0 - avg_loss",
+				"query": "| tstats `scd_summariesonly` avg(Test_Metrics.metric_name:network.loss) as avg_loss\nFROM datamodel=\"Cisco_ThousandEyes.Test_Metrics\"\nWHERE Test_Metrics.metric_name:network.loss=\"*\"\nTest_Metrics.thousandeyes.test.type IN (\"agent-to-server\",\"agent-to-agent\")\nBY _time, Test_Metrics.server.address\n| timechart eval(round(avg(avg_loss), 2)) as avg_loss BY Test_Metrics.server.address\n| sort 0 - avg_loss",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
