@@ -569,7 +569,7 @@
 				"annotation": "ds_annotation_occupancy_spike",
 				"primary": "ds_user_presence_trend"
 			},
-			"description": "Concurrent users by city (DEVICE_COUNT floor roll-up; USER_PRESENCE totalUsers is portfolio-wide)",
+			"description": "Concurrent users by location (15-minute DEVICE_COUNT floor roll-up; USER_PRESENCE totalUsers is portfolio-wide)",
 			"options": {
 				"annotationColor": [
 					"#D64550"
@@ -1008,7 +1008,7 @@
 		"ds_user_presence_trend": {
 			"name": "Building Resilience - ds_user_presence_trend",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR | eval users='deviceCounts.userCount', city='deviceCounts.location.parent.parent.name' | where isnotnull(city) | bin _time | stats max(users) as users by _time, floor, city | stats sum(users) as users by _time, city | timechart fixedrange=false sum(users) by city",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\"\n| `spaces_hierarchy(deviceCounts)`\n| eval users=tonumber(mvindex('deviceCounts.userCount', 0)), city=coalesce(campus, building, site)\n| where isnotnull(users) AND isnotnull(floor) AND isnotnull(city) AND city!=\"Unknown\"\n| bin _time span=15m\n| stats max(users) as users by _time, floor, city\n| stats sum(users) as users by _time, city\n| timechart span=15m fixedrange=false sum(users) by city",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"

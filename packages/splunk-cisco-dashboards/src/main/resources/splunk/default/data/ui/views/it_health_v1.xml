@@ -1719,7 +1719,7 @@
 			"dataSources": {
 				"primary": "ds_te_endpoint_traces"
 			},
-			"description": "Per-trace span counts, HTTP error counts, and duration from cisco:thousandeyes:trace events",
+			"description": "Per-test endpoint health from cisco:thousandeyes:metric events",
 			"options": {
 				"backgroundColor": "transparent",
 				"count": 25,
@@ -1729,7 +1729,7 @@
 					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
 				}
 			},
-			"title": "Endpoint Traces",
+			"title": "Endpoint Health by Agent",
 			"type": "splunk.table"
 		},
 		"viz_te_jitter_chart": {
@@ -1814,7 +1814,7 @@
 				"backgroundColor": "transparent",
 				"fontColor": "#005073",
 				"fontSize": "default",
-				"markdown": "### Endpoint Traces\n\nPer-trace span counts, HTTP error counts, and durations from `cisco:thousandeyes:trace` events. Sort by error count to surface root-cause traces."
+				"markdown": "### Endpoint Health\n\nPer-test endpoint availability, latency, loss, jitter, and originating ThousandEyes agent from `cisco:thousandeyes:metric` events."
 			},
 			"type": "splunk.markdown"
 		},
@@ -2729,9 +2729,9 @@
 			"type": "ds.search"
 		},
 		"ds_te_endpoint_traces": {
-			"name": "IT Health - ThousandEyes Endpoint Trace Health",
+			"name": "IT Health - ThousandEyes Endpoint Metric Health",
 			"options": {
-				"query": "`index_thousandeyes` sourcetype=\"cisco:thousandeyes:trace\"\n| eval parent_id=coalesce(parent_span_id, \"\")\n| eval start_ns_raw=tonumber(coalesce(start_time, startTimeUnixNano, start_time_unix_nano, startTime))\n| eval end_ns_raw=tonumber(coalesce(end_time, endTimeUnixNano, end_time_unix_nano, endTime))\n| eval start_ns=if(start_ns_raw>0, start_ns_raw, null())\n| eval end_ns=if(end_ns_raw>0, end_ns_raw, null())\n| eval http_status=tonumber(coalesce('attributes.http.response.code', 'http.response.status_code', 'http.status_code'))\n| eval endpoint=coalesce(name, endpoint, 'span.name', 'http.target', 'url.path', 'server.address', \"Unknown endpoint\")\n| eval agent_name=coalesce('thousandeyes.source.agent.name', 'source.agent.name', 'agent.name')\n| eval account_id=coalesce('thousandeyes.account.id', account_id, aid)\n| eval test_name=coalesce('thousandeyes.test.name', 'test.name')\n| eval permalink=coalesce('thousandeyes.permalink', permalink)\n| eventstats count as span_count count(eval(http_status>=400)) as error_count count(eval(http_status>=500 AND http_status<600)) as error_5xx_count min(start_ns) as trace_start_ns max(end_ns) as trace_end_ns min(_time) as first_event_time by trace_id\n| eval root_rank=case(parent_id=\"\" OR lower(parent_id)=\"null\", 1, start_ns=trace_start_ns OR _time=first_event_time, 2, 1==1, 3)\n| where root_rank<3\n| eval duration_ms=if(isnotnull(trace_start_ns) AND isnotnull(trace_end_ns) AND trace_end_ns>=trace_start_ns, round((trace_end_ns-trace_start_ns)/1000000, 0), null())\n| eval started_at_epoch=coalesce(round(trace_start_ns/1000000000), first_event_time)\n| eval \"Started\"=strftime(started_at_epoch, \"%Y-%m-%d %H:%M:%S %Z\")\n| eval \"Duration\"=if(isnotnull(duration_ms), duration_ms . \" ms\", \"n/a\")\n| sort 0 trace_id root_rank start_ns\n| dedup trace_id\n| sort 0 - error_count - duration_ms\n| rename trace_id as \"Trace ID\", endpoint as \"Endpoint\", error_count as \"HTTP Errors\", error_5xx_count as \"HTTP 5xx\", span_count as \"Span Count\", agent_name as \"Agent\", account_id as \"Account ID\", test_name as \"Test Name\", permalink as \"Trace Link\"\n| table \"Trace ID\", \"Endpoint\", \"Started\", \"HTTP Errors\", \"HTTP 5xx\", \"Span Count\", \"Duration\", \"Agent\", \"Account ID\", \"Test Name\", \"Trace Link\"",
+				"query": "`index_thousandeyes` sourcetype=\"cisco:thousandeyes:metric\" (\"thousandeyes.test.type\"=\"http-server\" OR \"thousandeyes.test.type\"=\"page-load\" OR \"thousandeyes.test.type\"=\"api\" OR \"thousandeyes.test.type\"=\"web-transaction\" OR \"thousandeyes.test.type\"=\"agent-to-server\")\n| eval endpoint=coalesce('server.address', 'url.domain', 'thousandeyes.test.domain', 'http.url', 'thousandeyes.test.name', \"Unknown endpoint\")\n| eval agent_name=coalesce('thousandeyes.source.agent.name', 'source.agent.name', \"Unknown agent\")\n| eval test_name=coalesce('thousandeyes.test.name', \"Unknown test\")\n| eval test_type=coalesce('thousandeyes.test.type', \"Unknown type\")\n| eval account_id=coalesce('thousandeyes.account.id', account_id, aid)\n| eval permalink=coalesce('thousandeyes.permalink', permalink)\n| stats latest(metric_name:http.server.request.availability) as http_availability_pct latest(metric_name:web.page.load.completion) as page_completion_pct latest(metric_name:network.latency) as latency_s latest(metric_name:network.loss) as loss_pct latest(metric_name:network.jitter) as jitter_ms latest(metric_name:http.client.request.duration) as http_duration latest(metric_name:web.page.load.duration) as page_load_duration latest(permalink) as permalink max(_time) as last_seen by endpoint agent_name test_name test_type account_id\n| where endpoint!=\"Unknown endpoint\" OR agent_name!=\"Unknown agent\" OR test_name!=\"Unknown test\"\n| eval availability_pct=round(coalesce(http_availability_pct, page_completion_pct), 2)\n| eval latency_ms=if(isnotnull(latency_s), round(latency_s*1000, 1), null())\n| eval loss_pct=if(isnotnull(loss_pct), round(loss_pct, 2), null())\n| eval jitter_ms=if(isnotnull(jitter_ms), round(jitter_ms, 1), null())\n| eval http_duration=if(isnotnull(http_duration), round(http_duration, 1), null())\n| eval page_load_duration=if(isnotnull(page_load_duration), round(page_load_duration, 1), null())\n| eval status=case((isnotnull(availability_pct) AND availability_pct<95) OR loss_pct>=5 OR latency_ms>=200, \"Critical\", (isnotnull(availability_pct) AND availability_pct<99) OR loss_pct>=1 OR latency_ms>=100 OR jitter_ms>=30, \"Degraded\", 1==1, \"Healthy\")\n| eval status_rank=case(status=\"Critical\", 1, status=\"Degraded\", 2, status=\"Healthy\", 3, 1==1, 4)\n| eval \"Last Seen\"=strftime(last_seen, \"%Y-%m-%d %H:%M:%S %Z\")\n| sort 0 status_rank availability_pct -latency_ms -loss_pct -jitter_ms\n| rename endpoint as \"Endpoint\", agent_name as \"Agent\", test_name as \"Test Name\", test_type as \"Test Type\", status as \"Status\", availability_pct as \"Availability %\", latency_ms as \"Latency (ms)\", loss_pct as \"Loss %\", jitter_ms as \"Jitter (ms)\", http_duration as \"HTTP Duration\", page_load_duration as \"Page Load Duration\", account_id as \"Account ID\", permalink as \"TE Link\"\n| table \"Status\", \"Endpoint\", \"Agent\", \"Test Name\", \"Test Type\", \"Last Seen\", \"Availability %\", \"Latency (ms)\", \"Loss %\", \"Jitter (ms)\", \"HTTP Duration\", \"Page Load Duration\", \"Account ID\", \"TE Link\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
