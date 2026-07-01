@@ -880,7 +880,7 @@
 		"ds_devices_trend": {
 			"name": "Connected Devices Trend",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_LOCATION_UPDATE\" | spath output=devMac path=deviceLocationUpdate.device.macAddress | timechart fixedrange=false dc(devMac) as \"Connected Devices\"",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_LOCATION_UPDATE\" | timechart fixedrange=false dc('deviceLocationUpdate.device.macAddress') as \"Connected Devices\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -923,7 +923,7 @@
 		"ds_location_breakdown": {
 			"name": "Building Resilience - ds_spaces_location_breakdown",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_LOCATION_UPDATE\" \n| spath output=devMac path=deviceLocationUpdate.device.macAddress \n| stats dc(devMac) as \"Unique Devices\", latest(deviceLocationUpdate.location.apCount) as \"AP Count\" by deviceLocationUpdate.location.parent.parent.name, deviceLocationUpdate.location.parent.name, deviceLocationUpdate.location.name \n| rename deviceLocationUpdate.location.parent.parent.name as Campus, deviceLocationUpdate.location.parent.name as Building, deviceLocationUpdate.location.name as Floor",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_LOCATION_UPDATE\" \n| stats dc('deviceLocationUpdate.device.macAddress') as \"Unique Devices\", latest(deviceLocationUpdate.location.apCount) as \"AP Count\" by deviceLocationUpdate.location.parent.parent.name, deviceLocationUpdate.location.parent.name, deviceLocationUpdate.location.name \n| rename deviceLocationUpdate.location.parent.parent.name as Campus, deviceLocationUpdate.location.parent.name as Building, deviceLocationUpdate.location.name as Floor",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
