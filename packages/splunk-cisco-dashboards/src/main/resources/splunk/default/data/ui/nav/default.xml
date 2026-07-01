@@ -23,16 +23,16 @@
     <!-- Event Operations dashboards -->
     <collection label="Event Ops">
         <a href="statewide_exercise_v1">Network Activation Report</a>
-        <a href="statewide_exercise_v1_studio_modern">Statewide Exercise - Modern Dashboard Studio</a>
     </collection>
 
     <!-- Concepts only: experimental or test dashboards -->
     <collection label="Concepts (Beta)">
         <!-- <a href="home_launchpad_v1">Executive Launchpad</a> -->
-        <a href="network_diagram">Network Diagram</a>
-        <a href="topology_canvas_v1">Topology Canvas</a>
-        <a href="searchbase_canvas">Searchbase Canvas</a>
-        <view name="health_monitoring" label="Health Monitoring"/>
+        <a href="searchbase_canvas">Searchbase Canvas Beta</a>
+        <a href="network_diagram">Network Diagram Beta</a>
+        <a href="topology_canvas_v1">Topology Canvas Beta</a>
+        <a href="statewide_exercise_v1_studio_modern">Statewide Exercise Beta</a>
+        <a href="health_monitoring">Health Monitoring Beta</a>
     </collection>
 
     <!-- Admin utilities, dashboard tooling, and built-in Splunk views -->
