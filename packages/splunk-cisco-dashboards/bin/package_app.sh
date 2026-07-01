@@ -8,6 +8,8 @@ PKG_ROOT="${SCRIPT_DIR}/.."
 STAGE_DIR="${PKG_ROOT}/stage"
 APP_NAME="splunk-cisco-dashboards"
 FROM_STAGE=0
+ROOT_DIR="${PKG_ROOT}/../.."
+VERSION_FILE="${ROOT_DIR}/VERSION"
 
 usage() {
   cat <<EOF
@@ -42,11 +44,15 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Read version from app.conf (source of truth)
+# Read version from repo-root VERSION (source of truth)
 APP_CONF="${PKG_ROOT}/src/main/resources/splunk/default/app.conf"
-VERSION=$(grep -E '^\s*version\s*=' "$APP_CONF" | head -1 | sed 's/.*=\s*//' | xargs)
+if [[ ! -f "$VERSION_FILE" ]]; then
+  echo "ERROR: VERSION file not found: ${VERSION_FILE}" >&2
+  exit 1
+fi
+VERSION=$(tr -d '[:space:]' < "$VERSION_FILE")
 if [[ -z "$VERSION" ]]; then
-  echo "ERROR: Could not read version from app.conf" >&2
+  echo "ERROR: VERSION file is empty: ${VERSION_FILE}" >&2
   exit 1
 fi
 
@@ -70,6 +76,8 @@ else
   bash "${SCRIPT_DIR}/clean_build.sh"
   node "${PKG_ROOT}/bin/build.js" build
 fi
+
+bash "${SCRIPT_DIR}/stamp_version.sh" "$STAGE_DIR"
 
 # Stage into a temp directory with the correct app directory name
 TMP_DIR="$(mktemp -d)"
