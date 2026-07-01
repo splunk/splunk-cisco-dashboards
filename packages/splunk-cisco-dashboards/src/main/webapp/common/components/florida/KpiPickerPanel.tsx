@@ -43,6 +43,7 @@ import {
     Gauge,
     Info,
     Loader2,
+    Maximize2,
     Play,
     RotateCcw,
     Search,
@@ -638,6 +639,10 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     const [drilldownTagDropdownOpen, setDrilldownTagDropdownOpen] = useState(false);
     const [chartStyleOpen, setChartStyleOpen] = useState(false);
     const [displayOpen, setDisplayOpen] = useState(false);
+    // Collapses the lower inspector into a compact selected-search
+    // strip so the catalogue list can own most of the drawer while
+    // users are browsing. The full editor is still one click away.
+    const [detailsCollapsed, setDetailsCollapsed] = useState(true);
 
     const searchInputRef = useRef<HTMLInputElement | null>(null);
     const tagSelectRef = useRef<HTMLDivElement | null>(null);
@@ -808,6 +813,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         // tiles the collapsed default keeps the panel compact.
         setChartStyleOpen(Boolean(context.currentVizOverride));
         setDisplayOpen(hidePeakActive || hideDeltaActive || hideOverlayActive);
+        setDetailsCollapsed(true);
         const defaultThresholds = context.defaultThresholds;
         const currentDirection = cur?.direction ?? 'higher_is_better';
         const defaultDirection = defaultThresholds?.direction ?? 'higher_is_better';
@@ -1775,7 +1781,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                 role="dialog"
                 aria-modal="true"
                 aria-label={`Configure ${context.defaultLabel}`}
-                className="fixed top-0 right-0 z-[1600] h-full w-full max-w-[440px] bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col"
+                className="fixed top-0 right-0 z-[1600] h-full w-full sm:w-[520px] xl:w-[560px] max-w-[calc(100vw-12px)] bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col"
             >
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
@@ -1790,15 +1796,44 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             </p>
                         </div>
                     </div>
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        title="Close (Esc)"
-                        aria-label="Close picker"
-                        className="p-1.5 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                    >
-                        <X className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                        <button
+                            type="button"
+                            onClick={() => setDetailsCollapsed((v) => !v)}
+                            disabled={!selectedEntry}
+                            title={
+                                detailsCollapsed
+                                    ? 'Show tile options'
+                                    : 'Focus the search list'
+                            }
+                            aria-label={
+                                detailsCollapsed
+                                    ? 'Show tile options'
+                                    : 'Focus the search list'
+                            }
+                            className={cn(
+                                'p-1.5 rounded transition-colors',
+                                selectedEntry
+                                    ? 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                    : 'text-slate-300 dark:text-slate-700 cursor-not-allowed'
+                            )}
+                        >
+                            {detailsCollapsed ? (
+                                <Settings2 className="w-4 h-4" />
+                            ) : (
+                                <Maximize2 className="w-4 h-4" />
+                            )}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            title="Close (Esc)"
+                            aria-label="Close picker"
+                            className="p-1.5 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Filters — search box + facet dropdowns + tag chips */}
@@ -2268,7 +2303,10 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         />
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 flex-wrap">
-                                                <span className="text-[11px] font-bold text-slate-800 dark:text-slate-100 break-all select-text cursor-text">
+                                                <span
+                                                    className="text-[11px] font-bold text-slate-800 dark:text-slate-100 break-words line-clamp-2 select-text cursor-text"
+                                                    title={entry.searchName}
+                                                >
                                                     {highlightMatch(entry.searchName, query)}
                                                 </span>
                                                 {plainDesc && (
@@ -2359,15 +2397,89 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
 
                 {/* Selection preview + form.
                   *
-                  * `max-h-[44%]` gives the accordion editor enough
+                  * `max-h-[48%]` gives the accordion editor enough
                   * room to breathe when one section is open while the
                   * search result list still owns the majority of the
                   * drawer. The internal `overflow-auto` keeps every
                   * field reachable when the panel content exceeds the
                   * cap, and the footer lives in a separate sibling so
                   * primary actions stay anchored. */}
-                <div className="border-t border-slate-200 dark:border-slate-800 flex-shrink-0 px-4 py-3 space-y-2.5 max-h-[44%] overflow-auto">
+                <div
+                    className={cn(
+                        'border-t border-slate-200 dark:border-slate-800 flex-shrink-0',
+                        detailsCollapsed
+                            ? 'px-3 py-2 max-h-[118px] overflow-hidden'
+                            : 'px-4 py-3 space-y-2.5 max-h-[48%] overflow-auto'
+                    )}
+                >
                     {selectedEntry ? (
+                        detailsCollapsed ? (
+                            <div className="flex items-start gap-2">
+                                <VizIcon
+                                    splunkViz={selectedEntry.defaultViz}
+                                    size={14}
+                                    showTooltip={false}
+                                    className="mt-0.5 text-sky-600 dark:text-sky-400 flex-shrink-0"
+                                />
+                                <div className="min-w-0 flex-1">
+                                    <div className="mb-0.5 flex min-w-0 items-center gap-1.5">
+                                        {selectedEntry.category && (
+                                            <span className="inline-flex max-w-[45%] items-center truncate rounded-sm bg-sky-100 px-1.5 py-px text-[8px] font-black uppercase tracking-widest text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">
+                                                {selectedEntry.category}
+                                                {selectedEntry.subCategory ? (
+                                                    <span className="ml-1 truncate opacity-70">
+                                                        · {selectedEntry.subCategory}
+                                                    </span>
+                                                ) : null}
+                                            </span>
+                                        )}
+                                        <span className="ml-auto inline-flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                                            {resolveVizMapping(selectedEntry.defaultViz).label}
+                                        </span>
+                                    </div>
+                                    <p
+                                        className="truncate text-[12px] font-bold leading-snug text-slate-800 dark:text-slate-100"
+                                        title={selectedEntry.searchName}
+                                    >
+                                        {selectedEntry.searchName}
+                                    </p>
+                                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                                        {selectedSearchbaseUrl && (
+                                            <a
+                                                href={selectedSearchbaseUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                title={`Open ${selectedEntry.id} in Searchbase`}
+                                                className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-sky-600 hover:text-sky-800 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5 dark:text-sky-300 dark:hover:text-sky-100"
+                                            >
+                                                Searchbase
+                                                <ExternalLink className="w-2.5 h-2.5" />
+                                            </a>
+                                        )}
+                                        {onTestInSearch && selectedEntry.search && (
+                                            <button
+                                                type="button"
+                                                onClick={() => onTestInSearch(selectedEntry.search)}
+                                                title="Run this exact SPL in Search (new tab)"
+                                                className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-sky-600 hover:text-sky-800 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5 dark:text-sky-300 dark:hover:text-sky-100"
+                                            >
+                                                <Play className="w-2.5 h-2.5" />
+                                                Test
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setDetailsCollapsed(false)}
+                                    title="Open tile options"
+                                    className="inline-flex flex-shrink-0 self-start -mt-0.5 items-center gap-1 rounded px-1.5 py-1 text-[9px] font-bold uppercase tracking-widest text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                                >
+                                    <Settings2 className="w-3 h-3" />
+                                    Options
+                                </button>
+                            </div>
+                        ) : (
                         <>
                             <div>
                                 {/* Build 96: chips moved inline with the
@@ -2420,6 +2532,15 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         />
                                         {resolveVizMapping(selectedEntry.defaultViz).label}
                                     </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setDetailsCollapsed(true)}
+                                        title="Collapse options and focus the search list"
+                                        className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                                    >
+                                        <Maximize2 className="w-3 h-3" />
+                                        Collapse
+                                    </button>
                                 </div>
                                 <p
                                     className="select-text cursor-text text-[12px] font-bold text-slate-800 dark:text-slate-100 break-words leading-snug"
@@ -3752,6 +3873,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 )}
                             </div>
                         </>
+                        )
                     ) : (
                         <p className="text-[11px] text-slate-400 dark:text-slate-500 italic">
                             Pick a search above to preview SPL and apply.

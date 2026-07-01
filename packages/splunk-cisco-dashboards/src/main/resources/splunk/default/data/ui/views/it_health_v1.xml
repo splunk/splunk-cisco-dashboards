@@ -14,6 +14,36 @@
 			},
 			"title": "",
 			"type": "input.timerange"
+		},
+		"input_site_filter": {
+			"context": {
+				"formattedConfig": {
+					"number": {
+						"prefix": ""
+					}
+				},
+				"formattedStatics": ">statics | formatByType(formattedConfig)",
+				"label": ">primary | seriesByName(\"Site\") | renameSeries(\"label\") | formatByType(formattedConfig)",
+				"statics": [
+					[
+						"All Sites"
+					],
+					[
+						"*"
+					]
+				],
+				"value": ">primary | seriesByName(\"Site\") | renameSeries(\"value\") | formatByType(formattedConfig)"
+			},
+			"dataSources": {
+				"primary": "ds_site_filter_options"
+			},
+			"options": {
+				"defaultValue": "*",
+				"items": ">frame(label, value) | prepend(formattedStatics) | objects()",
+				"token": "site_tok"
+			},
+			"title": "",
+			"type": "input.dropdown"
 		}
 	},
 	"defaults": {
@@ -36,7 +66,11 @@
 			}
 		},
 		"tokens": {
-			"default": {}
+			"default": {
+				"site_tok": {
+					"value": "*"
+				}
+			}
 		}
 	},
 	"visualizations": {
@@ -2138,6 +2172,17 @@
 		}
 	},
 	"dataSources": {
+		"ds_site_filter_options": {
+			"name": "Catalyst Center Site Filter Options",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| eval Site=`dnac_site_normalize(coalesce(Site, Location))`\n| where Site!=\"\"\n| stats count by Site\n| sort Site\n| fields Site",
+				"queryParameters": {
+					"earliest": "-7d@d",
+					"latest": "now"
+				}
+			},
+			"type": "ds.search"
+		},
 		"ds_ap_by_location": {
 			"name": "AP Count by Location",
 			"options": {
@@ -2160,7 +2205,7 @@
 		"ds_base_devicehealth_ref": {
 			"name": "IT - Critical Systems - Base Device Health",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| stats latest(OverallHealth) as OverallHealth, latest(Reachability) as Reachability, latest(Manageability) as Manageability, latest(ReachabilityFailureReason) as ReachabilityFailureReason, latest(CPUUtilization) as CPUUtilization, latest(MemoryUtilization) as MemoryUtilization, latest(DeviceFamily) as DeviceFamily, latest(DeviceRole) as DeviceRole, latest(Platform) as Platform, latest(Site) as Site, latest(IpAddress) as IpAddress, latest(MACAddress) as MACAddress, latest(SerialNumber) as SerialNumber, latest(ImageVersion) as DeviceImgVersion, latest(Uptime) as UpTime, latest(UptimeSeconds) as UptimeSeconds by DeviceName, DeviceID\n| eval SoftwareVersion=DeviceImgVersion",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| eval Site=`dnac_site_normalize(coalesce(Site, Location))`\n| where \"$site_tok$\"=\"*\" OR Site=\"$site_tok$\"\n| stats latest(OverallHealth) as OverallHealth, latest(Reachability) as Reachability, latest(Manageability) as Manageability, latest(ReachabilityFailureReason) as ReachabilityFailureReason, latest(CPUUtilization) as CPUUtilization, latest(MemoryUtilization) as MemoryUtilization, latest(DeviceFamily) as DeviceFamily, latest(DeviceRole) as DeviceRole, latest(Platform) as Platform, latest(Site) as Site, latest(IpAddress) as IpAddress, latest(MACAddress) as MACAddress, latest(SerialNumber) as SerialNumber, latest(ImageVersion) as DeviceImgVersion, latest(Uptime) as UpTime, latest(UptimeSeconds) as UptimeSeconds by DeviceName, DeviceID\n| eval SoftwareVersion=DeviceImgVersion",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2171,7 +2216,7 @@
 		"ds_base_issues_ref": {
 			"name": "IT - Critical Systems - Base Issues",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\"\n| eval DeviceImgVersion=DeviceImageVersion\n| join type=left DeviceID [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" | stats latest(Site) as SiteName, latest(Location) as SiteNameHierarchy by DeviceID ]\n| eval SiteName=coalesce(SiteName, \"Site enrichment unavailable\"), SiteNameHierarchy=coalesce(SiteNameHierarchy, SiteName), SiteType=null()\n| fields IssueID, IssueName, IssueCategory, IssueSpecificPriority, IssueStatus, IssueSpecificSeverity, IssueSpecificDescription, IssueSpecificSummary, IssueSpecificEntity, IssueSpecificEntityValue, IssueSpecificCategory, IssueSpecificName, IssueSpecificSource, IssueCount, IssueDeviceRole, DeviceName, DeviceFamily, DevicePlatform, DeviceRole, DeviceSerialNumber, DeviceSeries, DeviceIpAddress, DeviceImgVersion, DeviceMACAddress, SiteName, SiteNameHierarchy, SiteType, IssueClientMac, _time",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\"\n| eval DeviceImgVersion=DeviceImageVersion\n| join type=left DeviceID [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" | eval Site=`dnac_site_normalize(coalesce(Site, Location))` | stats latest(Site) as SiteName, latest(Location) as SiteNameHierarchy by DeviceID ]\n| eval SiteName=if(isnull(SiteName) OR SiteName=\"\", \"Site enrichment unavailable\", SiteName), SiteNameHierarchy=coalesce(SiteNameHierarchy, SiteName), SiteType=null()\n| where \"$site_tok$\"=\"*\" OR SiteName=\"$site_tok$\"\n| fields IssueID, IssueName, IssueCategory, IssueSpecificPriority, IssueStatus, IssueSpecificSeverity, IssueSpecificDescription, IssueSpecificSummary, IssueSpecificEntity, IssueSpecificEntityValue, IssueSpecificCategory, IssueSpecificName, IssueSpecificSource, IssueCount, IssueDeviceRole, DeviceName, DeviceFamily, DevicePlatform, DeviceRole, DeviceSerialNumber, DeviceSeries, DeviceIpAddress, DeviceImgVersion, DeviceMACAddress, SiteName, SiteNameHierarchy, SiteType, IssueClientMac, _time",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2275,7 +2320,7 @@
 		"ds_cpu_mem_trend": {
 			"name": "CPU Memory Alerts Trend",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" | where CPUUtilization > 80 OR MemoryUtilization > 80 | timechart fixedrange=false dc(DeviceName) as \"CPU/Memory Alerts\"",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| eval Site=`dnac_site_normalize(coalesce(Site, Location))`\n| where \"$site_tok$\"=\"*\" OR Site=\"$site_tok$\"\n| where CPUUtilization > 80 OR MemoryUtilization > 80\n| timechart fixedrange=false dc(DeviceName) as \"CPU/Memory Alerts\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2286,7 +2331,7 @@
 		"ds_dev_health_trend": {
 			"name": "Shared - Device Health Trend",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" | where OverallHealth>=0 | eval health=OverallHealth*10 | timechart fixedrange=false avg(health) as score",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| eval Site=`dnac_site_normalize(coalesce(Site, Location))`\n| where \"$site_tok$\"=\"*\" OR Site=\"$site_tok$\"\n| where OverallHealth>=0\n| eval health=OverallHealth*10\n| timechart fixedrange=false avg(health) as score",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2297,7 +2342,7 @@
 		"ds_device_health": {
 			"name": "IT Health - Device Health Trend",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" | eval OverallHealth=tonumber(mvindex(OverallHealth, 0)) | where OverallHealth>=0 | timechart fixedrange=false avg(eval(round(OverallHealth * 10, 2))) as health",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| eval Site=`dnac_site_normalize(coalesce(Site, Location))`\n| where \"$site_tok$\"=\"*\" OR Site=\"$site_tok$\"\n| eval OverallHealth=tonumber(mvindex(OverallHealth, 0))\n| where OverallHealth>=0\n| timechart fixedrange=false avg(eval(round(OverallHealth * 10, 2))) as health",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2413,24 +2458,18 @@
 		"ds_issue_trend_cat": {
 			"name": "IT - Critical Systems - Issue Trend",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\"\n| eval issue_group=case(match(IssueName,\"High input\"),\"Interface Utilization\", match(IssueName,\"BGP\"),\"BGP Instability\", match(IssueName,\"AP\"),\"AP Issues\", match(IssueName,\"AAA\"),\"AAA/RADIUS\", match(IssueName,\"Host flap\"),\"MAC Flapping\", match(IssueName,\"Network Device\"),\"Device Reachability\", match(IssueName,\"Internet\"),\"Internet Connectivity\", match(IssueName,\"5 GHz\"),\"Wireless Radio\", match(IssueName,\"This Device\"),\"Device Health\", 1==1,IssueSpecificCategory)\n| timechart dc(IssueID) by issue_group limit=10",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$"
-				}
+				"extend": "ds_base_issues_ref",
+				"query": "| eval issue_group=case(match(IssueName,\"High input\"),\"Interface Utilization\", match(IssueName,\"BGP\"),\"BGP Instability\", match(IssueName,\"AP\"),\"AP Issues\", match(IssueName,\"AAA\"),\"AAA/RADIUS\", match(IssueName,\"Host flap\"),\"MAC Flapping\", match(IssueName,\"Network Device\"),\"Device Reachability\", match(IssueName,\"Internet\"),\"Internet Connectivity\", match(IssueName,\"5 GHz\"),\"Wireless Radio\", match(IssueName,\"This Device\"),\"Device Health\", 1==1,IssueSpecificCategory)\n| timechart dc(IssueID) by issue_group limit=10"
 			},
-			"type": "ds.search"
+			"type": "ds.chain"
 		},
 		"ds_issues_trend": {
 			"name": "Open Issues Trend",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\" | timechart fixedrange=false dc(IssueID) as issues",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$"
-				}
+				"extend": "ds_base_issues_ref",
+				"query": "| timechart fixedrange=false dc(IssueID) as issues"
 			},
-			"type": "ds.search"
+			"type": "ds.chain"
 		},
 		"ds_kpi_cpu_mem": {
 			"name": "KPI CPU Memory Alerts",
@@ -2597,7 +2636,7 @@
 		"ds_reboots_trend": {
 			"name": "Recent Reboots Trend",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" UptimeSeconds<14400 | timechart fixedrange=false dc(DeviceName) as \"Recent Reboots\"",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" UptimeSeconds<14400\n| eval Site=`dnac_site_normalize(coalesce(Site, Location))`\n| where \"$site_tok$\"=\"*\" OR Site=\"$site_tok$\"\n| timechart fixedrange=false dc(DeviceName) as \"Recent Reboots\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2619,7 +2658,7 @@
 		"ds_site_health": {
 			"name": "IT - Critical Systems - Site Health",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" earliest=-15m\n| eval Site=`dnac_site_normalize(coalesce(Site, Location))`\n| where Site!=\"\"\n| stats avg(eval(if(OverallHealth>=0, OverallHealth, null))) as healthRaw, count(eval(OverallHealth>=8)) as good, count(eval(OverallHealth>=4 AND OverallHealth<8)) as fair, count(eval(OverallHealth<4 AND OverallHealth>=0)) as bad, dc(DeviceID) as total by Site\n| eval health=round(healthRaw*10)\n| fields Site health good bad fair total\n| sort -health",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" earliest=-15m\n| eval Site=`dnac_site_normalize(coalesce(Site, Location))`\n| where Site!=\"\"\n| where \"$site_tok$\"=\"*\" OR Site=\"$site_tok$\"\n| stats avg(eval(if(OverallHealth>=0, OverallHealth, null))) as healthRaw, count(eval(OverallHealth>=8)) as good, count(eval(OverallHealth>=4 AND OverallHealth<8)) as fair, count(eval(OverallHealth<4 AND OverallHealth>=0)) as bad, dc(DeviceID) as total by Site\n| eval health=round(healthRaw*10)\n| fields Site health good bad fair total\n| sort -health",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2764,7 +2803,7 @@
 		"ds_top_issue_devices": {
 			"name": "IT - Critical Systems - Top Issue Devices",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| stats latest(IssueCount) as issue_count, latest(OverallHealth) as health, latest(CPUUtilization) as cpu, latest(MemoryUtilization) as memory, latest(DeviceFamily) as family, latest(Platform) as platform, latest(Site) as site, latest(IpAddress) as ip by DeviceName\n| where issue_count>0 OR health<5 OR cpu>80 OR memory>80\n| eval concern=case(issue_count>5, \"High Issues (\".issue_count.\")\", health<5, \"Low Health (\".health.\")\", cpu>80, \"High CPU (\".cpu.\"%)\", memory>80, \"High Memory (\".memory.\"%)\", issue_count>0, \"Issues (\".issue_count.\")\", 1==1, \"Monitor\")\n| sort -issue_count, health, -cpu\n| rename DeviceName as Device",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| eval Site=`dnac_site_normalize(coalesce(Site, Location))`\n| where \"$site_tok$\"=\"*\" OR Site=\"$site_tok$\"\n| stats latest(IssueCount) as issue_count, latest(OverallHealth) as health, latest(CPUUtilization) as cpu, latest(MemoryUtilization) as memory, latest(DeviceFamily) as family, latest(Platform) as platform, latest(Site) as site, latest(IpAddress) as ip by DeviceName\n| where issue_count>0 OR health<5 OR cpu>80 OR memory>80\n| eval concern=case(issue_count>5, \"High Issues (\".issue_count.\")\", health<5, \"Low Health (\".health.\")\", cpu>80, \"High CPU (\".cpu.\"%)\", memory>80, \"High Memory (\".memory.\"%)\", issue_count>0, \"Issues (\".issue_count.\")\", 1==1, \"Monitor\")\n| sort -issue_count, health, -cpu\n| rename DeviceName as Device",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2815,7 +2854,7 @@
 		"ds_unreachable_trend": {
 			"name": "Unreachable Devices Trend",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" Reachability=\"Unreachable\" | timechart fixedrange=false dc(DeviceName) as \"Unreachable Devices\"",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" Reachability=\"Unreachable\"\n| eval Site=`dnac_site_normalize(coalesce(Site, Location))`\n| where \"$site_tok$\"=\"*\" OR Site=\"$site_tok$\"\n| timechart fixedrange=false dc(DeviceName) as \"Unreachable Devices\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -3388,6 +3427,16 @@
 						"type": "input"
 					},
 					{
+						"item": "input_site_filter",
+						"position": {
+							"h": 82,
+							"w": 230,
+							"x": 245,
+							"y": 4
+						},
+						"type": "input"
+					},
+					{
 						"item": "viz_p_hdr_title",
 						"position": {
 							"h": 30,
@@ -3635,6 +3684,16 @@
 							"w": 198,
 							"x": 30,
 							"y": 10
+						},
+						"type": "input"
+					},
+					{
+						"item": "input_site_filter",
+						"position": {
+							"h": 82,
+							"w": 230,
+							"x": 245,
+							"y": 4
 						},
 						"type": "input"
 					}
@@ -3886,6 +3945,16 @@
 							"w": 198,
 							"x": 30,
 							"y": 10
+						},
+						"type": "input"
+					},
+					{
+						"item": "input_site_filter",
+						"position": {
+							"h": 82,
+							"w": 230,
+							"x": 245,
+							"y": 4
 						},
 						"type": "input"
 					},
