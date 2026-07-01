@@ -1667,6 +1667,20 @@
 				"headerVisibility": "fixed",
 				"tableFormat": {
 					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+				},
+				"columnFormat": {
+					"Permalink": {
+						"width": 558
+					},
+					"Alert ID": {
+						"width": 216
+					},
+					"Expression": {
+						"width": 180
+					},
+					"Test Name": {
+						"width": 229
+					}
 				}
 			},
 			"title": "Recent Alerts",
@@ -1750,6 +1764,20 @@
 				"headerVisibility": "fixed",
 				"tableFormat": {
 					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+				},
+				"columnFormat": {
+					"TE Link": {
+						"width": 461
+					},
+					"Agent": {
+						"width": 129
+					},
+					"Test Name": {
+						"width": 147
+					},
+					"Test Type": {
+						"width": 90
+					}
 				}
 			},
 			"title": "Endpoint Health by Agent",
@@ -2730,9 +2758,9 @@
 			"type": "ds.search"
 		},
 		"ds_te_alerts_table": {
-			"name": "IT Health - ThousandEyes Active Alerts (Recent 20)",
+			"name": "IT Health - ThousandEyes Active Alerts Recent 20",
 			"options": {
-				"query": "| tstats `scd_summariesonly` count, values(Alerts.triggerTime) as triggerTime, values(Alerts.accountId) as accountId, values(Alerts.organizationId) as organizationId, values(Alerts.testId) as testId, values(Alerts.testName) as testName, values(Alerts.testType) as testType, values(Alerts.permalink) as permalink, values(Alerts.expression) as expression, values(Alerts.severity) as severity\nFROM datamodel=\"Cisco_ThousandEyes.Alerts\"\nBY _time, Alerts.alertId\n| eval \"Trigger Time\"=coalesce(strftime(triggerTime, \"%Y-%m-%d %H:%M:%S\"), strftime(_time, \"%Y-%m-%d %H:%M:%S\"))\n| rename accountId AS \"Account ID\", organizationId AS \"Org ID\", testId AS \"Test ID\", testName AS \"Test Name\", testType AS \"Test Type\", permalink AS \"Permalink\", expression AS \"Expression\", severity AS \"Severity\", Alerts.alertId AS \"Alert ID\"\n| sort 0 - \"Trigger Time\"\n| fields - _time, triggerTime, count\n| head 20\n| table \"Trigger Time\", \"Account ID\", \"Org ID\", \"Test ID\", \"Test Name\", \"Test Type\", \"Permalink\", \"Expression\", \"Severity\", \"Alert ID\"",
+				"query": "| tstats `scd_summariesonly` count, values(Alerts.triggerTime) as triggerTime, values(Alerts.accountId) as accountId, values(Alerts.organizationId) as organizationId, values(Alerts.testId) as testId, values(Alerts.testName) as testName, values(Alerts.testType) as testType, values(Alerts.permalink) as permalink, values(Alerts.expression) as expression, values(Alerts.severity) as severity\n    FROM datamodel=\"Cisco_ThousandEyes.Alerts\"\n    BY _time, Alerts.alertId \n| eval \"Trigger Time\"=coalesce(strftime(triggerTime, \"%Y-%m-%d %H:%M:%S\"), strftime(_time, \"%Y-%m-%d %H:%M:%S\")) \n| rename accountId AS \"Account ID\", organizationId AS \"Org ID\", testId AS \"Test ID\", testName AS \"Test Name\", testType AS \"Test Type\", permalink AS \"Permalink\", expression AS \"Expression\", severity AS \"Severity\", Alerts.alertId AS \"Alert ID\" \n| sort 0 - \"Trigger Time\" \n| fields - _time, triggerTime, count \n| head 20 \n| table \"Trigger Time\", \"Account ID\", \"Org ID\", \"Test ID\", \"Test Name\", \"Test Type\", \"Expression\", \"Severity\", \"Alert ID\", \"Permalink\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -4043,20 +4071,20 @@
 					{
 						"item": "viz_te_box_path",
 						"position": {
-							"h": 420,
+							"h": 435,
 							"w": 1400,
 							"x": 20,
-							"y": 145
+							"y": 130
 						},
 						"type": "block"
 					},
 					{
 						"item": "viz_te_path_title",
 						"position": {
-							"h": 50,
+							"h": 55,
 							"w": 1370,
 							"x": 35,
-							"y": 155
+							"y": 150
 						},
 						"type": "block"
 					},

@@ -9,7 +9,6 @@
 
     <!-- Operational monitoring and readiness -->
     <collection label="Operations">
-        <view name="health_monitoring" label="Health Monitoring"/>
         <a href="netops_readiness_v1">NetOps Readiness</a>
         <a href="asset_inventory_v1">Asset Inventory</a>
     </collection>
@@ -33,6 +32,7 @@
         <a href="network_diagram">Network Diagram</a>
         <a href="topology_canvas_v1">Topology Canvas</a>
         <a href="searchbase_canvas">Searchbase Canvas</a>
+        <view name="health_monitoring" label="Health Monitoring"/>
     </collection>
 
     <!-- Admin utilities, dashboard tooling, and built-in Splunk views -->

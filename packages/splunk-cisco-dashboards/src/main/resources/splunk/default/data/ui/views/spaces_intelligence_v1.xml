@@ -1143,7 +1143,7 @@
 				"annotation": "ds_activation_annotation",
 				"primary": "ds_week_compare"
 			},
-			"description": "Hourly user count comparison",
+			"description": "Average peak users: current 7 days vs previous 7 days.",
 			"options": {
 				"annotationColor": [
 					"#D64550"
@@ -1206,7 +1206,7 @@
 		"ds_act_compare_kpi": {
 			"name": "Spaces baseline × exercise — surge multiplier",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\"\n| addinfo\n| eval split_time=info_min_time+((info_max_time-info_min_time)/2)\n| eval people=coalesce('deviceCounts.userCount', 'deviceCounts.associatedCount', 'deviceCounts.deviceCount')\n| where isnotnull(people) AND people>0\n| eval phase=if(_time<split_time, \"baseline\", \"exercise\")\n| bin _time span=1h\n| stats max(people) as people by phase _time\n| stats avg(people) as avg_people by phase\n| eval avg_people=round(avg_people, 2)\n| xyseries phase phase avg_people\n| eval multiplier=if(isnotnull(baseline) AND baseline>0 AND isnotnull(exercise), round(exercise/baseline, 2), null())\n| fields multiplier",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\"\n| addinfo\n| eval split_time=info_min_time+((info_max_time-info_min_time)/2)\n| eval people=coalesce('deviceCounts.userCount', 'deviceCounts.associatedCount', 'deviceCounts.deviceCount')\n| where isnotnull(people) AND people>0\n| eval phase=if(_time<split_time, \"baseline\", \"exercise\")\n| bin _time span=1h\n| stats max(people) as people by phase _time\n| stats avg(eval(if(phase=\"baseline\", people, null()))) as baseline, avg(eval(if(phase=\"exercise\", people, null()))) as exercise\n| eval multiplier=if(isnotnull(baseline) AND baseline>0 AND isnotnull(exercise), round(exercise/baseline, 2), 0)\n| fields multiplier",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1855,9 +1855,9 @@
 		"ds_week_compare": {
 			"name": "This week vs last week",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR\n| eval users='deviceCounts.userCount',\n associated='deviceCounts.associatedCount',\n devices='deviceCounts.deviceCount',\n pct='deviceCounts.estimatedCapacityPercentage',\n floor='deviceCounts.location.name',\n building='deviceCounts.location.parent.name',\n city='deviceCounts.location.parent.parent.name'\n| bin _time span=1h \n| stats max(users) as peak by _time, floor\n| eval week=if(_time>=relative_time(now(), \"-7d\"), \"This Week\", \"Last Week\")\n| stats avg(peak) as \"Avg Peak Users\" by week\n| eval \"Avg Peak Users\"=round('Avg Peak Users', 0)",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR\n| addinfo\n| eval current_start=relative_time(info_max_time, \"-7d@h\"), previous_start=relative_time(info_max_time, \"-14d@h\")\n| where _time>=previous_start AND _time<info_max_time\n| eval users=coalesce('deviceCounts.userCount', 'deviceCounts.associatedCount', 'deviceCounts.deviceCount'),\n floor='deviceCounts.location.name'\n| where isnotnull(users)\n| bin _time span=1h\n| stats max(users) as peak by _time, floor\n| eval week=if(_time>=current_start, \"This Week\", \"Last Week\")\n| stats avg(peak) as avg_peak_users by week\n| append [ | makeresults count=2 | streamstats count | eval week=if(count=1, \"Last Week\", \"This Week\"), avg_peak_users=0 | fields week avg_peak_users ]\n| stats max(avg_peak_users) as \"Avg Peak Users\" by week\n| eval \"Avg Peak Users\"=round('Avg Peak Users', 0)",
 				"queryParameters": {
-					"earliest": "$global_time.earliest$",
+					"earliest": "-14d@h",
 					"latest": "$global_time.latest$"
 				}
 			},
