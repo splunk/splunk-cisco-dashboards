@@ -1442,19 +1442,6 @@
 			},
 			"type": "ds.search"
 		},
-		"ds_score_nrs": {
-			"name": "NRS - Composite Network Readiness Score",
-			"options": {
-				"query": "| union [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" DeviceFamily=\"Unified AP\" OverallHealth=*\n | where OverallHealth >= 0\n | stats latest(Reachability) as reach, latest(OverallHealth) as oh by DeviceName\n | eval is_reach=if(upper(reach)=\"REACHABLE\", 1, 0), ap_ok=if(oh>=`nrs_th_ap_health`, 1, 0)\n | stats avg(is_reach) as ap_reach, avg(ap_ok) as ap_health_ok\n | eval kind=\"ap\" ]\n| union [ search `index_catalyst` sourcetype=\"cisco:dnac:client\"\n | eval cl_health = 'health.overallScore'\n | stats avg(cl_health) as health_avg, count(eval(cl_health>=`nrs_th_cl_health`)) as ok_n, count as tot_n\n | eval cl_ok=if(tot_n>0, ok_n/tot_n, 1), health100=coalesce(health_avg,8)*10\n | eval kind=\"client\" ]\n| union [ search `index_catalyst` sourcetype=\"cisco:dnac:client\"\n | eval ob_ms = 'onboarding.avgRunDuration'\n | where isnotnull(ob_ms) AND ob_ms>0\n | stats avg(ob_ms) as ob_ms\n | eval ob_s=coalesce(ob_ms,1500)/1000, onb100=if(ob_s<=1, 100, if(ob_s>=5, 0, 100-((ob_s-1)*25)))\n | eval kind=\"onb\" ]\n| union [ search `index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueStatus=\"active\"\n | stats dc(eval(case(IssuePriority=\"P1\", IssueID))) as p1,\n dc(eval(case(IssuePriority=\"P2\", IssueID))) as p2\n | eval kind=\"risk\" ]\n| stats values(ap_reach) as ap_reach, values(ap_health_ok) as ap_ok,\n values(cl_ok) as cl_ok, values(health100) as h100,\n values(onb100) as o100, values(p1) as p1, values(p2) as p2\n| eval ap_reach=coalesce(ap_reach,1), ap_ok=coalesce(ap_ok,1), cl_ok=coalesce(cl_ok,1),\n h100=coalesce(h100,80), o100=coalesce(o100,80), p1=coalesce(p1,0), p2=coalesce(p2,0)\n| eval A=ap_reach*100, R=(ap_ok*0.5 + cl_ok*0.5)*100,\n Q=(h100*0.6 + o100*0.4),\n drisk_raw=1.0 - 0.05*p1 - 0.02*p2,\n D_risk=if(drisk_raw<0.5, 0.5, drisk_raw)\n| eval score=(A*`nrs_w_nrs_a` + R*`nrs_w_nrs_r` + Q*`nrs_w_nrs_q`) * D_risk\n| eval score=round(score, 2)\n| fields score",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$"
-				},
-				"refresh": "300s",
-				"refreshType": "delay"
-			},
-			"type": "ds.search"
-		},
 		"ds_score_nrs_spark": {
 			"name": "NRS sparkline series",
 			"options": {
