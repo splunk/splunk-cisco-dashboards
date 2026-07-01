@@ -1048,7 +1048,7 @@
 	},
 	"dataSources": {
 		"ds_base_fw_ref": {
-			"name": "Security Resilience - ds_base_fw",
+			"name": "Security Resilience - Base Firewall Search",
 			"options": {
 				"query": "`index_firewall` (sourcetype=\"cisco:asa\" OR sourcetype=\"cisco:ftd\" OR sourcetype=\"cisco:sfw:estreamer\")\n| fields _time, _raw",
 				"queryParameters": {
@@ -1059,7 +1059,7 @@
 			"type": "ds.search"
 		},
 		"ds_base_psirt": {
-			"name": "Security Resilience - ds_psirt",
+			"name": "Security Resilience - PSIRT",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:securityadvisory\" \n| eval AdvisorySeverity=upper(AdvisorySir)\n| eval severity_rank=case(AdvisorySeverity==\"CRITICAL\",4, AdvisorySeverity==\"HIGH\",3, AdvisorySeverity==\"MEDIUM\",2, AdvisorySeverity==\"LOW\",1, 1==1,0)\n| stats latest(AdvisorySeverity) as AdvisorySeverity, max(severity_rank) as severity_rank, dc(DeviceName) as affected_devices by AdvisoryID\n| sort -severity_rank, -affected_devices\n| table AdvisoryID AdvisorySeverity affected_devices",
 				"queryParameters": {
@@ -1070,7 +1070,7 @@
 			"type": "ds.search"
 		},
 		"ds_cloud_fw_blocked": {
-			"name": "Security Resilience - ds_cloud_fw_blocked",
+			"name": "Security Resilience - Cloud Firewall Blocked Connections",
 			"options": {
 				"query": "`index_security` sourcetype=\"cisco:cloud_security:firewall\" action=\"Blocked\"\n| stats count by src, dest, dest_port\n| stats count as count",
 				"queryParameters": {
@@ -1092,7 +1092,7 @@
 			"type": "ds.search"
 		},
 		"ds_failed_detail_sources": {
-			"name": "Security Resilience - ds_failed_detail_sources",
+			"name": "Security Resilience - Failed Detail Sources",
 			"options": {
 				"query": "| tstats `scd_summariesonly` count from datamodel=Authentication where Authentication.action=\"failure\" Authentication.src!=\"\" Authentication.src!=\"-\" Authentication.src!=\"::1\" Authentication.src!=\"127.0.0.1\" sourcetype=\"*WinEventLog\" BY Authentication.src\n| rename Authentication.src as \"Source IP\", count as Failures\n| sort -Failures\n| head 10",
 				"queryParameters": {
@@ -1103,7 +1103,7 @@
 			"type": "ds.search"
 		},
 		"ds_failed_detail_users": {
-			"name": "Security Resilience - ds_failed_detail_users",
+			"name": "Security Resilience - Failed Detail Users",
 			"options": {
 				"query": "| tstats `scd_summariesonly` count from datamodel=Authentication where Authentication.action=\"failure\" sourcetype=\"*WinEventLog\" BY Authentication.user\n| rename Authentication.user as User, count as Failures\n| where NOT match(User, \"\\$$\")\n| sort -Failures\n| head 10",
 				"queryParameters": {
@@ -1147,7 +1147,7 @@
 			"type": "ds.search"
 		},
 		"ds_fw_top_blocked": {
-			"name": "Security Resilience - ds_fw_top_blocked",
+			"name": "Security Resilience - Top Blocked Firewall Sources",
 			"options": {
 				"query": "| tstats `scd_summariesonly` count as blocked_connections from datamodel=Network_Traffic where All_Traffic.action=\"blocked\" by All_Traffic.dest\n| rename All_Traffic.dest as \"Destination IP\", blocked_connections as \"Blocked Connections\"\n| where isnotnull('Destination IP')\n| sort -\"Blocked Connections\"\n| head 10",
 				"queryParameters": {
@@ -1166,7 +1166,7 @@
 			"type": "ds.chain"
 		},
 		"ds_identity_detail_trend": {
-			"name": "Security Resilience - ds_identity_detail_trend",
+			"name": "Security Resilience - Identity Detail Trend",
 			"options": {
 				"query": "(`index_windows` sourcetype=\"*WinEventLog\" (EventCode=4624 OR EventCode=4625 OR EventCode=4740)) OR (`index_identity` sourcetype=\"cisco:ise:syslog\" (\"5200\" OR \"5400\"))\n| eval evt=case(EventCode==4624,\"AD_Success\", EventCode==4625,\"AD_Failed\", EventCode==4740,\"AD_Lockout\", match(_raw,\"5200\"),\"ISE_Success\", match(_raw,\"5400\"),\"ISE_Failed\", 1==1,\"Other\")\n| where evt!=\"Other\"\n| timechart count by evt",
 				"queryParameters": {
@@ -1177,7 +1177,7 @@
 			"type": "ds.search"
 		},
 		"ds_identity_trend": {
-			"name": "Security Resilience - ds_identity_trend",
+			"name": "Security Resilience - Identity Trend",
 			"options": {
 				"query": "| tstats `scd_summariesonly` count from datamodel=Authentication BY _time Authentication.action, sourcetype\n| rename Authentication.action as action\n| eval evt=case( action==\"success\" AND sourcetype==\"cisco:ise:syslog\",\"ISE_Pass\", action==\"failure\" AND sourcetype==\"cisco:ise:syslog\",\"ISE_Fail\", action==\"success\",\"AD_Success\", action==\"failure\",\"AD_Failure\", action==\"lockout\",\"Lockout\", 1==1,\"Other\")\n| timechart count by evt",
 				"queryParameters": {
@@ -1199,7 +1199,7 @@
 			"type": "ds.search"
 		},
 		"ds_ise_auth": {
-			"name": "Security Resilience - ds_ise_auth",
+			"name": "Security Resilience - ISE Auth",
 			"options": {
 				"query": "`index_identity` sourcetype=\"cisco:ise:syslog\" (\"5200\" OR \"5401\")\n| eval passed=if(match(_raw,\"5200\"),1,0)\n| stats sum(passed) as pass, count as total\n| eval score=if(total>0, round(pass/total*100, 1), 0)\n| fields score",
 				"queryParameters": {
@@ -1210,7 +1210,7 @@
 			"type": "ds.search"
 		},
 		"ds_ise_by_nas": {
-			"name": "Security Resilience - ds_ise_by_nas",
+			"name": "Security Resilience - ISE by NAS",
 			"options": {
 				"query": "`index_identity` sourcetype=\"cisco:ise:syslog\" (\"5200\" OR \"5401\")\n| rex \"NetworkDeviceName=(?<nas>[^,;]+)\"\n| fillnull nas value=\"Unknown\"\n| eval passed=if(match(_raw,\"5200\"),1,0)\n| stats count as Total, sum(passed) as Pass by nas\n| eval Fail=Total-Pass, \"Pass %\"=round(Pass/Total*100, 1)\n| sort -Total\n| head 10\n| rename nas as \"Network Access Server\"",
 				"queryParameters": {
@@ -1232,7 +1232,7 @@
 			"type": "ds.search"
 		},
 		"ds_ise_failure_reasons": {
-			"name": "Security Resilience - ds_ise_failure_reasons",
+			"name": "Security Resilience - ISE Failure Reasons",
 			"options": {
 				"query": "`index_identity` sourcetype=\"cisco:ise:syslog\" \"5401\"\n| rex \"FailureReason=(?<reason>[^,;]+)\"\n| fillnull reason value=\"Unknown\"\n| stats count by reason\n| sort -count\n| head 10\n| rename reason as \"Failure Reason\", count as Count",
 				"queryParameters": {
@@ -1350,7 +1350,7 @@
 			"type": "ds.chain"
 		},
 		"ds_lockout_detail": {
-			"name": "Security Resilience - ds_lockout_detail",
+			"name": "Security Resilience - Lockout Detail",
 			"options": {
 				"query": "`index_windows` sourcetype=\"*WinEventLog\" EventCode=4740\n| stats count as Lockouts, latest(_time) as last_seen, values(TargetDomainName) as sources by TargetUserName\n| eval last_seen=strftime(last_seen, \"%Y-%m-%d %H:%M\"), sources=mvjoin(sources, \", \")\n| sort -Lockouts\n| head 10\n| rename TargetUserName as \"Locked User\", sources as \"Source Hosts\", last_seen as \"Last Lockout\"",
 				"queryParameters": {
@@ -1372,7 +1372,7 @@
 			"type": "ds.search"
 		},
 		"ds_priv_detail": {
-			"name": "Security Resilience - ds_priv_detail",
+			"name": "Security Resilience - Privileged Logon Detail",
 			"options": {
 				"query": "| tstats `scd_summariesonly` count from datamodel=Authentication where Authentication.signature_id=4672 sourcetype=\"*WinEventLog\" BY Authentication.user\n| rename Authentication.user as User, count as \"Priv Logons\"\n| sort -\"Priv Logons\"",
 				"queryParameters": {
@@ -1413,7 +1413,7 @@
 			"type": "ds.chain"
 		},
 		"ds_rogue_device_detail": {
-			"name": "Security Resilience - ds_rogue_device_detail",
+			"name": "Security Resilience - Rogue Device Detail",
 			"options": {
 				"query": "(`index_network` sourcetype=\"cisco:ios\" (\"%SISF-4-MAC_STEAL\" OR \"%DOT1X-5-FAIL\" OR \"Rogue\")) OR (`index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueName=\"*rogue*\")\n| eval event_type=case(match(_raw,\"%SISF-4-MAC_STEAL\"),\"MAC Steal\", match(_raw,\"%DOT1X-5-FAIL\"),\"802.1X Failure\", match(_raw,\"(?i)rogue\") AND sourcetype==\"cisco:dnac:issue\",\"DNAC Rogue Alert\", match(_raw,\"(?i)rogue\"),\"Rogue Detected\", 1==1,\"Other\")\n| eval device=coalesce(host, DeviceName, \"unknown\")\n| stats count as events, latest(_time) as last_seen by device, event_type\n| eval last_seen=strftime(last_seen, \"%Y-%m-%d %H:%M:%S\")\n| sort -events\n| rename device as \"Device\", event_type as \"Event Type\", events as \"Events\", last_seen as \"Last Seen\"",
 				"queryParameters": {
@@ -1446,7 +1446,7 @@
 			"type": "ds.search"
 		},
 		"ds_security_events": {
-			"name": "Security Resilience - ds_security_events",
+			"name": "Security Resilience - Security Events",
 			"options": {
 				"query": "(`index_firewall` sourcetype=\"cisco:asa\" (\"Deny\" OR \"denied\" OR \"Teardown\")) OR (`index_identity` sourcetype=\"cisco:ise:syslog\" \"5400\") OR (`index_security` (sourcetype=\"cisco:cloud_security:dns\" OR sourcetype=\"cisco:cloud_security:firewall\") action=\"Blocked\") OR (`index_firewall` (sourcetype=\"cisco:estreamer:data\" OR sourcetype=\"cisco:sfw:estreamer\")) OR (`index_catalyst` sourcetype=\"cisco:dnac:audit:logs\" name=\"LOGIN_USER_EVENT\") OR (`index_windows` sourcetype=\"*WinEventLog\" (EventCode=4625 OR EventCode=4740 OR EventCode=4672))\n| eval Source=case(sourcetype==\"cisco:asa\",\"ASA\", sourcetype==\"cisco:ise:syslog\",\"ISE\", match(sourcetype,\"estreamer\"),\"Firepower\", match(sourcetype,\"cloud_security:dns\"),\"Umbrella DNS\", match(sourcetype,\"cloud_security:firewall\"),\"Umbrella FW\", match(sourcetype,\"dnac:audit\"),\"DNAC\", sourcetype==\"XmlWinEventLog\",\"Active Directory\", 1==1,sourcetype)\n| eval Event=case(sourcetype==\"cisco:asa\" AND match(_raw,\"(?i)deny\"),\"Firewall Deny\", sourcetype==\"cisco:asa\" AND match(_raw,\"(?i)teardown\"),\"Connection Teardown\", sourcetype==\"cisco:ise:syslog\",\"Authentication Failure\", match(sourcetype,\"estreamer\"),\"Intrusion Event\", match(sourcetype,\"cloud_security:dns\"),\"DNS Blocked\", match(sourcetype,\"cloud_security:firewall\"),\"Web Blocked\", match(sourcetype,\"dnac:audit\"),\"Login Attempt\", EventCode==4625,\"Logon Failed\", EventCode==4740,\"Account Lockout\", EventCode==4672,\"Privileged Logon\", 1==1,\"Security Event\")\n| eval Severity=case(match(_raw,\"(?i)(crit|emerg|alert)\"),\"Critical\", match(_raw,\"(?i)(err|deny|denied|block|5400)\") OR EventCode==4625 OR EventCode==4740,\"High\", match(_raw,\"(?i)(warn)\") OR EventCode==4672,\"Medium\", 1==1,\"Low\")\n| eval src=coalesce(src_ip, src, Source_Network_Address, \"—\"), dest=coalesce(dest_ip, dest, dst, Target_Server_Name, \"—\")\n| stats count as Count, latest(_time) as _time, values(src) as \"Source IP\", values(dest) as Destination by Source, Event, Severity\n| eval Time=strftime(_time, \"%Y-%m-%d %H:%M:%S\"), \"Source IP\"=mvindex('Source IP', 0, 4), Destination=mvindex(Destination, 0, 4)\n| sort -_time\n| table Time Source Event Severity \"Source IP\" Destination Count",
 				"queryParameters": {

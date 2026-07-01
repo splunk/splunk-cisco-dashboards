@@ -1048,7 +1048,7 @@
 	},
 	"dataSources": {
 		"ds_cs_by_ssid": {
-			"name": "Client Summary - ds_client_by_ssid",
+			"name": "Client Summary - Clients by SSID",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" \n| stats dc(macAddress) as clients by connection.ssid \n| rename connection.ssid as ssid ",
 				"queryParameters": {
@@ -1059,7 +1059,7 @@
 			"type": "ds.search"
 		},
 		"ds_cs_count_over_time": {
-			"name": "Client Summary - ds_client_count_over_time",
+			"name": "Client Summary - Client Count Over Time",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRED\" OR clientType=\"WIRELESS\") (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| bin _time span=15m\n| stats latest(clientCount) as cc by _time, clientType, scoreType\n| stats sum(cc) as cc by _time, scoreType\n| eval \"Good Count\"=if(scoreType==\"GOOD\",cc,null()), \"Fair Count\"=if(scoreType==\"FAIR\",cc,null()), \"Poor Count\"=if(scoreType==\"POOR\",cc,null()), \"Idle Count\"=if(scoreType==\"IDLE\" OR scoreType==\"NODATA\",cc,null())\n| stats sum(\"Good Count\") as \"Good Count\", sum(\"Fair Count\") as \"Fair Count\", sum(\"Poor Count\") as \"Poor Count\", sum(\"Idle Count\") as \"Idle Count\" by _time",
 				"queryParameters": {
@@ -1339,7 +1339,7 @@
 			"type": "ds.search"
 		},
 		"ds_wired_trend_24h": {
-			"name": "Statewide - ds_wired_client_trend_24h",
+			"name": "Statewide - Wired Client Trend 24h",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| timechart latest(eval(if(scoreType==\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType==\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType==\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\",clientCount,null()))) as \"No Data\"",
 				"queryParameters": {
@@ -1372,7 +1372,7 @@
 			"type": "ds.search"
 		},
 		"ds_wireless_trend_24h": {
-			"name": "Statewide - ds_wireless_client_trend_24h",
+			"name": "Statewide - Wireless Client Trend 24h",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| timechart latest(eval(if(scoreType==\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType==\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType==\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\",clientCount,null()))) as \"No Data\"",
 				"queryParameters": {

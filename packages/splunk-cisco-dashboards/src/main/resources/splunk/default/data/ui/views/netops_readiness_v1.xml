@@ -1197,7 +1197,7 @@
 			"type": "ds.search"
 		},
 		"ds_annotations": {
-			"name": "Shared - ds_annotations",
+			"name": "Shared - Annotations",
 			"options": {
 				"query": "| noop",
 				"queryParameters": {
@@ -1477,7 +1477,7 @@
 			"type": "ds.search"
 		},
 		"ds_score_per_site_nrs_only": {
-			"name": "ds_score_per_site_nrs_only",
+			"name": "Score per Site NRS Only",
 			"options": {
 				"query": "| union [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n | search DeviceFamily=\"Unified AP\" OR DeviceFamily=\"Wireless Controller\"\n | eval site=coalesce(Site, Location)\n | where isnotnull(site) AND trim(site)!=\"\" AND lower(site)!=\"null\" AND NOT match(site, \"(?i)(^|/)null(/|$)\") AND NOT match(site, \"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$\")\n | stats latest(Reachability) as reach, latest(OverallHealth) as oh by DeviceName, site\n | eval is_reach=if(upper(reach)=\"REACHABLE\", 1, 0)\n | eval ap_ok=case(isnull(oh), null(), oh<0, null(), oh>=`nrs_th_ap_health`, 1, 1=1, 0)\n | stats avg(is_reach) as ap_reach, avg(ap_ok) as ap_health_ok, count as ap_n by site ]\n| union [ search `index_catalyst` sourcetype=\"cisco:dnac:client\" siteHierarchy=*\n | eval cl_health = 'health.overallScore', site = siteHierarchy\n | where isnotnull(site) AND trim(site)!=\"\" AND lower(site)!=\"null\" AND NOT match(site, \"(?i)(^|/)null(/|$)\") AND NOT match(site, \"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$\")\n | stats avg(cl_health) as health_avg, count(eval(cl_health>=`nrs_th_cl_health`)) as ok_n, count as cl_n by site\n | eval cl_ok=if(cl_n>0, ok_n/cl_n, null()), health100=coalesce(health_avg,8)*10 ]\n| stats values(ap_reach) as ap_reach, values(ap_health_ok) as ap_ok,\n values(cl_ok) as cl_ok, values(health100) as h100,\n values(ap_n) as ap_n, values(cl_n) as cl_n by site\n| where isnotnull(site) AND trim(site)!=\"\" AND lower(site)!=\"null\" AND NOT match(site, \"(?i)(^|/)null(/|$)\")\n| where (isnotnull(ap_n) AND ap_n>0) OR (isnotnull(cl_n) AND cl_n>0)\n| eval ap_reach=coalesce(ap_reach,1), ap_ok=coalesce(ap_ok,1),\n cl_ok=coalesce(cl_ok,1), h100=coalesce(h100,80)\n| eval A=ap_reach*100, R=(ap_ok*0.5 + cl_ok*0.5)*100, Q=h100\n| eval NRS=A*`nrs_w_nrs_a` + R*`nrs_w_nrs_r` + Q*`nrs_w_nrs_q`\n| eval NRS=round(NRS, 2), A=round(A, 2), R=round(R, 2), Q=round(Q, 2)\n| eval site_short=replace(site, \"^Global/Florida/\", \"\")\n| sort -NRS\n| rename site_short as Site, ap_n as APs, cl_n as Clients\n| table Site NRS A R Q APs Clients\n| table Site NRS",
 				"queryParameters": {

@@ -921,7 +921,7 @@
 			"type": "ds.chain"
 		},
 		"ds_location_breakdown": {
-			"name": "Building Resilience - ds_spaces_location_breakdown",
+			"name": "Building Resilience - Spaces Location Breakdown",
 			"options": {
 				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_LOCATION_UPDATE\" \n| stats dc('deviceLocationUpdate.device.macAddress') as \"Unique Devices\", latest(deviceLocationUpdate.location.apCount) as \"AP Count\" by deviceLocationUpdate.location.parent.parent.name, deviceLocationUpdate.location.parent.name, deviceLocationUpdate.location.name \n| rename deviceLocationUpdate.location.parent.parent.name as Campus, deviceLocationUpdate.location.parent.name as Building, deviceLocationUpdate.location.name as Floor",
 				"queryParameters": {
@@ -943,7 +943,7 @@
 			"type": "ds.search"
 		},
 		"ds_room_detail": {
-			"name": "Building Resilience - ds_room_detail",
+			"name": "Building Resilience - Room Detail",
 			"options": {
 				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"SPACE_OCCUPANCY\"\n| stats latest(spaceOccupancy.peoplePresence) as Presence, latest(spaceOccupancy.peakPeopleCount) as \"Peak Count\", latest(spaceOccupancy.space.capacity) as Capacity, latest(spaceOccupancy.bookingStatus) as Booked, latest(spaceOccupancy.location.name) as Floor, latest(spaceOccupancy.location.parent.name) as Building by spaceOccupancy.space.name\n| rename spaceOccupancy.space.name as Room\n| eval Presence=if(Presence==\"true\", \"Occupied\", \"Empty\"), Booked=if(Booked==\"true\", \"Yes\", \"No\"), \"Utilization %\"=if(Capacity>0, round('Peak Count'/Capacity*100, 2), 0)\n| sort Building, Floor, Room",
 				"queryParameters": {
@@ -962,7 +962,7 @@
 			"type": "ds.chain"
 		},
 		"ds_ssid_clients": {
-			"name": "Building Resilience - ds_ssid_clients",
+			"name": "Building Resilience - SSID Clients",
 			"options": {
 				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_ASSOCIATION\"\n| eval ssid='deviceAssociation.ssid', event='deviceAssociation.event', building=coalesce('deviceAssociation.location.parent.parent.name', 'deviceAssociation.location.parent.name', 'deviceAssociation.location.name')\n| search event=\"ASSOCIATE\"\n| stats dc(deviceAssociation.device.macAddress) as Clients by ssid\n| sort -Clients\n| rename ssid as SSID",
 				"queryParameters": {
@@ -1006,7 +1006,7 @@
 			"type": "ds.search"
 		},
 		"ds_user_presence_trend": {
-			"name": "Building Resilience - ds_user_presence_trend",
+			"name": "Building Resilience - User Presence Trend",
 			"options": {
 				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\"\n| `spaces_hierarchy(deviceCounts)`\n| eval users=tonumber(mvindex('deviceCounts.userCount', 0)), city=coalesce(campus, building, site)\n| where isnotnull(users) AND isnotnull(floor) AND isnotnull(city) AND city!=\"Unknown\"\n| bin _time span=15m\n| stats max(users) as users by _time, floor, city\n| stats sum(users) as users by _time, city\n| timechart span=15m fixedrange=false sum(users) by city",
 				"queryParameters": {
@@ -1025,7 +1025,7 @@
 			"type": "ds.chain"
 		},
 		"ds_webex_devices": {
-			"name": "Building Resilience - ds_webex_devices",
+			"name": "Building Resilience - Webex Devices",
 			"options": {
 				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"WEBEX_TELEMETRY\"\n| stats latest(webexTelemetryUpdate.deviceInfo.displayName) as Device, latest(webexTelemetryUpdate.deviceInfo.product) as Product, latest(webexTelemetryUpdate.deviceInfo.ipAddress) as IP, latest(webexTelemetryUpdate.deviceInfo.softwareVersion) as Firmware, latest(webexTelemetryUpdate.location.name) as Building, latest(webexTelemetryUpdate.location.parent.name) as Campus by webexTelemetryUpdate.deviceInfo.serialNumber\n| rename webexTelemetryUpdate.deviceInfo.serialNumber as Serial\n| sort Device",
 				"queryParameters": {

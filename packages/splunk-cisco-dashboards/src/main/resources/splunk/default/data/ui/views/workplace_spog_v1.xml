@@ -508,7 +508,7 @@
 	},
 	"dataSources": {
 		"ds_annotations": {
-			"name": "Shared - ds_annotations",
+			"name": "Shared - Annotations",
 			"options": {
 				"query": "| noop",
 				"queryParameters": {
@@ -519,7 +519,7 @@
 			"type": "ds.search"
 		},
 		"ds_correlation": {
-			"name": "Cross-source correlation - clienthealth wired+wireless + AP health + Spaces + auth failures (union pattern)",
+			"name": "Cross-source correlation - clienthealth wired wireless AP health Spaces auth failures union pattern",
 			"options": {
 				"query": "| union\n [ search `index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" scoreType=\"ALL\" clientType=\"WIRED\"\n | timechart fixedrange=false latest(clientCount) as \"Wired Clients\" ]\n [ search `index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" scoreType=\"ALL\" clientType=\"WIRELESS\"\n | timechart fixedrange=false latest(clientCount) as \"Wireless Clients\" ]\n [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" OverallHealth=*\n | search DeviceFamily=\"Unified AP\" OR DeviceFamily=\"Wireless Controller\"\n | where OverallHealth >= 0\n | timechart avg(OverallHealth) as ap_h_raw\n | eval \"AP Health (0-100)\" = round(ap_h_raw*10, 1)\n | fields - ap_h_raw ]\n [ search `index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_PRESENCE\"\n | eval mac=coalesce('devicePresence.device.macAddress','devicePresence.macAddress')\n | where isnotnull(mac) AND mac!=\"\"\n | timechart dc(mac) as \"Spaces Concurrent Users\" ]\n [ search `index_windows` sourcetype=\"WinEventLog:Security\" (EventCode=4625 OR EventCode=4771)\n | timechart count as \"Auth Failures\" ]\n| stats values(*) as * by _time\n| sort _time\n| table _time, \"Wired Clients\", \"Wireless Clients\", \"AP Health (0-100)\", \"Spaces Concurrent Users\", \"Auth Failures\"",
 				"queryParameters": {
@@ -541,7 +541,7 @@
 			"type": "ds.search"
 		},
 		"ds_main_trend": {
-			"name": "Main trend - wired + wireless from clienthealth + AP health + issues daily (union pattern)",
+			"name": "Main trend - wired wireless from clienthealth AP health issues daily union pattern",
 			"options": {
 				"query": "| union\n [ search `index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" scoreType=\"ALL\" clientType=\"WIRED\"\n | timechart fixedrange=false latest(clientCount) as \"Wired Clients\" ]\n [ search `index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" scoreType=\"ALL\" clientType=\"WIRELESS\"\n | timechart fixedrange=false latest(clientCount) as \"Wireless Clients\" ]\n [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" OverallHealth=*\n | search DeviceFamily=\"Unified AP\" OR DeviceFamily=\"Wireless Controller\"\n | where OverallHealth >= 0\n | timechart avg(OverallHealth) as ap_h_raw\n | eval \"AP Health (0-100)\" = round(ap_h_raw*10, 1)\n | fields - ap_h_raw ]\n [ search `index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueStatus=\"active\"\n | timechart dc(IssueID) as \"Active Issues\" ]\n| stats values(*) as * by _time\n| sort _time\n| table _time, \"Wired Clients\", \"Wireless Clients\", \"AP Health (0-100)\", \"Active Issues\"",
 				"queryParameters": {
@@ -563,7 +563,7 @@
 			"type": "ds.search"
 		},
 		"ds_t1_occupancy_kpi": {
-			"name": "Tile 1 - total concurrent endpoints (wired+wireless via clienthealth)",
+			"name": "Tile 1 - total concurrent endpoints wired wireless via clienthealth",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" scoreType=\"ALL\" (clientType=\"WIRED\" OR clientType=\"WIRELESS\")\n| timechart fixedrange=false latest(clientCount) by clientType\n| addtotals fieldname=\"Total Endpoints\"\n| fields _time, \"Total Endpoints\"",
 				"queryParameters": {
@@ -585,7 +585,7 @@
 			"type": "ds.search"
 		},
 		"ds_t4_security_kpi": {
-			"name": "Tile 4 - active P1+P2 risks plus auth failures with sparkline",
+			"name": "Tile 4 - active P1 P2 risks plus auth failures with sparkline",
 			"options": {
 				"query": "| union\n [ search `index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueStatus=\"active\" (IssuePriority=\"P1\" OR IssuePriority=\"P2\")\n | bin _time span=1d \n | stats dc(IssueID) as dnac_risk by _time ]\n [ search `index_windows` sourcetype=\"WinEventLog:Security\" (EventCode=4625 OR EventCode=4771)\n | bin _time span=1d \n | stats count as auth_fail by _time ]\n| stats values(dnac_risk) as dnac_risk, values(auth_fail) as auth_fail by _time\n| eval dnac_risk=coalesce(dnac_risk,0), auth_fail=coalesce(auth_fail,0)\n| eval auth_fail_norm = if(auth_fail>0, ceil(auth_fail/100), 0)\n| eval risks = dnac_risk + auth_fail_norm\n| timechart span=1d max(risks) as \"Active Risks\"",
 				"queryParameters": {

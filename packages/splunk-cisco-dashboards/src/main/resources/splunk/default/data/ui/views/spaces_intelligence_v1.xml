@@ -1204,7 +1204,7 @@
 			"type": "ds.search"
 		},
 		"ds_act_compare_kpi": {
-			"name": "Spaces baseline × exercise — surge multiplier",
+			"name": "Spaces baseline x exercise - surge multiplier",
 			"options": {
 				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\"\n| addinfo\n| eval split_time=info_min_time+((info_max_time-info_min_time)/2)\n| eval people=coalesce('deviceCounts.userCount', 'deviceCounts.associatedCount', 'deviceCounts.deviceCount')\n| where isnotnull(people) AND people>0\n| eval phase=if(_time<split_time, \"baseline\", \"exercise\")\n| bin _time span=1h\n| stats max(people) as people by phase _time\n| stats avg(eval(if(phase=\"baseline\", people, null()))) as baseline, avg(eval(if(phase=\"exercise\", people, null()))) as exercise\n| eval multiplier=if(isnotnull(baseline) AND baseline>0 AND isnotnull(exercise), round(exercise/baseline, 2), 0)\n| fields multiplier",
 				"queryParameters": {
@@ -1226,7 +1226,7 @@
 			"type": "ds.search"
 		},
 		"ds_activation_env": {
-			"name": "Webex — temperature & humidity during activation",
+			"name": "Webex - temperature and humidity during activation",
 			"options": {
 				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"WEBEX_TELEMETRY\"\n| eval temp='webexTelemetryUpdate.telemetries{}.ambientTemp',\n humidity='webexTelemetryUpdate.telemetries{}.relativeHumidity',\n device='webexTelemetryUpdate.deviceInfo.serialNumber'\n| where isnotnull(temp) AND isnotnull(humidity)\n| eval temp_f=round(temp*9/5+32, 2)\n| stats avg(temp_f) as \"Avg Temp °F\", avg(humidity) as \"Avg Humidity %\", min(temp_f) as \"Min Temp °F\", max(temp_f) as \"Max Temp °F\"",
 				"queryParameters": {
@@ -1281,7 +1281,7 @@
 			"type": "ds.search"
 		},
 		"ds_activation_surge": {
-			"name": "Spaces occupancy surge  Op Florida Ready annotations",
+			"name": "Spaces occupancy surge Op Florida Ready annotations",
 			"options": {
 				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR \n| eval users=coalesce('deviceCounts.userCount', 'deviceCounts.associatedCount', 'deviceCounts.deviceCount'),\n    floor='deviceCounts.location.name' \n| where isnotnull(users) \n| bin _time span=1h \n| stats max(users) as users by _time, floor \n| stats sum(users) as Occupancy by _time \n| eval Occupancy=round(Occupancy, 2) \n| fields _time Occupancy",
 				"queryParameters": {
@@ -1292,7 +1292,7 @@
 			"type": "ds.search"
 		},
 		"ds_activation_wifi": {
-			"name": "Spaces — WiFi associations by SSID + exercise annotations",
+			"name": "Spaces - WiFi associations by SSID and exercise annotations",
 			"options": {
 				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_ASSOCIATION\" deviceAssociation.event=\"ASSOCIATE\"\n| eval mac='deviceAssociation.device.macAddress',\n ssid='deviceAssociation.ssid'\n| timechart useother=t count as Associations by ssid where max in top10",
 				"queryParameters": {
@@ -1336,7 +1336,7 @@
 			"type": "ds.search"
 		},
 		"ds_capacity_gauge_first": {
-			"name": "Highest capacity floor (period peak)",
+			"name": "Highest capacity floor period peak",
 			"options": {
 				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR\n| eval users='deviceCounts.userCount',\n associated='deviceCounts.associatedCount',\n devices='deviceCounts.deviceCount',\n pct='deviceCounts.estimatedCapacityPercentage',\n floor='deviceCounts.location.name',\n building='deviceCounts.location.parent.name',\n city='deviceCounts.location.parent.parent.name'\n| where isnotnull(pct) | stats latest(pct) as \"Capacity %\"\n| eval \"Capacity %\"=round('Capacity %', 2)",
 				"queryParameters": {
@@ -1347,7 +1347,7 @@
 			"type": "ds.search"
 		},
 		"ds_capacity_gauge_second": {
-			"name": "Second highest capacity floor (period peak)",
+			"name": "Second highest capacity floor period peak",
 			"options": {
 				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR\n| eval users='deviceCounts.userCount',\n associated='deviceCounts.associatedCount',\n devices='deviceCounts.deviceCount',\n pct='deviceCounts.estimatedCapacityPercentage',\n floor='deviceCounts.location.name',\n building='deviceCounts.location.parent.name',\n city='deviceCounts.location.parent.parent.name'\n| where isnotnull(pct) | stats latest(pct) as \"Capacity %\"\n| eval \"Capacity %\"=round('Capacity %', 2)",
 				"queryParameters": {
@@ -1391,7 +1391,7 @@
 			"type": "ds.search"
 		},
 		"ds_convergence_annotations": {
-			"name": "Op Florida Ready exercise annotations (Convergence)",
+			"name": "Op Florida Ready exercise annotations Convergence",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\"\n| dedup IssueID\n| eval label=\"DNAC: \".IssueSpecificName.\" - \".SiteName,\n color=\"#D64550\"\n| table _time label color\n| sort - _time\n| head 20",
 				"queryParameters": {
@@ -1413,7 +1413,7 @@
 			"type": "ds.search"
 		},
 		"ds_convergence_occupancy": {
-			"name": "Spaces × DNAC — occupancy + DNAC issues + date annotations",
+			"name": "Spaces x DNAC - occupancy and DNAC issues and date annotations",
 			"options": {
 				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR\n| eval users='deviceCounts.userCount',\n associated='deviceCounts.associatedCount',\n devices='deviceCounts.deviceCount',\n pct='deviceCounts.estimatedCapacityPercentage',\n floor='deviceCounts.location.name',\n building='deviceCounts.location.parent.name',\n city='deviceCounts.location.parent.parent.name'\n| where isnotnull(users)\n| timechart max(users) as Occupancy\n| eval Occupancy=round(Occupancy, 2)",
 				"queryParameters": {
@@ -1435,7 +1435,7 @@
 			"type": "ds.search"
 		},
 		"ds_env_annotation": {
-			"name": "Op Florida Ready exercise annotations (Environmental)",
+			"name": "Op Florida Ready exercise annotations Environmental",
 			"options": {
 				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"WEBEX_TELEMETRY\"\n| eval temp='webexTelemetryUpdate.telemetries{}.ambientTemp',\n humidity='webexTelemetryUpdate.telemetries{}.relativeHumidity',\n device='webexTelemetryUpdate.deviceInfo.serialNumber'\n| where isnotnull(temp) AND isnotnull(humidity)\n| eval temp_f=round(temp*9/5+32, 2)\n| where temp_f >= 78 OR humidity >= 65\n| eval label=case(temp_f>=78, \"Heat \".round(temp_f, 0).\"°F\", humidity>=65, \"Humidity \".round(humidity, 0).\"%\")\n| dedup _time, label\n| sort - _time\n| head 10\n| table _time label",
 				"queryParameters": {
@@ -1501,7 +1501,7 @@
 			"type": "ds.search"
 		},
 		"ds_humidity_trend": {
-			"name": "Webex sensors — humidity by floor + exercise annotations",
+			"name": "Webex sensors - humidity by floor and exercise annotations",
 			"options": {
 				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"WEBEX_TELEMETRY\"\n| eval temp='webexTelemetryUpdate.telemetries{}.ambientTemp',\n humidity='webexTelemetryUpdate.telemetries{}.relativeHumidity',\n device='webexTelemetryUpdate.deviceInfo.serialNumber'\n| where isnotnull(humidity) AND isnotnull(device)\n| timechart avg(humidity) as \"Humidity %\" by device limit=10",
 				"queryParameters": {
@@ -1523,7 +1523,7 @@
 			"type": "ds.search"
 		},
 		"ds_issues_by_site": {
-			"name": "DNAC — issues by site",
+			"name": "DNAC - issues by site",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\"\n| dedup IssueID\n| stats count as Issues by SiteName\n| sort - Issues\n| rename SiteName as Site",
 				"queryParameters": {
@@ -1545,7 +1545,7 @@
 			"type": "ds.search"
 		},
 		"ds_kpi_avg_week": {
-			"name": "Avg users (period)",
+			"name": "Avg users period",
 			"options": {
 				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR\n| eval users='deviceCounts.userCount',\n associated='deviceCounts.associatedCount',\n devices='deviceCounts.deviceCount',\n pct='deviceCounts.estimatedCapacityPercentage',\n floor='deviceCounts.location.name',\n building='deviceCounts.location.parent.name',\n city='deviceCounts.location.parent.parent.name'\n| bin _time span=1h \n| stats max(users) as peak by _time, floor\n| stats avg(peak) as \"Avg Concurrent Users\"\n| eval \"Avg Concurrent Users\"=round('Avg Concurrent Users', 0)",
 				"queryParameters": {
@@ -1765,7 +1765,7 @@
 			"type": "ds.search"
 		},
 		"ds_temp_trend": {
-			"name": "Webex sensors — temperature by floor + exercise annotations",
+			"name": "Webex sensors - temperature by floor and exercise annotations",
 			"options": {
 				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"WEBEX_TELEMETRY\"\n| eval temp='webexTelemetryUpdate.telemetries{}.ambientTemp',\n humidity='webexTelemetryUpdate.telemetries{}.relativeHumidity',\n device='webexTelemetryUpdate.deviceInfo.serialNumber'\n| where isnotnull(temp) AND isnotnull(device)\n| eval temp_f=round(temp*9/5+32, 2)\n| timechart avg(temp_f) as \"Temp °F\" by device limit=10",
 				"queryParameters": {

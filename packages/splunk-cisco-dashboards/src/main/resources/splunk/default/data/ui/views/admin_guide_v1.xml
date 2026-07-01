@@ -718,14 +718,14 @@
 			}
 		},
 		"ds_cache_pie": {
-			"name": "Cache Hit vs Miss (Overall)",
+			"name": "Cache Hit vs Miss Overall",
 			"type": "ds.search",
 			"options": {
 				"query": "| rest /services/search/jobs splunk_server=local\n| search (provenance=\"UI:dashboard:*\") NOT provenance=\"UI:dashboard:admin_guide\" | eval status = if(match(sid, \"^scheduler__\"), \"Cache Hit\", \"Cache Miss\")\n| stats count by status"
 			}
 		},
 		"ds_runtime_bar": {
-			"name": "Runtime by Search (Top 10)",
+			"name": "Runtime by Search Top 10",
 			"type": "ds.search",
 			"options": {
 				"query": "| rest /services/search/jobs splunk_server=local\n| search (provenance=\"UI:dashboard:*\") NOT provenance=\"UI:dashboard:admin_guide\" | stats latest(runDuration) as runtime by label\n| eval runtime = round(runtime, 2)\n| sort 10 - runtime\n| rename label as search_name\n| table search_name, runtime"
@@ -777,7 +777,7 @@
 			}
 		},
 		"ds_kpi_pct": {
-			"name": "KPI Scheduled %",
+			"name": "KPI Scheduled Percent",
 			"type": "ds.chain",
 			"options": {
 				"extend": "ds_concurrency_kpis",
