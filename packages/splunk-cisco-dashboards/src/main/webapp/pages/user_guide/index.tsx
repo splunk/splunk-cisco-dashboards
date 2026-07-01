@@ -147,7 +147,7 @@ const macroFamilies = [
   {
     app: "splunk-cisco-dashboards",
     format: "index IN (idx1, idx2)",
-    examples: "index_catalyst, index_firewall, index_identity, index_spaces, index_thousandeyes",
+    examples: "index_catalyst, index_firewall, index_f5, index_spaces, index_thousandeyes, and the other index_* macros",
     note: "Primary dashboard macros. The fast scan discovers known Cisco sourcetypes with tstats.",
   },
   {
@@ -174,10 +174,35 @@ const dataSources = [
   ["Catalyst Center", "`cisco:dnac:*`, `cisco:catalyst:center:*`", "`index_catalyst`"],
   ["Firewall", "`cisco:asa`, `cisco:ftd*`, `cisco:sfw:estreamer`, `cisco:estreamer:*`", "`index_firewall`"],
   ["Identity", "`cisco:ise:*`, Windows and Active Directory sourcetypes", "`index_identity`, `index_windows`"],
+  ["Network infrastructure", "`cisco:ios`, `cisco:ios:*`, `cisco:telemetry`, network syslog", "`index_network`"],
+  ["Zeek NSM", "`zeek:conn`, `zeek:dns`, `zeek:ssl`, `zeek:http`, `zeek:notice`, and related Zeek logs", "`index_zeek`"],
+  ["Meraki", "`meraki:*`", "`index_meraki`"],
   ["Cisco Spaces", "`cisco:spaces:*`", "`index_spaces`"],
   ["Security stack", "XDR, Umbrella/Secure Access, ESA, WSA, ETD, Defender, Secure Workload", "`index_security`"],
+  ["DHCP", "Windows DHCP Server logs such as `DhcpSrvLog`", "`index_dhcp`"],
   ["ThousandEyes", "`cisco:thousandeyes:*` plus TA data model macros", "`index_thousandeyes`"],
-  ["Network and endpoint", "IOS, Zeek, Meraki, SD-WAN, Duo, CyberVision, UCS, DC, NVM, DHCP, F5", "Specialized `index_*` macros"],
+  ["F5 BIG-IP", "`f5:bigip:*`", "`index_f5`"],
+  ["Duo", "`cisco:duo:*`", "`index_duo`"],
+  ["CyberVision", "`cisco:cybervision:*`", "`index_cybervision`"],
+  ["UCS", "`cisco:ucs`, `cisco:ucs:*`", "`index_ucs`"],
+  ["Cisco SD-WAN", "`cisco:sdwan:tunnelhealth`, `cisco:sdwan:sitehealth`, `cisco:sdwan:linkhealth`, `cisco:sdwan:*`", "`index_sdwan`"],
+  ["Data Center", "`cisco:dc:aci:*`, `cisco:dc:nd:*`, `cisco:dc:nexus9k`", "`index_dc`"],
+  ["Network Visibility Module", "`cisco:nvm:*`", "`index_nvm`"],
+];
+
+const supportMacros = [
+  ["`customer_name`", "Controls the organization name shown in dashboard headers and report titles."],
+  ["`scd_summariesonly`", "Controls tstats acceleration behavior for searches that can use accelerated data models."],
+  ["`spaces_hierarchy(1)`", "Normalizes Cisco Spaces location hierarchy into campus, building, floor, and site fields."],
+  ["`wireless_trust_base`", "Shared base search for wireless trust summary and device review panels."],
+  ["`dnac_site_normalize(1)`", "Normalizes Catalyst Center site labels used across device and client panels."],
+  ["`nrs_w_nrs_a`", "Network readiness score availability weight."],
+  ["`nrs_w_nrs_r`", "Network readiness score reachability weight."],
+  ["`nrs_w_nrs_q`", "Network readiness score quality weight."],
+  ["`nrs_th_ap_health`", "Access point health threshold for readiness scoring."],
+  ["`nrs_th_cl_health`", "Client health threshold for readiness scoring."],
+  ["`nrs_ap_saturation_clients`", "AP client saturation threshold for readiness scoring."],
+  ["`field_list`", "Utility macro used where dashboard searches need a reusable field projection."],
 ];
 
 const troubleshootingRows = [
@@ -196,7 +221,7 @@ export default function UserGuidePage(): JSX.Element {
   return (
     <main className="min-h-screen bg-slate-100 text-slate-900">
       <div className="border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-[1360px] px-6 py-8">
+        <div className="mx-auto max-w-[1680px] px-6 py-8 lg:px-8">
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
             <div>
               <div className="mb-3 inline-flex items-center gap-2 rounded border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-sky-800">
@@ -226,7 +251,7 @@ export default function UserGuidePage(): JSX.Element {
         </div>
       </div>
 
-      <div className="mx-auto grid max-w-[1360px] gap-5 px-6 py-6 lg:grid-cols-[240px_minmax(0,1fr)]">
+      <div className="mx-auto grid max-w-[1680px] gap-5 px-6 py-6 lg:grid-cols-[220px_minmax(0,1fr)] lg:px-8">
         <aside className="hidden lg:block">
           <nav className="sticky top-4 border border-slate-200 bg-white p-3 text-sm">
             {[
@@ -381,12 +406,12 @@ iseval = 0`}</CodeBlock>
             icon={<Database size={19} />}
           >
             <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse text-left text-sm">
+              <table className="min-w-[980px] border-collapse text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                    <th className="px-3 py-2 font-bold">Area</th>
-                    <th className="px-3 py-2 font-bold">Sourcetypes or Inputs</th>
-                    <th className="px-3 py-2 font-bold">Macro</th>
+                    <th className="w-[24%] px-3 py-2 font-bold">Area</th>
+                    <th className="w-[48%] px-3 py-2 font-bold">Sourcetypes or Inputs</th>
+                    <th className="w-[28%] px-3 py-2 font-bold">Macro</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -399,6 +424,23 @@ iseval = 0`}</CodeBlock>
                   ))}
                 </tbody>
               </table>
+            </div>
+            <div className="mt-5 border border-slate-200 bg-slate-50 p-4">
+              <h3 className="m-0 text-sm font-bold uppercase tracking-wide text-slate-600">
+                Supporting Macros
+              </h3>
+              <div className="mt-3 overflow-x-auto">
+                <table className="min-w-[720px] border-collapse text-left text-sm">
+                  <tbody>
+                    {supportMacros.map(([macro, purpose]) => (
+                      <tr key={macro} className="border-b border-slate-200 align-top last:border-b-0">
+                        <td className="w-[30%] px-3 py-3 font-mono text-xs text-sky-800">{macro}</td>
+                        <td className="px-3 py-3 text-slate-700">{purpose}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </Section>
 

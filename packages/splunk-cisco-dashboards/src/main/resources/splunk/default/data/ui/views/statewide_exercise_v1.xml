@@ -2253,7 +2253,7 @@
 		"ds_wired_kpi": {
 			"name": "Statewide - Wired Health KPI",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\"\n| stats latest(scoreValue) as sv, latest(clientCount) as total by scoreType\n| eval health=round(sv)\n| stats sum(eval(if(scoreType==\"ALL\", total, 0))) as total, avg(eval(if(scoreType==\"ALL\", health, null()))) as health, sum(eval(if(scoreType==\"GOOD\", total, 0))) as healthy, sum(eval(if(scoreType==\"FAIR\", total, 0))) as active, sum(eval(if(scoreType==\"POOR\", total, 0))) as inactive, sum(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\", total, 0))) as new_clients\n| eval health=round(health)",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\"\n| stats latest(scoreValue) as sv, latest(clientCount) as total by scoreType\n| eval health=round(sv)\n| stats sum(eval(if(scoreType==\"ALL\", total, 0))) as total, avg(eval(if(scoreType==\"ALL\", health, null()))) as health, sum(eval(if(scoreType==\"GOOD\", total, 0))) as healthy, sum(eval(if(scoreType==\"FAIR\", total, 0))) as active, sum(eval(if(scoreType==\"POOR\", total, 0))) as inactive, sum(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\" OR scoreType==\"NEW\", total, 0))) as new_clients\n| eval health=round(health)",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -2275,7 +2275,7 @@
 		"ds_wired_trend_24h": {
 			"name": "Statewide - Wired Client Trend 24h",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| timechart latest(eval(if(scoreType==\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType==\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType==\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\",clientCount,null()))) as \"No Data\"",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\" OR scoreType=\"NEW\")\n| timechart latest(eval(if(scoreType==\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType==\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType==\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\" OR scoreType==\"NEW\",clientCount,null()))) as \"No Data\"",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -2286,7 +2286,7 @@
 		"ds_wired_trend_7d": {
 			"name": "Statewide - Wired Client Trend 7d",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| timechart latest(eval(if(scoreType==\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType==\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType==\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\",clientCount,null()))) as \"No Data\"",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\" OR scoreType=\"NEW\")\n| timechart latest(eval(if(scoreType==\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType==\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType==\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\" OR scoreType==\"NEW\",clientCount,null()))) as \"No Data\"",
 				"queryParameters": {
 					"earliest": "-7d@d",
 					"latest": "now"
@@ -2308,7 +2308,7 @@
 		"ds_wireless_kpi": {
 			"name": "Statewide - Wireless Health KPI",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\"\n| stats latest(scoreValue) as sv, latest(clientCount) as total by scoreType\n| eval health=round(sv)\n| stats sum(eval(if(scoreType==\"ALL\", total, 0))) as total, avg(eval(if(scoreType==\"ALL\", health, null()))) as health, sum(eval(if(scoreType==\"GOOD\", total, 0))) as healthy, sum(eval(if(scoreType==\"FAIR\", total, 0))) as active, sum(eval(if(scoreType==\"POOR\", total, 0))) as inactive, sum(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\", total, 0))) as new_clients\n| eval health=round(health)",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\"\n| stats latest(scoreValue) as sv, latest(clientCount) as total by scoreType\n| eval health=round(sv)\n| stats sum(eval(if(scoreType==\"ALL\", total, 0))) as total, avg(eval(if(scoreType==\"ALL\", health, null()))) as health, sum(eval(if(scoreType==\"GOOD\", total, 0))) as healthy, sum(eval(if(scoreType==\"FAIR\", total, 0))) as active, sum(eval(if(scoreType==\"POOR\", total, 0))) as inactive, sum(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\" OR scoreType==\"NEW\", total, 0))) as new_clients\n| eval health=round(health)",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -2330,7 +2330,7 @@
 		"ds_wireless_trend_24h": {
 			"name": "Statewide - Wireless Client Trend 24h",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| timechart latest(eval(if(scoreType==\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType==\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType==\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\",clientCount,null()))) as \"No Data\"",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\" OR scoreType=\"NEW\")\n| timechart latest(eval(if(scoreType==\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType==\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType==\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\" OR scoreType==\"NEW\",clientCount,null()))) as \"No Data\"",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
