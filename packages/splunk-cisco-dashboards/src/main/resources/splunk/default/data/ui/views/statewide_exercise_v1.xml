@@ -387,11 +387,11 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"unit": "%",
-				"sparklineNullValueDisplay": "connect"
+				"unit": "%"
 			},
 			"title": "Client Health Score",
 			"type": "splunk.singlevalue"
@@ -524,10 +524,10 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent",
-				"sparklineNullValueDisplay": "connect"
+				"trendDisplay": "percent"
 			},
 			"title": "Total Connected Clients",
 			"type": "splunk.singlevalue"
@@ -621,11 +621,11 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"unit": "%",
-				"sparklineNullValueDisplay": "connect"
+				"unit": "%"
 			},
 			"title": "AP Reachability",
 			"type": "splunk.singlevalue"
@@ -658,10 +658,10 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent",
-				"sparklineNullValueDisplay": "connect"
+				"trendDisplay": "percent"
 			},
 			"title": "Access Points",
 			"type": "splunk.singlevalue"
@@ -807,10 +807,10 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent",
-				"sparklineNullValueDisplay": "connect"
+				"trendDisplay": "percent"
 			},
 			"title": "Healthy Devices",
 			"type": "splunk.singlevalue"
@@ -913,11 +913,11 @@
 			},
 			"description": "Issue volume trending — watch for spikes during activations",
 			"options": {
+				"nullValueDisplay": "connect",
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
 				"xAxisVisibility": "show",
-				"yAxisTitleText": "Issues",
-				"nullValueDisplay": "connect"
+				"yAxisTitleText": "Issues"
 			},
 			"title": "Total Issue Trend",
 			"type": "splunk.area"
@@ -950,11 +950,11 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"unit": "%",
-				"sparklineNullValueDisplay": "connect"
+				"unit": "%"
 			},
 			"title": "Network Health",
 			"type": "splunk.singlevalue"
@@ -1112,8 +1112,8 @@
 				"majorValue": "> primary | seriesByName('Open') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
-				"unit": "",
-				"sparklineNullValueDisplay": "connect"
+				"sparklineNullValueDisplay": "connect",
+				"unit": ""
 			},
 			"title": "Open Issues",
 			"type": "splunk.singlevalue"
@@ -1128,8 +1128,8 @@
 				"majorValue": "> primary | seriesByName('Resolved') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
-				"unit": "",
-				"sparklineNullValueDisplay": "connect"
+				"sparklineNullValueDisplay": "connect",
+				"unit": ""
 			},
 			"title": "Resolved Issues",
 			"type": "splunk.singlevalue"
@@ -1144,8 +1144,8 @@
 				"majorValue": "> primary | seriesByName('Total') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
-				"unit": "",
-				"sparklineNullValueDisplay": "connect"
+				"sparklineNullValueDisplay": "connect",
+				"unit": ""
 			},
 			"title": "Total Issues",
 			"type": "splunk.singlevalue"
@@ -1188,10 +1188,10 @@
 			},
 			"description": "Tallahassee Internet circuit bandwidth, broken down by protocol. Requires Netflow/Stream data.",
 			"options": {
+				"nullValueDisplay": "connect",
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Mbps",
-				"nullValueDisplay": "connect"
+				"yAxisTitleText": "Mbps"
 			},
 			"title": "Internet — Bandwidth by Protocol",
 			"type": "splunk.area"
@@ -1214,10 +1214,10 @@
 			},
 			"description": "Tallahassee Public Internet circuit bandwidth, broken down by protocol. Requires Netflow/Stream data.",
 			"options": {
+				"nullValueDisplay": "connect",
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Mbps",
-				"nullValueDisplay": "connect"
+				"yAxisTitleText": "Mbps"
 			},
 			"title": "Public Internet — Bandwidth by Protocol",
 			"type": "splunk.area"
@@ -1236,10 +1236,10 @@
 			},
 			"description": "Per-SSID client count over the last 24 hours",
 			"options": {
+				"nullValueDisplay": "connect",
 				"xAxisTitleVisibility": "hide",
 				"xAxisVisibility": "show",
-				"yAxisTitleText": "Clients",
-				"nullValueDisplay": "connect"
+				"yAxisTitleText": "Clients"
 			},
 			"title": "Client Count per SSID",
 			"type": "splunk.line"
@@ -1250,10 +1250,10 @@
 			},
 			"description": "Per-SSID client count over the last 7 days",
 			"options": {
+				"nullValueDisplay": "connect",
 				"xAxisTitleVisibility": "hide",
 				"xAxisVisibility": "show",
-				"yAxisTitleText": "Clients",
-				"nullValueDisplay": "connect"
+				"yAxisTitleText": "Clients"
 			},
 			"title": "Client Count per SSID — Past Week",
 			"type": "splunk.line"
@@ -1278,6 +1278,7 @@
 			},
 			"description": "Wired client count trend — last 24 hours",
 			"options": {
+				"nullValueDisplay": "connect",
 				"seriesColorsByField": {
 					"Fair": "#E5A823",
 					"Healthy": "#6EBE4A",
@@ -1286,8 +1287,7 @@
 				},
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Clients",
-				"nullValueDisplay": "connect"
+				"yAxisTitleText": "Clients"
 			},
 			"title": "Wired Client Trend",
 			"type": "splunk.area"
@@ -1298,6 +1298,7 @@
 			},
 			"description": "Wired client count trend — last 7 days",
 			"options": {
+				"nullValueDisplay": "connect",
 				"seriesColorsByField": {
 					"Fair": "#E5A823",
 					"Healthy": "#6EBE4A",
@@ -1306,8 +1307,7 @@
 				},
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Clients",
-				"nullValueDisplay": "connect"
+				"yAxisTitleText": "Clients"
 			},
 			"title": "Wired Clients — Past Week",
 			"type": "splunk.area"
@@ -1340,11 +1340,11 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"unit": "%",
-				"sparklineNullValueDisplay": "connect"
+				"unit": "%"
 			},
 			"title": "Wired Health",
 			"type": "splunk.singlevalue"
@@ -1394,10 +1394,10 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent",
-				"sparklineNullValueDisplay": "connect"
+				"trendDisplay": "percent"
 			},
 			"title": "Wired Clients",
 			"type": "splunk.singlevalue"
@@ -1408,6 +1408,7 @@
 			},
 			"description": "Wireless client count trend — last 24 hours",
 			"options": {
+				"nullValueDisplay": "connect",
 				"seriesColorsByField": {
 					"Fair": "#E5A823",
 					"Healthy": "#6EBE4A",
@@ -1416,8 +1417,7 @@
 				},
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Clients",
-				"nullValueDisplay": "connect"
+				"yAxisTitleText": "Clients"
 			},
 			"title": "Wireless Client Trend",
 			"type": "splunk.area"
@@ -1428,6 +1428,7 @@
 			},
 			"description": "Wireless client count trend — last 7 days",
 			"options": {
+				"nullValueDisplay": "connect",
 				"seriesColorsByField": {
 					"Fair": "#E5A823",
 					"Healthy": "#6EBE4A",
@@ -1436,8 +1437,7 @@
 				},
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Clients",
-				"nullValueDisplay": "connect"
+				"yAxisTitleText": "Clients"
 			},
 			"title": "Wireless Clients — Past Week",
 			"type": "splunk.area"
@@ -1470,11 +1470,11 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"unit": "%",
-				"sparklineNullValueDisplay": "connect"
+				"unit": "%"
 			},
 			"title": "Wireless Health",
 			"type": "splunk.singlevalue"
@@ -1524,10 +1524,10 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent",
-				"sparklineNullValueDisplay": "connect"
+				"trendDisplay": "percent"
 			},
 			"title": "Wireless Clients",
 			"type": "splunk.singlevalue"
@@ -1627,7 +1627,7 @@
 		"ds_cs_by_location": {
 			"name": "Client Summary - Clients by Location",
 			"options": {
-					"query": "`index_catalyst` (sourcetype=\"cisco:dnac:client\" OR sourcetype=\"cisco:catalyst:client\")\n| eval site_ref=coalesce(mvindex(mvdedup(siteHierarchyId),0), mvindex(mvdedup(siteId),0))\n| eval site_ref=if(isnotnull(site_ref), trim(site_ref), null())\n| eval leafSiteId=case(isnotnull(site_ref) AND site_ref!=\"\" AND lower(site_ref)!=\"null\" AND match(site_ref,\"/\"), mvindex(split(rtrim(site_ref,\"/\"),\"/\"),-1), isnotnull(site_ref) AND site_ref!=\"\" AND lower(site_ref)!=\"null\", site_ref)\n| lookup site_topology_lookup id as leafSiteId OUTPUT Site as lookupSite, name as lookupSiteName\n| eval site_path=mvindex(mvdedup(siteHierarchy),0)\n| eval rawSite=mvindex(split(rtrim(site_path,\"/\"),\"/\"),-1)\n| eval Site=case(isnotnull(lookupSite) AND trim(lookupSite)!=\"\" AND lower(lookupSite)!=\"null\", lookupSite, isnotnull(rawSite) AND trim(rawSite)!=\"\" AND lower(rawSite)!=\"null\" AND NOT match(rawSite,\"^[0-9a-fA-F-]{36}$\"), rawSite, isnotnull(lookupSiteName) AND trim(lookupSiteName)!=\"\" AND lower(lookupSiteName)!=\"null\", lookupSiteName)\n| where isnotnull(Site) AND Site!=\"Unknown\"\n| stats dc(macAddress) as clients by Site\n| sort -clients",
+				"query": "`index_catalyst` (sourcetype=\"cisco:dnac:client\" OR sourcetype=\"cisco:catalyst:client\")\n| eval site_ref=coalesce(mvindex(mvdedup(siteHierarchyId),0), mvindex(mvdedup(siteId),0))\n| eval site_ref=if(isnotnull(site_ref), trim(site_ref), null())\n| eval leafSiteId=case(isnotnull(site_ref) AND site_ref!=\"\" AND lower(site_ref)!=\"null\" AND match(site_ref,\"/\"), mvindex(split(rtrim(site_ref,\"/\"),\"/\"),-1), isnotnull(site_ref) AND site_ref!=\"\" AND lower(site_ref)!=\"null\", site_ref)\n| lookup site_topology_lookup id as leafSiteId OUTPUT Site as lookupSite, name as lookupSiteName\n| eval site_path=mvindex(mvdedup(siteHierarchy),0)\n| eval rawSite=mvindex(split(rtrim(site_path,\"/\"),\"/\"),-1)\n| eval Site=case(isnotnull(lookupSite) AND trim(lookupSite)!=\"\" AND lower(lookupSite)!=\"null\", lookupSite, isnotnull(rawSite) AND trim(rawSite)!=\"\" AND lower(rawSite)!=\"null\" AND NOT match(rawSite,\"^[0-9a-fA-F-]{36}$\"), rawSite, isnotnull(lookupSiteName) AND trim(lookupSiteName)!=\"\" AND lower(lookupSiteName)!=\"null\", lookupSiteName)\n| where isnotnull(Site) AND Site!=\"Unknown\"\n| stats dc(macAddress) as clients by Site\n| sort -clients",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1673,17 +1673,6 @@
 			},
 			"type": "ds.chain"
 		},
-		"ds_cs_client_kpi": {
-			"name": "Client Summary - Client Health KPI",
-			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\" scoreType=\"ALL\"\n| stats latest(scoreValue) as score, latest(clientCount) as total\n| eval health=round(score)",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
 		"ds_cs_count_over_time": {
 			"name": "Client Summary - Client Count Over Time",
 			"options": {
@@ -1706,7 +1695,7 @@
 		"ds_cs_health_by_location": {
 			"name": "Client Summary - Client Health by Location",
 			"options": {
-					"query": "`index_catalyst` (sourcetype=\"cisco:dnac:client\" OR sourcetype=\"cisco:catalyst:client\")\n| eval site_ref=coalesce(mvindex(mvdedup(siteHierarchyId),0), mvindex(mvdedup(siteId),0))\n| eval site_ref=if(isnotnull(site_ref), trim(site_ref), null())\n| eval leafSiteId=case(isnotnull(site_ref) AND site_ref!=\"\" AND lower(site_ref)!=\"null\" AND match(site_ref,\"/\"), mvindex(split(rtrim(site_ref,\"/\"),\"/\"),-1), isnotnull(site_ref) AND site_ref!=\"\" AND lower(site_ref)!=\"null\", site_ref)\n| lookup site_topology_lookup id as leafSiteId OUTPUT Site as lookupSite, name as lookupSiteName\n| eval site_path=mvindex(mvdedup(siteHierarchy),0)\n| eval rawSite=mvindex(split(rtrim(site_path,\"/\"),\"/\"),-1)\n| eval Site=case(isnotnull(lookupSite) AND trim(lookupSite)!=\"\" AND lower(lookupSite)!=\"null\", lookupSite, isnotnull(rawSite) AND trim(rawSite)!=\"\" AND lower(rawSite)!=\"null\" AND NOT match(rawSite,\"^[0-9a-fA-F-]{36}$\"), rawSite, isnotnull(lookupSiteName) AND trim(lookupSiteName)!=\"\" AND lower(lookupSiteName)!=\"null\", lookupSiteName)\n| eval health=tonumber(mvindex(mvdedup('health.overallScore'),0))\n| where isnotnull(Site) AND Site!=\"Unknown\" AND isnotnull(health) AND health>=0\n| stats avg(health) as health, dc(macAddress) as clients by Site\n| eval health=round(health*10, 2)\n| sort -clients\n| fields Site clients health",
+				"query": "`index_catalyst` (sourcetype=\"cisco:dnac:client\" OR sourcetype=\"cisco:catalyst:client\")\n| eval site_ref=coalesce(mvindex(mvdedup(siteHierarchyId),0), mvindex(mvdedup(siteId),0))\n| eval site_ref=if(isnotnull(site_ref), trim(site_ref), null())\n| eval leafSiteId=case(isnotnull(site_ref) AND site_ref!=\"\" AND lower(site_ref)!=\"null\" AND match(site_ref,\"/\"), mvindex(split(rtrim(site_ref,\"/\"),\"/\"),-1), isnotnull(site_ref) AND site_ref!=\"\" AND lower(site_ref)!=\"null\", site_ref)\n| lookup site_topology_lookup id as leafSiteId OUTPUT Site as lookupSite, name as lookupSiteName\n| eval site_path=mvindex(mvdedup(siteHierarchy),0)\n| eval rawSite=mvindex(split(rtrim(site_path,\"/\"),\"/\"),-1)\n| eval Site=case(isnotnull(lookupSite) AND trim(lookupSite)!=\"\" AND lower(lookupSite)!=\"null\", lookupSite, isnotnull(rawSite) AND trim(rawSite)!=\"\" AND lower(rawSite)!=\"null\" AND NOT match(rawSite,\"^[0-9a-fA-F-]{36}$\"), rawSite, isnotnull(lookupSiteName) AND trim(lookupSiteName)!=\"\" AND lower(lookupSiteName)!=\"null\", lookupSiteName)\n| eval health=tonumber(mvindex(mvdedup('health.overallScore'),0))\n| where isnotnull(Site) AND Site!=\"Unknown\" AND isnotnull(health) AND health>=0\n| stats avg(health) as health, dc(macAddress) as clients by Site\n| eval health=round(health*10, 2)\n| sort -clients\n| fields Site clients health",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1928,21 +1917,10 @@
 			},
 			"type": "ds.search"
 		},
-		"ds_exec_ap_count": {
-			"name": "Executive Summary - AP Count",
-			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| stats latest(DeviceFamily) as DeviceFamily, latest(Reachability) as Reachability by DeviceID\n| where match(DeviceFamily,\"(?i)ap|access.point|unified.ap\")\n| eval healthy=if(Reachability==\"Reachable\",1,0)\n| stats count as total, sum(healthy) as up\n| eval pct=round(up/total*100), down=total-up",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
 		"ds_exec_client_health_by_site": {
 			"name": "Executive Summary - Client Health by Site",
 			"options": {
-					"query": "`index_catalyst` (sourcetype=\"cisco:dnac:client\" OR sourcetype=\"cisco:catalyst:client\")\n| eval site_ref=coalesce(mvindex(mvdedup(siteHierarchyId),0), mvindex(mvdedup(siteId),0))\n| eval site_ref=if(isnotnull(site_ref), trim(site_ref), null())\n| eval leafSiteId=case(isnotnull(site_ref) AND site_ref!=\"\" AND lower(site_ref)!=\"null\" AND match(site_ref,\"/\"), mvindex(split(rtrim(site_ref,\"/\"),\"/\"),-1), isnotnull(site_ref) AND site_ref!=\"\" AND lower(site_ref)!=\"null\", site_ref)\n| lookup site_topology_lookup id as leafSiteId OUTPUT Site as lookupSite, name as lookupSiteName\n| eval site_path=mvindex(mvdedup(siteHierarchy),0)\n| eval rawSite=mvindex(split(rtrim(site_path,\"/\"),\"/\"),-1)\n| eval Site=case(isnotnull(lookupSite) AND trim(lookupSite)!=\"\" AND lower(lookupSite)!=\"null\", lookupSite, isnotnull(rawSite) AND trim(rawSite)!=\"\" AND lower(rawSite)!=\"null\" AND NOT match(rawSite,\"^[0-9a-fA-F-]{36}$\"), rawSite, isnotnull(lookupSiteName) AND trim(lookupSiteName)!=\"\" AND lower(lookupSiteName)!=\"null\", lookupSiteName)\n| eval clientType=case(upper(type)=\"WIRELESS\", \"wireless\", upper(type)=\"WIRED\", \"wired\", upper(clientType)=\"WIRELESS\", \"wireless\", upper(clientType)=\"WIRED\", \"wired\", true(), lower(coalesce(type, clientType)))\n| eval health=tonumber(mvindex(mvdedup('health.overallScore'),0))\n| where isnotnull(Site) AND Site!=\"Unknown\" AND isnotnull(health) AND health>=0 AND (clientType=\"wireless\" OR clientType=\"wired\")\n| stats avg(health) as health by clientType, Site\n| eval health=health*10\n| chart avg(health) by Site, clientType\n| eval wireless=round(wireless, 2), wired=round(wired, 2)\n| fields Site wireless wired",
+				"query": "`index_catalyst` (sourcetype=\"cisco:dnac:client\" OR sourcetype=\"cisco:catalyst:client\")\n| eval site_ref=coalesce(mvindex(mvdedup(siteHierarchyId),0), mvindex(mvdedup(siteId),0))\n| eval site_ref=if(isnotnull(site_ref), trim(site_ref), null())\n| eval leafSiteId=case(isnotnull(site_ref) AND site_ref!=\"\" AND lower(site_ref)!=\"null\" AND match(site_ref,\"/\"), mvindex(split(rtrim(site_ref,\"/\"),\"/\"),-1), isnotnull(site_ref) AND site_ref!=\"\" AND lower(site_ref)!=\"null\", site_ref)\n| lookup site_topology_lookup id as leafSiteId OUTPUT Site as lookupSite, name as lookupSiteName\n| eval site_path=mvindex(mvdedup(siteHierarchy),0)\n| eval rawSite=mvindex(split(rtrim(site_path,\"/\"),\"/\"),-1)\n| eval Site=case(isnotnull(lookupSite) AND trim(lookupSite)!=\"\" AND lower(lookupSite)!=\"null\", lookupSite, isnotnull(rawSite) AND trim(rawSite)!=\"\" AND lower(rawSite)!=\"null\" AND NOT match(rawSite,\"^[0-9a-fA-F-]{36}$\"), rawSite, isnotnull(lookupSiteName) AND trim(lookupSiteName)!=\"\" AND lower(lookupSiteName)!=\"null\", lookupSiteName)\n| eval clientType=case(upper(type)=\"WIRELESS\", \"wireless\", upper(type)=\"WIRED\", \"wired\", upper(clientType)=\"WIRELESS\", \"wireless\", upper(clientType)=\"WIRED\", \"wired\", true(), lower(coalesce(type, clientType)))\n| eval health=tonumber(mvindex(mvdedup('health.overallScore'),0))\n| where isnotnull(Site) AND Site!=\"Unknown\" AND isnotnull(health) AND health>=0 AND (clientType=\"wireless\" OR clientType=\"wired\")\n| stats avg(health) as health by clientType, Site\n| eval health=health*10\n| chart avg(health) by Site, clientType\n| eval wireless=round(wireless, 2), wired=round(wired, 2)\n| fields Site wireless wired",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1997,17 +1975,6 @@
 			"name": "Executive Summary - Device Inventory",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| stats latest(DeviceFamily) as DeviceFamily, latest(Reachability) as Reachability by DeviceID\n| eval cat=case(match(DeviceFamily,\"(?i)switch\"),\"Switches\", match(DeviceFamily,\"(?i)router\"),\"Routers\", match(DeviceFamily,\"(?i)ap|access.point|unified.ap\"),\"APs\", match(DeviceFamily,\"(?i)wireless.controller|wlc\"),\"WLCs\", 1==1,\"Third Party\"), reachable=if(Reachability==\"Reachable\",1,0)\n| stats count as total, sum(reachable) as up by cat\n| eval down=total-up",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_exec_healthy_devices": {
-			"name": "Executive Summary - Healthy Device Count",
-			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| stats latest(Reachability) as Reachability, latest(Manageability) as Manageability by DeviceID\n| eval healthy=if(Reachability==\"Reachable\" AND match(Manageability,\"^Managed\"), 1, 0)\n| stats count as total, sum(healthy) as healthy_count\n| eval pct=round(healthy_count/total*100)",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -2101,28 +2068,6 @@
 			"name": "Executive Summary - Network Health Trend",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" | timechart avg(eval(round(if(Reachability==\"Reachable\" AND match(Manageability,\"^Managed\"), 100, 0), 2))) as pct | eval pct=round(pct, 2)",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_exec_overall_client_health": {
-			"name": "Executive Summary - Overall Client Health",
-			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRELESS\" OR clientType=\"WIRED\") scoreType=\"ALL\"\n| stats latest(scoreValue) as sv by clientType\n| eval health=round(sv)\n| stats avg(health) as overall",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_exec_overall_network_health": {
-			"name": "Executive Summary - Overall Network Health",
-			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| stats latest(Reachability) as Reachability, latest(Manageability) as Manageability by DeviceID\n| eval healthy=if(Reachability==\"Reachable\" AND match(Manageability,\"^Managed\"), 1, 0)\n| stats avg(healthy) as pct\n| eval pct=round(pct*100)",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"

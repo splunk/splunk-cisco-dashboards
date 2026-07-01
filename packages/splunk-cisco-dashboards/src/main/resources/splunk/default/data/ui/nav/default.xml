@@ -15,6 +15,7 @@
 
     <!-- Workplace and collaboration-focused dashboards -->
     <collection label="Workplace &amp; Collaboration">
+        <a href="building_v1">Building Intelligence</a>
         <view name="spaces_intelligence_v1"/>
         <view name="workplace_spog_v1"/>
         <!-- <a href="m365_activity_monitoring">M365 Activity Monitoring</a> -->
