@@ -106,6 +106,7 @@ const commonConfig = webpackMerge(baseConfig, {
             webappRoot,
             'pages/macro_index_tuning/render.tsx'
         ),
+        user_guide: path.join(webappRoot, 'pages/user_guide/render.tsx'),
         dashboardbuilder: path.join(webappRoot, 'pages/dashboardbuilder/index.jsx'),
     },
     output: {

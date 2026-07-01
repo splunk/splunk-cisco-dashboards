@@ -1627,7 +1627,7 @@
 		"ds_cs_by_location": {
 			"name": "Client Summary - ds_client_by_location",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" \n| eval Site=mvindex(split(siteHierarchy,\"/\"),-1) \n| where isnotnull(Site) AND Site!=\"null\" AND Site!=\"\" \n| stats dc(macAddress) as clients by Site \n| sort -clients",
+				"query": "`index_catalyst` (sourcetype=\"cisco:dnac:client\" OR sourcetype=\"cisco:catalyst:client\")\n| spath output=siteHierarchyId_spath path=siteHierarchyId\n| spath output=siteId_spath path=siteId\n| spath output=siteHierarchy_spath path=siteHierarchy\n| rex field=_raw \"\\\"siteHierarchyId\\\"\\s*:\\s*\\\"(?<siteHierarchyId_json>[^\\\"]+)\\\"\"\n| rex field=_raw \"\\\"siteId\\\"\\s*:\\s*\\\"(?<siteId_json>[^\\\"]+)\\\"\"\n| rex field=_raw \"\\\"siteHierarchy\\\"\\s*:\\s*\\\"(?<siteHierarchy_json>[^\\\"]+)\\\"\"\n| eval site_id_path=coalesce(mvindex(mvdedup(siteHierarchyId),0), mvindex(mvdedup(siteHierarchyId_spath),0), mvindex(mvdedup(siteHierarchyId_json),0), mvindex(mvdedup(siteId),0), mvindex(mvdedup(siteId_spath),0), mvindex(mvdedup(siteId_json),0))\n| eval site_id_path=if(isnotnull(site_id_path), trim(site_id_path), null())\n| eval leafSiteId=case(isnotnull(site_id_path) AND site_id_path!=\"\" AND lower(site_id_path)!=\"null\" AND match(site_id_path,\"/\"), mvindex(split(rtrim(site_id_path,\"/\"),\"/\"),-1), isnotnull(site_id_path) AND site_id_path!=\"\" AND lower(site_id_path)!=\"null\", site_id_path)\n| lookup site_topology_lookup id as leafSiteId OUTPUT Site as lookupSite, name as lookupSiteName\n| eval site_path=coalesce(mvindex(mvdedup(siteHierarchy),0), mvindex(mvdedup(siteHierarchy_spath),0), mvindex(mvdedup(siteHierarchy_json),0), lookupSite, lookupSiteName)\n| eval rawSite=mvindex(split(rtrim(site_path,\"/\"),\"/\"),-1)\n| eval Site=case(isnotnull(lookupSite) AND trim(lookupSite)!=\"\" AND lower(lookupSite)!=\"null\", lookupSite, isnotnull(rawSite) AND trim(rawSite)!=\"\" AND lower(rawSite)!=\"null\" AND NOT match(rawSite,\"^[0-9a-fA-F-]{36}$\"), rawSite, isnotnull(lookupSiteName) AND trim(lookupSiteName)!=\"\" AND lower(lookupSiteName)!=\"null\", lookupSiteName, true(), \"Unknown\")\n| where Site!=\"Unknown\"\n| stats dc(macAddress) as clients by Site\n| sort -clients",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1706,7 +1706,7 @@
 		"ds_cs_health_by_location": {
 			"name": "Client Summary - ds_client_health_by_location",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" \n| eval Site=mvindex(split(siteHierarchy,\"/\"),-1) \n| where isnotnull(Site) AND Site!=\"null\" AND Site!=\"\" \n| stats avg(health.overallScore) as sv, dc(macAddress) as clients by Site \n| eval health=round(sv*10, 2) \n| sort -clients \n| fields Site clients health",
+				"query": "`index_catalyst` (sourcetype=\"cisco:dnac:client\" OR sourcetype=\"cisco:catalyst:client\")\n| spath output=siteHierarchyId_spath path=siteHierarchyId\n| spath output=siteId_spath path=siteId\n| spath output=siteHierarchy_spath path=siteHierarchy\n| rex field=_raw \"\\\"siteHierarchyId\\\"\\s*:\\s*\\\"(?<siteHierarchyId_json>[^\\\"]+)\\\"\"\n| rex field=_raw \"\\\"siteId\\\"\\s*:\\s*\\\"(?<siteId_json>[^\\\"]+)\\\"\"\n| rex field=_raw \"\\\"siteHierarchy\\\"\\s*:\\s*\\\"(?<siteHierarchy_json>[^\\\"]+)\\\"\"\n| eval site_id_path=coalesce(mvindex(mvdedup(siteHierarchyId),0), mvindex(mvdedup(siteHierarchyId_spath),0), mvindex(mvdedup(siteHierarchyId_json),0), mvindex(mvdedup(siteId),0), mvindex(mvdedup(siteId_spath),0), mvindex(mvdedup(siteId_json),0))\n| eval site_id_path=if(isnotnull(site_id_path), trim(site_id_path), null())\n| eval leafSiteId=case(isnotnull(site_id_path) AND site_id_path!=\"\" AND lower(site_id_path)!=\"null\" AND match(site_id_path,\"/\"), mvindex(split(rtrim(site_id_path,\"/\"),\"/\"),-1), isnotnull(site_id_path) AND site_id_path!=\"\" AND lower(site_id_path)!=\"null\", site_id_path)\n| lookup site_topology_lookup id as leafSiteId OUTPUT Site as lookupSite, name as lookupSiteName\n| eval site_path=coalesce(mvindex(mvdedup(siteHierarchy),0), mvindex(mvdedup(siteHierarchy_spath),0), mvindex(mvdedup(siteHierarchy_json),0), lookupSite, lookupSiteName)\n| eval rawSite=mvindex(split(rtrim(site_path,\"/\"),\"/\"),-1)\n| eval Site=case(isnotnull(lookupSite) AND trim(lookupSite)!=\"\" AND lower(lookupSite)!=\"null\", lookupSite, isnotnull(rawSite) AND trim(rawSite)!=\"\" AND lower(rawSite)!=\"null\" AND NOT match(rawSite,\"^[0-9a-fA-F-]{36}$\"), rawSite, isnotnull(lookupSiteName) AND trim(lookupSiteName)!=\"\" AND lower(lookupSiteName)!=\"null\", lookupSiteName, true(), \"Unknown\")\n| where Site!=\"Unknown\"\n| stats avg('health.overallScore') as sv, dc(macAddress) as clients by Site\n| eval health=round(sv*10, 2)\n| sort -clients\n| fields Site clients health",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1769,7 +1769,7 @@
 		"ds_cs_session_by_band": {
 			"name": "Client Session Duration by Band",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.band as band, connection.sessionDuration as sessionDuration | eval session_hrs=coalesce(sessionDuration,0)/3600 | eval band=coalesce(band, \"Unknown\") | stats sum(session_hrs) as total_hours, dc(macAddress) as clients by band | eval total_hours=round(total_hours, 2) | sort -total_hours",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.band as band, connection.sessionDuration as sessionDuration | eval session_secs=tonumber(mvindex(mvdedup(sessionDuration),0)), session_hrs=coalesce(session_secs,0)/3600 | eval band=coalesce(band, \"Unknown\") | stats sum(session_hrs) as total_hours, dc(macAddress) as clients by band | eval total_hours=round(total_hours, 2) | sort -total_hours",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1780,7 +1780,7 @@
 		"ds_cs_session_by_protocol": {
 			"name": "Client Session Duration by Protocol",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.protocol as Protocol, connection.sessionDuration as sessionDuration | eval session_hrs=coalesce(sessionDuration,0)/3600 | stats sum(session_hrs) as total_hours, dc(macAddress) as clients by Protocol | eval total_hours=round(total_hours, 2) | sort -total_hours",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.protocol as Protocol, connection.sessionDuration as sessionDuration | eval session_secs=tonumber(mvindex(mvdedup(sessionDuration),0)), session_hrs=coalesce(session_secs,0)/3600, Protocol=coalesce(Protocol, \"Unknown\") | stats sum(session_hrs) as total_hours, dc(macAddress) as clients by Protocol | eval total_hours=round(total_hours, 2) | sort -total_hours",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1791,7 +1791,7 @@
 		"ds_cs_session_by_ssid": {
 			"name": "Client Session Duration by SSID",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.sessionDuration as sessionDuration, connection.ssid as SSID | eval session_hrs=coalesce(sessionDuration,0)/3600 | stats sum(session_hrs) as total_hours, dc(macAddress) as clients by SSID | eval total_hours=round(total_hours, 2) | sort -total_hours | head 10",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.sessionDuration as sessionDuration, connection.ssid as SSID | eval session_secs=tonumber(mvindex(mvdedup(sessionDuration),0)), session_hrs=coalesce(session_secs,0)/3600, SSID=coalesce(SSID, \"Unknown\") | stats sum(session_hrs) as total_hours, dc(macAddress) as clients by SSID | eval total_hours=round(total_hours, 2) | sort -total_hours | head 10",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1832,7 +1832,7 @@
 		"ds_cs_traffic_by_band": {
 			"name": "Client Traffic by Band",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.band as band, traffic.* as * | eval total_bytes=coalesce(txBytes,0)+coalesce(rxBytes,0) | eval band=coalesce(band, \"Unknown\") | stats sum(total_bytes) as traffic_bytes, dc(macAddress) as clients by band | eval traffic_mb=round(traffic_bytes/1048576, 1) | sort -traffic_bytes",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.band as band, traffic.* as * | eval tx_bytes=tonumber(mvindex(mvdedup(txBytes),0)), rx_bytes=tonumber(mvindex(mvdedup(rxBytes),0)), total_bytes=coalesce(tx_bytes,0)+coalesce(rx_bytes,0) | eval band=coalesce(band, \"Unknown\") | stats sum(total_bytes) as traffic_bytes, dc(macAddress) as clients by band | eval traffic_mb=round(traffic_bytes/1048576, 1) | sort -traffic_bytes",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1843,7 +1843,7 @@
 		"ds_cs_traffic_by_protocol": {
 			"name": "Client Traffic by Protocol (timechart)",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.protocol as Protocol, traffic.* as * | eval total_bytes=coalesce(txBytes,0)+coalesce(rxBytes,0) | timechart sum(total_bytes) as traffic_bytes by Protocol fixedrange=false | foreach * [eval <<FIELD>>=if(\"<<FIELD>>\"!=\"_time\", round(<<FIELD>>/1073741824, 2), <<FIELD>>)]",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.protocol as Protocol, traffic.* as * | eval tx_bytes=tonumber(mvindex(mvdedup(txBytes),0)), rx_bytes=tonumber(mvindex(mvdedup(rxBytes),0)), total_bytes=coalesce(tx_bytes,0)+coalesce(rx_bytes,0) | timechart sum(total_bytes) as traffic_bytes by Protocol fixedrange=false | foreach * [eval <<FIELD>>=if(\"<<FIELD>>\"!=\"_time\", round(<<FIELD>>/1073741824, 2), <<FIELD>>)]",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1854,7 +1854,7 @@
 		"ds_cs_traffic_by_ssid": {
 			"name": "Client Traffic by SSID (timechart)",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.ssid as SSID, traffic.* as * | eval total_bytes=coalesce(txBytes,0)+coalesce(rxBytes,0) | timechart sum(total_bytes) as traffic_bytes by SSID fixedrange=false | foreach * [eval <<FIELD>>=if(\"<<FIELD>>\"!=\"_time\", round(<<FIELD>>/1073741824, 2), <<FIELD>>)]",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.ssid as SSID, traffic.* as * | eval tx_bytes=tonumber(mvindex(mvdedup(txBytes),0)), rx_bytes=tonumber(mvindex(mvdedup(rxBytes),0)), total_bytes=coalesce(tx_bytes,0)+coalesce(rx_bytes,0) | timechart sum(total_bytes) as traffic_bytes by SSID fixedrange=false | foreach * [eval <<FIELD>>=if(\"<<FIELD>>\"!=\"_time\", round(<<FIELD>>/1073741824, 2), <<FIELD>>)]",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1942,7 +1942,7 @@
 		"ds_exec_client_health_by_site": {
 			"name": "Executive Summary - ds_client_health_by_site",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| eval siteHierarchy=`dnac_site_normalize(siteHierarchy)`\n| where siteHierarchy!=\"\"\n| stats avg(health.overallScore) as health by type, siteHierarchy\n| eval health=round(health*10, 2)\n| chart avg(health) by siteHierarchy, type\n| rename Wireless as wireless, Wired as wired, siteHierarchy as Site\n| fields Site wireless wired",
+				"query": "`index_catalyst` (sourcetype=\"cisco:dnac:clienthealth\" OR sourcetype=\"cisco:catalyst:clienthealth\") (clientType=\"WIRELESS\" OR clientType=\"WIRED\" OR clientType=\"Wireless\" OR clientType=\"Wired\") scoreType=\"ALL\"\n| spath output=siteId_spath path=siteId\n| rex field=_raw \"\\\"siteId\\\"\\s*:\\s*\\\"(?<siteId_json>[^\\\"]+)\\\"\"\n| eval site_key=coalesce(mvindex(mvdedup(siteId),0), mvindex(mvdedup(siteId_spath),0), mvindex(mvdedup(siteId_json),0))\n| eval site_key=if(isnotnull(site_key), trim(site_key), null())\n| eval leafSiteId=case(isnotnull(site_key) AND site_key!=\"\" AND lower(site_key)!=\"null\" AND match(site_key,\"/\"), mvindex(split(rtrim(site_key,\"/\"),\"/\"),-1), isnotnull(site_key) AND site_key!=\"\" AND lower(site_key)!=\"null\", site_key)\n| lookup site_topology_lookup id as leafSiteId OUTPUT Site as lookupSite, name as lookupSiteName\n| eval Site=case(isnotnull(lookupSite) AND trim(lookupSite)!=\"\" AND lower(lookupSite)!=\"null\", lookupSite, isnotnull(lookupSiteName) AND trim(lookupSiteName)!=\"\" AND lower(lookupSiteName)!=\"null\", lookupSiteName, isnotnull(site_key) AND site_key!=\"\" AND lower(site_key)!=\"global\" AND lower(site_key)!=\"null\" AND NOT match(site_key,\"^[0-9a-fA-F-]{36}$\"), site_key, true(), \"Unknown\")\n| eval clientType=case(upper(clientType)=\"WIRELESS\", \"wireless\", upper(clientType)=\"WIRED\", \"wired\", true(), lower(clientType))\n| eval health=tonumber(mvindex(mvdedup(scoreValue),0))\n| where Site!=\"Unknown\" AND isnotnull(health) AND health>=0\n| stats latest(health) as health by clientType, Site\n| chart avg(health) by Site, clientType\n| eval wireless=round(wireless, 2), wired=round(wired, 2)\n| fields Site wireless wired",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -2051,7 +2051,7 @@
 		"ds_exec_issue_summary": {
 			"name": "Issue Summary (Total/Open/Resolved)",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\" | stats dc(IssueID) as Total, dc(eval(if(IssueStatus==\"active\", IssueID, null()))) as Open, dc(eval(if(IssueStatus==\"resolved\", IssueID, null()))) as Resolved",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\"\n| eval issue_id=coalesce(IssueID, issueId, id), issue_status=lower(coalesce(IssueStatus, issueStatus, status))\n| stats dc(issue_id) as Total, dc(eval(if(issue_status=\"active\", issue_id, null()))) as Open, dc(eval(if(issue_status=\"resolved\", issue_id, null()))) as Resolved\n| fillnull value=0 Total Open Resolved",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -2220,9 +2220,7 @@
 			"name": "KPI Open Issues",
 			"options": {
 				"extend": "ds_exec_issue_summary",
-				"fields": [
-					"Open"
-				]
+				"query": "| eval _time=now() | fields _time Open"
 			},
 			"type": "ds.chain"
 		},
@@ -2230,9 +2228,7 @@
 			"name": "KPI Resolved Issues",
 			"options": {
 				"extend": "ds_exec_issue_summary",
-				"fields": [
-					"Resolved"
-				]
+				"query": "| eval _time=now() | fields _time Resolved"
 			},
 			"type": "ds.chain"
 		},
@@ -2240,9 +2236,7 @@
 			"name": "KPI Total Issues",
 			"options": {
 				"extend": "ds_exec_issue_summary",
-				"fields": [
-					"Total"
-				]
+				"query": "| eval _time=now() | fields _time Total"
 			},
 			"type": "ds.chain"
 		},

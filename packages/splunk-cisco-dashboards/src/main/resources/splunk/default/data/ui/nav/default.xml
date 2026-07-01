@@ -37,7 +37,7 @@
 
     <!-- Admin utilities, dashboard tooling, and built-in Splunk views -->
     <collection label="Admin &amp; Tools">
-        <a href="admin_guide_v1">Admin Guide</a>
+        <a href="user_guide">User Guide</a>
         <a href="macro_index_tuning">Macro Index Tuning</a>
         <!-- <a href="template">Customer Template</a> -->
         <divider/>
