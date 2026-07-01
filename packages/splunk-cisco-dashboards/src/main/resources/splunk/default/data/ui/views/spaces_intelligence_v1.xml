@@ -1459,7 +1459,7 @@
 		"ds_dwell_distribution": {
 			"name": "Dwell time distribution",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_ASSOCIATION\"\n| eval mac='deviceAssociation.device.macAddress',\n event='deviceAssociation.event'\n| sort mac, _time\n| streamstats current=f last(event) as prev_event, last(_time) as prev_time by mac\n| where event=\"DISASSOCIATE\" AND prev_event=\"ASSOCIATE\"\n| eval dwell_min=round((_time-prev_time)/60, 2)\n| eval bucket=case(dwell_min<30, \"< 30 min\",\n dwell_min<60, \"30-60 min\",\n dwell_min<120, \"1-2 hrs\",\n dwell_min<240, \"2-4 hrs\",\n dwell_min<480, \"4-8 hrs\",\n 1=1, \"8+ hrs\")\n| stats count by bucket\n| rename bucket as \"Dwell Time\" ",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_ASSOCIATION\" \n| rename devicePresence.device.macAddress as mac, deviceAssociation.event as event \n| streamstats current=f last(event) as prev_event, last(_time) as prev_time by mac \n| where event=\"DISASSOCIATE\" AND prev_event=\"ASSOCIATE\" \n| eval dwell_min=round((_time-prev_time)/60, 2) \n| eval bucket=case(dwell_min<30, \"< 30 min\",\n    dwell_min<60, \"30-60 min\",\n    dwell_min<120, \"1-2 hrs\",\n    dwell_min<240, \"2-4 hrs\",\n    dwell_min<480, \"4-8 hrs\",\n    1=1, \"8+ hrs\") \n| stats count by bucket \n| rename bucket as \"Dwell Time\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1778,7 +1778,7 @@
 		"ds_sankey_flow": {
 			"name": "Inter-campus device flow",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_PRESENCE\"\n| eval mac='devicePresence.macAddress'\n| eval bldg_self=if(mvfind('devicePresence.location.inferredLocationTypes{}', \"BUILDING\")>=0, 'devicePresence.location.name', null())\n| eval bldg_parent=if(mvfind('devicePresence.location.parent.inferredLocationTypes{}', \"BUILDING\")>=0, 'devicePresence.location.parent.name', null())\n| eval bldg_grand=if(mvfind('devicePresence.location.parent.parent.inferredLocationTypes{}', \"BUILDING\")>=0, 'devicePresence.location.parent.parent.name', null())\n| eval building=coalesce(bldg_self, bldg_parent, bldg_grand)\n| where isnotnull(mac) AND mac!=\"\" AND isnotnull(building) AND building!=\"\"\n| sort mac, _time\n| streamstats current=f last(building) as prev_building by mac\n| where isnotnull(prev_building) AND building!=prev_building\n| stats count by prev_building, building\n| rename prev_building as source, building as target, count as value\n| sort - value\n| head 20",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_PRESENCE\"\n| rename devicePresence.device.macAddress as mac\n| eval bldg_self=if(mvfind('devicePresence.location.inferredLocationTypes{}', \"BUILDING\")>=0, 'devicePresence.location.name', null())\n| eval bldg_parent=if(mvfind('devicePresence.location.parent.inferredLocationTypes{}', \"BUILDING\")>=0, 'devicePresence.location.parent.name', null())\n| eval bldg_grand=if(mvfind('devicePresence.location.parent.parent.inferredLocationTypes{}', \"BUILDING\")>=0, 'devicePresence.location.parent.parent.name', null())\n| eval building=coalesce(bldg_self, bldg_parent, bldg_grand)\n| where isnotnull(mac) AND mac!=\"\" AND isnotnull(building) AND building!=\"\"\n| sort mac, _time\n| streamstats current=f last(building) as prev_building by mac\n| where isnotnull(prev_building) AND building!=prev_building\n| stats count by prev_building, building\n| rename prev_building as source, building as target, count as value\n| sort - value\n| head 20",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2922,9 +2922,10 @@
 		}
 	},
 	"applicationProperties": {
-		"hideEdit": false,
+		"hideEdit": true,
 		"hideExport": false,
 		"hideOpenInSearch": false
 	}
-}]]></definition>
+}
+    ]]></definition>
 </dashboard>
