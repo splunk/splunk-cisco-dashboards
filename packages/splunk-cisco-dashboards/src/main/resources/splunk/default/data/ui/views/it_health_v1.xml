@@ -484,10 +484,10 @@
 			"options": {
 				"backgroundColor": "transparent",
 				"legendDisplay": "bottom",
+				"nullValueDisplay": "connect",
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide",
-				"nullValueDisplay": "connect"
+				"yAxisTitleVisibility": "hide"
 			},
 			"title": "Issue Trend by Category",
 			"type": "splunk.area"
@@ -519,10 +519,10 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent",
-				"sparklineNullValueDisplay": "connect"
+				"trendDisplay": "percent"
 			},
 			"title": "CPU/Memory Alerts >80%",
 			"type": "splunk.singlevalue"
@@ -554,10 +554,10 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent",
-				"sparklineNullValueDisplay": "connect"
+				"trendDisplay": "percent"
 			},
 			"title": "DHCP Pool Events",
 			"type": "splunk.singlevalue"
@@ -623,10 +623,10 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent",
-				"sparklineNullValueDisplay": "connect"
+				"trendDisplay": "percent"
 			},
 			"title": "Recent Reboots",
 			"type": "splunk.singlevalue"
@@ -658,10 +658,10 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent",
-				"sparklineNullValueDisplay": "connect"
+				"trendDisplay": "percent"
 			},
 			"title": "Unreachable Devices",
 			"type": "splunk.singlevalue"
@@ -691,6 +691,7 @@
 			"options": {
 				"backgroundColor": "transparent",
 				"legendDisplay": "bottom",
+				"nullValueDisplay": "connect",
 				"seriesColors": [
 					"#6EBE4A",
 					"#E5A823",
@@ -698,8 +699,7 @@
 				],
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide",
-				"nullValueDisplay": "connect"
+				"yAxisTitleVisibility": "hide"
 			},
 			"title": "Network Health Trend",
 			"type": "splunk.area"
@@ -737,6 +737,7 @@
 			"options": {
 				"backgroundColor": "transparent",
 				"legendDisplay": "bottom",
+				"nullValueDisplay": "connect",
 				"seriesColors": [
 					"#D64550",
 					"#E5A823",
@@ -749,8 +750,7 @@
 				],
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide",
-				"nullValueDisplay": "connect"
+				"yAxisTitleVisibility": "hide"
 			},
 			"title": "Power Event Timeline (minute-by-minute)",
 			"type": "splunk.area"
@@ -1661,26 +1661,26 @@
 			],
 			"options": {
 				"backgroundColor": "transparent",
-				"count": 20,
-				"drilldown": "row",
-				"fontSize": "small",
-				"headerVisibility": "fixed",
-				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
-				},
 				"columnFormat": {
-					"Permalink": {
-						"width": 558
-					},
 					"Alert ID": {
 						"width": 216
 					},
 					"Expression": {
 						"width": 180
 					},
+					"Permalink": {
+						"width": 558
+					},
 					"Test Name": {
 						"width": 229
 					}
+				},
+				"count": 20,
+				"drilldown": "row",
+				"fontSize": "small",
+				"headerVisibility": "fixed",
+				"tableFormat": {
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
 				}
 			},
 			"title": "Recent Alerts",
@@ -1758,19 +1758,12 @@
 			],
 			"options": {
 				"backgroundColor": "transparent",
-				"count": 25,
-				"drilldown": "cell",
-				"fontSize": "small",
-				"headerVisibility": "fixed",
-				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
-				},
 				"columnFormat": {
-					"TE Link": {
-						"width": 461
-					},
 					"Agent": {
 						"width": 129
+					},
+					"TE Link": {
+						"width": 461
 					},
 					"Test Name": {
 						"width": 147
@@ -1778,6 +1771,13 @@
 					"Test Type": {
 						"width": 90
 					}
+				},
+				"count": 25,
+				"drilldown": "cell",
+				"fontSize": "small",
+				"headerVisibility": "fixed",
+				"tableFormat": {
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
 				}
 			},
 			"title": "Endpoint Health by Agent",
@@ -2245,7 +2245,7 @@
 		"ds_config_detail": {
 			"name": "IT Health - Recent Human Config Changes",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:audit:logs\" name=\"AUDIT_LOG\"\n userId!=\"system\" userId!=\"SYSTEM\" userId!=\"dnac-svc\" userId!=\"license-management\" userId!=\"localhost\" userId!=\"null\"\n NOT description=\"*read-only commands*\"\n NOT description=\"*preview*\"\n NOT description=\"Service request processing completed*\"\n NOT description=\"Going to deploy*\"\n| where (parentInstanceId=\"null\" OR parentInstanceId=\"\" OR isnull(parentInstanceId))\n| where NOT (description LIKE \"Executing command%display%\")\n| rex field=description mode=sed \"s/[\\r\\n\\t]+/ /g\"\n| rex field=description mode=sed \"s/ +/ /g\"\n| eval description = replace(description, \"&quot;\", \"\\\"\")\n| eval description = replace(description, \"&amp;\", \"&\")\n| eval description = replace(description, \"&lt;\", \"<\")\n| eval description = replace(description, \"&gt;\", \">\")\n| eval admin = coalesce(adminName, userId, \"unknown\")\n| eval audit_type=mvindex(mvdedup('additionalDetails.eventMetadata.auditLogMetadata.type'),0)\n| eval net_deviceId=mvindex(mvdedup('network.deviceId'),0)\n| eval net_deviceId = if(net_deviceId IN (\"null\",\"SYSTEM\",\"\") OR isnull(net_deviceId), null(), net_deviceId)\n| rex field=description \"Network Profile \\[.*?\\\"name\\\":\\\"(?<x_profile>[^\\\"]+)\"\n| rex field=description \"Creating task schedule.*?description:\\s*'(?<x_task>[^']+)'\"\n| rex field=description \"AP Provisioning request for AP\\(s\\) in (?<x_ap_site>[^,]+),\"\n| rex field=description \"for activity '(?<x_activity>[^']+)'\"\n| rex field=description \"network device (?<x_ip>\\d+\\.\\d+\\.\\d+\\.\\d+)\"\n| rex field=description \"deployed template (?<x_template>\\S+?)\\.?$\"\n| eval target = coalesce(net_deviceId, x_profile, x_task, x_ap_site, x_activity, x_ip, x_template, \"-\")\n| eval how = case(\n audit_type=\"CLI\", \"DNAC CLI session\",\n audit_type=\"API\", \"DNAC UI / REST API\",\n audit_type=\"NETCONF\", \"DNAC NETCONF push\",\n audit_type=\"SOCKET\", \"DNAC internal\",\n 1=1, \"DNAC \" . coalesce(audit_type, \"audit\"))\n| eval description = if(len(description) > 200, substr(description, 1, 197) . \"...\", description)\n| table _time admin how description target\n| rename admin as \"Who\", how as \"How\", description as \"What\", target as \"Target\"\n| sort - _time\n| head 5000",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:audit:logs\" name=\"AUDIT_LOG\"\n userId!=\"system\" userId!=\"SYSTEM\" userId!=\"dnac-svc\" userId!=\"license-management\" userId!=\"localhost\" userId!=\"null\"\n NOT description=\"*read-only commands*\"\n NOT description=\"*preview*\"\n NOT description=\"Service request processing completed*\"\n NOT description=\"Going to deploy*\"\n| where (parentInstanceId=\"null\" OR parentInstanceId=\"\" OR isnull(parentInstanceId))\n| where NOT (description LIKE \"Executing command%display%\")\n| rex field=description mode=sed \"s/[\\r\\n\\t]+/ /g\"\n| rex field=description mode=sed \"s/ +/ /g\"\n| eval description = replace(description, \"&quot;\", \"\\\"\")\n| eval description = replace(description, \"&amp;\", \"&\")\n| eval description = replace(description, \"&lt;\", \"<\")\n| eval description = replace(description, \"&gt;\", \">\")\n| eval admin = coalesce(adminName, userId, \"unknown\")\n| spath path=\"additionalDetails.eventMetadata.auditLogMetadata.type\" output=audit_type\n| spath path=\"network.deviceId\" output=net_deviceId\n| eval net_deviceId = if(net_deviceId IN (\"null\",\"SYSTEM\",\"\") OR isnull(net_deviceId), null(), net_deviceId)\n| rex field=description \"Network Profile \\[.*?\\\"name\\\":\\\"(?<x_profile>[^\\\"]+)\"\n| rex field=description \"Creating task schedule.*?description:\\s*'(?<x_task>[^']+)'\"\n| rex field=description \"AP Provisioning request for AP\\(s\\) in (?<x_ap_site>[^,]+),\"\n| rex field=description \"for activity '(?<x_activity>[^']+)'\"\n| rex field=description \"network device (?<x_ip>\\d+\\.\\d+\\.\\d+\\.\\d+)\"\n| rex field=description \"deployed template (?<x_template>\\S+?)\\.?$\"\n| eval target = coalesce(net_deviceId, x_profile, x_task, x_ap_site, x_activity, x_ip, x_template, \"-\")\n| eval how = case(\n audit_type=\"CLI\", \"DNAC CLI session\",\n audit_type=\"API\", \"DNAC UI / REST API\",\n audit_type=\"NETCONF\", \"DNAC NETCONF push\",\n audit_type=\"SOCKET\", \"DNAC internal\",\n 1=1, \"DNAC \" . coalesce(audit_type, \"audit\"))\n| eval description = if(len(description) > 200, substr(description, 1, 197) . \"...\", description)\n| table _time admin how description target\n| rename admin as \"Who\", how as \"How\", description as \"What\", target as \"Target\"\n| sort - _time\n| head 5000",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2269,14 +2269,6 @@
 			"options": {
 				"extend": "ds_base_devicehealth_ref",
 				"query": "| where CPUUtilization > 80 OR MemoryUtilization > 80 | eval cpu_status=if(CPUUtilization>90,\"Critical\",if(CPUUtilization>80,\"Warning\",\"OK\")), mem_status=if(MemoryUtilization>90,\"Critical\",if(MemoryUtilization>80,\"Warning\",\"OK\")) | table DeviceName, DeviceFamily, Platform, Site, CPUUtilization, cpu_status, MemoryUtilization, mem_status | sort -CPUUtilization | fillnull value=\"—\""
-			},
-			"type": "ds.chain"
-		},
-		"ds_cpu_mem_count": {
-			"name": "CPU/Memory Alerts",
-			"options": {
-				"extend": "ds_cpu_mem",
-				"query": "| stats count | fields count"
 			},
 			"type": "ds.chain"
 		},
@@ -2313,27 +2305,11 @@
 			},
 			"type": "ds.search"
 		},
-		"ds_device_health_current": {
-			"name": "Device Health",
-			"options": {
-				"extend": "ds_base_devicehealth_ref",
-				"query": "| eval h=case(Reachability==\"Reachable\" AND match(Manageability,\"^Managed\"),100, Reachability==\"Reachable\",50, 1==1,0) | stats avg(h) as score | eval score=round(score,0)"
-			},
-			"type": "ds.chain"
-		},
 		"ds_device_inventory": {
 			"name": "Device Inventory by Type",
 			"options": {
 				"extend": "ds_asset_base",
 				"query": "| stats count by device_type | rename device_type as category"
-			},
-			"type": "ds.chain"
-		},
-		"ds_dhcp_count": {
-			"name": "DHCP Pool Events",
-			"options": {
-				"extend": "ds_dhcp_events",
-				"query": "| stats sum(Events) as count | fields count"
 			},
 			"type": "ds.chain"
 		},
@@ -2352,17 +2328,6 @@
 			"name": "DHCP Pool Events Trend",
 			"options": {
 				"query": "`index_dhcp` sourcetype=\"DhcpSrvLog\" | rex \"^(?<event_id>\\d+),\" | where event_id IN (\"13\",\"14\",\"15\",\"16\",\"17\",\"20\",\"21\",\"36\") | timechart fixedrange=false count as \"DHCP Pool Events\"",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_guest_surge": {
-			"name": "IT Health - Guest Surge Monitor",
-			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" | where type=\"Wireless\" | timechart fixedrange=false dc(macAddress) as concurrent_clients | eval capacity_pct=round(concurrent_clients/3000*100, 1), status=case(concurrent_clients>=2500,\"CRITICAL - pool near exhaustion\", concurrent_clients>=2000,\"WARNING - high utilization\", concurrent_clients>=1500,\"ELEVATED\", 1==1,\"OK\")",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2455,14 +2420,6 @@
 				}
 			},
 			"type": "ds.search"
-		},
-		"ds_issues_current": {
-			"name": "Open Issues",
-			"options": {
-				"extend": "ds_open_issues",
-				"query": "| fields issues"
-			},
-			"type": "ds.chain"
 		},
 		"ds_issues_trend": {
 			"name": "Open Issues Trend",
@@ -2580,17 +2537,6 @@
 			},
 			"type": "ds.search"
 		},
-		"ds_network_health_current": {
-			"name": "Executive Dashboard - ds_network_health_current",
-			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:networkhealth\" category=\"All\"\n| stats latest(healthScore) as score\n| fields score",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
 		"ds_open_issues": {
 			"name": "Open Issues Base",
 			"options": {
@@ -2639,14 +2585,6 @@
 				}
 			},
 			"type": "ds.search"
-		},
-		"ds_reboot_count": {
-			"name": "Recent Reboots",
-			"options": {
-				"extend": "ds_reboots",
-				"query": "| stats count | fields count"
-			},
-			"type": "ds.chain"
 		},
 		"ds_reboots": {
 			"name": "Recent Reboots Base",
@@ -2713,14 +2651,6 @@
 			"options": {
 				"extend": "ds_base_devicehealth_ref",
 				"query": "| where DeviceFamily=\"Switches and Hubs\" AND Site!=\"\" | eval Site=mvindex(split(Site,\"/\"),-1) | stats dc(DeviceID) as Switches by Site"
-			},
-			"type": "ds.chain"
-		},
-		"ds_syslog_critical": {
-			"name": "Syslog Critical",
-			"options": {
-				"extend": "ds_syslog_severity",
-				"query": "| search severity=\"Critical\" | fields count | appendpipe [| where isnull(count) | eval count=0]"
 			},
 			"type": "ds.chain"
 		},
@@ -2879,14 +2809,6 @@
 			"options": {
 				"extend": "ds_base_devicehealth_ref",
 				"query": "| where Reachability=\"Unreachable\" | rename ReachabilityFailureReason as Reason, OverallHealth as Health, DeviceFamily as Family | table DeviceName, Family, Platform, Site, IpAddress, Reason, Health | fillnull value=\"—\""
-			},
-			"type": "ds.chain"
-		},
-		"ds_unreachable_count": {
-			"name": "Unreachable Devices",
-			"options": {
-				"extend": "ds_unreachable",
-				"query": "| stats count | fields count"
 			},
 			"type": "ds.chain"
 		},
