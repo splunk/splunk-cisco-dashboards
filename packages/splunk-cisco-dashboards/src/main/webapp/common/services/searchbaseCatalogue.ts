@@ -59,6 +59,8 @@ export interface SearchbaseRecord {
     subCategory: string;
     /** Comma-separated `tags` field, normalised into an array. */
     tags: string[];
+    /** Splunk app namespace that owns/stores this stanza. */
+    ownerApp: string;
     /** Splunk app namespace this stanza must dispatch in. */
     dispatchContext: string;
     /** True when the stanza is marked `search_hidden = 1` in searchbase.conf. */
@@ -74,6 +76,10 @@ export interface SearchbaseRecord {
      * Empty string when the stanza omits the field.
      */
     explanation: string;
+    /** HTML remediation/action guidance from the conf's `solution` field. */
+    solution: string;
+    /** HTML references/context from the conf's `related_info` field. */
+    relatedInfo: string;
     /** SPL body — useful for the picker's preview pane. */
     search: string;
     /**
@@ -114,6 +120,8 @@ interface SearchbaseEntry {
         dispatch_context?: string;
         description?: string;
         explanation?: string;
+        solution?: string;
+        related_info?: string;
         search?: string;
         drilldown_search_name?: string;
         drilldown_button_title?: string;
@@ -317,6 +325,7 @@ const fetchSearchbase = async (
             category: typeof content.category === 'string' ? content.category : '',
             subCategory: typeof content.sub_category === 'string' ? content.sub_category : '',
             tags: splitTags(content.tags),
+            ownerApp: sanitizeAppName(aclApp) || appName,
             // Runtime dispatch must honor the stanza's requested app
             // namespace. Some searches live in this app's
             // searchbase.conf but rely on macros/data models owned by
@@ -328,6 +337,9 @@ const fetchSearchbase = async (
             searchHidden: isTruthyConfValue(content.search_hidden),
             description: typeof content.description === 'string' ? content.description : '',
             explanation: typeof content.explanation === 'string' ? content.explanation : '',
+            solution: typeof content.solution === 'string' ? content.solution : '',
+            relatedInfo:
+                typeof content.related_info === 'string' ? content.related_info : '',
             search:
                 typeof content.search === 'string'
                     ? collapseExpandedIndexMacro(content.search)

@@ -18,6 +18,7 @@ import { plainTextFromHtml } from '../../common/services/searchbaseCatalogue';
 
 const ALL_APPS = '__all_apps__';
 const ALL_CATEGORIES = '__all_categories__';
+const ALL_SUB_CATEGORIES = '__all_sub_categories__';
 const DEFAULT_APP_SCOPE = 'splunk-cisco-dashboards';
 const KPI_MENU_WIDTH = 620;
 const MENU_VIEWPORT_MARGIN = 12;
@@ -92,6 +93,7 @@ export default function DropdownWithSearch({
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedApp, setSelectedApp] = useState(DEFAULT_APP_SCOPE);
     const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES);
+    const [selectedSubCategory, setSelectedSubCategory] = useState(ALL_SUB_CATEGORIES);
     const [selectedTags, setSelectedTags] = useState([]);
     const [includeHiddenSearches, setIncludeHiddenSearches] = useState(false);
     const [includeDrilldownSearches, setIncludeDrilldownSearches] = useState(false);
@@ -155,6 +157,7 @@ export default function DropdownWithSearch({
         setSearchTerm('');
         setSelectedApp(DEFAULT_APP_SCOPE);
         setSelectedCategory(ALL_CATEGORIES);
+        setSelectedSubCategory(ALL_SUB_CATEGORIES);
         setSelectedTags([]);
         setIncludeHiddenSearches(false);
         setIncludeDrilldownSearches(false);
@@ -195,8 +198,22 @@ export default function DropdownWithSearch({
 
     const categories = sortedUnique(appScopedSearches.map((search) => search.category));
 
+    const subCategories =
+        selectedCategory === ALL_CATEGORIES
+            ? []
+            : sortedUnique(
+                  appScopedSearches
+                      .filter((search) => search.category === selectedCategory)
+                      .map((search) => search.subCategory),
+              );
+
     const facetFilteredSearches = appScopedSearches.filter((search) => {
         if (selectedCategory !== ALL_CATEGORIES && search.category !== selectedCategory)
+            return false;
+        if (
+            selectedSubCategory !== ALL_SUB_CATEGORIES &&
+            search.subCategory !== selectedSubCategory
+        )
             return false;
         return true;
     });
@@ -239,6 +256,7 @@ export default function DropdownWithSearch({
         searchTerm.trim() ||
         selectedApp !== DEFAULT_APP_SCOPE ||
         selectedCategory !== ALL_CATEGORIES ||
+        selectedSubCategory !== ALL_SUB_CATEGORIES ||
         selectedTags.length > 0 ||
         includeHiddenSearches ||
         includeDrilldownSearches ||
@@ -248,6 +266,7 @@ export default function DropdownWithSearch({
         searchTerm.trim(),
         selectedApp !== DEFAULT_APP_SCOPE,
         selectedCategory !== ALL_CATEGORIES,
+        selectedSubCategory !== ALL_SUB_CATEGORIES,
         selectedTags.length > 0,
         includeHiddenSearches,
         includeDrilldownSearches,
@@ -351,6 +370,7 @@ export default function DropdownWithSearch({
                                             onChange={(e, { value }) => {
                                                 setSelectedApp(value);
                                                 setSelectedCategory(ALL_CATEGORIES);
+                                                setSelectedSubCategory(ALL_SUB_CATEGORIES);
                                                 setSelectedTags([]);
                                             }}
                                         >
@@ -414,6 +434,7 @@ export default function DropdownWithSearch({
                                             value={selectedCategory}
                                             onChange={(e, { value }) => {
                                                 setSelectedCategory(value);
+                                                setSelectedSubCategory(ALL_SUB_CATEGORIES);
                                                 setSelectedTags([]);
                                             }}
                                         >
@@ -430,6 +451,34 @@ export default function DropdownWithSearch({
                                             ))}
                                         </Select>
                                     </label>
+
+                                    {selectedCategory !== ALL_CATEGORIES &&
+                                        subCategories.length > 0 && (
+                                            <label className="dropdown-kpi-filter-row">
+                                                <span className="dropdown-kpi-filter-label">
+                                                    Sub-cat
+                                                </span>
+                                                <Select
+                                                    value={selectedSubCategory}
+                                                    onChange={(e, { value }) => {
+                                                        setSelectedSubCategory(value);
+                                                        setSelectedTags([]);
+                                                    }}
+                                                >
+                                                    <Select.Option
+                                                        label={`All sub-categories (${subCategories.length})`}
+                                                        value={ALL_SUB_CATEGORIES}
+                                                    />
+                                                    {subCategories.map((subCategory) => (
+                                                        <Select.Option
+                                                            key={subCategory}
+                                                            label={subCategory}
+                                                            value={subCategory}
+                                                        />
+                                                    ))}
+                                                </Select>
+                                            </label>
+                                        )}
 
                                     <label className="dropdown-kpi-filter-row dropdown-kpi-filter-row-top">
                                         <span className="dropdown-kpi-filter-label">Tags</span>

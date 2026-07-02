@@ -2545,6 +2545,67 @@ const vizFilterValue = (record: SearchbaseRecord): string => {
 const vizFilterLabel = (value: string): string =>
     value === UNSET_VIZ ? 'No default_viz' : formatVizLabel(value);
 
+const recordOwnerApp = (record: SearchbaseRecord): string =>
+    record.ownerApp || APP_NAME;
+
+const recordCatalogueApps = (record: SearchbaseRecord): string[] =>
+    Array.from(
+        new Set(
+            [recordOwnerApp(record), record.dispatchContext]
+                .map((value) => value?.trim())
+                .filter(Boolean)
+        )
+    );
+
+const normalizeCatalogueQueryText = (value: string): string =>
+    value
+        .toLowerCase()
+        .replace(/\s*=\s*/g, '=')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+const compactCatalogueQueryText = (value: string): string =>
+    normalizeCatalogueQueryText(value).replace(/\s+/g, '');
+
+const recordCatalogueText = (record: SearchbaseRecord): string =>
+    [
+        record.id,
+        record.searchName,
+        record.category,
+        record.subCategory,
+        recordOwnerApp(record),
+        record.dispatchContext,
+        record.tags.join(' '),
+        plainTextFromHtml(record.description),
+        plainTextFromHtml(record.explanation),
+        plainTextFromHtml(record.solution),
+        plainTextFromHtml(record.relatedInfo),
+        record.search,
+        record.drilldownSearchName,
+        record.drilldownButtonTitle,
+        record.defaultViz,
+        record.vizOptions ? JSON.stringify(record.vizOptions) : '',
+    ]
+        .filter(Boolean)
+        .join(' ');
+
+const recordMatchesCatalogueQuery = (
+    record: SearchbaseRecord,
+    rawQuery: string
+): boolean => {
+    const normalizedQuery = normalizeCatalogueQueryText(rawQuery);
+    if (!normalizedQuery) return true;
+
+    const normalizedHaystack = normalizeCatalogueQueryText(recordCatalogueText(record));
+    if (normalizedHaystack.includes(normalizedQuery)) return true;
+
+    const compactQuery = compactCatalogueQueryText(rawQuery);
+    return (
+        compactQuery.length > 0 &&
+        compactCatalogueQueryText(recordCatalogueText(record)).includes(compactQuery)
+    );
+};
+
 interface SearchableFilterSelectProps {
     value: string;
     options: string[];
@@ -2777,7 +2838,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
 
     const appOptions = useMemo(
         () =>
-            Array.from(new Set(records.map((record) => record.dispatchContext).filter(Boolean))).sort(),
+            Array.from(new Set(records.flatMap(recordCatalogueApps))).sort(),
         [records]
     );
 
@@ -2790,7 +2851,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
     const appScopedRecords = useMemo(
         () =>
             records.filter((record) =>
-                app === ALL ? true : record.dispatchContext === app
+                app === ALL ? true : recordCatalogueApps(record).includes(app)
             ),
         [app, records]
     );
@@ -2898,23 +2959,9 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
     }, [selectedTags, tagInput, tagScopedRecords]);
 
     const filteredRecords = useMemo(() => {
-        const normalizedQuery = query.trim().toLowerCase();
-        return tagScopedRecords.filter((record) => {
-            if (!normalizedQuery) return true;
-            const haystack = [
-                record.id,
-                record.searchName,
-                record.category,
-                record.subCategory,
-                record.dispatchContext,
-                record.tags.join(' '),
-                plainTextFromHtml(record.description),
-                record.search,
-            ]
-                .join(' ')
-                .toLowerCase();
-            return haystack.includes(normalizedQuery);
-        });
+        return tagScopedRecords.filter((record) =>
+            recordMatchesCatalogueQuery(record, query)
+        );
     }, [query, tagScopedRecords]);
 
     const selectedRecords = useMemo(
@@ -3022,7 +3069,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                     <input
                         value={query}
                         onChange={(event) => setQuery(event.target.value)}
-                        placeholder="Filter by name, SPL, description, or tag..."
+                        placeholder="Filter by stanza, name, SPL, description, or tag..."
                         className="h-11 w-full rounded-md border border-slate-300 bg-white pl-10 pr-3 text-sm font-medium text-slate-900 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
                     />
                 </label>
