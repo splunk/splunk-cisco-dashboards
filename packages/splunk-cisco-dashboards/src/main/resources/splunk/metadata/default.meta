@@ -6,3 +6,27 @@ export = none
 [macros/dnac_site_normalize%281%29]
 access = read : [ * ], write : [ admin, power, sc_admin ]
 export = system
+
+[macros/nrs_th_ap_health]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
+[macros/nrs_th_cl_health]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
+[macros/nrs_ap_saturation_clients]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
+[macros/nrs_w_nrs_a]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
+[macros/nrs_w_nrs_q]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
+[macros/nrs_w_nrs_r]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system

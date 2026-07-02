@@ -2922,10 +2922,33 @@ const OverviewPage: React.FC = () => {
             // persist it. Mirrors the split-percentage handling.
         }
     }, [mapPosition]);
+    const MAP_VISIBILITY_KEY = 'scd_overview_map_visible';
+    const MAP_VISIBLE_DEFAULT = true;
+    const [mapVisible, setMapVisible] = useState<boolean>(() => {
+        if (typeof window === 'undefined') return MAP_VISIBLE_DEFAULT;
+        try {
+            const saved = window.localStorage.getItem(MAP_VISIBILITY_KEY);
+            return saved === null ? MAP_VISIBLE_DEFAULT : saved !== 'false';
+        } catch {
+            return MAP_VISIBLE_DEFAULT;
+        }
+    });
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        try {
+            window.localStorage.setItem(MAP_VISIBILITY_KEY, String(mapVisible));
+        } catch {
+            // localStorage may be disabled; the toggle still applies
+            // for the current session.
+        }
+    }, [MAP_VISIBILITY_KEY, mapVisible]);
+    const toggleMapVisibility = useCallback(() => {
+        setMapVisible((visible) => !visible);
+    }, []);
     // Convenience flag for the drag / keyboard handlers and the
     // splitter styling: `right` mode drags on the X axis, `below` /
     // `above` modes drag on the Y axis.
-    const isVerticalSplit = mapPosition !== 'right';
+    const isVerticalSplit = mapVisible && mapPosition !== 'right';
 
     // ------------------------------ Layout split (tiles ↔ map) ------------------------------
     // Percentage of the container allocated to the tile column,
@@ -3572,6 +3595,7 @@ const OverviewPage: React.FC = () => {
     //   • customerTopology.v4           — retired per-browser map payload
     //   • scd_overview_split_pct        — tiles ↔ map splitter position
     //   • scd_overview_map_pos          — map position (right / below / above)
+    //   • scd_overview_map_visible      — topology map visibility
     //   • priorityDrilldown.v1          — pinned app-local drill-down target
     //   • signalTicker.v1               — moving KPI rail selection
     //
@@ -3596,16 +3620,17 @@ const OverviewPage: React.FC = () => {
         setTopologyResetKey((n) => n + 1);
         setLeftPct(SPLIT_DEFAULT);
         setMapPosition(MAP_POS_DEFAULT);
+        setMapVisible(MAP_VISIBLE_DEFAULT);
         setSelectedPriorityDrilldownView(DEFAULT_PRIORITY_DRILLDOWN_VIEW);
         clearPriorityDrilldownView();
         if (typeof window !== 'undefined' && window.localStorage) {
             try {
                 window.localStorage.removeItem(SPLIT_KEY);
                 window.localStorage.removeItem(MAP_POS_KEY);
+                window.localStorage.removeItem(MAP_VISIBILITY_KEY);
             } catch {
-                // Storage unavailable; the setLeftPct / setMapPosition
-                // calls above are the authoritative reset for this
-                // session anyway.
+                // Storage unavailable; the in-memory state resets
+                // above are authoritative for this session anyway.
             }
         }
         setPickerContext(null);
@@ -3623,6 +3648,9 @@ const OverviewPage: React.FC = () => {
         MAP_POS_KEY,
         MAP_POS_DEFAULT,
         setMapPosition,
+        MAP_VISIBILITY_KEY,
+        MAP_VISIBLE_DEFAULT,
+        setMapVisible,
     ]);
 
     // ------------------------------ Map footer ------------------------------
@@ -4048,6 +4076,32 @@ const OverviewPage: React.FC = () => {
                     <ThemeToggle theme={theme} onCycle={cycleTheme} />
                     <button
                         type="button"
+                        onClick={toggleMapVisibility}
+                        title={
+                            mapVisible
+                                ? 'Hide customer site connectivity map'
+                                : 'Show customer site connectivity map'
+                        }
+                        aria-label={
+                            mapVisible
+                                ? 'Hide customer site connectivity map'
+                                : 'Show customer site connectivity map'
+                        }
+                        aria-pressed={!mapVisible}
+                        className={cn(
+                            iconBtnClass,
+                            !mapVisible &&
+                                'text-sky-600 dark:text-sky-300 bg-sky-50 dark:bg-slate-800'
+                        )}
+                    >
+                        {mapVisible ? (
+                            <EyeOff className="w-4 h-4" />
+                        ) : (
+                            <Eye className="w-4 h-4" />
+                        )}
+                    </button>
+                    <button
+                        type="button"
                         onClick={() => setHelpOpen(true)}
                         // Build 1205: title widened from "Keyboard
                         // shortcuts" to reflect the overlay's broader
@@ -4227,10 +4281,12 @@ const OverviewPage: React.FC = () => {
                         //              splitter logic stays attached to
                         //              its sibling.
                         'scd-overview-split flex gap-2 h-full min-h-0 relative',
-                        mapPosition === 'right'
-                            ? 'flex-col xl:flex-row'
-                            : mapPosition === 'above'
-                            ? 'flex-col-reverse'
+                        mapVisible
+                            ? mapPosition === 'right'
+                                ? 'flex-col xl:flex-row'
+                                : mapPosition === 'above'
+                                ? 'flex-col-reverse'
+                                : 'flex-col'
                             : 'flex-col'
                     )}
                     style={splitStyle}
@@ -4264,7 +4320,7 @@ const OverviewPage: React.FC = () => {
                         // shadow bleed at narrow widths.
                         className={cn(
                             'scd-overview-metrics flex flex-col gap-2 min-h-0 min-w-0 w-full overflow-y-auto overflow-x-hidden',
-                            mapPosition === 'right'
+                            mapVisible && mapPosition === 'right'
                                 ? 'xl:w-[var(--scd-left-pct)] xl:flex-shrink-0'
                                 : ''
                         )}
@@ -4455,69 +4511,71 @@ const OverviewPage: React.FC = () => {
                         split. Same `leftPct` persists across modes so
                         switching back to a previous orientation
                         preserves the user's intent. */}
-                    <button
-                        type="button"
-                        role="separator"
-                        aria-orientation={isVerticalSplit ? 'horizontal' : 'vertical'}
-                        aria-label="Resize tiles vs map"
-                        aria-valuenow={Math.round(leftPct)}
-                        aria-valuemin={SPLIT_MIN}
-                        aria-valuemax={SPLIT_MAX}
-                        title="Drag to resize · arrows ±1% · double-click to reset"
-                        onMouseDown={beginDrag}
-                        onKeyDown={onSplitterKeyDown}
-                        onDoubleClick={resetSplit}
-                        className={cn(
-                            'scd-overview-splitter flex flex-shrink-0 items-center justify-center group relative',
-                            'rounded-full transition-colors',
-                            'focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
-                            // Right mode hides the splitter on sub-xl
-                            // widths because the layout collapses to a
-                            // single column there. Vertical modes
-                            // never collapse, so the splitter is
-                            // always visible in those.
-                            mapPosition === 'right' && 'hidden xl:flex',
-                            isVerticalSplit
-                                ? 'h-1.5 my-0.5 w-full cursor-row-resize'
-                                : 'w-1.5 mx-0.5 cursor-col-resize',
-                            dragging
-                                ? 'bg-sky-500'
-                                : 'bg-slate-200 dark:bg-slate-700 hover:bg-sky-400 dark:hover:bg-sky-500'
-                        )}
-                        data-map-position={mapPosition}
-                    >
-                        {/* Visible grip dots — three subtle dashes,
-                            oriented perpendicular to the drag axis so
-                            they read as a grip handle. Helps signal
-                            the handle is interactive at a glance. */}
-                        <span
-                            aria-hidden="true"
+                    {mapVisible && (
+                        <button
+                            type="button"
+                            role="separator"
+                            aria-orientation={isVerticalSplit ? 'horizontal' : 'vertical'}
+                            aria-label="Resize tiles vs map"
+                            aria-valuenow={Math.round(leftPct)}
+                            aria-valuemin={SPLIT_MIN}
+                            aria-valuemax={SPLIT_MAX}
+                            title="Drag to resize · arrows ±1% · double-click to reset"
+                            onMouseDown={beginDrag}
+                            onKeyDown={onSplitterKeyDown}
+                            onDoubleClick={resetSplit}
                             className={cn(
-                                'flex gap-0.5 opacity-50 transition-opacity',
-                                isVerticalSplit ? 'flex-row' : 'flex-col',
-                                dragging ? 'opacity-100' : 'group-hover:opacity-90'
+                                'scd-overview-splitter flex flex-shrink-0 items-center justify-center group relative',
+                                'rounded-full transition-colors',
+                                'focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
+                                // Right mode hides the splitter on sub-xl
+                                // widths because the layout collapses to a
+                                // single column there. Vertical modes
+                                // never collapse, so the splitter is
+                                // always visible in those.
+                                mapPosition === 'right' && 'hidden xl:flex',
+                                isVerticalSplit
+                                    ? 'h-1.5 my-0.5 w-full cursor-row-resize'
+                                    : 'w-1.5 mx-0.5 cursor-col-resize',
+                                dragging
+                                    ? 'bg-sky-500'
+                                    : 'bg-slate-200 dark:bg-slate-700 hover:bg-sky-400 dark:hover:bg-sky-500'
                             )}
+                            data-map-position={mapPosition}
                         >
+                            {/* Visible grip dots — three subtle dashes,
+                                oriented perpendicular to the drag axis so
+                                they read as a grip handle. Helps signal
+                                the handle is interactive at a glance. */}
                             <span
+                                aria-hidden="true"
                                 className={cn(
-                                    'block rounded-full bg-white',
-                                    isVerticalSplit ? 'h-0.5 w-1' : 'w-0.5 h-1'
+                                    'flex gap-0.5 opacity-50 transition-opacity',
+                                    isVerticalSplit ? 'flex-row' : 'flex-col',
+                                    dragging ? 'opacity-100' : 'group-hover:opacity-90'
                                 )}
-                            />
-                            <span
-                                className={cn(
-                                    'block rounded-full bg-white',
-                                    isVerticalSplit ? 'h-0.5 w-1' : 'w-0.5 h-1'
-                                )}
-                            />
-                            <span
-                                className={cn(
-                                    'block rounded-full bg-white',
-                                    isVerticalSplit ? 'h-0.5 w-1' : 'w-0.5 h-1'
-                                )}
-                            />
-                        </span>
-                    </button>
+                            >
+                                <span
+                                    className={cn(
+                                        'block rounded-full bg-white',
+                                        isVerticalSplit ? 'h-0.5 w-1' : 'w-0.5 h-1'
+                                    )}
+                                />
+                                <span
+                                    className={cn(
+                                        'block rounded-full bg-white',
+                                        isVerticalSplit ? 'h-0.5 w-1' : 'w-0.5 h-1'
+                                    )}
+                                />
+                                <span
+                                    className={cn(
+                                        'block rounded-full bg-white',
+                                        isVerticalSplit ? 'h-0.5 w-1' : 'w-0.5 h-1'
+                                    )}
+                                />
+                            </span>
+                        </button>
+                    )}
 
                     {/* Map column.
                         right mode: width is the complement of leftPct
@@ -4529,15 +4587,16 @@ const OverviewPage: React.FC = () => {
                         so a long word in a metric label or a wide map
                         tile can't blow the column wider than its
                         share. */}
-                    <div
-                        className={cn(
-                            'scd-overview-map flex flex-col min-h-0 min-w-0 w-full',
-                            mapPosition === 'right' ? 'xl:flex-1' : 'flex-1'
-                        )}
-                        data-map-position={mapPosition}
-                        style={verticalMapStyle}
-                    >
-                        <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-3 shadow-sm flex flex-col overflow-hidden">
+                    {mapVisible && (
+                        <div
+                            className={cn(
+                                'scd-overview-map flex flex-col min-h-0 min-w-0 w-full',
+                                mapPosition === 'right' ? 'xl:flex-1' : 'flex-1'
+                            )}
+                            data-map-position={mapPosition}
+                            style={verticalMapStyle}
+                        >
+                            <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-3 shadow-sm flex flex-col overflow-hidden">
                             <div className="flex items-center justify-between mb-2 flex-shrink-0">
                                 <div>
                                     <h3 className="text-base font-bold text-sky-900 dark:text-sky-200 uppercase tracking-wide leading-none">
@@ -4681,8 +4740,9 @@ const OverviewPage: React.FC = () => {
                                     isCustomized={Boolean(mapSecondaryOverride)}
                                 />
                             </div>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </main>
 

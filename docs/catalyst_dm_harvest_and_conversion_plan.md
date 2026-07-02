@@ -30,7 +30,7 @@ Generated from:
 1. Install **Cisco Enterprise Networking for Splunk Platform** (`cisco-catalyst-app`) on search heads.
 2. Accelerate **`Cisco_Catalyst_App`** data model.
 3. Tune **`cisco_catalyst_app_index`** macro (default is `index IN ("")` — must match your DNAC/ISE/SD-WAN indexes).
-4. Align with our **`index_catalyst`** / **`scd_summariesonly`** macros.
+4. Align with our **`index_catalyst`** macro; Catalyst DM searches use **`summariesonly`** from `cisco-catalyst-app` (not `scd_summariesonly`).
 5. Validate each migrated stanza on stack: raw count vs DM count in same window.
 
 ## Phase 1 — Raw → `Cisco_Catalyst_App` migration (searchbase.conf)
@@ -577,7 +577,7 @@ Net-new SPL to evaluate for `searchbase.conf` (low overlap with existing stanzas
 ```
 **After (Catalyst DM):**
 ```spl
-| tstats `scd_summariesonly` latest(Cisco_Catalyst_Dataset.Cisco_Catalyst_Device_Health_Events.device_health_reachability) as reachability
+| tstats `summariesonly` latest(Cisco_Catalyst_Dataset.Cisco_Catalyst_Device_Health_Events.device_health_reachability) as reachability
   FROM DATAMODEL=Cisco_Catalyst_App
   WHERE nodename=Cisco_Catalyst_Dataset.Cisco_Catalyst_Device_Health_Events
   BY Cisco_Catalyst_Dataset.Cisco_Catalyst_Device_Health_Events.device_health_device_name
