@@ -11,16 +11,14 @@
  * inside Splunk Web. Set `window.__SPLUNK_RUNTIME__ = false` to force the
  * mock path during development.
  *
- * Namespace: every dispatch is scoped to the splunk-cisco-dashboards
- * app, hitting `/servicesNS/-/splunk-cisco-dashboards/...`. This is
- * critical because:
- * - Our saved searches (Executive Dashboard - ds_*) are bundled with
- * the app and not exported globally — calls to `/services/` (no
- * namespace) would 404 every `| savedsearch "..."` reference.
- * - The customer_name macro is also app-scoped and must be resolved
- * in the app context.
+ * Namespace: dispatches default to the splunk-cisco-dashboards app,
+ * hitting `/servicesNS/-/splunk-cisco-dashboards/...`, but callers can
+ * pass `appContext` for searchbase entries whose `dispatch_context`
+ * points at a dependency app. This matters for searches that rely on
+ * macros or data models owned by Cisco add-ons.
  *
- * Use `setSearchAppContext('<other-app>')` in dev/tests to override.
+ * Use `setSearchAppContext('<other-app>')` in dev/tests to override
+ * the default namespace for calls that omit `appContext`.
  */
 import { addLeadingSearchCommand } from '@splunk/splunk-utils/search';
 import { createRESTURL } from '@splunk/splunk-utils/url';
@@ -84,6 +82,16 @@ export const setSearchAppContext = (appName) => {
 };
 
 export const getSearchAppContext = () => CURRENT_APP_CONTEXT;
+
+const resolveSearchAppContext = (appContext) => {
+ if (appContext === undefined || appContext === null || appContext === '') {
+ return CURRENT_APP_CONTEXT;
+ }
+ if (typeof appContext !== 'string' || !APP_NAME_PATTERN.test(appContext)) {
+ throw new Error('Invalid Splunk app name.');
+ }
+ return appContext;
+};
 
 const isInSplunkRuntime = () => {
  if (typeof window === 'undefined') return false;
@@ -204,7 +212,8 @@ const mockSearch = ({ tag }) => simulateLatency(FIXTURES[tag] || []);
 // gives us a clean slate, which is what an executive expects when
 // they hit refresh after a config change.
 const FAILED_SPL_CACHE = new Set();
-const cacheKey = (spl, earliestTime, latestTime) => `${earliestTime}|${latestTime}|${spl}`;
+const cacheKey = (spl, earliestTime, latestTime, appContext) =>
+    `${appContext}|${earliestTime}|${latestTime}|${spl}`;
 
 /** Max in-flight Splunk one-shot dispatches (shared FIFO queue). */
 export const MAX_CONCURRENT_TILE_SEARCHES = 4;
@@ -493,6 +502,7 @@ export const __resetDispatchQueue = () => {
  * @param {string} [params.earliestTime] - Splunk earliest time modifier.
  * @param {string} [params.latestTime] - Splunk latest time modifier.
  * @param {string} [params.tag] - Logical tag used by the mock backend to map to fixture data.
+ * @param {string} [params.appContext] - Splunk app namespace to dispatch in.
  * @param {number} [params.count] - Maximum result rows. Defaults to 1000 for
  *   regular dashboard tiles (the Splunk Web cap is also 1000 by default).
  *   Pass a larger value for metadata-style searches that need the full
@@ -508,10 +518,12 @@ export const runSearch = async ({
  earliestTime = '-24h',
  latestTime = 'now',
  tag,
+ appContext,
  count = 1000,
  signal,
 } = {}) => {
  assertSafeSpl(spl);
+ const resolvedAppContext = resolveSearchAppContext(appContext);
 
  if (signal?.aborted) {
  throw makeAbortError();
@@ -519,6 +531,7 @@ export const runSearch = async ({
 
  canvasDebug('[search/dispatch] enqueue', {
  tag: tag || null,
+ appContext: resolvedAppContext,
  spl: splFingerprint(spl),
  aborted: Boolean(signal?.aborted),
  });
@@ -532,7 +545,7 @@ export const runSearch = async ({
  // Splunk instance). Returning empty results lets the caller's
  // mock-fallback path kick in without re-spamming the browser's
  // network log.
- const key = cacheKey(spl, earliestTime, latestTime);
+ const key = cacheKey(spl, earliestTime, latestTime, resolvedAppContext);
  if (FAILED_SPL_CACHE.has(key)) {
  return { results: [] };
  }
@@ -559,7 +572,7 @@ export const runSearch = async ({
  // which lets `| savedsearch "..."` resolve any saved search bundled
  // with the app, even though the app isn't exported globally.
  const dispatchedSpl = addLeadingSearchCommand(spl);
- const namespace = { app: CURRENT_APP_CONTEXT };
+ const namespace = { app: resolvedAppContext };
  const searchParameters = {
  search: dispatchedSpl,
  earliest_time: earliestTime,
@@ -577,6 +590,7 @@ export const runSearch = async ({
  .then((response) => {
  canvasDebug('[search/dispatch] resolved', {
  tag: tag || null,
+ appContext: resolvedAppContext,
  rowCount: (response && response.results && response.results.length) || 0,
  });
  return { results: (response && response.results) || [] };
@@ -598,12 +612,14 @@ export const runSearch = async ({
  const tagLabel = tag || 'splunk-search';
  canvasDebug('[search/dispatch] rejected', {
  tag: tagLabel,
+ appContext: resolvedAppContext,
  aborted: false,
  httpStatus: classified.httpStatus ?? status,
  reason: classified.reason,
  });
  console.error('[splunkSearchService] dispatch failed', {
  tag: tagLabel,
+ appContext: resolvedAppContext,
  httpStatus: classified.httpStatus ?? status,
  reason: classified.reason,
  message: classified.message,

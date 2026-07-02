@@ -291,11 +291,11 @@ interface FloridaMapProps {
      * Drilldown handler — invoked with a SPL string when the user
      * clicks "Open in Splunk Search" or the SPL preview block on the
      * pinned site card. The container is expected to open the SPL in
-     * Splunk's Search & Reporting view under this app's namespace (so
-     * saved-search references resolve). When omitted, those
-     * affordances are rendered as no-ops.
+     * Splunk's Search & Reporting view under the same app namespace
+     * the stanza dispatches in. When omitted, those affordances are
+     * rendered as no-ops.
      */
-    onOpenInSearch?: (spl: string) => void;
+    onOpenInSearch?: (spl: string, appContext?: string) => void;
 }
 
 // Default framing for the executive view. Driven by an explicit
@@ -473,7 +473,7 @@ export const FloridaMap: React.FC<FloridaMapProps> = ({
         // is showing) so what the executive reads is exactly what
         // runs in Splunk Search.
         if (selectedCity && onOpenInSearch && selectedDisplaySpl) {
-            onOpenInSearch(selectedDisplaySpl);
+            onOpenInSearch(selectedDisplaySpl, selectedRecord?.dispatchContext);
         }
     };
 

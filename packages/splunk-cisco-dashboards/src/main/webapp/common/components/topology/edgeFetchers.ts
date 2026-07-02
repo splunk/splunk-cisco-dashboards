@@ -14,7 +14,10 @@
  */
 
 import { runSearch } from '@/common/services/splunkSearchService';
-import { getSearchbaseCatalogue } from '@/common/services/searchbaseCatalogue';
+import {
+    getSearchbaseCatalogue,
+    type SearchbaseRecord,
+} from '@/common/services/searchbaseCatalogue';
 import type {
     DiscoveredTopology,
     TopologyDiscoveredEdge,
@@ -125,17 +128,17 @@ export const fetchThousandEyesA2AEdges = async (
     // command path 400s on most stacks. The catalogue lookup uses
     // the same configs/conf-searchbase REST surface the picker
     // already calls, so it piggybacks the existing cache.
-    let spl: string;
+    let record: SearchbaseRecord;
     try {
         const catalogue = await getSearchbaseCatalogue();
-        const record = catalogue.find((r) => r.searchName === TE_A2A_SEARCH_NAME);
-        if (!record || record.search.trim().length === 0) {
+        const match = catalogue.find((r) => r.searchName === TE_A2A_SEARCH_NAME);
+        if (!match || match.search.trim().length === 0) {
             // Stanza not shipped on this stack (older install or
             // edited conf); skip silently — the canvas just renders
             // without TE overlays.
             return [];
         }
-        spl = record.search;
+        record = match;
     } catch {
         // Catalogue REST call failed (offline / permission). Fail
         // closed — no edges, no error toast in the canvas.
@@ -145,10 +148,11 @@ export const fetchThousandEyesA2AEdges = async (
     let res;
     try {
         res = await runSearch({
-            spl,
+            spl: record.search,
             earliestTime: '-4h@h',
             latestTime: 'now',
             tag: 'topology_te_a2a',
+            appContext: record.dispatchContext,
         });
     } catch {
         // Search dispatch failed (e.g. SPL macro missing on stack).

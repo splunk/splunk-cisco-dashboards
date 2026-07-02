@@ -73,6 +73,15 @@ const parseQueryParameters = (options) => ({
 });
 
 const noCollectInSplRegex = /\|\s*collect/gi;
+const APP_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_\-.]{0,127}$/;
+
+const normalizeDispatchContext = (content = {}) => {
+    const dispatchContext =
+        typeof content.dispatch_context === 'string'
+            ? content.dispatch_context.trim()
+            : '';
+    return APP_NAME_PATTERN.test(dispatchContext) ? dispatchContext : undefined;
+};
 
 const previewFetchPredicate = (searchState) => {
     if (get(searchState, ['content', 'isRealTimeSearch'], false)) {
@@ -220,8 +229,10 @@ class SearchBaseSearch extends DataSource {
                     search: data.entry[0].content.search,
                 };
 
-                if (data.entry[0].content.dispatch_context_force == '1')
-                    this.context.app = data.entry[0].content.dispatch_context;
+                const dispatchContext = normalizeDispatchContext(data.entry[0].content);
+                if (dispatchContext) {
+                    this.context.app = dispatchContext;
+                }
 
                 this.searchJob = SearchJob.create(this.options, this.context);
                 const sid = await this.searchJob.getSid().first().toPromise();

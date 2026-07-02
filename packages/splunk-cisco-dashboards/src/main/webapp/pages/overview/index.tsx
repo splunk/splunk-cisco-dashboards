@@ -42,6 +42,7 @@ import {
     PanelRight,
     PanelBottom,
     PanelTop,
+    Map as MapIcon,
     Edit3,
     Upload,
     X,
@@ -1332,14 +1333,20 @@ const splunkViewAppUrl = (
     return `${baseUrl}?${params.toString()}`;
 };
 
-const splunkSearchAppUrl = (spl: string, range: TimeRange): string => {
-    // Open the stock Splunk search bar but *under this app's namespace*
-    // (`/app/splunk-cisco-dashboards/search`). The platform `search`
-    // view is exported system-wide, so navigating to /app/<any-app>/search
-    // renders the standard Search & Reporting UI while dispatching in
-    // the current app's namespace — meaning `| savedsearch "..."`
-    // references to stanzas defined in this app resolve correctly
-    // without the app needing to be exported globally.
+const SEARCH_APP_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_\-.]{0,127}$/;
+
+const resolveSearchAppName = (appName?: string): string =>
+    appName && SEARCH_APP_NAME_PATTERN.test(appName) ? appName : APP_NAME;
+
+const splunkSearchAppUrl = (
+    spl: string,
+    range: TimeRange,
+    appName?: string
+): string => {
+    // Open the stock Splunk search bar under the same app namespace used
+    // for dispatch. The platform `search` view is exported system-wide,
+    // so navigating to /app/<any-app>/search renders Search & Reporting
+    // while resolving macros/data models in that app context.
     const path = typeof window !== 'undefined' ? window.location.pathname : '/en-US';
     const localeMatch = path.match(/^\/([a-z]{2}-[A-Z]{2})\//);
     const locale = localeMatch ? localeMatch[1] : 'en-US';
@@ -1348,7 +1355,7 @@ const splunkSearchAppUrl = (spl: string, range: TimeRange): string => {
         earliest: range.earliest,
         latest: range.latest,
     });
-    return `/${locale}/app/${APP_NAME}/search?${params.toString()}`;
+    return `/${locale}/app/${resolveSearchAppName(appName)}/search?${params.toString()}`;
 };
 
 type MetricDetailTableColumnKind = 'text' | 'status' | 'metric';
@@ -1367,6 +1374,7 @@ interface MetricDetailTableConfig {
     buttonTitle: string;
     subtitle: (range: TimeRange) => string;
     spl: string;
+    dispatchContext?: string;
     tag: string;
     rowKeyField: string;
     emptyMessage: string;
@@ -1527,6 +1535,7 @@ const buildMetricDetailTableConfig = (
         subtitle: (range) =>
             interpolateDetailSubtitle(subtitleTemplate, source, detail, range),
         spl: detail.search,
+        dispatchContext: detail.dispatchContext,
         tag,
         rowKeyField:
             readDetailStringOption(options, 'rowKeyField') ?? columns[0]?.field ?? '',
@@ -1812,7 +1821,12 @@ const MetricCard: React.FC<MetricCardProps> = ({
         }
         const sb = searchbaseByName.get(effective.savedSearch);
         if (sb && sb.search) {
-            return { ...effective, spl: sb.search, savedSearch: undefined };
+            return {
+                ...effective,
+                spl: sb.search,
+                savedSearch: undefined,
+                dispatchContext: sb.dispatchContext,
+            };
         }
         return effective;
     }, [effective, searchbaseByName]);
@@ -2105,9 +2119,13 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
 
     const handleClick = useCallback(() => {
         if (!drilldownSpl) return;
-        const url = splunkSearchAppUrl(drilldownSpl, range);
+        const url = splunkSearchAppUrl(
+            drilldownSpl,
+            range,
+            dispatchedConfig.dispatchContext
+        );
         if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener,noreferrer');
-    }, [drilldownSpl, range]);
+    }, [dispatchedConfig.dispatchContext, drilldownSpl, range]);
 
     // Threshold rows are derived from the same `MetricThresholds` the
     // runtime uses to colour the headline (`computeStatus`), so the
@@ -2235,9 +2253,13 @@ const TableCardLeaf: React.FC<CommonLeafProps> = ({
     const drilldownSpl = result.spl;
     const handleClick = useCallback(() => {
         if (!drilldownSpl) return;
-        const url = splunkSearchAppUrl(drilldownSpl, range);
+        const url = splunkSearchAppUrl(
+            drilldownSpl,
+            range,
+            dispatchedConfig.dispatchContext
+        );
         if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener,noreferrer');
-    }, [drilldownSpl, range]);
+    }, [dispatchedConfig.dispatchContext, drilldownSpl, range]);
 
     return (
         <TableTile
@@ -2293,9 +2315,13 @@ const BarBreakdownCardLeaf: React.FC<CommonLeafProps> = ({
     const drilldownSpl = result.spl;
     const handleClick = useCallback(() => {
         if (!drilldownSpl) return;
-        const url = splunkSearchAppUrl(drilldownSpl, range);
+        const url = splunkSearchAppUrl(
+            drilldownSpl,
+            range,
+            dispatchedConfig.dispatchContext
+        );
         if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener,noreferrer');
-    }, [drilldownSpl, range]);
+    }, [dispatchedConfig.dispatchContext, drilldownSpl, range]);
 
     return (
         <BarBreakdownTile
@@ -2350,9 +2376,13 @@ const PieCardLeaf: React.FC<PieCardLeafProps> = ({
     const drilldownSpl = result.spl;
     const handleClick = useCallback(() => {
         if (!drilldownSpl) return;
-        const url = splunkSearchAppUrl(drilldownSpl, range);
+        const url = splunkSearchAppUrl(
+            drilldownSpl,
+            range,
+            dispatchedConfig.dispatchContext
+        );
         if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener,noreferrer');
-    }, [drilldownSpl, range]);
+    }, [dispatchedConfig.dispatchContext, drilldownSpl, range]);
 
     return (
         <PieTile
@@ -2412,9 +2442,13 @@ const ScalarGaugeCardLeaf: React.FC<ScalarGaugeCardLeafProps> = ({
     const drilldownSpl = result.spl;
     const handleClick = useCallback(() => {
         if (!drilldownSpl) return;
-        const url = splunkSearchAppUrl(drilldownSpl, range);
+        const url = splunkSearchAppUrl(
+            drilldownSpl,
+            range,
+            dispatchedConfig.dispatchContext
+        );
         if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener,noreferrer');
-    }, [drilldownSpl, range]);
+    }, [dispatchedConfig.dispatchContext, drilldownSpl, range]);
 
     const tileColor = useMemo(
         () => firstSeriesColorFromVizOptions(sbRecord?.vizOptions, effective.color),
@@ -2945,6 +2979,7 @@ const OverviewPage: React.FC = () => {
     const toggleMapVisibility = useCallback(() => {
         setMapVisible((visible) => !visible);
     }, []);
+    const activeMapPosition: MapPosition | 'hidden' = mapVisible ? mapPosition : 'hidden';
     // Convenience flag for the drag / keyboard handlers and the
     // splitter styling: `right` mode drags on the X axis, `below` /
     // `above` modes drag on the Y axis.
@@ -3684,6 +3719,7 @@ const OverviewPage: React.FC = () => {
                 return {
                     ...base,
                     spl: sbBase.search,
+                    dispatchContext: sbBase.dispatchContext,
                 };
             }
             return base;
@@ -3694,6 +3730,7 @@ const OverviewPage: React.FC = () => {
             return {
                 ...base,
                 spl: sb.search,
+                dispatchContext: sb.dispatchContext,
                 savedSearch: undefined,
                 valueField: ov.valueField,
                 label: ov.label ?? base.label,
@@ -3735,18 +3772,30 @@ const OverviewPage: React.FC = () => {
     const mapSecondaryDrilldownSpl = mapSecondary.spl;
     const handleMapPrimaryOpenInSearch = useCallback(() => {
         if (!mapPrimaryDrilldownSpl) return;
-        const url = splunkSearchAppUrl(mapPrimaryDrilldownSpl, timeRange);
+        const url = splunkSearchAppUrl(
+            mapPrimaryDrilldownSpl,
+            timeRange,
+            effectiveMapPrimaryCfg.dispatchContext
+        );
         if (typeof window !== 'undefined') {
             window.open(url, '_blank', 'noopener,noreferrer');
         }
-    }, [mapPrimaryDrilldownSpl, timeRange]);
+    }, [effectiveMapPrimaryCfg.dispatchContext, mapPrimaryDrilldownSpl, timeRange]);
     const handleMapSecondaryOpenInSearch = useCallback(() => {
         if (!mapSecondaryDrilldownSpl) return;
-        const url = splunkSearchAppUrl(mapSecondaryDrilldownSpl, timeRange);
+        const url = splunkSearchAppUrl(
+            mapSecondaryDrilldownSpl,
+            timeRange,
+            effectiveMapSecondaryCfg.dispatchContext
+        );
         if (typeof window !== 'undefined') {
             window.open(url, '_blank', 'noopener,noreferrer');
         }
-    }, [mapSecondaryDrilldownSpl, timeRange]);
+    }, [
+        effectiveMapSecondaryCfg.dispatchContext,
+        mapSecondaryDrilldownSpl,
+        timeRange,
+    ]);
     const mapPrimaryBindingFootnote = mapPrimaryOverride
         ? mapPrimaryOverride.savedSearch
             ? `Saved search: ${mapPrimaryOverride.savedSearch}`
@@ -4094,11 +4143,7 @@ const OverviewPage: React.FC = () => {
                                 'text-sky-600 dark:text-sky-300 bg-sky-50 dark:bg-slate-800'
                         )}
                     >
-                        {mapVisible ? (
-                            <EyeOff className="w-4 h-4" />
-                        ) : (
-                            <Eye className="w-4 h-4" />
-                        )}
+                        <MapIcon className="w-4 h-4" />
                     </button>
                     <button
                         type="button"
@@ -4262,7 +4307,7 @@ const OverviewPage: React.FC = () => {
             >
                 <div
                     ref={splitContainerRef}
-                    data-map-position={mapPosition}
+                    data-map-position={activeMapPosition}
                     className={cn(
                         // Map placement is now operator-configurable. Three
                         // modes are wired to the segmented control in the
@@ -4324,7 +4369,7 @@ const OverviewPage: React.FC = () => {
                                 ? 'xl:w-[var(--scd-left-pct)] xl:flex-shrink-0'
                                 : ''
                         )}
-                        data-map-position={mapPosition}
+                        data-map-position={activeMapPosition}
                         style={verticalMetricsStyle}
                     >
                         {visibleSections.map((section) => {
@@ -4654,8 +4699,12 @@ const OverviewPage: React.FC = () => {
                                         earliestTime={timeRange.earliest}
                                         latestTime={timeRange.latest}
                                         refreshToken={refreshToken}
-                                        onOpenInSearch={(spl) => {
-                                            const url = splunkSearchAppUrl(spl, timeRange);
+                                        onOpenInSearch={(spl, appContext) => {
+                                            const url = splunkSearchAppUrl(
+                                                spl,
+                                                timeRange,
+                                                appContext
+                                            );
                                             if (typeof window !== 'undefined') {
                                                 window.open(
                                                     url,
@@ -4768,7 +4817,7 @@ const OverviewPage: React.FC = () => {
                     clearOverride(tileId);
                     closePicker();
                 }}
-                onTestInSearch={(spl) => {
+                onTestInSearch={(spl, appContext) => {
                     // Open Splunk Search & Reporting with the *literal*
                     // SPL pulled from `searchbase.conf` — the executive
                     // sees-and-tests exactly what the picker is showing
@@ -4777,7 +4826,7 @@ const OverviewPage: React.FC = () => {
                     // browsing. URLSearchParams handles encoding of
                     // backticks, quotes, pipes, and embedded newlines.
                     if (!spl) return;
-                    const url = splunkSearchAppUrl(spl, timeRange);
+                    const url = splunkSearchAppUrl(spl, timeRange, appContext);
                     if (typeof window !== 'undefined') {
                         window.open(url, '_blank', 'noopener,noreferrer');
                     }
@@ -5084,6 +5133,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
             earliestTime: range.earliest,
             latestTime: range.latest,
             tag: config.tag,
+            appContext: config.dispatchContext,
         })
             .then((res) => {
                 if (cancelled) return;
@@ -5163,7 +5213,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
         ? rows.filter((row) => row[statusField] === availableStatus).length
         : 0;
     const unavailableCount = statusField ? rows.length - availableCount : 0;
-    const searchUrl = splunkSearchAppUrl(config.spl, range);
+    const searchUrl = splunkSearchAppUrl(config.spl, range, config.dispatchContext);
 
     return (
         <div

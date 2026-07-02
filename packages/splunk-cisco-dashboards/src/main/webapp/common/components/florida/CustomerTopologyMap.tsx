@@ -4703,7 +4703,7 @@ interface CustomerTopologyMapProps {
     refreshToken?: number;
     spotlightIntervalMs?: number;
     spotlightPauseMs?: number;
-    onOpenInSearch?: (spl: string) => void;
+    onOpenInSearch?: (spl: string, appContext?: string) => void;
     onSummaryMetricsChange?: (metrics: TopologySummaryMetricMap) => void;
 }
 
@@ -4881,6 +4881,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
             earliestTime,
             latestTime,
             tag: 'topology_te_a2a_inventory',
+            appContext: record.dispatchContext,
         })
             .then((res) => {
                 if (cancelled) return;
@@ -4982,6 +4983,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
             earliestTime,
             latestTime,
             tag: 'topology_overview',
+            appContext: record.dispatchContext,
         })
             .then((res) => {
                 if (cancelled) return;
@@ -5201,6 +5203,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 earliestTime,
                 latestTime,
                 tag: `topology_site_${site.id}`,
+                appContext: record.dispatchContext,
             })
                 .then((res) => {
                     if (cancelled) return;
@@ -5268,6 +5271,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
             earliestTime,
             latestTime,
             tag: 'topology_marker_enrichment',
+            appContext: record.dispatchContext,
         })
             .then((res) => {
                 if (cancelled) return;
@@ -5353,6 +5357,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 earliestTime,
                 latestTime,
                 tag: `topology_link_${link.id}`,
+                appContext: record.dispatchContext,
             })
                 .then((res) => {
                     if (cancelled) return;
@@ -5592,6 +5597,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         selectedSearchName && selectedRecord?.search?.trim()
             ? selectedRecord.search.trim()
             : '';
+    const selectedDispatchContext = selectedRecord?.dispatchContext;
 
     // NOTE: the popup-side search picker was removed on 2026-05-13
     // per Alan's request — the read-only popup is now inspect+run
@@ -5678,7 +5684,9 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         : 'bg-white/95 border-slate-200 hover:bg-slate-50 text-slate-600';
 
     const openSelectedInSearch = () => {
-        if (selectedSpl && onOpenInSearch) onOpenInSearch(selectedSpl);
+        if (selectedSpl && onOpenInSearch) {
+            onOpenInSearch(selectedSpl, selectedDispatchContext);
+        }
     };
 
     const cycleTilePreset = () => {
@@ -7146,7 +7154,7 @@ interface TopologyEditorPanelProps {
      * on tile pickers, so operators can sanity-check a search
      * before saving the topology.
      */
-    onOpenInSearch?: (spl: string) => void;
+    onOpenInSearch?: (spl: string, appContext?: string) => void;
 }
 
 const editorInputClass = (isDark: boolean): string =>
@@ -7312,8 +7320,9 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
     const handleOpenInSearch = useCallback(
         (searchName: string | undefined) => {
             if (!searchName || !onOpenInSearch || !catalogueByName) return;
-            const spl = catalogueByName[searchName]?.search?.trim();
-            if (spl) onOpenInSearch(spl);
+            const record = catalogueByName[searchName];
+            const spl = record?.search?.trim();
+            if (spl) onOpenInSearch(spl, record?.dispatchContext);
         },
         [onOpenInSearch, catalogueByName]
     );

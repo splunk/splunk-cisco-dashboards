@@ -685,6 +685,7 @@ interface SearchbaseDetailTableConfig {
     buttonTitle: string;
     subtitle: (range: TimeRange) => string;
     spl: string;
+    dispatchContext?: string;
     tag: string;
     rowKeyField: string;
     emptyMessage: string;
@@ -821,6 +822,7 @@ const buildSearchbaseDetailTableConfig = (
         subtitle: (range) =>
             interpolateDetailSubtitle(subtitleTemplate, source, detail, range),
         spl: detail.search,
+        dispatchContext: detail.dispatchContext,
         tag,
         rowKeyField:
             readDetailStringOption(options, 'rowKeyField') ?? columns[0]?.field ?? '',
@@ -1159,6 +1161,7 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
                 .join(' / '),
             description,
             spl: record.search,
+            dispatchContext: record.dispatchContext,
             color,
             valueField: valueFieldOverride,
             sparkDataField: sparkDataFieldOverride,
@@ -1335,10 +1338,11 @@ const SearchbaseTableTileBody: React.FC<
         () => ({
             id: tile.id,
             spl: record.search,
+            dispatchContext: record.dispatchContext,
             rowLimit: 50,
             suppressMockOnEmpty: true,
         }),
-        [record.search, tile.id]
+        [record.dispatchContext, record.search, tile.id]
     );
     const table = useTableData(tableConfig, range, refreshToken);
 
@@ -1462,8 +1466,8 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
         [entryByName, record]
     );
     const openSearch = useCallback(() => {
-        openSplunkSearch(record.search, range);
-    }, [record.search, range]);
+        openSplunkSearch(record.search, range, record.dispatchContext);
+    }, [record.dispatchContext, record.search, range]);
     const openDrilldown = useCallback(() => {
         if (detailTableConfig) {
             onOpenDetailTable(detailTableConfig);
@@ -1472,13 +1476,16 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
         if (record.drilldownSearchName) {
             openSplunkSearch(
                 drilldownRecord?.search ?? savedSearchSpl(record.drilldownSearchName),
-                range
+                range,
+                drilldownRecord?.dispatchContext ?? record.dispatchContext
             );
         }
     }, [
         detailTableConfig,
+        drilldownRecord?.dispatchContext,
         drilldownRecord?.search,
         onOpenDetailTable,
+        record.dispatchContext,
         record.drilldownSearchName,
         range,
     ]);
@@ -1660,7 +1667,8 @@ const SearchbasePreviewTile: React.FC<ResolvedSearchbaseCanvasTileProps> = ({
     presentationMode = false,
 }) => {
     const description = recordPlainText(record);
-    const openSearch = () => openSplunkSearch(record.search, range);
+    const openSearch = () =>
+        openSplunkSearch(record.search, range, record.dispatchContext);
     const color = firstSeriesColor(record.vizOptions);
     const viz = effectiveTileViz(tile, record);
     const detailTableConfig = useMemo(
@@ -1871,6 +1879,7 @@ const SearchbaseDetailTableModal: React.FC<{
             earliestTime: range.earliest,
             latestTime: range.latest,
             tag: config.tag,
+            appContext: config.dispatchContext,
         })
             .then((response) => {
                 if (cancelled) return;
@@ -1920,7 +1929,7 @@ const SearchbaseDetailTableModal: React.FC<{
     const titleId = `${config.tag}-title`;
     const displayColumns = columns.length > 0 ? columns : config.columns;
     const columnCount = Math.max(displayColumns.length, 1);
-    const searchUrl = splunkSearchAppUrl(config.spl, range);
+    const searchUrl = splunkSearchAppUrl(config.spl, range, config.dispatchContext);
 
     return (
         <div
@@ -2451,7 +2460,8 @@ const NoDataReportModal: React.FC<{
                                                         onClick={() =>
                                                             openSplunkSearch(
                                                                 record.search,
-                                                                range
+                                                                range,
+                                                                record.dispatchContext
                                                             )
                                                         }
                                                         className="inline-flex items-center gap-1 rounded border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 transition-colors hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:border-slate-700 dark:text-slate-300 dark:hover:border-sky-600 dark:hover:bg-sky-950/40 dark:hover:text-sky-200"
@@ -2899,6 +2909,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                 record.dispatchContext,
                 record.tags.join(' '),
                 plainTextFromHtml(record.description),
+                record.search,
             ]
                 .join(' ')
                 .toLowerCase();
@@ -3011,7 +3022,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                     <input
                         value={query}
                         onChange={(event) => setQuery(event.target.value)}
-                        placeholder="Filter by name, description, or tag..."
+                        placeholder="Filter by name, SPL, description, or tag..."
                         className="h-11 w-full rounded-md border border-slate-300 bg-white pl-10 pr-3 text-sm font-medium text-slate-900 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
                     />
                 </label>

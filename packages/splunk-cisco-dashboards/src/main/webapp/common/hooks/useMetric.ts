@@ -158,6 +158,8 @@ export interface MetricConfig {
      * the right shape. Mutually exclusive with `savedSearch`.
      */
     spl?: string;
+    /** Splunk app namespace to dispatch this search in. */
+    dispatchContext?: string;
     /** Field name in the search results to read the headline + sparkline from. */
     valueField?: string;
     /**
@@ -646,6 +648,7 @@ export const useMetric = (
             earliestTime: range.earliest,
             latestTime: range.latest,
             tag: cfg.id,
+            appContext: cfg.dispatchContext,
             signal: controller.signal,
         });
 
@@ -663,6 +666,7 @@ export const useMetric = (
                       earliestTime: previousRange.earliest,
                       latestTime: previousRange.latest,
                       tag: `${cfg.id}__prev`,
+                      appContext: cfg.dispatchContext,
                       signal: controller.signal,
                   }).catch((err) =>
                       isAbortError(err)
@@ -693,6 +697,7 @@ export const useMetric = (
 
         debugLog(cfg.id, 'dispatching', {
             spl,
+            dispatchContext: cfg.dispatchContext,
             earliest: range.earliest,
             latest: range.latest,
             label: range.label,
@@ -978,6 +983,8 @@ export interface KpiConfig {
     savedSearch?: string;
     /** Inline SPL — preferred over savedSearch when no stanza fits. */
     spl?: string;
+    /** Splunk app namespace to dispatch this search in. */
+    dispatchContext?: string;
     /** Field whose value is displayed. Defaults to 'value'. */
     valueField?: string;
     /** Optional suffix appended to numeric KPI values, e.g. '%' or 'ms'. */
@@ -1079,6 +1086,7 @@ export const useKpi = (
         });
         debugLog(cfg.id, 'kpi dispatching', {
             spl,
+            dispatchContext: cfg.dispatchContext,
             earliest: range.earliest,
             latest: range.latest,
             label: range.label,
@@ -1090,6 +1098,7 @@ export const useKpi = (
             earliestTime: range.earliest,
             latestTime: range.latest,
             tag: cfg.id,
+            appContext: cfg.dispatchContext,
             signal: controller.signal,
         })
             .then((res) => {
@@ -1244,6 +1253,8 @@ export interface TableDataConfig {
     id: string;
     savedSearch?: string;
     spl?: string;
+    /** Splunk app namespace to dispatch this search in. */
+    dispatchContext?: string;
     /**
      * Maximum rows materialised into the tile. oneShot can return up
      * to 1,000 rows; the executive table tile should cap well before
@@ -1369,6 +1380,7 @@ export const useTableData = (
 
         debugLog(cfg.id, 'table dispatching', {
             spl,
+            dispatchContext: cfg.dispatchContext,
             earliest: range.earliest,
             latest: range.latest,
             label: range.label,
@@ -1380,6 +1392,7 @@ export const useTableData = (
             earliestTime: range.earliest,
             latestTime: range.latest,
             tag: cfg.id,
+            appContext: cfg.dispatchContext,
             signal: controller.signal,
         })
             .then((res) => {

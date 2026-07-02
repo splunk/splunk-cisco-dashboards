@@ -85,13 +85,14 @@ const ALL_APPS = '__all_apps__';
 // as the Category facet.
 //
 // The UI stores a normalised `dispatchContext` sourced from the stanza's
-// owning ACL app; the UI labels it "App" because that's what operators
-// recognise.
+// `dispatch_context` value; the UI labels it "App" because that's what
+// operators recognise. If a stanza omits `dispatch_context`, the
+// catalogue falls back to the owning ACL app.
 //
-// Every stanza shipped in this app's `default/searchbase.conf` carries
-// `dispatch_context = splunk-cisco-dashboards` (with
-// `dispatch_context_force = 1`), so this default passes the full
-// 530-entry catalogue.
+// Most stanzas shipped in this app's `default/searchbase.conf` dispatch
+// in `splunk-cisco-dashboards`, while dependency data-model searches can
+// dispatch in their owning apps (for example `cisco-catalyst-app`).
+// This default keeps the first browse focused on dashboard-pack searches.
 //
 // Build trail:
 //   - Build 87: dropped the `Cisco` noise tag from every stanza,
@@ -309,9 +310,11 @@ export interface KpiPickerPanelProps {
      * compact "Test in Search" action appears next to the Searchbase
      * link. The handler receives the *literal* SPL from
      * `searchbase.conf` (the `search` field), not a saved-search
-     * reference.
+     * reference. The optional app context is the searchbase stanza's
+     * dispatch namespace, so testing runs in the same app context as
+     * the runtime tile.
      */
-    onTestInSearch?: (spl: string) => void;
+    onTestInSearch?: (spl: string, appContext?: string) => void;
     /**
      * Optional "factory reset" handler. When provided, a small
      * destructive-styled link is rendered alongside the "Reset tile"
@@ -2459,7 +2462,12 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         {onTestInSearch && selectedEntry.search && (
                                             <button
                                                 type="button"
-                                                onClick={() => onTestInSearch(selectedEntry.search)}
+                                                onClick={() =>
+                                                    onTestInSearch(
+                                                        selectedEntry.search,
+                                                        selectedEntry.dispatchContext
+                                                    )
+                                                }
                                                 title="Run this exact SPL in Search (new tab)"
                                                 className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-sky-600 hover:text-sky-800 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5 dark:text-sky-300 dark:hover:text-sky-100"
                                             >
@@ -2564,7 +2572,12 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     {onTestInSearch && selectedEntry.search && (
                                         <button
                                             type="button"
-                                            onClick={() => onTestInSearch(selectedEntry.search)}
+                                            onClick={() =>
+                                                onTestInSearch(
+                                                    selectedEntry.search,
+                                                    selectedEntry.dispatchContext
+                                                )
+                                            }
                                             title="Run this exact SPL in Search (new tab)"
                                             className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-sky-600 dark:text-sky-300 hover:text-sky-800 dark:hover:text-sky-100 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
                                         >
@@ -2802,7 +2815,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                         type="button"
                                                                         onClick={() =>
                                                                             onTestInSearch(
-                                                                                selectedDrilldownEntry.search
+                                                                                selectedDrilldownEntry.search,
+                                                                                selectedDrilldownEntry.dispatchContext
                                                                             )
                                                                         }
                                                                         title="Run the attached drilldown SPL in Search (new tab)"
