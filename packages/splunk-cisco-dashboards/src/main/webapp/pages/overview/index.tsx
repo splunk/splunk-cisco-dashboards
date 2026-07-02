@@ -472,27 +472,23 @@ const METRIC_CONFIG: MetricConfig[] = [
         mock: { seed: 14, sparkMin: 0, sparkMax: 8, value: 12, change: 0 },
     },
     {
-        id: 'sites_below_threshold',
+        id: 'syslog_severity',
         section: 'it_health',
-        label: 'Sites < 90%',
-        subLabel: 'Sites below health threshold',
+        label: 'Syslog severity',
+        subLabel: 'IOS events by severity',
         description:
-            'How many monitored sites (Tallahassee, Auburndale) have a current ' +
-            'device-health rollup below 90%. Discrete count, not a composite — ' +
-            '0 = all sites healthy, 1+ = open the Overview map to identify which ' +
-            'site is degraded. Uses the same HA-pair-aware filter as the Overview ' +
-            'site markers so a standby device reporting 0 does not unfairly flag ' +
-            'its site.',
-        // Single row: { sites_below, sites_total }
-        savedSearch: 'IT Health - Sites Below Health Threshold',
-        valueField: 'sites_below',
+            'Cisco IOS syslog events grouped into Critical, Error, Warning, and ' +
+            'Info severity buckets so operators can see whether network log volume ' +
+            'is routine noise or an actionable infrastructure signal.',
+        // Column rows: { severity, events, hosts, message_types }.
+        savedSearch: 'IT - Critical Systems - Syslog Severity Distribution',
+        valueField: 'events',
         color: '#0ea5e9',
-        thresholds: { warning: 1, critical: 2, direction: 'lower_is_better' },
+        thresholds: { warning: 100, critical: 500, direction: 'lower_is_better' },
         thresholdNote:
-            'The 90% per-site cutoff matches the Catalyst Center "fair vs poor" ' +
-            'boundary; widen / narrow it in the underlying SPL stanza if your ' +
-            'network has a different normal.',
-        mock: { seed: 15, sparkMin: 0, sparkMax: 1, value: 0, change: 0 },
+            'The headline tracks event volume while the chart keeps the severity ' +
+            'mix visible. Critical or Error-heavy buckets should drive the drilldown.',
+        mock: { seed: 15, sparkMin: 0, sparkMax: 120, value: 42, change: 0 },
     },
     {
         id: 'it_domain_score',
@@ -514,23 +510,23 @@ const METRIC_CONFIG: MetricConfig[] = [
         mock: { seed: 16, sparkMin: 70, sparkMax: 100, value: 92, change: 0 },
     },
     {
-        id: 'thousandeyes_health',
+        id: 'config_changes',
         section: 'it_health',
-        label: 'ThousandEyes health',
-        subLabel: 'Synthetic monitoring composite',
+        label: 'Config changes',
+        subLabel: 'Catalyst Center audit activity',
         description:
-            'Synthetic monitoring health across packet loss, latency, HTTP ' +
-            'availability, and page-load completion from ThousandEyes data model ' +
-            'summaries.',
-        savedSearch: 'Executive - ThousandEyes Health Score',
-        valueField: 'score',
-        unit: '%',
+            'Count of meaningful Catalyst Center audit events in the selected ' +
+            'window, excluding noisy service startup and registration activity. ' +
+            'This gives operators a concrete change-tempo signal instead of a ' +
+            'second synthetic health rollup.',
+        savedSearch: 'IT - Critical Systems - Configuration Changes',
+        valueField: 'count',
         color: '#0ea5e9',
-        thresholds: { warning: 90, critical: 70, direction: 'higher_is_better' },
+        thresholds: { warning: 25, critical: 100, direction: 'lower_is_better' },
         thresholdNote:
-            'A directional experience score: use the ThousandEyes drilldown to ' +
-            'separate transport, HTTP, and page-load contributors when the score moves.',
-        mock: { seed: 17, sparkMin: 70, sparkMax: 100, value: 94, change: 0 },
+            'Configuration changes are not inherently bad, but unexplained spikes ' +
+            'often line up with outages, policy drift, or unauthorized activity.',
+        mock: { seed: 17, sparkMin: 0, sparkMax: 30, value: 8, change: 0 },
     },
     {
         id: 'compliance_rate',
@@ -650,25 +646,24 @@ const METRIC_CONFIG: MetricConfig[] = [
         mock: { seed: 23, sparkMin: 0, sparkMax: 5, value: 1, change: 0 },
     },
     {
-        id: 'xdr_incidents',
+        id: 'rogue_devices',
         section: 'security',
-        label: 'XDR incidents',
-        subLabel: 'Distinct Cisco XDR incident IDs',
+        label: 'Rogue devices',
+        subLabel: 'Rogue + unauthorized signals',
         description:
-            'Count of distinct Cisco XDR / SecureX incident IDs in the dispatched ' +
-            'window. Includes both real-time and summary incident sourcetypes.',
-        // Single row: { total }
-        savedSearch: 'Executive - XDR Incidents',
-        valueField: 'total',
+            'Rollup of rogue and unauthorized device indicators from IOS SISF, ' +
+            '802.1X failures, and Catalyst Center rogue issues.',
+        // Single row: { count }
+        savedSearch: 'Security Resilience - Rogue Device Detection',
+        valueField: 'count',
         // Same rationale as Threat Sources: resting state stays neutral
         // sky; MetricItem's status palette turns the sparkline amber/
         // red when the count crosses warning/critical thresholds.
         color: '#0ea5e9',
-        thresholds: { warning: 5, critical: 20, direction: 'lower_is_better' },
+        thresholds: { warning: 1, critical: 5, direction: 'lower_is_better' },
         thresholdNote:
-            'XDR groups related detections into a single incident ID, so even small ' +
-            'numbers matter. > 5 simultaneous open incidents typically exceeds what a ' +
-            'single SOC analyst can triage at once; > 20 is "all hands" territory.',
+            'Any sustained nonzero value deserves wireless/security review. Spikes ' +
+            'during onboarding may be policy friction; off-hours spikes are more suspect.',
         mock: { seed: 24, sparkMin: 0, sparkMax: 4, value: 2, change: 0 },
     },
     {
@@ -693,9 +688,9 @@ const METRIC_CONFIG: MetricConfig[] = [
             '"failed auth" tile next to this one is the natural companion drilldown.',
         mock: { seed: 25, sparkMin: 80, sparkMax: 100, value: 98, change: 0 },
     },
-    // Narrows XDR Incidents to severity=Critical
-    // only — answers "how many incidents need a war-room right now?"
-    // separately from the broader xdr_incidents trend.
+    // Answers "how many incidents need a war-room right now?"
+    // without defaulting the broader all-severity XDR incident rollup
+    // onto the executive view.
     {
         id: 'xdr_critical',
         section: 'security',
@@ -703,8 +698,8 @@ const METRIC_CONFIG: MetricConfig[] = [
         subLabel: 'Severity=Critical incidents only',
         description:
             'Distinct Cisco XDR incident IDs at Critical severity in the ' +
-            'dispatched window. Companion to the broader "XDR incidents" tile ' +
-            'next door; this one isolates the escalation-pressure tier.',
+            'dispatched window. This isolates the escalation-pressure tier ' +
+            'without surfacing every low-severity XDR incident by default.',
         // Single row: { total }
         savedSearch: 'Overview - XDR Critical Incidents',
         valueField: 'total',
@@ -735,21 +730,22 @@ const METRIC_CONFIG: MetricConfig[] = [
         mock: { seed: 27, sparkMin: 0, sparkMax: 400, value: 120, change: 0 },
     },
     {
-        id: 'ids_ips_alerts',
+        id: 'web_threats',
         section: 'security',
-        label: 'IDS/IPS alerts',
-        subLabel: 'Secure Firewall intrusion events',
+        label: 'Web threats',
+        subLabel: 'WSA blocked web policy events',
         description:
-            'Accelerated count of Secure Firewall intrusion events from the Cisco ' +
-            'Security data model.',
-        savedSearch: 'Security Resilience - IDS/IPS Alert Count',
+            'Blocked web requests from Cisco Web Security Appliance squid and L4TM ' +
+            'streams. This is a concrete web-security enforcement count, separate ' +
+            'from firewall and DNS controls.',
+        savedSearch: 'Security Resilience - Web Threat Count',
         valueField: 'count',
         color: '#0ea5e9',
-        thresholds: { warning: 10000, critical: 100000, direction: 'lower_is_better' },
+        thresholds: { warning: 1000, critical: 5000, direction: 'lower_is_better' },
         thresholdNote:
-            'IPS volume is environment-sensitive. Treat sudden increases or sudden ' +
-            'zeros as the actionable signal, then pivot to classifications.',
-        mock: { seed: 28, sparkMin: 0, sparkMax: 1000, value: 240, change: 0 },
+            'Rising blocks may indicate stricter policy, a noisy user population, ' +
+            'or malware callback attempts. Use the drilldown to separate source streams.',
+        mock: { seed: 28, sparkMin: 0, sparkMax: 600, value: 80, change: 0 },
     },
     {
         id: 'email_threat_count',
@@ -775,8 +771,8 @@ const METRIC_CONFIG: MetricConfig[] = [
     // thresholds — they're trend signals against an environment-
     // specific baseline, not pass/fail metrics. Each carries a
     // `thresholdNote` so the operator still gets a clear answer to
-    // "what counts as good?". Building score is a composite with
-    // numeric bands.
+    // "what counts as good?". Concrete exceptions such as devices to
+    // review and water leaks carry lower-is-better bands.
     {
         id: 'active_devices',
         section: 'building',
@@ -847,26 +843,23 @@ const METRIC_CONFIG: MetricConfig[] = [
         mock: { seed: 33, sparkMin: 0, sparkMax: 10, value: 0, change: 0 },
     },
     {
-        id: 'bldg_score',
+        id: 'devices_to_review',
         section: 'building',
-        label: 'Building score',
-        subLabel: 'AP + presence + occupancy + comply',
+        label: 'Devices to review',
+        subLabel: 'Wireless trust review',
         description:
-            'Composite building-domain score: AP health (Catalyst Center) + ' +
-            'device-presence connectivity (Cisco Spaces) + room occupancy + ' +
-            'compliance pass-rate, averaged. 0-100.',
-        // Single row: { score: 0..100 }
-        savedSearch: 'Executive - Building Score',
-        valueField: 'score',
-        unit: '%',
+            'Number of wireless devices that need trust review after correlating ' +
+            'Cisco Spaces client observations with ISE authentication results.',
+        // Single row: { count }
+        savedSearch: 'Building Resilience - Devices To Review Count',
+        valueField: 'count',
         color: '#10b981',
-        thresholds: { warning: 90, critical: 70, direction: 'higher_is_better' },
+        thresholds: { warning: 5, critical: 20, direction: 'lower_is_better' },
         thresholdNote:
-            'Composite of four sub-scores averaged equally. A 70% headline can ' +
-            'still hide one fully-failed sub-score (e.g. compliance at 0 with ' +
-            'others at 90+). When this drops, expand each contributor on the ' +
-            'Building dashboard before reacting at a building-wide level.',
-        mock: { seed: 34, sparkMin: 70, sparkMax: 100, value: 87, change: 1 },
+            'Zero, or N/A when no flagged devices exist, is the desired baseline. ' +
+            'Rising counts usually point to onboarding gaps, expired certificates, ' +
+            'or guests lingering on corporate SSIDs.',
+        mock: { seed: 34, sparkMin: 0, sparkMax: 12, value: 0, change: 0 },
     },
     {
         id: 'collab_devices',
@@ -1024,7 +1017,7 @@ const METRIC_CONFIG: MetricConfig[] = [
     {
         id: 'executive_building_score',
         section: 'custom',
-        label: 'Building score',
+        label: 'Facility score',
         subLabel: 'Facility domain rollup',
         description:
             'Executive building-domain score across AP health, presence, occupancy, ' +
@@ -1035,7 +1028,7 @@ const METRIC_CONFIG: MetricConfig[] = [
         color: '#10b981',
         thresholds: { warning: 85, critical: 55, direction: 'higher_is_better' },
         thresholdNote:
-            'Building composite. Drops should be decomposed into AP, presence, ' +
+            'Facility composite. Drops should be decomposed into AP, presence, ' +
             'occupancy, and compliance contributors.',
         mock: { seed: 44, sparkMin: 55, sparkMax: 100, value: 87, change: 0 },
     },
@@ -1812,8 +1805,10 @@ const MetricCard: React.FC<MetricCardProps> = ({
     // compatibility binding on first paint and gets superseded a
     // second later by the real searchbase SPL (double network round-trip).
     //
-    // When a compatibility dependency has no matching searchbase
-    // entry, we fall back to the configured binding.
+    // If a binding no longer exists in searchbase.conf, do not fall
+    // back to `| savedsearch ...`. The overview's shipped tiles must
+    // be searchbase-backed only; a missing stanza should render as
+    // demo/empty state until the binding is corrected.
     const dispatchedConfig = useMemo<typeof effective>(() => {
         if (!effective.savedSearch) return effective;
         if (searchbaseByName === null || searchbaseByName === undefined) {
@@ -1828,7 +1823,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
                 dispatchContext: sb.dispatchContext,
             };
         }
-        return effective;
+        return { ...effective, savedSearch: undefined, spl: undefined };
     }, [effective, searchbaseByName]);
 
     // Resolve the conf record (if any) so we can pull viz hints from it.
@@ -3719,10 +3714,11 @@ const OverviewPage: React.FC = () => {
                 return {
                     ...base,
                     spl: sbBase.search,
+                    savedSearch: undefined,
                     dispatchContext: sbBase.dispatchContext,
                 };
             }
-            return base;
+            return { ...base, savedSearch: undefined, spl: undefined };
         }
 
         const sb = ov.savedSearch ? searchbaseByName?.get(ov.savedSearch) : undefined;
@@ -3740,7 +3736,7 @@ const OverviewPage: React.FC = () => {
 
         return {
             ...base,
-            savedSearch: ov.savedSearch,
+            savedSearch: undefined,
             spl: undefined,
             valueField: ov.valueField,
             label: ov.label ?? base.label,
