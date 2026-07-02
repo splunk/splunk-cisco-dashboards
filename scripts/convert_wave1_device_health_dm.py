@@ -222,6 +222,7 @@ def tstats_span_from_bin_line(bin_stage: str) -> str:
     return DM_TSTATS_DEFAULT_SPAN
 
 
+def build_tstats(
     aggs: list[tuple[str, str]],
     where_filters: list[str],
     by_clause: str | None = None,
