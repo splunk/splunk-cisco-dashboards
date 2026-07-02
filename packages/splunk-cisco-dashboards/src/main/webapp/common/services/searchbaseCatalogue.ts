@@ -61,6 +61,8 @@ export interface SearchbaseRecord {
     tags: string[];
     /** Splunk app namespace this stanza must dispatch in. */
     dispatchContext: string;
+    /** True when the stanza is marked `search_hidden = 1` in searchbase.conf. */
+    searchHidden?: boolean;
     /** HTML description (carries inline tags from the conf). */
     description: string;
     /**
@@ -323,6 +325,7 @@ const fetchSearchbase = async (
             // stanza is stored.
             dispatchContext:
                 sanitizeAppName(content.dispatch_context) || aclApp || appName,
+            searchHidden: isTruthyConfValue(content.search_hidden),
             description: typeof content.description === 'string' ? content.description : '',
             explanation: typeof content.explanation === 'string' ? content.explanation : '',
             search:

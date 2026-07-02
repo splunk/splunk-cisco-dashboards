@@ -204,7 +204,10 @@ const COMPACT_HEIGHT_THRESHOLD_PX = 720;
 const SECTION_HEIGHT_BASE_PX = 180;
 const SECTION_HEIGHT_COMPACT_BASE_PX = 174;
 const SECTION_HEIGHT_STEP_PX = 120;
-const SECTION_WRAPPED_TILE_ROW_STEP_PX = 152;
+// Wrapped sections need to budget for the full card floor plus the
+// inter-row gap. 152px matched the bare tile min-height too closely and
+// caused the third row to be clipped at H1 when a section showed 9 tiles.
+const SECTION_WRAPPED_TILE_ROW_STEP_PX = 176;
 const SECTION_WRAP_TILE_COUNT = 5;
 const SECTION_WRAPPED_TILE_COLUMNS = 3;
 const VERTICAL_MAP_MIN_HEIGHT_PX = 420;
@@ -4446,9 +4449,9 @@ const OverviewPage: React.FC = () => {
                                     // screens and the hard min-height
                                     // floor that triggers metric-column
                                     // scrolling on short screens.
-                                    className="flex-1"
                                     style={{
                                         flexGrow: heightLevel,
+                                        flexShrink: 0,
                                         minHeight: sectionMinHeight,
                                     }}
                                     height={{
