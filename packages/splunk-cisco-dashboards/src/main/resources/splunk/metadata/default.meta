@@ -2,3 +2,7 @@
 []
 access = read : [ * ], write : [ admin, sc_admin, power ]
 export = none
+
+[macros/dnac_site_normalize%281%29]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system

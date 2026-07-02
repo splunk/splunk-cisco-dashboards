@@ -35,6 +35,8 @@ search = <SPL, multi-line per the Search field formatting section below>
 
 Skip `default_viz` / `viz_options` only when the stanza is purely a backend search (no tile binding).
 
+**Cisco Catalyst DM stanzas:** when SPL uses `datamodel=Cisco_Catalyst_App`, set `dispatch_context = cisco-catalyst-app` (with `dispatch_context_force = 1`). The data model is owned by `cisco-catalyst-app` and is not visible from other app namespaces unless exported system-wide.
+
 ## Search field formatting
 
 The `search` field uses `\` line continuations. Read [searchbase.conf](../../../packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf) for canonical examples and follow the same shape.

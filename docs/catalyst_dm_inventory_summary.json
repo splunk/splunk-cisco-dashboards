@@ -1,0 +1,30 @@
+{
+  "searchbase_total_stanzas": 965,
+  "catalyst_ecosystem_raw": 462,
+  "catalyst_app_dm_queries_total": 239,
+  "catalyst_app_dm_queries_unique": 233,
+  "harvest_candidates": 131,
+  "likely_covered": 102,
+  "migrate_buckets": {
+    "Cisco_Catalyst_Device_Health_Events": 126,
+    "Cisco_Catalyst_Client_Events": 67,
+    "Cisco_Catalyst_Client_Inventory_And_Health_Score_Events": 56,
+    "Cisco_Catalyst_Active_Issue_Events": 52,
+    "Cisco_Catalyst_IOS_Devices_Events": 33,
+    "Cisco_Catalyst_Threat_Events": 19,
+    "Cisco_Catalyst_Authentication_Events": 18,
+    "Cisco_Catalyst_Device_Compliance_Events": 14,
+    "Cisco_Catalyst_Meraki_*": 13,
+    "Cisco_Catalyst_Network_Health_Events": 13,
+    "Cisco_Catalyst_Audit_Log_Events": 7,
+    "Cisco_Catalyst_SDWAN_*": 6,
+    "Cisco_Catalyst_ISE_Syslog_Events.ISE_Syslog_System_Health": 6,
+    "Cisco_Catalyst_Security_Advisories_Events": 6,
+    "Cisco_Catalyst_SDWAN_Link_Health": 6,
+    "Cisco_Catalyst_Dataset (review)": 5,
+    "Cisco_Catalyst_Sensor_Events": 4,
+    "Cisco_Catalyst_SDWAN_Site_Health_Events": 4,
+    "Cisco_Catalyst_Cyber_Vision_*": 4,
+    "Cisco_Catalyst_SDWAN_Audit_Events": 3
+  }
+}

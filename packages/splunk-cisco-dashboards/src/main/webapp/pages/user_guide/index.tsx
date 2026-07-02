@@ -170,6 +170,37 @@ const macroFamilies = [
   },
 ];
 
+const dependencyApps = [
+  {
+    name: "Cisco Security Cloud",
+    folder: "CiscoSecurityCloud",
+    splunkbase: "https://splunkbase.splunk.com/app/7404",
+    models: "Cisco_Security",
+    usage: "Required for Cisco Security Cloud data model macros and security model-backed content.",
+  },
+  {
+    name: "Cisco ThousandEyes App for Splunk",
+    folder: "ta_cisco_thousandeyes",
+    splunkbase: "https://splunkbase.splunk.com/app/7719",
+    models: "Cisco_ThousandEyes",
+    usage: "Required for ThousandEyes data model macros and tstats-backed ThousandEyes panels.",
+  },
+  {
+    name: "Cisco Enterprise Networking for Splunk Platform",
+    folder: "cisco-catalyst-app",
+    splunkbase: "https://splunkbase.splunk.com/app/7539",
+    models: "Cisco_Catalyst_App",
+    usage: "Provides Cisco Catalyst datasets for network health, device health, client inventory, active issues, authentication, audit, alarms, SD-WAN, ISE, Meraki, NetFlow, and related Catalyst events.",
+  },
+  {
+    name: "Splunk AI Toolkit",
+    folder: "Splunk AI Toolkit",
+    splunkbase: "https://splunkbase.splunk.com/app/2890",
+    models: "N/A",
+    usage: "Required by searches that use Splunk AI or Machine Learning Toolkit commands such as fit and apply.",
+  },
+];
+
 const dataSources = [
   ["Catalyst Center", "`cisco:dnac:*`, `cisco:catalyst:center:*`", "`index_catalyst`"],
   ["Firewall", "`cisco:asa`, `cisco:ftd*`, `cisco:sfw:estreamer`, `cisco:estreamer:*`", "`index_firewall`"],
@@ -256,6 +287,7 @@ export default function UserGuidePage(): JSX.Element {
           <nav className="sticky top-4 border border-slate-200 bg-white p-3 text-sm">
             {[
               ["Overview", "#overview"],
+              ["Prerequisites", "#prerequisites"],
               ["Install", "#install"],
               ["Macro Tuning", "#macro-tuning"],
               ["Data Sources", "#data-sources"],
@@ -299,13 +331,62 @@ export default function UserGuidePage(): JSX.Element {
           </Section>
 
           <Section
+            id="prerequisites"
+            title="Prerequisites"
+            kicker="Install these apps and prepare their data models before tuning macros or validating data model-backed panels."
+            icon={<GitBranch size={19} />}
+          >
+            <div className="overflow-x-auto">
+              <table className="min-w-[1180px] border-collapse text-left text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                    <th className="w-[22%] px-3 py-2 font-bold">Dependency</th>
+                    <th className="w-[18%] px-3 py-2 font-bold">App Folder</th>
+                    <th className="w-[24%] px-3 py-2 font-bold">Splunkbase</th>
+                    <th className="w-[16%] px-3 py-2 font-bold">Data Model</th>
+                    <th className="w-[20%] px-3 py-2 font-bold">How SCD Uses It</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dependencyApps.map((app) => (
+                    <tr key={app.name} className="border-b border-slate-100 align-top">
+                      <td className="px-3 py-3 font-bold text-slate-800">{app.name}</td>
+                      <td className="px-3 py-3 font-mono text-xs text-slate-700">{app.folder}</td>
+                      <td className="px-3 py-3">
+                        <a
+                          href={app.splunkbase}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 font-mono text-xs font-bold text-sky-800 hover:text-sky-600"
+                        >
+                          {app.splunkbase}
+                          <ExternalLink size={13} />
+                        </a>
+                      </td>
+                      <td className="px-3 py-3 font-mono text-xs text-slate-700">{app.models}</td>
+                      <td className="px-3 py-3 text-slate-600">{app.usage}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-4 text-sm leading-6 text-slate-600">
+              Splunk Cisco Dashboards currently uses the Cisco Security Cloud and
+              Cisco ThousandEyes data models, and will use the Cisco_Catalyst_App data
+              model from Cisco Enterprise Networking for Splunk Platform. For best
+              performance, the data models in those three Cisco apps are expected to be
+              accelerated when you enable their related content.
+            </p>
+          </Section>
+
+          <Section
             id="install"
             title="Day-One Setup"
-            kicker="Use this sequence after installing the app and required Cisco add-ons."
+            kicker="Use this sequence after installing the app and required dependencies."
             icon={<PlayCircle size={19} />}
           >
             <ol className="m-0 grid gap-3 pl-5 text-sm leading-6 text-slate-700">
-              <li>Install the app and any technology add-ons that collect your Cisco, Windows, CIM, and ThousandEyes data.</li>
+              <li>Install the app, Splunk Common Information Model, Splunk AI Toolkit, and the Cisco apps that provide required data models.</li>
               <li>Confirm events are present with a broad data check before tuning dashboards.</li>
               <li>Open Macro Index Tuning and run the fast scan for dashboard macros.</li>
               <li>Save the generated SCD macros, then save any Cisco Security Cloud and ThousandEyes model macros that apply.</li>
