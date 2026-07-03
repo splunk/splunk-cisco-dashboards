@@ -22369,3 +22369,97 @@ solution = <p>Validate <code>Cisco_Catalyst_App</code> acceleration and <code>ci
 related_info = <ul><li><b>Provenance</b><br>Harvested from cisco-catalyst-app <code>events_and_incident_viewer</code> dashboard.</li><li><b>Dispatch</b><br>Runs in <code>cisco-catalyst-app</code> app context.</li></ul>
 search = | tstats `summariesonly` count as "Count" from datamodel=Cisco_Catalyst_App where nodename=Cisco_Catalyst_Dataset.Cisco_Catalyst_ISE_Syslog_Events.ISE_Syslog_Meraki_Policy_Sync Cisco_Catalyst_Dataset.Cisco_Catalyst_ISE_Syslog_Events.ise_syslog_message_code = 62012 OR Cisco_Catalyst_Dataset.Cisco_Catalyst_ISE_Syslog_Events.ise_syslog_message_code = 62013 by Cisco_Catalyst_Dataset.Cisco_Catalyst_ISE_Syslog_Events.ise_syslog_ise_servername
 
+
+# ============================================================================
+# DELETED STANZAS - test/legacy (2026-07-03)
+# ============================================================================
+
+[user_experience_thousandeyes_test_results]
+search_name = User Experience - ThousandEyes Test Results
+search_author = akhamis
+updated_author = akhamis
+version = 1.0.0
+date_created = 2026-04-12 20:14:57
+date_updated = 2026-04-12 20:14:57
+category = Monitoring
+sub_category = ThousandEyes
+tags = SCD,User Experience,ThousandEyes
+dispatch_context = splunk-cisco-dashboards
+dispatch_context_force = 1
+default_viz = splunk.table
+description = <p>Per-test ThousandEyes <b>latency</b>, <b>loss</b>, <b>HTTP availability</b>, and <b>page load</b> with a derived <b>status</b> for application-centric reviews.</p>
+explanation = <p><code>tstats</code> pulls the newest <code>latest()</code> values for network latency and loss, HTTP availability, and web page-load duration from <code>Cisco_ThousandEyes.Test_Metrics</code>, grouped by test name, test type, and server address. Renames shorten columns to <code>test</code>, <code>type</code>, and <code>target</code> for UI consumption.</p><p>Rounding keeps numeric columns tidy, while <code>case()</code> sets <code>status</code>: Critical when loss is at least 5% or latency at least 200 ms, Degraded for milder network thresholds or HTTP availability under 95%, otherwise Healthy. Teams scan Critical/Degraded rows to prioritize customer-facing URLs, VPN gateways, or API monitors.</p><p>Junior engineers: mixing network and web metrics means some rows may have null network fields—your <code>case()</code> should short-circuit safely; watch <code>isnotnull(loss)</code> guards already in the search. Prefer <code>latest</code> here for snapshot tables; switch to <code>avg</code> when you need stability over volatile page loads.</p><p><b>Query model:</b> TE metrics by test identity → latest metric snapshot → multi-metric health classification → field projection.</p>
+solution = <p><b>Operational insight:</b> HTTP availability can degrade while network latency looks fine—this table deliberately surfaces both so you do not chase the wrong layer during SaaS incidents.</p><p><b>Suggested Actions</b><br><b>1.</b> Drill into Critical rows inside ThousandEyes for path and waterfall detail.<br><b>2.</b> For Degraded HTTP with Healthy network, coordinate with app owners on TLS, DNS, or origin errors.<br><b>3.</b> Validate data model acceleration after TA upgrades if statuses freeze.<br><b>4.</b> Cross-check false Healthy rows against synthetic browser tests when users report slowness.<br><b>5.</b> Use the <a href="/app/splunk-cisco-dashboards/home_launchpad">Executive Dashboard</a> Data Source Status if rows stop updating.</p><p><b>Recommended Alerts</b></p><pre><code>| ... your base search ... | eval severity_level=case(status=="Critical", "critical", status=="Degraded" AND (loss&gt;=2 OR latency&gt;=100 OR http_avail&lt;95), "high", status=="Degraded", "medium", 1==1, "normal")</code></pre><p>Tune HTTP availability cutoffs to your SLO.</p><p><b>Evaluation Logic:</b></p><ul><li><b>Normal:</b> All visible tests Healthy with metrics inside thresholds.</li><li><b>Low:</b> Occasional Degraded on non-critical marketing sites.</li><li><b>Medium:</b> Degraded on important apps or intermittent availability dips.</li><li><b>High:</b> Multiple Degraded business-critical tests or strong metric breaches.</li><li><b>Critical:</b> Any Critical status or widespread availability collapse on tier-1 URLs.</li></ul>
+related_info = <ul><li><b>latest() per test tuple</b><br>Produces a point-in-time executive table without heavy event scanning.</li><li><b>Multi-metric case()</b><br>Lets one column summarize layered network and HTTP health.</li><li><b>fields projection</b><br>Trims to dashboard-ready columns after enrichment.</li></ul>
+search = | tstats `scd_summariesonly` latest(Test_Metrics.metric_name:network.latency) as latency, latest(Test_Metrics.metric_name:network.loss) as loss, latest(Test_Metrics.metric_name:http.server.request.availability) as http_avail, latest(Test_Metrics.metric_name:web.page.load.duration) as page_dur FROM DATAMODEL=Cisco_ThousandEyes.Test_Metrics BY Test_Metrics.thousandeyes.test.name, Test_Metrics.thousandeyes.test.type, Test_Metrics.server.address\
+| rename Test_Metrics.thousandeyes.test.name as test, Test_Metrics.thousandeyes.test.type as type, Test_Metrics.server.address as target\
+| eval latency=round(latency,1), loss=round(loss,2), http_avail=round(http_avail,1), page_dur=round(page_dur,0), status=case(isnotnull(loss) AND (loss>=5 OR latency>=200), "Critical", isnotnull(loss) AND (loss>=1 OR latency>=100), "Degraded", isnotnull(http_avail) AND http_avail<95, "Degraded", 1==1, "Healthy")\
+| fields test type target latency loss http_avail page_dur status
+
+[teuc_5_9_41_transaction_test_completion_rate]
+search_name = TEUC-5.9.41 — Transaction Test Completion Rate
+search_author = use-case-library
+updated_author = akhamis
+version = 1.0.0
+date_created = 2026-04-21 11:24:21
+date_updated = 2026-04-21 11:24:21
+category = Monitoring
+sub_category = Transactions
+tags = SCD,ThousandEyes,Transactions,Completion,Errors
+dispatch_context = splunk-cisco-dashboards
+dispatch_context_force = 1
+default_viz = splunk.column
+viz_options = {"seriesColors":["#38BDF8"],"stackMode":"unstacked"}
+description = <p>Lists <b>web transaction</b> tests whose <b>average completion</b> falls short of a perfect run or that show <b>non-zero error volume</b>, so you can prioritize broken flows before users report checkout or login failures.</p>
+explanation = <p>The query runs against the ThousandEyes OTel <b>stream</b> via <code>index_thousandeyes</code>, narrowed to <code>thousandeyes.test.type="web-transaction"</code> so only scripted browser transaction telemetry is considered. It aggregates with <code>stats</code> per <code>thousandeyes.test.name</code>, computing <code>avg(metric_name:web.transaction.completion)</code> and summing <code>web.transaction.errors.count</code> into <code>total_errors</code>.</p><p>Any row returned is already <b>actionable</b>: either completion averaged below 100% or errors were observed. Sorting by <code>avg_completion</code> surfaces the worst-performing tests first, helping you distinguish a flaky single step from a systemic outage pattern.</p><p>For newer Splunk authors, this is a compact pattern: <code>stats</code> for per-test rollups, <code>where</code> as a <b>quality gate</b> after aggregation (not in the initial search, which keeps the stats pass efficient), and <code>sort</code> for triage order. The <code>index_thousandeyes</code> macro abstracts the concrete index so deployments can retarget storage without rewriting the SPL.</p><p>Pipeline summary: <b>macro-scoped stream pull</b> &rarr; <b>per-test stats</b> (mean completion, sum errors) &rarr; <b>filter to failing or imperfect tests</b> &rarr; <b>sort ascending on completion</b>.</p>
+solution = <p>Healthy synthetic transactions should trend toward <b>100% average completion</b> with <b>zero summed errors</b> over the chosen window; persistent gaps point to application, CDN, or credential issues affecting scripted steps.</p><p><b>Suggested Actions</b><br><b>1.</b> For the lowest <code>avg_completion</code> tests, open the ThousandEyes transaction run detail and identify which step first fails or times out.<br><b>2.</b> When <code>total_errors</code> rises but completion stays high, correlate with release or WAF rule changes that may return soft errors the script still counts.<br><b>3.</b> Compare agent locations if the same test name appears from multiple vantage points &mdash; geo-specific failures suggest DNS or regional routing rather than app logic.<br><b>4.</b> If this search returns no rows yet completion issues are reported live, shorten the time range and confirm <code>web-transaction</code> metrics are present in <code>index_thousandeyes</code>.<br><b>5.</b> Tune alert thresholds per business criticality: revenue paths warrant stricter completion floors than internal admin flows.</p><p><b>Recommended Alerts</b></p><pre><code>| eval severity_level=case(avg_completion&lt;90 OR total_errors&gt;=25, "critical", avg_completion&lt;95 OR total_errors&gt;=8, "high", avg_completion&lt;99 OR total_errors&gt;=2, "medium", total_errors&gt;0, "low", 1==1, "normal")</code></pre><p>This SPL should be added as the final command in your search pipeline to assign severity levels for alerting or dashboard visualization. <br/><b>Threshold values should be calibrated to your specific usage patterns</b>; the provided alert levels serve as a starting point for tuning based on your environment and workload! In some cases if the search "returns no results" but finishes without errors we will set the severity to "normal.</p><p><b>Evaluation Logic:</b></p><ul><li><b>Normal (Severity 1):</b> <i>No rows returned in the filtered result set (no tests under 100% completion with errors in-window), or defaults after eval when completion and errors are within benign bounds.</i></li><li><b>Low (Severity 2):</b> <i>Isolated error signals with <code>total_errors&gt;0</code> but completion remains strong after aggregation.</i></li><li><b>Medium (Severity 3):</b> <i>Meaningful slippage such as <code>avg_completion&lt;99</code> or repeated low error counts that deserve daytime follow-up.</i></li><li><b>High (Severity 4):</b> <i>Clear degradation: <code>avg_completion&lt;95</code> or elevated <code>total_errors</code> indicating many failed iterations.</i></li><li><b>Critical (Severity 5):</b> <i>Severe user-impacting behavior: <code>avg_completion&lt;90</code> or very high <code>total_errors</code> suggesting widespread step failure.</i></li></ul>
+related_info = <ul><li><b>Transaction completion vs. availability</b><br>Completion reflects whether scripted steps finished successfully, which can flag partial outages that simple HTTP uptime misses.</li><li><b>Post-aggregation filtering</b><br>Applying <code>where</code> after <code>stats</code> reduces scanned noise and keeps the table limited to tests that actually violate your quality bar.</li><li><b>Index macros</b><br><code>index_thousandeyes</code> centralizes index routing so the same library search works across dev, staging, and prod Splunk deployments.</li></ul>
+search = | tstats `scd_summariesonly` avg(Test_Metrics.metric_name:web.transaction.completion) as avg_completion FROM DATAMODEL=Cisco_ThousandEyes.Test_Metrics WHERE Test_Metrics.thousandeyes.test.type="web-transaction" BY Test_Metrics.thousandeyes.test.name\
+| rename "Test_Metrics.thousandeyes.test.name" as "thousandeyes.test.name"\
+| eval total_errors=0\
+| where avg_completion < 100
+
+[it_health_te_config_test_inventory_detail]
+search_name = ThousandEyes - Configuration Status - Test Inventory Detail Table
+search_author = ta-cisco-thousandeyes
+updated_author = akhamis
+version = 1.0.0
+date_created = 2026-05-13
+date_updated = 2026-05-21
+category = Monitoring
+sub_category = TE Configuration
+tags = SCD,ThousandEyes,Detail,Configuration Status
+dispatch_context = splunk-cisco-dashboards
+dispatch_context_force = 1
+default_viz = splunk.table
+description = <p>Canonical SPL from the Cisco ThousandEyes TA stock dashboard <code>configuration_status.xml</code> (configuration test inventory).</p>
+explanation = <p>Harvested from <code>ta_cisco_thousandeyes</code> shipped views. Appears on: <b>configuration_status</b>. Requires accelerated <code>Cisco_ThousandEyes</code> data model.</p>
+solution = <p>Run only when DM acceleration is healthy; empty panels usually indicate the accelerated data model has not built summaries for the dispatched time range.</p>
+related_info = <ul><li><b>Upstream</b><br>Cisco Splunk Add-on for ThousandEyes stock dashboards.</li></ul>
+search = | tstats `scd_summariesonly` values(Test_Metrics.thousandeyes.test.type) as "Test Types" values(Test_Metrics.thousandeyes.test.name) as "Test Name" FROM DATAMODEL=Cisco_ThousandEyes.Test_Metrics BY Test_Metrics.thousandeyes.test.id, Test_Metrics.thousandeyes.test.domain\
+| rename Test_Metrics.thousandeyes.test.id as "Test Id" Test_Metrics.thousandeyes.test.domain as "Test Domain"\
+| table "Test Id", "Test Name", "Test Domain", "Test Types"
+
+[network_intelligence_zeek_ssl_legacy_tls_usage]
+search_name = Zeek - TLS - Legacy and Weak Cryptographic Usage
+search_author = akhamis
+updated_author = akhamis
+version = 1.0.0
+date_created = 2026-06-02
+date_updated = 2026-06-02
+category = Network
+sub_category = Network Intelligence
+tags = SCD,Network,Zeek,TLS,Cipher,Risk
+dispatch_context = splunk-cisco-dashboards
+dispatch_context_force = 1
+default_viz = splunk.table
+description = <p>Identifies potentially risky TLS usage patterns, including legacy protocol versions and weak or non-standard cipher/curve selections.</p>
+explanation = <p>This search evaluates TLS version, cipher, and curve fields from <code>zeek:ssl</code> and assigns a deterministic risk indicator. It then summarizes source and destination spread per indicator and crypto tuple for fast prioritization.</p>
+solution = <p>Investigate any legacy TLS or weak-cipher observations that are still accepted in production paths. Use findings to tune TLS policy, deprecate weak negotiation options, and reduce downgrade exposure.</p>
+related_info = <ul><li><b>Observed values</b><br>Sample data includes TLSv10/TLSv11 and non-standard curve labels, making this a high-value hygiene panel.</li></ul>
+search = `index_zeek` sourcetype="zeek:ssl"\
+| eval source=coalesce(src,'id.orig_h'), destination=coalesce(dst,'id.resp_h'), destination_port=coalesce(p,'id.resp_p'), server=lower(coalesce(server_name,"unknown")), tls_version=coalesce(version,"unknown"), cipher_name=coalesce(cipher,"unknown"), curve_name=coalesce(curve,"unknown"), risk_indicator=case(match(tls_version,"^TLSv1(0|1)$"),"Legacy TLS version", match(cipher_name,"(?i)ANON|RC4|_CBC_"),"Weak or deprecated cipher", match(curve_name,"(?i)draft|kyber|sm2"),"Non-standard key exchange curve", 1==1,null())\
+| where isnotnull(risk_indicator)\
+| stats count as session_count dc(source) as unique_sources dc(destination) as unique_destinations by risk_indicator, tls_version, cipher_name, curve_name, server, destination_port\
+| sort 25 -session_count -unique_sources
+
