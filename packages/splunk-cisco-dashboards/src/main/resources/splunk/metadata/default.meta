@@ -7,6 +7,10 @@ export = none
 access = read : [ * ], write : [ admin, power, sc_admin ]
 export = system
 
+[overview_factory_tiles]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
 [macros/nrs_th_ap_health]
 access = read : [ * ], write : [ admin, power, sc_admin ]
 export = system

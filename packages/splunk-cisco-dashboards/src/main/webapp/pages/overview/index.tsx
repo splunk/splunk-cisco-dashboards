@@ -163,6 +163,11 @@ import {
     getSearchbaseCatalogue,
     type SearchbaseRecord,
 } from '@/common/services/searchbaseCatalogue';
+import {
+    loadOverviewFactoryTiles,
+    saveOverviewFactoryTiles,
+    type OverviewFactoryTilesConfig,
+} from '@/common/services/overviewFactoryTilesService';
 import { cn } from '@/common/lib/utils';
 
 // =============================================================================
@@ -326,12 +331,11 @@ const METRIC_CONFIG: MetricConfig[] = [
     // three Alan defaulted onto). The two legacy composite-score
     // tiles (UX Score, Compliance) were replaced in the same review
     // with named, countable signals: Active TE alerts (Critical+High)
-    // and Sites < 90%. The composite searchbase entries themselves
-    // stay in the catalogue so anyone who wants them back can re-bind
-    // via the KPI picker. As of 2026-06-04 every section ships with
-    // nine factory candidates but still defaults to three visible
-    // tiles, so the executive view stays tight while operators can
-    // dial up breadth with the count pill. Drag-to-reorder stays in place.
+    // and more explicit operational tiles. The composite searchbase
+    // entries themselves stay in the catalogue so anyone who wants
+    // them back can re-bind via the KPI picker. Factory candidates
+    // remain ordered here; per-user count/order controls can then
+    // adjust the visible subset without changing this baseline.
     {
         id: 'critical_website_availability',
         section: 'it_health',
@@ -397,7 +401,7 @@ const METRIC_CONFIG: MetricConfig[] = [
             'Catalyst Center. Devices that are reachable AND managed score 100, ' +
             'reachable-only score 50, otherwise 0.',
         // Single row: { score: 0..100 }
-        savedSearch: 'Executive - Current Device Health',
+        savedSearch: 'IT - Critical Systems - Device Health Score',
         valueField: 'score',
         unit: '%',
         thresholds: { warning: 98, critical: 90, direction: 'higher_is_better' },
@@ -422,57 +426,34 @@ const METRIC_CONFIG: MetricConfig[] = [
         thresholds: { warning: 500, critical: 1000, direction: 'lower_is_better' },
         thresholdNote:
             'Counts issues across every priority, including informational. The ' +
-            'companion "active TE alerts" tile narrows to high+critical only when ' +
-            'you want a more selective signal.',
+            'issue detail drilldown is the right follow-up when total volume spikes.',
         mock: { seed: 13, sparkMin: 100, sparkMax: 800, value: 650, change: -50 },
     },
-    // Composite-metric replacements per Alan's 2026-05-11 review:
-    // "UX score" (Catalyst client + device blend) and "Compliance"
-    // (% of compliance checks passing) were both 0-100 composites that
-    // executives could not act on directly ("80% means what?"). They
-    // are replaced here with two named, countable signals. The original
-    // stanzas (`Executive Dashboard - User Experience Score`,
-    // `IT - Critical Systems - Compliance Rate`) stay in the catalogue
-    // so anyone who wants the composite back can dial it up via the
-    // KPI picker; we just stop defaulting them onto the executive view.
+    // Keep the historical id so existing per-user tile-order storage
+    // treats this as an in-place factory replacement instead of
+    // appending a brand-new tile outside the visible window.
     {
         id: 'active_te_alerts',
         section: 'it_health',
-        label: 'Active TE alerts',
-        subLabel: 'Severity breakdown (count by severity)',
+        label: 'Inventory mix',
+        subLabel: 'Managed fleet by type',
         description:
-            'Count of currently-active ThousandEyes alerts in the dispatched ' +
-            'window, broken down by severity. Headline is the total across all ' +
-            'severities; the bars below show the per-severity counts so the ' +
-            'executive sees at a glance which severity bucket is loud right ' +
-            'now (critical vs. high vs. medium…). Replaces the legacy UX ' +
-            'Score composite tile and, as of Build 85, the time-series ' +
-            "headline-with-sparkline view (still available via the picker as " +
-            '"IT Health - Active TE Alerts (High + Critical)").',
-        // Bar-breakdown rows: { Severity, count }. Tile renders as
-        // BarBreakdownTile because the bound searchbase stanza
-        // declares default_viz = splunk.bar.
-        savedSearch: 'IT Health - Active TE Alerts by Severity',
-        // valueField/sparkDataField/baselineField are unused by the
-        // bar-breakdown leaf (it reads `rows` + `columns` from
-        // useTableData), but kept here as a safety net so a picker
-        // override that swaps to a *time-series* binding still has
-        // sensible field hints to fall back on.
+            'Unified asset inventory grouped by device type. This replaces ' +
+            'the old active ThousandEyes alert factory tile because the TE ' +
+            'alert feed is optional and often empty in lab or early customer ' +
+            'deployments, while the inventory lookup is part of the core ' +
+            'operational setup.',
+        // Table rows: { category, count }. Tile renders through
+        // TableTile because the bound searchbase stanza declares
+        // default_viz = splunk.table.
+        savedSearch: 'IT - Critical Systems - Device Inventory by Type',
         valueField: 'count',
-        // Resting/healthy color is neutral sky; the bar tile's
-        // severity-aware color map (red for critical, orange for
-        // high, …) overrides this on a per-bar basis, but the value
-        // is preserved so a picker swap to a non-bar viz reverts
-        // cleanly.
         color: '#0ea5e9',
-        thresholds: { warning: 5, critical: 20, direction: 'lower_is_better' },
         thresholdNote:
-            'Threshold applies to the total count across all severities. The ' +
-            'severity-aware bar colours (red = critical, orange = high, …) ' +
-            'flag the dominant severity at a glance; pivot to ' +
-            '[it_health_thousandeyes_alerts_table] for the recent-20 ' +
-            'drill-down filtered to whichever bar is loud.',
-        mock: { seed: 14, sparkMin: 0, sparkMax: 8, value: 12, change: 0 },
+            'Inventory rows are grouped from the asset_inventory lookup. If ' +
+            'this tile is empty, run the asset inventory builder and validate ' +
+            'macro index tuning before troubleshooting the Overview page.',
+        mock: { seed: 14, sparkMin: 10, sparkMax: 60, value: 42, change: 0 },
     },
     {
         id: 'syslog_severity',
@@ -2110,10 +2091,10 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
     }, [effective.id, result.status, onStatus]);
 
     // Drilldown SPL — what we open in Splunk Search when the user
-    // clicks the "open in search" icon or the sparkline. Always
-    // mirrors what `useMetric` dispatched (`result.spl`), so the click
-    // and the runtime are in sync.
-    const drilldownSpl = result.spl;
+    // clicks the "open in search" icon. Prefer the resolved searchbase
+    // SPL so the action remains available even when the result set is
+    // empty, mocked, or still loading.
+    const drilldownSpl = dispatchedConfig.spl ?? result.spl;
 
     const handleClick = useCallback(() => {
         if (!drilldownSpl) return;
@@ -2248,7 +2229,7 @@ const TableCardLeaf: React.FC<CommonLeafProps> = ({
         onStatus(effective.id, 'unknown');
     }, [effective.id, onStatus]);
 
-    const drilldownSpl = result.spl;
+    const drilldownSpl = dispatchedConfig.spl ?? result.spl;
     const handleClick = useCallback(() => {
         if (!drilldownSpl) return;
         const url = splunkSearchAppUrl(
@@ -2310,7 +2291,7 @@ const BarBreakdownCardLeaf: React.FC<CommonLeafProps> = ({
         onStatus(effective.id, 'unknown');
     }, [effective.id, onStatus]);
 
-    const drilldownSpl = result.spl;
+    const drilldownSpl = dispatchedConfig.spl ?? result.spl;
     const handleClick = useCallback(() => {
         if (!drilldownSpl) return;
         const url = splunkSearchAppUrl(
@@ -2371,7 +2352,7 @@ const PieCardLeaf: React.FC<PieCardLeafProps> = ({
         onStatus(effective.id, 'unknown');
     }, [effective.id, onStatus]);
 
-    const drilldownSpl = result.spl;
+    const drilldownSpl = dispatchedConfig.spl ?? result.spl;
     const handleClick = useCallback(() => {
         if (!drilldownSpl) return;
         const url = splunkSearchAppUrl(
@@ -2437,7 +2418,7 @@ const ScalarGaugeCardLeaf: React.FC<ScalarGaugeCardLeafProps> = ({
         onStatus(effective.id, result.status);
     }, [effective.id, result.status, onStatus]);
 
-    const drilldownSpl = result.spl;
+    const drilldownSpl = dispatchedConfig.spl ?? result.spl;
     const handleClick = useCallback(() => {
         if (!drilldownSpl) return;
         const url = splunkSearchAppUrl(
@@ -2614,6 +2595,75 @@ const OverviewPage: React.FC = () => {
         resetAll: resetAllSectionLayout,
     } = usePersistedSectionLayout();
 
+    // ------------------------------ Shared factory tile layout ------------------------------
+    //
+    // The shipped METRIC_CONFIG remains the full tile catalogue. This
+    // app-level config controls the shared factory order and visible
+    // count for each section, then the existing per-user localStorage
+    // hooks layer personal changes on top. Operators can update the
+    // shared baseline from the picker footer via "Save defaults";
+    // users who already customised their browser keep that preference
+    // until they use Factory reset.
+    const [overviewFactoryTiles, setOverviewFactoryTiles] =
+        useState<OverviewFactoryTilesConfig>({});
+    const [factoryDefaultsStatus, setFactoryDefaultsStatus] = useState<
+        'idle' | 'saving' | 'saved' | 'error'
+    >('idle');
+
+    useEffect(() => {
+        let cancelled = false;
+        loadOverviewFactoryTiles()
+            .then((config) => {
+                if (cancelled) return;
+                setOverviewFactoryTiles(config);
+            })
+            .catch((error) => {
+                if (cancelled) return;
+                // Keep Overview usable even if the optional shared
+                // defaults config is unavailable; METRIC_CONFIG is the
+                // hardcoded fallback.
+                console.warn('[overview] factory tile defaults unavailable', error);
+                setOverviewFactoryTiles({});
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    const factoryTileCountDefaults = useMemo(() => {
+        const out: Partial<Record<SectionId, number>> = {};
+        for (const section of availableSections) {
+            const count = overviewFactoryTiles[section]?.visibleCount;
+            if (typeof count === 'number' && Number.isFinite(count)) {
+                out[section] = count;
+            }
+        }
+        return out;
+    }, [availableSections, overviewFactoryTiles]);
+
+    const getFactoryTileOrder = useCallback(
+        (section: SectionId, sectionMetrics: MetricConfig[]): string[] => {
+            const canonicalIds = sectionMetrics.map((metric) => metric.id);
+            const configuredIds = overviewFactoryTiles[section]?.tiles ?? [];
+            if (configuredIds.length === 0) return canonicalIds;
+
+            const canonicalSet = new Set(canonicalIds);
+            const seen = new Set<string>();
+            const ordered: string[] = [];
+            for (const id of configuredIds) {
+                if (!canonicalSet.has(id) || seen.has(id)) continue;
+                seen.add(id);
+                ordered.push(id);
+            }
+            for (const id of canonicalIds) {
+                if (seen.has(id)) continue;
+                ordered.push(id);
+            }
+            return ordered;
+        },
+        [overviewFactoryTiles]
+    );
+
     // ------------------------------ Section tile-count preference ------------------------------
     //
     // Per-user, per-section "how many tiles do I want visible". The
@@ -2624,25 +2674,13 @@ const OverviewPage: React.FC = () => {
     // who customises tile #5, dials down to 3, then back up to 5,
     // gets their customisation back unchanged.
     //
-    // Bounds: 3..9 with per-section defaults. Cap is 9 so every
-    // shipped section can expose the full factory catalogue while
-    // still booting at a tight three-tile executive summary.
-    //
-    // *Default* count is 3 across every section (Build 83). The exec
-    // view boots with a tight, three-headline-per-row layout that
-    // fits cleanly into the new 2/3-tiles / 1/3-map split. Operators
-    // who want more breadth dial up via the `−  N  +` pill on each
-    // section header (cap is 9).
-    //
-    // History: earlier revisions defaulted to 3 (Alan's original
-    // "show me the three I asked for"), then bumped to 6 on
-    // 2026-05-12 because the right-side map fought for horizontal
-    // width and the wider tile column looked empty at 3 tiles. With
-    // Build 83's 2/3-tile column the visual balance flips back —
-    // 3 tiles fill the row cleanly without collisions, and 6 starts
-    // truncating headlines at 1280px. Returning users keep whatever
-    // count they had configured because the per-section preference
-    // is keyed off localStorage.
+    // Bounds: 3..9 with per-section defaults from
+    // overview_factory_tiles.conf. The packaged baseline currently
+    // exposes nine tiles per section; operators can save a different
+    // shared default from the picker footer, and individual users can
+    // still dial the visible count up/down with the section pill.
+    // Returning users keep whatever count they had configured because
+    // the per-section preference is keyed off localStorage.
     //
     // Declared up here (before the aggregate status block) because
     // the HealthBadge filter below needs to know which tiles are
@@ -2655,7 +2693,7 @@ const OverviewPage: React.FC = () => {
     } = usePersistedSectionTileCounts({
         minCount: 3,
         maxCount: 9,
-        defaultCount: {},
+        defaultCount: factoryTileCountDefaults,
         fallbackDefault: 3,
     });
 
@@ -2733,15 +2771,19 @@ const OverviewPage: React.FC = () => {
             // tile dragged into the visible window also gets its
             // status counted in the aggregate, and a tile dragged
             // out is dropped immediately.
-            const canonicalIds = METRIC_CONFIG.filter((m) => m.section === section).map(
-                (m) => m.id
-            );
+            const sectionMetrics = METRIC_CONFIG.filter((m) => m.section === section);
+            const canonicalIds = getFactoryTileOrder(section, sectionMetrics);
             const orderedIds = getSectionTileOrder(section, canonicalIds);
             const visible = orderedIds.slice(0, sectionTileCounts[section]);
             for (const id of visible) out.add(id);
         }
         return out;
-    }, [visibleSections, sectionTileCounts, getSectionTileOrder]);
+    }, [
+        visibleSections,
+        sectionTileCounts,
+        getFactoryTileOrder,
+        getSectionTileOrder,
+    ]);
 
     const statusList = useMemo(
         () =>
@@ -3686,6 +3728,51 @@ const OverviewPage: React.FC = () => {
         setMapVisible,
     ]);
 
+    const handleSaveOverviewFactoryDefaults = useCallback(async () => {
+        const next: OverviewFactoryTilesConfig = {};
+        for (const section of availableSections) {
+            const sectionMetrics = METRIC_CONFIG.filter((m) => m.section === section);
+            if (sectionMetrics.length === 0) continue;
+            const factoryOrder = getFactoryTileOrder(section, sectionMetrics);
+            const effectiveOrder = getSectionTileOrder(section, factoryOrder);
+            const visibleCount = Math.min(
+                sectionTileCounts[section],
+                Math.min(sectionTileBounds.maxCount, sectionMetrics.length)
+            );
+            next[section] = {
+                tiles: effectiveOrder,
+                visibleCount,
+            };
+        }
+
+        setFactoryDefaultsStatus('saving');
+        try {
+            await saveOverviewFactoryTiles(next);
+            setOverviewFactoryTiles(next);
+            setFactoryDefaultsStatus('saved');
+            if (typeof window !== 'undefined') {
+                window.setTimeout(() => setFactoryDefaultsStatus('idle'), 2400);
+            }
+        } catch (error) {
+            console.error('[overview] failed to save factory tile defaults', error);
+            setFactoryDefaultsStatus('error');
+            if (typeof window !== 'undefined') {
+                window.alert(
+                    error instanceof Error
+                        ? error.message
+                        : 'Could not save Overview factory defaults.'
+                );
+                window.setTimeout(() => setFactoryDefaultsStatus('idle'), 4000);
+            }
+        }
+    }, [
+        availableSections,
+        getFactoryTileOrder,
+        getSectionTileOrder,
+        sectionTileBounds.maxCount,
+        sectionTileCounts,
+    ]);
+
     // ------------------------------ Map footer ------------------------------
     // Same dispatch rules as the main metric grid: searchbase.conf
     // entries resolve to literal SPL so the footer value, picker preview,
@@ -4416,7 +4503,10 @@ const OverviewPage: React.FC = () => {
                             // still resolving each id back to its
                             // full MetricConfig — no per-iteration
                             // .find() scan.
-                            const canonicalIds = allSectionMetrics.map((m) => m.id);
+                            const canonicalIds = getFactoryTileOrder(
+                                section,
+                                allSectionMetrics
+                            );
                             const orderedIds = getSectionTileOrder(section, canonicalIds);
                             const visibleIds = orderedIds.slice(0, visibleCount);
                             const byId = new Map(allSectionMetrics.map((m) => [m.id, m]));
@@ -4831,6 +4921,8 @@ const OverviewPage: React.FC = () => {
                     }
                 }}
                 onResetAllCustomizations={handleResetAllCustomizations}
+                onSaveFactoryDefaults={handleSaveOverviewFactoryDefaults}
+                factoryDefaultsStatus={factoryDefaultsStatus}
             />
 
             <SignalTickerEditor

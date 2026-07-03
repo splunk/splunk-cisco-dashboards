@@ -329,6 +329,14 @@ export interface KpiPickerPanelProps {
      * reset and (typically) closing the picker after.
      */
     onResetAllCustomizations?: () => void;
+    /**
+     * Optional shared-default save handler. Overview uses this to
+     * write the current section tile order/counts to an app-level
+     * config file so the same factory layout applies to every user
+     * who has not chosen a local override.
+     */
+    onSaveFactoryDefaults?: () => void | Promise<void>;
+    factoryDefaultsStatus?: 'idle' | 'saving' | 'saved' | 'error';
 }
 
 const escapeRegex = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -492,6 +500,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     onSetSearchDrilldown,
     onTestInSearch,
     onResetAllCustomizations,
+    onSaveFactoryDefaults,
+    factoryDefaultsStatus = 'idle',
     onApplyDisplayToSection,
 }) => {
     const [catalogue, setCatalogue] = useState<SearchbaseRecord[]>([]);
@@ -1749,6 +1759,16 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         );
         if (!ok) return;
         onResetAllCustomizations();
+    };
+
+    const handleSaveFactoryDefaults = () => {
+        if (!onSaveFactoryDefaults) return;
+        const ok = window.confirm(
+            'Save the current Overview tile order and visible tile counts as the shared factory default?\n\n' +
+                'This updates the app-level defaults for all users. Users with their own local tile layout keep it until they use Factory reset.'
+        );
+        if (!ok) return;
+        void onSaveFactoryDefaults();
     };
 
     const handleClearFacets = () => {
@@ -3930,6 +3950,37 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 >
                                     <RotateCcw className="w-3 h-3" />
                                     Factory reset
+                                </button>
+                            </>
+                        )}
+                        {onSaveFactoryDefaults && (
+                            <>
+                                <span
+                                    aria-hidden="true"
+                                    className="w-px h-3 bg-slate-200 dark:bg-slate-700 flex-shrink-0"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={handleSaveFactoryDefaults}
+                                    disabled={factoryDefaultsStatus === 'saving'}
+                                    title="Save current tile order and counts as the shared Overview factory default"
+                                    className={cn(
+                                        'inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider flex-shrink-0',
+                                        factoryDefaultsStatus === 'error'
+                                            ? 'text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300'
+                                            : factoryDefaultsStatus === 'saved'
+                                              ? 'text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300'
+                                              : 'text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300',
+                                        factoryDefaultsStatus === 'saving' &&
+                                            'opacity-60 cursor-wait'
+                                    )}
+                                >
+                                    <Settings2 className="w-3 h-3" />
+                                    {factoryDefaultsStatus === 'saving'
+                                        ? 'Saving defaults'
+                                        : factoryDefaultsStatus === 'saved'
+                                          ? 'Defaults saved'
+                                          : 'Save defaults'}
                                 </button>
                             </>
                         )}
