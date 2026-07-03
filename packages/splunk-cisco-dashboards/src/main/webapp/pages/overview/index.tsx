@@ -5607,6 +5607,10 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
 
     const activeSet = new Set(layoutDraft);
     const hiddenSections = availableSections.filter((section) => !activeSet.has(section));
+    const editorSections = [
+        ...layoutDraft.filter((section) => availableSections.includes(section)),
+        ...hiddenSections,
+    ];
     const canAddSection = layoutDraft.length < maxSections && hiddenSections.length > 0;
 
     const addSection = () => {
@@ -5730,10 +5734,14 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
                     </div>
 
                     <div className="grid gap-3 sm:grid-cols-2">
-                        {availableSections.map((section, idx) => {
+                        {editorSections.map((section) => {
                             const isVisible = activeSet.has(section);
+                            const visibleIndex = layoutDraft.indexOf(section);
                             const canShow = !isVisible && layoutDraft.length < maxSections;
                             const canHide = isVisible && layoutDraft.length > 1;
+                            const sectionKeyLabel = section
+                                .replace(/_/g, ' ')
+                                .replace(/\b\w/g, (letter) => letter.toUpperCase());
                             return (
                                 <div
                                     key={section}
@@ -5749,7 +5757,12 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
                                             htmlFor={`section-title-${section}`}
                                             className={cn(labelClass, 'mb-0')}
                                         >
-                                            Section {idx + 1}
+                                            {isVisible
+                                                ? `Section ${visibleIndex + 1}`
+                                                : 'Hidden section'}
+                                            <span className="ml-2 text-[9px] font-black text-slate-400 dark:text-slate-500">
+                                                {sectionKeyLabel}
+                                            </span>
                                         </label>
                                         <button
                                             type="button"
