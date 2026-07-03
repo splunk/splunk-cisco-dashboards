@@ -1,0 +1,41 @@
+{
+  "catalyst_stanza_count": 248,
+  "static": {
+    "errors": 0,
+    "warnings": 0,
+    "issues": []
+  },
+  "prerequisites": {
+    "ok": false,
+    "checks": [
+      {
+        "owner": "codex",
+        "app": "cisco-catalyst-app",
+        "status": "fail",
+        "detail": "HTTP 404: Action forbidden."
+      },
+      {
+        "owner": "nobody",
+        "app": "cisco-catalyst-app",
+        "status": "fail",
+        "detail": "HTTP 404: Action forbidden."
+      },
+      {
+        "owner": "codex",
+        "app": "splunk-cisco-dashboards",
+        "status": "fail",
+        "detail": "Error in 'DataModelEvaluator': Data model 'Cisco_Catalyst_App' was not found."
+      },
+      {
+        "owner": "nobody",
+        "app": "search",
+        "status": "fail",
+        "detail": "Error in 'DataModelEvaluator': Data model 'Cisco_Catalyst_App' was not found."
+      }
+    ],
+    "dispatch_app": "cisco-catalyst-app",
+    "dispatch_owner": "codex"
+  },
+  "live_skipped_reason": "live prerequisites failed: no namespace can run datamodel=Cisco_Catalyst_App (see checks in report)",
+  "live": []
+}
