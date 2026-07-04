@@ -11,11 +11,10 @@ export interface City {
         latency: number;
     };
     /**
-     * searchbase.conf `search_name` that powers the "Active SPL Query"
-     * preview card and the "Open in Splunk Search" drilldown for this
-     * site.
+     * Searchbase-owned topology site id used to resolve this legacy map
+     * marker to a stanza via `viz_options.topologySite.id`.
      */
-    savedSearch: string;
+    topologySiteId?: string;
 }
 
 export interface SearchResult {

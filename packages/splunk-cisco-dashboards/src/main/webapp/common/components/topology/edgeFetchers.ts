@@ -24,10 +24,18 @@ import type {
     HealthStatus,
 } from '@/common/services/topologyDiscovery';
 
-/** Friendly `search_name` of the searchbase stanza that backs the
- *  synthetic A2A edge fetcher. Kept here (and not in the stanza id)
- *  because `search_name` is the stable, reviewer-visible key. */
-const TE_A2A_SEARCH_NAME = 'Overview - Link ThousandEyes A2A Inventory';
+/** Searchbase role that identifies the generic TE A2A inventory stanza. */
+const TE_A2A_INVENTORY_ROLE = 'teA2AInventory';
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    Boolean(value && typeof value === 'object' && !Array.isArray(value));
+
+const searchbaseTopologyMapRole = (record: SearchbaseRecord): string => {
+    const raw = record.vizOptions?.topologyMap;
+    if (!isRecord(raw)) return '';
+    const role = raw.role;
+    return typeof role === 'string' ? role.trim() : '';
+};
 
 const optionalString = (raw: unknown): string | undefined => {
     if (typeof raw !== 'string') return undefined;
@@ -123,15 +131,17 @@ export const fetchThousandEyesA2AEdges = async (
     topology: DiscoveredTopology
 ): Promise<TopologyDiscoveredEdge[]> => {
     // Resolve the inline SPL out of `searchbase.conf` rather than
-    // dispatching `| savedsearch "..."` — the stanza is *not* a real
+    // dispatching through the savedsearch command — the stanza is *not* a real
     // saved search (only a searchbase entry), so the savedsearch
     // command path 400s on most stacks. The catalogue lookup uses
     // the same configs/conf-searchbase REST surface the picker
     // already calls, so it piggybacks the existing cache.
     let record: SearchbaseRecord;
     try {
-        const catalogue = await getSearchbaseCatalogue();
-        const match = catalogue.find((r) => r.searchName === TE_A2A_SEARCH_NAME);
+        const catalogue = await getSearchbaseCatalogue({ includeHidden: true });
+        const match = catalogue.find(
+            (r) => searchbaseTopologyMapRole(r) === TE_A2A_INVENTORY_ROLE
+        );
         if (!match || match.search.trim().length === 0) {
             // Stanza not shipped on this stack (older install or
             // edited conf); skip silently — the canvas just renders

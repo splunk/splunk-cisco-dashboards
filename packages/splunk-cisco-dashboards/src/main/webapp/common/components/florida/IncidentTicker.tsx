@@ -1,11 +1,11 @@
 /**
  * IncidentTicker — auto-cycling strip of recent critical events.
  *
- * Optionally driven by a Splunk saved search whose result rows look like
+ * Optionally driven by a searchbase SPL whose result rows look like
  *
  *     _time, severity, source, message
  *
- * Renders nothing until a saved search is wired. Deployments that want an
+ * Renders nothing until a search is wired. Deployments that want an
  * explicit empty state can pass `fallback` rows. Each row is shown for
  * `intervalMs` (default 5 s) and the ticker pauses on hover so executives
  * can read.
@@ -28,8 +28,10 @@ export interface IncidentRow {
 }
 
 interface IncidentTickerProps {
-    /** Saved-search stanza to drive the feed. */
-    savedSearch?: string;
+    /** Literal SPL from searchbase.conf. */
+    search?: string;
+    /** Splunk app namespace this search must dispatch in. */
+    appContext?: string;
     range: TimeRange;
     refreshToken: number;
     intervalMs?: number;
@@ -54,13 +56,6 @@ const COLOR: Record<IncidentSeverity, string> = {
     info: 'text-slate-500',
 };
 
-const NAME_PATTERN = /^[\w\s\-.:()]+$/;
-
-const buildSpl = (name: string): string => {
-    if (!name || name.length > 256 || !NAME_PATTERN.test(name)) return '';
-    return `| savedsearch "${name}"`;
-};
-
 const normalizeSeverity = (raw: unknown): IncidentSeverity => {
     const s = String(raw ?? '').toLowerCase();
     if (s.startsWith('crit')) return 'critical';
@@ -71,7 +66,8 @@ const normalizeSeverity = (raw: unknown): IncidentSeverity => {
 };
 
 export const IncidentTicker: React.FC<IncidentTickerProps> = ({
-    savedSearch,
+    search,
+    appContext,
     range,
     refreshToken,
     intervalMs = 5000,
@@ -81,7 +77,7 @@ export const IncidentTicker: React.FC<IncidentTickerProps> = ({
     const [paused, setPaused] = useState(false);
     const [index, setIndex] = useState(0);
 
-    const spl = useMemo(() => (savedSearch ? buildSpl(savedSearch) : ''), [savedSearch]);
+    const spl = useMemo(() => search?.trim() ?? '', [search]);
 
     useEffect(() => {
         if (!spl) {
@@ -95,6 +91,7 @@ export const IncidentTicker: React.FC<IncidentTickerProps> = ({
             earliestTime: range.earliest,
             latestTime: range.latest,
             tag: 'incident_ticker',
+            appContext,
         })
             .then((res) => {
                 if (cancelled) return;
@@ -117,7 +114,7 @@ export const IncidentTicker: React.FC<IncidentTickerProps> = ({
         return () => {
             cancelled = true;
         };
-    }, [spl, range.earliest, range.latest, refreshToken, fallback]);
+    }, [spl, appContext, range.earliest, range.latest, refreshToken, fallback]);
 
     useEffect(() => {
         if (paused || rows.length <= 1) return undefined;

@@ -147,6 +147,11 @@ export interface MetricConfig {
      */
     description?: string;
     /**
+     * Optional searchbase.conf stanza id. Overview factory tiles use this as the
+     * stable binding when the tile definition is authored in searchbase metadata.
+     */
+    searchbaseId?: string;
+    /**
      * Search binding name. Historically this pointed at savedsearches.conf;
      * new overview bindings resolve to searchbase.conf first and use
      * saved-search dispatch only for deliberately scheduled searches.
@@ -979,6 +984,12 @@ export const useMetric = (
 export interface KpiConfig {
     id: string;
     label: string;
+    /**
+     * Optional searchbase.conf stanza id. Map footer KPIs use this as
+     * the stable binding when the default card is authored in
+     * searchbase metadata.
+     */
+    searchbaseId?: string;
     /** Search binding name; can resolve through searchbase or savedsearches. */
     savedSearch?: string;
     /** Inline SPL — preferred over savedSearch when no stanza fits. */

@@ -6,8 +6,8 @@
  * can dial the visible count down
  * to a configurable minimum (3 by default) when they want a cleaner
  * read, or back up to the section's natural size when they want
- * everything. The trailing tiles in METRIC_CONFIG are the ones that
- * get hidden first — picker overrides on hidden tiles are NOT
+ * everything. The trailing tiles in the resolved section catalogue are
+ * the ones that get hidden first — picker overrides on hidden tiles are NOT
  * cleared, so when the user bumps the count back up their
  * customisations come back unchanged.
  *
