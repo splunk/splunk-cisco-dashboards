@@ -11,6 +11,18 @@ export = system
 access = read : [ * ], write : [ admin, power, sc_admin ]
 export = system
 
+# Overview tile settings that must read the same for every viewer
+# (Thresholds, Data Mapping, Drilldown) live in searchbase.conf's
+# viz_options / drilldown_search_name fields. Deliberately narrower
+# than the app-wide default above: only the `admin` role (which holds
+# `admin_all_objects` by default) may write here. Splunk's ACL model
+# also lets any user explicitly granted the `admin_all_objects`
+# capability write regardless of this list, which is the intended
+# escape hatch for a custom role that shouldn't otherwise be `admin`.
+[searchbase]
+access = read : [ * ], write : [ admin, sc_admin ]
+export = system
+
 [macros/nrs_th_ap_health]
 access = read : [ * ], write : [ admin, power, sc_admin ]
 export = system

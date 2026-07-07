@@ -99,6 +99,7 @@ import { InfoTooltip } from '@/common/components/florida/InfoTooltip';
 import {
     KpiPickerPanel,
     type KpiPickerContext,
+    type FactoryTileConfigApplyPatch,
 } from '@/common/components/florida/KpiPickerPanel';
 import {
     useMetric,
@@ -166,6 +167,8 @@ import {
     saveOverviewFactoryTiles,
     type OverviewFactoryTilesConfig,
 } from '@/common/services/overviewFactoryTilesService';
+import { saveFactoryTileConfig } from '@/common/services/searchbaseTileConfigService';
+import { useCanManageFactoryTileConfig } from '@/common/hooks/useCanManageFactoryTileConfig';
 import { cn } from '@/common/lib/utils';
 
 // =============================================================================
@@ -1040,131 +1043,21 @@ interface MetricCardProps {
 }
 
 /**
- * Returns a cloned MetricConfig with user picker overrides merged in.
+ * Returns a cloned MetricConfig with the current viewer's *display*
+ * preferences merged in (chart style, chrome-hiding toggles). This is
+ * intentionally a small function now.
  *
- * Only overridable fields are touched (search binding, value
- * field, label, description, thresholds). Everything else — mock
- * fallback, section, colour — stays put so the visual identity
- * stays consistent with the static config.
- *
- * `valueField` does NOT fall back to `cfg.valueField` when an override
- * is in play. When the user binds a different searchbase entry, the
- * original tile's field name almost certainly doesn't exist in the
- * new search's output — carrying it forward used to make `useMetric`
- * read undefined values, filter to an empty series, and silently fall
- * back to the static mock (the "headline didn't change after a picker
- * swap" bug). When `override.valueField` is undefined, `useMetric`
- * auto-detects from the live result rows.
- *
- * Thresholds (Build 97): each of `thresholdWarning` /
- * `thresholdCritical` / `thresholdDirection` is independently
- * optional. When set, the override field replaces the static
- * default; when undefined, the static default carries through. This
- * means a partial override (e.g. only `thresholdWarning`) keeps the
- * other two threshold fields anchored to the shipped values, which
- * is exactly what users want when they want to "tweak the warning
- * point but leave critical alone". The merged `MetricThresholds`
- * tuple is fed to `computeStatus` and `deriveThresholdLines` so the
- * tile colour, the trend-arrow tint, the sparkline stroke, and the
- * THRESHOLDS rows in the per-tile info popover all stay in lockstep
- * — there's still exactly one source of truth.
+ * Search binding, value field, label, and thresholds used to be
+ * merged here too, from a per-user localStorage override. They moved
+ * to admin-controlled `searchbase.conf` (`searchbaseTileConfigService`)
+ * so every viewer sees the same binding/label/thresholds — which
+ * means `cfg` (built straight from the searchbase catalogue) is
+ * already the effective value for those fields, with no client-side
+ * merge needed. `applyOverride` only has display taste left to apply.
  */
-const mergeThresholds = (
-    base: MetricThresholds | undefined,
-    override: MetricOverride
-): MetricThresholds | undefined => {
-    const hasOverride =
-        override.thresholdWarning !== undefined ||
-        override.thresholdCritical !== undefined ||
-        override.thresholdDirection !== undefined;
-    if (!hasOverride) return base;
-    return {
-        warning: override.thresholdWarning ?? base?.warning,
-        critical: override.thresholdCritical ?? base?.critical,
-        // Direction is required on the type even when warning/critical
-        // are both undefined. Fall back to `higher_is_better` if the
-        // tile shipped without thresholds at all so the override path
-        // produces a valid `MetricThresholds` shape rather than a
-        // partial that breaks `computeStatus`.
-        direction: override.thresholdDirection ?? base?.direction ?? 'higher_is_better',
-    };
-};
-
 const applyOverride = (cfg: MetricConfig, override?: MetricOverride): MetricConfig => {
     if (!override) return cfg;
-    // Detect "binding-swap" overrides vs. "tweak-only" overrides
-    // (Build 1188.1).
-    //
-    // Originally `applyOverride` assumed every override was a
-    // saved-search swap and aggressively blanked the original
-    // `subLabel` / `unit` / `spl` / mock-fallback so the prior
-    // tile's chrome wouldn't decorate a now-different headline.
-    // That assumption broke once Build 1174 introduced
-    // viz-only overrides (`vizOverride` and threshold tweaks
-    // without changing the binding): the picker was writing
-    // `savedSearch: <same as cfg.savedSearch>` because the
-    // payload always carries it, but `applyOverride` couldn't
-    // tell the difference and still nuked the original tile's
-    // mock-fallback. The chart promptly went blank for any
-    // tile whose searchbase entry returned 0 rows, because the
-    // mock series that had been painting the sparkline was
-    // suppressed (Alan flagged on 2026-05-18: "it works only
-    // with the viz type set in searchbase.conf, changing to
-    // anything is broken").
-    //
-    // Heuristic: when `override.savedSearch` matches the static
-    // `cfg.savedSearch`, the user explicitly kept the binding
-    // (or never changed it). In that case keep the original
-    // tile's chrome — don't drop `spl` (the static SPL is what
-    // the binding *means*), don't blank `subLabel`/`unit`, and
-    // don't suppress the mock fallback. Apply only the genuinely
-    // user-set fields (label / description / threshold / valueField
-    // / vizOverride). When the saved searches differ, fall through
-    // to the historical "binding swap" behaviour so a different
-    // search no longer carries the prior tile's identity.
-    const isBindingSwap = override.savedSearch !== cfg.savedSearch;
-    if (!isBindingSwap) {
-        return {
-            ...cfg,
-            // Apply user-set overrides only when they have a value.
-            // `valueField` is special: undefined here means "use
-            // auto-detect", which is a legitimate user choice on
-            // tweak-only overrides too, so we still set it through
-            // (the picker carries the static cfg's valueField when
-            // the user hasn't changed it, so this rarely actually
-            // changes anything in practice).
-            valueField: override.valueField ?? cfg.valueField,
-            label: override.label ?? cfg.label,
-            description: override.description ?? cfg.description,
-            thresholds: mergeThresholds(cfg.thresholds, override),
-        };
-    }
-    return {
-        ...cfg,
-        searchbaseId: undefined,
-        savedSearch: override.savedSearch,
-        spl: undefined,
-        valueField: override.valueField,
-        label: override.label ?? cfg.label,
-        description: override.description ?? cfg.description,
-        thresholds: mergeThresholds(cfg.thresholds, override),
-        // Blank these when the user binds a different search. The
-        // original tile's `subLabel` (e.g. "Catalyst compliance pass
-        // rate") and `unit` (e.g. "%") have no business decorating a
-        // headline produced by an unrelated search — leaving them in
-        // is what made every picker swap look like "the search didn't
-        // change" even though it had: the user-visible chrome belonged
-        // to the prior metric.
-        subLabel: '',
-        unit: '',
-        // Flip the no-data behaviour: a tile bound by the user must
-        // never silently re-render the original tile's hardcoded mock
-        // value when its new SPL returns nothing on this Splunk env —
-        // that's the "I picked a new search but the number didn't
-        // change" bug. With this flag, useMetric emits a NaN sentinel
-        // so MetricItem renders "—" instead of falling back to mock.
-        suppressMockOnEmpty: true,
-    };
+    return cfg;
 };
 
 const SPARKLINE_VIZ_OVERRIDES = new Set<MetricVizOverride>([
@@ -2096,6 +1989,14 @@ const OverviewPage: React.FC = () => {
         Map<string, SearchbaseRecord> | null
     >(null);
 
+    // Bumped after an admin saves a Thresholds / Data Mapping /
+    // Drilldown change (`searchbaseTileConfigService`) so the catalogue
+    // re-fetches and the new admin-set values show up without a full
+    // page reload. `saveFactoryTileConfig` already clears the
+    // in-memory cache in `searchbaseCatalogue.ts`; this token just
+    // re-runs the effect below to actually re-fetch.
+    const [searchbaseRefreshToken, setSearchbaseRefreshToken] = useState(0);
+
     // Runtime dispatch intentionally includes `search_hidden = 1`
     // stanzas. Factory tiles and support drilldowns can be hidden from
     // pickers while still being valid runtime bindings.
@@ -2123,7 +2024,7 @@ const OverviewPage: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, []);
+    }, [searchbaseRefreshToken]);
 
     const metricConfig = useMemo(
         () => buildOverviewMetricConfig(searchbaseRecords),
@@ -2880,20 +2781,16 @@ const OverviewPage: React.FC = () => {
             color: cfg.color,
             thresholds: cfg.thresholds,
         });
+        // Search binding is admin-controlled now, so `cfg` is already
+        // the effective value — no override to layer on top.
         const map = new Map<string, SignalTickerMetricDefaults>();
         for (const cfg of metricConfig) {
             if (cfg.savedSearch) map.set(cfg.savedSearch, toDefault(cfg));
-            const effective = applyOverride(cfg, overrides[cfg.id]);
-            if (effective.savedSearch) {
-                map.set(effective.savedSearch, toDefault(effective));
-            }
         }
         return map;
-    }, [metricConfig, overrides]);
+    }, [metricConfig]);
     const {
         drilldowns: searchbaseDrilldowns,
-        setDrilldown: setSearchbaseDrilldown,
-        clearDrilldown: clearSearchbaseDrilldown,
         resetAll: resetAllSearchbaseDrilldowns,
     } = usePersistedSearchbaseDrilldowns();
     const [pickerContext, setPickerContext] = useState<KpiPickerContext | null>(null);
@@ -2958,21 +2855,19 @@ const OverviewPage: React.FC = () => {
     );
 
     // Saved-search names already bound across the dashboard, so the
-    // picker can flag duplicates with an "in use" badge.
+    // picker can flag duplicates with an "in use" badge. Search
+    // binding is admin-controlled now (searchbase.conf), so `cfg`
+    // already reflects the effective binding — no override to layer.
     const usedSavedSearches = useMemo(() => {
         const used = new Set<string>();
         for (const m of metricConfig) {
-            const ov = overrides[m.id];
-            const name = ov?.savedSearch ?? m.savedSearch;
-            if (name) used.add(name);
+            if (m.savedSearch) used.add(m.savedSearch);
         }
         for (const k of mapFooterKpiConfig) {
-            const ov = overrides[k.id];
-            const name = ov?.savedSearch ?? k.savedSearch;
-            if (name) used.add(name);
+            if (k.savedSearch) used.add(k.savedSearch);
         }
         return used;
-    }, [mapFooterKpiConfig, metricConfig, overrides]);
+    }, [mapFooterKpiConfig, metricConfig]);
 
     const openPicker = useCallback(
         (
@@ -3013,36 +2908,20 @@ const OverviewPage: React.FC = () => {
                 section?: SectionId;
             }
         ) => {
+            // Search binding, value field, label, and thresholds are
+            // admin-controlled (searchbase.conf) now — `current` IS
+            // the effective value, no per-user override to layer on
+            // top. Only chart style / display flags still come from
+            // the viewer's own localStorage override.
             const ov: MetricOverride | undefined = overrides[tileId];
-            // CRITICAL: when an override exists, an undefined
-            // `valueField` is the user's explicit "use auto-detect"
-            // choice and must NOT fall through to the original tile's
-            // valueField. The previous `??` did exactly that, which
-            // pre-filled the picker input with the original column
-            // name and caused every subsequent Apply to clobber the
-            // user's auto-detect intent.
-            //
-            // Threshold context (Build 97):
-            //   • `defaultThresholds` always reflects the *static*
-            //     code-defined tuple — the picker uses this for the
-            //     factory-default helper text and the per-field
-            //     Reset-to-default behaviour.
-            //   • `currentThresholds` reflects the current effective
-            //     tuple after merging any persisted override on top of
-            //     the default. The picker pre-fills its inputs from
-            //     this, so re-opening the picker on a customised tile
-            //     shows the customised values, not the defaults.
-            const merged: MetricThresholds | undefined = ov
-                ? mergeThresholds(current?.defaultThresholds, ov)
-                : current?.defaultThresholds;
             setPickerContext({
                 tileId,
                 defaultLabel,
-                currentSavedSearch: ov ? ov.savedSearch : current?.savedSearch,
-                currentValueField: ov ? ov.valueField : current?.valueField,
-                currentLabel: ov?.label,
+                currentSavedSearch: current?.savedSearch,
+                currentValueField: current?.valueField,
+                currentLabel: defaultLabel,
                 defaultThresholds: current?.defaultThresholds,
-                currentThresholds: merged,
+                currentThresholds: current?.defaultThresholds,
                 thresholdUnit: current?.unit,
                 usedSavedSearches,
                 currentVizOverride: ov?.vizOverride,
@@ -3068,19 +2947,79 @@ const OverviewPage: React.FC = () => {
         [setOverride]
     );
 
-    const handleSearchbaseDrilldownApply = useCallback(
-        (sourceSearchName: string, drilldownSearchName: string | null) => {
-            const source = searchbaseByName?.get(sourceSearchName);
-            const defaultName = source?.drilldownSearchName?.trim() ?? '';
-            const nextName = drilldownSearchName?.trim() ?? '';
-            if (nextName === defaultName || (!nextName && !defaultName)) {
-                clearSearchbaseDrilldown(sourceSearchName);
+    // ------------------------------ Admin-only tile config (Thresholds / Data Mapping / Drilldown) ------------------------------
+    //
+    // `canManageFactoryConfig` is a UI-side courtesy check only — the
+    // real enforcement is `metadata/default.meta` restricting
+    // searchbase.conf writes to `admin_all_objects`. See
+    // `useCanManageFactoryTileConfig` and `searchbaseTileConfigService`.
+    const { canManage: canManageFactoryConfig } = useCanManageFactoryTileConfig();
+    const [factoryTileConfigStatus, setFactoryTileConfigStatus] = useState<
+        'idle' | 'saving' | 'saved' | 'error'
+    >('idle');
+
+    const handleSaveFactoryTileConfig = useCallback(
+        async (patch: FactoryTileConfigApplyPatch) => {
+            const currentSavedSearch = pickerContext?.currentSavedSearch;
+            const fromStanzaId = currentSavedSearch
+                ? searchbaseByName?.get(currentSavedSearch)?.id
+                : undefined;
+            if (!fromStanzaId) {
+                console.error(
+                    '[overview] cannot save factory tile config: unresolved source stanza',
+                    patch.tileId
+                );
                 return;
             }
-            setSearchbaseDrilldown(sourceSearchName, nextName || null);
+            const toStanzaId = patch.newSearchName
+                ? searchbaseByName?.get(patch.newSearchName)?.id
+                : undefined;
+            if (patch.newSearchName && !toStanzaId) {
+                console.error(
+                    '[overview] cannot save factory tile config: unresolved target stanza',
+                    patch.newSearchName
+                );
+                return;
+            }
+
+            setFactoryTileConfigStatus('saving');
+            try {
+                await saveFactoryTileConfig({
+                    tileId: patch.tileId,
+                    section: pickerContext?.sectionId ?? 'custom',
+                    fromStanzaId,
+                    thresholds: patch.thresholds,
+                    dataMapping: patch.dataMapping,
+                    searchRebind: toStanzaId ? { toStanzaId } : undefined,
+                    drilldownSearchName: patch.drilldownSearchName,
+                });
+                setSearchbaseRefreshToken((n) => n + 1);
+                setFactoryTileConfigStatus('saved');
+                setPickerContext(null);
+                if (typeof window !== 'undefined') {
+                    window.setTimeout(() => setFactoryTileConfigStatus('idle'), 2400);
+                }
+            } catch (error) {
+                console.error('[overview] failed to save factory tile config', error);
+                setFactoryTileConfigStatus('error');
+                if (typeof window !== 'undefined') {
+                    window.alert(
+                        error instanceof Error
+                            ? error.message
+                            : 'Could not save this tile setting.'
+                    );
+                    window.setTimeout(() => setFactoryTileConfigStatus('idle'), 4000);
+                }
+            }
         },
-        [clearSearchbaseDrilldown, searchbaseByName, setSearchbaseDrilldown]
+        [pickerContext, searchbaseByName]
     );
+
+    // Drilldown edits now go through `handleSaveFactoryTileConfig`
+    // (admin-only, written into searchbase.conf). The
+    // `usePersistedSearchbaseDrilldowns` hook stays only for its
+    // `resetAll` in `handleResetAllCustomizations`, so any leftover
+    // local override from before this migration can still be cleared.
 
     /**
      * Section-level "Apply these Display settings to all tiles in
@@ -3123,15 +3062,14 @@ const OverviewPage: React.FC = () => {
             sectionId: string,
             patch: { hidePeak: boolean; hideDelta: boolean; hideOverlay: boolean }
         ) => {
-            // Resolve siblings from the metric catalogue only.
+            // Resolve siblings from the metric catalogue only. Display
+            // flags are the only thing left in the per-user override,
+            // so no need to carry a search binding through anymore.
             const sectionMetrics = metricConfig.filter((m) => m.section === sectionId);
             for (const m of sectionMetrics) {
                 const existing = overrides[m.id];
-                const baseSavedSearch = existing?.savedSearch ?? m.savedSearch;
-                if (!baseSavedSearch) continue;
                 const next: MetricOverride = {
-                    ...(existing ?? { savedSearch: baseSavedSearch }),
-                    savedSearch: baseSavedSearch,
+                    ...existing,
                     // Pass `undefined` for false flags so the sanitiser
                     // strips them from the persisted payload — gives us
                     // a "show everything" reset path through the same
@@ -3270,65 +3208,25 @@ const OverviewPage: React.FC = () => {
     // Same dispatch rules as the main metric grid: searchbase.conf
     // entries resolve to literal SPL so the footer value, picker preview,
     // and Open in Search action all point at the same query.
-    const buildEffectiveMapFooterKpiCfg = (
-        base: KpiConfig,
-        ov: MetricOverride | undefined
-    ): KpiConfig => {
+    // Search binding / value field / label for the map footer cards
+    // are admin-controlled (searchbase.conf `viz_options.mapFooter`)
+    // now, same as the main tile grid — `base` is already the
+    // effective value, no per-user override to layer on top.
+    const buildEffectiveMapFooterKpiCfg = (base: KpiConfig): KpiConfig => {
         if (searchbaseByName === null || searchbaseById === null) {
+            return { ...base, spl: undefined, savedSearch: undefined };
+        }
+
+        const sbBase = resolveSearchbaseRecordForConfig(base, searchbaseById, searchbaseByName);
+        if (sbBase?.search) {
             return {
                 ...base,
-                spl: undefined,
+                spl: sbBase.search,
                 savedSearch: undefined,
-                ...(ov
-                    ? {
-                          valueField: ov.valueField,
-                          label: ov.label ?? base.label,
-                          suppressMockOnEmpty: true,
-                      }
-                    : {}),
+                dispatchContext: sbBase.dispatchContext,
             };
         }
-
-        if (!ov) {
-            const sbBase = resolveSearchbaseRecordForConfig(
-                base,
-                searchbaseById,
-                searchbaseByName
-            );
-            if (sbBase?.search) {
-                return {
-                    ...base,
-                    spl: sbBase.search,
-                    savedSearch: undefined,
-                    dispatchContext: sbBase.dispatchContext,
-                };
-            }
-            return { ...base, savedSearch: undefined, spl: undefined };
-        }
-
-        const sb = ov.savedSearch ? searchbaseByName?.get(ov.savedSearch) : undefined;
-        if (sb?.search) {
-            return {
-                ...base,
-                searchbaseId: undefined,
-                spl: sb.search,
-                dispatchContext: sb.dispatchContext,
-                savedSearch: undefined,
-                valueField: ov.valueField,
-                label: ov.label ?? base.label,
-                suppressMockOnEmpty: true,
-            };
-        }
-
-        return {
-            ...base,
-            searchbaseId: undefined,
-            savedSearch: undefined,
-            spl: undefined,
-            valueField: ov.valueField,
-            label: ov.label ?? base.label,
-            suppressMockOnEmpty: true,
-        };
+        return { ...base, savedSearch: undefined, spl: undefined };
     };
 
     const mapPrimaryBaseCfg = mapFooterKpiConfig[0];
@@ -3336,22 +3234,16 @@ const OverviewPage: React.FC = () => {
     const effectiveMapPrimaryCfg = useMemo<KpiConfig>(
         () =>
             mapPrimaryBaseCfg
-                ? buildEffectiveMapFooterKpiCfg(
-                      mapPrimaryBaseCfg,
-                      overrides[mapPrimaryBaseCfg.id]
-                  )
+                ? buildEffectiveMapFooterKpiCfg(mapPrimaryBaseCfg)
                 : DISABLED_MAP_FOOTER_KPI_CONFIG,
-        [mapPrimaryBaseCfg, overrides, searchbaseById, searchbaseByName]
+        [mapPrimaryBaseCfg, searchbaseById, searchbaseByName]
     );
     const effectiveMapSecondaryCfg = useMemo<KpiConfig>(
         () =>
             mapSecondaryBaseCfg
-                ? buildEffectiveMapFooterKpiCfg(
-                      mapSecondaryBaseCfg,
-                      overrides[mapSecondaryBaseCfg.id]
-                  )
+                ? buildEffectiveMapFooterKpiCfg(mapSecondaryBaseCfg)
                 : DISABLED_MAP_FOOTER_KPI_CONFIG,
-        [mapSecondaryBaseCfg, overrides, searchbaseById, searchbaseByName]
+        [mapSecondaryBaseCfg, searchbaseById, searchbaseByName]
     );
     const mapPrimary = useKpi(effectiveMapPrimaryCfg, timeRange, refreshToken);
     const mapSecondary = useKpi(effectiveMapSecondaryCfg, timeRange, refreshToken);
@@ -3405,10 +3297,6 @@ const OverviewPage: React.FC = () => {
     ]);
     const mapPrimaryBindingFootnote = !mapPrimaryBaseCfg
         ? ''
-        : mapPrimaryOverride
-        ? mapPrimaryOverride.savedSearch
-            ? `Saved search: ${mapPrimaryOverride.savedSearch}`
-            : '(inline SPL)'
         : mapPrimaryBaseRecord
         ? `Searchbase: ${mapPrimaryBaseRecord.searchName}`
         : mapPrimaryBaseCfg.searchbaseId
@@ -3416,10 +3304,6 @@ const OverviewPage: React.FC = () => {
         : '(inline SPL)';
     const mapSecondaryBindingFootnote = !mapSecondaryBaseCfg
         ? ''
-        : mapSecondaryOverride
-        ? mapSecondaryOverride.savedSearch
-            ? `Saved search: ${mapSecondaryOverride.savedSearch}`
-            : '(inline SPL)'
         : mapSecondaryBaseRecord
         ? `Searchbase: ${mapSecondaryBaseRecord.searchName}`
         : mapSecondaryBaseCfg.searchbaseId
@@ -4416,7 +4300,6 @@ const OverviewPage: React.FC = () => {
                 onApply={handlePickerApply}
                 onApplyDisplayToSection={handleApplyDisplayToSection}
                 drilldownBindings={searchbaseDrilldowns}
-                onSetSearchDrilldown={handleSearchbaseDrilldownApply}
                 onClearOverride={(tileId) => {
                     clearOverride(tileId);
                     closePicker();
@@ -4438,6 +4321,9 @@ const OverviewPage: React.FC = () => {
                 onResetAllCustomizations={handleResetAllCustomizations}
                 onSaveFactoryDefaults={handleSaveOverviewFactoryDefaults}
                 factoryDefaultsStatus={factoryDefaultsStatus}
+                canManageFactoryConfig={canManageFactoryConfig}
+                onSaveFactoryTileConfig={handleSaveFactoryTileConfig}
+                factoryTileConfigStatus={factoryTileConfigStatus}
             />
 
             <SignalTickerEditor
