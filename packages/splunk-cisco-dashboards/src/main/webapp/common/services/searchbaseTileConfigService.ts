@@ -40,6 +40,44 @@ import { clearSearchbaseCache } from './searchbaseCatalogue';
 const APP_NAME = 'splunk-cisco-dashboards';
 const CONF_BASENAME = 'searchbase';
 
+const DEFAULT_OVERVIEW_FACTORY_STANZA_IDS = [
+    'building_resilience_environmental_health_index',
+    'building_resilience_water_leak_detection',
+    'building_resilience_wireless_devices_to_review_count',
+    'executive_dashboard_active_clients',
+    'executive_dashboard_issue_summary_kpis',
+    'executive_dashboard_building_domain_score',
+    'executive_dashboard_building_occupancy',
+    'executive_dashboard_it_domain_score',
+    'executive_dashboard_security_domain_score',
+    'it_critical_systems_compliance_rate',
+    'it_critical_systems_configuration_changes',
+    'it_critical_systems_device_health_score',
+    'it_critical_systems_device_inventory_by_type',
+    'it_critical_systems_network_health_score',
+    'it_critical_systems_syslog_severity_distribution',
+    'security_resilience_dns_blocked_queries',
+    'security_resilience_email_threat_count',
+    'security_resilience_rogue_device_detection',
+    'security_resilience_web_threat_count',
+    'executive_dashboard_active_devices',
+    'executive_dashboard_collab_devices',
+    'executive_dashboard_wifi_clients',
+    'building_resilience_rooms_occupied_trend',
+    'executive_dashboard_ds_ux_score',
+    'overview_active_critical_alerts',
+    'overview_xdr_critical_incidents',
+    'overview_ap_health',
+    'executive_dashboard_critical_website_availability',
+    'executive_dashboard_firewall_blocked_with_baseline',
+    'executive_dashboard_threat_sources_with_baseline',
+    'executive_dashboard_failed_logon_with_baseline',
+    'security_ai_defense_block_rate_kpi',
+    'identity_duo_tenant_kpis',
+] as const;
+
+const STANZA_ID_PATTERN = /^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,255}$/;
+
 export interface TileThresholdsPatch {
     warning?: number;
     critical?: number;
@@ -156,6 +194,27 @@ const writeStanzaKeys = async (
     if (response.ok) return;
     throw new SearchbaseTileConfigError(
         await extractErrorMessage(response, `Couldn't save searchbase.conf stanza "${stanza}"`),
+        response.status
+    );
+};
+
+const deleteStanzaLocalOverride = async (stanza: string): Promise<void> => {
+    if (!isInSplunkRuntime()) return;
+    const appName = getSearchAppContext() || APP_NAME;
+    const deleteInit = createFetchInit({
+        method: 'DELETE',
+        headers: { Accept: 'application/json' },
+    });
+    const response = await fetch(
+        `${buildStanzaUrl('nobody', appName, stanza)}?output_mode=json`,
+        deleteInit
+    );
+    if (response.ok || response.status === 404) return;
+    throw new SearchbaseTileConfigError(
+        await extractErrorMessage(
+            response,
+            `Couldn't reset searchbase.conf stanza "${stanza}"`
+        ),
         response.status
     );
 };
@@ -372,4 +431,22 @@ export const saveFactoryTileConfig = async (patch: FactoryTileConfigPatch): Prom
     if (patch.drilldownSearchName !== undefined) {
         await saveTileDrilldown(ownerStanzaId, patch.drilldownSearchName);
     }
+};
+
+export const resetOverviewSearchbaseTileConfig = async (
+    currentOwnerStanzaIds: readonly (string | undefined | null)[]
+): Promise<void> => {
+    if (!isInSplunkRuntime()) return;
+
+    const stanzaIds = new Set<string>(DEFAULT_OVERVIEW_FACTORY_STANZA_IDS);
+    currentOwnerStanzaIds.forEach((raw) => {
+        const stanza = typeof raw === 'string' ? raw.trim() : '';
+        if (!stanza || !STANZA_ID_PATTERN.test(stanza)) return;
+        stanzaIds.add(stanza);
+    });
+
+    await Promise.all(
+        Array.from(stanzaIds, (stanza) => deleteStanzaLocalOverride(stanza))
+    );
+    clearSearchbaseCache();
 };

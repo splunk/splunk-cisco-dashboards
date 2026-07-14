@@ -164,10 +164,14 @@ import {
 } from '@/common/services/searchbaseCatalogue';
 import {
     loadOverviewFactoryTiles,
+    resetOverviewFactoryTiles,
     saveOverviewFactoryTiles,
     type OverviewFactoryTilesConfig,
 } from '@/common/services/overviewFactoryTilesService';
-import { saveFactoryTileConfig } from '@/common/services/searchbaseTileConfigService';
+import {
+    resetOverviewSearchbaseTileConfig,
+    saveFactoryTileConfig,
+} from '@/common/services/searchbaseTileConfigService';
 import { useCanManageFactoryTileConfig } from '@/common/hooks/useCanManageFactoryTileConfig';
 import { cn } from '@/common/lib/utils';
 
@@ -608,8 +612,8 @@ const SECTION_META: Record<
     },
     custom: {
         title: DEFAULT_CUSTOMER_TOPOLOGY_SECTION_TITLES.custom,
-        linkText: 'Open executive signals',
-        href: 'home_launchpad_v1',
+        linkText: 'Open dashboard builder',
+        href: 'dashboardbuilder',
     },
 };
 
@@ -3095,8 +3099,13 @@ const OverviewPage: React.FC = () => {
     //   • searchbaseDrilldowns.v1       — picker-wired drilldown bindings
     //   • sectionLayout.v1              — visible section roster
     //   • sectionTileCounts.v1          — visible tile count per section
+    //                                      (forced back to the original
+    //                                      three-tile executive summary)
     //   • sectionHeights.v1             — vertical room per section
     //   • sectionTileOrder.v1           — drag-to-reorder preference
+    //   • local/overview_factory_tiles.conf — shared saved order/count overlay
+    //   • local/searchbase.conf overview keys — org-wide tile binding /
+    //                                      thresholds / mapping overlays
     //   • customerTopology.v4           — retired per-browser map payload
     //   • scd_overview_split_pct        — tiles ↔ map splitter position
     //   • scd_overview_map_pos          — map position (right / below / above)
@@ -3114,10 +3123,17 @@ const OverviewPage: React.FC = () => {
     // After reset, we close the picker and bump `topologyResetKey` to
     // clear any retired in-browser topology payload from old builds.
     const handleResetAllCustomizations = useCallback(() => {
+        const overviewSearchbaseStanzaIds = metricConfig.map(
+            (metric) => metric.searchbaseId
+        );
+
         resetAllOverrides();
         resetAllSearchbaseDrilldowns();
         resetAllSectionLayout();
         resetAllSectionTileCounts();
+        availableSections.forEach((section) => {
+            setSectionTileCount(section, sectionTileBounds.minCount);
+        });
         resetAllSectionHeights();
         resetAllSectionTileOrder();
         resetSignalTickerConfig();
@@ -3139,11 +3155,34 @@ const OverviewPage: React.FC = () => {
             }
         }
         setPickerContext(null);
+
+        void (async () => {
+            try {
+                await resetOverviewFactoryTiles();
+                await resetOverviewSearchbaseTileConfig(overviewSearchbaseStanzaIds);
+                setSearchbaseRefreshToken((n) => n + 1);
+                const nextFactoryTiles = await loadOverviewFactoryTiles();
+                setOverviewFactoryTiles(nextFactoryTiles);
+            } catch (error) {
+                console.error('[overview] failed to reset shared factory config', error);
+                if (typeof window !== 'undefined') {
+                    window.alert(
+                        error instanceof Error
+                            ? error.message
+                            : 'Personal reset completed, but shared Overview factory settings could not be reset.'
+                    );
+                }
+            }
+        })();
     }, [
+        availableSections,
+        metricConfig,
         resetAllOverrides,
         resetAllSearchbaseDrilldowns,
         resetAllSectionLayout,
         resetAllSectionTileCounts,
+        setSectionTileCount,
+        sectionTileBounds.minCount,
         resetAllSectionHeights,
         resetAllSectionTileOrder,
         resetSignalTickerConfig,

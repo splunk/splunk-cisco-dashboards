@@ -176,6 +176,28 @@ const upsertSection = async (
     );
 };
 
+const deleteSectionLocalOverride = async (section: SectionId): Promise<void> => {
+    if (!isInSplunkRuntime()) return;
+
+    const deleteUrl = `${buildBaseUrl(true)}/${encodeURIComponent(
+        section
+    )}?output_mode=json`;
+    const deleteInit = createFetchInit({
+        method: 'DELETE',
+        headers: { Accept: 'application/json' },
+    });
+
+    const response = await fetch(deleteUrl, deleteInit);
+    if (response.ok || response.status === 404) return;
+
+    throw new Error(
+        await extractErrorMessage(
+            response,
+            `Couldn't reset Overview factory tiles for ${section}`
+        )
+    );
+};
+
 export const saveOverviewFactoryTiles = async (
     config: OverviewFactoryTilesConfig
 ): Promise<void> => {
@@ -186,4 +208,12 @@ export const saveOverviewFactoryTiles = async (
         if (!sectionConfig) continue;
         await upsertSection(section, sectionConfig);
     }
+};
+
+export const resetOverviewFactoryTiles = async (): Promise<void> => {
+    if (!isInSplunkRuntime()) return;
+
+    await Promise.all(
+        SECTION_IDS.map((section) => deleteSectionLocalOverride(section))
+    );
 };
