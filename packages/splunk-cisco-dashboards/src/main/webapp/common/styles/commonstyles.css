@@ -2883,7 +2883,7 @@ div.card-trend-footer [data-test='button'] {
 }
 
 .dropdown-kpi-menu {
-    width: 560px;
+    width: 620px;
     max-width: calc(100vw - 48px);
 }
 
@@ -2904,15 +2904,103 @@ div.card-trend-footer [data-test='button'] {
     margin: 0 0 8px 0;
 }
 
-.dropdown-kpi-filters {
+.dropdown-kpi-filter-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 0;
+    border-radius: 8px;
+    background: #f1f5f9;
+    color: #334155;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    line-height: 1;
+    padding: 9px 12px;
+    text-transform: uppercase;
+}
+
+.dropdown-kpi-filter-toggle:hover {
+    background: #e8f2fc;
+    color: #0f4f80;
+}
+
+.dropdown-kpi-filter-caret {
+    display: inline-flex;
+    width: 10px;
+    justify-content: center;
+}
+
+.dropdown-kpi-filter-active {
+    border-radius: 999px;
+    background: #dff2ff;
+    color: #0064a4;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    padding: 3px 7px;
+}
+
+.dropdown-kpi-filter-panel {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #f8fafc;
+}
+
+.dropdown-kpi-filter-row {
+    display: grid;
+    grid-template-columns: 86px minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+}
+
+.dropdown-kpi-filter-row-top {
+    align-items: start;
+}
+
+.dropdown-kpi-filter-label {
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
+.dropdown-kpi-visibility-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
 }
 
-.dropdown-kpi-filters [data-test='select'],
-.dropdown-kpi-filters [data-test='multiselect'],
-.dropdown-kpi-filters [data-test='textbox'] {
+.dropdown-kpi-visibility-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 58px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+    padding: 10px;
+}
+
+.dropdown-kpi-visibility-option input {
+    flex: 0 0 auto;
+    width: 15px;
+    height: 15px;
+}
+
+.dropdown-kpi-filter-panel [data-test='select'],
+.dropdown-kpi-filter-panel [data-test='multiselect'],
+.dropdown-kpi-filter-panel [data-test='textbox'] {
     width: 100%;
     background: #ffffff;
 }

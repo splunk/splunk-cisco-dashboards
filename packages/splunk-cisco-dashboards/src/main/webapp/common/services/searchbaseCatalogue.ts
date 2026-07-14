@@ -41,9 +41,9 @@ export interface SearchbaseCatalogueOptions {
     includeHidden?: boolean;
     /**
      * When true, fetch every installed app that ships searchbase.conf.
-     * Catalogue browsers opt into this so their App facet can span all
-     * apps; runtime dispatch maps omit it to keep historical current-app
-     * scope and avoid same-`search_name` collisions.
+     * Catalogue browsers opt into this so their App/dispatch facet can
+     * span all apps; runtime dispatch maps omit it to keep historical
+     * current-app stanza scope and avoid same-`search_name` collisions.
      */
     allApps?: boolean;
 }
@@ -59,8 +59,12 @@ export interface SearchbaseRecord {
     subCategory: string;
     /** Comma-separated `tags` field, normalised into an array. */
     tags: string[];
-    /** Full app namespace expected (`splunk-cisco-dashboards`). */
+    /** Splunk app namespace that owns/stores this stanza. */
+    ownerApp: string;
+    /** Splunk app namespace this stanza must dispatch in. */
     dispatchContext: string;
+    /** True when the stanza is marked `search_hidden = 1` in searchbase.conf. */
+    searchHidden?: boolean;
     /** HTML description (carries inline tags from the conf). */
     description: string;
     /**
@@ -72,6 +76,10 @@ export interface SearchbaseRecord {
      * Empty string when the stanza omits the field.
      */
     explanation: string;
+    /** HTML remediation/action guidance from the conf's `solution` field. */
+    solution: string;
+    /** HTML references/context from the conf's `related_info` field. */
+    relatedInfo: string;
     /** SPL body — useful for the picker's preview pane. */
     search: string;
     /**
@@ -112,6 +120,8 @@ interface SearchbaseEntry {
         dispatch_context?: string;
         description?: string;
         explanation?: string;
+        solution?: string;
+        related_info?: string;
         search?: string;
         drilldown_search_name?: string;
         drilldown_button_title?: string;
@@ -158,14 +168,21 @@ interface SearchbaseResponse {
 
 const APP_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_\-.]{0,127}$/;
 
+const sanitizeAppName = (raw: string | undefined): string | undefined => {
+    if (typeof raw !== 'string') return undefined;
+    const trimmed = raw.trim();
+    return APP_NAME_PATTERN.test(trimmed) ? trimmed : undefined;
+};
+
 /**
  * Builds the REST URL for fetching `searchbase.conf` entries.
  *
  * Why `/servicesNS/-/-/` (wildcard user + wildcard app): unscoped
  * catalogue browsers need all installed apps that ship `searchbase.conf`
- * so the App facet can narrow by owner. Runtime callers use the scoped
- * default, which adds `search=eai:acl.app=<appName>` and keeps dispatch
- * maps from being overwritten by another app's same `search_name`.
+ * so the App facet can narrow by dispatch namespace. Runtime callers
+ * use the scoped default, which adds `search=eai:acl.app=<appName>` and
+ * keeps dispatch maps from being overwritten by another app's same
+ * `search_name`.
  *
  * Equivalent SPL one-liner for hand-testing:
  *   | rest splunk_server=local /servicesNS/-/-/configs/conf-searchbase
@@ -308,15 +325,21 @@ const fetchSearchbase = async (
             category: typeof content.category === 'string' ? content.category : '',
             subCategory: typeof content.sub_category === 'string' ? content.sub_category : '',
             tags: splitTags(content.tags),
-            // Source the App-filter value from `acl.app` (the actual
-            // owning app) instead of the stanza-author-supplied
-            // `dispatch_context` field, which is semantically about
-            // "what app should dispatch this search" and is often
-            // hard-coded to splunk-cisco-dashboards even when the
-            // stanza lives in another app.
-            dispatchContext: aclApp || appName,
+            ownerApp: sanitizeAppName(aclApp) || appName,
+            // Runtime dispatch must honor the stanza's requested app
+            // namespace. Some searches live in this app's
+            // searchbase.conf but rely on macros/data models owned by
+            // Cisco add-on apps, so `dispatch_context` is the actual
+            // search execution context; `acl.app` is only where the
+            // stanza is stored.
+            dispatchContext:
+                sanitizeAppName(content.dispatch_context) || aclApp || appName,
+            searchHidden: isTruthyConfValue(content.search_hidden),
             description: typeof content.description === 'string' ? content.description : '',
             explanation: typeof content.explanation === 'string' ? content.explanation : '',
+            solution: typeof content.solution === 'string' ? content.solution : '',
+            relatedInfo:
+                typeof content.related_info === 'string' ? content.related_info : '',
             search:
                 typeof content.search === 'string'
                     ? collapseExpandedIndexMacro(content.search)

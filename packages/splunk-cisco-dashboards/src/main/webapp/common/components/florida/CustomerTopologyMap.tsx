@@ -510,7 +510,7 @@ const TOPOLOGY_STATUS_FIELD_HELP =
     'Fallback/manual status. If this item has a bound search, live search results ' +
     'override it after they load.';
 
-const TE_A2A_INVENTORY_SEARCH_NAME = 'Overview - Link ThousandEyes A2A Inventory';
+const TE_A2A_INVENTORY_ROLE = 'teA2AInventory';
 const TE_A2A_MATCH_THRESHOLD = 72;
 const TE_A2A_CLOSE_MATCH_DELTA = 8;
 const TE_A2A_STOP_WORDS = new Set([
@@ -1143,6 +1143,21 @@ const cloneTopology = (topology: CustomerTopology): CustomerTopology =>
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
     Boolean(value && typeof value === 'object' && !Array.isArray(value));
+
+const searchbaseTopologyMapRole = (record: SearchbaseRecord): string => {
+    const raw = record.vizOptions?.topologyMap;
+    if (!isRecord(raw)) return '';
+    const role = raw.role;
+    return typeof role === 'string' ? role.trim() : '';
+};
+
+const findSearchbaseByTopologyMapRole = (
+    catalogueByName: Record<string, SearchbaseRecord>,
+    role: string
+): SearchbaseRecord | null =>
+    Object.values(catalogueByName).find(
+        (record) => searchbaseTopologyMapRole(record) === role
+    ) ?? null;
 
 const textValue = (value: unknown, fallback = ''): string => {
     if (value === null || value === undefined) return fallback;
@@ -2907,10 +2922,10 @@ const TILE_LAYER_PRESETS: TileLayerPreset[] = [
         label: 'Navigation',
         badge: 'Nav',
         light:
-            'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-        dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-        attribution:
-            '&copy; OpenStreetMap contributors &copy; CARTO',
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+        dark:
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+        attribution: 'Tiles &copy; Esri',
     },
 ];
 
@@ -4703,7 +4718,7 @@ interface CustomerTopologyMapProps {
     refreshToken?: number;
     spotlightIntervalMs?: number;
     spotlightPauseMs?: number;
-    onOpenInSearch?: (spl: string) => void;
+    onOpenInSearch?: (spl: string, appContext?: string) => void;
     onSummaryMetricsChange?: (metrics: TopologySummaryMetricMap) => void;
 }
 
@@ -4831,7 +4846,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
 
     useEffect(() => {
         let cancelled = false;
-        getSearchbaseCatalogue()
+        getSearchbaseCatalogue({ includeHidden: true })
             .then((list) => {
                 if (cancelled) return;
                 const byName: Record<string, SearchbaseRecord> = {};
@@ -4851,7 +4866,10 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
 
     useEffect(() => {
         if (catalogueByName === null) return undefined;
-        const record = catalogueByName[TE_A2A_INVENTORY_SEARCH_NAME];
+        const record = findSearchbaseByTopologyMapRole(
+            catalogueByName,
+            TE_A2A_INVENTORY_ROLE
+        );
         if (!record?.search?.trim()) {
             setTeA2ACandidates([]);
             setTeA2AInventoryError(
@@ -4881,6 +4899,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
             earliestTime,
             latestTime,
             tag: 'topology_te_a2a_inventory',
+            appContext: record.dispatchContext,
         })
             .then((res) => {
                 if (cancelled) return;
@@ -4982,6 +5001,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
             earliestTime,
             latestTime,
             tag: 'topology_overview',
+            appContext: record.dispatchContext,
         })
             .then((res) => {
                 if (cancelled) return;
@@ -5201,6 +5221,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 earliestTime,
                 latestTime,
                 tag: `topology_site_${site.id}`,
+                appContext: record.dispatchContext,
             })
                 .then((res) => {
                     if (cancelled) return;
@@ -5268,6 +5289,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
             earliestTime,
             latestTime,
             tag: 'topology_marker_enrichment',
+            appContext: record.dispatchContext,
         })
             .then((res) => {
                 if (cancelled) return;
@@ -5353,6 +5375,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 earliestTime,
                 latestTime,
                 tag: `topology_link_${link.id}`,
+                appContext: record.dispatchContext,
             })
                 .then((res) => {
                     if (cancelled) return;
@@ -5592,6 +5615,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         selectedSearchName && selectedRecord?.search?.trim()
             ? selectedRecord.search.trim()
             : '';
+    const selectedDispatchContext = selectedRecord?.dispatchContext;
 
     // NOTE: the popup-side search picker was removed on 2026-05-13
     // per Alan's request — the read-only popup is now inspect+run
@@ -5678,7 +5702,9 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         : 'bg-white/95 border-slate-200 hover:bg-slate-50 text-slate-600';
 
     const openSelectedInSearch = () => {
-        if (selectedSpl && onOpenInSearch) onOpenInSearch(selectedSpl);
+        if (selectedSpl && onOpenInSearch) {
+            onOpenInSearch(selectedSpl, selectedDispatchContext);
+        }
     };
 
     const cycleTilePreset = () => {
@@ -7146,7 +7172,7 @@ interface TopologyEditorPanelProps {
      * on tile pickers, so operators can sanity-check a search
      * before saving the topology.
      */
-    onOpenInSearch?: (spl: string) => void;
+    onOpenInSearch?: (spl: string, appContext?: string) => void;
 }
 
 const editorInputClass = (isDark: boolean): string =>
@@ -7227,21 +7253,13 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
     // tile and editing a topology element feel like the same
     // operation.
     //
-    // Build 98 (2026-05-13): scope changed from `tags.includes('Cisco')`
-    // to `dispatchContext === 'splunk-cisco-dashboards'`. The `Cisco`
-    // tag was removed from every stanza during the FDEM/branding
-    // cleanup in Build 91, so the old filter started returning
-    // nothing — the topology editor's site / link change-search
-    // browsers showed "0 of 0" entries (Alan caught this on
-    // 2026-05-13). Same root-cause and same one-line fix as the KPI
-    // picker hit in Build 91; the `dispatch_context` field is
-    // authored on every stanza in this app's `default/searchbase.conf`
-    // (with `dispatch_context_force = 1`) so it's a stable scope key
-    // that the FDEM scrub didn't touch.
+    // Scope by owner app, not dispatch app. Some stanzas live in this
+    // app's searchbase.conf but intentionally run in another app context
+    // such as cisco-catalyst-app so macros/data models resolve correctly.
     const editorSearchOptions = useMemo(() => {
         if (!catalogueByName) return [] as SearchbaseRecord[];
         return Object.values(catalogueByName)
-            .filter((record) => record.dispatchContext === 'splunk-cisco-dashboards')
+            .filter((record) => record.ownerApp === 'splunk-cisco-dashboards')
             .sort((a, b) =>
                 a.searchName.localeCompare(b.searchName, undefined, {
                     sensitivity: 'base',
@@ -7312,8 +7330,9 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
     const handleOpenInSearch = useCallback(
         (searchName: string | undefined) => {
             if (!searchName || !onOpenInSearch || !catalogueByName) return;
-            const spl = catalogueByName[searchName]?.search?.trim();
-            if (spl) onOpenInSearch(spl);
+            const record = catalogueByName[searchName];
+            const spl = record?.search?.trim();
+            if (spl) onOpenInSearch(spl, record?.dispatchContext);
         },
         [onOpenInSearch, catalogueByName]
     );

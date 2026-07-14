@@ -6,24 +6,19 @@ const baseConfig = require('@splunk/webpack-configs').default;
 const CopyPlugin = require('copy-webpack-plugin');
 
 /**
- * Build 115.21 — read the canonical `build = NNNN` and
- * `version = X.Y.Z` lines out of `default/app.conf` at webpack
- * compile time and inject them as `process.env.APP_BUILD` and
- * `process.env.APP_VERSION` for the React bundles to read.
+ * Build 115.21 — read the canonical `build = NNNN` from
+ * `default/app.conf` and the app version from the repo-root
+ * `VERSION` file at webpack compile time, then inject them as
+ * `process.env.APP_BUILD` and `process.env.APP_VERSION` for
+ * the React bundles to read.
  *
- * Why we read both from app.conf (not package.json):
- *   • app.conf IS the canonical Splunk-app metadata — it's
- *     what splunkd reports for the app version in
- *     `/services/apps/local/...` and what the Splunk Web Apps
- *     page displays. Pulling the same value into our UI badge
- *     keeps every surface that quotes a version in agreement.
+ * Why version comes from VERSION (not package.json or app.conf):
+ *   • VERSION is the single source of truth for releases —
+ *     package_app.sh stamps it into staged app.conf at package
+ *     time, matching splunk-cisco-app-navigator.
  *   • package.json's `version` field belongs to the npm
  *     workspace ("0.1.0" today) and intentionally isn't kept
- *     in lock-step with the Splunk app version. Reading it
- *     for UI display would falsely advertise "v0.1.0" while
- *     splunkd reports "v1.0.10" — the kind of inconsistency
- *     that turns a support ticket into a 20-minute "wait,
- *     which version are you actually on?" detour.
+ *     in lock-step with the Splunk app version.
  *
  * Why compile-time injection (not a runtime fetch):
  *   • The displayed value MATCHES the JS bytes that printed
@@ -55,8 +50,18 @@ const readAppConfField = (key) => {
         return null;
     }
 };
+const readBuildVersion = () => {
+    const versionPath = path.join(__dirname, '..', '..', 'VERSION');
+    try {
+        const version = fs.readFileSync(versionPath, 'utf8').trim();
+        if (version) return version;
+    } catch (_e) {
+        /* fall through */
+    }
+    return readAppConfField('version') || '0.0.0';
+};
 const APP_BUILD = readAppConfField('build') || 'unknown';
-const APP_VERSION = readAppConfField('version') || '0.0.0';
+const APP_VERSION = readBuildVersion();
 
 /**
  * Multi-entry config: each Splunk dashboard ("view") has its own React
@@ -106,6 +111,7 @@ const commonConfig = webpackMerge(baseConfig, {
             webappRoot,
             'pages/macro_index_tuning/render.tsx'
         ),
+        user_guide: path.join(webappRoot, 'pages/user_guide/render.tsx'),
         dashboardbuilder: path.join(webappRoot, 'pages/dashboardbuilder/index.jsx'),
     },
     output: {

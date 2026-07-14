@@ -6,8 +6,8 @@
  * can dial the visible count down
  * to a configurable minimum (3 by default) when they want a cleaner
  * read, or back up to the section's natural size when they want
- * everything. The trailing tiles in METRIC_CONFIG are the ones that
- * get hidden first — picker overrides on hidden tiles are NOT
+ * everything. The trailing tiles in the resolved section catalogue are
+ * the ones that get hidden first — picker overrides on hidden tiles are NOT
  * cleared, so when the user bumps the count back up their
  * customisations come back unchanged.
  *
@@ -123,6 +123,24 @@ const writeToStorage = (counts: SectionTileCountMap): void => {
     }
 };
 
+const clearStorage = (): void => {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    try {
+        window.localStorage.removeItem(STORAGE_KEY);
+    } catch {
+        // Storage may be unavailable. The in-memory state still resets.
+    }
+};
+
+const hasStoredCounts = (): boolean => {
+    if (typeof window === 'undefined' || !window.localStorage) return false;
+    try {
+        return window.localStorage.getItem(STORAGE_KEY) !== null;
+    } catch {
+        return false;
+    }
+};
+
 export interface UsePersistedSectionTileCountsResult {
     /** Current visible tile count per section, always within bounds. */
     counts: SectionTileCountMap;
@@ -142,6 +160,12 @@ export const usePersistedSectionTileCounts = (
     }
 ): UsePersistedSectionTileCountsResult => {
     const [counts, setCounts] = useState<SectionTileCountMap>(() => readFromStorage(bounds));
+    const defaultSignature = JSON.stringify(buildDefaults(bounds));
+
+    useEffect(() => {
+        if (hasStoredCounts()) return;
+        setCounts(buildDefaults(bounds));
+    }, [bounds.minCount, bounds.maxCount, defaultSignature]);
 
     // Cross-tab sync: pick up changes made in another tab via the
     // standard `storage` event so the layout stays consistent across
@@ -172,7 +196,7 @@ export const usePersistedSectionTileCounts = (
 
     const resetAll = useCallback(() => {
         const fresh = buildDefaults(bounds);
-        writeToStorage(fresh);
+        clearStorage();
         setCounts(fresh);
     }, [bounds]);
 

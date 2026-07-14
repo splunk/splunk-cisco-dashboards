@@ -718,14 +718,14 @@
 			}
 		},
 		"ds_cache_pie": {
-			"name": "Cache Hit vs Miss (Overall)",
+			"name": "Cache Hit vs Miss Overall",
 			"type": "ds.search",
 			"options": {
 				"query": "| rest /services/search/jobs splunk_server=local\n| search (provenance=\"UI:dashboard:*\") NOT provenance=\"UI:dashboard:admin_guide\" | eval status = if(match(sid, \"^scheduler__\"), \"Cache Hit\", \"Cache Miss\")\n| stats count by status"
 			}
 		},
 		"ds_runtime_bar": {
-			"name": "Runtime by Search (Top 10)",
+			"name": "Runtime by Search Top 10",
 			"type": "ds.search",
 			"options": {
 				"query": "| rest /services/search/jobs splunk_server=local\n| search (provenance=\"UI:dashboard:*\") NOT provenance=\"UI:dashboard:admin_guide\" | stats latest(runDuration) as runtime by label\n| eval runtime = round(runtime, 2)\n| sort 10 - runtime\n| rename label as search_name\n| table search_name, runtime"
@@ -777,7 +777,7 @@
 			}
 		},
 		"ds_kpi_pct": {
-			"name": "KPI Scheduled %",
+			"name": "KPI Scheduled Percent",
 			"type": "ds.chain",
 			"options": {
 				"extend": "ds_concurrency_kpis",
@@ -787,7 +787,7 @@
 		"ds_dashboard_usage": {
 			"type": "ds.search",
 			"options": {
-				"query": "index=_internal sourcetype=splunk_web_access user!=\"-\" app=* view=* \n| bin _time \n| stats dc(user) as daily_users values(user) as Users by _time, app, view \n| stats sparkline(sum(daily_users), 1d) as trend, dc(user) as \"Unique Users\", values(Users) as Users by app, view \n| rename app as App, view as Dashboard \n| sort - \"Unique Users\"",
+				"query": "index=_internal sourcetype=splunk_web_access user!=\"-\" app=* view=* \n| bin _time span=1d \n| stats dc(user) as daily_users values(user) as Users by _time, app, view \n| stats sparkline(sum(daily_users), 1d) as trend, dc(user) as \"Unique Users\", values(Users) as Users by app, view \n| rename app as App, view as Dashboard \n| sort - \"Unique Users\"",
 				"queryParameters": {
 					"earliest": "-30d@d",
 					"latest": "now"

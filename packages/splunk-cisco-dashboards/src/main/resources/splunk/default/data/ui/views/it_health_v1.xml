@@ -14,6 +14,36 @@
 			},
 			"title": "",
 			"type": "input.timerange"
+		},
+		"input_site_filter": {
+			"context": {
+				"formattedConfig": {
+					"number": {
+						"prefix": ""
+					}
+				},
+				"formattedStatics": ">statics | formatByType(formattedConfig)",
+				"label": ">primary | seriesByName(\"Site\") | renameSeries(\"label\") | formatByType(formattedConfig)",
+				"statics": [
+					[
+						"All Sites"
+					],
+					[
+						"*"
+					]
+				],
+				"value": ">primary | seriesByName(\"Site\") | renameSeries(\"value\") | formatByType(formattedConfig)"
+			},
+			"dataSources": {
+				"primary": "ds_site_filter_options"
+			},
+			"options": {
+				"defaultValue": "*",
+				"items": ">frame(label, value) | prepend(formattedStatics) | objects()",
+				"token": "site_tok"
+			},
+			"title": "",
+			"type": "input.dropdown"
 		}
 	},
 	"defaults": {
@@ -36,7 +66,11 @@
 			}
 		},
 		"tokens": {
-			"default": {}
+			"default": {
+				"site_tok": {
+					"value": "*"
+				}
+			}
 		}
 	},
 	"visualizations": {
@@ -484,10 +518,10 @@
 			"options": {
 				"backgroundColor": "transparent",
 				"legendDisplay": "bottom",
+				"nullValueDisplay": "connect",
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide",
-				"nullValueDisplay": "connect"
+				"yAxisTitleVisibility": "hide"
 			},
 			"title": "Issue Trend by Category",
 			"type": "splunk.area"
@@ -519,10 +553,10 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent",
-				"sparklineNullValueDisplay": "connect"
+				"trendDisplay": "percent"
 			},
 			"title": "CPU/Memory Alerts >80%",
 			"type": "splunk.singlevalue"
@@ -554,10 +588,10 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent",
-				"sparklineNullValueDisplay": "connect"
+				"trendDisplay": "percent"
 			},
 			"title": "DHCP Pool Events",
 			"type": "splunk.singlevalue"
@@ -623,10 +657,10 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent",
-				"sparklineNullValueDisplay": "connect"
+				"trendDisplay": "percent"
 			},
 			"title": "Recent Reboots",
 			"type": "splunk.singlevalue"
@@ -658,10 +692,10 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent",
-				"sparklineNullValueDisplay": "connect"
+				"trendDisplay": "percent"
 			},
 			"title": "Unreachable Devices",
 			"type": "splunk.singlevalue"
@@ -691,6 +725,7 @@
 			"options": {
 				"backgroundColor": "transparent",
 				"legendDisplay": "bottom",
+				"nullValueDisplay": "connect",
 				"seriesColors": [
 					"#6EBE4A",
 					"#E5A823",
@@ -698,8 +733,7 @@
 				],
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide",
-				"nullValueDisplay": "connect"
+				"yAxisTitleVisibility": "hide"
 			},
 			"title": "Network Health Trend",
 			"type": "splunk.area"
@@ -737,6 +771,7 @@
 			"options": {
 				"backgroundColor": "transparent",
 				"legendDisplay": "bottom",
+				"nullValueDisplay": "connect",
 				"seriesColors": [
 					"#D64550",
 					"#E5A823",
@@ -749,8 +784,7 @@
 				],
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide",
-				"nullValueDisplay": "connect"
+				"yAxisTitleVisibility": "hide"
 			},
 			"title": "Power Event Timeline (minute-by-minute)",
 			"type": "splunk.area"
@@ -1650,9 +1684,33 @@
 				"primary": "ds_te_alerts_table"
 			},
 			"description": "Most recent 20 ThousandEyes alerts with deep-link permalinks",
+			"eventHandlers": [
+				{
+					"options": {
+						"newTab": true,
+						"url": "$row.Permalink.value|n$"
+					},
+					"type": "drilldown.customUrl"
+				}
+			],
 			"options": {
 				"backgroundColor": "transparent",
+				"columnFormat": {
+					"Alert ID": {
+						"width": 216
+					},
+					"Expression": {
+						"width": 180
+					},
+					"Permalink": {
+						"width": 558
+					},
+					"Test Name": {
+						"width": 229
+					}
+				},
 				"count": 20,
+				"drilldown": "row",
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
@@ -1719,17 +1777,44 @@
 			"dataSources": {
 				"primary": "ds_te_endpoint_traces"
 			},
-			"description": "Per-trace span counts, HTTP error counts, and duration from cisco:thousandeyes:trace events",
+			"description": "Per-test endpoint health from cisco:thousandeyes:metric events",
+			"eventHandlers": [
+				{
+					"options": {
+						"fields": [
+							"TE Link"
+						],
+						"newTab": true,
+						"url": "$row.TE Link.value|n$"
+					},
+					"type": "drilldown.customUrl"
+				}
+			],
 			"options": {
 				"backgroundColor": "transparent",
+				"columnFormat": {
+					"Agent": {
+						"width": 129
+					},
+					"TE Link": {
+						"width": 461
+					},
+					"Test Name": {
+						"width": 147
+					},
+					"Test Type": {
+						"width": 90
+					}
+				},
 				"count": 25,
+				"drilldown": "cell",
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
 					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
 				}
 			},
-			"title": "Endpoint Traces",
+			"title": "Endpoint Health by Agent",
 			"type": "splunk.table"
 		},
 		"viz_te_jitter_chart": {
@@ -1814,7 +1899,7 @@
 				"backgroundColor": "transparent",
 				"fontColor": "#005073",
 				"fontSize": "default",
-				"markdown": "### Endpoint Traces\n\nPer-trace span counts, HTTP error counts, and durations from `cisco:thousandeyes:trace` events. Sort by error count to surface root-cause traces."
+				"markdown": "### Endpoint Health\n\nPer-test endpoint availability, latency, loss, jitter, and originating ThousandEyes agent from `cisco:thousandeyes:metric` events."
 			},
 			"type": "splunk.markdown"
 		},
@@ -2087,6 +2172,17 @@
 		}
 	},
 	"dataSources": {
+		"ds_site_filter_options": {
+			"name": "Catalyst Center Site Filter Options",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| eval Site=`dnac_site_normalize(coalesce(Site, Location))`\n| where Site!=\"\"\n| stats count by Site\n| sort Site\n| fields Site",
+				"queryParameters": {
+					"earliest": "-7d@d",
+					"latest": "now"
+				}
+			},
+			"type": "ds.search"
+		},
 		"ds_ap_by_location": {
 			"name": "AP Count by Location",
 			"options": {
@@ -2107,9 +2203,9 @@
 			"type": "ds.search"
 		},
 		"ds_base_devicehealth_ref": {
-			"name": "IT - Critical Systems - ds_base_devicehealth",
+			"name": "IT - Critical Systems - Base Device Health",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| stats latest(OverallHealth) as OverallHealth, latest(Reachability) as Reachability, latest(Manageability) as Manageability, latest(ReachabilityFailureReason) as ReachabilityFailureReason, latest(CPUUtilization) as CPUUtilization, latest(MemoryUtilization) as MemoryUtilization, latest(DeviceFamily) as DeviceFamily, latest(DeviceRole) as DeviceRole, latest(Platform) as Platform, latest(Site) as Site, latest(IpAddress) as IpAddress, latest(MACAddress) as MACAddress, latest(SerialNumber) as SerialNumber, latest(ImageVersion) as DeviceImgVersion, latest(Uptime) as UpTime, latest(UptimeSeconds) as UptimeSeconds by DeviceName, DeviceID\n| eval SoftwareVersion=DeviceImgVersion",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| eval Site=`dnac_site_normalize(coalesce(Site, Location))`\n| where \"$site_tok$\"=\"*\" OR Site=\"$site_tok$\"\n| stats latest(OverallHealth) as OverallHealth, latest(Reachability) as Reachability, latest(Manageability) as Manageability, latest(ReachabilityFailureReason) as ReachabilityFailureReason, latest(CPUUtilization) as CPUUtilization, latest(MemoryUtilization) as MemoryUtilization, latest(DeviceFamily) as DeviceFamily, latest(DeviceRole) as DeviceRole, latest(Platform) as Platform, latest(Site) as Site, latest(IpAddress) as IpAddress, latest(MACAddress) as MACAddress, latest(SerialNumber) as SerialNumber, latest(ImageVersion) as DeviceImgVersion, latest(Uptime) as UpTime, latest(UptimeSeconds) as UptimeSeconds by DeviceName, DeviceID\n| eval SoftwareVersion=DeviceImgVersion",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2118,9 +2214,9 @@
 			"type": "ds.search"
 		},
 		"ds_base_issues_ref": {
-			"name": "IT - Critical Systems - ds_base_issues",
+			"name": "IT - Critical Systems - Base Issues",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\"\n| eval DeviceImgVersion=DeviceImageVersion\n| join type=left DeviceID [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" | stats latest(Site) as SiteName, latest(Location) as SiteNameHierarchy by DeviceID ]\n| eval SiteName=coalesce(SiteName, \"Site enrichment unavailable\"), SiteNameHierarchy=coalesce(SiteNameHierarchy, SiteName), SiteType=null()\n| fields IssueID, IssueName, IssueCategory, IssueSpecificPriority, IssueStatus, IssueSpecificSeverity, IssueSpecificDescription, IssueSpecificSummary, IssueSpecificEntity, IssueSpecificEntityValue, IssueSpecificCategory, IssueSpecificName, IssueSpecificSource, IssueCount, IssueDeviceRole, DeviceName, DeviceFamily, DevicePlatform, DeviceRole, DeviceSerialNumber, DeviceSeries, DeviceIpAddress, DeviceImgVersion, DeviceMACAddress, SiteName, SiteNameHierarchy, SiteType, IssueClientMac, _time",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\"\n| eval DeviceImgVersion=DeviceImageVersion\n| eval SiteNameHierarchy=if(isnull(SiteNameHierarchy) OR SiteNameHierarchy=\"\", SiteName, SiteNameHierarchy)\n| eval SiteNameHierarchy=`dnac_site_normalize(SiteNameHierarchy)`\n| eval SiteName=if(isnull(SiteName) OR SiteName=\"\", mvindex(split(SiteNameHierarchy,\"/\"), -1), SiteName)\n| eval SiteName=if(isnull(SiteName) OR SiteName=\"\", \"Site enrichment unavailable\", SiteName), SiteNameHierarchy=if(isnull(SiteNameHierarchy) OR SiteNameHierarchy=\"\", SiteName, SiteNameHierarchy), SiteType=if(isnull(SiteType) OR SiteType=\"\", \"Unknown\", SiteType)\n| where \"$site_tok$\"=\"*\" OR SiteNameHierarchy=\"$site_tok$\" OR SiteName=\"$site_tok$\" OR like(SiteNameHierarchy, \"$site_tok$/%\")\n| fields IssueID, IssueName, IssueCategory, IssueSpecificPriority, IssueStatus, IssueSpecificSeverity, IssueSpecificDescription, IssueSpecificSummary, IssueSpecificEntity, IssueSpecificEntityValue, IssueSpecificCategory, IssueSpecificName, IssueSpecificSource, IssueCount, IssueDeviceRole, DeviceName, DeviceFamily, DevicePlatform, DeviceRole, DeviceSerialNumber, DeviceSeries, DeviceIpAddress, DeviceImgVersion, DeviceMACAddress, SiteName, SiteNameHierarchy, SiteType, IssueClientMac, _time",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2137,7 +2233,7 @@
 			"type": "ds.chain"
 		},
 		"ds_compliance": {
-			"name": "Executive Dashboard - ds_compliance",
+			"name": "Executive Dashboard - Compliance",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:compliance\" ComplianceStatus!=\"NOT_APPLICABLE\"\n| eval ok=if(ComplianceStatus==\"COMPLIANT\" OR ComplianceStatus==\"COMPLIANT_WARNING\",1,0)\n| stats sum(ok) as compliant, count as total\n| eval pct=if(total>0, round(compliant/total*100), 0)\n| fields pct",
 				"queryParameters": {
@@ -2148,7 +2244,7 @@
 			"type": "ds.search"
 		},
 		"ds_compliance_detail": {
-			"name": "Building Resilience - ds_compliance_detail",
+			"name": "Building Resilience - Compliance Detail",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:compliance\" ComplianceStatus!=\"COMPLIANT\" ComplianceStatus!=\"NOT_APPLICABLE\"\n| stats latest(ComplianceStatus) as Status, latest(DeviceFamily) as Family, latest(IpAddress) as IP, latest(ImageVersion) as Version by DeviceName\n| rename DeviceName as device_name\n| lookup asset_inventory device_name OUTPUT location, management_source\n| rename device_name as Device, location as Location, management_source as Source\n| sort Status",
 				"queryParameters": {
@@ -2159,7 +2255,7 @@
 			"type": "ds.search"
 		},
 		"ds_compliance_donut": {
-			"name": "IT - Critical Systems - ds_compliance_donut",
+			"name": "IT - Critical Systems - Compliance Donut",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:compliance\" \n| stats latest(ComplianceStatus) as status by DeviceName \n| eval status=case(status==\"COMPLIANT\", \"Compliant\", status==\"COMPLIANT_WARNING\", \"Warning\", status==\"NON_COMPLIANT\", \"Non-Compliant\", status==\"NOT_APPLICABLE\", \"Not Applicable\", 1==1, status) \n| stats count by status",
 				"queryParameters": {
@@ -2170,7 +2266,7 @@
 			"type": "ds.search"
 		},
 		"ds_compliance_report": {
-			"name": "IT - Critical Systems - ds_compliance_report",
+			"name": "IT - Critical Systems - Compliance Report",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:compliance\" ComplianceStatus=NON_COMPLIANT ComplianceDetail=True\n| stats dc(ComplianceComplianceType) as type_count, values(ComplianceComplianceType) as compliance_types, latest(IpAddress) as ip, latest(Platform) as platform, latest(DeviceSeries) as series, latest(DeviceFamily) as family, latest(DeviceRole) as role, latest(ImageVersion) as version, latest(Uptime) as uptime, latest(Manageability) as manageability, latest(Reachability) as reachability by DeviceName\n| eval compliance_types=mvjoin(compliance_types,\", \")\n| sort -type_count\n| rename DeviceName as \"Device Name\", ip as \"IP Address\", compliance_types as \"Compliance Types\", type_count as \"Type Count\", platform as Platform, series as \"Device Series\", family as \"Device Family\", role as \"Device Role\", version as \"Image Version\", uptime as Uptime, manageability as Manageability, reachability as Reachability",
 				"queryParameters": {
@@ -2181,7 +2277,7 @@
 			"type": "ds.search"
 		},
 		"ds_config_changes": {
-			"name": "Executive Dashboard - ds_config_changes",
+			"name": "IT - Critical Systems - Configuration Changes",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:audit:logs\" NOT name IN (\"REGISTER\",\"APIS_READY\",\"SERVICE_STARTUP\")\n| stats count",
 				"queryParameters": {
@@ -2194,7 +2290,7 @@
 		"ds_config_detail": {
 			"name": "IT Health - Recent Human Config Changes",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:audit:logs\" name=\"AUDIT_LOG\"\n userId!=\"system\" userId!=\"SYSTEM\" userId!=\"dnac-svc\" userId!=\"license-management\" userId!=\"localhost\" userId!=\"null\"\n NOT description=\"*read-only commands*\"\n NOT description=\"*preview*\"\n NOT description=\"Service request processing completed*\"\n NOT description=\"Going to deploy*\"\n| where (parentInstanceId=\"null\" OR parentInstanceId=\"\" OR isnull(parentInstanceId))\n| where NOT (description LIKE \"Executing command%display%\")\n| rex field=description mode=sed \"s/[\\r\\n\\t]+/ /g\"\n| rex field=description mode=sed \"s/ +/ /g\"\n| eval description = replace(description, \"&quot;\", \"\\\"\")\n| eval description = replace(description, \"&amp;\", \"&\")\n| eval description = replace(description, \"&lt;\", \"<\")\n| eval description = replace(description, \"&gt;\", \">\")\n| eval admin = coalesce(adminName, userId, \"unknown\")\n| spath path=\"additionalDetails.eventMetadata.auditLogMetadata.type\" output=audit_type\n| spath path=\"network.deviceId\" output=net_deviceId\n| eval net_deviceId = if(net_deviceId IN (\"null\",\"SYSTEM\",\"\") OR isnull(net_deviceId), null(), net_deviceId)\n| rex field=description \"Network Profile \\[.*?\\\"name\\\":\\\"(?<x_profile>[^\\\"]+)\"\n| rex field=description \"Creating task schedule.*?description:\\s*'(?<x_task>[^']+)'\"\n| rex field=description \"AP Provisioning request for AP\\(s\\) in (?<x_ap_site>[^,]+),\"\n| rex field=description \"for activity '(?<x_activity>[^']+)'\"\n| rex field=description \"network device (?<x_ip>\\d+\\.\\d+\\.\\d+\\.\\d+)\"\n| rex field=description \"deployed template (?<x_template>\\S+?)\\.?$\"\n| eval target = coalesce(net_deviceId, x_profile, x_task, x_ap_site, x_activity, x_ip, x_template, \"-\")\n| eval how = case(\n audit_type=\"CLI\", \"DNAC CLI session\",\n audit_type=\"API\", \"DNAC UI / REST API\",\n audit_type=\"NETCONF\", \"DNAC NETCONF push\",\n audit_type=\"SOCKET\", \"DNAC internal\",\n 1=1, \"DNAC \" . coalesce(audit_type, \"audit\"))\n| eval description = if(len(description) > 200, substr(description, 1, 197) . \"...\", description)\n| table _time admin how description target\n| rename admin as \"Who\", how as \"How\", description as \"What\", target as \"Target\"\n| sort - _time\n| head 5000",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:audit:logs\" name=\"AUDIT_LOG\"\n userId!=\"system\" userId!=\"SYSTEM\" userId!=\"dnac-svc\" userId!=\"license-management\" userId!=\"localhost\" userId!=\"null\"\n NOT description=\"*read-only commands*\"\n NOT description=\"*preview*\"\n NOT description=\"Service request processing completed*\"\n NOT description=\"Going to deploy*\"\n| where (parentInstanceId=\"null\" OR parentInstanceId=\"\" OR isnull(parentInstanceId))\n| where NOT (description LIKE \"Executing command%display%\")\n| rex field=description mode=sed \"s/[\\r\\n\\t]+/ /g\"\n| rex field=description mode=sed \"s/ +/ /g\"\n| eval description = replace(description, \"&quot;\", \"\\\"\")\n| eval description = replace(description, \"&amp;\", \"&\")\n| eval description = replace(description, \"&lt;\", \"<\")\n| eval description = replace(description, \"&gt;\", \">\")\n| eval admin = coalesce(adminName, userId, \"unknown\")\n| eval audit_type=mvindex(mvdedup('additionalDetails.eventMetadata.auditLogMetadata.type'),0)\n| eval net_deviceId=mvindex(mvdedup('network.deviceId'),0)\n| eval net_deviceId = if(net_deviceId IN (\"null\",\"SYSTEM\",\"\") OR isnull(net_deviceId), null(), net_deviceId)\n| rex field=description \"Network Profile \\[.*?\\\"name\\\":\\\"(?<x_profile>[^\\\"]+)\"\n| rex field=description \"Creating task schedule.*?description:\\s*'(?<x_task>[^']+)'\"\n| rex field=description \"AP Provisioning request for AP\\(s\\) in (?<x_ap_site>[^,]+),\"\n| rex field=description \"for activity '(?<x_activity>[^']+)'\"\n| rex field=description \"network device (?<x_ip>\\d+\\.\\d+\\.\\d+\\.\\d+)\"\n| rex field=description \"deployed template (?<x_template>\\S+?)\\.?$\"\n| eval target = coalesce(net_deviceId, x_profile, x_task, x_ap_site, x_activity, x_ip, x_template, \"-\")\n| eval how = case(\n audit_type=\"CLI\", \"DNAC CLI session\",\n audit_type=\"API\", \"DNAC UI / REST API\",\n audit_type=\"NETCONF\", \"DNAC NETCONF push\",\n audit_type=\"SOCKET\", \"DNAC internal\",\n 1=1, \"DNAC \" . coalesce(audit_type, \"audit\"))\n| eval description = if(len(description) > 200, substr(description, 1, 197) . \"...\", description)\n| table _time admin how description target\n| rename admin as \"Who\", how as \"How\", description as \"What\", target as \"Target\"\n| sort - _time\n| head 5000",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2205,7 +2301,7 @@
 		"ds_config_trend": {
 			"name": "IT Health - Config Change Trend",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:audit:logs\" name=\"AUDIT_LOG\"\n userId!=\"system\" userId!=\"SYSTEM\" userId!=\"dnac-svc\" userId!=\"license-management\" userId!=\"localhost\" userId!=\"null\"\n NOT description=\"*read-only commands*\"\n NOT description=\"*preview*\"\n NOT description=\"Service request processing completed*\"\n NOT description=\"Going to deploy*\"\n| where (parentInstanceId=\"null\" OR parentInstanceId=\"\" OR isnull(parentInstanceId))\n| where NOT (description LIKE \"Executing command%display%\")\n| eval admin=coalesce(adminName, userId, \"unknown\")\n| bin _time as bucket\n| eval session = admin . \"|\" . bucket\n| timechart fixedrange=false dc(session) as workflows by admin",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:audit:logs\" name=\"AUDIT_LOG\"\n userId!=\"system\" userId!=\"SYSTEM\" userId!=\"dnac-svc\" userId!=\"license-management\" userId!=\"localhost\" userId!=\"null\"\n NOT description=\"*read-only commands*\"\n NOT description=\"*preview*\"\n NOT description=\"Service request processing completed*\"\n NOT description=\"Going to deploy*\"\n| where (parentInstanceId=\"null\" OR parentInstanceId=\"\" OR isnull(parentInstanceId))\n| where NOT (description LIKE \"Executing command%display%\")\n| eval admin=coalesce(adminName, userId, \"unknown\")\n| bin span=15m _time as bucket\n| eval session = admin . \"|\" . bucket\n| timechart span=15m fixedrange=false dc(session) as workflows by admin",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2214,25 +2310,17 @@
 			"type": "ds.search"
 		},
 		"ds_cpu_mem": {
-			"name": "CPU/Memory Alerts Base",
+			"name": "CPU Memory Alerts Base",
 			"options": {
 				"extend": "ds_base_devicehealth_ref",
 				"query": "| where CPUUtilization > 80 OR MemoryUtilization > 80 | eval cpu_status=if(CPUUtilization>90,\"Critical\",if(CPUUtilization>80,\"Warning\",\"OK\")), mem_status=if(MemoryUtilization>90,\"Critical\",if(MemoryUtilization>80,\"Warning\",\"OK\")) | table DeviceName, DeviceFamily, Platform, Site, CPUUtilization, cpu_status, MemoryUtilization, mem_status | sort -CPUUtilization | fillnull value=\"—\""
 			},
 			"type": "ds.chain"
 		},
-		"ds_cpu_mem_count": {
-			"name": "CPU/Memory Alerts",
-			"options": {
-				"extend": "ds_cpu_mem",
-				"query": "| stats count | fields count"
-			},
-			"type": "ds.chain"
-		},
 		"ds_cpu_mem_trend": {
-			"name": "CPU/Memory Alerts Trend",
+			"name": "CPU Memory Alerts Trend",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" | where CPUUtilization > 80 OR MemoryUtilization > 80 | timechart fixedrange=false dc(DeviceName) as \"CPU/Memory Alerts\"",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| eval Site=`dnac_site_normalize(coalesce(Site, Location))`\n| where \"$site_tok$\"=\"*\" OR Site=\"$site_tok$\"\n| where CPUUtilization > 80 OR MemoryUtilization > 80\n| timechart fixedrange=false dc(DeviceName) as \"CPU/Memory Alerts\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2241,9 +2329,9 @@
 			"type": "ds.search"
 		},
 		"ds_dev_health_trend": {
-			"name": "Shared - ds_dev_health_trend",
+			"name": "Shared - Device Health Trend",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" | where OverallHealth>=0 | eval health=OverallHealth*10 | timechart fixedrange=false avg(health) as score",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| eval Site=`dnac_site_normalize(coalesce(Site, Location))`\n| where \"$site_tok$\"=\"*\" OR Site=\"$site_tok$\"\n| where OverallHealth>=0\n| eval health=OverallHealth*10\n| timechart fixedrange=false avg(health) as score",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2254,21 +2342,13 @@
 		"ds_device_health": {
 			"name": "IT Health - Device Health Trend",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" | eval OverallHealth=tonumber(mvindex(OverallHealth, 0)) | where OverallHealth>=0 | timechart fixedrange=false avg(eval(round(OverallHealth * 10, 2))) as health",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| eval Site=`dnac_site_normalize(coalesce(Site, Location))`\n| where \"$site_tok$\"=\"*\" OR Site=\"$site_tok$\"\n| eval OverallHealth=tonumber(mvindex(OverallHealth, 0))\n| where OverallHealth>=0\n| timechart fixedrange=false avg(eval(round(OverallHealth * 10, 2))) as health",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
 				}
 			},
 			"type": "ds.search"
-		},
-		"ds_device_health_current": {
-			"name": "Device Health",
-			"options": {
-				"extend": "ds_base_devicehealth_ref",
-				"query": "| eval h=case(Reachability==\"Reachable\" AND match(Manageability,\"^Managed\"),100, Reachability==\"Reachable\",50, 1==1,0) | stats avg(h) as score | eval score=round(score,0)"
-			},
-			"type": "ds.chain"
 		},
 		"ds_device_inventory": {
 			"name": "Device Inventory by Type",
@@ -2278,16 +2358,8 @@
 			},
 			"type": "ds.chain"
 		},
-		"ds_dhcp_count": {
-			"name": "DHCP Pool Events",
-			"options": {
-				"extend": "ds_dhcp_events",
-				"query": "| stats sum(Events) as count | fields count"
-			},
-			"type": "ds.chain"
-		},
 		"ds_dhcp_events": {
-			"name": "IT - Critical Systems - ds_dhcp_pool_exhaustion",
+			"name": "IT - Critical Systems - DHCP Pool Exhaustion",
 			"options": {
 				"query": "`index_dhcp` sourcetype=\"DhcpSrvLog\"\n| rex \"^(?<event_id>\\d+),(?<date>[^,]+),(?<time>[^,]+),(?<description>[^,]*),(?<ip_address>[^,]+),(?<hostname>[^,]*),(?<mac_address>[^,]*)\"\n| eval event_type=case(event_id==\"13\",\"IP In Use\", event_id==\"14\",\"Lease Denied\", event_id==\"15\",\"Range Exhausted\", event_id==\"16\",\"Range Extended\", 1==1,\"Event \".event_id)\n| where event_id IN (\"13\",\"14\",\"15\",\"16\")\n| stats dc(ip_address) as unique_ips, dc(mac_address) as unique_clients, count as events, earliest(_time) as first_seen, latest(_time) as last_seen by event_type\n| eval first_seen=strftime(first_seen, \"%Y-%m-%d %H:%M\"), last_seen=strftime(last_seen, \"%Y-%m-%d %H:%M\")\n| sort -events\n| rename event_type as \"Event\", unique_ips as \"Unique IPs\", unique_clients as \"Unique Clients\", events as \"Events\", first_seen as \"First Seen\", last_seen as \"Last Seen\"",
 				"queryParameters": {
@@ -2301,17 +2373,6 @@
 			"name": "DHCP Pool Events Trend",
 			"options": {
 				"query": "`index_dhcp` sourcetype=\"DhcpSrvLog\" | rex \"^(?<event_id>\\d+),\" | where event_id IN (\"13\",\"14\",\"15\",\"16\",\"17\",\"20\",\"21\",\"36\") | timechart fixedrange=false count as \"DHCP Pool Events\"",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_guest_surge": {
-			"name": "IT Health - Guest Surge Monitor",
-			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" | where type=\"Wireless\" | timechart fixedrange=false dc(macAddress) as concurrent_clients | eval capacity_pct=round(concurrent_clients/3000*100, 1), status=case(concurrent_clients>=2500,\"CRITICAL - pool near exhaustion\", concurrent_clients>=2000,\"WARNING - high utilization\", concurrent_clients>=1500,\"ELEVATED\", 1==1,\"OK\")",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2395,37 +2456,23 @@
 			"type": "ds.chain"
 		},
 		"ds_issue_trend_cat": {
-			"name": "IT - Critical Systems - ds_issue_trend",
+			"name": "IT - Critical Systems - Issue Trend",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\"\n| eval issue_group=case(match(IssueName,\"High input\"),\"Interface Utilization\", match(IssueName,\"BGP\"),\"BGP Instability\", match(IssueName,\"AP\"),\"AP Issues\", match(IssueName,\"AAA\"),\"AAA/RADIUS\", match(IssueName,\"Host flap\"),\"MAC Flapping\", match(IssueName,\"Network Device\"),\"Device Reachability\", match(IssueName,\"Internet\"),\"Internet Connectivity\", match(IssueName,\"5 GHz\"),\"Wireless Radio\", match(IssueName,\"This Device\"),\"Device Health\", 1==1,IssueSpecificCategory)\n| timechart dc(IssueID) by issue_group limit=10",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_issues_current": {
-			"name": "Open Issues",
-			"options": {
-				"extend": "ds_open_issues",
-				"query": "| fields issues"
+				"extend": "ds_base_issues_ref",
+				"query": "| eval issue_group=case(match(IssueName,\"High input\"),\"Interface Utilization\", match(IssueName,\"BGP\"),\"BGP Instability\", match(IssueName,\"AP\"),\"AP Issues\", match(IssueName,\"AAA\"),\"AAA/RADIUS\", match(IssueName,\"Host flap\"),\"MAC Flapping\", match(IssueName,\"Network Device\"),\"Device Reachability\", match(IssueName,\"Internet\"),\"Internet Connectivity\", match(IssueName,\"5 GHz\"),\"Wireless Radio\", match(IssueName,\"This Device\"),\"Device Health\", 1==1,IssueSpecificCategory)\n| timechart dc(IssueID) by issue_group limit=10"
 			},
 			"type": "ds.chain"
 		},
 		"ds_issues_trend": {
 			"name": "Open Issues Trend",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\" | timechart fixedrange=false dc(IssueID) as issues",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$"
-				}
+				"extend": "ds_base_issues_ref",
+				"query": "| timechart fixedrange=false dc(IssueID) as issues"
 			},
-			"type": "ds.search"
+			"type": "ds.chain"
 		},
 		"ds_kpi_cpu_mem": {
-			"name": "KPI CPU/Memory Alerts",
+			"name": "KPI CPU Memory Alerts",
 			"options": {
 				"extend": "ds_cpu_mem_trend",
 				"query": "| fields _time \"CPU/Memory Alerts\""
@@ -2489,7 +2536,7 @@
 			"type": "ds.chain"
 		},
 		"ds_link_flap_storm": {
-			"name": "IT - Critical Systems - ds_link_flap_storm",
+			"name": "IT - Critical Systems - Link Flap Storm",
 			"options": {
 				"query": "`index_network` sourcetype=\"cisco:ios\" (\"%LINEPROTO-5-UPDOWN\" OR \"%LINK-3-UPDOWN\" OR \"%LINK-5-CHANGED\")\n| rex \"Interface (?<interface>\\S+)\"\n| stats count as flap_count, dc(interface) as intf_count, earliest(_time) as first_flap, latest(_time) as last_flap by host\n| eval duration_sec=round(last_flap-first_flap,0), first_flap=strftime(first_flap,\"%H:%M:%S\"), last_flap=strftime(last_flap,\"%H:%M:%S\"), flaps_per_min=if(duration_sec>0,round(flap_count/(duration_sec/60),1),flap_count), event_type=if(intf_count>5 AND duration_sec<120,\"Power Event (mass flap)\",\"Isolated Flap\")\n| sort -flap_count",
 				"queryParameters": {
@@ -2529,17 +2576,6 @@
 			},
 			"type": "ds.search"
 		},
-		"ds_network_health_current": {
-			"name": "Executive Dashboard - ds_network_health_current",
-			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:networkhealth\" category=\"All\"\n| stats latest(healthScore) as score\n| fields score",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
 		"ds_open_issues": {
 			"name": "Open Issues Base",
 			"options": {
@@ -2549,7 +2585,7 @@
 			"type": "ds.chain"
 		},
 		"ds_power_detection": {
-			"name": "IT - Critical Systems - ds_power_event_detection",
+			"name": "IT - Critical Systems - Power Event Detection",
 			"options": {
 				"query": "`index_network` sourcetype=\"cisco:ios\" (\"%SYS-5-RELOAD\" OR \"%SYS-5-RESTART\" OR \"%SYS-5-CONFIG_I\" OR \"%PLATFORM_ENV-1-FAN\" OR \"%PLATFORM_ENV-6-BOARD\" OR \"%REDUNDANCY-5-SWITCHOVER\" OR \"%STACKMGR-6-STACK_LINK_CHANGE\" OR \"%SYS-6-LOGGINGHOST_STARTSTOP\" OR \"%SYS-2-MALLOCFAIL\" OR \"%PLATFORM-2-PEM_NOINPUT\")\n| eval event_class=case(match(_raw,\"RELOAD|RESTART\"),\"Reload/Restart\", match(_raw,\"PLATFORM_ENV|PEM_NOINPUT\"),\"Power/Environment\", match(_raw,\"REDUNDANCY|SWITCHOVER\"),\"Supervisor Switchover\", match(_raw,\"STACKMGR\"),\"Stack Change\", match(_raw,\"MALLOCFAIL\"),\"Memory Failure\", match(_raw,\"CONFIG_I\"),\"Post-Boot Config\", match(_raw,\"LOGGINGHOST\"),\"Logging Restart\", 1==1,\"Other\")\n| stats count as events, dc(host) as affected_devices, values(host) as devices, earliest(_time) as first_event, latest(_time) as last_event by event_class\n| eval duration_sec=last_event-first_event, first_event=strftime(first_event,\"%H:%M:%S\"), last_event=strftime(last_event,\"%H:%M:%S\"), devices=mvjoin(devices,\", \")\n| sort -events",
 				"queryParameters": {
@@ -2560,7 +2596,7 @@
 			"type": "ds.search"
 		},
 		"ds_power_summary": {
-			"name": "IT - Critical Systems - ds_power_event_summary",
+			"name": "IT - Critical Systems - Power Event Summary",
 			"options": {
 				"query": "`index_network` sourcetype=\"cisco:ios\" (\"%SYS-5-RELOAD\" OR \"%SYS-5-RESTART\" OR \"%PLATFORM_ENV\" OR \"%REDUNDANCY-5-SWITCHOVER\" OR \"%STACKMGR\" OR \"%SYS-2-MALLOCFAIL\" OR \"%PLATFORM-2-PEM_NOINPUT\")\n| stats count as power_events, dc(host) as affected_devices, earliest(_time) as first_event, latest(_time) as last_event \n| eval time_span_min=round((last_event-first_event)/60,1), first_event=strftime(first_event,\"%Y-%m-%d %H:%M:%S\"), last_event=strftime(last_event,\"%Y-%m-%d %H:%M:%S\") \n| fillnull value=0 power_events, affected_devices",
 				"queryParameters": {
@@ -2589,14 +2625,6 @@
 			},
 			"type": "ds.search"
 		},
-		"ds_reboot_count": {
-			"name": "Recent Reboots",
-			"options": {
-				"extend": "ds_reboots",
-				"query": "| stats count | fields count"
-			},
-			"type": "ds.chain"
-		},
 		"ds_reboots": {
 			"name": "Recent Reboots Base",
 			"options": {
@@ -2608,7 +2636,7 @@
 		"ds_reboots_trend": {
 			"name": "Recent Reboots Trend",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" UptimeSeconds<14400 | timechart fixedrange=false dc(DeviceName) as \"Recent Reboots\"",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" UptimeSeconds<14400\n| eval Site=`dnac_site_normalize(coalesce(Site, Location))`\n| where \"$site_tok$\"=\"*\" OR Site=\"$site_tok$\"\n| timechart fixedrange=false dc(DeviceName) as \"Recent Reboots\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2617,7 +2645,7 @@
 			"type": "ds.search"
 		},
 		"ds_routing_reconvergence": {
-			"name": "IT - Critical Systems - ds_routing_reconvergence",
+			"name": "IT - Critical Systems - Routing Reconvergence",
 			"options": {
 				"query": "`index_network` sourcetype=\"cisco:ios\" (\"%OSPF-5-ADJCHG\" OR \"%EIGRP-5-NBRCHANGE\" OR \"%BGP-5-ADJCHANGE\" OR \"%BGP-3-NOTIFICATION\")\n| eval protocol=case(match(_raw,\"OSPF\"),\"OSPF\", match(_raw,\"EIGRP\"),\"EIGRP\", match(_raw,\"BGP\"),\"BGP\"), state=if(match(_raw,\"(?i)up|FULL|established|adjacency\"),\"Up\",\"Down\")\n| stats count as events, count(eval(state==\"Down\")) as down_events, count(eval(state==\"Up\")) as up_events, earliest(_time) as first_event, latest(_time) as last_event by host, protocol\n| eval recovery_sec=round(last_event-first_event,0), first_event=strftime(first_event,\"%H:%M:%S\"), last_event=strftime(last_event,\"%H:%M:%S\")\n| sort -events",
 				"queryParameters": {
@@ -2628,9 +2656,9 @@
 			"type": "ds.search"
 		},
 		"ds_site_health": {
-			"name": "IT - Critical Systems - ds_site_health",
+			"name": "IT - Critical Systems - Site Health",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" earliest=-15m\n| eval Site=`dnac_site_normalize(coalesce(Site, Location))`\n| where Site!=\"\"\n| stats avg(eval(if(OverallHealth>=0, OverallHealth, null))) as healthRaw, count(eval(OverallHealth>=8)) as good, count(eval(OverallHealth>=4 AND OverallHealth<8)) as fair, count(eval(OverallHealth<4 AND OverallHealth>=0)) as bad, dc(DeviceID) as total by Site\n| eval health=round(healthRaw*10)\n| fields Site health good bad fair total\n| sort -health",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" earliest=-15m\n| eval Site=`dnac_site_normalize(coalesce(Site, Location))`\n| where Site!=\"\"\n| where \"$site_tok$\"=\"*\" OR Site=\"$site_tok$\"\n| stats avg(eval(if(OverallHealth>=0, OverallHealth, null))) as healthRaw, count(eval(OverallHealth>=8)) as good, count(eval(OverallHealth>=4 AND OverallHealth<8)) as fair, count(eval(OverallHealth<4 AND OverallHealth>=0)) as bad, dc(DeviceID) as total by Site\n| eval health=round(healthRaw*10)\n| fields Site health good bad fair total\n| sort -health",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2647,7 +2675,7 @@
 			"type": "ds.chain"
 		},
 		"ds_stp_reconvergence": {
-			"name": "IT - Critical Systems - ds_stp_reconvergence",
+			"name": "IT - Critical Systems - STP Reconvergence",
 			"options": {
 				"query": "`index_network` sourcetype=\"cisco:ios\" (\"%STP-6-TOPOLOGY\" OR \"%SPANTREE-2-ROOTCHANGE\" OR \"%SPANTREE-6-ROOTCHANGE\" OR \"%SPANTREE-2-BLOCK_BPDUGUARD\")\n| rex \"VLAN(?<vlan_id>\\d+)\"\n| stats count as topology_changes, dc(vlan_id) as vlans_affected, earliest(_time) as first_event, latest(_time) as last_event by host\n| eval duration_sec=round(last_event-first_event,0), first_event=strftime(first_event,\"%H:%M:%S\"), last_event=strftime(last_event,\"%H:%M:%S\")\n| sort -topology_changes",
 				"queryParameters": {
@@ -2665,16 +2693,8 @@
 			},
 			"type": "ds.chain"
 		},
-		"ds_syslog_critical": {
-			"name": "Syslog Critical",
-			"options": {
-				"extend": "ds_syslog_severity",
-				"query": "| search severity=\"Critical\" | fields count | appendpipe [| where isnull(count) | eval count=0]"
-			},
-			"type": "ds.chain"
-		},
 		"ds_syslog_severity": {
-			"name": "IT - Critical Systems - ds_syslog_severity",
+			"name": "IT - Critical Systems - Syslog Severity",
 			"options": {
 				"query": "`index_network` (sourcetype=\"cisco:ios\")\n| rex \"%(?<facility>[A-Z_]+)-(?<severity_id>\\d+)-(?<mnemonic>[A-Z_]+)\"\n| eval severity=case(severity_id<=2,\"Critical\", severity_id==3,\"Error\", severity_id<=5,\"Warning\", 1==1,\"Info\")\n| stats count as events, dc(host) as hosts, dc(mnemonic) as message_types by severity",
 				"queryParameters": {
@@ -2698,7 +2718,7 @@
 		"ds_te_alerts_summary": {
 			"name": "IT Health - ThousandEyes Alerts Summary by Severity",
 			"options": {
-				"query": "| tstats `summariesonly` count\nFROM datamodel=\"Cisco_ThousandEyes.Alerts\"\nBY Alerts.severity\n| rename Alerts.severity AS Severity\n| sort - count",
+				"query": "| tstats `scd_summariesonly` count\nFROM datamodel=\"Cisco_ThousandEyes.Alerts\"\nBY Alerts.severity\n| rename Alerts.severity AS Severity\n| sort - count",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2707,9 +2727,9 @@
 			"type": "ds.search"
 		},
 		"ds_te_alerts_table": {
-			"name": "IT Health - ThousandEyes Active Alerts (Recent 20)",
+			"name": "IT Health - ThousandEyes Active Alerts Recent 20",
 			"options": {
-				"query": "| tstats `summariesonly` count, values(Alerts.triggerTime) as triggerTime, values(Alerts.accountId) as accountId, values(Alerts.organizationId) as organizationId, values(Alerts.testId) as testId, values(Alerts.testName) as testName, values(Alerts.testType) as testType, values(Alerts.permalink) as permalink, values(Alerts.expression) as expression, values(Alerts.severity) as severity\nFROM datamodel=\"Cisco_ThousandEyes.Alerts\"\nBY _time, Alerts.alertId\n| eval \"Trigger Time\"=coalesce(strftime(triggerTime, \"%Y-%m-%d %H:%M:%S\"), strftime(_time, \"%Y-%m-%d %H:%M:%S\"))\n| rename accountId AS \"Account ID\", organizationId AS \"Org ID\", testId AS \"Test ID\", testName AS \"Test Name\", testType AS \"Test Type\", permalink AS \"Permalink\", expression AS \"Expression\", severity AS \"Severity\", Alerts.alertId AS \"Alert ID\"\n| sort 0 - \"Trigger Time\"\n| fields - _time, triggerTime, count\n| head 20\n| table \"Trigger Time\", \"Account ID\", \"Org ID\", \"Test ID\", \"Test Name\", \"Test Type\", \"Permalink\", \"Expression\", \"Severity\", \"Alert ID\"",
+				"query": "| tstats `scd_summariesonly` count, values(Alerts.triggerTime) as triggerTime, values(Alerts.accountId) as accountId, values(Alerts.organizationId) as organizationId, values(Alerts.testId) as testId, values(Alerts.testName) as testName, values(Alerts.testType) as testType, values(Alerts.permalink) as permalink, values(Alerts.expression) as expression, values(Alerts.severity) as severity\n    FROM datamodel=\"Cisco_ThousandEyes.Alerts\"\n    BY _time, Alerts.alertId \n| eval \"Trigger Time\"=coalesce(strftime(triggerTime, \"%Y-%m-%d %H:%M:%S\"), strftime(_time, \"%Y-%m-%d %H:%M:%S\")) \n| rename accountId AS \"Account ID\", organizationId AS \"Org ID\", testId AS \"Test ID\", testName AS \"Test Name\", testType AS \"Test Type\", permalink AS \"Permalink\", expression AS \"Expression\", severity AS \"Severity\", Alerts.alertId AS \"Alert ID\" \n| sort 0 - \"Trigger Time\" \n| fields - _time, triggerTime, count \n| head 20 \n| table \"Trigger Time\", \"Account ID\", \"Org ID\", \"Test ID\", \"Test Name\", \"Test Type\", \"Expression\", \"Severity\", \"Alert ID\", \"Permalink\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2720,7 +2740,7 @@
 		"ds_te_alerts_timeline": {
 			"name": "IT Health - ThousandEyes Alerts Timeline",
 			"options": {
-				"query": "| tstats `summariesonly` count\nFROM datamodel=\"Cisco_ThousandEyes.Alerts\"\nBY Alerts.severity, _time span=1h\n| rename Alerts.severity AS Severity\n| timechart span=1h sum(count) AS count BY Severity",
+				"query": "| tstats `scd_summariesonly` count\nFROM datamodel=\"Cisco_ThousandEyes.Alerts\"\nBY Alerts.severity, _time span=1h\n| rename Alerts.severity AS Severity\n| timechart span=1h sum(count) AS count BY Severity",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2729,9 +2749,9 @@
 			"type": "ds.search"
 		},
 		"ds_te_endpoint_traces": {
-			"name": "IT Health - ThousandEyes Endpoint Trace Health",
+			"name": "IT Health - ThousandEyes Endpoint Health by Agent",
 			"options": {
-				"query": "index=* sourcetype=\"cisco:thousandeyes:trace\"\n| eval is_parent=if(parent_span_id==\"\", 1, 0)\n| eval parent_key=if(is_parent==1, span_id, parent_span_id)\n| eval http_code_num = if(is_parent==1, 0, attributes.http.response.code)\n| eval agent_name = 'thousandeyes.source.agent.name'\n| eval permalink = 'thousandeyes.permalink'\n| eventstats count as spans_count count(eval('attributes.http.response.code'>399)) as error_count count(eval('attributes.http.response.code'>=500 AND 'attributes.http.response.code'<600)) as error_5xx_count min(start_time) as min_start_time max(end_time) as max_end_time by trace_id, parent_key\n| where is_parent==1\n| eval duration=round((max_end_time - min_start_time)/1000000) . \" ms\"\n| eval started_at_epoch = round(min_start_time / 1000000000)\n| eval timestamp = strftime(started_at_epoch, \"%a, %b %d %Y %I:%M:%S %p %Z\")\n| eval spans_count=spans_count-1\n| where (max_end_time - min_start_time)/1000000 >= 0\n| rename name as endpoint\n| rename thousandeyes.account.id as account_id\n| rename thousandeyes.test.name as test_name\n| dedup trace_id\n| table trace_id endpoint timestamp error_count spans_count duration agent_name account_id test_name permalink _raw",
+				"query": "`index_thousandeyes` sourcetype=\"cisco:thousandeyes:metric\" (\"thousandeyes.test.type\"=\"http-server\" OR \"thousandeyes.test.type\"=\"page-load\" OR \"thousandeyes.test.type\"=\"api\" OR \"thousandeyes.test.type\"=\"web-transaction\" OR \"thousandeyes.test.type\"=\"agent-to-server\")\n| eval endpoint=coalesce('server.address', 'url.domain', 'thousandeyes.test.domain', 'http.url', 'thousandeyes.test.name', \"Unknown endpoint\")\n| eval agent_name=coalesce('thousandeyes.source.agent.name', 'source.agent.name', \"Unknown agent\")\n| eval test_name=coalesce('thousandeyes.test.name', \"Unknown test\")\n| eval test_type=coalesce('thousandeyes.test.type', \"Unknown type\")\n| eval test_id=coalesce('thousandeyes.test.id', 'test.id', test_id, testId, tid, \"\")\n| eval account_id=coalesce('thousandeyes.account.id', account_id, aid)\n| eval permalink=coalesce('thousandeyes.permalink', permalink)\n| eval permalink=if(isnotnull(permalink) AND match(permalink,\"^https?://\") AND NOT match(permalink,\"(?i)app\\.example\\.com|account=9999999|test=demo\"), permalink, null())\n| stats latest(metric_name:http.server.request.availability) as http_availability_pct latest(metric_name:web.page.load.completion) as page_completion_pct latest(metric_name:network.latency) as latency_s latest(metric_name:network.loss) as loss_pct latest(metric_name:network.jitter) as jitter_ms latest(metric_name:http.client.request.duration) as http_duration latest(metric_name:web.page.load.duration) as page_load_duration latest(permalink) as permalink max(_time) as last_seen by endpoint agent_name test_name test_type account_id test_id\n| where endpoint!=\"Unknown endpoint\" OR agent_name!=\"Unknown agent\" OR test_name!=\"Unknown test\"\n| eval availability_pct=round(coalesce(http_availability_pct, page_completion_pct), 2)\n| eval latency_ms=if(isnotnull(latency_s), round(latency_s*1000, 1), null())\n| eval loss_pct=if(isnotnull(loss_pct), round(loss_pct, 2), null())\n| eval jitter_ms=if(isnotnull(jitter_ms), round(jitter_ms, 1), null())\n| eval http_duration=if(isnotnull(http_duration), round(http_duration, 1), null())\n| eval page_load_duration=if(isnotnull(page_load_duration), round(page_load_duration, 1), null())\n| eval status=case((isnotnull(availability_pct) AND availability_pct<95) OR loss_pct>=5 OR latency_ms>=200, \"Critical\", (isnotnull(availability_pct) AND availability_pct<99) OR loss_pct>=1 OR latency_ms>=100 OR jitter_ms>=30, \"Degraded\", 1==1, \"Healthy\")\n| eval status_rank=case(status=\"Critical\", 1, status=\"Degraded\", 2, status=\"Healthy\", 3, 1==1, 4)\n| eval \"Last Seen\"=strftime(last_seen, \"%Y-%m-%d %H:%M:%S %Z\")\n| eval generated_permalink=case(test_id!=\"\" AND lower(test_id)!=\"demo\" AND isnotnull(account_id) AND account_id!=\"\" AND account_id!=\"9999999\", \"https://app.thousandeyes.com/network-app-synthetics/views/?__a=\".account_id.\"&testId=\".test_id, test_id!=\"\" AND lower(test_id)!=\"demo\", \"https://app.thousandeyes.com/network-app-synthetics/views/?testId=\".test_id)\n| eval permalink=coalesce(permalink, generated_permalink)\n| sort 0 status_rank availability_pct -latency_ms -loss_pct -jitter_ms\n| rename endpoint as \"Endpoint\", agent_name as \"Agent\", test_name as \"Test Name\", test_type as \"Test Type\", status as \"Status\", availability_pct as \"Availability %\", latency_ms as \"Latency (ms)\", loss_pct as \"Loss %\", jitter_ms as \"Jitter (ms)\", http_duration as \"HTTP Duration\", page_load_duration as \"Page Load Duration\", account_id as \"Account ID\", permalink as \"TE Link\"\n| table \"Status\", \"Endpoint\", \"Agent\", \"Test Name\", \"Test Type\", \"Last Seen\", \"Availability %\", \"Latency (ms)\", \"Loss %\", \"Jitter (ms)\", \"HTTP Duration\", \"Page Load Duration\", \"Account ID\", \"TE Link\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2742,7 +2762,7 @@
 		"ds_te_network_jitter": {
 			"name": "IT Health - ThousandEyes Network Jitter",
 			"options": {
-				"query": "| tstats `summariesonly` avg(Test_Metrics.metric_name:network.jitter) as avg_jitter\nFROM datamodel=\"Cisco_ThousandEyes.Test_Metrics\"\nWHERE Test_Metrics.metric_name:network.jitter=\"*\"\nTest_Metrics.thousandeyes.test.type IN (\"agent-to-server\",\"agent-to-agent\")\nBY _time, Test_Metrics.server.address\n| timechart eval(round(avg(avg_jitter), 2)) as avg_jitter BY Test_Metrics.server.address\n| sort 0 - avg_jitter",
+				"query": "| tstats `scd_summariesonly` avg(Test_Metrics.metric_name:network.jitter) as avg_jitter\nFROM datamodel=\"Cisco_ThousandEyes.Test_Metrics\"\nWHERE Test_Metrics.metric_name:network.jitter=\"*\"\nTest_Metrics.thousandeyes.test.type IN (\"agent-to-server\",\"agent-to-agent\")\nBY _time, Test_Metrics.server.address\n| timechart eval(round(avg(avg_jitter), 2)) as avg_jitter BY Test_Metrics.server.address\n| sort 0 - avg_jitter",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2753,7 +2773,7 @@
 		"ds_te_network_latency": {
 			"name": "IT Health - ThousandEyes Network Latency",
 			"options": {
-				"query": "| tstats `summariesonly` avg(Test_Metrics.metric_name:network.latency) as avg_latency\nFROM datamodel=\"Cisco_ThousandEyes.Test_Metrics\"\nWHERE Test_Metrics.metric_name:network.latency=\"*\"\nTest_Metrics.thousandeyes.test.type IN (\"agent-to-server\",\"agent-to-agent\")\nBY _time, Test_Metrics.server.address\n| timechart eval(round(avg(avg_latency), 2)) as avg_latency BY Test_Metrics.server.address\n| sort 0 - avg_latency",
+				"query": "| tstats `scd_summariesonly` avg(Test_Metrics.metric_name:network.latency) as avg_latency\nFROM datamodel=\"Cisco_ThousandEyes.Test_Metrics\"\nWHERE Test_Metrics.metric_name:network.latency=\"*\"\nTest_Metrics.thousandeyes.test.type IN (\"agent-to-server\",\"agent-to-agent\")\nBY _time, Test_Metrics.server.address\n| timechart eval(round(avg(avg_latency), 2)) as avg_latency BY Test_Metrics.server.address\n| sort 0 - avg_latency",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2764,7 +2784,7 @@
 		"ds_te_network_loss": {
 			"name": "IT Health - ThousandEyes Network Loss",
 			"options": {
-				"query": "| tstats `summariesonly` avg(Test_Metrics.metric_name:network.loss) as avg_loss\nFROM datamodel=\"Cisco_ThousandEyes.Test_Metrics\"\nWHERE Test_Metrics.metric_name:network.loss=\"*\"\nTest_Metrics.thousandeyes.test.type IN (\"agent-to-server\",\"agent-to-agent\")\nBY _time, Test_Metrics.server.address\n| timechart eval(round(avg(avg_loss), 2)) as avg_loss BY Test_Metrics.server.address\n| sort 0 - avg_loss",
+				"query": "| tstats `scd_summariesonly` avg(Test_Metrics.metric_name:network.loss) as avg_loss\nFROM datamodel=\"Cisco_ThousandEyes.Test_Metrics\"\nWHERE Test_Metrics.metric_name:network.loss=\"*\"\nTest_Metrics.thousandeyes.test.type IN (\"agent-to-server\",\"agent-to-agent\")\nBY _time, Test_Metrics.server.address\n| timechart eval(round(avg(avg_loss), 2)) as avg_loss BY Test_Metrics.server.address\n| sort 0 - avg_loss",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2781,9 +2801,9 @@
 			"type": "ds.chain"
 		},
 		"ds_top_issue_devices": {
-			"name": "IT - Critical Systems - ds_top_issue_devices",
+			"name": "IT - Critical Systems - Top Issue Devices",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| stats latest(IssueCount) as issue_count, latest(OverallHealth) as health, latest(CPUUtilization) as cpu, latest(MemoryUtilization) as memory, latest(DeviceFamily) as family, latest(Platform) as platform, latest(Site) as site, latest(IpAddress) as ip by DeviceName\n| where issue_count>0 OR health<5 OR cpu>80 OR memory>80\n| eval concern=case(issue_count>5, \"High Issues (\".issue_count.\")\", health<5, \"Low Health (\".health.\")\", cpu>80, \"High CPU (\".cpu.\"%)\", memory>80, \"High Memory (\".memory.\"%)\", issue_count>0, \"Issues (\".issue_count.\")\", 1==1, \"Monitor\")\n| sort -issue_count, health, -cpu\n| rename DeviceName as Device",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| eval Site=`dnac_site_normalize(coalesce(Site, Location))`\n| where \"$site_tok$\"=\"*\" OR Site=\"$site_tok$\"\n| stats latest(IssueCount) as issue_count, latest(OverallHealth) as health, latest(CPUUtilization) as cpu, latest(MemoryUtilization) as memory, latest(DeviceFamily) as family, latest(Platform) as platform, latest(Site) as site, latest(IpAddress) as ip by DeviceName\n| where issue_count>0 OR health<5 OR cpu>80 OR memory>80\n| eval concern=case(issue_count>5, \"High Issues (\".issue_count.\")\", health<5, \"Low Health (\".health.\")\", cpu>80, \"High CPU (\".cpu.\"%)\", memory>80, \"High Memory (\".memory.\"%)\", issue_count>0, \"Issues (\".issue_count.\")\", 1==1, \"Monitor\")\n| sort -issue_count, health, -cpu\n| rename DeviceName as Device",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2831,18 +2851,10 @@
 			},
 			"type": "ds.chain"
 		},
-		"ds_unreachable_count": {
-			"name": "Unreachable Devices",
-			"options": {
-				"extend": "ds_unreachable",
-				"query": "| stats count | fields count"
-			},
-			"type": "ds.chain"
-		},
 		"ds_unreachable_trend": {
 			"name": "Unreachable Devices Trend",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" Reachability=\"Unreachable\" | timechart fixedrange=false dc(DeviceName) as \"Unreachable Devices\"",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" Reachability=\"Unreachable\"\n| eval Site=`dnac_site_normalize(coalesce(Site, Location))`\n| where \"$site_tok$\"=\"*\" OR Site=\"$site_tok$\"\n| timechart fixedrange=false dc(DeviceName) as \"Unreachable Devices\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2851,7 +2863,7 @@
 			"type": "ds.search"
 		},
 		"ds_uxh_base_client_ref": {
-			"name": "IT Health - User Experience - ds_uxh_base_client_ref",
+			"name": "IT Health - User Experience - Base Client Search",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| fields macAddress, osType, deviceType",
 				"queryParameters": {
@@ -2862,9 +2874,9 @@
 			"type": "ds.search"
 		},
 		"ds_uxh_client_trend": {
-			"name": "IT Health - User Experience - ds_uxh_client_trend",
+			"name": "IT Health - User Experience - Client Trend",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRED\" OR clientType=\"WIRELESS\") (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\")\n| bin _time\n| stats latest(clientCount) as cc by _time, clientType, scoreType\n| stats sum(cc) as cc by _time, scoreType\n| eval Good=if(scoreType==\"GOOD\",cc,null()), Fair=if(scoreType==\"FAIR\",cc,null()), Poor=if(scoreType==\"POOR\",cc,null())\n| stats sum(Good) as Good, sum(Fair) as Fair, sum(Poor) as Poor by _time",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRED\" OR clientType=\"WIRELESS\") (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\")\n| bin _time span=15m\n| stats latest(clientCount) as cc by _time, clientType, scoreType\n| stats sum(cc) as cc by _time, scoreType\n| eval Good=if(scoreType==\"GOOD\",cc,null()), Fair=if(scoreType==\"FAIR\",cc,null()), Poor=if(scoreType==\"POOR\",cc,null())\n| stats sum(Good) as Good, sum(Fair) as Fair, sum(Poor) as Poor by _time",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2873,7 +2885,7 @@
 			"type": "ds.search"
 		},
 		"ds_uxh_top_client_os": {
-			"name": "IT Health - User Experience - ds_uxh_top_client_os",
+			"name": "IT Health - User Experience - Top Client OS",
 			"options": {
 				"extend": "ds_uxh_base_client_ref",
 				"query": "| where isnotnull(osType) AND osType!=\"null\" AND osType!=\"\" AND osType!=\"Unknown\" AND osType!=\"unknown\" | stats dc(macAddress) as count by osType | sort -count | head 5 | rename osType as os"
@@ -2881,7 +2893,7 @@
 			"type": "ds.chain"
 		},
 		"ds_uxh_top_device_types": {
-			"name": "IT Health - User Experience - ds_uxh_top_device_types",
+			"name": "IT Health - User Experience - Top Device Types",
 			"options": {
 				"extend": "ds_uxh_base_client_ref",
 				"query": "| where isnotnull(deviceType) AND deviceType!=\"null\" AND deviceType!=\"\" AND deviceType!=\"Un-Classified Device\" | stats dc(macAddress) as Clients by deviceType | sort -Clients | head 5 | rename deviceType as \"Device Type\""
@@ -2889,7 +2901,7 @@
 			"type": "ds.chain"
 		},
 		"ds_uxh_wired_health": {
-			"name": "IT Health - User Experience - ds_uxh_wired_health",
+			"name": "IT Health - User Experience - Wired Health",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" scoreType=\"ALL\"\n| stats latest(scoreValue) as sv\n| eval score=if(sv>=0, sv, 0)\n| fields score",
 				"queryParameters": {
@@ -2900,7 +2912,7 @@
 			"type": "ds.search"
 		},
 		"ds_uxh_wireless_health": {
-			"name": "IT Health - User Experience - ds_uxh_wireless_health",
+			"name": "IT Health - User Experience - Wireless Health",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" scoreType=\"ALL\"\n| stats latest(scoreValue) as sv\n| eval score=if(sv>=0, sv, 0)\n| fields score",
 				"queryParameters": {
@@ -2911,7 +2923,7 @@
 			"type": "ds.search"
 		},
 		"ds_wow_health": {
-			"name": "IT - Critical Systems - ds_wow_health",
+			"name": "IT - Critical Systems - Week over Week Health",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:networkhealth\"\n| eval is_this_week=if(_time >= relative_time(now(), \"-7d@d\"), 1, 0)\n| stats avg(eval(if(is_this_week==1, healthScore, null()))) as this_week, avg(eval(if(is_this_week==0, healthScore, null()))) as last_week\n| eval score=round(this_week, 1), delta=round(this_week - last_week, 1)\n| table score delta",
 				"queryParameters": {
@@ -3415,6 +3427,16 @@
 						"type": "input"
 					},
 					{
+						"item": "input_site_filter",
+						"position": {
+							"h": 82,
+							"w": 230,
+							"x": 245,
+							"y": 4
+						},
+						"type": "input"
+					},
+					{
 						"item": "viz_p_hdr_title",
 						"position": {
 							"h": 30,
@@ -3662,6 +3684,16 @@
 							"w": 198,
 							"x": 30,
 							"y": 10
+						},
+						"type": "input"
+					},
+					{
+						"item": "input_site_filter",
+						"position": {
+							"h": 82,
+							"w": 230,
+							"x": 245,
+							"y": 4
 						},
 						"type": "input"
 					}
@@ -3917,6 +3949,16 @@
 						"type": "input"
 					},
 					{
+						"item": "input_site_filter",
+						"position": {
+							"h": 82,
+							"w": 230,
+							"x": 245,
+							"y": 4
+						},
+						"type": "input"
+					},
+					{
 						"item": "viz_config_detail",
 						"position": {
 							"h": 320,
@@ -4020,20 +4062,20 @@
 					{
 						"item": "viz_te_box_path",
 						"position": {
-							"h": 420,
+							"h": 435,
 							"w": 1400,
 							"x": 20,
-							"y": 145
+							"y": 130
 						},
 						"type": "block"
 					},
 					{
 						"item": "viz_te_path_title",
 						"position": {
-							"h": 50,
+							"h": 55,
 							"w": 1370,
 							"x": 35,
-							"y": 155
+							"y": 150
 						},
 						"type": "block"
 					},

@@ -93,11 +93,21 @@ def parse_stanzas(text: str) -> list[tuple[str, dict[str, str]]]:
             continue
 
         if in_search:
-            if (
+            cont = (
                 line.startswith(" ")
                 or line.startswith("|")
                 or line.endswith("\\")
-            ):
+            )
+            if not cont and search_lines:
+                prev = search_lines[-1].rstrip()
+                if prev.endswith(","):
+                    cont = True
+                elif " = " not in line and re.match(
+                    r'^(".*?"|\w[\w.-]*)=', line
+                ):
+                    # SPL clause split onto its own line (e.g. lower95=round(...))
+                    cont = True
+            if cont:
                 search_lines.append(line)
                 continue
             current["search"] = "\n".join(search_lines)
@@ -316,6 +326,62 @@ def format_search(search: str) -> tuple[str, bool]:
     return new_search, changed
 
 
+_SPL_ORPHAN_RE = re.compile(r'^(".*?"|\w[\w.-]*)=')
+
+
+def find_leaked_spl_lines(text: str) -> list[tuple[int, str, str]]:
+    """Lines Splunk would parse as invalid conf keys (SPL outside search continuations)."""
+    leaks: list[tuple[int, str, str]] = []
+    current: str | None = None
+    in_search = False
+    search_lines: list[str] = []
+
+    for i, line in enumerate(text.splitlines(), 1):
+        m = re.match(r"^\[([a-z0-9_]+)\]$", line)
+        if m:
+            current = m.group(1)
+            in_search = False
+            search_lines = []
+            continue
+
+        if current is None:
+            continue
+
+        if line.startswith("search = "):
+            in_search = True
+            search_lines = [line[len("search = ") :]]
+            continue
+
+        if in_search:
+            cont = (
+                line.startswith(" ")
+                or line.startswith("|")
+                or line.endswith("\\")
+            )
+            if not cont and search_lines:
+                prev = search_lines[-1].rstrip()
+                if prev.endswith(","):
+                    cont = True
+                elif " = " not in line and _SPL_ORPHAN_RE.match(line):
+                    cont = True
+            if cont:
+                search_lines.append(line)
+                continue
+            in_search = False
+            search_lines = []
+
+        if not line.strip() or line.startswith("#"):
+            continue
+        if line.startswith("search = ") or line.startswith("|") or line.startswith(" "):
+            continue
+        if " = " in line:
+            continue
+        if _SPL_ORPHAN_RE.match(line):
+            leaks.append((i, current, line))
+
+    return leaks
+
+
 def emit_search_field(search: str) -> list[str]:
     """Emit `search = ...\\` lines with the backslash flush against the last char."""
     parts = search.split("\n") if "\n" in search else [search]
@@ -474,8 +540,15 @@ def main() -> int:
         for item in unsafe:
             print(f"  {item}")
 
+    leaked = find_leaked_spl_lines(text)
+    if leaked:
+        print(f"Leaked SPL lines (invalid conf keys): {len(leaked)}")
+        for lineno, sid, content in leaked:
+            preview = content if len(content) <= 72 else content[:69] + "..."
+            print(f"  line {lineno} [{sid}]: {preview}")
+
     if args.check:
-        return 0
+        return 1 if leaked else 0
 
     args.source.write_text(out_text, encoding="utf-8")
     return 0

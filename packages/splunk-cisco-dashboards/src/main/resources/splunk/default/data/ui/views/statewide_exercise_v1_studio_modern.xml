@@ -1048,7 +1048,7 @@
 	},
 	"dataSources": {
 		"ds_cs_by_ssid": {
-			"name": "Client Summary - ds_client_by_ssid",
+			"name": "Client Summary - Clients by SSID",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" \n| stats dc(macAddress) as clients by connection.ssid \n| rename connection.ssid as ssid ",
 				"queryParameters": {
@@ -1059,9 +1059,9 @@
 			"type": "ds.search"
 		},
 		"ds_cs_count_over_time": {
-			"name": "Client Summary - ds_client_count_over_time",
+			"name": "Client Summary - Client Count Over Time",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRED\" OR clientType=\"WIRELESS\") (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| bin _time\n| stats latest(clientCount) as cc by _time, clientType, scoreType\n| stats sum(cc) as cc by _time, scoreType\n| eval \"Good Count\"=if(scoreType==\"GOOD\",cc,null()), \"Fair Count\"=if(scoreType==\"FAIR\",cc,null()), \"Poor Count\"=if(scoreType==\"POOR\",cc,null()), \"Idle Count\"=if(scoreType==\"IDLE\" OR scoreType==\"NODATA\",cc,null())\n| stats sum(\"Good Count\") as \"Good Count\", sum(\"Fair Count\") as \"Fair Count\", sum(\"Poor Count\") as \"Poor Count\", sum(\"Idle Count\") as \"Idle Count\" by _time",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRED\" OR clientType=\"WIRELESS\") (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| bin _time span=15m\n| stats latest(clientCount) as cc by _time, clientType, scoreType\n| stats sum(cc) as cc by _time, scoreType\n| eval \"Good Count\"=if(scoreType==\"GOOD\",cc,null()), \"Fair Count\"=if(scoreType==\"FAIR\",cc,null()), \"Poor Count\"=if(scoreType==\"POOR\",cc,null()), \"Idle Count\"=if(scoreType==\"IDLE\" OR scoreType==\"NODATA\",cc,null())\n| stats sum(\"Good Count\") as \"Good Count\", sum(\"Fair Count\") as \"Fair Count\", sum(\"Poor Count\") as \"Poor Count\", sum(\"Idle Count\") as \"Idle Count\" by _time",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1153,7 +1153,7 @@
 		"ds_mod_client_activity_7d": {
 			"name": "Modern - Client activity and onboarding over 7 days",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| eval Site=mvindex(split(siteHierarchy,\"/\"),-1)\n| search Site=\"$site_tok$\" type=\"$client_type_tok$\"\n| bin _time span=1d\n| stats dc(macAddress) as \"Active Clients\", avg(onboarding.avgAuthDuration) as avg_aaa, avg(onboarding.avgDhcpDuration) as avg_dhcp, avg(onboarding.avgAssocDuration) as avg_assoc by _time\n| eval \"Avg Onboarding (ms)\"=round(coalesce(avg_aaa,0)+coalesce(avg_dhcp,0)+coalesce(avg_assoc,0), 2)\n| fields _time \"Active Clients\" \"Avg Onboarding (ms)\"",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| eval leafSiteId=mvindex(split(rtrim(siteHierarchyId,\"/\"),\"/\"),-1)\n| lookup site_topology_lookup id as leafSiteId OUTPUT Site as lookupSite, name as lookupSiteName\n| eval site_path=coalesce(siteHierarchy, lookupSite, lookupSiteName), rawSite=mvindex(split(site_path,\"/\"),-1)\n| eval Site=case(isnotnull(lookupSite) AND trim(lookupSite)!=\"\" AND lower(lookupSite)!=\"null\", lookupSite, isnotnull(rawSite) AND trim(rawSite)!=\"\" AND lower(rawSite)!=\"null\", rawSite, isnotnull(lookupSiteName) AND trim(lookupSiteName)!=\"\" AND lower(lookupSiteName)!=\"null\", lookupSiteName, true(), \"Unknown\")\n| search Site=\"$site_tok$\" type=\"$client_type_tok$\"\n| bin _time span=1d\n| stats dc(macAddress) as \"Active Clients\", avg(onboarding.avgAuthDuration) as avg_aaa, avg(onboarding.avgDhcpDuration) as avg_dhcp, avg(onboarding.avgAssocDuration) as avg_assoc by _time\n| eval \"Avg Onboarding (ms)\"=round(coalesce(avg_aaa,0)+coalesce(avg_dhcp,0)+coalesce(avg_assoc,0), 2)\n| fields _time \"Active Clients\" \"Avg Onboarding (ms)\"",
 				"queryParameters": {
 					"earliest": "-7d@d",
 					"latest": "now"
@@ -1164,7 +1164,7 @@
 		"ds_mod_client_details": {
 			"name": "Modern - Client details table with filters",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| eval Site=mvindex(split(siteHierarchy,\"/\"),-1)\n| search Site=\"$site_tok$\" type=\"$client_type_tok$\"\n| stats sum(traffic.usage) as usage, latest(deviceType) as device_type, latest(connection.ssid) as ssid, latest(connection.l3Vn) as vn, latest(connection.apMac) as ap, latest(type) as conn_type, latest(Site) as Site, latest(health.overallScore) as health by macAddress\n| eval usage_gb=tonumber(round(usage/1073741824,2)), ssid=case(isnotnull(ssid) AND ssid!=\"null\" AND ssid!=\"\", ssid, conn_type=\"Wired\" AND isnotnull(vn) AND vn!=\"null\", \"Wired (\".vn.\")\", conn_type=\"Wired\", \"Wired\", 1==1, \"Unknown\"), device_type=if(isnull(device_type) OR device_type=\"null\" OR device_type=\"\", \"Unknown\", device_type), health=round(health*10, 1)\n| where usage_gb > 0\n| sort -usage_gb\n| head 50\n| rename macAddress as Client, device_type as Type, ssid as SSID, ap as AP, usage_gb as \"Traffic (GB)\", health as \"Health %\"\n| table Client Type SSID AP Site \"Traffic (GB)\" \"Health %\"",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| eval leafSiteId=mvindex(split(rtrim(siteHierarchyId,\"/\"),\"/\"),-1)\n| lookup site_topology_lookup id as leafSiteId OUTPUT Site as lookupSite, name as lookupSiteName\n| eval site_path=coalesce(siteHierarchy, lookupSite, lookupSiteName), rawSite=mvindex(split(site_path,\"/\"),-1)\n| eval Site=case(isnotnull(lookupSite) AND trim(lookupSite)!=\"\" AND lower(lookupSite)!=\"null\", lookupSite, isnotnull(rawSite) AND trim(rawSite)!=\"\" AND lower(rawSite)!=\"null\", rawSite, isnotnull(lookupSiteName) AND trim(lookupSiteName)!=\"\" AND lower(lookupSiteName)!=\"null\", lookupSiteName, true(), \"Unknown\")\n| search Site=\"$site_tok$\" type=\"$client_type_tok$\"\n| stats sum(traffic.usage) as usage, latest(deviceType) as device_type, latest(connection.ssid) as ssid, latest(connection.l3Vn) as vn, latest(connection.apMac) as ap, latest(type) as conn_type, latest(Site) as Site, latest(health.overallScore) as health by macAddress\n| eval usage_gb=tonumber(round(usage/1073741824,2)), ssid=case(isnotnull(ssid) AND ssid!=\"null\" AND ssid!=\"\", ssid, conn_type=\"Wired\" AND isnotnull(vn) AND vn!=\"null\", \"Wired (\".vn.\")\", conn_type=\"Wired\", \"Wired\", 1==1, \"Unknown\"), device_type=if(isnull(device_type) OR device_type=\"null\" OR device_type=\"\", \"Unknown\", device_type), health=round(health*10, 1)\n| where usage_gb > 0\n| sort -usage_gb\n| head 50\n| rename macAddress as Client, device_type as Type, ssid as SSID, ap as AP, usage_gb as \"Traffic (GB)\", health as \"Health %\"\n| table Client Type SSID AP Site \"Traffic (GB)\" \"Health %\"",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1186,7 +1186,7 @@
 		"ds_mod_client_location_dist": {
 			"name": "Modern - Client location distribution with filters",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| eval Site=mvindex(split(siteHierarchy,\"/\"),-1)\n| search Site=\"$site_tok$\" type=\"$client_type_tok$\"\n| where isnotnull(Site) AND Site!=\"null\" AND Site!=\"\"\n| stats dc(macAddress) as Clients by Site\n| sort -Clients\n| head 20",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| eval leafSiteId=mvindex(split(rtrim(siteHierarchyId,\"/\"),\"/\"),-1)\n| lookup site_topology_lookup id as leafSiteId OUTPUT Site as lookupSite, name as lookupSiteName\n| eval site_path=coalesce(siteHierarchy, lookupSite, lookupSiteName), rawSite=mvindex(split(site_path,\"/\"),-1)\n| eval Site=case(isnotnull(lookupSite) AND trim(lookupSite)!=\"\" AND lower(lookupSite)!=\"null\", lookupSite, isnotnull(rawSite) AND trim(rawSite)!=\"\" AND lower(rawSite)!=\"null\", rawSite, isnotnull(lookupSiteName) AND trim(lookupSiteName)!=\"\" AND lower(lookupSiteName)!=\"null\", lookupSiteName, true(), \"Unknown\")\n| search Site=\"$site_tok$\" type=\"$client_type_tok$\"\n| where Site!=\"Unknown\"\n| stats dc(macAddress) as Clients by Site\n| sort -Clients\n| head 20",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1197,7 +1197,7 @@
 		"ds_mod_client_os_dist": {
 			"name": "Modern - Client OS distribution with filters",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| eval Site=mvindex(split(siteHierarchy,\"/\"),-1)\n| search Site=\"$site_tok$\" type=\"$client_type_tok$\"\n| eval osType=if(isnull(osType) OR osType=\"null\" OR osType=\"\" OR osType=\"Un-Classified Device\", \"Unknown\", osType)\n| stats dc(macAddress) as Clients by osType\n| sort -Clients\n| rename osType as \"OS\"",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| eval leafSiteId=mvindex(split(rtrim(siteHierarchyId,\"/\"),\"/\"),-1)\n| lookup site_topology_lookup id as leafSiteId OUTPUT Site as lookupSite, name as lookupSiteName\n| eval site_path=coalesce(siteHierarchy, lookupSite, lookupSiteName), rawSite=mvindex(split(site_path,\"/\"),-1)\n| eval Site=case(isnotnull(lookupSite) AND trim(lookupSite)!=\"\" AND lower(lookupSite)!=\"null\", lookupSite, isnotnull(rawSite) AND trim(rawSite)!=\"\" AND lower(rawSite)!=\"null\", rawSite, isnotnull(lookupSiteName) AND trim(lookupSiteName)!=\"\" AND lower(lookupSiteName)!=\"null\", lookupSiteName, true(), \"Unknown\")\n| search Site=\"$site_tok$\" type=\"$client_type_tok$\"\n| eval osType=if(isnull(osType) OR osType=\"null\" OR osType=\"\" OR osType=\"Un-Classified Device\", \"Unknown\", osType)\n| stats dc(macAddress) as Clients by osType\n| sort -Clients\n| rename osType as \"OS\"",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1339,7 +1339,7 @@
 			"type": "ds.search"
 		},
 		"ds_wired_trend_24h": {
-			"name": "Statewide - ds_wired_client_trend_24h",
+			"name": "Statewide - Wired Client Trend 24h",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| timechart latest(eval(if(scoreType==\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType==\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType==\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\",clientCount,null()))) as \"No Data\"",
 				"queryParameters": {
@@ -1372,7 +1372,7 @@
 			"type": "ds.search"
 		},
 		"ds_wireless_trend_24h": {
-			"name": "Statewide - ds_wireless_client_trend_24h",
+			"name": "Statewide - Wireless Client Trend 24h",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| timechart latest(eval(if(scoreType==\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType==\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType==\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\",clientCount,null()))) as \"No Data\"",
 				"queryParameters": {

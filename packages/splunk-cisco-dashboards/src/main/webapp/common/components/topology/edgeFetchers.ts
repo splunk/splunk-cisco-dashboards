@@ -14,17 +14,28 @@
  */
 
 import { runSearch } from '@/common/services/splunkSearchService';
-import { getSearchbaseCatalogue } from '@/common/services/searchbaseCatalogue';
+import {
+    getSearchbaseCatalogue,
+    type SearchbaseRecord,
+} from '@/common/services/searchbaseCatalogue';
 import type {
     DiscoveredTopology,
     TopologyDiscoveredEdge,
     HealthStatus,
 } from '@/common/services/topologyDiscovery';
 
-/** Friendly `search_name` of the searchbase stanza that backs the
- *  synthetic A2A edge fetcher. Kept here (and not in the stanza id)
- *  because `search_name` is the stable, reviewer-visible key. */
-const TE_A2A_SEARCH_NAME = 'Overview - Link ThousandEyes A2A Inventory';
+/** Searchbase role that identifies the generic TE A2A inventory stanza. */
+const TE_A2A_INVENTORY_ROLE = 'teA2AInventory';
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    Boolean(value && typeof value === 'object' && !Array.isArray(value));
+
+const searchbaseTopologyMapRole = (record: SearchbaseRecord): string => {
+    const raw = record.vizOptions?.topologyMap;
+    if (!isRecord(raw)) return '';
+    const role = raw.role;
+    return typeof role === 'string' ? role.trim() : '';
+};
 
 const optionalString = (raw: unknown): string | undefined => {
     if (typeof raw !== 'string') return undefined;
@@ -120,22 +131,24 @@ export const fetchThousandEyesA2AEdges = async (
     topology: DiscoveredTopology
 ): Promise<TopologyDiscoveredEdge[]> => {
     // Resolve the inline SPL out of `searchbase.conf` rather than
-    // dispatching `| savedsearch "..."` — the stanza is *not* a real
+    // dispatching through the savedsearch command — the stanza is *not* a real
     // saved search (only a searchbase entry), so the savedsearch
     // command path 400s on most stacks. The catalogue lookup uses
     // the same configs/conf-searchbase REST surface the picker
     // already calls, so it piggybacks the existing cache.
-    let spl: string;
+    let record: SearchbaseRecord;
     try {
-        const catalogue = await getSearchbaseCatalogue();
-        const record = catalogue.find((r) => r.searchName === TE_A2A_SEARCH_NAME);
-        if (!record || record.search.trim().length === 0) {
+        const catalogue = await getSearchbaseCatalogue({ includeHidden: true });
+        const match = catalogue.find(
+            (r) => searchbaseTopologyMapRole(r) === TE_A2A_INVENTORY_ROLE
+        );
+        if (!match || match.search.trim().length === 0) {
             // Stanza not shipped on this stack (older install or
             // edited conf); skip silently — the canvas just renders
             // without TE overlays.
             return [];
         }
-        spl = record.search;
+        record = match;
     } catch {
         // Catalogue REST call failed (offline / permission). Fail
         // closed — no edges, no error toast in the canvas.
@@ -145,10 +158,11 @@ export const fetchThousandEyesA2AEdges = async (
     let res;
     try {
         res = await runSearch({
-            spl,
+            spl: record.search,
             earliestTime: '-4h@h',
             latestTime: 'now',
             tag: 'topology_te_a2a',
+            appContext: record.dispatchContext,
         });
     } catch {
         // Search dispatch failed (e.g. SPL macro missing on stack).

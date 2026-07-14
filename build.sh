@@ -4,6 +4,9 @@
 # any Splunk instance. Pass --install or --deploy (and optionally
 # --restart) to push the build into a local Splunk.
 #
+# Version is read from the repo-root VERSION file and stamped into the
+# staged/package app.conf at package time.
+#
 # Default workflow:
 #   ./build.sh                                                # build only; produces dist/<app>-<version>.tar.gz
 #
@@ -59,6 +62,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_NAME="splunk-cisco-dashboards"
 APP_DIR="${ROOT_DIR}/packages/${APP_NAME}"
 DIST_DIR="${ROOT_DIR}/dist"
+VERSION_FILE="${ROOT_DIR}/VERSION"
 
 do_install=0
 do_deploy=0
@@ -148,6 +152,7 @@ usage() {
 Usage: ./build.sh [options]
 
 Default behavior: build the .tar.gz only. No Splunk install, no restart.
+Version is read from ./VERSION and stamped at package time.
 
 Push-to-Splunk options (mutually exclusive):
   --install              splunkd-managed install via REST mgmt port. Calls
@@ -346,22 +351,39 @@ if [[ "$do_deploy" -eq 1 ]]; then
     fi
 fi
 
+build_version=""
+if [[ "$no_build" -eq 0 ]]; then
+    if [[ ! -f "$VERSION_FILE" ]]; then
+        err "ERROR: VERSION file not found: ${VERSION_FILE}"
+        exit 1
+    fi
+    build_version="$(tr -d '[:space:]' < "$VERSION_FILE")"
+    if [[ -z "$build_version" ]]; then
+        err "ERROR: VERSION file is empty: ${VERSION_FILE}"
+        exit 1
+    fi
+fi
+
 if [[ "$no_build" -eq 1 ]]; then
     hdr "Reusing existing tarball (--no-build)..."
 elif [[ "$from_stage" -eq 1 ]]; then
-    hdr "Packaging current stage/ (--from-stage)..."
+    hdr "Packaging current stage/ v${build_version} (--from-stage)..."
     run_quietly bash "${APP_DIR}/bin/package_app.sh" --from-stage
 else
-    hdr "Packaging ${APP_NAME}..."
+    hdr "Packaging ${APP_NAME} v${build_version}..."
     run_quietly bash -c "cd '$APP_DIR' && yarn run package:app"
 fi
 
-package_path="$(
-    find "$DIST_DIR" -maxdepth 1 -type f -name "${APP_NAME}-*.tar.gz" \
-        -print0 \
-        | xargs -0 ls -t 2>/dev/null \
-        | head -n 1
-)"
+if [[ "$no_build" -eq 1 ]]; then
+    package_path="$(
+        find "$DIST_DIR" -maxdepth 1 -type f -name "${APP_NAME}-*.tar.gz" \
+            -print0 \
+            | xargs -0 ls -t 2>/dev/null \
+            | head -n 1
+    )"
+else
+    package_path="${DIST_DIR}/${APP_NAME}-${build_version}.tar.gz"
+fi
 
 if [[ -z "$package_path" ]]; then
     if [[ "$no_build" -eq 1 ]]; then

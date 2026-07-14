@@ -387,11 +387,11 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"unit": "%",
-				"sparklineNullValueDisplay": "connect"
+				"unit": "%"
 			},
 			"title": "Client Health Score",
 			"type": "splunk.singlevalue"
@@ -524,10 +524,10 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent",
-				"sparklineNullValueDisplay": "connect"
+				"trendDisplay": "percent"
 			},
 			"title": "Total Connected Clients",
 			"type": "splunk.singlevalue"
@@ -621,11 +621,11 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"unit": "%",
-				"sparklineNullValueDisplay": "connect"
+				"unit": "%"
 			},
 			"title": "AP Reachability",
 			"type": "splunk.singlevalue"
@@ -658,10 +658,10 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent",
-				"sparklineNullValueDisplay": "connect"
+				"trendDisplay": "percent"
 			},
 			"title": "Access Points",
 			"type": "splunk.singlevalue"
@@ -807,10 +807,10 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent",
-				"sparklineNullValueDisplay": "connect"
+				"trendDisplay": "percent"
 			},
 			"title": "Healthy Devices",
 			"type": "splunk.singlevalue"
@@ -913,11 +913,11 @@
 			},
 			"description": "Issue volume trending — watch for spikes during activations",
 			"options": {
+				"nullValueDisplay": "connect",
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
 				"xAxisVisibility": "show",
-				"yAxisTitleText": "Issues",
-				"nullValueDisplay": "connect"
+				"yAxisTitleText": "Issues"
 			},
 			"title": "Total Issue Trend",
 			"type": "splunk.area"
@@ -950,11 +950,11 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"unit": "%",
-				"sparklineNullValueDisplay": "connect"
+				"unit": "%"
 			},
 			"title": "Network Health",
 			"type": "splunk.singlevalue"
@@ -1112,8 +1112,8 @@
 				"majorValue": "> primary | seriesByName('Open') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
-				"unit": "",
-				"sparklineNullValueDisplay": "connect"
+				"sparklineNullValueDisplay": "connect",
+				"unit": ""
 			},
 			"title": "Open Issues",
 			"type": "splunk.singlevalue"
@@ -1128,8 +1128,8 @@
 				"majorValue": "> primary | seriesByName('Resolved') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
-				"unit": "",
-				"sparklineNullValueDisplay": "connect"
+				"sparklineNullValueDisplay": "connect",
+				"unit": ""
 			},
 			"title": "Resolved Issues",
 			"type": "splunk.singlevalue"
@@ -1144,8 +1144,8 @@
 				"majorValue": "> primary | seriesByName('Total') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
-				"unit": "",
-				"sparklineNullValueDisplay": "connect"
+				"sparklineNullValueDisplay": "connect",
+				"unit": ""
 			},
 			"title": "Total Issues",
 			"type": "splunk.singlevalue"
@@ -1188,10 +1188,10 @@
 			},
 			"description": "Tallahassee Internet circuit bandwidth, broken down by protocol. Requires Netflow/Stream data.",
 			"options": {
+				"nullValueDisplay": "connect",
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Mbps",
-				"nullValueDisplay": "connect"
+				"yAxisTitleText": "Mbps"
 			},
 			"title": "Internet — Bandwidth by Protocol",
 			"type": "splunk.area"
@@ -1214,10 +1214,10 @@
 			},
 			"description": "Tallahassee Public Internet circuit bandwidth, broken down by protocol. Requires Netflow/Stream data.",
 			"options": {
+				"nullValueDisplay": "connect",
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Mbps",
-				"nullValueDisplay": "connect"
+				"yAxisTitleText": "Mbps"
 			},
 			"title": "Public Internet — Bandwidth by Protocol",
 			"type": "splunk.area"
@@ -1236,10 +1236,10 @@
 			},
 			"description": "Per-SSID client count over the last 24 hours",
 			"options": {
+				"nullValueDisplay": "connect",
 				"xAxisTitleVisibility": "hide",
 				"xAxisVisibility": "show",
-				"yAxisTitleText": "Clients",
-				"nullValueDisplay": "connect"
+				"yAxisTitleText": "Clients"
 			},
 			"title": "Client Count per SSID",
 			"type": "splunk.line"
@@ -1250,10 +1250,10 @@
 			},
 			"description": "Per-SSID client count over the last 7 days",
 			"options": {
+				"nullValueDisplay": "connect",
 				"xAxisTitleVisibility": "hide",
 				"xAxisVisibility": "show",
-				"yAxisTitleText": "Clients",
-				"nullValueDisplay": "connect"
+				"yAxisTitleText": "Clients"
 			},
 			"title": "Client Count per SSID — Past Week",
 			"type": "splunk.line"
@@ -1278,6 +1278,7 @@
 			},
 			"description": "Wired client count trend — last 24 hours",
 			"options": {
+				"nullValueDisplay": "connect",
 				"seriesColorsByField": {
 					"Fair": "#E5A823",
 					"Healthy": "#6EBE4A",
@@ -1286,8 +1287,7 @@
 				},
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Clients",
-				"nullValueDisplay": "connect"
+				"yAxisTitleText": "Clients"
 			},
 			"title": "Wired Client Trend",
 			"type": "splunk.area"
@@ -1298,6 +1298,7 @@
 			},
 			"description": "Wired client count trend — last 7 days",
 			"options": {
+				"nullValueDisplay": "connect",
 				"seriesColorsByField": {
 					"Fair": "#E5A823",
 					"Healthy": "#6EBE4A",
@@ -1306,8 +1307,7 @@
 				},
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Clients",
-				"nullValueDisplay": "connect"
+				"yAxisTitleText": "Clients"
 			},
 			"title": "Wired Clients — Past Week",
 			"type": "splunk.area"
@@ -1340,11 +1340,11 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"unit": "%",
-				"sparklineNullValueDisplay": "connect"
+				"unit": "%"
 			},
 			"title": "Wired Health",
 			"type": "splunk.singlevalue"
@@ -1394,10 +1394,10 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent",
-				"sparklineNullValueDisplay": "connect"
+				"trendDisplay": "percent"
 			},
 			"title": "Wired Clients",
 			"type": "splunk.singlevalue"
@@ -1408,6 +1408,7 @@
 			},
 			"description": "Wireless client count trend — last 24 hours",
 			"options": {
+				"nullValueDisplay": "connect",
 				"seriesColorsByField": {
 					"Fair": "#E5A823",
 					"Healthy": "#6EBE4A",
@@ -1416,8 +1417,7 @@
 				},
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Clients",
-				"nullValueDisplay": "connect"
+				"yAxisTitleText": "Clients"
 			},
 			"title": "Wireless Client Trend",
 			"type": "splunk.area"
@@ -1428,6 +1428,7 @@
 			},
 			"description": "Wireless client count trend — last 7 days",
 			"options": {
+				"nullValueDisplay": "connect",
 				"seriesColorsByField": {
 					"Fair": "#E5A823",
 					"Healthy": "#6EBE4A",
@@ -1436,8 +1437,7 @@
 				},
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Clients",
-				"nullValueDisplay": "connect"
+				"yAxisTitleText": "Clients"
 			},
 			"title": "Wireless Clients — Past Week",
 			"type": "splunk.area"
@@ -1470,11 +1470,11 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"unit": "%",
-				"sparklineNullValueDisplay": "connect"
+				"unit": "%"
 			},
 			"title": "Wireless Health",
 			"type": "splunk.singlevalue"
@@ -1524,10 +1524,10 @@
 				"showTrendIndicator": true,
 				"sparklineAreaColor": "#049FD9",
 				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#049FD9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent",
-				"sparklineNullValueDisplay": "connect"
+				"trendDisplay": "percent"
 			},
 			"title": "Wireless Clients",
 			"type": "splunk.singlevalue"
@@ -1581,7 +1581,7 @@
 	},
 	"dataSources": {
 		"ds_bw": {
-			"name": "Statewide - ds_bandwidth_internet",
+			"name": "Statewide - Internet Bandwidth",
 			"options": {
 				"query": "| noop",
 				"queryParameters": {
@@ -1592,7 +1592,7 @@
 			"type": "ds.search"
 		},
 		"ds_bw_public": {
-			"name": "Statewide - ds_bandwidth_public_internet",
+			"name": "Statewide - Public Internet Bandwidth",
 			"options": {
 				"query": "| noop",
 				"queryParameters": {
@@ -1614,7 +1614,7 @@
 			"type": "ds.search"
 		},
 		"ds_cs_by_device_type": {
-			"name": "Client Summary - ds_client_by_device_type",
+			"name": "Client Summary - Clients by Device Type",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" \n| eval deviceType=if(isnull(deviceType) OR deviceType==\"null\" OR deviceType==\"\" OR deviceType==\"Un-Classified Device\", \"Unknown\", deviceType) \n| stats dc(macAddress) as clients by deviceType \n| sort -clients",
 				"queryParameters": {
@@ -1625,9 +1625,9 @@
 			"type": "ds.search"
 		},
 		"ds_cs_by_location": {
-			"name": "Client Summary - ds_client_by_location",
+			"name": "Client Summary - Clients by Location",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" \n| eval Site=mvindex(split(siteHierarchy,\"/\"),-1) \n| where isnotnull(Site) AND Site!=\"null\" AND Site!=\"\" \n| stats dc(macAddress) as clients by Site \n| sort -clients",
+				"query": "`index_catalyst` (sourcetype=\"cisco:dnac:client\" OR sourcetype=\"cisco:catalyst:client\")\n| eval site_ref=coalesce(mvindex(mvdedup(siteHierarchyId),0), mvindex(mvdedup(siteId),0))\n| eval site_ref=if(isnotnull(site_ref), trim(site_ref), null())\n| eval leafSiteId=case(isnotnull(site_ref) AND site_ref!=\"\" AND lower(site_ref)!=\"null\" AND match(site_ref,\"/\"), mvindex(split(rtrim(site_ref,\"/\"),\"/\"),-1), isnotnull(site_ref) AND site_ref!=\"\" AND lower(site_ref)!=\"null\", site_ref)\n| lookup site_topology_lookup id as leafSiteId OUTPUT Site as lookupSite, name as lookupSiteName\n| eval site_path=mvindex(mvdedup(siteHierarchy),0)\n| eval rawSite=mvindex(split(rtrim(site_path,\"/\"),\"/\"),-1)\n| eval Site=case(isnotnull(lookupSite) AND trim(lookupSite)!=\"\" AND lower(lookupSite)!=\"null\", lookupSite, isnotnull(rawSite) AND trim(rawSite)!=\"\" AND lower(rawSite)!=\"null\" AND NOT match(rawSite,\"^[0-9a-fA-F-]{36}$\"), rawSite, isnotnull(lookupSiteName) AND trim(lookupSiteName)!=\"\" AND lower(lookupSiteName)!=\"null\", lookupSiteName)\n| where isnotnull(Site) AND Site!=\"Unknown\"\n| stats dc(macAddress) as clients by Site\n| sort -clients",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1655,7 +1655,7 @@
 			"type": "ds.search"
 		},
 		"ds_cs_by_ssid": {
-			"name": "Client Summary - ds_client_by_ssid",
+			"name": "Client Summary - Clients by SSID",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" \n| stats dc(macAddress) as clients by connection.ssid \n| rename connection.ssid as ssid ",
 				"queryParameters": {
@@ -1673,21 +1673,10 @@
 			},
 			"type": "ds.chain"
 		},
-		"ds_cs_client_kpi": {
-			"name": "Client Summary - ds_client_health_kpi",
-			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\" scoreType=\"ALL\"\n| stats latest(scoreValue) as score, latest(clientCount) as total\n| eval health=round(score)",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
 		"ds_cs_count_over_time": {
-			"name": "Client Summary - ds_client_count_over_time",
+			"name": "Client Summary - Client Count Over Time",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRED\" OR clientType=\"WIRELESS\") (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| bin _time\n| stats latest(clientCount) as cc by _time, clientType, scoreType\n| stats sum(cc) as cc by _time, scoreType\n| eval \"Good Count\"=if(scoreType==\"GOOD\",cc,null()), \"Fair Count\"=if(scoreType==\"FAIR\",cc,null()), \"Poor Count\"=if(scoreType==\"POOR\",cc,null()), \"Idle Count\"=if(scoreType==\"IDLE\" OR scoreType==\"NODATA\",cc,null())\n| stats sum(\"Good Count\") as \"Good Count\", sum(\"Fair Count\") as \"Fair Count\", sum(\"Poor Count\") as \"Poor Count\", sum(\"Idle Count\") as \"Idle Count\" by _time",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRED\" OR clientType=\"WIRELESS\") (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| bin _time span=15m\n| stats latest(clientCount) as cc by _time, clientType, scoreType\n| stats sum(cc) as cc by _time, scoreType\n| eval \"Good Count\"=if(scoreType==\"GOOD\",cc,null()), \"Fair Count\"=if(scoreType==\"FAIR\",cc,null()), \"Poor Count\"=if(scoreType==\"POOR\",cc,null()), \"Idle Count\"=if(scoreType==\"IDLE\" OR scoreType==\"NODATA\",cc,null())\n| stats sum(\"Good Count\") as \"Good Count\", sum(\"Fair Count\") as \"Fair Count\", sum(\"Poor Count\") as \"Poor Count\", sum(\"Idle Count\") as \"Idle Count\" by _time",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1704,9 +1693,9 @@
 			"type": "ds.chain"
 		},
 		"ds_cs_health_by_location": {
-			"name": "Client Summary - ds_client_health_by_location",
+			"name": "Client Summary - Client Health by Location",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" \n| eval Site=mvindex(split(siteHierarchy,\"/\"),-1) \n| where isnotnull(Site) AND Site!=\"null\" AND Site!=\"\" \n| stats avg(health.overallScore) as sv, dc(macAddress) as clients by Site \n| eval health=round(sv*10, 2) \n| sort -clients \n| fields Site clients health",
+				"query": "`index_catalyst` (sourcetype=\"cisco:dnac:client\" OR sourcetype=\"cisco:catalyst:client\")\n| eval site_ref=coalesce(mvindex(mvdedup(siteHierarchyId),0), mvindex(mvdedup(siteId),0))\n| eval site_ref=if(isnotnull(site_ref), trim(site_ref), null())\n| eval leafSiteId=case(isnotnull(site_ref) AND site_ref!=\"\" AND lower(site_ref)!=\"null\" AND match(site_ref,\"/\"), mvindex(split(rtrim(site_ref,\"/\"),\"/\"),-1), isnotnull(site_ref) AND site_ref!=\"\" AND lower(site_ref)!=\"null\", site_ref)\n| lookup site_topology_lookup id as leafSiteId OUTPUT Site as lookupSite, name as lookupSiteName\n| eval site_path=mvindex(mvdedup(siteHierarchy),0)\n| eval rawSite=mvindex(split(rtrim(site_path,\"/\"),\"/\"),-1)\n| eval Site=case(isnotnull(lookupSite) AND trim(lookupSite)!=\"\" AND lower(lookupSite)!=\"null\", lookupSite, isnotnull(rawSite) AND trim(rawSite)!=\"\" AND lower(rawSite)!=\"null\" AND NOT match(rawSite,\"^[0-9a-fA-F-]{36}$\"), rawSite, isnotnull(lookupSiteName) AND trim(lookupSiteName)!=\"\" AND lower(lookupSiteName)!=\"null\", lookupSiteName)\n| eval health=tonumber(mvindex(mvdedup('health.overallScore'),0))\n| where isnotnull(Site) AND Site!=\"Unknown\" AND isnotnull(health) AND health>=0\n| stats avg(health) as health, dc(macAddress) as clients by Site\n| eval health=round(health*10, 2)\n| sort -clients\n| fields Site clients health",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1715,7 +1704,7 @@
 			"type": "ds.search"
 		},
 		"ds_cs_health_dist": {
-			"name": "Client Summary - ds_client_health_dist",
+			"name": "Client Summary - Client Health Distribution",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRED\" OR clientType=\"WIRELESS\") (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| stats latest(clientCount) as cc by clientType, scoreType\n| stats sum(cc) as clients by scoreType",
 				"queryParameters": {
@@ -1737,7 +1726,7 @@
 			"type": "ds.search"
 		},
 		"ds_cs_onboarding": {
-			"name": "Client Summary - ds_client_onboarding",
+			"name": "Client Summary - Client Onboarding",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" \n| stats avg(onboarding.avgAuthDuration) as avg_aaa, avg(onboarding.avgDhcpDuration) as avg_dhcp, avg(onboarding.avgAssocDuration) as avg_assoc \n| eval avg_onboard=round(avg_aaa+avg_dhcp+avg_assoc, 2), avg_aaa=round(avg_aaa, 2), avg_dhcp=round(avg_dhcp, 2), avg_assoc=round(avg_assoc, 2)",
 				"queryParameters": {
@@ -1756,7 +1745,7 @@
 			"type": "ds.chain"
 		},
 		"ds_cs_os_dist": {
-			"name": "Client Summary - ds_client_os_dist",
+			"name": "Client Summary - Client OS Distribution",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" \n| eval osType=if(isnull(osType) OR osType==\"null\" OR osType==\"\" OR osType==\"Un-Classified Device\", \"Unknown\", osType) \n| stats dc(macAddress) as clients by osType \n| rename osType as hostOs \n| sort -clients",
 				"queryParameters": {
@@ -1769,7 +1758,7 @@
 		"ds_cs_session_by_band": {
 			"name": "Client Session Duration by Band",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.band as band, connection.sessionDuration as sessionDuration | eval session_hrs=coalesce(sessionDuration,0)/3600 | eval band=coalesce(band, \"Unknown\") | stats sum(session_hrs) as total_hours, dc(macAddress) as clients by band | eval total_hours=round(total_hours, 2) | sort -total_hours",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.band as band, connection.sessionDuration as sessionDuration | eval session_secs=tonumber(mvindex(mvdedup(sessionDuration),0)), session_hrs=coalesce(session_secs,0)/3600 | eval band=coalesce(band, \"Unknown\") | stats sum(session_hrs) as total_hours, dc(macAddress) as clients by band | eval total_hours=round(total_hours, 2) | sort -total_hours",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1780,7 +1769,7 @@
 		"ds_cs_session_by_protocol": {
 			"name": "Client Session Duration by Protocol",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.protocol as Protocol, connection.sessionDuration as sessionDuration | eval session_hrs=coalesce(sessionDuration,0)/3600 | stats sum(session_hrs) as total_hours, dc(macAddress) as clients by Protocol | eval total_hours=round(total_hours, 2) | sort -total_hours",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.protocol as Protocol, connection.sessionDuration as sessionDuration | eval session_secs=tonumber(mvindex(mvdedup(sessionDuration),0)), session_hrs=coalesce(session_secs,0)/3600, Protocol=coalesce(Protocol, \"Unknown\") | stats sum(session_hrs) as total_hours, dc(macAddress) as clients by Protocol | eval total_hours=round(total_hours, 2) | sort -total_hours",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1791,7 +1780,7 @@
 		"ds_cs_session_by_ssid": {
 			"name": "Client Session Duration by SSID",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.sessionDuration as sessionDuration, connection.ssid as SSID | eval session_hrs=coalesce(sessionDuration,0)/3600 | stats sum(session_hrs) as total_hours, dc(macAddress) as clients by SSID | eval total_hours=round(total_hours, 2) | sort -total_hours | head 10",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.sessionDuration as sessionDuration, connection.ssid as SSID | eval session_secs=tonumber(mvindex(mvdedup(sessionDuration),0)), session_hrs=coalesce(session_secs,0)/3600, SSID=coalesce(SSID, \"Unknown\") | stats sum(session_hrs) as total_hours, dc(macAddress) as clients by SSID | eval total_hours=round(total_hours, 2) | sort -total_hours | head 10",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1800,7 +1789,7 @@
 			"type": "ds.search"
 		},
 		"ds_cs_top_clients": {
-			"name": "Client Summary - ds_top_clients_by_usage",
+			"name": "Client Summary - Top Clients by Usage",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" \n| stats sum(traffic.usage) as usage, latest(deviceType) as device_type, latest(connection.ssid) as ssid, latest(connection.l3Vn) as vn, latest(type) as conn_type, latest(siteHierarchy) as location by macAddress \n| eval usage_gb=tonumber(round(usage/1073741824,2)), ssid=case(isnotnull(ssid) AND ssid!=\"null\" AND ssid!=\"\", ssid, conn_type==\"Wired\" AND isnotnull(vn) AND vn!=\"null\", \"Wired (\".vn.\")\", conn_type==\"Wired\", \"Wired\", 1==1, \"Unknown\"), device_type=if(isnull(device_type) OR device_type==\"null\" OR device_type==\"\", \"Unknown\", device_type) \n| where usage_gb > 0 \n| sort -usage_gb \n| head 20 \n| fields macAddress device_type ssid location usage_gb",
 				"queryParameters": {
@@ -1832,7 +1821,7 @@
 		"ds_cs_traffic_by_band": {
 			"name": "Client Traffic by Band",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.band as band, traffic.* as * | eval total_bytes=coalesce(txBytes,0)+coalesce(rxBytes,0) | eval band=coalesce(band, \"Unknown\") | stats sum(total_bytes) as traffic_bytes, dc(macAddress) as clients by band | eval traffic_mb=round(traffic_bytes/1048576, 1) | sort -traffic_bytes",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.band as band, traffic.* as * | eval tx_bytes=tonumber(mvindex(mvdedup(txBytes),0)), rx_bytes=tonumber(mvindex(mvdedup(rxBytes),0)), total_bytes=coalesce(tx_bytes,0)+coalesce(rx_bytes,0) | eval band=coalesce(band, \"Unknown\") | stats sum(total_bytes) as traffic_bytes, dc(macAddress) as clients by band | eval traffic_mb=round(traffic_bytes/1048576, 1) | sort -traffic_bytes",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1841,9 +1830,9 @@
 			"type": "ds.search"
 		},
 		"ds_cs_traffic_by_protocol": {
-			"name": "Client Traffic by Protocol (timechart)",
+			"name": "Client Traffic by Protocol timechart",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.protocol as Protocol, traffic.* as * | eval total_bytes=coalesce(txBytes,0)+coalesce(rxBytes,0) | timechart sum(total_bytes) as traffic_bytes by Protocol fixedrange=false | foreach * [eval <<FIELD>>=if(\"<<FIELD>>\"!=\"_time\", round(<<FIELD>>/1073741824, 2), <<FIELD>>)]",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.protocol as Protocol, traffic.* as * | eval tx_bytes=tonumber(mvindex(mvdedup(txBytes),0)), rx_bytes=tonumber(mvindex(mvdedup(rxBytes),0)), total_bytes=coalesce(tx_bytes,0)+coalesce(rx_bytes,0) | timechart sum(total_bytes) as traffic_bytes by Protocol fixedrange=false | foreach * [eval <<FIELD>>=if(\"<<FIELD>>\"!=\"_time\", round(<<FIELD>>/1073741824, 2), <<FIELD>>)]",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1852,9 +1841,9 @@
 			"type": "ds.search"
 		},
 		"ds_cs_traffic_by_ssid": {
-			"name": "Client Traffic by SSID (timechart)",
+			"name": "Client Traffic by SSID timechart",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.ssid as SSID, traffic.* as * | eval total_bytes=coalesce(txBytes,0)+coalesce(rxBytes,0) | timechart sum(total_bytes) as traffic_bytes by SSID fixedrange=false | foreach * [eval <<FIELD>>=if(\"<<FIELD>>\"!=\"_time\", round(<<FIELD>>/1073741824, 2), <<FIELD>>)]",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.ssid as SSID, traffic.* as * | eval tx_bytes=tonumber(mvindex(mvdedup(txBytes),0)), rx_bytes=tonumber(mvindex(mvdedup(rxBytes),0)), total_bytes=coalesce(tx_bytes,0)+coalesce(rx_bytes,0) | timechart sum(total_bytes) as traffic_bytes by SSID fixedrange=false | foreach * [eval <<FIELD>>=if(\"<<FIELD>>\"!=\"_time\", round(<<FIELD>>/1073741824, 2), <<FIELD>>)]",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1863,7 +1852,7 @@
 			"type": "ds.search"
 		},
 		"ds_cs_wireless_vs_wired": {
-			"name": "Client Summary - ds_wireless_vs_wired",
+			"name": "Client Summary - Wireless vs Wired",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRELESS\" OR clientType=\"WIRED\") scoreType=\"ALL\"\n| stats latest(clientCount) as clients by clientType",
 				"queryParameters": {
@@ -1928,21 +1917,10 @@
 			},
 			"type": "ds.search"
 		},
-		"ds_exec_ap_count": {
-			"name": "Executive Summary - ds_ap_count",
-			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| stats latest(DeviceFamily) as DeviceFamily, latest(Reachability) as Reachability by DeviceID\n| where match(DeviceFamily,\"(?i)ap|access.point|unified.ap\")\n| eval healthy=if(Reachability==\"Reachable\",1,0)\n| stats count as total, sum(healthy) as up\n| eval pct=round(up/total*100), down=total-up",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
 		"ds_exec_client_health_by_site": {
-			"name": "Executive Summary - ds_client_health_by_site",
+			"name": "Executive Summary - Client Health by Site",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| eval siteHierarchy=`dnac_site_normalize(siteHierarchy)`\n| where siteHierarchy!=\"\"\n| stats avg(health.overallScore) as health by type, siteHierarchy\n| eval health=round(health*10, 2)\n| chart avg(health) by siteHierarchy, type\n| rename Wireless as wireless, Wired as wired, siteHierarchy as Site\n| fields Site wireless wired",
+				"query": "`index_catalyst` (sourcetype=\"cisco:dnac:client\" OR sourcetype=\"cisco:catalyst:client\")\n| eval site_ref=coalesce(mvindex(mvdedup(siteHierarchyId),0), mvindex(mvdedup(siteId),0))\n| eval site_ref=if(isnotnull(site_ref), trim(site_ref), null())\n| eval leafSiteId=case(isnotnull(site_ref) AND site_ref!=\"\" AND lower(site_ref)!=\"null\" AND match(site_ref,\"/\"), mvindex(split(rtrim(site_ref,\"/\"),\"/\"),-1), isnotnull(site_ref) AND site_ref!=\"\" AND lower(site_ref)!=\"null\", site_ref)\n| lookup site_topology_lookup id as leafSiteId OUTPUT Site as lookupSite, name as lookupSiteName\n| eval site_path=mvindex(mvdedup(siteHierarchy),0)\n| eval rawSite=mvindex(split(rtrim(site_path,\"/\"),\"/\"),-1)\n| eval Site=case(isnotnull(lookupSite) AND trim(lookupSite)!=\"\" AND lower(lookupSite)!=\"null\", lookupSite, isnotnull(rawSite) AND trim(rawSite)!=\"\" AND lower(rawSite)!=\"null\" AND NOT match(rawSite,\"^[0-9a-fA-F-]{36}$\"), rawSite, isnotnull(lookupSiteName) AND trim(lookupSiteName)!=\"\" AND lower(lookupSiteName)!=\"null\", lookupSiteName)\n| eval clientType=case(upper(type)=\"WIRELESS\", \"wireless\", upper(type)=\"WIRED\", \"wired\", upper(clientType)=\"WIRELESS\", \"wireless\", upper(clientType)=\"WIRED\", \"wired\", true(), lower(coalesce(type, clientType)))\n| eval health=tonumber(mvindex(mvdedup('health.overallScore'),0))\n| where isnotnull(Site) AND Site!=\"Unknown\" AND isnotnull(health) AND health>=0 AND (clientType=\"wireless\" OR clientType=\"wired\")\n| stats avg(health) as health by clientType, Site\n| eval health=health*10\n| chart avg(health) by Site, clientType\n| eval wireless=round(wireless, 2), wired=round(wired, 2)\n| fields Site wireless wired",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1951,7 +1929,7 @@
 			"type": "ds.search"
 		},
 		"ds_exec_client_health_trend": {
-			"name": "Executive Summary - ds_client_health_trend",
+			"name": "Executive Summary - Client Health Trend",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\" scoreType=\"ALL\" | timechart fixedrange=false latest(scoreValue) as health | eval health=round(health, 2)",
 				"queryParameters": {
@@ -1994,7 +1972,7 @@
 			"type": "ds.chain"
 		},
 		"ds_exec_device_inventory": {
-			"name": "Executive Summary - ds_device_inventory",
+			"name": "Executive Summary - Device Inventory",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| stats latest(DeviceFamily) as DeviceFamily, latest(Reachability) as Reachability by DeviceID\n| eval cat=case(match(DeviceFamily,\"(?i)switch\"),\"Switches\", match(DeviceFamily,\"(?i)router\"),\"Routers\", match(DeviceFamily,\"(?i)ap|access.point|unified.ap\"),\"APs\", match(DeviceFamily,\"(?i)wireless.controller|wlc\"),\"WLCs\", 1==1,\"Third Party\"), reachable=if(Reachability==\"Reachable\",1,0)\n| stats count as total, sum(reachable) as up by cat\n| eval down=total-up",
 				"queryParameters": {
@@ -2004,19 +1982,8 @@
 			},
 			"type": "ds.search"
 		},
-		"ds_exec_healthy_devices": {
-			"name": "Executive Summary - ds_healthy_device_count",
-			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| stats latest(Reachability) as Reachability, latest(Manageability) as Manageability by DeviceID\n| eval healthy=if(Reachability==\"Reachable\" AND match(Manageability,\"^Managed\"), 1, 0)\n| stats count as total, sum(healthy) as healthy_count\n| eval pct=round(healthy_count/total*100)",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
 		"ds_exec_issue_details": {
-			"name": "Executive Summary - ds_issue_details",
+			"name": "Executive Summary - Issue Details",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueStatus=\"active\"\n| stats dc(IssueID) as Count, latest(IssueSpecificDescription) as Description, latest(IssueSpecificSummary) as Summary, values(SiteName) as Sites, values(DeviceName) as Devices by IssueName, IssueSpecificPriority\n| eval Explanation=coalesce(Description, Summary, \"No description available\"), Sites=mvjoin(Sites, \", \"), Devices=mvjoin(Devices, \", \")\n| rename IssueName as Issue, IssueSpecificPriority as Priority, Explanation as Why\n| table Priority, Issue, Count, Why, Sites, Devices",
 				"queryParameters": {
@@ -2027,7 +1994,7 @@
 			"type": "ds.search"
 		},
 		"ds_exec_issue_dist": {
-			"name": "Executive Summary - ds_issue_distribution",
+			"name": "Executive Summary - Issue Distribution",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueStatus=\"active\"\n| stats dc(IssueID) as count by IssueSpecificPriority",
 				"queryParameters": {
@@ -2038,7 +2005,7 @@
 			"type": "ds.search"
 		},
 		"ds_exec_issue_priority_kpi": {
-			"name": "Executive Summary - ds_issue_by_priority_kpi",
+			"name": "Executive Summary - Issues by Priority KPI",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueStatus=\"active\"\n| stats dc(IssueID) as count by IssuePriority\n| eval p1=if(IssuePriority=\"P1\",count,0), p2=if(IssuePriority=\"P2\",count,0), p3=if(IssuePriority=\"P3\",count,0), p4=if(IssuePriority=\"P4\",count,0)\n| stats sum(p1) as p1, sum(p2) as p2, sum(p3) as p3, sum(p4) as p4",
 				"queryParameters": {
@@ -2049,9 +2016,9 @@
 			"type": "ds.search"
 		},
 		"ds_exec_issue_summary": {
-			"name": "Issue Summary (Total/Open/Resolved)",
+			"name": "Issue Summary Total Open Resolved",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\" | stats dc(IssueID) as Total, dc(eval(if(IssueStatus==\"active\", IssueID, null()))) as Open, dc(eval(if(IssueStatus==\"resolved\", IssueID, null()))) as Resolved",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\"\n| eval issue_id=coalesce(IssueID, issueId, id), issue_status=lower(coalesce(IssueStatus, issueStatus, status))\n| stats dc(issue_id) as Total, dc(eval(if(issue_status=\"active\", issue_id, null()))) as Open, dc(eval(if(issue_status=\"resolved\", issue_id, null()))) as Resolved\n| fillnull value=0 Total Open Resolved",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -2060,7 +2027,7 @@
 			"type": "ds.search"
 		},
 		"ds_exec_issue_trend": {
-			"name": "Executive Summary - ds_issue_trend",
+			"name": "Executive Summary - Issue Trend",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\" | timechart count by IssueSpecificPriority",
 				"queryParameters": {
@@ -2071,7 +2038,7 @@
 			"type": "ds.search"
 		},
 		"ds_exec_net_health_by_site": {
-			"name": "Executive Summary - ds_network_health_by_site",
+			"name": "Executive Summary - Network Health by Site",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| where Site!=\"\"\n| stats latest(Reachability) as Reachability, latest(Manageability) as Manageability, latest(DeviceFamily) as DeviceFamily by DeviceID, Site\n| eval healthy=if(Reachability==\"Reachable\" AND match(Manageability,\"^Managed\"), 1, 0), cat=case(match(DeviceFamily,\"(?i)switch\"),\"Switch\", match(DeviceFamily,\"(?i)router\"),\"Router\", match(DeviceFamily,\"(?i)ap|access.point|unified.ap\"),\"Wireless\", 1==1,\"Third Party\")\n| stats avg(healthy) as health_pct, dc(eval(if(cat==\"Switch\",DeviceID,null()))) as switches, dc(eval(if(cat==\"Router\",DeviceID,null()))) as routers, dc(eval(if(cat==\"Wireless\",DeviceID,null()))) as wireless, dc(eval(if(cat==\"Third Party\",DeviceID,null()))) as third_party by Site\n| eval health_pct=round(health_pct*100)\n| sort health_pct",
 				"queryParameters": {
@@ -2098,7 +2065,7 @@
 			"type": "ds.chain"
 		},
 		"ds_exec_network_health_trend": {
-			"name": "Executive Summary - ds_network_health_trend",
+			"name": "Executive Summary - Network Health Trend",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" | timechart avg(eval(round(if(Reachability==\"Reachable\" AND match(Manageability,\"^Managed\"), 100, 0), 2))) as pct | eval pct=round(pct, 2)",
 				"queryParameters": {
@@ -2108,30 +2075,8 @@
 			},
 			"type": "ds.search"
 		},
-		"ds_exec_overall_client_health": {
-			"name": "Executive Summary - ds_overall_client_health",
-			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRELESS\" OR clientType=\"WIRED\") scoreType=\"ALL\"\n| stats latest(scoreValue) as sv by clientType\n| eval health=round(sv)\n| stats avg(health) as overall",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_exec_overall_network_health": {
-			"name": "Executive Summary - ds_overall_network_health",
-			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n| stats latest(Reachability) as Reachability, latest(Manageability) as Manageability by DeviceID\n| eval healthy=if(Reachability==\"Reachable\" AND match(Manageability,\"^Managed\"), 1, 0)\n| stats avg(healthy) as pct\n| eval pct=round(pct*100)",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
 		"ds_exec_top_issues": {
-			"name": "Executive Summary - ds_top_issues",
+			"name": "Executive Summary - Top Issues",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueStatus=\"active\" \n| stats count by IssueName, IssueSpecificPriority, IssueSpecificCategory",
 				"queryParameters": {
@@ -2220,9 +2165,7 @@
 			"name": "KPI Open Issues",
 			"options": {
 				"extend": "ds_exec_issue_summary",
-				"fields": [
-					"Open"
-				]
+				"query": "| eval _time=now() | fields _time Open"
 			},
 			"type": "ds.chain"
 		},
@@ -2230,9 +2173,7 @@
 			"name": "KPI Resolved Issues",
 			"options": {
 				"extend": "ds_exec_issue_summary",
-				"fields": [
-					"Resolved"
-				]
+				"query": "| eval _time=now() | fields _time Resolved"
 			},
 			"type": "ds.chain"
 		},
@@ -2240,9 +2181,7 @@
 			"name": "KPI Total Issues",
 			"options": {
 				"extend": "ds_exec_issue_summary",
-				"fields": [
-					"Total"
-				]
+				"query": "| eval _time=now() | fields _time Total"
 			},
 			"type": "ds.chain"
 		},
@@ -2279,7 +2218,7 @@
 			"type": "ds.chain"
 		},
 		"ds_ssid_trend_24h": {
-			"name": "Statewide - ds_ssid_client_trend_24h",
+			"name": "Statewide - SSID Client Trend 24h",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\"\n| timechart dc(macAddress) as clients by connection.ssid",
 				"queryParameters": {
@@ -2290,7 +2229,7 @@
 			"type": "ds.search"
 		},
 		"ds_ssid_trend_7d": {
-			"name": "Statewide - ds_ssid_client_trend_24h",
+			"name": "Statewide - SSID Client Trend 7d",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\"\n| timechart dc(macAddress) as clients by connection.ssid",
 				"queryParameters": {
@@ -2312,9 +2251,9 @@
 			"type": "ds.search"
 		},
 		"ds_wired_kpi": {
-			"name": "Statewide - ds_wired_health_kpi",
+			"name": "Statewide - Wired Health KPI",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\"\n| stats latest(scoreValue) as sv, latest(clientCount) as total by scoreType\n| eval health=round(sv)\n| stats sum(eval(if(scoreType==\"ALL\", total, 0))) as total, avg(eval(if(scoreType==\"ALL\", health, null()))) as health, sum(eval(if(scoreType==\"GOOD\", total, 0))) as healthy, sum(eval(if(scoreType==\"FAIR\", total, 0))) as active, sum(eval(if(scoreType==\"POOR\", total, 0))) as inactive, sum(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\", total, 0))) as new_clients\n| eval health=round(health)",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\"\n| stats latest(scoreValue) as sv, latest(clientCount) as total by scoreType\n| eval health=round(sv)\n| stats sum(eval(if(scoreType==\"ALL\", total, 0))) as total, avg(eval(if(scoreType==\"ALL\", health, null()))) as health, sum(eval(if(scoreType==\"GOOD\", total, 0))) as healthy, sum(eval(if(scoreType==\"FAIR\", total, 0))) as active, sum(eval(if(scoreType==\"POOR\", total, 0))) as inactive, sum(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\" OR scoreType==\"NEW\", total, 0))) as new_clients\n| eval health=round(health)",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -2334,9 +2273,9 @@
 			"type": "ds.search"
 		},
 		"ds_wired_trend_24h": {
-			"name": "Statewide - ds_wired_client_trend_24h",
+			"name": "Statewide - Wired Client Trend 24h",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| timechart latest(eval(if(scoreType==\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType==\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType==\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\",clientCount,null()))) as \"No Data\"",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\" OR scoreType=\"NEW\")\n| timechart latest(eval(if(scoreType==\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType==\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType==\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\" OR scoreType==\"NEW\",clientCount,null()))) as \"No Data\"",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -2345,9 +2284,9 @@
 			"type": "ds.search"
 		},
 		"ds_wired_trend_7d": {
-			"name": "Statewide - ds_wired_client_trend_24h",
+			"name": "Statewide - Wired Client Trend 7d",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| timechart latest(eval(if(scoreType==\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType==\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType==\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\",clientCount,null()))) as \"No Data\"",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\" OR scoreType=\"NEW\")\n| timechart latest(eval(if(scoreType==\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType==\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType==\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\" OR scoreType==\"NEW\",clientCount,null()))) as \"No Data\"",
 				"queryParameters": {
 					"earliest": "-7d@d",
 					"latest": "now"
@@ -2367,9 +2306,9 @@
 			"type": "ds.search"
 		},
 		"ds_wireless_kpi": {
-			"name": "Statewide - ds_wireless_health_kpi",
+			"name": "Statewide - Wireless Health KPI",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\"\n| stats latest(scoreValue) as sv, latest(clientCount) as total by scoreType\n| eval health=round(sv)\n| stats sum(eval(if(scoreType==\"ALL\", total, 0))) as total, avg(eval(if(scoreType==\"ALL\", health, null()))) as health, sum(eval(if(scoreType==\"GOOD\", total, 0))) as healthy, sum(eval(if(scoreType==\"FAIR\", total, 0))) as active, sum(eval(if(scoreType==\"POOR\", total, 0))) as inactive, sum(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\", total, 0))) as new_clients\n| eval health=round(health)",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\"\n| stats latest(scoreValue) as sv, latest(clientCount) as total by scoreType\n| eval health=round(sv)\n| stats sum(eval(if(scoreType==\"ALL\", total, 0))) as total, avg(eval(if(scoreType==\"ALL\", health, null()))) as health, sum(eval(if(scoreType==\"GOOD\", total, 0))) as healthy, sum(eval(if(scoreType==\"FAIR\", total, 0))) as active, sum(eval(if(scoreType==\"POOR\", total, 0))) as inactive, sum(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\" OR scoreType==\"NEW\", total, 0))) as new_clients\n| eval health=round(health)",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -2389,9 +2328,9 @@
 			"type": "ds.search"
 		},
 		"ds_wireless_trend_24h": {
-			"name": "Statewide - ds_wireless_client_trend_24h",
+			"name": "Statewide - Wireless Client Trend 24h",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| timechart latest(eval(if(scoreType==\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType==\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType==\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\",clientCount,null()))) as \"No Data\"",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\" OR scoreType=\"NEW\")\n| timechart latest(eval(if(scoreType==\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType==\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType==\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\" OR scoreType==\"NEW\",clientCount,null()))) as \"No Data\"",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -2400,7 +2339,7 @@
 			"type": "ds.search"
 		},
 		"ds_wireless_trend_7d": {
-			"name": "Statewide - ds_wireless_client_trend_7d",
+			"name": "Statewide - Wireless Client Trend 7d",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\") clientCount=*\n| timechart max(clientCount) as clientCount by scoreType",
 				"queryParameters": {

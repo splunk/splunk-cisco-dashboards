@@ -8,10 +8,18 @@ const ActionButtonIcon = <Magnifier />;
 const DEFAULT_EARLIEST = '-24h@h';
 const DEFAULT_LATEST = 'now';
 const GLOBAL_TIME_TOKEN = 'global_time';
+const DEFAULT_SEARCH_APP = 'splunk-cisco-dashboards';
+const APP_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_\-.]{0,127}$/;
+
+const resolveSearchApp = (appName) =>
+    typeof appName === 'string' && APP_NAME_PATTERN.test(appName.trim())
+        ? appName.trim()
+        : DEFAULT_SEARCH_APP;
 
 const CustomOpenSearch = ({ itemId, dashboardApi, itemDefinition, dataSources }) => {
     const [disabled, setDisabled] = useState(true);
     const [splSearch, setSplSearch] = useState();
+    const [searchApp, setSearchApp] = useState(DEFAULT_SEARCH_APP);
     const [searches, setSearches] = useState([]);
     const [earliest, setEarliest] = useState('-24h@h');
     const [latest, setLatest] = useState('now');
@@ -106,6 +114,7 @@ const CustomOpenSearch = ({ itemId, dashboardApi, itemDefinition, dataSources })
                 }
 
                 if (primaryDataSource.type == 'ds.chain') {
+                    setSearchApp(DEFAULT_SEARCH_APP);
                     const extendedDataSourceId = primaryDataSource.options.extend;
                     const extendedDataSource =
                         dashboardApi.getDefinition().dataSources[extendedDataSourceId];
@@ -126,6 +135,7 @@ const CustomOpenSearch = ({ itemId, dashboardApi, itemDefinition, dataSources })
                         );
                         if (search) {
                             spl = search.content.search;
+                            setSearchApp(resolveSearchApp(search.content.dispatch_context));
                             setResolvedTimeRange(
                                 dataSourceRegistry.getDataSourceController(primaryDataSourceId)?.def
                                     ?.options?.queryParameters ||
@@ -135,6 +145,7 @@ const CustomOpenSearch = ({ itemId, dashboardApi, itemDefinition, dataSources })
                         }
                     }
                 } else if (primaryDataSource.type == 'ds.search') {
+                    setSearchApp(DEFAULT_SEARCH_APP);
                     if (primaryDataSource.options.query) {
                         spl = primaryDataSource.options.query;
                         setResolvedTimeRange(
@@ -176,7 +187,7 @@ const CustomOpenSearch = ({ itemId, dashboardApi, itemDefinition, dataSources })
             data-test="CustomOpenSearchButton" // for testing
             onClick={() =>
                 window.open(
-                    `/app/splunk-cisco-dashboards/search?earliest=${encodeURIComponent(
+                    `/app/${searchApp}/search?earliest=${encodeURIComponent(
                         earliest,
                     )}&latest=${encodeURIComponent(latest)}&q=${encodeURIComponent(splSearch)}`,
                     '_blank',

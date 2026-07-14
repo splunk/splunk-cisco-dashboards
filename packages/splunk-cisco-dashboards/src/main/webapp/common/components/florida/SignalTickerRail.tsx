@@ -419,6 +419,7 @@ const SignalTickerTile: React.FC<SignalTickerTileProps> = ({
             subLabel: subtitleForRecord(record, metricDefault),
             description: descriptionForRecord(record, metricDefault),
             spl: record?.search,
+            dispatchContext: record?.dispatchContext,
             valueField: item.valueField ?? metricDefault?.valueField,
             displayField: metricDefault?.displayField,
             sparkDataField: metricDefault?.sparkDataField,
@@ -484,7 +485,7 @@ const SignalTickerTile: React.FC<SignalTickerTileProps> = ({
             density={density}
             searchHref={
                 record?.search
-                    ? splunkSearchAppUrl(record.search, range)
+                    ? splunkSearchAppUrl(record.search, range, record.dispatchContext)
                     : undefined
             }
         />
@@ -552,7 +553,7 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
                     delta: visual.delta,
                     deltaDir: visual.deltaDir,
                     href: record?.search
-                        ? splunkSearchAppUrl(record.search, range)
+                        ? splunkSearchAppUrl(record.search, range, record.dispatchContext)
                         : undefined,
                     canOpen: visual.canOpen,
                 };
@@ -1700,7 +1701,11 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                         '-'
                                     )}`;
                                     const searchHref = entry.search?.trim()
-                                        ? splunkSearchAppUrl(entry.search, range)
+                                        ? splunkSearchAppUrl(
+                                              entry.search,
+                                              range,
+                                              entry.dispatchContext
+                                          )
                                         : undefined;
                                     return (
                                         <div

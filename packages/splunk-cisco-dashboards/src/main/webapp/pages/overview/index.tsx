@@ -11,7 +11,6 @@
  *   * Aggregate health badge derived from those statuses
  *   * Comparison overlay (previous-period dashed line) on every spark
  *   * Click-sparkline → opens the SPL in Splunk Search
- *   * Mini incident ticker, currently empty until a real incident feed is wired
  *   * KPI cards under the topology map driven by searchbase or inline SPL
  *   * PNG / PDF export of the entire page
  *   * Keyboard shortcuts (g i, g s, g b, g r, t, r, ?, /)
@@ -42,6 +41,7 @@ import {
     PanelRight,
     PanelBottom,
     PanelTop,
+    Map as MapIcon,
     Edit3,
     Upload,
     X,
@@ -89,7 +89,6 @@ import {
     type CustomerTopologySectionTitles,
 } from '@/common/services/customerTopologyPersistenceService';
 import { HealthBadge } from '@/common/components/florida/HealthBadge';
-import { IncidentTicker } from '@/common/components/florida/IncidentTicker';
 import {
     SignalTickerEditor,
     SignalTickerRail,
@@ -100,6 +99,7 @@ import { InfoTooltip } from '@/common/components/florida/InfoTooltip';
 import {
     KpiPickerPanel,
     type KpiPickerContext,
+    type FactoryTileConfigApplyPatch,
 } from '@/common/components/florida/KpiPickerPanel';
 import {
     useMetric,
@@ -162,6 +162,17 @@ import {
     getSearchbaseCatalogue,
     type SearchbaseRecord,
 } from '@/common/services/searchbaseCatalogue';
+import {
+    loadOverviewFactoryTiles,
+    resetOverviewFactoryTiles,
+    saveOverviewFactoryTiles,
+    type OverviewFactoryTilesConfig,
+} from '@/common/services/overviewFactoryTilesService';
+import {
+    resetOverviewSearchbaseTileConfig,
+    saveFactoryTileConfig,
+} from '@/common/services/searchbaseTileConfigService';
+import { useCanManageFactoryTileConfig } from '@/common/hooks/useCanManageFactoryTileConfig';
 import { cn } from '@/common/lib/utils';
 
 // =============================================================================
@@ -203,7 +214,10 @@ const COMPACT_HEIGHT_THRESHOLD_PX = 720;
 const SECTION_HEIGHT_BASE_PX = 180;
 const SECTION_HEIGHT_COMPACT_BASE_PX = 174;
 const SECTION_HEIGHT_STEP_PX = 120;
-const SECTION_WRAPPED_TILE_ROW_STEP_PX = 152;
+// Wrapped sections need to budget for the full card floor plus the
+// inter-row gap. 152px matched the bare tile min-height too closely and
+// caused the third row to be clipped at H1 when a section showed 9 tiles.
+const SECTION_WRAPPED_TILE_ROW_STEP_PX = 176;
 const SECTION_WRAP_TILE_COUNT = 5;
 const SECTION_WRAPPED_TILE_COLUMNS = 3;
 const VERTICAL_MAP_MIN_HEIGHT_PX = 420;
@@ -299,855 +313,279 @@ const AUTO_REFRESH_OPTIONS: { label: string; seconds: number }[] = [
 ];
 
 // =============================================================================
-// Metric configuration
+// Overview searchbase metadata
 // =============================================================================
 //
-// Each metric is bound to a `search_name` in `default/searchbase.conf`.
-// The page resolves the binding to the literal SPL before dispatch so
-// searchbase remains the runtime source of truth. `savedSearch` is kept
-// as the config property name for persisted override compatibility.
-//
-// `comparePeriod` is intentionally off for every metric below: these
-// "current value" searches return a single row, so the dashed
-// previous-period overlay can't be rendered. Re-enable per metric only
-// when you bind it to a *time-series* search (e.g. one that uses
-// `timechart` and emits N rows over the dispatched window).
+// Factory Overview tiles are authored in `default/searchbase.conf` under
+// `viz_options.overview`. This page intentionally does not carry a parallel
+// tile catalogue; until the searchbase catalogue loads, the tile roster is
+// empty. Once loaded, searchbase.conf is the source for label, section, value
+// fields, thresholds, mock fallback, SPL, and dispatch context.
 
-const METRIC_CONFIG: MetricConfig[] = [
-    // ----- IT Health -----
-    //
-    // Per the Overview review with the customer (Alan, 2026-05-11), the IT
-    // Health row was reworked: `critical_website_availability` sits
-    // at position 1, then Network health, then Device health (the
-    // three Alan defaulted onto). The two legacy composite-score
-    // tiles (UX Score, Compliance) were replaced in the same review
-    // with named, countable signals: Active TE alerts (Critical+High)
-    // and Sites < 90%. The composite searchbase entries themselves
-    // stay in the catalogue so anyone who wants them back can re-bind
-    // via the KPI picker. As of 2026-06-04 every section ships with
-    // nine factory candidates but still defaults to three visible
-    // tiles, so the executive view stays tight while operators can
-    // dial up breadth with the count pill. Drag-to-reorder stays in place.
-    {
-        id: 'critical_website_availability',
-        section: 'it_health',
-        label: 'Critical sites available',
-        subLabel: 'ThousandEyes HTTP availability',
-        description:
-            "Count of business-critical websites whose ThousandEyes HTTP Server " +
-            'Availability AVG is at least 99.5% over the dispatched window, vs. the ' +
-            'total monitored. Headline reads "X of Y available". Sparkline shows the ' +
-            'live availability percentage; dashed line is the rolling-average baseline ' +
-            'so anomalies stand out without remembering "what is normal".',
-        // Timechart row: { _time, current_pct, baseline_pct, sites_up,
-        // sites_total, display, headline_pct }. `display` and
-        // `headline_pct` are broadcast onto every row via eventstats
-        // latest, so reading the latest row gives a stable string +
-        // numeric pair.
-        savedSearch: 'Executive - Critical Website Availability',
-        valueField: 'headline_pct',
-        displayField: 'display',
-        sparkDataField: 'current_pct',
-        baselineField: 'baseline_pct',
-        overlayLabel: 'Avg',
-        unit: '%',
-        color: '#16A34A',
-        thresholds: { warning: 99.5, critical: 90, direction: 'higher_is_better' },
-        thresholdNote:
-            'Threshold applies to the per-window availability percentage that drives ' +
-            'the headline colour. The "X of Y" headline counts each site whose ' +
-            'individual ThousandEyes HTTP Server Availability AVG is ≥ 99.5%. ' +
-            '99.5% is the standard four-nines-plus SLO operators expect from ' +
-            'public-facing critical sites.',
-        // Mock falls back to a "16 of 18" feel so the tile is
-        // recognisable even before the search resolves.
-        mock: { seed: 10, sparkMin: 88, sparkMax: 100, value: 89, change: -1 },
-    },
-    {
-        id: 'network_health',
-        section: 'it_health',
-        label: 'Network health',
-        subLabel: 'Catalyst Center network score',
-        description:
-            "Latest network-wide health score from Catalyst Center for the 'All' " +
-            'category. Combines link state, throughput and protocol metrics into a ' +
-            '0-100 grade.',
-        // Single row: { score: 0..100 }
-        savedSearch: 'IT - Critical Systems - Network Health Score (Current)',
-        valueField: 'score',
-        unit: '%',
-        thresholds: { warning: 95, critical: 80, direction: 'higher_is_better' },
-        thresholdNote:
-            'Bands match the Catalyst Center default policy: ≥ 95 is "good", ' +
-            '80–94 is "fair" (Cisco labels this orange in CC), < 80 is "poor". ' +
-            'Tune via override if your network has a different baseline normal.',
-        mock: { seed: 11, sparkMin: 80, sparkMax: 100, value: 99, change: 0 },
-    },
-    {
-        id: 'device_health',
-        section: 'it_health',
-        label: 'Device health',
-        subLabel: 'Reachable + managed devices',
-        description:
-            'Average reachability + manageability across every device tracked by ' +
-            'Catalyst Center. Devices that are reachable AND managed score 100, ' +
-            'reachable-only score 50, otherwise 0.',
-        // Single row: { score: 0..100 }
-        savedSearch: 'Executive - Current Device Health',
-        valueField: 'score',
-        unit: '%',
-        thresholds: { warning: 98, critical: 90, direction: 'higher_is_better' },
-        thresholdNote:
-            'Tighter than network-health on purpose: any non-managed device drags ' +
-            'the average by 50, so 98% means at most ~4% of the fleet is ' +
-            'reachable-only. < 90% typically signals more than one site has lost ' +
-            'a device-management integration.',
-        mock: { seed: 12, sparkMin: 95, sparkMax: 100, value: 100, change: 0 },
-    },
-    {
-        id: 'open_issues',
-        section: 'it_health',
-        label: 'Open issues',
-        subLabel: 'Active Catalyst Center issues',
-        description:
-            'Count of open issues raised by Catalyst Center across every priority. ' +
-            'Source: cisco:dnac:issue. ',
-        // Single row: { total, critical, high, affected_devices, affected_sites }
-        savedSearch: 'Executive - Issue Summary KPIs',
-        valueField: 'total',
-        thresholds: { warning: 500, critical: 1000, direction: 'lower_is_better' },
-        thresholdNote:
-            'Counts issues across every priority, including informational. The ' +
-            'companion "active TE alerts" tile narrows to high+critical only when ' +
-            'you want a more selective signal.',
-        mock: { seed: 13, sparkMin: 100, sparkMax: 800, value: 650, change: -50 },
-    },
-    // Composite-metric replacements per Alan's 2026-05-11 review:
-    // "UX score" (Catalyst client + device blend) and "Compliance"
-    // (% of compliance checks passing) were both 0-100 composites that
-    // executives could not act on directly ("80% means what?"). They
-    // are replaced here with two named, countable signals. The original
-    // stanzas (`Executive Dashboard - User Experience Score`,
-    // `IT - Critical Systems - Compliance Rate`) stay in the catalogue
-    // so anyone who wants the composite back can dial it up via the
-    // KPI picker; we just stop defaulting them onto the executive view.
-    {
-        id: 'active_te_alerts',
-        section: 'it_health',
-        label: 'Active TE alerts',
-        subLabel: 'Severity breakdown (count by severity)',
-        description:
-            'Count of currently-active ThousandEyes alerts in the dispatched ' +
-            'window, broken down by severity. Headline is the total across all ' +
-            'severities; the bars below show the per-severity counts so the ' +
-            'executive sees at a glance which severity bucket is loud right ' +
-            'now (critical vs. high vs. medium…). Replaces the legacy UX ' +
-            'Score composite tile and, as of Build 85, the time-series ' +
-            "headline-with-sparkline view (still available via the picker as " +
-            '"IT Health - Active TE Alerts (High + Critical)").',
-        // Bar-breakdown rows: { Severity, count }. Tile renders as
-        // BarBreakdownTile because the bound searchbase stanza
-        // declares default_viz = splunk.bar.
-        savedSearch: 'IT Health - Active TE Alerts by Severity',
-        // valueField/sparkDataField/baselineField are unused by the
-        // bar-breakdown leaf (it reads `rows` + `columns` from
-        // useTableData), but kept here as a safety net so a picker
-        // override that swaps to a *time-series* binding still has
-        // sensible field hints to fall back on.
-        valueField: 'count',
-        // Resting/healthy color is neutral sky; the bar tile's
-        // severity-aware color map (red for critical, orange for
-        // high, …) overrides this on a per-bar basis, but the value
-        // is preserved so a picker swap to a non-bar viz reverts
-        // cleanly.
-        color: '#0ea5e9',
-        thresholds: { warning: 5, critical: 20, direction: 'lower_is_better' },
-        thresholdNote:
-            'Threshold applies to the total count across all severities. The ' +
-            'severity-aware bar colours (red = critical, orange = high, …) ' +
-            'flag the dominant severity at a glance; pivot to ' +
-            '[it_health_thousandeyes_alerts_table] for the recent-20 ' +
-            'drill-down filtered to whichever bar is loud.',
-        mock: { seed: 14, sparkMin: 0, sparkMax: 8, value: 12, change: 0 },
-    },
-    {
-        id: 'sites_below_threshold',
-        section: 'it_health',
-        label: 'Sites < 90%',
-        subLabel: 'Sites below health threshold',
-        description:
-            'How many monitored sites (Tallahassee, Auburndale) have a current ' +
-            'device-health rollup below 90%. Discrete count, not a composite — ' +
-            '0 = all sites healthy, 1+ = open the Overview map to identify which ' +
-            'site is degraded. Uses the same HA-pair-aware filter as the Overview ' +
-            'site markers so a standby device reporting 0 does not unfairly flag ' +
-            'its site.',
-        // Single row: { sites_below, sites_total }
-        savedSearch: 'IT Health - Sites Below Health Threshold',
-        valueField: 'sites_below',
-        color: '#0ea5e9',
-        thresholds: { warning: 1, critical: 2, direction: 'lower_is_better' },
-        thresholdNote:
-            'The 90% per-site cutoff matches the Catalyst Center "fair vs poor" ' +
-            'boundary; widen / narrow it in the underlying SPL stanza if your ' +
-            'network has a different normal.',
-        mock: { seed: 15, sparkMin: 0, sparkMax: 1, value: 0, change: 0 },
-    },
-    {
-        id: 'it_domain_score',
-        section: 'it_health',
-        label: 'IT domain score',
-        subLabel: 'Network + device + compliance',
-        description:
-            'Composite IT score blending Catalyst Center network health, device ' +
-            'readiness, and compliance pass rate into a single executive signal.',
-        savedSearch: 'Executive - IT Domain Score',
-        valueField: 'score',
-        unit: '%',
-        color: '#2563eb',
-        thresholds: { warning: 90, critical: 70, direction: 'higher_is_better' },
-        thresholdNote:
-            'Same three-pillar posture used by the executive rollup. Drops should ' +
-            'be decomposed into network, device, and compliance contributors before ' +
-            'declaring a broad IT incident.',
-        mock: { seed: 16, sparkMin: 70, sparkMax: 100, value: 92, change: 0 },
-    },
-    {
-        id: 'thousandeyes_health',
-        section: 'it_health',
-        label: 'ThousandEyes health',
-        subLabel: 'Synthetic monitoring composite',
-        description:
-            'Synthetic monitoring health across packet loss, latency, HTTP ' +
-            'availability, and page-load completion from ThousandEyes data model ' +
-            'summaries.',
-        savedSearch: 'Executive - ThousandEyes Health Score',
-        valueField: 'score',
-        unit: '%',
-        color: '#0ea5e9',
-        thresholds: { warning: 90, critical: 70, direction: 'higher_is_better' },
-        thresholdNote:
-            'A directional experience score: use the ThousandEyes drilldown to ' +
-            'separate transport, HTTP, and page-load contributors when the score moves.',
-        mock: { seed: 17, sparkMin: 70, sparkMax: 100, value: 94, change: 0 },
-    },
-    {
-        id: 'compliance_rate',
-        section: 'it_health',
-        label: 'Compliance rate',
-        subLabel: 'Catalyst checks passing',
-        description:
-            'Percentage of Catalyst Center compliance checks passing, excluding ' +
-            'not-applicable checks from the denominator.',
-        savedSearch: 'IT - Critical Systems - Compliance Rate',
-        valueField: 'pct',
-        unit: '%',
-        color: '#14b8a6',
-        thresholds: { warning: 95, critical: 70, direction: 'higher_is_better' },
-        thresholdNote:
-            'This is check-level compliance, not percent of devices fully compliant. ' +
-            'A sharp fall usually indicates new failing checks or assessment scope drift.',
-        mock: { seed: 18, sparkMin: 70, sparkMax: 100, value: 96, change: 0 },
-    },
-    // ----- Security -----
-    {
-        id: 'fw_blocked',
-        section: 'security',
-        label: 'FW blocked',
-        subLabel: 'Unique blocked connections',
-        description:
-            'Distinct (source, destination, dest-port) tuples blocked by the ' +
-            'firewall over the dispatched window. The headline is the window-total ' +
-            "count — same meaning as the original 'Firewall Blocked Count' tile. " +
-            'The sparkline shows per-hour distinct blocks; the dashed line is the ' +
-            'rolling-average baseline so an anomalous spike stands out at a glance.',
-        // Hour-bucket timechart: { _time, blocked, baseline, total_blocked }.
-        // total_blocked is broadcast (window-total, headline value);
-        // blocked is per-hour (sparkline); baseline is window-avg
-        // (dashed overlay).
-        savedSearch:
-            'Executive - Firewall Blocked Connections (with Baseline)',
-        valueField: 'total_blocked',
-        sparkDataField: 'blocked',
-        baselineField: 'baseline',
-        overlayLabel: 'Avg',
-        color: '#f59e0b',
-        thresholds: { warning: 5000, critical: 25000, direction: 'lower_is_better' },
-        thresholdNote:
-            'Tuned for a typical mid-size enterprise edge: < 5k blocks per window ' +
-            'is steady-state internet noise, > 25k usually means a scanning campaign ' +
-            'or a misconfigured peer hammering the policy. Compare against the ' +
-            'baseline overlay before sounding the alarm — sustained elevation ' +
-            'matters more than a single hot bucket.',
-        mock: { seed: 21, sparkMin: 10, sparkMax: 50, value: 142, change: 12 },
-    },
-    {
-        id: 'threat_sources',
-        section: 'security',
-        label: 'Threat sources',
-        subLabel: 'Unique IPs blocked (with baseline)',
-        description:
-            'Distinct external source IPs blocked by the firewall over the ' +
-            'dispatched window. The headline is the window-wide distinct count — ' +
-            "same meaning as the original 'Threat Sources' single-value tile. " +
-            'The sparkline shows per-bucket distinct sources; the dashed line ' +
-            'is the rolling-average baseline so a sustained spike (i.e. ' +
-            'distributed scanning) stands out against normal background noise.',
-        // Bucketed timechart variant: { _time, sources, baseline, total_sources }.
-        // total_sources is broadcast (window-wide dc(src), the headline);
-        // sources is per-bucket (sparkline); baseline is window-avg
-        // (dashed overlay). Replaces the single-row Network_Traffic
-        // tstats binding, which was triggering useMetric's
-        // `isSingleRow` mock-spark fallback — the chart was synthesised
-        // RNG between sparkMin (5) and sparkMax (20), not real data.
-        // See SESSION_LOG Build 1209 for the full diagnosis.
-        savedSearch: 'Executive - Threat Sources (with Baseline)',
-        valueField: 'total_sources',
-        sparkDataField: 'sources',
-        baselineField: 'baseline',
-        overlayLabel: 'Avg',
-        // Resting/healthy color is neutral sky so the line doesn't pre-
-        // tint as "alarming" when the count is fine. The status palette
-        // in MetricItem flips the sparkline to amber/red when the tile
-        // crosses warning/critical thresholds, so red is reserved for
-        // "actually bad" state across every tile in the dashboard.
-        color: '#0ea5e9',
-        thresholds: { warning: 25, critical: 100, direction: 'lower_is_better' },
-        thresholdNote:
-            'Distinct *source* IPs, not block events. A single IP retrying 10,000 ' +
-            'times still counts as one. > 100 distinct sources in a 24h window is ' +
-            'the classic distributed-scan signature and warrants a look at the ' +
-            'firewall logs. Compare against the baseline overlay before sounding ' +
-            'the alarm — sustained elevation matters more than a single hot bucket.',
-        mock: { seed: 22, sparkMin: 5, sparkMax: 20, value: 18, change: -5 },
-    },
-    {
-        id: 'failed_auth',
-        section: 'security',
-        label: 'Failed auth',
-        subLabel: 'ISE + AD failures (with baseline)',
-        description:
-            'Total failed authentication events from ISE syslog (5400) and Windows ' +
-            'Security log (EventCode=4625) over the dispatched window. Sparkline ' +
-            'shows per-hour failures; dashed line is the rolling-average baseline. ' +
-            'Sustained elevation above the baseline often indicates credential-' +
-            'stuffing or a lockout storm.',
-        // Hour-bucket timechart: { _time, failures, baseline, total_count }.
-        savedSearch:
-            'Executive - Failed Logon Count (with Baseline)',
-        valueField: 'total_count',
-        sparkDataField: 'failures',
-        baselineField: 'baseline',
-        overlayLabel: 'Avg',
-        color: '#0ea5e9',
-        thresholds: { warning: 25, critical: 100, direction: 'lower_is_better' },
-        thresholdNote:
-            'Window-total across both ISE and Windows AD. The bands assume a ' +
-            'typical mid-size workforce; raise them by an order of magnitude for ' +
-            'large fleets. Sustained drift above the dashed baseline matters more ' +
-            'than the absolute count for stuffing detection.',
-        mock: { seed: 23, sparkMin: 0, sparkMax: 5, value: 1, change: 0 },
-    },
-    {
-        id: 'xdr_incidents',
-        section: 'security',
-        label: 'XDR incidents',
-        subLabel: 'Distinct Cisco XDR incident IDs',
-        description:
-            'Count of distinct Cisco XDR / SecureX incident IDs in the dispatched ' +
-            'window. Includes both real-time and summary incident sourcetypes.',
-        // Single row: { total }
-        savedSearch: 'Executive - XDR Incidents',
-        valueField: 'total',
-        // Same rationale as Threat Sources: resting state stays neutral
-        // sky; MetricItem's status palette turns the sparkline amber/
-        // red when the count crosses warning/critical thresholds.
-        color: '#0ea5e9',
-        thresholds: { warning: 5, critical: 20, direction: 'lower_is_better' },
-        thresholdNote:
-            'XDR groups related detections into a single incident ID, so even small ' +
-            'numbers matter. > 5 simultaneous open incidents typically exceeds what a ' +
-            'single SOC analyst can triage at once; > 20 is "all hands" territory.',
-        mock: { seed: 24, sparkMin: 0, sparkMax: 4, value: 2, change: 0 },
-    },
-    {
-        id: 'sec_score',
-        section: 'security',
-        label: 'Security score',
-        subLabel: 'ISE + AD auth success rate',
-        description:
-            'Authentication-success score blending ISE syslog ' +
-            '(CISE_Passed_Authentications vs CISE_Failed_Attempts) with ' +
-            'Windows AD events (4624 vs 4625). 0-100.',
-        // Single row: { score: 0..100 }
-        savedSearch: 'Executive - Security Domain Score',
-        valueField: 'score',
-        unit: '%',
-        color: '#10b981',
-        thresholds: { warning: 95, critical: 80, direction: 'higher_is_better' },
-        thresholdNote:
-            'A success-rate metric, not a posture score: 100% means every auth ' +
-            'attempt succeeded in the window. < 95% usually flags a misconfigured ' +
-            'service account, an MFA outage, or active credential-stuffing — the ' +
-            '"failed auth" tile next to this one is the natural companion drilldown.',
-        mock: { seed: 25, sparkMin: 80, sparkMax: 100, value: 98, change: 0 },
-    },
-    // Narrows XDR Incidents to severity=Critical
-    // only — answers "how many incidents need a war-room right now?"
-    // separately from the broader xdr_incidents trend.
-    {
-        id: 'xdr_critical',
-        section: 'security',
-        label: 'XDR critical',
-        subLabel: 'Severity=Critical incidents only',
-        description:
-            'Distinct Cisco XDR incident IDs at Critical severity in the ' +
-            'dispatched window. Companion to the broader "XDR incidents" tile ' +
-            'next door; this one isolates the escalation-pressure tier.',
-        // Single row: { total }
-        savedSearch: 'Overview - XDR Critical Incidents',
-        valueField: 'total',
-        color: '#dc2626',
-        thresholds: { warning: 1, critical: 5, direction: 'lower_is_better' },
-        thresholdNote:
-            'Critical XDR incidents are pre-triaged by SecureX as the tier most ' +
-            'likely to require executive escalation. > 1 already warrants war-room ' +
-            'consideration; > 5 simultaneously open exceeds the routing capacity ' +
-            'of a single SOC shift on most SecOps teams.',
-        mock: { seed: 26, sparkMin: 0, sparkMax: 2, value: 0, change: 0 },
-    },
-    {
-        id: 'dns_blocked_queries',
-        section: 'security',
-        label: 'DNS blocks',
-        subLabel: 'Unique policy-blocked queries',
-        description:
-            'Unique blocked DNS resolutions from Cisco Cloud Security / Umbrella, ' +
-            'deduplicated by source and queried domain.',
-        savedSearch: 'Security Resilience - DNS Blocked Queries',
-        valueField: 'blocked',
-        color: '#0ea5e9',
-        thresholds: { warning: 5000, critical: 50000, direction: 'lower_is_better' },
-        thresholdNote:
-            'Unique client-domain blocks, not raw DNS log lines. Sustained spikes ' +
-            'usually point to a campaign, new policy, or a noisy internal source.',
-        mock: { seed: 27, sparkMin: 0, sparkMax: 400, value: 120, change: 0 },
-    },
-    {
-        id: 'ids_ips_alerts',
-        section: 'security',
-        label: 'IDS/IPS alerts',
-        subLabel: 'Secure Firewall intrusion events',
-        description:
-            'Accelerated count of Secure Firewall intrusion events from the Cisco ' +
-            'Security data model.',
-        savedSearch: 'Security Resilience - IDS/IPS Alert Count',
-        valueField: 'count',
-        color: '#0ea5e9',
-        thresholds: { warning: 10000, critical: 100000, direction: 'lower_is_better' },
-        thresholdNote:
-            'IPS volume is environment-sensitive. Treat sudden increases or sudden ' +
-            'zeros as the actionable signal, then pivot to classifications.',
-        mock: { seed: 28, sparkMin: 0, sparkMax: 1000, value: 240, change: 0 },
-    },
-    {
-        id: 'email_threat_count',
-        section: 'security',
-        label: 'Email threats',
-        subLabel: 'AMP + spam + content scanner',
-        description:
-            'High-risk Cisco Email Security verdict count across AMP, antispam, ' +
-            'and content scanner telemetry.',
-        savedSearch: 'Security Resilience - Email Threat Count',
-        valueField: 'count',
-        color: '#0ea5e9',
-        thresholds: { warning: 1000, critical: 5000, direction: 'lower_is_better' },
-        thresholdNote:
-            'This is a blended intensity signal. Use the email breakdown drilldown ' +
-            'to determine whether AMP, spam, or content scanning drove the change.',
-        mock: { seed: 29, sparkMin: 0, sparkMax: 600, value: 80, change: 0 },
-    },
-    // ----- Building Intelligence -----
-    //
-    // The four "presence" tiles below (active devices, Wi-Fi clients,
-    // occupancy, Webex devices) deliberately have no numeric
-    // thresholds — they're trend signals against an environment-
-    // specific baseline, not pass/fail metrics. Each carries a
-    // `thresholdNote` so the operator still gets a clear answer to
-    // "what counts as good?". Building score is a composite with
-    // numeric bands.
-    {
-        id: 'active_devices',
-        section: 'building',
-        label: 'Active devices',
-        subLabel: 'Tracked across Cisco Spaces',
-        description:
-            'Total active tracked devices summed across every monitored location, ' +
-            'derived from the latest DEVICE_PRESENCE event per location in Cisco ' +
-            'Spaces. Reflects how busy the campus is right now.',
-        // Time series: { active_devices }
-        savedSearch: 'Executive - Active Devices',
-        valueField: 'active_devices',
-        color: '#10b981',
-        thresholdNote:
-            'Trend metric — no fixed cutoff. The "right" number depends on the ' +
-            'campus, day-of-week, and event calendar. Watch for sudden drops vs. ' +
-            'the same hour the prior week (likely a feed outage) or sustained ' +
-            'climbs above seasonal norm (planning signal for capacity).',
-        mock: { seed: 31, sparkMin: 30, sparkMax: 60, value: 54, change: 2600 },
-    },
-    {
-        id: 'wifi_clients',
-        section: 'building',
-        label: 'Wi-Fi clients',
-        subLabel: 'Wireless clients on APs (with baseline)',
-        description:
-            'Distinct Wi-Fi MAC addresses that associated to access points across ' +
-            'the dispatched window, taken from Cisco Spaces DEVICE_ASSOCIATION ' +
-            'ASSOCIATE events. Headline is the window-wide distinct-MAC count ' +
-            "broadcast onto every row (so the executive number is stable and " +
-            "does not drift with the latest bucket's noise); sparkline is the " +
-            'per-bucket distinct count with a rolling-average baseline overlay.',
-        // Bucketed timechart: { _time, clients, baseline, total_clients, score }.
-        // score is broadcast (= total_clients, window-wide dc(mac), the
-        // headline); clients is per-bucket (sparkline); baseline is
-        // window-avg (dashed overlay). See searchbase stanza
-        // executive_dashboard_wifi_clients for the SPL.
-        savedSearch: 'Executive - Wifi Clients',
-        valueField: 'score',
-        sparkDataField: 'clients',
-        baselineField: 'baseline',
-        overlayLabel: 'Avg',
-        thresholdNote:
-            'Trend metric — no fixed cutoff. Use this against the AP-capacity ' +
-            'baseline for the campus: a sudden drop usually means an AP cluster ' +
-            'has gone offline; a sustained climb signals it is time to revisit ' +
-            'AP density planning.',
-        mock: { seed: 32, sparkMin: 1, sparkMax: 5, value: 2, change: 0 },
-    },
-    {
-        id: 'occupancy',
-        section: 'building',
-        label: 'Occupancy',
-        subLabel: 'Occupied rooms as % of total',
-        description:
-            'Percentage of monitored rooms that have at least one person present, ' +
-            'derived from Cisco Spaces SPACE_OCCUPANCY events. 0% may indicate either ' +
-            'an empty building or a stalled feed — check the source dot.',
-        // Single row: { score: 0..100 }
-        savedSearch: 'Executive - Building Occupancy',
-        valueField: 'score',
-        unit: '%',
-        thresholdNote:
-            'Operational signal, not a pass/fail. Building managers typically ' +
-            'target 60-75% peak utilisation for healthy work patterns; sustained ' +
-            '> 85% suggests booking pressure, < 20% during business hours suggests ' +
-            'the space is underused.',
-        mock: { seed: 33, sparkMin: 0, sparkMax: 10, value: 0, change: 0 },
-    },
-    {
-        id: 'bldg_score',
-        section: 'building',
-        label: 'Building score',
-        subLabel: 'AP + presence + occupancy + comply',
-        description:
-            'Composite building-domain score: AP health (Catalyst Center) + ' +
-            'device-presence connectivity (Cisco Spaces) + room occupancy + ' +
-            'compliance pass-rate, averaged. 0-100.',
-        // Single row: { score: 0..100 }
-        savedSearch: 'Executive - Building Score',
-        valueField: 'score',
-        unit: '%',
-        color: '#10b981',
-        thresholds: { warning: 90, critical: 70, direction: 'higher_is_better' },
-        thresholdNote:
-            'Composite of four sub-scores averaged equally. A 70% headline can ' +
-            'still hide one fully-failed sub-score (e.g. compliance at 0 with ' +
-            'others at 90+). When this drops, expand each contributor on the ' +
-            'Building dashboard before reacting at a building-wide level.',
-        mock: { seed: 34, sparkMin: 70, sparkMax: 100, value: 87, change: 1 },
-    },
-    {
-        id: 'collab_devices',
-        section: 'building',
-        label: 'Webex devices',
-        subLabel: 'Distinct serials in telemetry',
-        description:
-            'Count of unique Webex collaboration endpoints reporting telemetry ' +
-            '(WEBEX_TELEMETRY events) from Cisco Spaces. Drops in this number can ' +
-            'indicate a feed issue or large-scale device offline event.',
-        // Single row: { score }
-        savedSearch: 'Executive - Collab Devices',
-        valueField: 'score',
-        color: '#0ea5e9',
-        thresholdNote:
-            'Trend metric — no fixed cutoff. The number you expect is "the count ' +
-            'of Webex endpoints you own". A drop of more than ~10% from yesterday ' +
-            'is the actionable signal — it usually means a telemetry feed has ' +
-            'stalled, not that devices were physically removed.',
-        mock: { seed: 35, sparkMin: 5, sparkMax: 50, value: 32, change: 0 },
-    },
-    // Catalyst Center AP reachability % — the
-    // obvious complement to "Wi-Fi clients" and "Active devices": if APs
-    // are unreachable, the rest of the building section is fiction.
-    {
-        id: 'ap_health',
-        section: 'building',
-        label: 'AP health',
-        subLabel: 'Reachable APs (Catalyst Center)',
-        description:
-            'Percentage of access points reporting Reachable in Catalyst Center ' +
-            'device-health snapshots. The control-plane availability metric for ' +
-            'the wireless infrastructure that backs Wi-Fi clients and presence.',
-        // Single row: { pct, total, up, down }
-        savedSearch: 'Overview - AP Health',
-        valueField: 'pct',
-        unit: '%',
-        color: '#10b981',
-        thresholds: { warning: 97, critical: 92, direction: 'higher_is_better' },
-        thresholdNote:
-            'Wireless availability ladder. ≥99% is steady-state for a healthy AP ' +
-            'fleet; 92-96% means active wireless impact (open a wireless bridge ' +
-            'call); <92% is a major outage cluster. Calibrate to your fleet — ' +
-            'some campuses normally run at 97-98% because of permanently-offline ' +
-            'spare-pool APs.',
-        mock: { seed: 36, sparkMin: 90, sparkMax: 100, value: 99, change: 0 },
-    },
-    {
-        id: 'environmental_health',
-        section: 'building',
-        label: 'Environmental health',
-        subLabel: 'Temperature + humidity index',
-        description:
-            'Percentage of environmental sensor readings inside normal temperature ' +
-            'and humidity ranges across Meraki and Cisco Spaces telemetry.',
-        savedSearch: 'Building Resilience - Environmental Health Index',
-        valueField: 'score',
-        unit: '%',
-        color: '#10b981',
-        thresholds: { warning: 75, critical: 60, direction: 'higher_is_better' },
-        thresholdNote:
-            'Facility comfort signal. Persistent drops usually mean HVAC, sensor ' +
-            'placement, or localized environmental issues rather than a network problem.',
-        mock: { seed: 37, sparkMin: 60, sparkMax: 100, value: 91, change: 0 },
-    },
-    {
-        id: 'rooms_occupied',
-        section: 'building',
-        label: 'Rooms occupied',
-        subLabel: 'ROOM spaces with presence',
-        description:
-            'Time series of the percent of room-type spaces with people present ' +
-            'from Cisco Spaces occupancy events.',
-        savedSearch: 'Building Resilience - Rooms Occupied Trend',
-        valueField: 'Rooms Occupied',
-        unit: '%',
-        color: '#0ea5e9',
-        thresholdNote:
-            'Space-utilization signal, not pass/fail. Compare this against meeting ' +
-            'room inventory and business-hour expectations before acting.',
-        mock: { seed: 38, sparkMin: 15, sparkMax: 85, value: 62, change: 0 },
-    },
-    {
-        id: 'water_leaks',
-        section: 'building',
-        label: 'Water leaks',
-        subLabel: 'Active Meraki leak detections',
-        description:
-            'Count of active Meraki sensor readings reporting water present.',
-        savedSearch: 'Building Resilience - Water Leak Detection',
-        valueField: 'leaks',
-        color: '#0ea5e9',
-        thresholds: { warning: 1, critical: 2, direction: 'lower_is_better' },
-        thresholdNote:
-            'Water is a safety-critical signal. Any positive value should be ' +
-            'validated quickly by facilities staff.',
-        mock: { seed: 39, sparkMin: 0, sparkMax: 1, value: 0, change: 0 },
-    },
-    // ----- Optional Executive Signals -----
-    //
-    // Hidden by default. The section editor can reveal this fourth
-    // section when a user wants a broader command-center rollup without
-    // replacing the three shipped domain sections.
-    {
-        id: 'executive_ux_score',
-        section: 'custom',
-        label: 'UX score',
-        subLabel: 'Client + infrastructure health',
-        description:
-            'User-experience domain score combining Catalyst Center client health ' +
-            'and infrastructure readiness.',
-        savedSearch: 'Executive - User Experience Domain Score',
-        valueField: 'score',
-        unit: '%',
-        color: '#0ea5e9',
-        thresholds: { warning: 90, critical: 70, direction: 'higher_is_better' },
-        thresholdNote:
-            'Blends client health and device readiness. Drops often need both RF ' +
-            'and infrastructure review.',
-        mock: { seed: 41, sparkMin: 70, sparkMax: 100, value: 93, change: 0 },
-    },
-    {
-        id: 'executive_it_score',
-        section: 'custom',
-        label: 'IT score',
-        subLabel: 'IT domain rollup',
-        description: 'Executive IT domain score for command-center layouts.',
-        savedSearch: 'Executive - IT Domain Score',
-        valueField: 'score',
-        unit: '%',
-        color: '#2563eb',
-        thresholds: { warning: 90, critical: 70, direction: 'higher_is_better' },
-        thresholdNote:
-            'Composite IT health. Use the default IT section for contributor-level context.',
-        mock: { seed: 42, sparkMin: 70, sparkMax: 100, value: 92, change: 0 },
-    },
-    {
-        id: 'executive_security_score',
-        section: 'custom',
-        label: 'Security score',
-        subLabel: 'Identity trust rollup',
-        description:
-            'Executive security-domain score built from ISE and Active Directory ' +
-            'authentication success rates.',
-        savedSearch: 'Executive - Security Domain Score',
-        valueField: 'score',
-        unit: '%',
-        color: '#10b981',
-        thresholds: { warning: 95, critical: 80, direction: 'higher_is_better' },
-        thresholdNote:
-            'Authentication success-rate composite. Pair with failed-auth and ' +
-            'threat-source counts when explaining movement.',
-        mock: { seed: 43, sparkMin: 80, sparkMax: 100, value: 98, change: 0 },
-    },
-    {
-        id: 'executive_building_score',
-        section: 'custom',
-        label: 'Building score',
-        subLabel: 'Facility domain rollup',
-        description:
-            'Executive building-domain score across AP health, presence, occupancy, ' +
-            'and compliance pillars.',
-        savedSearch: 'Executive - Building Domain Score',
-        valueField: 'score',
-        unit: '%',
-        color: '#10b981',
-        thresholds: { warning: 85, critical: 55, direction: 'higher_is_better' },
-        thresholdNote:
-            'Building composite. Drops should be decomposed into AP, presence, ' +
-            'occupancy, and compliance contributors.',
-        mock: { seed: 44, sparkMin: 55, sparkMax: 100, value: 87, change: 0 },
-    },
-    {
-        id: 'executive_active_clients',
-        section: 'custom',
-        label: 'Active clients',
-        subLabel: 'Catalyst endpoint count',
-        description:
-            'Active Catalyst Center clients by connection type. Useful as an ' +
-            'occupancy and capacity proxy.',
-        savedSearch: 'Executive - Active Clients',
-        valueField: 'count',
-        color: '#0ea5e9',
-        thresholdNote:
-            'Environment-specific capacity signal. Watch for sharp drops versus ' +
-            'the same business-hour baseline.',
-        mock: { seed: 45, sparkMin: 100, sparkMax: 1000, value: 420, change: 0 },
-    },
-    {
-        id: 'executive_active_alerts',
-        section: 'custom',
-        label: 'Active alerts',
-        subLabel: 'Critical ThousandEyes alerts',
-        description:
-            'Count of currently-active critical or error severity ThousandEyes alerts.',
-        savedSearch: 'Overview - Active Critical Alerts',
-        valueField: 'value',
-        color: '#0ea5e9',
-        thresholds: { warning: 1, critical: 5, direction: 'lower_is_better' },
-        thresholdNote:
-            'Pressure gauge. Any positive value deserves a quick incident review; ' +
-            'sustained growth means the issue is not clearing.',
-        mock: { seed: 46, sparkMin: 1, sparkMax: 20, value: 12, change: 0 },
-    },
-    {
-        id: 'executive_ai_defense_blocks',
-        section: 'custom',
-        label: 'AI blocks',
-        subLabel: 'Cisco AI Defense block rate',
-        description:
-            'Percent of GenAI prompts or responses denied by Cisco AI Defense policy.',
-        savedSearch: 'Security - GenAI Protection - Cisco AI Defense Block Rate',
-        valueField: 'block_pct',
-        unit: '%',
-        color: '#0ea5e9',
-        thresholds: { warning: 20, critical: 50, direction: 'lower_is_better' },
-        thresholdNote:
-            'High block rates can mean active probing or a policy/model change. ' +
-            'Review top blocked policies for context.',
-        mock: { seed: 47, sparkMin: 0, sparkMax: 30, value: 4, change: 0 },
-    },
-    {
-        id: 'executive_duo_users',
-        section: 'custom',
-        label: 'Duo users',
-        subLabel: 'Tenant snapshot users',
-        description:
-            'Latest Duo tenant user count from the tenant KPI snapshot.',
-        savedSearch: 'Identity - Duo MFA - Tenant KPI Snapshot',
-        valueField: 'Users',
-        color: '#8b5cf6',
-        thresholdNote:
-            'Inventory signal. Treat unexpected drops as a tenant, API, or parsing ' +
-            'issue until confirmed.',
-        mock: { seed: 48, sparkMin: 500, sparkMax: 5000, value: 1280, change: 0 },
-    },
-    {
-        id: 'executive_issue_pressure',
-        section: 'custom',
-        label: 'Issue pressure',
-        subLabel: 'Active Catalyst Center issues',
-        description:
-            'Active Catalyst Center issue volume with P1/P2 and footprint context.',
-        savedSearch: 'Executive - Issue Summary KPIs',
-        valueField: 'total',
-        color: '#0ea5e9',
-        thresholds: { warning: 50, critical: 250, direction: 'lower_is_better' },
-        thresholdNote:
-            'Broad issue pressure gauge. P1/P2 counts and affected-site footprint ' +
-            'matter more than total volume alone.',
-        mock: { seed: 49, sparkMin: 0, sparkMax: 200, value: 36, change: 0 },
-    },
-];
+const OVERVIEW_SECTION_IDS = new Set<SectionId>([
+    'it_health',
+    'security',
+    'building',
+    'custom',
+]);
 
-// Search-backed map footer cards. Keep these as normal KPI bindings so
-// operators can open the backing SPL and reassign each footer card from
-// the picker, just like the larger overview tiles.
-const MAP_FOOTER_KPI_CONFIG: KpiConfig[] = [
-    {
-        id: 'map_inter_site_latency',
-        label: 'Inter-site latency',
-        description:
-            'Current measured latency between the customer sites shown on the topology map. This is a path-level signal, not a repeat of the IT Health availability tiles.',
-        savedSearch: 'Overview - Inter-Site Latency (TLH <-> AUB)',
-        valueField: 'value',
-        mockValue: 'Loading...',
-        thresholdNote:
-            'Lower is better. A dash means the ThousandEyes agent-to-agent path is not reporting for the selected window; rising latency means the mapped site path deserves investigation.',
-    },
-    {
-        id: 'map_site_link_availability',
-        label: 'Site link availability',
-        description:
-            'Worst-site inter-device link availability from Catalyst Center. This complements the map by showing whether the weakest site still has its network links up.',
-        savedSearch: 'IT Critical Systems - Site Link Availability % (Worst Site)',
-        valueField: 'availability_pct',
-        unit: '%',
-        mockValue: 'Loading...',
-        thresholdNote:
-            'Higher is better. 99%+ is normal, 95-99% is watch-list, and sustained drops below 95% usually mean one site has active link loss or flapping.',
-    },
-];
+const DEFAULT_OVERVIEW_MOCK: MetricConfig['mock'] = {
+    seed: 1,
+    sparkMin: 0,
+    sparkMax: 0,
+    value: 0,
+    change: 0,
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    Boolean(value && typeof value === 'object' && !Array.isArray(value));
+
+const readOverviewString = (
+    source: Record<string, unknown>,
+    key: string,
+    maxLength = 512
+): string | undefined => {
+    const raw = source[key];
+    if (typeof raw !== 'string') return undefined;
+    const trimmed = raw.trim();
+    return trimmed.length > 0 && trimmed.length <= maxLength ? trimmed : undefined;
+};
+
+const readOverviewNumber = (
+    source: Record<string, unknown>,
+    key: string
+): number | undefined => {
+    const raw = source[key];
+    if (typeof raw === 'number') return Number.isFinite(raw) ? raw : undefined;
+    if (typeof raw !== 'string') return undefined;
+    const parsed = Number(raw.trim());
+    return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const readOverviewBoolean = (
+    source: Record<string, unknown>,
+    key: string
+): boolean | undefined => {
+    const raw = source[key];
+    if (typeof raw === 'boolean') return raw;
+    if (typeof raw !== 'string') return undefined;
+    if (/^(1|true|yes)$/i.test(raw.trim())) return true;
+    if (/^(0|false|no)$/i.test(raw.trim())) return false;
+    return undefined;
+};
+
+const readFirstSeriesColor = (
+    options: Record<string, unknown> | undefined
+): string | undefined => {
+    const seriesColors = options?.seriesColors;
+    if (!Array.isArray(seriesColors)) return undefined;
+    const first = seriesColors.find(
+        (value): value is string =>
+            typeof value === 'string' &&
+            /^#[0-9a-f]{3,8}$/i.test(value.trim())
+    );
+    return first?.trim();
+};
+
+const plainTextFromHtml = (raw: string | undefined): string | undefined => {
+    if (!raw) return undefined;
+    const text = raw
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/\s+/g, ' ')
+        .trim();
+    return text || undefined;
+};
+
+const parseOverviewSection = (raw: unknown): SectionId | undefined => {
+    if (typeof raw !== 'string') return undefined;
+    const candidate = raw.trim() as SectionId;
+    return OVERVIEW_SECTION_IDS.has(candidate) ? candidate : undefined;
+};
+
+const parseOverviewThresholds = (
+    raw: unknown,
+    fallback?: MetricThresholds
+): MetricThresholds | undefined => {
+    if (!isRecord(raw)) return fallback;
+    const warning = readOverviewNumber(raw, 'warning');
+    const critical = readOverviewNumber(raw, 'critical');
+    const directionRaw = readOverviewString(raw, 'direction', 32);
+    const direction =
+        directionRaw === 'lower_is_better' || directionRaw === 'higher_is_better'
+            ? directionRaw
+            : fallback?.direction;
+    if (warning === undefined && critical === undefined && !direction) return fallback;
+    return {
+        warning: warning ?? fallback?.warning,
+        critical: critical ?? fallback?.critical,
+        direction: direction ?? 'higher_is_better',
+    };
+};
+
+const parseOverviewMock = (
+    raw: unknown,
+    fallback?: MetricConfig['mock']
+): MetricConfig['mock'] => {
+    if (!isRecord(raw)) return fallback ?? DEFAULT_OVERVIEW_MOCK;
+    return {
+        seed: readOverviewNumber(raw, 'seed') ?? fallback?.seed ?? DEFAULT_OVERVIEW_MOCK.seed,
+        sparkMin:
+            readOverviewNumber(raw, 'sparkMin') ??
+            fallback?.sparkMin ??
+            DEFAULT_OVERVIEW_MOCK.sparkMin,
+        sparkMax:
+            readOverviewNumber(raw, 'sparkMax') ??
+            fallback?.sparkMax ??
+            DEFAULT_OVERVIEW_MOCK.sparkMax,
+        value:
+            readOverviewNumber(raw, 'value') ??
+            fallback?.value ??
+            DEFAULT_OVERVIEW_MOCK.value,
+        change:
+            readOverviewNumber(raw, 'change') ??
+            fallback?.change ??
+            DEFAULT_OVERVIEW_MOCK.change,
+    };
+};
+
+const overviewDefinitionsFromRecord = (
+    record: SearchbaseRecord
+): Record<string, unknown>[] => {
+    const raw = record.vizOptions?.overview;
+    if (Array.isArray(raw)) return raw.filter(isRecord);
+    return isRecord(raw) ? [raw] : [];
+};
+
+const buildOverviewMetricConfig = (
+    records: SearchbaseRecord[] | null
+): MetricConfig[] => {
+    if (records === null) return [];
+
+    const discovered = new Map<string, MetricConfig>();
+
+    for (const record of records) {
+        if (!record.searchName || !record.search) continue;
+        for (const definition of overviewDefinitionsFromRecord(record)) {
+            const id = readOverviewString(definition, 'tileId', 128);
+            const section = parseOverviewSection(definition.section);
+            if (!id || !section || discovered.has(id)) continue;
+
+            const description =
+                readOverviewString(definition, 'description', 4000) ??
+                plainTextFromHtml(record.explanation) ??
+                plainTextFromHtml(record.description);
+            const color =
+                readOverviewString(definition, 'color', 32) ??
+                readFirstSeriesColor(record.vizOptions);
+            const comparePeriod = readOverviewBoolean(definition, 'comparePeriod');
+
+            discovered.set(id, {
+                id,
+                section,
+                label:
+                    readOverviewString(definition, 'label', 160) ??
+                    record.searchName,
+                subLabel:
+                    readOverviewString(definition, 'subLabel', 160) ??
+                    record.subCategory ??
+                    record.category,
+                description,
+                searchbaseId: record.id,
+                savedSearch: record.searchName,
+                spl: undefined,
+                dispatchContext: record.dispatchContext,
+                valueField:
+                    readOverviewString(definition, 'valueField', 160),
+                changeField:
+                    readOverviewString(definition, 'changeField', 160),
+                displayField:
+                    readOverviewString(definition, 'displayField', 160),
+                sparkDataField:
+                    readOverviewString(definition, 'sparkDataField', 160),
+                baselineField:
+                    readOverviewString(definition, 'baselineField', 160),
+                overlayLabel:
+                    readOverviewString(definition, 'overlayLabel', 80),
+                comparePeriod,
+                unit:
+                    readOverviewString(definition, 'unit', 32),
+                color,
+                thresholds: parseOverviewThresholds(definition.thresholds),
+                thresholdNote:
+                    readOverviewString(definition, 'thresholdNote', 2000),
+                mock: parseOverviewMock(definition.mock),
+            });
+        }
+    }
+
+    return Array.from(discovered.values());
+};
+
+const MAP_FOOTER_SLOTS = ['primary', 'secondary'] as const;
+type MapFooterSlot = (typeof MAP_FOOTER_SLOTS)[number];
+
+const DISABLED_MAP_FOOTER_KPI_CONFIG: KpiConfig = {
+    id: '__map_footer_unavailable',
+    label: '',
+    valueField: 'value',
+    mockValue: '',
+};
+
+const isMapFooterSlot = (value: unknown): value is MapFooterSlot =>
+    typeof value === 'string' &&
+    (MAP_FOOTER_SLOTS as readonly string[]).includes(value.trim());
+
+const buildOverviewMapFooterConfig = (
+    records: SearchbaseRecord[] | null
+): KpiConfig[] => {
+    if (records === null) return [];
+
+    const discovered = new Map<MapFooterSlot, KpiConfig>();
+
+    for (const record of records) {
+        if (!record.searchName || !record.search) continue;
+        const raw = record.vizOptions?.mapFooter;
+        if (!isRecord(raw)) continue;
+        const rawSlot = typeof raw.slot === 'string' ? raw.slot.trim() : '';
+        if (!isMapFooterSlot(rawSlot)) continue;
+        const slot = rawSlot;
+        if (discovered.has(slot)) continue;
+
+        const id = readOverviewString(raw, 'id', 128) ?? `map_${slot}`;
+        discovered.set(slot, {
+            id,
+            searchbaseId: record.id,
+            savedSearch: record.searchName,
+            spl: undefined,
+            dispatchContext: record.dispatchContext,
+            label:
+                readOverviewString(raw, 'label', 160) ??
+                record.searchName,
+            description:
+                readOverviewString(raw, 'description', 2000) ??
+                plainTextFromHtml(record.explanation) ??
+                plainTextFromHtml(record.description),
+            valueField:
+                readOverviewString(raw, 'valueField', 160),
+            unit:
+                readOverviewString(raw, 'unit', 32),
+            mockValue:
+                readOverviewString(raw, 'mockValue', 120) ??
+                'Loading...',
+            thresholdNote:
+                readOverviewString(raw, 'thresholdNote', 2000),
+        });
+    }
+
+    return MAP_FOOTER_SLOTS.map((slot) => discovered.get(slot))
+        .filter((item): item is KpiConfig => Boolean(item));
+};
 
 // =============================================================================
 // Section meta (titles, drilldown hrefs)
@@ -1174,15 +612,10 @@ const SECTION_META: Record<
     },
     custom: {
         title: DEFAULT_CUSTOMER_TOPOLOGY_SECTION_TITLES.custom,
-        linkText: 'Open executive signals',
-        href: 'home_launchpad_v1',
+        linkText: 'Open dashboard builder',
+        href: 'dashboardbuilder',
     },
 };
-
-// Leave blank until a deployment wires a saved search returning
-// `_time, severity, source, message`. When blank, the incident ticker
-// stays hidden rather than showing customer-facing placeholder copy.
-const OVERVIEW_INCIDENT_TICKER_SAVED_SEARCH: string = '';
 
 interface AppPriorityDrilldown {
     viewName: string;
@@ -1332,14 +765,20 @@ const splunkViewAppUrl = (
     return `${baseUrl}?${params.toString()}`;
 };
 
-const splunkSearchAppUrl = (spl: string, range: TimeRange): string => {
-    // Open the stock Splunk search bar but *under this app's namespace*
-    // (`/app/splunk-cisco-dashboards/search`). The platform `search`
-    // view is exported system-wide, so navigating to /app/<any-app>/search
-    // renders the standard Search & Reporting UI while dispatching in
-    // the current app's namespace — meaning `| savedsearch "..."`
-    // references to stanzas defined in this app resolve correctly
-    // without the app needing to be exported globally.
+const SEARCH_APP_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_\-.]{0,127}$/;
+
+const resolveSearchAppName = (appName?: string): string =>
+    appName && SEARCH_APP_NAME_PATTERN.test(appName) ? appName : APP_NAME;
+
+const splunkSearchAppUrl = (
+    spl: string,
+    range: TimeRange,
+    appName?: string
+): string => {
+    // Open the stock Splunk search bar under the same app namespace used
+    // for dispatch. The platform `search` view is exported system-wide,
+    // so navigating to /app/<any-app>/search renders Search & Reporting
+    // while resolving macros/data models in that app context.
     const path = typeof window !== 'undefined' ? window.location.pathname : '/en-US';
     const localeMatch = path.match(/^\/([a-z]{2}-[A-Z]{2})\//);
     const locale = localeMatch ? localeMatch[1] : 'en-US';
@@ -1348,7 +787,7 @@ const splunkSearchAppUrl = (spl: string, range: TimeRange): string => {
         earliest: range.earliest,
         latest: range.latest,
     });
-    return `/${locale}/app/${APP_NAME}/search?${params.toString()}`;
+    return `/${locale}/app/${resolveSearchAppName(appName)}/search?${params.toString()}`;
 };
 
 type MetricDetailTableColumnKind = 'text' | 'status' | 'metric';
@@ -1367,6 +806,7 @@ interface MetricDetailTableConfig {
     buttonTitle: string;
     subtitle: (range: TimeRange) => string;
     spl: string;
+    dispatchContext?: string;
     tag: string;
     rowKeyField: string;
     emptyMessage: string;
@@ -1527,6 +967,7 @@ const buildMetricDetailTableConfig = (
         subtitle: (range) =>
             interpolateDetailSubtitle(subtitleTemplate, source, detail, range),
         spl: detail.search,
+        dispatchContext: detail.dispatchContext,
         tag,
         rowKeyField:
             readDetailStringOption(options, 'rowKeyField') ?? columns[0]?.field ?? '',
@@ -1541,6 +982,23 @@ const buildMetricDetailTableConfig = (
         unavailableStatus: readDetailStringOption(options, 'unavailableStatus'),
         columns,
     };
+};
+
+const resolveSearchbaseRecordForConfig = (
+    cfg:
+        | Pick<MetricConfig, 'searchbaseId' | 'savedSearch'>
+        | Pick<KpiConfig, 'searchbaseId' | 'savedSearch'>,
+    searchbaseById: Map<string, SearchbaseRecord> | null | undefined,
+    searchbaseByName: Map<string, SearchbaseRecord> | null | undefined
+): SearchbaseRecord | null => {
+    if (cfg.searchbaseId && searchbaseById) {
+        const byId = searchbaseById.get(cfg.searchbaseId);
+        if (byId) return byId;
+    }
+    if (cfg.savedSearch && searchbaseByName) {
+        return searchbaseByName.get(cfg.savedSearch) ?? null;
+    }
+    return null;
 };
 
 // =============================================================================
@@ -1584,133 +1042,26 @@ interface MetricCardProps {
      * preview, and the drilldown in lockstep.
      */
     searchbaseByName: Map<string, SearchbaseRecord> | null;
+    /** Same catalogue keyed by searchbase stanza id. Factory tiles resolve by id. */
+    searchbaseById: Map<string, SearchbaseRecord> | null;
 }
 
 /**
- * Returns a cloned MetricConfig with user picker overrides merged in.
+ * Returns a cloned MetricConfig with the current viewer's *display*
+ * preferences merged in (chart style, chrome-hiding toggles). This is
+ * intentionally a small function now.
  *
- * Only overridable fields are touched (search binding, value
- * field, label, description, thresholds). Everything else — mock
- * fallback, section, colour — stays put so the visual identity
- * stays consistent with the static config.
- *
- * `valueField` does NOT fall back to `cfg.valueField` when an override
- * is in play. When the user binds a different searchbase entry, the
- * original tile's field name almost certainly doesn't exist in the
- * new search's output — carrying it forward used to make `useMetric`
- * read undefined values, filter to an empty series, and silently fall
- * back to the static mock (the "headline didn't change after a picker
- * swap" bug). When `override.valueField` is undefined, `useMetric`
- * auto-detects from the live result rows.
- *
- * Thresholds (Build 97): each of `thresholdWarning` /
- * `thresholdCritical` / `thresholdDirection` is independently
- * optional. When set, the override field replaces the static
- * default; when undefined, the static default carries through. This
- * means a partial override (e.g. only `thresholdWarning`) keeps the
- * other two threshold fields anchored to the shipped values, which
- * is exactly what users want when they want to "tweak the warning
- * point but leave critical alone". The merged `MetricThresholds`
- * tuple is fed to `computeStatus` and `deriveThresholdLines` so the
- * tile colour, the trend-arrow tint, the sparkline stroke, and the
- * THRESHOLDS rows in the per-tile info popover all stay in lockstep
- * — there's still exactly one source of truth.
+ * Search binding, value field, label, and thresholds used to be
+ * merged here too, from a per-user localStorage override. They moved
+ * to admin-controlled `searchbase.conf` (`searchbaseTileConfigService`)
+ * so every viewer sees the same binding/label/thresholds — which
+ * means `cfg` (built straight from the searchbase catalogue) is
+ * already the effective value for those fields, with no client-side
+ * merge needed. `applyOverride` only has display taste left to apply.
  */
-const mergeThresholds = (
-    base: MetricThresholds | undefined,
-    override: MetricOverride
-): MetricThresholds | undefined => {
-    const hasOverride =
-        override.thresholdWarning !== undefined ||
-        override.thresholdCritical !== undefined ||
-        override.thresholdDirection !== undefined;
-    if (!hasOverride) return base;
-    return {
-        warning: override.thresholdWarning ?? base?.warning,
-        critical: override.thresholdCritical ?? base?.critical,
-        // Direction is required on the type even when warning/critical
-        // are both undefined. Fall back to `higher_is_better` if the
-        // tile shipped without thresholds at all so the override path
-        // produces a valid `MetricThresholds` shape rather than a
-        // partial that breaks `computeStatus`.
-        direction: override.thresholdDirection ?? base?.direction ?? 'higher_is_better',
-    };
-};
-
 const applyOverride = (cfg: MetricConfig, override?: MetricOverride): MetricConfig => {
     if (!override) return cfg;
-    // Detect "binding-swap" overrides vs. "tweak-only" overrides
-    // (Build 1188.1).
-    //
-    // Originally `applyOverride` assumed every override was a
-    // saved-search swap and aggressively blanked the original
-    // `subLabel` / `unit` / `spl` / mock-fallback so the prior
-    // tile's chrome wouldn't decorate a now-different headline.
-    // That assumption broke once Build 1174 introduced
-    // viz-only overrides (`vizOverride` and threshold tweaks
-    // without changing the binding): the picker was writing
-    // `savedSearch: <same as cfg.savedSearch>` because the
-    // payload always carries it, but `applyOverride` couldn't
-    // tell the difference and still nuked the original tile's
-    // mock-fallback. The chart promptly went blank for any
-    // tile whose searchbase entry returned 0 rows, because the
-    // mock series that had been painting the sparkline was
-    // suppressed (Alan flagged on 2026-05-18: "it works only
-    // with the viz type set in searchbase.conf, changing to
-    // anything is broken").
-    //
-    // Heuristic: when `override.savedSearch` matches the static
-    // `cfg.savedSearch`, the user explicitly kept the binding
-    // (or never changed it). In that case keep the original
-    // tile's chrome — don't drop `spl` (the static SPL is what
-    // the binding *means*), don't blank `subLabel`/`unit`, and
-    // don't suppress the mock fallback. Apply only the genuinely
-    // user-set fields (label / description / threshold / valueField
-    // / vizOverride). When the saved searches differ, fall through
-    // to the historical "binding swap" behaviour so a different
-    // search no longer carries the prior tile's identity.
-    const isBindingSwap = override.savedSearch !== cfg.savedSearch;
-    if (!isBindingSwap) {
-        return {
-            ...cfg,
-            // Apply user-set overrides only when they have a value.
-            // `valueField` is special: undefined here means "use
-            // auto-detect", which is a legitimate user choice on
-            // tweak-only overrides too, so we still set it through
-            // (the picker carries the static cfg's valueField when
-            // the user hasn't changed it, so this rarely actually
-            // changes anything in practice).
-            valueField: override.valueField ?? cfg.valueField,
-            label: override.label ?? cfg.label,
-            description: override.description ?? cfg.description,
-            thresholds: mergeThresholds(cfg.thresholds, override),
-        };
-    }
-    return {
-        ...cfg,
-        savedSearch: override.savedSearch,
-        spl: undefined,
-        valueField: override.valueField,
-        label: override.label ?? cfg.label,
-        description: override.description ?? cfg.description,
-        thresholds: mergeThresholds(cfg.thresholds, override),
-        // Blank these when the user binds a different search. The
-        // original tile's `subLabel` (e.g. "Catalyst compliance pass
-        // rate") and `unit` (e.g. "%") have no business decorating a
-        // headline produced by an unrelated search — leaving them in
-        // is what made every picker swap look like "the search didn't
-        // change" even though it had: the user-visible chrome belonged
-        // to the prior metric.
-        subLabel: '',
-        unit: '',
-        // Flip the no-data behaviour: a tile bound by the user must
-        // never silently re-render the original tile's hardcoded mock
-        // value when its new SPL returns nothing on this Splunk env —
-        // that's the "I picked a new search but the number didn't
-        // change" bug. With this flag, useMetric emits a NaN sentinel
-        // so MetricItem renders "—" instead of falling back to mock.
-        suppressMockOnEmpty: true,
-    };
+    return cfg;
 };
 
 const SPARKLINE_VIZ_OVERRIDES = new Set<MetricVizOverride>([
@@ -1784,6 +1135,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
     onOpenDetailTable,
     searchbaseDrilldowns,
     searchbaseByName,
+    searchbaseById,
 }) => {
     const effective = useMemo(() => applyOverride(cfg, override), [cfg, override]);
 
@@ -1797,34 +1149,54 @@ const MetricCard: React.FC<MetricCardProps> = ({
     // the "Open in Search" drilldown opens. This keeps everything the
     // executive interacts with in lock-step.
     //
-    // While `searchbaseByName === null` (still loading), we defer the
+    // While the searchbase maps are `null` (still loading), we defer the
     // dispatch by stripping spl + savedSearch — useMetric short-circuits
     // to mock and waits. That avoids a "ghost dispatch" that fires
     // compatibility binding on first paint and gets superseded a
     // second later by the real searchbase SPL (double network round-trip).
     //
-    // When a compatibility dependency has no matching searchbase
-    // entry, we fall back to the configured binding.
+    // If a binding no longer exists in searchbase.conf, do not fall
+    // back to savedsearch-command indirection. The overview's shipped
+    // tiles must be searchbase-backed only; a missing stanza should
+    // render as demo/empty state until the binding is corrected.
     const dispatchedConfig = useMemo<typeof effective>(() => {
-        if (!effective.savedSearch) return effective;
-        if (searchbaseByName === null || searchbaseByName === undefined) {
+        if (!effective.savedSearch && !effective.searchbaseId) return effective;
+        if (
+            searchbaseByName === null ||
+            searchbaseByName === undefined ||
+            searchbaseById === null ||
+            searchbaseById === undefined
+        ) {
             return { ...effective, savedSearch: undefined, spl: undefined };
         }
-        const sb = searchbaseByName.get(effective.savedSearch);
+        const sb = resolveSearchbaseRecordForConfig(
+            effective,
+            searchbaseById,
+            searchbaseByName
+        );
         if (sb && sb.search) {
-            return { ...effective, spl: sb.search, savedSearch: undefined };
+            return {
+                ...effective,
+                spl: sb.search,
+                savedSearch: undefined,
+                dispatchContext: sb.dispatchContext,
+            };
         }
-        return effective;
-    }, [effective, searchbaseByName]);
+        return { ...effective, savedSearch: undefined, spl: undefined };
+    }, [effective, searchbaseById, searchbaseByName]);
 
     // Resolve the conf record (if any) so we can pull viz hints from it.
     // The picker preview, drilldown, and tile renderer must all agree
-    // on which entry is in play — we read the same `effective.savedSearch`
-    // → `searchbaseByName` lookup the dispatch logic above already does.
+    // on which entry is in play — we use the same id/name resolution
+    // the dispatch logic above already does.
     const sbRecord = useMemo(() => {
-        if (!effective.savedSearch || !searchbaseByName) return null;
-        return searchbaseByName.get(effective.savedSearch) ?? null;
-    }, [effective.savedSearch, searchbaseByName]);
+        if (!effective.savedSearch && !effective.searchbaseId) return null;
+        return resolveSearchbaseRecordForConfig(
+            effective,
+            searchbaseById,
+            searchbaseByName
+        );
+    }, [effective, searchbaseById, searchbaseByName]);
 
     const detailTableConfig = useMemo(
         () =>
@@ -2098,16 +1470,20 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
     }, [effective.id, result.status, onStatus]);
 
     // Drilldown SPL — what we open in Splunk Search when the user
-    // clicks the "open in search" icon or the sparkline. Always
-    // mirrors what `useMetric` dispatched (`result.spl`), so the click
-    // and the runtime are in sync.
-    const drilldownSpl = result.spl;
+    // clicks the "open in search" icon. Prefer the resolved searchbase
+    // SPL so the action remains available even when the result set is
+    // empty, mocked, or still loading.
+    const drilldownSpl = dispatchedConfig.spl ?? result.spl;
 
     const handleClick = useCallback(() => {
         if (!drilldownSpl) return;
-        const url = splunkSearchAppUrl(drilldownSpl, range);
+        const url = splunkSearchAppUrl(
+            drilldownSpl,
+            range,
+            dispatchedConfig.dispatchContext
+        );
         if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener,noreferrer');
-    }, [drilldownSpl, range]);
+    }, [dispatchedConfig.dispatchContext, drilldownSpl, range]);
 
     // Threshold rows are derived from the same `MetricThresholds` the
     // runtime uses to colour the headline (`computeStatus`), so the
@@ -2115,7 +1491,8 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
     // ("%", "ms", etc.) is appended verbatim. For tiles whose unit
     // doesn't apply to the threshold (e.g. `critical_website_availability`
     // headline is "X of Y" but the threshold is on a percentage),
-    // `thresholdNote` clarifies — see METRIC_CONFIG.
+    // `thresholdNote` clarifies; factory values come from searchbase.conf
+    // `viz_options.overview`.
     const thresholdLines = useMemo(
         () => deriveThresholdLines(effective.thresholds, effective.unit),
         [effective.thresholds, effective.unit]
@@ -2232,12 +1609,16 @@ const TableCardLeaf: React.FC<CommonLeafProps> = ({
         onStatus(effective.id, 'unknown');
     }, [effective.id, onStatus]);
 
-    const drilldownSpl = result.spl;
+    const drilldownSpl = dispatchedConfig.spl ?? result.spl;
     const handleClick = useCallback(() => {
         if (!drilldownSpl) return;
-        const url = splunkSearchAppUrl(drilldownSpl, range);
+        const url = splunkSearchAppUrl(
+            drilldownSpl,
+            range,
+            dispatchedConfig.dispatchContext
+        );
         if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener,noreferrer');
-    }, [drilldownSpl, range]);
+    }, [dispatchedConfig.dispatchContext, drilldownSpl, range]);
 
     return (
         <TableTile
@@ -2290,12 +1671,16 @@ const BarBreakdownCardLeaf: React.FC<CommonLeafProps> = ({
         onStatus(effective.id, 'unknown');
     }, [effective.id, onStatus]);
 
-    const drilldownSpl = result.spl;
+    const drilldownSpl = dispatchedConfig.spl ?? result.spl;
     const handleClick = useCallback(() => {
         if (!drilldownSpl) return;
-        const url = splunkSearchAppUrl(drilldownSpl, range);
+        const url = splunkSearchAppUrl(
+            drilldownSpl,
+            range,
+            dispatchedConfig.dispatchContext
+        );
         if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener,noreferrer');
-    }, [drilldownSpl, range]);
+    }, [dispatchedConfig.dispatchContext, drilldownSpl, range]);
 
     return (
         <BarBreakdownTile
@@ -2347,12 +1732,16 @@ const PieCardLeaf: React.FC<PieCardLeafProps> = ({
         onStatus(effective.id, 'unknown');
     }, [effective.id, onStatus]);
 
-    const drilldownSpl = result.spl;
+    const drilldownSpl = dispatchedConfig.spl ?? result.spl;
     const handleClick = useCallback(() => {
         if (!drilldownSpl) return;
-        const url = splunkSearchAppUrl(drilldownSpl, range);
+        const url = splunkSearchAppUrl(
+            drilldownSpl,
+            range,
+            dispatchedConfig.dispatchContext
+        );
         if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener,noreferrer');
-    }, [drilldownSpl, range]);
+    }, [dispatchedConfig.dispatchContext, drilldownSpl, range]);
 
     return (
         <PieTile
@@ -2409,12 +1798,16 @@ const ScalarGaugeCardLeaf: React.FC<ScalarGaugeCardLeafProps> = ({
         onStatus(effective.id, result.status);
     }, [effective.id, result.status, onStatus]);
 
-    const drilldownSpl = result.spl;
+    const drilldownSpl = dispatchedConfig.spl ?? result.spl;
     const handleClick = useCallback(() => {
         if (!drilldownSpl) return;
-        const url = splunkSearchAppUrl(drilldownSpl, range);
+        const url = splunkSearchAppUrl(
+            drilldownSpl,
+            range,
+            dispatchedConfig.dispatchContext
+        );
         if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener,noreferrer');
-    }, [drilldownSpl, range]);
+    }, [dispatchedConfig.dispatchContext, drilldownSpl, range]);
 
     const tileColor = useMemo(
         () => firstSeriesColorFromVizOptions(sbRecord?.vizOptions, effective.color),
@@ -2530,7 +1923,6 @@ const OverviewPage: React.FC = () => {
     );
     const [selectedPriorityDrilldownView, setSelectedPriorityDrilldownView] =
         useState<string>(readPriorityDrilldownView);
-    const configuredIncidentTickerSearch = OVERVIEW_INCIDENT_TICKER_SAVED_SEARCH.trim();
     const selectedPriorityDrilldown = useMemo(
         () => getPriorityDrilldown(selectedPriorityDrilldownView),
         [selectedPriorityDrilldownView]
@@ -2582,35 +1974,153 @@ const OverviewPage: React.FC = () => {
         resetAll: resetAllSectionLayout,
     } = usePersistedSectionLayout();
 
+    // ------------------------------ Searchbase metadata ------------------------------
+    // Loaded once at page mount and shared across the overview runtime.
+    // `viz_options.overview` defines the factory tile catalogue; the
+    // same record supplies literal SPL, friendly `search_name`, and
+    // `dispatch_context`, so the tile browser, runtime dispatch, and
+    // Open-in-Search all resolve through one central source of truth.
+    //
+    // `null` is the loading sentinel — tiles defer dispatch until Splunk
+    // returns the conf records.
+    const [searchbaseRecords, setSearchbaseRecords] = useState<
+        SearchbaseRecord[] | null
+    >(null);
+    const [searchbaseByName, setSearchbaseByName] = useState<
+        Map<string, SearchbaseRecord> | null
+    >(null);
+    const [searchbaseById, setSearchbaseById] = useState<
+        Map<string, SearchbaseRecord> | null
+    >(null);
+
+    // Bumped after an admin saves a Thresholds / Data Mapping /
+    // Drilldown change (`searchbaseTileConfigService`) so the catalogue
+    // re-fetches and the new admin-set values show up without a full
+    // page reload. `saveFactoryTileConfig` already clears the
+    // in-memory cache in `searchbaseCatalogue.ts`; this token just
+    // re-runs the effect below to actually re-fetch.
+    const [searchbaseRefreshToken, setSearchbaseRefreshToken] = useState(0);
+
+    // Runtime dispatch intentionally includes `search_hidden = 1`
+    // stanzas. Factory tiles and support drilldowns can be hidden from
+    // pickers while still being valid runtime bindings.
+    useEffect(() => {
+        let cancelled = false;
+        getSearchbaseCatalogue({ includeHidden: true })
+            .then((list) => {
+                if (cancelled) return;
+                const byName = new Map<string, SearchbaseRecord>();
+                const byId = new Map<string, SearchbaseRecord>();
+                for (const entry of list) {
+                    if (entry.searchName) byName.set(entry.searchName, entry);
+                    if (entry.id) byId.set(entry.id, entry);
+                }
+                setSearchbaseRecords(list);
+                setSearchbaseByName(byName);
+                setSearchbaseById(byId);
+            })
+            .catch(() => {
+                if (cancelled) return;
+                setSearchbaseRecords([]);
+                setSearchbaseByName(new Map());
+                setSearchbaseById(new Map());
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [searchbaseRefreshToken]);
+
+    const metricConfig = useMemo(
+        () => buildOverviewMetricConfig(searchbaseRecords),
+        [searchbaseRecords]
+    );
+    const mapFooterKpiConfig = useMemo(
+        () => buildOverviewMapFooterConfig(searchbaseRecords),
+        [searchbaseRecords]
+    );
+
+    // ------------------------------ Shared factory tile layout ------------------------------
+    //
+    // The searchbase overview metadata is the full tile catalogue. This
+    // app-level config controls only the shared factory order and visible
+    // count for each section; it never carries search bindings.
+    const [overviewFactoryTiles, setOverviewFactoryTiles] =
+        useState<OverviewFactoryTilesConfig>({});
+    const [factoryDefaultsStatus, setFactoryDefaultsStatus] = useState<
+        'idle' | 'saving' | 'saved' | 'error'
+    >('idle');
+
+    useEffect(() => {
+        let cancelled = false;
+        loadOverviewFactoryTiles()
+            .then((config) => {
+                if (cancelled) return;
+                setOverviewFactoryTiles(config);
+            })
+            .catch((error) => {
+                if (cancelled) return;
+                // Keep Overview usable even if the optional shared
+                // defaults config is unavailable; searchbase overview
+                // metadata still controls the tile roster.
+                console.warn('[overview] factory tile defaults unavailable', error);
+                setOverviewFactoryTiles({});
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    const factoryTileCountDefaults = useMemo(() => {
+        const out: Partial<Record<SectionId, number>> = {};
+        for (const section of availableSections) {
+            const count = overviewFactoryTiles[section]?.visibleCount;
+            if (typeof count === 'number' && Number.isFinite(count)) {
+                out[section] = count;
+            }
+        }
+        return out;
+    }, [availableSections, overviewFactoryTiles]);
+
+    const getFactoryTileOrder = useCallback(
+        (section: SectionId, sectionMetrics: MetricConfig[]): string[] => {
+            const canonicalIds = sectionMetrics.map((metric) => metric.id);
+            const configuredIds = overviewFactoryTiles[section]?.tiles ?? [];
+            if (configuredIds.length === 0) return canonicalIds;
+
+            const canonicalSet = new Set(canonicalIds);
+            const seen = new Set<string>();
+            const ordered: string[] = [];
+            for (const id of configuredIds) {
+                if (!canonicalSet.has(id) || seen.has(id)) continue;
+                seen.add(id);
+                ordered.push(id);
+            }
+            for (const id of canonicalIds) {
+                if (seen.has(id)) continue;
+                ordered.push(id);
+            }
+            return ordered;
+        },
+        [overviewFactoryTiles]
+    );
+
     // ------------------------------ Section tile-count preference ------------------------------
     //
     // Per-user, per-section "how many tiles do I want visible". The
     // user dials it via the small `−  N  +` pill on each section
-    // header. Trailing tiles (from the bottom of METRIC_CONFIG for
+    // header. Trailing tiles (from the bottom of the searchbase-backed catalogue for
     // that section) are the ones that hide first when narrowing —
     // picker overrides on hidden tiles are NOT cleared, so a user
     // who customises tile #5, dials down to 3, then back up to 5,
     // gets their customisation back unchanged.
     //
-    // Bounds: 3..9 with per-section defaults. Cap is 9 so every
-    // shipped section can expose the full factory catalogue while
-    // still booting at a tight three-tile executive summary.
-    //
-    // *Default* count is 3 across every section (Build 83). The exec
-    // view boots with a tight, three-headline-per-row layout that
-    // fits cleanly into the new 2/3-tiles / 1/3-map split. Operators
-    // who want more breadth dial up via the `−  N  +` pill on each
-    // section header (cap is 9).
-    //
-    // History: earlier revisions defaulted to 3 (Alan's original
-    // "show me the three I asked for"), then bumped to 6 on
-    // 2026-05-12 because the right-side map fought for horizontal
-    // width and the wider tile column looked empty at 3 tiles. With
-    // Build 83's 2/3-tile column the visual balance flips back —
-    // 3 tiles fill the row cleanly without collisions, and 6 starts
-    // truncating headlines at 1280px. Returning users keep whatever
-    // count they had configured because the per-section preference
-    // is keyed off localStorage.
+    // Bounds: 3..9 with per-section defaults from
+    // overview_factory_tiles.conf. The packaged baseline currently
+    // exposes nine tiles per section; operators can save a different
+    // shared default from the picker footer, and individual users can
+    // still dial the visible count up/down with the section pill.
+    // Returning users keep whatever count they had configured because
+    // the per-section preference is keyed off localStorage.
     //
     // Declared up here (before the aggregate status block) because
     // the HealthBadge filter below needs to know which tiles are
@@ -2623,7 +2133,7 @@ const OverviewPage: React.FC = () => {
     } = usePersistedSectionTileCounts({
         minCount: 3,
         maxCount: 9,
-        defaultCount: {},
+        defaultCount: factoryTileCountDefaults,
         fallbackDefault: 3,
     });
 
@@ -2653,7 +2163,7 @@ const OverviewPage: React.FC = () => {
     // over which tiles appear and in what order.
     //
     // `getOrder(section, canonicalIds)` reconciles the persisted
-    // order against METRIC_CONFIG on every read — renamed/removed
+    // order against the searchbase-backed catalogue on every read — renamed/removed
     // tiles drop out, new tiles are appended at the end so they
     // can't bump the user's chosen top tiles out of view when a
     // release ships.
@@ -2701,15 +2211,20 @@ const OverviewPage: React.FC = () => {
             // tile dragged into the visible window also gets its
             // status counted in the aggregate, and a tile dragged
             // out is dropped immediately.
-            const canonicalIds = METRIC_CONFIG.filter((m) => m.section === section).map(
-                (m) => m.id
-            );
+            const sectionMetrics = metricConfig.filter((m) => m.section === section);
+            const canonicalIds = getFactoryTileOrder(section, sectionMetrics);
             const orderedIds = getSectionTileOrder(section, canonicalIds);
             const visible = orderedIds.slice(0, sectionTileCounts[section]);
             for (const id of visible) out.add(id);
         }
         return out;
-    }, [visibleSections, sectionTileCounts, getSectionTileOrder]);
+    }, [
+        visibleSections,
+        sectionTileCounts,
+        metricConfig,
+        getFactoryTileOrder,
+        getSectionTileOrder,
+    ]);
 
     const statusList = useMemo(
         () =>
@@ -2721,52 +2236,6 @@ const OverviewPage: React.FC = () => {
 
     // ------------------------------ Help overlay ------------------------------
     const [helpOpen, setHelpOpen] = useState(false);
-
-    // ------------------------------ Searchbase metadata ------------------------------
-    // Loaded once at page mount and shared across all metric tiles via
-    // a Map keyed by `search_name`. Drives the *runtime dispatch* of
-    // each metric tile. When a tile's effective binding matches
-    // an entry, we run that entry's literal SPL instead of the
-    // `| savedsearch "..."` indirection. The drilldown / hover preview
-    // / picker all read from the same SPL, so they're guaranteed to
-    // agree with what's actually executing.
-    //
-    // `null` is the loading sentinel — tiles defer their dispatch
-    // until the catalogue resolves so we don't fire a ghost
-    // compatibility request that gets superseded a moment later.
-    // On fetch failure we set an empty Map so tiles fall back to the
-    // configured dispatch path (still functional, just less
-    // executive-friendly drilldowns).
-    const [searchbaseByName, setSearchbaseByName] = useState<
-        Map<string, SearchbaseRecord> | null
-    >(null);
-    // Runtime dispatch intentionally includes `search_hidden = 1`
-    // stanzas. A few factory tiles bind to hidden support searches in
-    // `searchbase.conf`; if those are omitted here, the tile falls
-    // back to `| savedsearch "..."` and Splunk returns 400 because
-    // the hidden searchbase stanza is not a savedsearches.conf entry.
-    //
-    // UI browsers/pickers still fetch the default visible-only
-    // catalogue below so hidden support stanzas never surface as
-    // selectable KPI options.
-    useEffect(() => {
-        let cancelled = false;
-        getSearchbaseCatalogue({ includeHidden: true })
-            .then((list) => {
-                if (cancelled) return;
-                const map = new Map<string, SearchbaseRecord>();
-                for (const entry of list) {
-                    if (entry.searchName) map.set(entry.searchName, entry);
-                }
-                setSearchbaseByName(map);
-            })
-            .catch(() => {
-                if (!cancelled) setSearchbaseByName(new Map());
-            });
-        return () => {
-            cancelled = true;
-        };
-    }, []);
 
     const [visibleSearchbaseCatalogue, setVisibleSearchbaseCatalogue] = useState<
         SearchbaseRecord[] | null
@@ -2922,10 +2391,34 @@ const OverviewPage: React.FC = () => {
             // persist it. Mirrors the split-percentage handling.
         }
     }, [mapPosition]);
+    const MAP_VISIBILITY_KEY = 'scd_overview_map_visible';
+    const MAP_VISIBLE_DEFAULT = true;
+    const [mapVisible, setMapVisible] = useState<boolean>(() => {
+        if (typeof window === 'undefined') return MAP_VISIBLE_DEFAULT;
+        try {
+            const saved = window.localStorage.getItem(MAP_VISIBILITY_KEY);
+            return saved === null ? MAP_VISIBLE_DEFAULT : saved !== 'false';
+        } catch {
+            return MAP_VISIBLE_DEFAULT;
+        }
+    });
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        try {
+            window.localStorage.setItem(MAP_VISIBILITY_KEY, String(mapVisible));
+        } catch {
+            // localStorage may be disabled; the toggle still applies
+            // for the current session.
+        }
+    }, [MAP_VISIBILITY_KEY, mapVisible]);
+    const toggleMapVisibility = useCallback(() => {
+        setMapVisible((visible) => !visible);
+    }, []);
+    const activeMapPosition: MapPosition | 'hidden' = mapVisible ? mapPosition : 'hidden';
     // Convenience flag for the drag / keyboard handlers and the
     // splitter styling: `right` mode drags on the X axis, `below` /
     // `above` modes drag on the Y axis.
-    const isVerticalSplit = mapPosition !== 'right';
+    const isVerticalSplit = mapVisible && mapPosition !== 'right';
 
     // ------------------------------ Layout split (tiles ↔ map) ------------------------------
     // Percentage of the container allocated to the tile column,
@@ -3113,7 +2606,7 @@ const OverviewPage: React.FC = () => {
     const firstVisibleSectionMinHeight = useMemo(() => {
         const section = visibleSections[0];
         if (!section) return verticalMetricsMinHeight;
-        const sectionMetricCount = METRIC_CONFIG.filter(
+        const sectionMetricCount = metricConfig.filter(
             (metric) => metric.section === section
         ).length;
         const visibleCount = Math.min(
@@ -3143,6 +2636,7 @@ const OverviewPage: React.FC = () => {
         sectionHeights,
         sectionTileBounds.maxCount,
         sectionTileCounts,
+        metricConfig,
         verticalMetricsMinHeight,
         visibleSections,
     ]);
@@ -3291,20 +2785,16 @@ const OverviewPage: React.FC = () => {
             color: cfg.color,
             thresholds: cfg.thresholds,
         });
+        // Search binding is admin-controlled now, so `cfg` is already
+        // the effective value — no override to layer on top.
         const map = new Map<string, SignalTickerMetricDefaults>();
-        for (const cfg of METRIC_CONFIG) {
+        for (const cfg of metricConfig) {
             if (cfg.savedSearch) map.set(cfg.savedSearch, toDefault(cfg));
-            const effective = applyOverride(cfg, overrides[cfg.id]);
-            if (effective.savedSearch) {
-                map.set(effective.savedSearch, toDefault(effective));
-            }
         }
         return map;
-    }, [overrides]);
+    }, [metricConfig]);
     const {
         drilldowns: searchbaseDrilldowns,
-        setDrilldown: setSearchbaseDrilldown,
-        clearDrilldown: clearSearchbaseDrilldown,
         resetAll: resetAllSearchbaseDrilldowns,
     } = usePersistedSearchbaseDrilldowns();
     const [pickerContext, setPickerContext] = useState<KpiPickerContext | null>(null);
@@ -3369,21 +2859,19 @@ const OverviewPage: React.FC = () => {
     );
 
     // Saved-search names already bound across the dashboard, so the
-    // picker can flag duplicates with an "in use" badge.
+    // picker can flag duplicates with an "in use" badge. Search
+    // binding is admin-controlled now (searchbase.conf), so `cfg`
+    // already reflects the effective binding — no override to layer.
     const usedSavedSearches = useMemo(() => {
         const used = new Set<string>();
-        for (const m of METRIC_CONFIG) {
-            const ov = overrides[m.id];
-            const name = ov?.savedSearch ?? m.savedSearch;
-            if (name) used.add(name);
+        for (const m of metricConfig) {
+            if (m.savedSearch) used.add(m.savedSearch);
         }
-        for (const k of MAP_FOOTER_KPI_CONFIG) {
-            const ov = overrides[k.id];
-            const name = ov?.savedSearch ?? k.savedSearch;
-            if (name) used.add(name);
+        for (const k of mapFooterKpiConfig) {
+            if (k.savedSearch) used.add(k.savedSearch);
         }
         return used;
-    }, [overrides]);
+    }, [mapFooterKpiConfig, metricConfig]);
 
     const openPicker = useCallback(
         (
@@ -3424,36 +2912,20 @@ const OverviewPage: React.FC = () => {
                 section?: SectionId;
             }
         ) => {
+            // Search binding, value field, label, and thresholds are
+            // admin-controlled (searchbase.conf) now — `current` IS
+            // the effective value, no per-user override to layer on
+            // top. Only chart style / display flags still come from
+            // the viewer's own localStorage override.
             const ov: MetricOverride | undefined = overrides[tileId];
-            // CRITICAL: when an override exists, an undefined
-            // `valueField` is the user's explicit "use auto-detect"
-            // choice and must NOT fall through to the original tile's
-            // valueField. The previous `??` did exactly that, which
-            // pre-filled the picker input with the original column
-            // name and caused every subsequent Apply to clobber the
-            // user's auto-detect intent.
-            //
-            // Threshold context (Build 97):
-            //   • `defaultThresholds` always reflects the *static*
-            //     code-defined tuple — the picker uses this for the
-            //     factory-default helper text and the per-field
-            //     Reset-to-default behaviour.
-            //   • `currentThresholds` reflects the current effective
-            //     tuple after merging any persisted override on top of
-            //     the default. The picker pre-fills its inputs from
-            //     this, so re-opening the picker on a customised tile
-            //     shows the customised values, not the defaults.
-            const merged: MetricThresholds | undefined = ov
-                ? mergeThresholds(current?.defaultThresholds, ov)
-                : current?.defaultThresholds;
             setPickerContext({
                 tileId,
                 defaultLabel,
-                currentSavedSearch: ov ? ov.savedSearch : current?.savedSearch,
-                currentValueField: ov ? ov.valueField : current?.valueField,
-                currentLabel: ov?.label,
+                currentSavedSearch: current?.savedSearch,
+                currentValueField: current?.valueField,
+                currentLabel: defaultLabel,
                 defaultThresholds: current?.defaultThresholds,
-                currentThresholds: merged,
+                currentThresholds: current?.defaultThresholds,
                 thresholdUnit: current?.unit,
                 usedSavedSearches,
                 currentVizOverride: ov?.vizOverride,
@@ -3479,19 +2951,79 @@ const OverviewPage: React.FC = () => {
         [setOverride]
     );
 
-    const handleSearchbaseDrilldownApply = useCallback(
-        (sourceSearchName: string, drilldownSearchName: string | null) => {
-            const source = searchbaseByName?.get(sourceSearchName);
-            const defaultName = source?.drilldownSearchName?.trim() ?? '';
-            const nextName = drilldownSearchName?.trim() ?? '';
-            if (nextName === defaultName || (!nextName && !defaultName)) {
-                clearSearchbaseDrilldown(sourceSearchName);
+    // ------------------------------ Admin-only tile config (Thresholds / Data Mapping / Drilldown) ------------------------------
+    //
+    // `canManageFactoryConfig` is a UI-side courtesy check only — the
+    // real enforcement is `metadata/default.meta` restricting
+    // searchbase.conf writes to `admin_all_objects`. See
+    // `useCanManageFactoryTileConfig` and `searchbaseTileConfigService`.
+    const { canManage: canManageFactoryConfig } = useCanManageFactoryTileConfig();
+    const [factoryTileConfigStatus, setFactoryTileConfigStatus] = useState<
+        'idle' | 'saving' | 'saved' | 'error'
+    >('idle');
+
+    const handleSaveFactoryTileConfig = useCallback(
+        async (patch: FactoryTileConfigApplyPatch) => {
+            const currentSavedSearch = pickerContext?.currentSavedSearch;
+            const fromStanzaId = currentSavedSearch
+                ? searchbaseByName?.get(currentSavedSearch)?.id
+                : undefined;
+            if (!fromStanzaId) {
+                console.error(
+                    '[overview] cannot save factory tile config: unresolved source stanza',
+                    patch.tileId
+                );
                 return;
             }
-            setSearchbaseDrilldown(sourceSearchName, nextName || null);
+            const toStanzaId = patch.newSearchName
+                ? searchbaseByName?.get(patch.newSearchName)?.id
+                : undefined;
+            if (patch.newSearchName && !toStanzaId) {
+                console.error(
+                    '[overview] cannot save factory tile config: unresolved target stanza',
+                    patch.newSearchName
+                );
+                return;
+            }
+
+            setFactoryTileConfigStatus('saving');
+            try {
+                await saveFactoryTileConfig({
+                    tileId: patch.tileId,
+                    section: pickerContext?.sectionId ?? 'custom',
+                    fromStanzaId,
+                    thresholds: patch.thresholds,
+                    dataMapping: patch.dataMapping,
+                    searchRebind: toStanzaId ? { toStanzaId } : undefined,
+                    drilldownSearchName: patch.drilldownSearchName,
+                });
+                setSearchbaseRefreshToken((n) => n + 1);
+                setFactoryTileConfigStatus('saved');
+                setPickerContext(null);
+                if (typeof window !== 'undefined') {
+                    window.setTimeout(() => setFactoryTileConfigStatus('idle'), 2400);
+                }
+            } catch (error) {
+                console.error('[overview] failed to save factory tile config', error);
+                setFactoryTileConfigStatus('error');
+                if (typeof window !== 'undefined') {
+                    window.alert(
+                        error instanceof Error
+                            ? error.message
+                            : 'Could not save this tile setting.'
+                    );
+                    window.setTimeout(() => setFactoryTileConfigStatus('idle'), 4000);
+                }
+            }
         },
-        [clearSearchbaseDrilldown, searchbaseByName, setSearchbaseDrilldown]
+        [pickerContext, searchbaseByName]
     );
+
+    // Drilldown edits now go through `handleSaveFactoryTileConfig`
+    // (admin-only, written into searchbase.conf). The
+    // `usePersistedSearchbaseDrilldowns` hook stays only for its
+    // `resetAll` in `handleResetAllCustomizations`, so any leftover
+    // local override from before this migration can still be cleared.
 
     /**
      * Section-level "Apply these Display settings to all tiles in
@@ -3517,7 +3049,7 @@ const OverviewPage: React.FC = () => {
      *
      * Why this lives in the page (not the picker): the picker
      * doesn't know the section roster, and we don't want to hand
-     * it the whole `METRIC_CONFIG` catalogue. The
+     * it the whole searchbase-backed tile catalogue. The
      * page owns the catalogue; the picker hands us the section id
      * and the patch and we do the fan-out.
      *
@@ -3534,14 +3066,14 @@ const OverviewPage: React.FC = () => {
             sectionId: string,
             patch: { hidePeak: boolean; hideDelta: boolean; hideOverlay: boolean }
         ) => {
-            // Resolve siblings from the metric catalogue only.
-            const sectionMetrics = METRIC_CONFIG.filter((m) => m.section === sectionId);
+            // Resolve siblings from the metric catalogue only. Display
+            // flags are the only thing left in the per-user override,
+            // so no need to carry a search binding through anymore.
+            const sectionMetrics = metricConfig.filter((m) => m.section === sectionId);
             for (const m of sectionMetrics) {
                 const existing = overrides[m.id];
-                const baseSavedSearch = existing?.savedSearch ?? m.savedSearch;
                 const next: MetricOverride = {
-                    ...(existing ?? { savedSearch: baseSavedSearch }),
-                    savedSearch: baseSavedSearch,
+                    ...existing,
                     // Pass `undefined` for false flags so the sanitiser
                     // strips them from the persisted payload — gives us
                     // a "show everything" reset path through the same
@@ -3554,7 +3086,7 @@ const OverviewPage: React.FC = () => {
             }
             setPickerContext(null);
         },
-        [overrides, setOverride]
+        [metricConfig, overrides, setOverride]
     );
 
     // "Factory reset" — wipes every persisted dashboard customisation
@@ -3567,11 +3099,17 @@ const OverviewPage: React.FC = () => {
     //   • searchbaseDrilldowns.v1       — picker-wired drilldown bindings
     //   • sectionLayout.v1              — visible section roster
     //   • sectionTileCounts.v1          — visible tile count per section
+    //                                      (forced back to the original
+    //                                      three-tile executive summary)
     //   • sectionHeights.v1             — vertical room per section
     //   • sectionTileOrder.v1           — drag-to-reorder preference
+    //   • local/overview_factory_tiles.conf — shared saved order/count overlay
+    //   • local/searchbase.conf overview keys — org-wide tile binding /
+    //                                      thresholds / mapping overlays
     //   • customerTopology.v4           — retired per-browser map payload
     //   • scd_overview_split_pct        — tiles ↔ map splitter position
     //   • scd_overview_map_pos          — map position (right / below / above)
+    //   • scd_overview_map_visible      — topology map visibility
     //   • priorityDrilldown.v1          — pinned app-local drill-down target
     //   • signalTicker.v1               — moving KPI rail selection
     //
@@ -3585,10 +3123,17 @@ const OverviewPage: React.FC = () => {
     // After reset, we close the picker and bump `topologyResetKey` to
     // clear any retired in-browser topology payload from old builds.
     const handleResetAllCustomizations = useCallback(() => {
+        const overviewSearchbaseStanzaIds = metricConfig.map(
+            (metric) => metric.searchbaseId
+        );
+
         resetAllOverrides();
         resetAllSearchbaseDrilldowns();
         resetAllSectionLayout();
         resetAllSectionTileCounts();
+        availableSections.forEach((section) => {
+            setSectionTileCount(section, sectionTileBounds.minCount);
+        });
         resetAllSectionHeights();
         resetAllSectionTileOrder();
         resetSignalTickerConfig();
@@ -3596,24 +3141,48 @@ const OverviewPage: React.FC = () => {
         setTopologyResetKey((n) => n + 1);
         setLeftPct(SPLIT_DEFAULT);
         setMapPosition(MAP_POS_DEFAULT);
+        setMapVisible(MAP_VISIBLE_DEFAULT);
         setSelectedPriorityDrilldownView(DEFAULT_PRIORITY_DRILLDOWN_VIEW);
         clearPriorityDrilldownView();
         if (typeof window !== 'undefined' && window.localStorage) {
             try {
                 window.localStorage.removeItem(SPLIT_KEY);
                 window.localStorage.removeItem(MAP_POS_KEY);
+                window.localStorage.removeItem(MAP_VISIBILITY_KEY);
             } catch {
-                // Storage unavailable; the setLeftPct / setMapPosition
-                // calls above are the authoritative reset for this
-                // session anyway.
+                // Storage unavailable; the in-memory state resets
+                // above are authoritative for this session anyway.
             }
         }
         setPickerContext(null);
+
+        void (async () => {
+            try {
+                await resetOverviewFactoryTiles();
+                await resetOverviewSearchbaseTileConfig(overviewSearchbaseStanzaIds);
+                setSearchbaseRefreshToken((n) => n + 1);
+                const nextFactoryTiles = await loadOverviewFactoryTiles();
+                setOverviewFactoryTiles(nextFactoryTiles);
+            } catch (error) {
+                console.error('[overview] failed to reset shared factory config', error);
+                if (typeof window !== 'undefined') {
+                    window.alert(
+                        error instanceof Error
+                            ? error.message
+                            : 'Personal reset completed, but shared Overview factory settings could not be reset.'
+                    );
+                }
+            }
+        })();
     }, [
+        availableSections,
+        metricConfig,
         resetAllOverrides,
         resetAllSearchbaseDrilldowns,
         resetAllSectionLayout,
         resetAllSectionTileCounts,
+        setSectionTileCount,
+        sectionTileBounds.minCount,
         resetAllSectionHeights,
         resetAllSectionTileOrder,
         resetSignalTickerConfig,
@@ -3623,115 +3192,161 @@ const OverviewPage: React.FC = () => {
         MAP_POS_KEY,
         MAP_POS_DEFAULT,
         setMapPosition,
+        MAP_VISIBILITY_KEY,
+        MAP_VISIBLE_DEFAULT,
+        setMapVisible,
+    ]);
+
+    const handleSaveOverviewFactoryDefaults = useCallback(async () => {
+        const next: OverviewFactoryTilesConfig = {};
+        for (const section of availableSections) {
+            const sectionMetrics = metricConfig.filter((m) => m.section === section);
+            if (sectionMetrics.length === 0) continue;
+            const factoryOrder = getFactoryTileOrder(section, sectionMetrics);
+            const effectiveOrder = getSectionTileOrder(section, factoryOrder);
+            const visibleCount = Math.min(
+                sectionTileCounts[section],
+                Math.min(sectionTileBounds.maxCount, sectionMetrics.length)
+            );
+            next[section] = {
+                tiles: effectiveOrder,
+                visibleCount,
+            };
+        }
+
+        setFactoryDefaultsStatus('saving');
+        try {
+            await saveOverviewFactoryTiles(next);
+            setOverviewFactoryTiles(next);
+            setFactoryDefaultsStatus('saved');
+            if (typeof window !== 'undefined') {
+                window.setTimeout(() => setFactoryDefaultsStatus('idle'), 2400);
+            }
+        } catch (error) {
+            console.error('[overview] failed to save factory tile defaults', error);
+            setFactoryDefaultsStatus('error');
+            if (typeof window !== 'undefined') {
+                window.alert(
+                    error instanceof Error
+                        ? error.message
+                        : 'Could not save Overview factory defaults.'
+                );
+                window.setTimeout(() => setFactoryDefaultsStatus('idle'), 4000);
+            }
+        }
+    }, [
+        availableSections,
+        getFactoryTileOrder,
+        getSectionTileOrder,
+        metricConfig,
+        sectionTileBounds.maxCount,
+        sectionTileCounts,
     ]);
 
     // ------------------------------ Map footer ------------------------------
     // Same dispatch rules as the main metric grid: searchbase.conf
     // entries resolve to literal SPL so the footer value, picker preview,
     // and Open in Search action all point at the same query.
-    const buildEffectiveMapFooterKpiCfg = (
-        base: KpiConfig,
-        ov: MetricOverride | undefined
-    ): KpiConfig => {
-        if (searchbaseByName === null) {
+    // Search binding / value field / label for the map footer cards
+    // are admin-controlled (searchbase.conf `viz_options.mapFooter`)
+    // now, same as the main tile grid — `base` is already the
+    // effective value, no per-user override to layer on top.
+    const buildEffectiveMapFooterKpiCfg = (base: KpiConfig): KpiConfig => {
+        if (searchbaseByName === null || searchbaseById === null) {
+            return { ...base, spl: undefined, savedSearch: undefined };
+        }
+
+        const sbBase = resolveSearchbaseRecordForConfig(base, searchbaseById, searchbaseByName);
+        if (sbBase?.search) {
             return {
                 ...base,
-                spl: undefined,
+                spl: sbBase.search,
                 savedSearch: undefined,
-                ...(ov
-                    ? {
-                          valueField: ov.valueField,
-                          label: ov.label ?? base.label,
-                          suppressMockOnEmpty: true,
-                      }
-                    : {}),
+                dispatchContext: sbBase.dispatchContext,
             };
         }
-
-        if (!ov) {
-            const sbBase = base.savedSearch
-                ? searchbaseByName?.get(base.savedSearch)
-                : undefined;
-            if (sbBase?.search) {
-                return {
-                    ...base,
-                    spl: sbBase.search,
-                };
-            }
-            return base;
-        }
-
-        const sb = ov.savedSearch ? searchbaseByName?.get(ov.savedSearch) : undefined;
-        if (sb?.search) {
-            return {
-                ...base,
-                spl: sb.search,
-                savedSearch: undefined,
-                valueField: ov.valueField,
-                label: ov.label ?? base.label,
-                suppressMockOnEmpty: true,
-            };
-        }
-
-        return {
-            ...base,
-            savedSearch: ov.savedSearch,
-            spl: undefined,
-            valueField: ov.valueField,
-            label: ov.label ?? base.label,
-            suppressMockOnEmpty: true,
-        };
+        return { ...base, savedSearch: undefined, spl: undefined };
     };
 
+    const mapPrimaryBaseCfg = mapFooterKpiConfig[0];
+    const mapSecondaryBaseCfg = mapFooterKpiConfig[1];
     const effectiveMapPrimaryCfg = useMemo<KpiConfig>(
         () =>
-            buildEffectiveMapFooterKpiCfg(
-                MAP_FOOTER_KPI_CONFIG[0],
-                overrides[MAP_FOOTER_KPI_CONFIG[0].id]
-            ),
-        [overrides, searchbaseByName]
+            mapPrimaryBaseCfg
+                ? buildEffectiveMapFooterKpiCfg(mapPrimaryBaseCfg)
+                : DISABLED_MAP_FOOTER_KPI_CONFIG,
+        [mapPrimaryBaseCfg, searchbaseById, searchbaseByName]
     );
     const effectiveMapSecondaryCfg = useMemo<KpiConfig>(
         () =>
-            buildEffectiveMapFooterKpiCfg(
-                MAP_FOOTER_KPI_CONFIG[1],
-                overrides[MAP_FOOTER_KPI_CONFIG[1].id]
-            ),
-        [overrides, searchbaseByName]
+            mapSecondaryBaseCfg
+                ? buildEffectiveMapFooterKpiCfg(mapSecondaryBaseCfg)
+                : DISABLED_MAP_FOOTER_KPI_CONFIG,
+        [mapSecondaryBaseCfg, searchbaseById, searchbaseByName]
     );
     const mapPrimary = useKpi(effectiveMapPrimaryCfg, timeRange, refreshToken);
     const mapSecondary = useKpi(effectiveMapSecondaryCfg, timeRange, refreshToken);
-    const mapPrimaryOverride = overrides[MAP_FOOTER_KPI_CONFIG[0].id];
-    const mapSecondaryOverride = overrides[MAP_FOOTER_KPI_CONFIG[1].id];
+    const mapPrimaryOverride = mapPrimaryBaseCfg
+        ? overrides[mapPrimaryBaseCfg.id]
+        : undefined;
+    const mapSecondaryOverride = mapSecondaryBaseCfg
+        ? overrides[mapSecondaryBaseCfg.id]
+        : undefined;
+    const mapPrimaryBaseRecord = mapPrimaryBaseCfg
+        ? resolveSearchbaseRecordForConfig(
+              mapPrimaryBaseCfg,
+              searchbaseById,
+              searchbaseByName
+          )
+        : null;
+    const mapSecondaryBaseRecord = mapSecondaryBaseCfg
+        ? resolveSearchbaseRecordForConfig(
+              mapSecondaryBaseCfg,
+              searchbaseById,
+              searchbaseByName
+          )
+        : null;
     const mapPrimaryDrilldownSpl = mapPrimary.spl;
     const mapSecondaryDrilldownSpl = mapSecondary.spl;
     const handleMapPrimaryOpenInSearch = useCallback(() => {
         if (!mapPrimaryDrilldownSpl) return;
-        const url = splunkSearchAppUrl(mapPrimaryDrilldownSpl, timeRange);
+        const url = splunkSearchAppUrl(
+            mapPrimaryDrilldownSpl,
+            timeRange,
+            effectiveMapPrimaryCfg.dispatchContext
+        );
         if (typeof window !== 'undefined') {
             window.open(url, '_blank', 'noopener,noreferrer');
         }
-    }, [mapPrimaryDrilldownSpl, timeRange]);
+    }, [effectiveMapPrimaryCfg.dispatchContext, mapPrimaryDrilldownSpl, timeRange]);
     const handleMapSecondaryOpenInSearch = useCallback(() => {
         if (!mapSecondaryDrilldownSpl) return;
-        const url = splunkSearchAppUrl(mapSecondaryDrilldownSpl, timeRange);
+        const url = splunkSearchAppUrl(
+            mapSecondaryDrilldownSpl,
+            timeRange,
+            effectiveMapSecondaryCfg.dispatchContext
+        );
         if (typeof window !== 'undefined') {
             window.open(url, '_blank', 'noopener,noreferrer');
         }
-    }, [mapSecondaryDrilldownSpl, timeRange]);
-    const mapPrimaryBindingFootnote = mapPrimaryOverride
-        ? mapPrimaryOverride.savedSearch
-            ? `Saved search: ${mapPrimaryOverride.savedSearch}`
-            : '(inline SPL)'
-        : MAP_FOOTER_KPI_CONFIG[0].savedSearch
-        ? `Saved search: ${MAP_FOOTER_KPI_CONFIG[0].savedSearch}`
+    }, [
+        effectiveMapSecondaryCfg.dispatchContext,
+        mapSecondaryDrilldownSpl,
+        timeRange,
+    ]);
+    const mapPrimaryBindingFootnote = !mapPrimaryBaseCfg
+        ? ''
+        : mapPrimaryBaseRecord
+        ? `Searchbase: ${mapPrimaryBaseRecord.searchName}`
+        : mapPrimaryBaseCfg.searchbaseId
+        ? `Searchbase id: ${mapPrimaryBaseCfg.searchbaseId}`
         : '(inline SPL)';
-    const mapSecondaryBindingFootnote = mapSecondaryOverride
-        ? mapSecondaryOverride.savedSearch
-            ? `Saved search: ${mapSecondaryOverride.savedSearch}`
-            : '(inline SPL)'
-        : MAP_FOOTER_KPI_CONFIG[1].savedSearch
-        ? `Saved search: ${MAP_FOOTER_KPI_CONFIG[1].savedSearch}`
+    const mapSecondaryBindingFootnote = !mapSecondaryBaseCfg
+        ? ''
+        : mapSecondaryBaseRecord
+        ? `Searchbase: ${mapSecondaryBaseRecord.searchName}`
+        : mapSecondaryBaseCfg.searchbaseId
+        ? `Searchbase id: ${mapSecondaryBaseCfg.searchbaseId}`
         : '(inline SPL)';
 
     // ------------------------------ Keyboard shortcuts ------------------------------
@@ -4048,6 +3663,28 @@ const OverviewPage: React.FC = () => {
                     <ThemeToggle theme={theme} onCycle={cycleTheme} />
                     <button
                         type="button"
+                        onClick={toggleMapVisibility}
+                        title={
+                            mapVisible
+                                ? 'Hide customer site connectivity map'
+                                : 'Show customer site connectivity map'
+                        }
+                        aria-label={
+                            mapVisible
+                                ? 'Hide customer site connectivity map'
+                                : 'Show customer site connectivity map'
+                        }
+                        aria-pressed={!mapVisible}
+                        className={cn(
+                            iconBtnClass,
+                            !mapVisible &&
+                                'text-sky-600 dark:text-sky-300 bg-sky-50 dark:bg-slate-800'
+                        )}
+                    >
+                        <MapIcon className="w-4 h-4" />
+                    </button>
+                    <button
+                        type="button"
                         onClick={() => setHelpOpen(true)}
                         // Build 1205: title widened from "Keyboard
                         // shortcuts" to reflect the overlay's broader
@@ -4085,15 +3722,6 @@ const OverviewPage: React.FC = () => {
                     )}
                 </div>
             </header>
-
-            {/* Mini incident ticker: hidden until a saved search is configured. */}
-            {configuredIncidentTickerSearch ? (
-                <IncidentTicker
-                    savedSearch={configuredIncidentTickerSearch}
-                    range={timeRange}
-                    refreshToken={refreshToken}
-                />
-            ) : null}
 
             <SignalTickerRail
                 config={signalTickerConfig}
@@ -4208,7 +3836,7 @@ const OverviewPage: React.FC = () => {
             >
                 <div
                     ref={splitContainerRef}
-                    data-map-position={mapPosition}
+                    data-map-position={activeMapPosition}
                     className={cn(
                         // Map placement is now operator-configurable. Three
                         // modes are wired to the segmented control in the
@@ -4227,10 +3855,12 @@ const OverviewPage: React.FC = () => {
                         //              splitter logic stays attached to
                         //              its sibling.
                         'scd-overview-split flex gap-2 h-full min-h-0 relative',
-                        mapPosition === 'right'
-                            ? 'flex-col xl:flex-row'
-                            : mapPosition === 'above'
-                            ? 'flex-col-reverse'
+                        mapVisible
+                            ? mapPosition === 'right'
+                                ? 'flex-col xl:flex-row'
+                                : mapPosition === 'above'
+                                ? 'flex-col-reverse'
+                                : 'flex-col'
                             : 'flex-col'
                     )}
                     style={splitStyle}
@@ -4264,24 +3894,24 @@ const OverviewPage: React.FC = () => {
                         // shadow bleed at narrow widths.
                         className={cn(
                             'scd-overview-metrics flex flex-col gap-2 min-h-0 min-w-0 w-full overflow-y-auto overflow-x-hidden',
-                            mapPosition === 'right'
+                            mapVisible && mapPosition === 'right'
                                 ? 'xl:w-[var(--scd-left-pct)] xl:flex-shrink-0'
                                 : ''
                         )}
-                        data-map-position={mapPosition}
+                        data-map-position={activeMapPosition}
                         style={verticalMetricsStyle}
                     >
                         {visibleSections.map((section) => {
                             const meta = effectiveSectionMeta[section];
-                            const allSectionMetrics = METRIC_CONFIG.filter(
+                            const allSectionMetrics = metricConfig.filter(
                                 (m) => m.section === section
                             );
                             // The pill's max is whichever is smaller —
                             // the global cap (sectionTileBounds.maxCount)
-                            // or what METRIC_CONFIG actually offers for
+                            // or what the searchbase-backed catalogue actually offers for
                             // this section. This keeps the UI honest if
                             // someone trims a section to fewer tiles in
-                            // METRIC_CONFIG without touching this code.
+                            // searchbase.conf without touching this code.
                             const sectionMaxAvailable = Math.min(
                                 sectionTileBounds.maxCount,
                                 allSectionMetrics.length
@@ -4316,7 +3946,10 @@ const OverviewPage: React.FC = () => {
                             // still resolving each id back to its
                             // full MetricConfig — no per-iteration
                             // .find() scan.
-                            const canonicalIds = allSectionMetrics.map((m) => m.id);
+                            const canonicalIds = getFactoryTileOrder(
+                                section,
+                                allSectionMetrics
+                            );
                             const orderedIds = getSectionTileOrder(section, canonicalIds);
                             const visibleIds = orderedIds.slice(0, visibleCount);
                             const byId = new Map(allSectionMetrics.map((m) => [m.id, m]));
@@ -4349,9 +3982,9 @@ const OverviewPage: React.FC = () => {
                                     // screens and the hard min-height
                                     // floor that triggers metric-column
                                     // scrolling on short screens.
-                                    className="flex-1"
                                     style={{
                                         flexGrow: heightLevel,
+                                        flexShrink: 0,
                                         minHeight: sectionMinHeight,
                                     }}
                                     height={{
@@ -4414,6 +4047,7 @@ const OverviewPage: React.FC = () => {
                                                             }
                                                             override={overrides[cfg.id]}
                                                             searchbaseByName={searchbaseByName}
+                                                            searchbaseById={searchbaseById}
                                                             searchbaseDrilldowns={
                                                                 searchbaseDrilldowns
                                                             }
@@ -4455,69 +4089,71 @@ const OverviewPage: React.FC = () => {
                         split. Same `leftPct` persists across modes so
                         switching back to a previous orientation
                         preserves the user's intent. */}
-                    <button
-                        type="button"
-                        role="separator"
-                        aria-orientation={isVerticalSplit ? 'horizontal' : 'vertical'}
-                        aria-label="Resize tiles vs map"
-                        aria-valuenow={Math.round(leftPct)}
-                        aria-valuemin={SPLIT_MIN}
-                        aria-valuemax={SPLIT_MAX}
-                        title="Drag to resize · arrows ±1% · double-click to reset"
-                        onMouseDown={beginDrag}
-                        onKeyDown={onSplitterKeyDown}
-                        onDoubleClick={resetSplit}
-                        className={cn(
-                            'scd-overview-splitter flex flex-shrink-0 items-center justify-center group relative',
-                            'rounded-full transition-colors',
-                            'focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
-                            // Right mode hides the splitter on sub-xl
-                            // widths because the layout collapses to a
-                            // single column there. Vertical modes
-                            // never collapse, so the splitter is
-                            // always visible in those.
-                            mapPosition === 'right' && 'hidden xl:flex',
-                            isVerticalSplit
-                                ? 'h-1.5 my-0.5 w-full cursor-row-resize'
-                                : 'w-1.5 mx-0.5 cursor-col-resize',
-                            dragging
-                                ? 'bg-sky-500'
-                                : 'bg-slate-200 dark:bg-slate-700 hover:bg-sky-400 dark:hover:bg-sky-500'
-                        )}
-                        data-map-position={mapPosition}
-                    >
-                        {/* Visible grip dots — three subtle dashes,
-                            oriented perpendicular to the drag axis so
-                            they read as a grip handle. Helps signal
-                            the handle is interactive at a glance. */}
-                        <span
-                            aria-hidden="true"
+                    {mapVisible && (
+                        <button
+                            type="button"
+                            role="separator"
+                            aria-orientation={isVerticalSplit ? 'horizontal' : 'vertical'}
+                            aria-label="Resize tiles vs map"
+                            aria-valuenow={Math.round(leftPct)}
+                            aria-valuemin={SPLIT_MIN}
+                            aria-valuemax={SPLIT_MAX}
+                            title="Drag to resize · arrows ±1% · double-click to reset"
+                            onMouseDown={beginDrag}
+                            onKeyDown={onSplitterKeyDown}
+                            onDoubleClick={resetSplit}
                             className={cn(
-                                'flex gap-0.5 opacity-50 transition-opacity',
-                                isVerticalSplit ? 'flex-row' : 'flex-col',
-                                dragging ? 'opacity-100' : 'group-hover:opacity-90'
+                                'scd-overview-splitter flex flex-shrink-0 items-center justify-center group relative',
+                                'rounded-full transition-colors',
+                                'focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
+                                // Right mode hides the splitter on sub-xl
+                                // widths because the layout collapses to a
+                                // single column there. Vertical modes
+                                // never collapse, so the splitter is
+                                // always visible in those.
+                                mapPosition === 'right' && 'hidden xl:flex',
+                                isVerticalSplit
+                                    ? 'h-1.5 my-0.5 w-full cursor-row-resize'
+                                    : 'w-1.5 mx-0.5 cursor-col-resize',
+                                dragging
+                                    ? 'bg-sky-500'
+                                    : 'bg-slate-200 dark:bg-slate-700 hover:bg-sky-400 dark:hover:bg-sky-500'
                             )}
+                            data-map-position={mapPosition}
                         >
+                            {/* Visible grip dots — three subtle dashes,
+                                oriented perpendicular to the drag axis so
+                                they read as a grip handle. Helps signal
+                                the handle is interactive at a glance. */}
                             <span
+                                aria-hidden="true"
                                 className={cn(
-                                    'block rounded-full bg-white',
-                                    isVerticalSplit ? 'h-0.5 w-1' : 'w-0.5 h-1'
+                                    'flex gap-0.5 opacity-50 transition-opacity',
+                                    isVerticalSplit ? 'flex-row' : 'flex-col',
+                                    dragging ? 'opacity-100' : 'group-hover:opacity-90'
                                 )}
-                            />
-                            <span
-                                className={cn(
-                                    'block rounded-full bg-white',
-                                    isVerticalSplit ? 'h-0.5 w-1' : 'w-0.5 h-1'
-                                )}
-                            />
-                            <span
-                                className={cn(
-                                    'block rounded-full bg-white',
-                                    isVerticalSplit ? 'h-0.5 w-1' : 'w-0.5 h-1'
-                                )}
-                            />
-                        </span>
-                    </button>
+                            >
+                                <span
+                                    className={cn(
+                                        'block rounded-full bg-white',
+                                        isVerticalSplit ? 'h-0.5 w-1' : 'w-0.5 h-1'
+                                    )}
+                                />
+                                <span
+                                    className={cn(
+                                        'block rounded-full bg-white',
+                                        isVerticalSplit ? 'h-0.5 w-1' : 'w-0.5 h-1'
+                                    )}
+                                />
+                                <span
+                                    className={cn(
+                                        'block rounded-full bg-white',
+                                        isVerticalSplit ? 'h-0.5 w-1' : 'w-0.5 h-1'
+                                    )}
+                                />
+                            </span>
+                        </button>
+                    )}
 
                     {/* Map column.
                         right mode: width is the complement of leftPct
@@ -4529,15 +4165,16 @@ const OverviewPage: React.FC = () => {
                         so a long word in a metric label or a wide map
                         tile can't blow the column wider than its
                         share. */}
-                    <div
-                        className={cn(
-                            'scd-overview-map flex flex-col min-h-0 min-w-0 w-full',
-                            mapPosition === 'right' ? 'xl:flex-1' : 'flex-1'
-                        )}
-                        data-map-position={mapPosition}
-                        style={verticalMapStyle}
-                    >
-                        <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-3 shadow-sm flex flex-col overflow-hidden">
+                    {mapVisible && (
+                        <div
+                            className={cn(
+                                'scd-overview-map flex flex-col min-h-0 min-w-0 w-full',
+                                mapPosition === 'right' ? 'xl:flex-1' : 'flex-1'
+                            )}
+                            data-map-position={mapPosition}
+                            style={verticalMapStyle}
+                        >
+                            <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-3 shadow-sm flex flex-col overflow-hidden">
                             <div className="flex items-center justify-between mb-2 flex-shrink-0">
                                 <div>
                                     <h3 className="text-base font-bold text-sky-900 dark:text-sky-200 uppercase tracking-wide leading-none">
@@ -4595,8 +4232,12 @@ const OverviewPage: React.FC = () => {
                                         earliestTime={timeRange.earliest}
                                         latestTime={timeRange.latest}
                                         refreshToken={refreshToken}
-                                        onOpenInSearch={(spl) => {
-                                            const url = splunkSearchAppUrl(spl, timeRange);
+                                        onOpenInSearch={(spl, appContext) => {
+                                            const url = splunkSearchAppUrl(
+                                                spl,
+                                                timeRange,
+                                                appContext
+                                            );
                                             if (typeof window !== 'undefined') {
                                                 window.open(
                                                     url,
@@ -4611,78 +4252,73 @@ const OverviewPage: React.FC = () => {
                                 )}
                             </div>
 
-                            <div className="mt-3 grid grid-cols-2 gap-3 flex-shrink-0">
-                                <KpiCard
-                                    label={effectiveMapPrimaryCfg.label}
-                                    value={mapPrimary.value}
-                                    source={mapPrimary.source}
-                                    accentClassName="bg-emerald-500"
-                                    description={MAP_FOOTER_KPI_CONFIG[0].description}
-                                    thresholdNote={
-                                        MAP_FOOTER_KPI_CONFIG[0].thresholdNote
-                                    }
-                                    bindingFootnote={mapPrimaryBindingFootnote}
-                                    onOpenInSearch={
-                                        mapPrimaryDrilldownSpl
-                                            ? handleMapPrimaryOpenInSearch
-                                            : undefined
-                                    }
-                                    onConfigure={() =>
-                                        openPicker(
-                                            MAP_FOOTER_KPI_CONFIG[0].id,
-                                            MAP_FOOTER_KPI_CONFIG[0].label,
-                                            {
-                                                savedSearch:
-                                                    MAP_FOOTER_KPI_CONFIG[0]
-                                                        .savedSearch,
-                                                valueField:
-                                                    MAP_FOOTER_KPI_CONFIG[0]
-                                                        .valueField,
-                                                unit:
-                                                    MAP_FOOTER_KPI_CONFIG[0].unit,
+                            {mapPrimaryBaseCfg || mapSecondaryBaseCfg ? (
+                                <div className="mt-3 grid grid-cols-2 gap-3 flex-shrink-0">
+                                    {mapPrimaryBaseCfg ? (
+                                        <KpiCard
+                                            label={effectiveMapPrimaryCfg.label}
+                                            value={mapPrimary.value}
+                                            source={mapPrimary.source}
+                                            accentClassName="bg-emerald-500"
+                                            description={mapPrimaryBaseCfg.description}
+                                            thresholdNote={mapPrimaryBaseCfg.thresholdNote}
+                                            bindingFootnote={mapPrimaryBindingFootnote}
+                                            onOpenInSearch={
+                                                mapPrimaryDrilldownSpl
+                                                    ? handleMapPrimaryOpenInSearch
+                                                    : undefined
                                             }
-                                        )
-                                    }
-                                    isCustomized={Boolean(mapPrimaryOverride)}
-                                />
-                                <KpiCard
-                                    label={effectiveMapSecondaryCfg.label}
-                                    value={mapSecondary.value}
-                                    source={mapSecondary.source}
-                                    accentClassName="bg-sky-500"
-                                    description={
-                                        MAP_FOOTER_KPI_CONFIG[1].description
-                                    }
-                                    thresholdNote={
-                                        MAP_FOOTER_KPI_CONFIG[1].thresholdNote
-                                    }
-                                    bindingFootnote={mapSecondaryBindingFootnote}
-                                    onOpenInSearch={
-                                        mapSecondaryDrilldownSpl
-                                            ? handleMapSecondaryOpenInSearch
-                                            : undefined
-                                    }
-                                    onConfigure={() =>
-                                        openPicker(
-                                            MAP_FOOTER_KPI_CONFIG[1].id,
-                                            MAP_FOOTER_KPI_CONFIG[1].label,
-                                            {
-                                                savedSearch:
-                                                    MAP_FOOTER_KPI_CONFIG[1]
-                                                        .savedSearch,
-                                                valueField:
-                                                    MAP_FOOTER_KPI_CONFIG[1]
-                                                        .valueField,
-                                                unit:
-                                                    MAP_FOOTER_KPI_CONFIG[1].unit,
+                                            onConfigure={() =>
+                                                openPicker(
+                                                    mapPrimaryBaseCfg.id,
+                                                    mapPrimaryBaseCfg.label,
+                                                    {
+                                                        savedSearch:
+                                                            mapPrimaryBaseCfg.savedSearch,
+                                                        valueField:
+                                                            mapPrimaryBaseCfg.valueField,
+                                                        unit: mapPrimaryBaseCfg.unit,
+                                                    }
+                                                )
                                             }
-                                        )
-                                    }
-                                    isCustomized={Boolean(mapSecondaryOverride)}
-                                />
+                                            isCustomized={Boolean(mapPrimaryOverride)}
+                                        />
+                                    ) : null}
+                                    {mapSecondaryBaseCfg ? (
+                                        <KpiCard
+                                            label={effectiveMapSecondaryCfg.label}
+                                            value={mapSecondary.value}
+                                            source={mapSecondary.source}
+                                            accentClassName="bg-sky-500"
+                                            description={mapSecondaryBaseCfg.description}
+                                            thresholdNote={mapSecondaryBaseCfg.thresholdNote}
+                                            bindingFootnote={mapSecondaryBindingFootnote}
+                                            onOpenInSearch={
+                                                mapSecondaryDrilldownSpl
+                                                    ? handleMapSecondaryOpenInSearch
+                                                    : undefined
+                                            }
+                                            onConfigure={() =>
+                                                openPicker(
+                                                    mapSecondaryBaseCfg.id,
+                                                    mapSecondaryBaseCfg.label,
+                                                    {
+                                                        savedSearch:
+                                                            mapSecondaryBaseCfg.savedSearch,
+                                                        valueField:
+                                                            mapSecondaryBaseCfg.valueField,
+                                                        unit: mapSecondaryBaseCfg.unit,
+                                                    }
+                                                )
+                                            }
+                                            isCustomized={Boolean(mapSecondaryOverride)}
+                                        />
+                                    ) : null}
+                                </div>
+                            ) : null}
                             </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </main>
 
@@ -4703,26 +4339,30 @@ const OverviewPage: React.FC = () => {
                 onApply={handlePickerApply}
                 onApplyDisplayToSection={handleApplyDisplayToSection}
                 drilldownBindings={searchbaseDrilldowns}
-                onSetSearchDrilldown={handleSearchbaseDrilldownApply}
                 onClearOverride={(tileId) => {
                     clearOverride(tileId);
                     closePicker();
                 }}
-                onTestInSearch={(spl) => {
+                onTestInSearch={(spl, appContext) => {
                     // Open Splunk Search & Reporting with the *literal*
                     // SPL pulled from `searchbase.conf` — the executive
                     // sees-and-tests exactly what the picker is showing
-                    // them, no `| savedsearch` indirection. Open in a
+                    // them, no savedsearch-command indirection. Open in a
                     // new tab so the picker stays open for further
                     // browsing. URLSearchParams handles encoding of
                     // backticks, quotes, pipes, and embedded newlines.
                     if (!spl) return;
-                    const url = splunkSearchAppUrl(spl, timeRange);
+                    const url = splunkSearchAppUrl(spl, timeRange, appContext);
                     if (typeof window !== 'undefined') {
                         window.open(url, '_blank', 'noopener,noreferrer');
                     }
                 }}
                 onResetAllCustomizations={handleResetAllCustomizations}
+                onSaveFactoryDefaults={handleSaveOverviewFactoryDefaults}
+                factoryDefaultsStatus={factoryDefaultsStatus}
+                canManageFactoryConfig={canManageFactoryConfig}
+                onSaveFactoryTileConfig={handleSaveFactoryTileConfig}
+                factoryTileConfigStatus={factoryTileConfigStatus}
             />
 
             <SignalTickerEditor
@@ -5024,6 +4664,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
             earliestTime: range.earliest,
             latestTime: range.latest,
             tag: config.tag,
+            appContext: config.dispatchContext,
         })
             .then((res) => {
                 if (cancelled) return;
@@ -5103,7 +4744,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
         ? rows.filter((row) => row[statusField] === availableStatus).length
         : 0;
     const unavailableCount = statusField ? rows.length - availableCount : 0;
-    const searchUrl = splunkSearchAppUrl(config.spl, range);
+    const searchUrl = splunkSearchAppUrl(config.spl, range, config.dispatchContext);
 
     return (
         <div
@@ -5406,6 +5047,10 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
 
     const activeSet = new Set(layoutDraft);
     const hiddenSections = availableSections.filter((section) => !activeSet.has(section));
+    const editorSections = [
+        ...layoutDraft.filter((section) => availableSections.includes(section)),
+        ...hiddenSections,
+    ];
     const canAddSection = layoutDraft.length < maxSections && hiddenSections.length > 0;
 
     const addSection = () => {
@@ -5529,10 +5174,14 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
                     </div>
 
                     <div className="grid gap-3 sm:grid-cols-2">
-                        {availableSections.map((section, idx) => {
+                        {editorSections.map((section) => {
                             const isVisible = activeSet.has(section);
+                            const visibleIndex = layoutDraft.indexOf(section);
                             const canShow = !isVisible && layoutDraft.length < maxSections;
                             const canHide = isVisible && layoutDraft.length > 1;
+                            const sectionKeyLabel = section
+                                .replace(/_/g, ' ')
+                                .replace(/\b\w/g, (letter) => letter.toUpperCase());
                             return (
                                 <div
                                     key={section}
@@ -5548,7 +5197,12 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
                                             htmlFor={`section-title-${section}`}
                                             className={cn(labelClass, 'mb-0')}
                                         >
-                                            Section {idx + 1}
+                                            {isVisible
+                                                ? `Section ${visibleIndex + 1}`
+                                                : 'Hidden section'}
+                                            <span className="ml-2 text-[9px] font-black text-slate-400 dark:text-slate-500">
+                                                {sectionKeyLabel}
+                                            </span>
                                         </label>
                                         <button
                                             type="button"

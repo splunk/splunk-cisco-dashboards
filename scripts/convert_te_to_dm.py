@@ -293,7 +293,7 @@ def _build_tstats_stats(base_cond: str, aggs_raw: str, by_raw: str,
     where_clause = f" WHERE {where_str}" if where_str else ""
 
     tstats = (
-        f"| tstats `summariesonly` {dm_aggs_str}"
+        f"| tstats `scd_summariesonly` {dm_aggs_str}"
         f" FROM datamodel={dm_path}"
         f"{where_clause}"
         f"{by_clause}"
@@ -342,7 +342,7 @@ def _build_tstats_timechart(base_cond: str, span: str, agg_raw: str, alias: str,
         by_clause = f" BY _time{span_clause}"
 
     tstats = (
-        f"| tstats `summariesonly` {dm_agg_str}"
+        f"| tstats `scd_summariesonly` {dm_agg_str}"
         f" FROM datamodel={dm_path}"
         f"{where_clause}"
         f"{by_clause}"
@@ -568,7 +568,7 @@ def _convert_eval_scale_timechart(base_cond, rest_segs, node, dm_path):
     dm_raw_field = f"{node}.{raw_field}"
     avg_alias    = f"avg_raw_s"
     tstats = (
-        f"| tstats `summariesonly` avg({dm_raw_field}) as {avg_alias}"
+        f"| tstats `scd_summariesonly` avg({dm_raw_field}) as {avg_alias}"
         f" FROM datamodel={dm_path}"
         + (f" WHERE {_prefix_where_cond(base_cond, node)}" if base_cond else "")
         + (f" BY _time{' span=' + span if span else ' span=1h'}"

@@ -310,7 +310,7 @@ def check_external_deps(spl: str, full_text: str) -> list[CheckFailure]:
         )
 
     for macro in MACRO_CALL.findall(norm):
-        if macro in {"summariesonly"}:
+        if macro in {"scd_summariesonly"}:
             continue
         failures.append(
             CheckFailure(

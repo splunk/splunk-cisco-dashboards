@@ -35,6 +35,10 @@ search = <SPL, multi-line per the Search field formatting section below>
 
 Skip `default_viz` / `viz_options` only when the stanza is purely a backend search (no tile binding).
 
+Separate stanzas with **one blank line** (the formatter writes `"\n\n".join(blocks)`). Never glue `[next_stanza]` directly onto the final `search` line of the prior stanza.
+
+**Cisco Catalyst DM stanzas:** when SPL uses `datamodel=Cisco_Catalyst_App`, set `dispatch_context = cisco-catalyst-app` (with `dispatch_context_force = 1`). The data model is owned by `cisco-catalyst-app` and is not visible from other app namespaces unless exported system-wide. Use the upstream app's `` `summariesonly` `` macro in `tstats` (not `` `scd_summariesonly` ``, which belongs to this app). In `tstats`, bucket time with `` BY _time span=30m `` (or another explicit span) — never `` bins= ``; that syntax is for `bin`/`timechart` on raw events, not DM `tstats`.
+
 ## Search field formatting
 
 The `search` field uses `\` line continuations. Read [searchbase.conf](../../../packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf) for canonical examples and follow the same shape.
@@ -56,7 +60,7 @@ This style matches the upstream `searchbase` app (`~/repo/searchbase`). Keep the
 ### Canonical example (one pipe per line)
 
 ```spl
-search = | tstats `summariesonly` avg(Test_Metrics.metric_name:http.server.request.availability) AS avg_avail FROM datamodel="Cisco_ThousandEyes.Test_Metrics" WHERE Test_Metrics.metric_name:http.server.request.availability="*" Test_Metrics.thousandeyes.test.type="http-server" BY _time span=1h, Test_Metrics.server.address, Test_Metrics.thousandeyes.test.name\
+search = | tstats `scd_summariesonly` avg(Test_Metrics.metric_name:http.server.request.availability) AS avg_avail FROM datamodel="Cisco_ThousandEyes.Test_Metrics" WHERE Test_Metrics.metric_name:http.server.request.availability="*" Test_Metrics.thousandeyes.test.type="http-server" BY _time span=1h, Test_Metrics.server.address, Test_Metrics.thousandeyes.test.name\
 | rename Test_Metrics.server.address AS site\
 | stats avg(avg_avail) AS site_avail BY _time, site\
 | eval available = if(site_avail >= 99.5, 1, 0)\

@@ -20,7 +20,7 @@ const ALL_APPS = '__all_apps__';
 const ALL_CATEGORIES = '__all_categories__';
 const ALL_SUB_CATEGORIES = '__all_sub_categories__';
 const DEFAULT_APP_SCOPE = 'splunk-cisco-dashboards';
-const KPI_MENU_WIDTH = 560;
+const KPI_MENU_WIDTH = 620;
 const MENU_VIEWPORT_MARGIN = 12;
 const CONFIG_PANEL_MIN_WIDTH = 240;
 const CONFIG_PANEL_MIN_HEIGHT = 300;
@@ -63,6 +63,10 @@ const equalArrays = (a, b) => {
 const sortedUnique = (values) =>
     [...new Set(values.filter(Boolean))].sort((left, right) => left.localeCompare(right));
 
+const normalizeSearchKey = (value) => String(value || '').trim().toLowerCase();
+
+const isTableSearch = (search) => normalizeSearchKey(search.defaultViz) === 'splunk.table';
+
 const getVizIcon = (defaultViz) => {
     if (!defaultViz) return <TableList width={20} height={20} />;
     if (defaultViz.includes('table')) return <TableList width={20} height={20} />;
@@ -91,6 +95,10 @@ export default function DropdownWithSearch({
     const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES);
     const [selectedSubCategory, setSelectedSubCategory] = useState(ALL_SUB_CATEGORIES);
     const [selectedTags, setSelectedTags] = useState([]);
+    const [includeHiddenSearches, setIncludeHiddenSearches] = useState(false);
+    const [includeDrilldownSearches, setIncludeDrilldownSearches] = useState(false);
+    const [includeTableSearches, setIncludeTableSearches] = useState(false);
+    const [filtersOpen, setFiltersOpen] = useState(true);
     const [isOpen, setIsOpen] = useState(false);
     const [menuPosition, setMenuPosition] = useState(undefined);
     const [selection, setSelection] = useState([]);
@@ -151,6 +159,9 @@ export default function DropdownWithSearch({
         setSelectedCategory(ALL_CATEGORIES);
         setSelectedSubCategory(ALL_SUB_CATEGORIES);
         setSelectedTags([]);
+        setIncludeHiddenSearches(false);
+        setIncludeDrilldownSearches(false);
+        setIncludeTableSearches(false);
     };
 
     const clearSelectionAndClose = () => {
@@ -159,9 +170,29 @@ export default function DropdownWithSearch({
         setIsOpen(false);
     };
 
-    const apps = sortedUnique(searches.map((search) => search.dispatchContext));
+    const drilldownSearchNames = new Set(
+        searches
+            .flatMap((search) => [search.drilldownSearchName])
+            .filter(Boolean)
+            .map(normalizeSearchKey),
+    );
 
-    const appScopedSearches = searches.filter(
+    const visibilityFilteredSearches = searches.filter((search) => {
+        if (!includeHiddenSearches && search.searchHidden) return false;
+
+        const isDrilldownSearch =
+            drilldownSearchNames.has(normalizeSearchKey(search.searchName)) ||
+            drilldownSearchNames.has(normalizeSearchKey(search.id));
+        if (!includeDrilldownSearches && isDrilldownSearch) return false;
+
+        if (!includeTableSearches && isTableSearch(search)) return false;
+
+        return true;
+    });
+
+    const apps = sortedUnique(visibilityFilteredSearches.map((search) => search.dispatchContext));
+
+    const appScopedSearches = visibilityFilteredSearches.filter(
         (search) => selectedApp === ALL_APPS || search.dispatchContext === selectedApp,
     );
 
@@ -204,6 +235,10 @@ export default function DropdownWithSearch({
             search.subCategory,
             search.dispatchContext,
             plainTextFromHtml(search.description || ''),
+            plainTextFromHtml(search.explanation || ''),
+            search.search,
+            search.drilldownSearchName,
+            search.defaultViz,
             ...(search.tags || []),
         ]
             .join('\n')
@@ -222,7 +257,21 @@ export default function DropdownWithSearch({
         selectedApp !== DEFAULT_APP_SCOPE ||
         selectedCategory !== ALL_CATEGORIES ||
         selectedSubCategory !== ALL_SUB_CATEGORIES ||
-        selectedTags.length > 0;
+        selectedTags.length > 0 ||
+        includeHiddenSearches ||
+        includeDrilldownSearches ||
+        includeTableSearches;
+
+    const activeFilterCount = [
+        searchTerm.trim(),
+        selectedApp !== DEFAULT_APP_SCOPE,
+        selectedCategory !== ALL_CATEGORIES,
+        selectedSubCategory !== ALL_SUB_CATEGORIES,
+        selectedTags.length > 0,
+        includeHiddenSearches,
+        includeDrilldownSearches,
+        includeTableSearches,
+    ].filter(Boolean).length;
 
     return (
         <>
@@ -297,87 +346,165 @@ export default function DropdownWithSearch({
                                 onChange={(e, { value }) => setSearchTerm(value)}
                             />
 
-                            <div className="dropdown-kpi-filters">
-                                <Select
-                                    value={selectedApp}
-                                    onChange={(e, { value }) => {
-                                        setSelectedApp(value);
-                                        setSelectedCategory(ALL_CATEGORIES);
-                                        setSelectedSubCategory(ALL_SUB_CATEGORIES);
-                                        setSelectedTags([]);
-                                    }}
-                                >
-                                    <Select.Option
-                                        label={`All apps (${apps.length})`}
-                                        value={ALL_APPS}
-                                    />
-                                    {apps.map((app) => (
-                                        <Select.Option key={app} label={app} value={app} />
-                                    ))}
-                                    {!apps.includes(DEFAULT_APP_SCOPE) && (
-                                        <Select.Option
-                                            label={DEFAULT_APP_SCOPE}
-                                            value={DEFAULT_APP_SCOPE}
-                                        />
-                                    )}
-                                </Select>
+                            <button
+                                type="button"
+                                className="dropdown-kpi-filter-toggle"
+                                aria-expanded={filtersOpen}
+                                onClick={() => setFiltersOpen((open) => !open)}
+                            >
+                                <span className="dropdown-kpi-filter-caret">
+                                    {filtersOpen ? '^' : 'v'}
+                                </span>
+                                <span>Filters</span>
+                                {activeFilterCount > 0 && (
+                                    <span className="dropdown-kpi-filter-active">Active</span>
+                                )}
+                            </button>
 
-                                <Select
-                                    value={selectedCategory}
-                                    onChange={(e, { value }) => {
-                                        setSelectedCategory(value);
-                                        setSelectedSubCategory(ALL_SUB_CATEGORIES);
-                                        setSelectedTags([]);
-                                    }}
-                                >
-                                    <Select.Option label="All categories" value={ALL_CATEGORIES} />
-                                    {categories.map((category) => (
-                                        <Select.Option
-                                            key={category}
-                                            label={category}
-                                            value={category}
-                                        />
-                                    ))}
-                                </Select>
+                            {filtersOpen && (
+                                <div className="dropdown-kpi-filter-panel">
+                                    <label className="dropdown-kpi-filter-row">
+                                        <span className="dropdown-kpi-filter-label">App</span>
+                                        <Select
+                                            value={selectedApp}
+                                            onChange={(e, { value }) => {
+                                                setSelectedApp(value);
+                                                setSelectedCategory(ALL_CATEGORIES);
+                                                setSelectedSubCategory(ALL_SUB_CATEGORIES);
+                                                setSelectedTags([]);
+                                            }}
+                                        >
+                                            <Select.Option
+                                                label={`All apps (${apps.length})`}
+                                                value={ALL_APPS}
+                                            />
+                                            {apps.map((app) => (
+                                                <Select.Option key={app} label={app} value={app} />
+                                            ))}
+                                            {!apps.includes(DEFAULT_APP_SCOPE) && (
+                                                <Select.Option
+                                                    label={DEFAULT_APP_SCOPE}
+                                                    value={DEFAULT_APP_SCOPE}
+                                                />
+                                            )}
+                                        </Select>
+                                    </label>
 
-                                <Select
-                                    disabled={selectedCategory === ALL_CATEGORIES}
-                                    value={selectedSubCategory}
-                                    onChange={(e, { value }) => {
-                                        setSelectedSubCategory(value);
-                                        setSelectedTags([]);
-                                    }}
-                                >
-                                    <Select.Option
-                                        label={
-                                            selectedCategory === ALL_CATEGORIES
-                                                ? 'Select category first'
-                                                : `All sub-categories (${subCategories.length})`
-                                        }
-                                        value={ALL_SUB_CATEGORIES}
-                                    />
-                                    {subCategories.map((subCategory) => (
-                                        <Select.Option
-                                            key={subCategory}
-                                            label={subCategory}
-                                            value={subCategory}
-                                        />
-                                    ))}
-                                </Select>
+                                    <div className="dropdown-kpi-filter-row dropdown-kpi-filter-row-top">
+                                        <span className="dropdown-kpi-filter-label">
+                                            Visibility
+                                        </span>
+                                        <div className="dropdown-kpi-visibility-grid">
+                                            <label className="dropdown-kpi-visibility-option">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={includeHiddenSearches}
+                                                    onChange={(e) =>
+                                                        setIncludeHiddenSearches(e.target.checked)
+                                                    }
+                                                />
+                                                <span>Show hidden searches</span>
+                                            </label>
+                                            <label className="dropdown-kpi-visibility-option">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={includeDrilldownSearches}
+                                                    onChange={(e) =>
+                                                        setIncludeDrilldownSearches(e.target.checked)
+                                                    }
+                                                />
+                                                <span>Show drill-down searches</span>
+                                            </label>
+                                            <label className="dropdown-kpi-visibility-option">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={includeTableSearches}
+                                                    onChange={(e) =>
+                                                        setIncludeTableSearches(e.target.checked)
+                                                    }
+                                                />
+                                                <span>Show table searches</span>
+                                            </label>
+                                        </div>
+                                    </div>
 
-                                <Multiselect
-                                    values={selectedTags}
-                                    onChange={(e, { values }) => {
-                                        setSelectedTags(values || []);
-                                    }}
-                                    placeholder="Filter by tags"
-                                    inline
-                                >
-                                    {availableTags.map((tag) => (
-                                        <Multiselect.Option key={tag} label={tag} value={tag} />
-                                    ))}
-                                </Multiselect>
-                            </div>
+                                    <label className="dropdown-kpi-filter-row">
+                                        <span className="dropdown-kpi-filter-label">Category</span>
+                                        <Select
+                                            value={selectedCategory}
+                                            onChange={(e, { value }) => {
+                                                setSelectedCategory(value);
+                                                setSelectedSubCategory(ALL_SUB_CATEGORIES);
+                                                setSelectedTags([]);
+                                            }}
+                                        >
+                                            <Select.Option
+                                                label="All categories"
+                                                value={ALL_CATEGORIES}
+                                            />
+                                            {categories.map((category) => (
+                                                <Select.Option
+                                                    key={category}
+                                                    label={category}
+                                                    value={category}
+                                                />
+                                            ))}
+                                        </Select>
+                                    </label>
+
+                                    {selectedCategory !== ALL_CATEGORIES &&
+                                        subCategories.length > 0 && (
+                                            <label className="dropdown-kpi-filter-row">
+                                                <span className="dropdown-kpi-filter-label">
+                                                    Sub-cat
+                                                </span>
+                                                <Select
+                                                    value={selectedSubCategory}
+                                                    onChange={(e, { value }) => {
+                                                        setSelectedSubCategory(value);
+                                                        setSelectedTags([]);
+                                                    }}
+                                                >
+                                                    <Select.Option
+                                                        label={`All sub-categories (${subCategories.length})`}
+                                                        value={ALL_SUB_CATEGORIES}
+                                                    />
+                                                    {subCategories.map((subCategory) => (
+                                                        <Select.Option
+                                                            key={subCategory}
+                                                            label={subCategory}
+                                                            value={subCategory}
+                                                        />
+                                                    ))}
+                                                </Select>
+                                            </label>
+                                        )}
+
+                                    <label className="dropdown-kpi-filter-row dropdown-kpi-filter-row-top">
+                                        <span className="dropdown-kpi-filter-label">Tags</span>
+                                        <Multiselect
+                                            values={selectedTags}
+                                            onChange={(e, { values }) => {
+                                                setSelectedTags(values || []);
+                                            }}
+                                            placeholder={
+                                                selectedTags.length === 0
+                                                    ? `Filter by tag (${availableTags.length} available, AND combined)...`
+                                                    : 'Add tag...'
+                                            }
+                                            inline
+                                        >
+                                            {availableTags.map((tag) => (
+                                                <Multiselect.Option
+                                                    key={tag}
+                                                    label={tag}
+                                                    value={tag}
+                                                />
+                                            ))}
+                                        </Multiselect>
+                                    </label>
+                                </div>
+                            )}
 
                             <div className="dropdown-kpi-filter-summary">
                                 <span>

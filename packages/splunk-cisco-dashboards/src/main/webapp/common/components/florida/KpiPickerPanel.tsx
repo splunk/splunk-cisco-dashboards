@@ -43,6 +43,8 @@ import {
     Gauge,
     Info,
     Loader2,
+    Lock,
+    Maximize2,
     Play,
     RotateCcw,
     Search,
@@ -84,13 +86,14 @@ const ALL_APPS = '__all_apps__';
 // as the Category facet.
 //
 // The UI stores a normalised `dispatchContext` sourced from the stanza's
-// owning ACL app; the UI labels it "App" because that's what operators
-// recognise.
+// `dispatch_context` value; the UI labels it "App" because that's what
+// operators recognise. If a stanza omits `dispatch_context`, the
+// catalogue falls back to the owning ACL app.
 //
-// Every stanza shipped in this app's `default/searchbase.conf` carries
-// `dispatch_context = splunk-cisco-dashboards` (with
-// `dispatch_context_force = 1`), so this default passes the full
-// 530-entry catalogue.
+// Most stanzas shipped in this app's `default/searchbase.conf` dispatch
+// in `splunk-cisco-dashboards`, while dependency data-model searches can
+// dispatch in their owning apps (for example `cisco-catalyst-app`).
+// This default keeps the first browse focused on dashboard-pack searches.
 //
 // Build trail:
 //   - Build 87: dropped the `Cisco` noise tag from every stanza,
@@ -282,16 +285,14 @@ export interface KpiPickerPanelProps {
     onApply: (tileId: string, override: MetricOverride) => void;
     onClearOverride: (tileId: string) => void;
     /**
-     * Search-level drilldown bindings keyed by source `search_name`.
-     * These sit beside `searchbase.conf`'s shipped
-     * `drilldown_search_name` relationship and let an operator attach
-     * a drilldown from the picker without hand-editing conf.
+     * Legacy per-user drilldown bindings keyed by source `search_name`
+     * (read-only here). Drilldown moved to admin-controlled
+     * `searchbase.conf` via `onSaveFactoryTileConfig` — this map only
+     * still feeds the picker's pre-fill so a browser that has a
+     * leftover local binding from before the migration doesn't look
+     * like it silently reverted.
      */
     drilldownBindings?: SearchbaseDrilldownMap;
-    onSetSearchDrilldown?: (
-        sourceSearchName: string,
-        drilldownSearchName: string | null
-    ) => void;
     /**
      * Section-level apply for the DISPLAY flags only (Build 1203).
      * When provided, the Display block in the picker renders an
@@ -308,9 +309,11 @@ export interface KpiPickerPanelProps {
      * compact "Test in Search" action appears next to the Searchbase
      * link. The handler receives the *literal* SPL from
      * `searchbase.conf` (the `search` field), not a saved-search
-     * reference.
+     * reference. The optional app context is the searchbase stanza's
+     * dispatch namespace, so testing runs in the same app context as
+     * the runtime tile.
      */
-    onTestInSearch?: (spl: string) => void;
+    onTestInSearch?: (spl: string, appContext?: string) => void;
     /**
      * Optional "factory reset" handler. When provided, a small
      * destructive-styled link is rendered alongside the "Reset tile"
@@ -325,6 +328,42 @@ export interface KpiPickerPanelProps {
      * reset and (typically) closing the picker after.
      */
     onResetAllCustomizations?: () => void;
+    /**
+     * Optional shared-default save handler. Overview uses this to
+     * write the current section tile order/counts to an app-level
+     * config file so the same factory layout applies to every user
+     * who has not chosen a local override.
+     */
+    onSaveFactoryDefaults?: () => void | Promise<void>;
+    factoryDefaultsStatus?: 'idle' | 'saving' | 'saved' | 'error';
+    /**
+     * True when the current Splunk user holds `admin_all_objects`
+     * (see `useCanManageFactoryTileConfig`). Thresholds, Data Mapping,
+     * and Drilldown are org-wide settings now (searchbase.conf), so
+     * their inputs render read-only for everyone else. Chart Style
+     * and Display stay editable regardless — those are personal
+     * preferences, not org-wide config.
+     */
+    canManageFactoryConfig?: boolean;
+    /**
+     * Admin-only save for Thresholds / Data Mapping / Drilldown.
+     * Only called when `canManageFactoryConfig` is true. The page is
+     * responsible for resolving stanza ids and calling
+     * `searchbaseTileConfigService.saveFactoryTileConfig`.
+     */
+    onSaveFactoryTileConfig?: (patch: FactoryTileConfigApplyPatch) => void | Promise<void>;
+    factoryTileConfigStatus?: 'idle' | 'saving' | 'saved' | 'error';
+}
+
+/** What the picker hands the page on Apply for the admin-gated fields. */
+export interface FactoryTileConfigApplyPatch {
+    tileId: string;
+    thresholds?: { warning?: number; critical?: number; direction?: MetricThresholds['direction'] };
+    dataMapping?: { label?: string; valueField?: string };
+    /** Present only when the admin picked a different search entirely. */
+    newSearchName?: string;
+    /** `undefined` = don't touch; `null` = clear; string = set. */
+    drilldownSearchName?: string | null;
 }
 
 const escapeRegex = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -485,10 +524,14 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     onApply,
     onClearOverride,
     drilldownBindings,
-    onSetSearchDrilldown,
     onTestInSearch,
     onResetAllCustomizations,
+    onSaveFactoryDefaults,
+    factoryDefaultsStatus = 'idle',
     onApplyDisplayToSection,
+    canManageFactoryConfig = false,
+    onSaveFactoryTileConfig,
+    factoryTileConfigStatus = 'idle',
 }) => {
     const [catalogue, setCatalogue] = useState<SearchbaseRecord[]>([]);
     const [loadState, setLoadState] = useState<'idle' | 'loading' | 'error'>('idle');
@@ -638,6 +681,10 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     const [drilldownTagDropdownOpen, setDrilldownTagDropdownOpen] = useState(false);
     const [chartStyleOpen, setChartStyleOpen] = useState(false);
     const [displayOpen, setDisplayOpen] = useState(false);
+    // Collapses the lower inspector into a compact selected-search
+    // strip so the catalogue list can own most of the drawer while
+    // users are browsing. The full editor is still one click away.
+    const [detailsCollapsed, setDetailsCollapsed] = useState(true);
 
     const searchInputRef = useRef<HTMLInputElement | null>(null);
     const tagSelectRef = useRef<HTMLDivElement | null>(null);
@@ -808,6 +855,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         // tiles the collapsed default keeps the panel compact.
         setChartStyleOpen(Boolean(context.currentVizOverride));
         setDisplayOpen(hidePeakActive || hideDeltaActive || hideOverlayActive);
+        setDetailsCollapsed(true);
         const defaultThresholds = context.defaultThresholds;
         const currentDirection = cur?.direction ?? 'higher_is_better';
         const defaultDirection = defaultThresholds?.direction ?? 'higher_is_better';
@@ -1578,77 +1626,81 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         drilldownActiveFilterCount > 0 || drilldownTagFilter.trim().length > 0;
 
     const handleApply = () => {
-        if (!selectedEntry || !canApply) return;
-        // Persist the catalogue key. The page resolves it through
-        // searchbase.conf before dispatching, so the picker and runtime
-        // use the same SPL.
-        const payload: MetricOverride = { savedSearch: selectedEntry.searchName };
-        if (valueField) payload.valueField = valueField;
-        if (labelOverride.trim()) payload.label = labelOverride.trim();
-        if (selectedDescriptionPlain) {
-            payload.description = selectedDescriptionPlain.slice(0, 600);
+        if (!selectedEntry || !canApply || !context) return;
+
+        // ---- Personal display taste: always applies, always local. ----
+        // Viz override (Build 1174) and the three display toggles are
+        // the only things left in the localStorage override — chart
+        // style and chrome-hiding are genuinely per-viewer taste, not
+        // org-wide fact.
+        const displayPayload: MetricOverride = {};
+        if (vizOverrideInput) {
+            displayPayload.vizOverride = vizOverrideInput;
         }
-        // Threshold deltas (Build 97). Only persist values that
-        // differ from the tile's static default — keeps the
-        // localStorage payload minimal, makes "Reset to default" a
-        // simple drop-the-field operation at runtime, and ensures
-        // that future changes to the shipped defaults flow through
-        // automatically for any field the user hasn't customised.
-        //
-        // Comparison rule: empty input matches `undefined` default,
-        // so leaving the field blank when the tile shipped without a
-        // warning band is correctly recognised as "unchanged" and
-        // omitted. Numeric comparisons are direct === since the
-        // parsed values are already finite numbers; a 95 user-typed
-        // value matches a 95 default exactly.
+        if (hidePeakInput) displayPayload.hidePeak = true;
+        if (hideDeltaInput) displayPayload.hideDelta = true;
+        if (hideOverlayInput) displayPayload.hideOverlay = true;
+        onApply(context.tileId, displayPayload);
+
+        // ---- Org-wide fields: admin-only, saved server-side. ----
+        // Thresholds / Data Mapping / Drilldown inputs render
+        // read-only when `canManageFactoryConfig` is false, so there's
+        // nothing meaningful to persist for a non-admin — bail rather
+        // than silently no-op through `onSaveFactoryTileConfig`.
+        if (!canManageFactoryConfig || !onSaveFactoryTileConfig) {
+            return;
+        }
+
+        const thresholds: FactoryTileConfigApplyPatch['thresholds'] = {};
         if (warningParsed !== def?.warning && warningParsed !== undefined) {
-            payload.thresholdWarning = warningParsed;
+            thresholds.warning = warningParsed;
         }
         if (criticalParsed !== def?.critical && criticalParsed !== undefined) {
-            payload.thresholdCritical = criticalParsed;
+            thresholds.critical = criticalParsed;
         }
         const defaultDirection = def?.direction ?? 'higher_is_better';
         if (thresholdDirection !== defaultDirection) {
-            payload.thresholdDirection = thresholdDirection;
+            thresholds.direction = thresholdDirection;
         }
-        // Viz override (Build 1174). Stored only when set — `null`
-        // means "use the conf default", which we represent at the
-        // storage layer by simply omitting the field. Same pattern
-        // as the threshold deltas above: only persist genuine
-        // user-set values, fall through to defaults at runtime.
-        if (vizOverrideInput) {
-            payload.vizOverride = vizOverrideInput;
+
+        const dataMapping: FactoryTileConfigApplyPatch['dataMapping'] = {};
+        if (valueField !== (context.currentValueField ?? '')) {
+            dataMapping.valueField = valueField || undefined;
         }
-        // Display toggles (Build 1202). Only `true` is persisted —
-        // the storage sanitiser enforces this too, but doing it here
-        // means the payload that hits localStorage matches what the
-        // user picked exactly, with no surprise drops downstream.
-        // `false` means "let the runtime defaults render the chrome",
-        // which is the same as omitting the field entirely.
-        if (hidePeakInput) {
-            payload.hidePeak = true;
+        const trimmedLabel = labelOverride.trim();
+        if (trimmedLabel && trimmedLabel !== context.currentLabel) {
+            dataMapping.label = trimmedLabel;
         }
-        if (hideDeltaInput) {
-            payload.hideDelta = true;
+
+        const searchChanged = selectedEntry.searchName !== context.currentSavedSearch;
+        const nextDrilldown = drilldownDraftSearchName.trim() || null;
+        const drilldownChanged =
+            nextDrilldown !== (configuredDrilldownNameFor(selectedEntry, drilldownBindings) || null);
+
+        // Rebinding a tile to a different search is org-wide and
+        // high-blast-radius (every viewer's dashboard changes), but
+        // `selectedEntry` also drives simple browsing/previewing in
+        // the results list above — clicking around to look at other
+        // searches while this picker happens to be open for a
+        // different tile is completely normal, and shouldn't silently
+        // commit a rebind just because Apply was clicked afterward.
+        // Require an explicit, named confirmation before a rebind
+        // actually writes anything, same pattern as Factory Reset.
+        if (searchChanged && typeof window !== 'undefined') {
+            const confirmed = window.confirm(
+                `Rebind "${context.defaultLabel}" from "${context.currentSavedSearch ?? '(none)'}" to "${selectedEntry.searchName}"?\n\n` +
+                    'This is an org-wide change — every viewer of this dashboard will see the new search, not just you.'
+            );
+            if (!confirmed) return;
         }
-        if (hideOverlayInput) {
-            payload.hideOverlay = true;
-        }
-        onSetSearchDrilldown?.(
-            selectedEntry.searchName,
-            drilldownDraftSearchName.trim() || null
-        );
-        // Edge case: the user *cleared* a default-set threshold
-        // (e.g. tile defaulted to warning=95, user blanked the input
-        // to mean "no warning band"). We can't represent "explicitly
-        // undefined" in the override map without a sentinel, so we
-        // store the deletion as a sentinel value the merge layer
-        // recognises. For now, clearing a defaulted threshold is a
-        // rare-enough case that we punt on it — the picker shows a
-        // hint when the user blanks an input that has a default, so
-        // they're aware the default will be re-applied on next merge.
-        // (See comment near the input field.)
-        onApply(context.tileId, payload);
+
+        void onSaveFactoryTileConfig({
+            tileId: context.tileId,
+            thresholds: Object.keys(thresholds).length > 0 ? thresholds : undefined,
+            dataMapping: Object.keys(dataMapping).length > 0 ? dataMapping : undefined,
+            newSearchName: searchChanged ? selectedEntry.searchName : undefined,
+            drilldownSearchName: drilldownChanged ? nextDrilldown : undefined,
+        });
     };
 
     /**
@@ -1742,6 +1794,16 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         onResetAllCustomizations();
     };
 
+    const handleSaveFactoryDefaults = () => {
+        if (!onSaveFactoryDefaults) return;
+        const ok = window.confirm(
+            'Save the current Overview tile order and visible tile counts as the shared factory default?\n\n' +
+                'This updates the app-level defaults for all users. Users with their own local tile layout keep it until they use Factory reset.'
+        );
+        if (!ok) return;
+        void onSaveFactoryDefaults();
+    };
+
     const handleClearFacets = () => {
         setSelectedApp(DEFAULT_APP_SCOPE);
         setIncludeHiddenSearches(false);
@@ -1775,7 +1837,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                 role="dialog"
                 aria-modal="true"
                 aria-label={`Configure ${context.defaultLabel}`}
-                className="fixed top-0 right-0 z-[1600] h-full w-full max-w-[440px] bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col"
+                className="fixed top-0 right-0 z-[1600] h-full w-full sm:w-[520px] xl:w-[560px] max-w-[calc(100vw-12px)] bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col"
             >
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
@@ -1790,15 +1852,44 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             </p>
                         </div>
                     </div>
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        title="Close (Esc)"
-                        aria-label="Close picker"
-                        className="p-1.5 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                    >
-                        <X className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                        <button
+                            type="button"
+                            onClick={() => setDetailsCollapsed((v) => !v)}
+                            disabled={!selectedEntry}
+                            title={
+                                detailsCollapsed
+                                    ? 'Show tile options'
+                                    : 'Focus the search list'
+                            }
+                            aria-label={
+                                detailsCollapsed
+                                    ? 'Show tile options'
+                                    : 'Focus the search list'
+                            }
+                            className={cn(
+                                'p-1.5 rounded transition-colors',
+                                selectedEntry
+                                    ? 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                    : 'text-slate-300 dark:text-slate-700 cursor-not-allowed'
+                            )}
+                        >
+                            {detailsCollapsed ? (
+                                <Settings2 className="w-4 h-4" />
+                            ) : (
+                                <Maximize2 className="w-4 h-4" />
+                            )}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            title="Close (Esc)"
+                            aria-label="Close picker"
+                            className="p-1.5 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Filters — search box + facet dropdowns + tag chips */}
@@ -2268,7 +2359,10 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         />
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 flex-wrap">
-                                                <span className="text-[11px] font-bold text-slate-800 dark:text-slate-100 break-all select-text cursor-text">
+                                                <span
+                                                    className="text-[11px] font-bold text-slate-800 dark:text-slate-100 break-words line-clamp-2 select-text cursor-text"
+                                                    title={entry.searchName}
+                                                >
                                                     {highlightMatch(entry.searchName, query)}
                                                 </span>
                                                 {plainDesc && (
@@ -2359,15 +2453,94 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
 
                 {/* Selection preview + form.
                   *
-                  * `max-h-[44%]` gives the accordion editor enough
+                  * `max-h-[48%]` gives the accordion editor enough
                   * room to breathe when one section is open while the
                   * search result list still owns the majority of the
                   * drawer. The internal `overflow-auto` keeps every
                   * field reachable when the panel content exceeds the
                   * cap, and the footer lives in a separate sibling so
                   * primary actions stay anchored. */}
-                <div className="border-t border-slate-200 dark:border-slate-800 flex-shrink-0 px-4 py-3 space-y-2.5 max-h-[44%] overflow-auto">
+                <div
+                    className={cn(
+                        'border-t border-slate-200 dark:border-slate-800 flex-shrink-0',
+                        detailsCollapsed
+                            ? 'px-3 py-2 max-h-[118px] overflow-hidden'
+                            : 'px-4 py-3 space-y-2.5 max-h-[48%] overflow-auto'
+                    )}
+                >
                     {selectedEntry ? (
+                        detailsCollapsed ? (
+                            <div className="flex items-start gap-2">
+                                <VizIcon
+                                    splunkViz={selectedEntry.defaultViz}
+                                    size={14}
+                                    showTooltip={false}
+                                    className="mt-0.5 text-sky-600 dark:text-sky-400 flex-shrink-0"
+                                />
+                                <div className="min-w-0 flex-1">
+                                    <div className="mb-0.5 flex min-w-0 items-center gap-1.5">
+                                        {selectedEntry.category && (
+                                            <span className="inline-flex max-w-[45%] items-center truncate rounded-sm bg-sky-100 px-1.5 py-px text-[8px] font-black uppercase tracking-widest text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">
+                                                {selectedEntry.category}
+                                                {selectedEntry.subCategory ? (
+                                                    <span className="ml-1 truncate opacity-70">
+                                                        · {selectedEntry.subCategory}
+                                                    </span>
+                                                ) : null}
+                                            </span>
+                                        )}
+                                        <span className="ml-auto inline-flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                                            {resolveVizMapping(selectedEntry.defaultViz).label}
+                                        </span>
+                                    </div>
+                                    <p
+                                        className="truncate text-[12px] font-bold leading-snug text-slate-800 dark:text-slate-100"
+                                        title={selectedEntry.searchName}
+                                    >
+                                        {selectedEntry.searchName}
+                                    </p>
+                                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                                        {selectedSearchbaseUrl && (
+                                            <a
+                                                href={selectedSearchbaseUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                title={`Open ${selectedEntry.id} in Searchbase`}
+                                                className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-sky-600 hover:text-sky-800 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5 dark:text-sky-300 dark:hover:text-sky-100"
+                                            >
+                                                Searchbase
+                                                <ExternalLink className="w-2.5 h-2.5" />
+                                            </a>
+                                        )}
+                                        {onTestInSearch && selectedEntry.search && (
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    onTestInSearch(
+                                                        selectedEntry.search,
+                                                        selectedEntry.dispatchContext
+                                                    )
+                                                }
+                                                title="Run this exact SPL in Search (new tab)"
+                                                className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-sky-600 hover:text-sky-800 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5 dark:text-sky-300 dark:hover:text-sky-100"
+                                            >
+                                                <Play className="w-2.5 h-2.5" />
+                                                Test
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setDetailsCollapsed(false)}
+                                    title="Open tile options"
+                                    className="inline-flex flex-shrink-0 self-start -mt-0.5 items-center gap-1 rounded px-1.5 py-1 text-[9px] font-bold uppercase tracking-widest text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                                >
+                                    <Settings2 className="w-3 h-3" />
+                                    Options
+                                </button>
+                            </div>
+                        ) : (
                         <>
                             <div>
                                 {/* Build 96: chips moved inline with the
@@ -2420,6 +2593,15 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         />
                                         {resolveVizMapping(selectedEntry.defaultViz).label}
                                     </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setDetailsCollapsed(true)}
+                                        title="Collapse options and focus the search list"
+                                        className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                                    >
+                                        <Maximize2 className="w-3 h-3" />
+                                        Collapse
+                                    </button>
                                 </div>
                                 <p
                                     className="select-text cursor-text text-[12px] font-bold text-slate-800 dark:text-slate-100 break-words leading-snug"
@@ -2443,7 +2625,12 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     {onTestInSearch && selectedEntry.search && (
                                         <button
                                             type="button"
-                                            onClick={() => onTestInSearch(selectedEntry.search)}
+                                            onClick={() =>
+                                                onTestInSearch(
+                                                    selectedEntry.search,
+                                                    selectedEntry.dispatchContext
+                                                )
+                                            }
                                             title="Run this exact SPL in Search (new tab)"
                                             className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-sky-600 dark:text-sky-300 hover:text-sky-800 dark:hover:text-sky-100 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
                                         >
@@ -2519,6 +2706,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     </label>
                                     <input
                                         type="text"
+                                        disabled={!canManageFactoryConfig}
                                         value={valueField}
                                         onChange={(e) =>
                                             setValueField(
@@ -2527,17 +2715,26 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         }
                                         placeholder="auto-detect"
                                         title={
-                                            'The exact column name in the search results to read for the headline / sparkline value.\n\n' +
-                                            'Examples: score, count, pct, totalUsers, avg_latency.\n\n' +
-                                            'Leave blank to auto-detect (uses the first numeric column found, preferring value / count / score / pct).'
+                                            canManageFactoryConfig
+                                                ? 'The exact column name in the search results to read for the headline / sparkline value.\n\n' +
+                                                  'Examples: score, count, pct, totalUsers, avg_latency.\n\n' +
+                                                  'Leave blank to auto-detect (uses the first numeric column found, preferring value / count / score / pct).'
+                                                : 'Org-wide setting — requires admin to change'
                                         }
                                         className={cn(
+                                            'disabled:opacity-50 disabled:cursor-not-allowed',
                                             'w-full px-2 py-1 text-[11px] rounded border focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100',
                                             fieldNameValid
                                                 ? 'border-slate-200 dark:border-slate-700'
                                                 : 'border-red-400 dark:border-red-600'
                                         )}
                                     />
+                                    {!canManageFactoryConfig && (
+                                        <p className="mt-0.5 flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                                            <Lock className="w-2.5 h-2.5" />
+                                            Org-wide — requires admin
+                                        </p>
+                                    )}
                                     {!fieldNameValid && (
                                         <p className="mt-0.5 text-[9px] text-red-600 dark:text-red-400">
                                             Letters / digits / underscores / dot only.
@@ -2592,12 +2789,18 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     </label>
                                     <input
                                         type="text"
+                                        disabled={!canManageFactoryConfig}
                                         value={labelOverride}
                                         onChange={(e) =>
                                             setLabelOverride(e.target.value.slice(0, 80))
                                         }
                                         placeholder={context.defaultLabel}
-                                        className="w-full px-2 py-1 text-[11px] rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                                        title={
+                                            canManageFactoryConfig
+                                                ? undefined
+                                                : 'Org-wide setting — requires admin to change'
+                                        }
+                                        className="w-full px-2 py-1 text-[11px] rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:opacity-50 disabled:cursor-not-allowed"
                                     />
                                 </div>
                             </div>
@@ -2681,7 +2884,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                         type="button"
                                                                         onClick={() =>
                                                                             onTestInSearch(
-                                                                                selectedDrilldownEntry.search
+                                                                                selectedDrilldownEntry.search,
+                                                                                selectedDrilldownEntry.dispatchContext
                                                                             )
                                                                         }
                                                                         title="Run the attached drilldown SPL in Search (new tab)"
@@ -3553,6 +3757,13 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     </p>
                                 )}
 
+                                {thresholdsOpen && !canManageFactoryConfig && (
+                                    <p className="mt-1 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                                        <Lock className="w-2.5 h-2.5" />
+                                        Org-wide setting — requires admin to change
+                                    </p>
+                                )}
+
                                 {thresholdsOpen && (
                                     <div
                                         id="kpi-picker-thresholds-block"
@@ -3590,12 +3801,17 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                         <button
                                                             key={opt.v}
                                                             type="button"
+                                                            disabled={!canManageFactoryConfig}
                                                             onClick={() =>
                                                                 setThresholdDirection(opt.v)
                                                             }
-                                                            title={opt.hint}
+                                                            title={
+                                                                canManageFactoryConfig
+                                                                    ? opt.hint
+                                                                    : 'Org-wide setting — requires admin to change'
+                                                            }
                                                             className={cn(
-                                                                'px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                                                                'px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400 disabled:opacity-50 disabled:cursor-not-allowed',
                                                                 active
                                                                     ? 'bg-sky-500 text-white'
                                                                     : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -3623,6 +3839,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                     type="number"
                                                     inputMode="decimal"
                                                     step="any"
+                                                    disabled={!canManageFactoryConfig}
                                                     value={thresholdWarningInput}
                                                     onChange={(e) =>
                                                         setThresholdWarningInput(
@@ -3634,8 +3851,13 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                             ? String(def.warning)
                                                             : 'none'
                                                     }
-                                                    title="Value at which the headline flips to the warning colour. Leave blank to disable the warning band."
+                                                    title={
+                                                        canManageFactoryConfig
+                                                            ? 'Value at which the headline flips to the warning colour. Leave blank to disable the warning band.'
+                                                            : 'Org-wide setting — requires admin to change'
+                                                    }
                                                     className={cn(
+                                                        'disabled:opacity-50 disabled:cursor-not-allowed',
                                                         'w-full px-2 py-1 text-[11px] rounded border focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100',
                                                         warningInputValid
                                                             ? 'border-slate-200 dark:border-slate-700'
@@ -3656,6 +3878,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                     type="number"
                                                     inputMode="decimal"
                                                     step="any"
+                                                    disabled={!canManageFactoryConfig}
                                                     value={thresholdCriticalInput}
                                                     onChange={(e) =>
                                                         setThresholdCriticalInput(
@@ -3667,8 +3890,13 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                             ? String(def.critical)
                                                             : 'none'
                                                     }
-                                                    title="Value at which the headline flips to the critical colour. Leave blank to disable the critical band."
+                                                    title={
+                                                        canManageFactoryConfig
+                                                            ? 'Value at which the headline flips to the critical colour. Leave blank to disable the critical band.'
+                                                            : 'Org-wide setting — requires admin to change'
+                                                    }
                                                     className={cn(
+                                                        'disabled:opacity-50 disabled:cursor-not-allowed',
                                                         'w-full px-2 py-1 text-[11px] rounded border focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100',
                                                         criticalInputValid
                                                             ? 'border-slate-200 dark:border-slate-700'
@@ -3752,6 +3980,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 )}
                             </div>
                         </>
+                        )
                     ) : (
                         <p className="text-[11px] text-slate-400 dark:text-slate-500 italic">
                             Pick a search above to preview SPL and apply.
@@ -3794,6 +4023,37 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 >
                                     <RotateCcw className="w-3 h-3" />
                                     Factory reset
+                                </button>
+                            </>
+                        )}
+                        {onSaveFactoryDefaults && (
+                            <>
+                                <span
+                                    aria-hidden="true"
+                                    className="w-px h-3 bg-slate-200 dark:bg-slate-700 flex-shrink-0"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={handleSaveFactoryDefaults}
+                                    disabled={factoryDefaultsStatus === 'saving'}
+                                    title="Save current tile order and counts as the shared Overview factory default"
+                                    className={cn(
+                                        'inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider flex-shrink-0',
+                                        factoryDefaultsStatus === 'error'
+                                            ? 'text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300'
+                                            : factoryDefaultsStatus === 'saved'
+                                              ? 'text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300'
+                                              : 'text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300',
+                                        factoryDefaultsStatus === 'saving' &&
+                                            'opacity-60 cursor-wait'
+                                    )}
+                                >
+                                    <Settings2 className="w-3 h-3" />
+                                    {factoryDefaultsStatus === 'saving'
+                                        ? 'Saving defaults'
+                                        : factoryDefaultsStatus === 'saved'
+                                          ? 'Defaults saved'
+                                          : 'Save defaults'}
                                 </button>
                             </>
                         )}

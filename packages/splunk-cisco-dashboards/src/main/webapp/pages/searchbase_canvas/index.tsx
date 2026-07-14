@@ -685,6 +685,7 @@ interface SearchbaseDetailTableConfig {
     buttonTitle: string;
     subtitle: (range: TimeRange) => string;
     spl: string;
+    dispatchContext?: string;
     tag: string;
     rowKeyField: string;
     emptyMessage: string;
@@ -821,6 +822,7 @@ const buildSearchbaseDetailTableConfig = (
         subtitle: (range) =>
             interpolateDetailSubtitle(subtitleTemplate, source, detail, range),
         spl: detail.search,
+        dispatchContext: detail.dispatchContext,
         tag,
         rowKeyField:
             readDetailStringOption(options, 'rowKeyField') ?? columns[0]?.field ?? '',
@@ -1159,6 +1161,7 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
                 .join(' / '),
             description,
             spl: record.search,
+            dispatchContext: record.dispatchContext,
             color,
             valueField: valueFieldOverride,
             sparkDataField: sparkDataFieldOverride,
@@ -1282,6 +1285,25 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
         return <MarkerGaugeTile {...scalarTileProps} />;
     }
 
+    const baseVizType = sparklineVizTypeFromSplunkViz(viz);
+    const sparklineDisplayOption = record.vizOptions?.sparklineDisplay;
+    const singleValueSparklineDisabled =
+        record.vizOptions?.showSparkline === false ||
+        (typeof sparklineDisplayOption === 'string' &&
+            sparklineDisplayOption.trim().toLowerCase() === 'off');
+    const shouldRenderSingleValueSparkline =
+        baseVizType === 'singlevalue' &&
+        !singleValueSparklineDisabled &&
+        metric.source === 'live' &&
+        metric.sparkData.length > 1 &&
+        metric.sparkTimestamps.length === metric.sparkData.length;
+    const tileVizType = shouldRenderSingleValueSparkline ? 'line' : baseVizType;
+    const tileDataValuesDisplay =
+        shouldRenderSingleValueSparkline &&
+        record.vizOptions?.dataValuesDisplay === undefined
+            ? 'off'
+            : normalizeDataValuesDisplay(record.vizOptions?.dataValuesDisplay);
+
     return (
         <MetricItem
             label={record.searchName}
@@ -1305,10 +1327,8 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
             source={metric.source}
             noDataReason={metric.noDataReason}
             rangeLabel={metric.rangeLabel}
-            vizType={sparklineVizTypeFromSplunkViz(viz)}
-            dataValuesDisplay={normalizeDataValuesDisplay(
-                record.vizOptions?.dataValuesDisplay
-            )}
+            vizType={tileVizType}
+            dataValuesDisplay={tileDataValuesDisplay}
             onOpenDetailTable={onOpenDrilldown}
             detailTableTitle={drilldownTitle ?? 'View detail'}
         />
@@ -1335,10 +1355,11 @@ const SearchbaseTableTileBody: React.FC<
         () => ({
             id: tile.id,
             spl: record.search,
+            dispatchContext: record.dispatchContext,
             rowLimit: 50,
             suppressMockOnEmpty: true,
         }),
-        [record.search, tile.id]
+        [record.dispatchContext, record.search, tile.id]
     );
     const table = useTableData(tableConfig, range, refreshToken);
 
@@ -1462,8 +1483,8 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
         [entryByName, record]
     );
     const openSearch = useCallback(() => {
-        openSplunkSearch(record.search, range);
-    }, [record.search, range]);
+        openSplunkSearch(record.search, range, record.dispatchContext);
+    }, [record.dispatchContext, record.search, range]);
     const openDrilldown = useCallback(() => {
         if (detailTableConfig) {
             onOpenDetailTable(detailTableConfig);
@@ -1472,13 +1493,16 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
         if (record.drilldownSearchName) {
             openSplunkSearch(
                 drilldownRecord?.search ?? savedSearchSpl(record.drilldownSearchName),
-                range
+                range,
+                drilldownRecord?.dispatchContext ?? record.dispatchContext
             );
         }
     }, [
         detailTableConfig,
+        drilldownRecord?.dispatchContext,
         drilldownRecord?.search,
         onOpenDetailTable,
+        record.dispatchContext,
         record.drilldownSearchName,
         range,
     ]);
@@ -1660,7 +1684,8 @@ const SearchbasePreviewTile: React.FC<ResolvedSearchbaseCanvasTileProps> = ({
     presentationMode = false,
 }) => {
     const description = recordPlainText(record);
-    const openSearch = () => openSplunkSearch(record.search, range);
+    const openSearch = () =>
+        openSplunkSearch(record.search, range, record.dispatchContext);
     const color = firstSeriesColor(record.vizOptions);
     const viz = effectiveTileViz(tile, record);
     const detailTableConfig = useMemo(
@@ -1871,6 +1896,7 @@ const SearchbaseDetailTableModal: React.FC<{
             earliestTime: range.earliest,
             latestTime: range.latest,
             tag: config.tag,
+            appContext: config.dispatchContext,
         })
             .then((response) => {
                 if (cancelled) return;
@@ -1920,7 +1946,7 @@ const SearchbaseDetailTableModal: React.FC<{
     const titleId = `${config.tag}-title`;
     const displayColumns = columns.length > 0 ? columns : config.columns;
     const columnCount = Math.max(displayColumns.length, 1);
-    const searchUrl = splunkSearchAppUrl(config.spl, range);
+    const searchUrl = splunkSearchAppUrl(config.spl, range, config.dispatchContext);
 
     return (
         <div
@@ -2451,7 +2477,8 @@ const NoDataReportModal: React.FC<{
                                                         onClick={() =>
                                                             openSplunkSearch(
                                                                 record.search,
-                                                                range
+                                                                range,
+                                                                record.dispatchContext
                                                             )
                                                         }
                                                         className="inline-flex items-center gap-1 rounded border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 transition-colors hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:border-slate-700 dark:text-slate-300 dark:hover:border-sky-600 dark:hover:bg-sky-950/40 dark:hover:text-sky-200"
@@ -2534,6 +2561,64 @@ const vizFilterValue = (record: SearchbaseRecord): string => {
 
 const vizFilterLabel = (value: string): string =>
     value === UNSET_VIZ ? 'No default_viz' : formatVizLabel(value);
+
+const recordOwnerApp = (record: SearchbaseRecord): string =>
+    record.ownerApp || APP_NAME;
+
+const recordDispatchContext = (record: SearchbaseRecord): string =>
+    record.dispatchContext || recordOwnerApp(record);
+
+const normalizeSearchIdentity = (value: unknown): string =>
+    String(value ?? '').trim().toLowerCase();
+
+const normalizeCatalogueQueryText = (value: string): string =>
+    value
+        .toLowerCase()
+        .replace(/\s*=\s*/g, '=')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+const compactCatalogueQueryText = (value: string): string =>
+    normalizeCatalogueQueryText(value).replace(/\s+/g, '');
+
+const recordCatalogueText = (record: SearchbaseRecord): string =>
+    [
+        record.id,
+        record.searchName,
+        record.category,
+        record.subCategory,
+        recordOwnerApp(record),
+        record.dispatchContext,
+        record.tags.join(' '),
+        plainTextFromHtml(record.description),
+        plainTextFromHtml(record.explanation),
+        plainTextFromHtml(record.solution),
+        plainTextFromHtml(record.relatedInfo),
+        record.search,
+        record.drilldownSearchName,
+        record.drilldownButtonTitle,
+        record.defaultViz,
+        record.vizOptions ? JSON.stringify(record.vizOptions) : '',
+    ]
+        .filter(Boolean)
+        .join(' ');
+
+const recordMatchesCatalogueQuery = (
+    record: SearchbaseRecord,
+    rawQuery: string
+): boolean => {
+    const normalizedQuery = normalizeCatalogueQueryText(rawQuery);
+    if (!normalizedQuery) return true;
+
+    const normalizedHaystack = normalizeCatalogueQueryText(recordCatalogueText(record));
+    if (normalizedHaystack.includes(normalizedQuery)) return true;
+
+    const compactQuery = compactCatalogueQueryText(rawQuery);
+    return (
+        compactQuery.length > 0 &&
+        compactCatalogueQueryText(recordCatalogueText(record)).includes(compactQuery)
+    );
+};
 
 interface SearchableFilterSelectProps {
     value: string;
@@ -2722,6 +2807,9 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
     const [vizType, setVizType] = useState(ALL);
     const [tagInput, setTagInput] = useState('');
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
+    const [includeDrilldownSearches, setIncludeDrilldownSearches] =
+        useState(false);
+    const [includeTableSearches, setIncludeTableSearches] = useState(false);
     const [filtersCollapsed, setFiltersCollapsed] = useState(true);
     const [selectedNames, setSelectedNames] = useState<Set<string>>(
         () => new Set()
@@ -2740,6 +2828,39 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
             setFiltersCollapsed(true);
         }
     }, [open]);
+
+    const drilldownSearchNames = useMemo(
+        () =>
+            new Set(
+                records
+                    .map((record) => record.drilldownSearchName)
+                    .filter(Boolean)
+                    .map(normalizeSearchIdentity)
+            ),
+        [records]
+    );
+
+    const browserRecords = useMemo(
+        () =>
+            records.filter((record) => {
+                if (!includeHiddenSearches && record.searchHidden) return false;
+                const isDrilldownSearch =
+                    drilldownSearchNames.has(
+                        normalizeSearchIdentity(record.searchName)
+                    ) ||
+                    drilldownSearchNames.has(normalizeSearchIdentity(record.id));
+                if (!includeDrilldownSearches && isDrilldownSearch) return false;
+                if (!includeTableSearches && isTableViz(record.defaultViz)) return false;
+                return true;
+            }),
+        [
+            drilldownSearchNames,
+            includeDrilldownSearches,
+            includeHiddenSearches,
+            includeTableSearches,
+            records,
+        ]
+    );
 
     const blockedSearchNames = useMemo(() => {
         const names = new Set<string>();
@@ -2767,22 +2888,29 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
 
     const appOptions = useMemo(
         () =>
-            Array.from(new Set(records.map((record) => record.dispatchContext).filter(Boolean))).sort(),
-        [records]
+            Array.from(new Set(browserRecords.map(recordDispatchContext))).sort(
+                (left, right) => left.localeCompare(right)
+            ),
+        [browserRecords]
     );
 
     useEffect(() => {
-        if (appOptions.length > 0 && !appOptions.includes(app) && app !== ALL) {
+        if (
+            appOptions.length > 0 &&
+            !appOptions.includes(app) &&
+            app !== ALL &&
+            app !== APP_NAME
+        ) {
             setApp(appOptions.includes(APP_NAME) ? APP_NAME : ALL);
         }
     }, [app, appOptions]);
 
     const appScopedRecords = useMemo(
         () =>
-            records.filter((record) =>
-                app === ALL ? true : record.dispatchContext === app
+            browserRecords.filter((record) =>
+                app === ALL ? true : recordDispatchContext(record) === app
             ),
-        [app, records]
+        [app, browserRecords]
     );
 
     const categoryOptions = useMemo(
@@ -2869,6 +2997,11 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
         [facetScopedRecords, selectedTags]
     );
 
+    const availableTagCount = useMemo(
+        () => new Set(facetScopedRecords.flatMap((record) => record.tags)).size,
+        [facetScopedRecords]
+    );
+
     const tagOptions = useMemo(() => {
         const tagCounts = new Map<string, number>();
         for (const record of tagScopedRecords) {
@@ -2888,22 +3021,9 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
     }, [selectedTags, tagInput, tagScopedRecords]);
 
     const filteredRecords = useMemo(() => {
-        const normalizedQuery = query.trim().toLowerCase();
-        return tagScopedRecords.filter((record) => {
-            if (!normalizedQuery) return true;
-            const haystack = [
-                record.id,
-                record.searchName,
-                record.category,
-                record.subCategory,
-                record.dispatchContext,
-                record.tags.join(' '),
-                plainTextFromHtml(record.description),
-            ]
-                .join(' ')
-                .toLowerCase();
-            return haystack.includes(normalizedQuery);
-        });
+        return tagScopedRecords.filter((record) =>
+            recordMatchesCatalogueQuery(record, query)
+        );
     }, [query, tagScopedRecords]);
 
     const selectedRecords = useMemo(
@@ -2935,6 +3055,12 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
         if (includeHiddenSearches) {
             chips.push({ id: 'hidden', label: 'Hidden included' });
         }
+        if (includeDrilldownSearches) {
+            chips.push({ id: 'drilldown', label: 'Drill-down included' });
+        }
+        if (includeTableSearches) {
+            chips.push({ id: 'tables', label: 'Tables included' });
+        }
         if (category !== ALL) chips.push({ id: `category-${category}`, label: category });
         if (subCategory !== ALL) {
             chips.push({ id: `sub-category-${subCategory}`, label: subCategory });
@@ -2944,7 +3070,16 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
         }
         for (const tag of selectedTags) chips.push({ id: `tag-${tag}`, label: tag });
         return chips;
-    }, [app, category, includeHiddenSearches, selectedTags, subCategory, vizType]);
+    }, [
+        app,
+        category,
+        includeDrilldownSearches,
+        includeHiddenSearches,
+        includeTableSearches,
+        selectedTags,
+        subCategory,
+        vizType,
+    ]);
 
     const hasActiveFilters =
         query.trim().length > 0 || activeFilterChips.length > 0;
@@ -2953,6 +3088,8 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
         setQuery('');
         setApp(appOptions.includes(APP_NAME) ? APP_NAME : ALL);
         onIncludeHiddenSearchesChange(false);
+        setIncludeDrilldownSearches(false);
+        setIncludeTableSearches(false);
         setCategory(ALL);
         setSubCategory(ALL);
         setVizType(ALL);
@@ -3011,7 +3148,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                     <input
                         value={query}
                         onChange={(event) => setQuery(event.target.value)}
-                        placeholder="Filter by name, description, or tag..."
+                        placeholder="Filter by stanza, name, SPL, description, or tag..."
                         className="h-11 w-full rounded-md border border-slate-300 bg-white pl-10 pr-3 text-sm font-medium text-slate-900 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
                     />
                 </label>
@@ -3064,38 +3201,76 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                         </div>
                     )
                 ) : (
-                    <>
-                        <div className="mt-3 grid grid-cols-[76px_minmax(0,1fr)] gap-x-3 gap-y-2.5">
+                    <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/80 p-3 dark:border-slate-800 dark:bg-slate-900/60">
+                        <div className="grid grid-cols-[76px_minmax(0,1fr)] gap-x-3 gap-y-3">
                             <label className="self-center text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
                                 App
                             </label>
                             <select
                                 value={app}
-                                onChange={(event) => setApp(event.target.value)}
-                                className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
+                                onChange={(event) => {
+                                    setApp(event.target.value);
+                                    setCategory(ALL);
+                                    setSubCategory(ALL);
+                                    setVizType(ALL);
+                                    setSelectedTags([]);
+                                    setTagInput('');
+                                }}
+                                className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-900"
                             >
-                                <option value={ALL}>All apps</option>
+                                <option value={ALL}>All apps ({appOptions.length})</option>
                                 {appOptions.map((option) => (
                                     <option key={option} value={option}>
                                         {option}
                                     </option>
                                 ))}
+                                {!appOptions.includes(APP_NAME) && (
+                                    <option value={APP_NAME}>{APP_NAME}</option>
+                                )}
                             </select>
 
-                            <label className="self-center text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
-                                Hidden
-                            </label>
-                            <label className="flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
-                                <input
-                                    type="checkbox"
-                                    checked={includeHiddenSearches}
-                                    onChange={(event) =>
-                                        onIncludeHiddenSearchesChange(event.target.checked)
-                                    }
-                                    className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-950"
-                                />
-                                <span>Show hidden searches</span>
-                            </label>
+                            <span className="self-start pt-4 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                                Visibility
+                            </span>
+                            <div className="grid gap-2 sm:grid-cols-3">
+                                <label className="flex min-h-16 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-bold leading-tight text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                                    <input
+                                        type="checkbox"
+                                        checked={includeHiddenSearches}
+                                        onChange={(event) =>
+                                            onIncludeHiddenSearchesChange(
+                                                event.target.checked
+                                            )
+                                        }
+                                        className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-950"
+                                    />
+                                    <span>Show hidden searches</span>
+                                </label>
+                                <label className="flex min-h-16 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-bold leading-tight text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                                    <input
+                                        type="checkbox"
+                                        checked={includeDrilldownSearches}
+                                        onChange={(event) =>
+                                            setIncludeDrilldownSearches(
+                                                event.target.checked
+                                            )
+                                        }
+                                        className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-950"
+                                    />
+                                    <span>Show drill-down searches</span>
+                                </label>
+                                <label className="flex min-h-16 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-bold leading-tight text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                                    <input
+                                        type="checkbox"
+                                        checked={includeTableSearches}
+                                        onChange={(event) =>
+                                            setIncludeTableSearches(event.target.checked)
+                                        }
+                                        className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-950"
+                                    />
+                                    <span>Show table searches</span>
+                                </label>
+                            </div>
 
                             <label className="self-center text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
                                 Category
@@ -3106,28 +3281,47 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                 allLabel="All categories"
                                 searchPlaceholder="Search categories..."
                                 ariaLabel="Category"
-                                onChange={setCategory}
+                                onChange={(value) => {
+                                    setCategory(value);
+                                    setSubCategory(ALL);
+                                    setVizType(ALL);
+                                    setSelectedTags([]);
+                                    setTagInput('');
+                                }}
                             />
 
-                            <label className="self-center text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
-                                Sub-cat
-                            </label>
-                            <SearchableFilterSelect
-                                value={subCategory}
-                                options={subCategoryOptions}
-                                allLabel="All sub-categories"
-                                searchPlaceholder="Search sub-categories..."
-                                ariaLabel="Sub-category"
-                                onChange={setSubCategory}
-                            />
+                            {category !== ALL && subCategoryOptions.length > 0 && (
+                                <>
+                                    <label className="self-center text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                                        Sub-cat
+                                    </label>
+                                    <SearchableFilterSelect
+                                        value={subCategory}
+                                        options={subCategoryOptions}
+                                        allLabel={`All sub-categories (${subCategoryOptions.length})`}
+                                        searchPlaceholder="Search sub-categories..."
+                                        ariaLabel="Sub-category"
+                                        onChange={(value) => {
+                                            setSubCategory(value);
+                                            setVizType(ALL);
+                                            setSelectedTags([]);
+                                            setTagInput('');
+                                        }}
+                                    />
+                                </>
+                            )}
 
                             <label className="self-center text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
                                 Viz
                             </label>
                             <select
                                 value={vizType}
-                                onChange={(event) => setVizType(event.target.value)}
-                                className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
+                                onChange={(event) => {
+                                    setVizType(event.target.value);
+                                    setSelectedTags([]);
+                                    setTagInput('');
+                                }}
+                                className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-900"
                             >
                                 <option value={ALL}>All viz types</option>
                                 {vizTypeOptions.map((option) => (
@@ -3136,54 +3330,60 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                     </option>
                                 ))}
                             </select>
-                        </div>
 
-                        <div className="mt-3">
-                            <label className="relative block">
+                            <label className="self-center text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                                Tags
+                            </label>
+                            <div>
                                 <input
                                     value={tagInput}
                                     onChange={(event) => setTagInput(event.target.value)}
-                                    placeholder="Filter by tag..."
-                                    className="h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
+                                    placeholder={`Filter by tag (${availableTagCount} available, AND combined)...`}
+                                    className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-900"
                                 />
-                            </label>
-                            {(selectedTags.length > 0 || tagOptions.length > 0) && (
-                                <div className="mt-2 flex max-h-20 flex-wrap gap-1 overflow-y-auto">
-                                    {selectedTags.map((tag) => (
-                                        <button
-                                            key={tag}
-                                            type="button"
-                                            onClick={() =>
-                                                setSelectedTags((current) =>
-                                                    current.filter((value) => value !== tag)
-                                                )
-                                            }
-                                            className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-1 text-[11px] font-bold text-sky-700 hover:bg-sky-200 dark:bg-sky-900 dark:text-sky-100 dark:hover:bg-sky-800"
-                                        >
-                                            {tag}
-                                            <X className="h-3 w-3" />
-                                        </button>
-                                    ))}
-                                    {tagOptions.map(({ tag, count }) => (
-                                        <button
-                                            key={tag}
-                                            type="button"
-                                            onClick={() => selectTag(tag)}
-                                            className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-500 hover:border-sky-300 hover:text-sky-600 dark:border-slate-700 dark:text-slate-400 dark:hover:border-sky-700 dark:hover:text-sky-300"
-                                        >
-                                            {tag}
-                                            <span className="text-slate-400">{count}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
+                                {(selectedTags.length > 0 || tagOptions.length > 0) && (
+                                    <div className="mt-2 flex max-h-20 flex-wrap gap-1 overflow-y-auto">
+                                        {selectedTags.map((tag) => (
+                                            <button
+                                                key={tag}
+                                                type="button"
+                                                onClick={() =>
+                                                    setSelectedTags((current) =>
+                                                        current.filter(
+                                                            (value) => value !== tag
+                                                        )
+                                                    )
+                                                }
+                                                className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-1 text-[11px] font-bold text-sky-700 hover:bg-sky-200 dark:bg-sky-900 dark:text-sky-100 dark:hover:bg-sky-800"
+                                            >
+                                                {tag}
+                                                <X className="h-3 w-3" />
+                                            </button>
+                                        ))}
+                                        {tagOptions.map(({ tag, count }) => (
+                                            <button
+                                                key={tag}
+                                                type="button"
+                                                onClick={() => selectTag(tag)}
+                                                className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-500 hover:border-sky-300 hover:text-sky-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:border-sky-700 dark:hover:text-sky-300"
+                                            >
+                                                {tag}
+                                                <span className="text-slate-400">{count}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                    </>
+                    </div>
                 )}
             </div>
 
             <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 px-4 py-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                <span className="font-bold">{filteredRecords.length.toLocaleString()} searches</span>
+                <span className="font-bold">
+                    {filteredRecords.length.toLocaleString()} of{' '}
+                    {browserRecords.length.toLocaleString()} searches
+                </span>
                 {!replaceMode && addableFilteredRecords.length !== filteredRecords.length && (
                     <span>{addableFilteredRecords.length.toLocaleString()} addable</span>
                 )}
@@ -3221,7 +3421,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto p-3">
-                {records.length === 0 ? (
+                {browserRecords.length === 0 ? (
                     <div className="rounded-md border border-dashed border-slate-300 p-5 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
                         Searchbase catalogue is empty in this runtime.
                     </div>
@@ -3280,7 +3480,11 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                                 </span>
                                             </div>
                                             <div className="mt-0.5 truncate text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                                                {[record.category, record.subCategory]
+                                                {[
+                                                    record.category,
+                                                    record.subCategory,
+                                                    recordDispatchContext(record),
+                                                ]
                                                     .filter(Boolean)
                                                     .join(' / ')}
                                             </div>
@@ -3432,11 +3636,7 @@ const SearchbaseCanvasPage: React.FC = () => {
     useEffect(() => {
         let cancelled = false;
         setLoadingCatalogue(true);
-        getSearchbaseCatalogue(
-            includeHiddenSearches
-                ? { allApps: true, includeHidden: true }
-                : { allApps: true }
-        )
+        getSearchbaseCatalogue({ allApps: true, includeHidden: true })
             .then((list) => {
                 if (cancelled) return;
                 setRecords(list);
@@ -3452,7 +3652,7 @@ const SearchbaseCanvasPage: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, [includeHiddenSearches]);
+    }, []);
 
     const refreshSavedCanvases = useCallback(() => {
         listSearchbaseCanvases()

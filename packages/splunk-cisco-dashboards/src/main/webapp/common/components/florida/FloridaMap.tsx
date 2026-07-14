@@ -70,9 +70,9 @@ L.Icon.Default.mergeOptions({
 // the dashboard cares about (matches the SITE NODES legend below). Add
 // more here only if they get a corresponding row in the legend + table.
 //
-// `savedSearch` is the searchbase.conf `search_name` for the site SPL.
-// The popup card pulls the resolved SPL from the searchbase catalogue,
-// so what you see is exactly what the app dispatches.
+// `topologySiteId` is resolved from searchbase.conf
+// `viz_options.topologySite.id`, keeping the search binding in the central
+// catalogue instead of hard-coding friendly search names here.
 const cities: City[] = [
     {
         id: 'tlh',
@@ -82,7 +82,7 @@ const cities: City[] = [
         status: 'stable',
         importance: 'primary',
         metrics: { events: 1240, alerts: 0, latency: 28 },
-        savedSearch: 'Overview - Site Tallahassee Health',
+        topologySiteId: 'tlh',
     },
     {
         id: 'mco',
@@ -92,7 +92,7 @@ const cities: City[] = [
         status: 'warning',
         importance: 'primary',
         metrics: { events: 4100, alerts: 12, latency: 145 },
-        savedSearch: 'Overview - Site Demo (Warning)',
+        topologySiteId: 'mco',
     },
     {
         id: 'aub',
@@ -102,23 +102,21 @@ const cities: City[] = [
         status: 'critical',
         importance: 'primary',
         metrics: { events: 8200, alerts: 42, latency: 310 },
-        savedSearch: 'Overview - Site Auburndale Health',
+        topologySiteId: 'aub',
     },
 ];
-
-/**
- * Builds the SPL string we hand to the search bar when the user clicks
- * "Open in Splunk Search". `| savedsearch "..."` dispatches the stanza
- * inside the current app context, so any conf-side change to the
- * stanza is what actually runs.
- */
-const buildSiteDispatchSpl = (savedSearch: string): string =>
-    `| savedsearch "${savedSearch.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 
 const STATUS_RANK: Record<City['status'], number> = {
     critical: 3,
     warning: 2,
     stable: 1,
+};
+
+const readTopologySiteId = (record: SearchbaseRecord): string => {
+    const raw = record.vizOptions?.topologySite;
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return '';
+    const id = (raw as { id?: unknown }).id;
+    return typeof id === 'string' ? id.trim() : '';
 };
 
 // HTML-escape so divIcon contents can never inject markup if the city
@@ -291,11 +289,11 @@ interface FloridaMapProps {
      * Drilldown handler — invoked with a SPL string when the user
      * clicks "Open in Splunk Search" or the SPL preview block on the
      * pinned site card. The container is expected to open the SPL in
-     * Splunk's Search & Reporting view under this app's namespace (so
-     * saved-search references resolve). When omitted, those
-     * affordances are rendered as no-ops.
+     * Splunk's Search & Reporting view under the same app namespace
+     * the stanza dispatches in. When omitted, those affordances are
+     * rendered as no-ops.
      */
-    onOpenInSearch?: (spl: string) => void;
+    onOpenInSearch?: (spl: string, appContext?: string) => void;
 }
 
 // Default framing for the executive view. Driven by an explicit
@@ -373,34 +371,32 @@ export const FloridaMap: React.FC<FloridaMapProps> = ({
     );
     const pauseUntilRef = useRef<number>(0);
 
-    // Map of search_name → searchbase entry. Drives both the popup
+    // Map of topologySite.id → searchbase entry. Drives both the popup
     // SPL preview and the "Open in Splunk Search" drilldown so the
     // executive sees-and-clicks the literal SPL straight from
-    // searchbase.conf — no `| savedsearch "..."` indirection.
+    // searchbase.conf.
     //
     // State is `null` while the first fetch is in flight; we render
-    // a "Loading SPL…" placeholder instead of a stale invocation
-    // string. On fetch failure we fall back to an empty map and the
-    // dispatch form (so the popup still works, just with the
-    // saved-search reference).
-    const [catalogueByName, setCatalogueByName] = useState<Record<
+    // a "Loading SPL…" placeholder instead of stale or implicit dispatch.
+    const [catalogueByTopologySiteId, setCatalogueByTopologySiteId] = useState<Record<
         string,
         SearchbaseRecord
     > | null>(null);
     useEffect(() => {
         let cancelled = false;
-        getSearchbaseCatalogue()
+        getSearchbaseCatalogue({ includeHidden: true })
             .then((list) => {
                 if (cancelled) return;
-                const byName: Record<string, SearchbaseRecord> = {};
+                const byTopologySiteId: Record<string, SearchbaseRecord> = {};
                 for (const r of list) {
-                    if (r.searchName) byName[r.searchName] = r;
+                    const topologySiteId = readTopologySiteId(r);
+                    if (topologySiteId) byTopologySiteId[topologySiteId] = r;
                 }
-                setCatalogueByName(byName);
+                setCatalogueByTopologySiteId(byTopologySiteId);
             })
             .catch(() => {
                 if (cancelled) return;
-                setCatalogueByName({});
+                setCatalogueByTopologySiteId({});
             });
         return () => {
             cancelled = true;
@@ -408,20 +404,16 @@ export const FloridaMap: React.FC<FloridaMapProps> = ({
     }, []);
 
     const selectedRecord = useMemo(() => {
-        if (!selectedCity || !catalogueByName) return null;
-        return catalogueByName[selectedCity.savedSearch] ?? null;
-    }, [selectedCity, catalogueByName]);
+        if (!selectedCity || !catalogueByTopologySiteId) return null;
+        const topologySiteId = selectedCity.topologySiteId?.trim();
+        return topologySiteId ? catalogueByTopologySiteId[topologySiteId] ?? null : null;
+    }, [selectedCity, catalogueByTopologySiteId]);
 
     // SPL the popup card renders AND the "Open in Splunk Search"
     // button dispatches — the literal `search` field from
-    // searchbase.conf when available, falling back to the
-    // `| savedsearch` invocation only if the stanza isn't in
-    // searchbase yet. Both consumers share the same string so what
-    // the executive reads is exactly what runs.
-    const selectedDisplaySpl = selectedCity
-        ? selectedRecord?.search?.trim() ||
-          buildSiteDispatchSpl(selectedCity.savedSearch)
-        : '';
+    // searchbase.conf when available. No saved-search fallback here:
+    // missing central catalogue bindings should be visible to authors.
+    const selectedDisplaySpl = selectedCity ? selectedRecord?.search?.trim() || '' : '';
 
     // Sites ordered worst-first so spotlight starts on the most urgent one.
     const rotationOrder = useMemo(
@@ -473,7 +465,7 @@ export const FloridaMap: React.FC<FloridaMapProps> = ({
         // is showing) so what the executive reads is exactly what
         // runs in Splunk Search.
         if (selectedCity && onOpenInSearch && selectedDisplaySpl) {
-            onOpenInSearch(selectedDisplaySpl);
+            onOpenInSearch(selectedDisplaySpl, selectedRecord?.dispatchContext);
         }
     };
 
@@ -666,28 +658,44 @@ export const FloridaMap: React.FC<FloridaMapProps> = ({
                                         title="Open this query in Search"
                                         className="w-full text-left bg-black/60 hover:bg-black/80 rounded p-2 border border-slate-800 hover:border-sky-700 font-mono transition-colors focus:outline-none focus:ring-1 focus:ring-sky-500"
                                     >
-                                        {catalogueByName === null ? (
+                                        {catalogueByTopologySiteId === null ? (
                                             <p className="text-[10px] text-slate-500 italic leading-relaxed">
-                                                Loading saved-search SPL…
+                                                Loading searchbase SPL…
                                             </p>
-                                        ) : (
+                                        ) : selectedDisplaySpl ? (
                                             <p className="text-[10px] text-sky-200 leading-relaxed whitespace-pre-wrap break-all">
                                                 {selectedDisplaySpl}
+                                            </p>
+                                        ) : (
+                                            <p className="text-[10px] text-slate-500 italic leading-relaxed">
+                                                No searchbase topology binding found for this site.
                                             </p>
                                         )}
                                     </button>
                                 ) : (
                                     <div className="bg-black/60 rounded p-2 border border-slate-800 font-mono">
-                                        <p className="text-[10px] text-sky-200 leading-relaxed whitespace-pre-wrap break-all">
-                                            {selectedDisplaySpl}
-                                        </p>
+                                        {selectedDisplaySpl ? (
+                                            <p className="text-[10px] text-sky-200 leading-relaxed whitespace-pre-wrap break-all">
+                                                {selectedDisplaySpl}
+                                            </p>
+                                        ) : (
+                                            <p className="text-[10px] text-slate-500 italic leading-relaxed">
+                                                No searchbase topology binding found for this site.
+                                            </p>
+                                        )}
                                     </div>
                                 )}
                                 <p
                                     className="text-[9px] font-mono text-slate-500 truncate"
-                                    title={`Source: searchbase.conf · search_name "${selectedCity.savedSearch}"`}
+                                    title={
+                                        selectedRecord
+                                            ? `Source: searchbase.conf · search_name "${selectedRecord.searchName}"`
+                                            : `Source: searchbase.conf · topologySite.id "${selectedCity.topologySiteId ?? selectedCity.id}"`
+                                    }
                                 >
-                                    via searchbase &quot;{selectedCity.savedSearch}&quot;
+                                    {selectedRecord
+                                        ? `via searchbase "${selectedRecord.searchName}"`
+                                        : `via searchbase topologySite "${selectedCity.topologySiteId ?? selectedCity.id}"`}
                                 </p>
                             </div>
 

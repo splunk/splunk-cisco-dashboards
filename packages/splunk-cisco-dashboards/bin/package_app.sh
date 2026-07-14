@@ -8,6 +8,8 @@ PKG_ROOT="${SCRIPT_DIR}/.."
 STAGE_DIR="${PKG_ROOT}/stage"
 APP_NAME="splunk-cisco-dashboards"
 FROM_STAGE=0
+ROOT_DIR="${PKG_ROOT}/../.."
+VERSION_FILE="${ROOT_DIR}/VERSION"
 
 usage() {
   cat <<EOF
@@ -42,11 +44,15 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Read version from app.conf (source of truth)
+# Read version from repo-root VERSION (source of truth)
 APP_CONF="${PKG_ROOT}/src/main/resources/splunk/default/app.conf"
-VERSION=$(grep -E '^\s*version\s*=' "$APP_CONF" | head -1 | sed 's/.*=\s*//' | xargs)
+if [[ ! -f "$VERSION_FILE" ]]; then
+  echo "ERROR: VERSION file not found: ${VERSION_FILE}" >&2
+  exit 1
+fi
+VERSION=$(tr -d '[:space:]' < "$VERSION_FILE")
 if [[ -z "$VERSION" ]]; then
-  echo "ERROR: Could not read version from app.conf" >&2
+  echo "ERROR: VERSION file is empty: ${VERSION_FILE}" >&2
   exit 1
 fi
 
@@ -60,6 +66,16 @@ if [[ "$FROM_STAGE" -eq 1 ]]; then
     echo "       Run 'yarn run package:app' once, or keep 'yarn start' running until webpack has compiled." >&2
     exit 1
   fi
+  if [[ ! -f "${STAGE_DIR}/default/app.conf" ]]; then
+    echo "ERROR: --from-stage requested but stage/default/app.conf is missing." >&2
+    echo "       stage/ is incomplete. Wait for webpack --watch to finish or run 'yarn run build'." >&2
+    exit 1
+  fi
+  if [[ ! -d "${STAGE_DIR}/appserver/static/pages" ]] || ! compgen -G "${STAGE_DIR}/appserver/static/pages/*.js" >/dev/null; then
+    echo "ERROR: --from-stage requested but stage/appserver/static/pages/*.js is missing." >&2
+    echo "       stage/ is incomplete. Wait for webpack --watch to finish or run 'yarn run build'." >&2
+    exit 1
+  fi
   echo "[package] using existing stage/ (--from-stage); skipping clean build and webpack"
 else
   if [[ ! -d "$STAGE_DIR" ]]; then
@@ -70,6 +86,15 @@ else
   bash "${SCRIPT_DIR}/clean_build.sh"
   node "${PKG_ROOT}/bin/build.js" build
 fi
+
+bash "${SCRIPT_DIR}/stamp_version.sh" "$STAGE_DIR"
+
+# Remove Splunk-generated runtime artifacts from stage itself before copying.
+# When developers symlink SPLUNK_HOME/etc/apps/splunk-cisco-dashboards to
+# stage/, splunkd may create these files inside the repo. They are runtime
+# state and should never remain in the project or ship in a package.
+rm -rf "${STAGE_DIR}/local"
+rm -f  "${STAGE_DIR}/metadata/local.meta"
 
 # Stage into a temp directory with the correct app directory name
 TMP_DIR="$(mktemp -d)"
@@ -82,13 +107,19 @@ find "${TMP_DIR}" -name ".DS_Store" -delete
 rm -rf "${TMP_DIR}/${APP_NAME}/local"
 rm -f  "${TMP_DIR}/${APP_NAME}/metadata/local.meta"
 
-# Revert export = system → export = none for Splunkbase packaging
-# (We use export = system in dev for REST conf-products refresh, but apps
-#  should never export system-wide on customer instances)
+# Revert app-wide export = system → export = none for Splunkbase packaging.
+# Preserve stanza-specific exports such as macros/dnac_site_normalize%281%29,
+# which must remain system-visible so callers outside this app can use them.
 META_FILE="${TMP_DIR}/${APP_NAME}/metadata/default.meta"
 if [[ -f "$META_FILE" ]]; then
-  sed -i '' 's/^export = system$/export = none/' "$META_FILE"
-  echo "[package] default.meta: reverted export to 'none' for Splunkbase"
+  awk '
+    /^\[[^]]*\]/ { stanza=$0 }
+    stanza == "[]" && /^export[[:space:]]*=[[:space:]]*system[[:space:]]*$/ {
+      sub(/system[[:space:]]*$/, "none")
+    }
+    { print }
+  ' "$META_FILE" > "${META_FILE}.tmp" && mv "${META_FILE}.tmp" "$META_FILE"
+  echo "[package] default.meta: ensured app-wide export is 'none'"
 fi
 
 # Bump [install] build in the packaged app.conf only. Source app.conf is
