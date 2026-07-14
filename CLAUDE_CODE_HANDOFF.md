@@ -191,7 +191,7 @@ Expected result at commit `7850478`:
 git status --short
 yarn --cwd packages/splunk-cisco-dashboards typecheck
 git diff --check
-SPLUNK_HOME=/opt/10 ./build.sh --fast --install --auth admin:password
+SPLUNK_HOME=/opt/10 ./build.sh --fast --install
 ```
 
 ## Suggested Next Checks
