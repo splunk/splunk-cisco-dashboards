@@ -11,7 +11,7 @@
 #   ./build.sh                                                # build only; produces dist/<app>-<version>.tar.gz
 #
 # Install workflows (splunkd-managed; goes through REST mgmt port 8089):
-#   ./build.sh --install --auth admin:changeme                # build + `splunk install app` against the default Splunk
+#   ./build.sh --install --auth admin:********                # build + `splunk install app` against the default Splunk
 #   SPLUNK_HOME=/opt/10 ./build.sh --install --auth admin:pw  # build + install against a non-default Splunk
 #   ./build.sh --install --auth admin:pw --restart            # build + install + restart Splunk
 #
@@ -186,8 +186,8 @@ Other options:
 
 Examples:
   ./build.sh                                                  # build only
-  ./build.sh --install --auth admin:changeme                  # build + splunkd install
-  SPLUNK_HOME=/opt/10 ./build.sh --install --auth admin:changeme --restart
+  ./build.sh --install --auth admin:********                  # build + splunkd install
+  SPLUNK_HOME=/opt/10 ./build.sh --install --auth admin:******** --restart
   ./build.sh --deploy                                         # build + filesystem swap
   SPLUNK_HOME=/opt/10 ./build.sh --deploy --restart           # ... against /opt/10 + restart
 
@@ -322,8 +322,8 @@ fi
 if [[ "$do_install" -eq 1 ]]; then
     if [[ -z "$auth_value" ]]; then
         echo "ERROR: --install requires --auth user:pass" >&2
-        echo "       Example: ./build.sh --install --auth admin:changeme" >&2
-        echo "       (or set SPLUNK_AUTH=admin:changeme in the environment)" >&2
+        echo "       Example: ./build.sh --install --auth admin:********" >&2
+        echo "       (or set SPLUNK_AUTH=admin:******** in the environment)" >&2
         exit 2
     fi
     if [[ "$auth_value" != *:* ]]; then
