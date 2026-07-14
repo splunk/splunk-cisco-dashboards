@@ -36,6 +36,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
     BarChart3,
+    Check,
     ChevronDown,
     ChevronRight,
     Eye,
@@ -69,21 +70,19 @@ import {
 } from '@/common/hooks/useMetric';
 import { VizIcon, resolveVizMapping } from './vizIcons';
 
-// "All" sentinel for the facet dropdowns — using a sentinel rather
-// than '' keeps the <select> element rendering predictable.
+// "All" sentinels for the category facets - using sentinels rather
+// than '' keeps the <select> elements rendering predictable.
 const ALL_CATEGORIES = '__all__';
 const ALL_SUB_CATEGORIES = '__all_sub__';
-const ALL_APPS = '__all_apps__';
 
 // Default app scope for the picker. The catalogue REST endpoint pulls
 // from every app namespace (`/servicesNS/-/-/configs/conf-searchbase`),
 // so on a Splunk stack with multiple apps that ship their own
 // `searchbase.conf` the catalogue can grow beyond what this app vetted.
 // To keep the picker scoped to dashboard-pack searches by default, the
-// App facet starts at this value and only shows entries whose
-// owning app matches it. Users can switch to "All apps" or pick a
-// specific other app from the same dropdown to browse wider — same UX
-// as the Category facet.
+// App facet starts at this value and only shows entries whose dispatch
+// app matches it. Users can select multiple app namespaces or clear the
+// selection to browse all apps.
 //
 // The UI stores a normalised `dispatchContext` sourced from the stanza's
 // `dispatch_context` value; the UI labels it "App" because that's what
@@ -105,7 +104,19 @@ const ALL_APPS = '__all_apps__';
 //     (Dispatch dropdown).
 //   - Build 93: renamed Dispatch → App for clarity, collapsed the
 //     facet block by default to give the result list more room.
+//   - Build 1204: changed App from a single-select dropdown to a
+//     multi-select control so app namespaces can be OR-combined.
 const DEFAULT_APP_SCOPE = 'splunk-cisco-dashboards';
+
+const makeDefaultAppSelection = (): Set<string> => new Set([DEFAULT_APP_SCOPE]);
+
+const isDefaultAppSelection = (selection: ReadonlySet<string>): boolean =>
+    selection.size === 1 && selection.has(DEFAULT_APP_SCOPE);
+
+const entryMatchesAppSelection = (
+    entry: SearchbaseRecord,
+    selection: ReadonlySet<string>
+): boolean => selection.size === 0 || selection.has(entry.dispatchContext);
 
 const MAX_FIELD_LENGTH = 64;
 const FIELD_NAME_PATTERN = /^[A-Za-z_][\w.]{0,63}$/;
@@ -464,12 +475,12 @@ const entryMatchesKey = (entry: SearchbaseRecord, key: string | null | undefined
 
 const entryMatchesFacetSelection = (
     entry: SearchbaseRecord,
-    app: string,
+    appSelection: ReadonlySet<string>,
     category: string,
     subCategory: string,
     tags: ReadonlySet<string>
 ): boolean => {
-    if (app !== ALL_APPS && entry.dispatchContext !== app) {
+    if (!entryMatchesAppSelection(entry, appSelection)) {
         return false;
     }
     if (category !== ALL_CATEGORIES && entry.category !== category) {
@@ -507,6 +518,229 @@ const buildSearchbaseEditUrl = (entry: SearchbaseRecord): string | null => {
     return `${origin}${getSplunkWebLocalePrefix()}/app/searchbase/start#/edit/${encodeURIComponent(stanza)}#search-spl`;
 };
 
+interface AppMultiSelectProps {
+    apps: string[];
+    appCountByName: ReadonlyMap<string, number>;
+    selectedApps: ReadonlySet<string>;
+    onChange: (next: Set<string>) => void;
+    ariaLabel: string;
+    listboxId: string;
+    compact?: boolean;
+}
+
+const AppMultiSelect: React.FC<AppMultiSelectProps> = ({
+    apps,
+    appCountByName,
+    selectedApps,
+    onChange,
+    ariaLabel,
+    listboxId,
+    compact = false,
+}) => {
+    const [open, setOpen] = useState(false);
+    const containerRef = useRef<HTMLDivElement | null>(null);
+    const isAllApps = selectedApps.size === 0;
+    const appOptions = useMemo(() => {
+        const set = new Set(apps);
+        if (!set.has(DEFAULT_APP_SCOPE)) {
+            set.add(DEFAULT_APP_SCOPE);
+        }
+        return Array.from(set).sort((a, b) =>
+            a.localeCompare(b, undefined, { sensitivity: 'base' })
+        );
+    }, [apps]);
+    const selectedList = appOptions.filter((app) => selectedApps.has(app));
+
+    useEffect(() => {
+        if (!open) {
+            return undefined;
+        }
+        const handler = (e: MouseEvent) => {
+            if (!containerRef.current?.contains(e.target as Node)) {
+                setOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [open]);
+
+    const toggleApp = (app: string) => {
+        const next = new Set<string>(isAllApps ? [] : selectedApps);
+        if (next.has(app)) {
+            next.delete(app);
+        } else {
+            next.add(app);
+        }
+        onChange(next);
+    };
+
+    const removeApp = (app: string) => {
+        const next = new Set<string>(selectedApps);
+        next.delete(app);
+        onChange(next);
+    };
+
+    return (
+        <div className="relative min-w-0" ref={containerRef}>
+            <div
+                role="combobox"
+                aria-label={ariaLabel}
+                aria-controls={listboxId}
+                aria-expanded={open}
+                tabIndex={0}
+                onClick={() => setOpen(true)}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setOpen((v) => !v);
+                    } else if (e.key === 'Escape') {
+                        setOpen(false);
+                    }
+                }}
+                className={cn(
+                    'flex w-full cursor-pointer flex-wrap items-center gap-1 rounded-lg border bg-white transition-shadow dark:bg-slate-950',
+                    open
+                        ? 'border-sky-400 ring-2 ring-sky-400/25'
+                        : 'border-slate-200 dark:border-slate-800',
+                    compact
+                        ? 'min-h-[32px] px-1.5 py-1 text-[11px]'
+                        : 'min-h-[42px] px-2 py-1.5 text-sm'
+                )}
+            >
+                {isAllApps ? (
+                    <span className="min-w-0 flex-1 truncate font-semibold text-slate-700 dark:text-slate-100">
+                        All apps ({appOptions.length})
+                    </span>
+                ) : (
+                    selectedList.map((app) => {
+                        const count = appCountByName.get(app) ?? 0;
+                        return (
+                            <span
+                                key={app}
+                                className={cn(
+                                    'inline-flex max-w-full items-center gap-1 rounded-full bg-sky-500 font-bold text-white',
+                                    compact
+                                        ? 'py-0.5 pl-1.5 pr-0.5 text-[9px]'
+                                        : 'py-0.5 pl-2 pr-1 text-[10px] uppercase tracking-wide'
+                                )}
+                            >
+                                <span className="max-w-[210px] truncate">{app}</span>
+                                {count > 0 && (
+                                    <span className="font-normal opacity-75">{count}</span>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        removeApp(app);
+                                    }}
+                                    title={`Remove ${app} app filter`}
+                                    aria-label={`Remove ${app} app filter`}
+                                    className="rounded-full p-0.5 hover:bg-sky-700/40"
+                                >
+                                    <X className={compact ? 'h-2 w-2' : 'h-2.5 w-2.5'} />
+                                </button>
+                            </span>
+                        );
+                    })
+                )}
+                {!isAllApps && selectedList.length === 0 && (
+                    <span className="min-w-0 flex-1 truncate font-semibold text-slate-500 dark:text-slate-400">
+                        No matching apps selected
+                    </span>
+                )}
+                <ChevronDown
+                    className={cn(
+                        'ml-auto shrink-0 text-slate-400',
+                        compact ? 'h-3 w-3' : 'h-4 w-4'
+                    )}
+                />
+            </div>
+
+            {open && (
+                <div
+                    id={listboxId}
+                    role="listbox"
+                    aria-label={ariaLabel}
+                    aria-multiselectable="true"
+                    className={cn(
+                        'absolute left-0 right-0 top-full z-30 mt-1 max-h-64 overflow-auto rounded-lg border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900',
+                        compact && 'rounded-md'
+                    )}
+                >
+                    <button
+                        type="button"
+                        role="option"
+                        aria-selected={isAllApps}
+                        onClick={() => onChange(new Set())}
+                        className={cn(
+                            'flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left transition-colors focus:outline-none',
+                            compact ? 'text-[11px]' : 'text-xs',
+                            isAllApps
+                                ? 'bg-sky-50 dark:bg-sky-900/30'
+                                : 'hover:bg-sky-50 dark:hover:bg-sky-900/30'
+                        )}
+                    >
+                        <span className="flex min-w-0 items-center gap-2 truncate font-semibold text-slate-700 dark:text-slate-200">
+                            <span
+                                className={cn(
+                                    'flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border',
+                                    isAllApps
+                                        ? 'border-sky-500 bg-sky-500 text-white'
+                                        : 'border-slate-300 dark:border-slate-700'
+                                )}
+                            >
+                                {isAllApps && <Check className="h-3 w-3" />}
+                            </span>
+                            <span className="truncate">All apps</span>
+                        </span>
+                        <span className="shrink-0 text-[10px] font-bold text-slate-400 dark:text-slate-500">
+                            {appOptions.length}
+                        </span>
+                    </button>
+                    {appOptions.map((app) => {
+                        const selected = selectedApps.has(app);
+                        const count = appCountByName.get(app) ?? 0;
+                        return (
+                            <button
+                                key={app}
+                                type="button"
+                                role="option"
+                                aria-selected={selected}
+                                onClick={() => toggleApp(app)}
+                                className={cn(
+                                    'flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left transition-colors focus:outline-none',
+                                    compact ? 'text-[11px]' : 'text-xs',
+                                    selected
+                                        ? 'bg-sky-50 dark:bg-sky-900/30'
+                                        : 'hover:bg-sky-50 dark:hover:bg-sky-900/30'
+                                )}
+                            >
+                                <span className="flex min-w-0 items-center gap-2 truncate text-slate-700 dark:text-slate-200">
+                                    <span
+                                        className={cn(
+                                            'flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border',
+                                            selected
+                                                ? 'border-sky-500 bg-sky-500 text-white'
+                                                : 'border-slate-300 dark:border-slate-700'
+                                        )}
+                                    >
+                                        {selected && <Check className="h-3 w-3" />}
+                                    </span>
+                                    <span className="truncate">{app}</span>
+                                </span>
+                                <span className="shrink-0 text-[10px] font-bold text-slate-400 dark:text-slate-500">
+                                    {count}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+};
+
 const configuredDrilldownNameFor = (
     entry: SearchbaseRecord,
     bindings: SearchbaseDrilldownMap | undefined
@@ -539,13 +773,12 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     const [query, setQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<string>(ALL_CATEGORIES);
     const [selectedSubCategory, setSelectedSubCategory] = useState<string>(ALL_SUB_CATEGORIES);
-    // App facet — defaults to this app's namespace (read from the
+    // App facet - defaults to this app's namespace (read from the
     // searchbase entry's `dispatch_context` field) so the picker stays
-    // scoped to dashboard-pack searches at first open.
-    // Switch to ALL_APPS or another app's namespace via
-    // the dropdown to browse wider.
-    const [selectedApp, setSelectedApp] = useState<string>(
-        DEFAULT_APP_SCOPE
+    // scoped to dashboard-pack searches at first open. Empty selection
+    // means "All apps"; otherwise selected app namespaces are OR-combined.
+    const [selectedApps, setSelectedApps] = useState<Set<string>>(
+        makeDefaultAppSelection
     );
     const [includeHiddenSearches, setIncludeHiddenSearches] = useState(false);
     const [includeDrilldownSearches, setIncludeDrilldownSearches] = useState(false);
@@ -668,8 +901,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     const [drilldownQuery, setDrilldownQuery] = useState('');
     const [drilldownDraftSearchName, setDrilldownDraftSearchName] = useState('');
     const [drilldownFiltersOpen, setDrilldownFiltersOpen] = useState(false);
-    const [drilldownSelectedApp, setDrilldownSelectedApp] =
-        useState<string>(DEFAULT_APP_SCOPE);
+    const [drilldownSelectedApps, setDrilldownSelectedApps] =
+        useState<Set<string>>(makeDefaultAppSelection);
     const [drilldownSelectedCategory, setDrilldownSelectedCategory] =
         useState<string>(ALL_CATEGORIES);
     const [drilldownSelectedSubCategory, setDrilldownSelectedSubCategory] =
@@ -789,7 +1022,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         setQuery('');
         setSelectedCategory(ALL_CATEGORIES);
         setSelectedSubCategory(ALL_SUB_CATEGORIES);
-        setSelectedApp(DEFAULT_APP_SCOPE);
+        setSelectedApps(makeDefaultAppSelection());
         setIncludeHiddenSearches(false);
         setIncludeDrilldownSearches(false);
         setIncludeTableSearches(false);
@@ -842,7 +1075,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         setDataMappingOpen(false);
         setDrilldownOpen(false);
         setDrilldownFiltersOpen(false);
-        setDrilldownSelectedApp(DEFAULT_APP_SCOPE);
+        setDrilldownSelectedApps(makeDefaultAppSelection());
         setDrilldownSelectedCategory(ALL_CATEGORIES);
         setDrilldownSelectedSubCategory(ALL_SUB_CATEGORIES);
         setDrilldownActiveTags(new Set());
@@ -901,13 +1134,13 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         setSelectedCategory(ALL_CATEGORIES);
         setSelectedSubCategory(ALL_SUB_CATEGORIES);
         setActiveTags(new Set());
-    }, [selectedApp]);
+    }, [selectedApps]);
 
     useEffect(() => {
         setDrilldownSelectedCategory(ALL_CATEGORIES);
         setDrilldownSelectedSubCategory(ALL_SUB_CATEGORIES);
         setDrilldownActiveTags(new Set());
-    }, [drilldownSelectedApp]);
+    }, [drilldownSelectedApps]);
 
     // Auto-expand the Filters block whenever an applied facet appears
     // — guarantees the user can always see what's narrowing the result
@@ -916,7 +1149,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     // expanded, the user controls when to hide the block again.
     useEffect(() => {
         if (
-            selectedApp !== DEFAULT_APP_SCOPE ||
+            !isDefaultAppSelection(selectedApps) ||
             includeHiddenSearches ||
             includeDrilldownSearches ||
             includeTableSearches ||
@@ -927,7 +1160,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
             setFiltersOpen(true);
         }
     }, [
-        selectedApp,
+        selectedApps,
         includeHiddenSearches,
         includeDrilldownSearches,
         includeTableSearches,
@@ -938,7 +1171,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
 
     useEffect(() => {
         if (
-            drilldownSelectedApp !== DEFAULT_APP_SCOPE ||
+            !isDefaultAppSelection(drilldownSelectedApps) ||
             drilldownSelectedCategory !== ALL_CATEGORIES ||
             drilldownSelectedSubCategory !== ALL_SUB_CATEGORIES ||
             drilldownActiveTags.size > 0
@@ -946,7 +1179,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
             setDrilldownFiltersOpen(true);
         }
     }, [
-        drilldownSelectedApp,
+        drilldownSelectedApps,
         drilldownSelectedCategory,
         drilldownSelectedSubCategory,
         drilldownActiveTags,
@@ -1003,16 +1236,13 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         return () => document.removeEventListener('mousedown', handler);
     }, [open, drilldownTagDropdownOpen]);
 
-    // Distinct, sorted category list — drives the Category dropdown.
-    // Scoped to the active App facet so picking a single app narrows
-    // the Category dropdown to that app's category vocabulary.
+    // Distinct, sorted category list - drives the Category dropdown.
+    // Scoped to the active App facet so app selections narrow the
+    // Category dropdown to that app vocabulary.
     const categories = useMemo(() => {
         const set = new Set<string>();
         for (const e of catalogue) {
-            if (
-                selectedApp !== ALL_APPS &&
-                e.dispatchContext !== selectedApp
-            ) {
+            if (!entryMatchesAppSelection(e, selectedApps)) {
                 continue;
             }
             if (e.category) set.add(e.category);
@@ -1020,7 +1250,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         return Array.from(set).sort((a, b) =>
             a.localeCompare(b, undefined, { sensitivity: 'base' })
         );
-    }, [catalogue, selectedApp]);
+    }, [catalogue, selectedApps]);
 
     // Sub-categories scoped to the current category and dispatch
     // context. Empty array when no category is picked — that hides
@@ -1029,10 +1259,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         if (selectedCategory === ALL_CATEGORIES) return [];
         const set = new Set<string>();
         for (const e of catalogue) {
-            if (
-                selectedApp !== ALL_APPS &&
-                e.dispatchContext !== selectedApp
-            ) {
+            if (!entryMatchesAppSelection(e, selectedApps)) {
                 continue;
             }
             if (e.category !== selectedCategory) continue;
@@ -1041,7 +1268,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         return Array.from(set).sort((a, b) =>
             a.localeCompare(b, undefined, { sensitivity: 'base' })
         );
-    }, [catalogue, selectedApp, selectedCategory]);
+    }, [catalogue, selectedApps, selectedCategory]);
 
     // Distinct app namespaces (`dispatch_context` values) present in
     // the catalogue. Drives the App facet dropdown. Sorted
@@ -1054,6 +1281,16 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         return Array.from(set).sort((a, b) =>
             a.localeCompare(b, undefined, { sensitivity: 'base' })
         );
+    }, [catalogue]);
+
+    const appCountByName = useMemo(() => {
+        const map = new Map<string, number>();
+        for (const entry of catalogue) {
+            if (entry.dispatchContext) {
+                map.set(entry.dispatchContext, (map.get(entry.dispatchContext) ?? 0) + 1);
+            }
+        }
+        return map;
     }, [catalogue]);
 
     const drilldownBaseEntries = useMemo(
@@ -1076,13 +1313,20 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         );
     }, [drilldownBaseEntries]);
 
+    const drilldownAppCountByName = useMemo(() => {
+        const map = new Map<string, number>();
+        for (const entry of drilldownBaseEntries) {
+            if (entry.dispatchContext) {
+                map.set(entry.dispatchContext, (map.get(entry.dispatchContext) ?? 0) + 1);
+            }
+        }
+        return map;
+    }, [drilldownBaseEntries]);
+
     const drilldownCategories = useMemo(() => {
         const set = new Set<string>();
         for (const entry of drilldownBaseEntries) {
-            if (
-                drilldownSelectedApp !== ALL_APPS &&
-                entry.dispatchContext !== drilldownSelectedApp
-            ) {
+            if (!entryMatchesAppSelection(entry, drilldownSelectedApps)) {
                 continue;
             }
             if (entry.category) set.add(entry.category);
@@ -1090,16 +1334,13 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         return Array.from(set).sort((a, b) =>
             a.localeCompare(b, undefined, { sensitivity: 'base' })
         );
-    }, [drilldownBaseEntries, drilldownSelectedApp]);
+    }, [drilldownBaseEntries, drilldownSelectedApps]);
 
     const drilldownSubCategories = useMemo(() => {
         if (drilldownSelectedCategory === ALL_CATEGORIES) return [];
         const set = new Set<string>();
         for (const entry of drilldownBaseEntries) {
-            if (
-                drilldownSelectedApp !== ALL_APPS &&
-                entry.dispatchContext !== drilldownSelectedApp
-            ) {
+            if (!entryMatchesAppSelection(entry, drilldownSelectedApps)) {
                 continue;
             }
             if (entry.category !== drilldownSelectedCategory) continue;
@@ -1108,7 +1349,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         return Array.from(set).sort((a, b) =>
             a.localeCompare(b, undefined, { sensitivity: 'base' })
         );
-    }, [drilldownBaseEntries, drilldownSelectedApp, drilldownSelectedCategory]);
+    }, [drilldownBaseEntries, drilldownSelectedApps, drilldownSelectedCategory]);
 
     // Tag counts are scoped to the current result slice, including
     // already-selected tags. This makes the tag picker progressive:
@@ -1116,10 +1357,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     // co-occur in the narrowed results rather than the full catalogue.
     const tagFacetEntries = useMemo(() => {
         return catalogue.filter((entry) => {
-            if (
-                selectedApp !== ALL_APPS &&
-                entry.dispatchContext !== selectedApp
-            ) {
+            if (!entryMatchesAppSelection(entry, selectedApps)) {
                 return false;
             }
             if (selectedCategory !== ALL_CATEGORIES && entry.category !== selectedCategory) {
@@ -1138,7 +1376,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
             }
             return matchesQuery(entry, query);
         });
-    }, [catalogue, query, selectedApp, selectedCategory, selectedSubCategory, activeTags]);
+    }, [catalogue, query, selectedApps, selectedCategory, selectedSubCategory, activeTags]);
 
     // Full tag counts for the narrowed slice. Sorted by frequency
     // desc, then alpha. Not capped — that happens in
@@ -1181,7 +1419,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
             if (
                 !entryMatchesFacetSelection(
                     entry,
-                    drilldownSelectedApp,
+                    drilldownSelectedApps,
                     drilldownSelectedCategory,
                     drilldownSelectedSubCategory,
                     drilldownActiveTags
@@ -1193,7 +1431,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         });
     }, [
         drilldownBaseEntries,
-        drilldownSelectedApp,
+        drilldownSelectedApps,
         drilldownSelectedCategory,
         drilldownSelectedSubCategory,
         drilldownActiveTags,
@@ -1238,10 +1476,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
 
     const filtered = useMemo(() => {
         return catalogue.filter((entry) => {
-            if (
-                selectedApp !== ALL_APPS &&
-                entry.dispatchContext !== selectedApp
-            ) {
+            if (!entryMatchesAppSelection(entry, selectedApps)) {
                 return false;
             }
             if (selectedCategory !== ALL_CATEGORIES && entry.category !== selectedCategory) {
@@ -1278,7 +1513,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         includeDrilldownSearches,
         includeTableSearches,
         query,
-        selectedApp,
+        selectedApps,
         selectedCategory,
         selectedSubCategory,
     ]);
@@ -1317,7 +1552,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                 if (
                     !entryMatchesFacetSelection(
                         entry,
-                        drilldownSelectedApp,
+                        drilldownSelectedApps,
                         drilldownSelectedCategory,
                         drilldownSelectedSubCategory,
                         drilldownActiveTags
@@ -1343,7 +1578,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         selectedEntry,
         drilldownQuery,
         drilldownDraftSearchName,
-        drilldownSelectedApp,
+        drilldownSelectedApps,
         drilldownSelectedCategory,
         drilldownSelectedSubCategory,
         drilldownActiveTags,
@@ -1608,7 +1843,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     // collapsed toggle and feeds `facetsActive` for the Clear-filters
     // button visibility.
     const activeFilterCount =
-        (selectedApp !== DEFAULT_APP_SCOPE ? 1 : 0) +
+        (!isDefaultAppSelection(selectedApps) ? 1 : 0) +
         (includeHiddenSearches ? 1 : 0) +
         (includeDrilldownSearches ? 1 : 0) +
         (includeTableSearches ? 1 : 0) +
@@ -1618,7 +1853,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
 
     const facetsActive = activeFilterCount > 0 || tagFilter.trim().length > 0;
     const drilldownActiveFilterCount =
-        (drilldownSelectedApp !== DEFAULT_APP_SCOPE ? 1 : 0) +
+        (!isDefaultAppSelection(drilldownSelectedApps) ? 1 : 0) +
         (drilldownSelectedCategory !== ALL_CATEGORIES ? 1 : 0) +
         (drilldownSelectedSubCategory !== ALL_SUB_CATEGORIES ? 1 : 0) +
         drilldownActiveTags.size;
@@ -1805,7 +2040,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     };
 
     const handleClearFacets = () => {
-        setSelectedApp(DEFAULT_APP_SCOPE);
+        setSelectedApps(makeDefaultAppSelection());
         setIncludeHiddenSearches(false);
         setIncludeDrilldownSearches(false);
         setIncludeTableSearches(false);
@@ -1816,7 +2051,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     };
 
     const handleClearDrilldownFacets = () => {
-        setDrilldownSelectedApp(DEFAULT_APP_SCOPE);
+        setDrilldownSelectedApps(makeDefaultAppSelection());
         setDrilldownSelectedCategory(ALL_CATEGORIES);
         setDrilldownSelectedSubCategory(ALL_SUB_CATEGORIES);
         setDrilldownActiveTags(new Set());
@@ -1959,33 +2194,22 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             {/* App facet — defaults to this app's namespace
                                 so each picker open starts scoped to vetted
                                 dashboard-pack searches. */}
-                            <label className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-center">
+                            <div className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-center">
                                 <span
                                     className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400"
                                     title="Splunk app the search belongs to"
                                 >
                                     App
                                 </span>
-                                <select
-                                    value={selectedApp}
-                                    onChange={(e) => setSelectedApp(e.target.value)}
-                                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-950"
-                                >
-                                    <option value={ALL_APPS}>
-                                        All apps ({apps.length})
-                                    </option>
-                                    {apps.map((app) => (
-                                        <option key={app} value={app}>
-                                            {app}
-                                        </option>
-                                    ))}
-                                    {!apps.includes(DEFAULT_APP_SCOPE) && (
-                                        <option value={DEFAULT_APP_SCOPE}>
-                                            {DEFAULT_APP_SCOPE}
-                                        </option>
-                                    )}
-                                </select>
-                            </label>
+                                <AppMultiSelect
+                                    apps={apps}
+                                    appCountByName={appCountByName}
+                                    selectedApps={selectedApps}
+                                    onChange={setSelectedApps}
+                                    ariaLabel="Filter searches by app"
+                                    listboxId="kpi-picker-app-filter-options"
+                                />
+                            </div>
 
                             <div className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-start">
                                 <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
@@ -2975,33 +3199,23 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                             >
                                                                 App
                                                             </span>
-                                                            <select
-                                                                value={drilldownSelectedApp}
-                                                                onChange={(e) =>
-                                                                    setDrilldownSelectedApp(
-                                                                        e.target.value
-                                                                    )
-                                                                }
-                                                                className="flex-1 px-2 py-1 text-[11px] rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
-                                                            >
-                                                                <option value={ALL_APPS}>
-                                                                    All apps ({drilldownApps.length})
-                                                                </option>
-                                                                {drilldownApps.map((app) => (
-                                                                    <option key={app} value={app}>
-                                                                        {app}
-                                                                    </option>
-                                                                ))}
-                                                                {!drilldownApps.includes(
-                                                                    DEFAULT_APP_SCOPE
-                                                                ) && (
-                                                                    <option
-                                                                        value={DEFAULT_APP_SCOPE}
-                                                                    >
-                                                                        {DEFAULT_APP_SCOPE}
-                                                                    </option>
-                                                                )}
-                                                            </select>
+                                                            <div className="min-w-0 flex-1">
+                                                                <AppMultiSelect
+                                                                    apps={drilldownApps}
+                                                                    appCountByName={
+                                                                        drilldownAppCountByName
+                                                                    }
+                                                                    selectedApps={
+                                                                        drilldownSelectedApps
+                                                                    }
+                                                                    onChange={
+                                                                        setDrilldownSelectedApps
+                                                                    }
+                                                                    ariaLabel="Filter drilldown searches by app"
+                                                                    listboxId="kpi-picker-drilldown-app-filter-options"
+                                                                    compact
+                                                                />
+                                                            </div>
                                                         </div>
 
                                                         {drilldownCategories.length > 1 && (
