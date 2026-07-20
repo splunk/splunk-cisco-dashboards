@@ -132,7 +132,10 @@ def post_oneshot(
         },
         method="POST",
     )
-    context = None if verify_ssl else ssl._create_unverified_context()
+    context = ssl.create_default_context()
+    if not verify_ssl:
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
     with urlopen(req, timeout=timeout, context=context) as resp:
         data = json.loads(resp.read().decode("utf-8") or "{}")
     return data.get("messages", []), data.get("results", [])
