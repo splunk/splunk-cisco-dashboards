@@ -140,7 +140,7 @@ const commonConfig = webpackMerge(baseConfig, {
                         // shadow) under a relative `images/` path; bundling
                         // them produces oddly-named assets in non-served
                         // locations. We override marker icons via the cdnjs
-                        // CDN in FloridaMap.tsx and don't render the layers
+                        // CDN in CustomerTopologyMap.tsx and don't render the layers
                         // control, so the few remaining missing-image
                         // requests are harmless 404s rather than visible
                         // breakage.

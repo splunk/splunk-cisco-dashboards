@@ -108,7 +108,7 @@ const CONF_BASENAME = 'network_diagrams';
  * value both as the URL path segment in REST calls AND as the
  * stanza primary key, so it has to be safe for both. The ranges
  * chosen below cover ASCII letters/digits, spaces, `_`, `-`, `.`
- * — enough for "FDEM Production v2" / "fdem-prod-v2" style names
+ * — enough for "Site Topology v2" / "site-topology-v2" style names
  * without opening up URL-injection, conf-stanza-injection, or
  * btool-CLI surprises. NOTE: spaces are URL-encoded by
  * `encodeURIComponent` before they hit the network.

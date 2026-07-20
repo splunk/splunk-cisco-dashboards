@@ -8304,7 +8304,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                             <input
                                                 className={editorInputClass(isDark)}
                                                 value={(site.aliases ?? []).join(', ')}
-                                                placeholder="AUB, Tallahassee EOC, facility code"
+                                                placeholder="site code, alternate name, facility code"
                                                 onChange={(event) => {
                                                     const aliases = optionalTextArray(
                                                         event.target.value
@@ -9437,13 +9437,13 @@ interface LinkDetailsProps {
 }
 
 const LinkDetails: React.FC<LinkDetailsProps> = ({ link, siteById, isDark }) => {
-    // Render the agent pair only when both sides are present. We learned on
-    // 2026-05-12 that TE test names can be misleading (the "TLH - AUB
-    // Connection" test was actually targeting an Orlando agent under the
-    // hood), so when the underlying data carries explicit source/target
-    // agent names, we display them prominently in the popup as ground truth
-    // — that way the operator sees which agents are *actually* being probed,
-    // not just the test's marketing name.
+    // Render the agent pair only when both sides are present. TE test names
+    // can be misleading (a test can be named after one site pair while
+    // actually targeting a different agent under the hood), so when the
+    // underlying data carries explicit source/target agent names, we display
+    // them prominently in the popup as ground truth — that way the operator
+    // sees which agents are *actually* being probed, not just the test's
+    // marketing name.
     const showAgentPair = Boolean(link.sourceAgents && link.targetAgents);
     // Build 103 (2026-05-14): pass `dataState === 'loading'` to every
     // formatter so undefined values render as 'Loading…' instead of
@@ -9578,10 +9578,10 @@ const LinkDetails: React.FC<LinkDetailsProps> = ({ link, siteById, isDark }) => 
                 )}
                 {/* Build 102 (2026-05-14): TE agent-location row
                     restored. Build 98 dropped this entire row to
-                    resolve a customer-site mismatch ("why is it
-                    saying Orlando instead of Auburndale?"), but
-                    Alan flagged the removal as a regression on
-                    review — the row was the visible proof inside
+                    resolve a site-name mismatch (the agent
+                    location string didn't match the configured
+                    site name), but the row was reinstated as a
+                    regression fix — it's the visible proof inside
                     the popup that ThousandEyes A2A data is
                     actually reaching the dashboard. Without it the
                     TELEMETRY SOURCE block reads as "thinly wired"
@@ -9591,16 +9591,15 @@ const LinkDetails: React.FC<LinkDetailsProps> = ({ link, siteById, isDark }) => 
                     the TE-registered agent geography rather than
                     as a competing claim about the link's
                     endpoints. The customer-site row immediately
-                    below ("Auburndale (Logistics) to Tallahassee
-                    (State EOC)") stays as ground truth on what
-                    the link actually represents. The Orlando-vs-
-                    Auburndale mismatch is now clearly attributable
-                    to TE agent registration (the AUB-side agent
-                    `dema-te01-va` is registered to the Orlando
-                    metro in TE because TE aggregates by metro), so
-                    operators see WHY the geo string reads
-                    "Orlando" rather than wondering if the dashboard
-                    is broken. */}
+                    below stays as ground truth on what the link
+                    actually represents. A site-name vs. agent-geo
+                    mismatch like this is typically attributable to
+                    TE agent registration (an agent can be
+                    registered to a different metro than the site
+                    it physically serves, because TE aggregates by
+                    metro), so operators see WHY the geo string
+                    doesn't match the site name rather than
+                    wondering if the dashboard is broken. */}
                 {(link.sourceLocation || link.targetLocation) && (
                     <p
                         className={cn(

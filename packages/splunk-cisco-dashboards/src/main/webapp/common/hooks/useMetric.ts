@@ -360,6 +360,12 @@ export interface MetricResult {
     rangeLabel?: string;
 }
 
+export interface MetricResultCacheOptions {
+    cacheKey: string;
+    cachedResult?: MetricResult;
+    onResultChange?: (cacheKey: string, result: MetricResult) => void;
+}
+
 // ---------------------------------------------------------------------------
 // Mock generator (seeded LCG so renders are stable)
 // ---------------------------------------------------------------------------
@@ -617,15 +623,22 @@ const computePreviousRange = (range: TimeRange): { earliest: string; latest: str
 export const useMetric = (
     cfg: MetricConfig,
     range: TimeRange,
-    refreshToken: number
+    refreshToken: number,
+    cacheOptions?: MetricResultCacheOptions
 ): MetricResult => {
     const spl = resolveMetricSpl(cfg);
     const savedSearchName = cfg.savedSearch ?? '';
     const initialMock = buildMock(cfg, spl, savedSearchName);
-    const [result, setResult] = useState<MetricResult>(initialMock);
+    const [result, setResult] = useState<MetricResult>(
+        () => cacheOptions?.cachedResult ?? initialMock
+    );
 
     useEffect(() => {
         const mock = buildMock(cfg, spl, savedSearchName);
+        if (cacheOptions?.cachedResult) {
+            setResult(cacheOptions.cachedResult);
+            return undefined;
+        }
         // Empty SPL → no real search wired. Stay mock; never hit the
         // network. This is the primary defence against console-spam
         // 400s when a metric has no binding yet.
@@ -700,6 +713,13 @@ export const useMetric = (
             rangeLabel: range.label,
         });
 
+        const setFinalResult = (next: MetricResult) => {
+            setResult(next);
+            if (cacheOptions?.cacheKey) {
+                cacheOptions.onResultChange?.(cacheOptions.cacheKey, next);
+            }
+        };
+
         debugLog(cfg.id, 'dispatching', {
             spl,
             dispatchContext: cfg.dispatchContext,
@@ -720,7 +740,7 @@ export const useMetric = (
                     debugLog(cfg.id, 'no rows returned', {
                         rangeLabel: range.label,
                     });
-                    setResult(
+                    setFinalResult(
                         cfg.suppressMockOnEmpty ? buildNoData('empty_rows') : mock
                     );
                     return;
@@ -775,7 +795,7 @@ export const useMetric = (
                             configuredValueField: cfg.valueField,
                         }
                     );
-                    setResult(
+                    setFinalResult(
                         cfg.suppressMockOnEmpty
                             ? buildNoData(
                                   strictMissing ? 'column_missing' : 'no_numeric_column'
@@ -821,7 +841,7 @@ export const useMetric = (
                         rowCount: rows.length,
                         valueField,
                     });
-                    setResult(
+                    setFinalResult(
                         cfg.suppressMockOnEmpty
                             ? buildNoData('no_numeric_column')
                             : mock
@@ -917,7 +937,7 @@ export const useMetric = (
                     to: 'live',
                     rowCount: rows.length,
                 });
-                setResult({
+                setFinalResult({
                     value,
                     displayValue,
                     change,
@@ -953,7 +973,7 @@ export const useMetric = (
                     to: cfg.suppressMockOnEmpty ? 'live-no-data' : 'mock',
                     reason: failure.reason,
                 });
-                setResult(
+                setFinalResult(
                     cfg.suppressMockOnEmpty
                         ? buildNoData(failure.reason, failure)
                         : mock
@@ -1301,6 +1321,12 @@ export interface TableDataResult {
     rangeLabel?: string;
 }
 
+export interface TableDataResultCacheOptions {
+    cacheKey: string;
+    cachedResult?: TableDataResult;
+    onResultChange?: (cacheKey: string, result: TableDataResult) => void;
+}
+
 const DEFAULT_TABLE_ROW_LIMIT = 50;
 
 /**
@@ -1333,7 +1359,8 @@ export const isBarBreakdownViz = (splunkViz: string | undefined): boolean => {
 export const useTableData = (
     cfg: TableDataConfig,
     range: TimeRange,
-    refreshToken: number
+    refreshToken: number,
+    cacheOptions?: TableDataResultCacheOptions
 ): TableDataResult => {
     const spl = resolveMetricSpl(cfg);
     const savedSearchName = cfg.savedSearch ?? '';
@@ -1342,14 +1369,17 @@ export const useTableData = (
         Math.min(cfg.rowLimit ?? DEFAULT_TABLE_ROW_LIMIT, 1000)
     );
 
-    const [result, setResult] = useState<TableDataResult>(() => ({
-        rows: [],
-        columns: [],
-        totalRowCount: 0,
-        source: 'mock',
-        spl,
-        resolvedSavedSearch: savedSearchName,
-    }));
+    const [result, setResult] = useState<TableDataResult>(
+        () =>
+            cacheOptions?.cachedResult ?? {
+                rows: [],
+                columns: [],
+                totalRowCount: 0,
+                source: 'mock',
+                spl,
+                resolvedSavedSearch: savedSearchName,
+            }
+    );
 
     useEffect(() => {
         const fresh: TableDataResult = {
@@ -1360,6 +1390,10 @@ export const useTableData = (
             spl,
             resolvedSavedSearch: savedSearchName,
         };
+        if (cacheOptions?.cachedResult) {
+            setResult(cacheOptions.cachedResult);
+            return undefined;
+        }
         if (!spl) {
             setResult(fresh);
             return undefined;
@@ -1389,6 +1423,13 @@ export const useTableData = (
             rangeLabel: range.label,
         });
 
+        const setFinalResult = (next: TableDataResult) => {
+            setResult(next);
+            if (cacheOptions?.cacheKey) {
+                cacheOptions.onResultChange?.(cacheOptions.cacheKey, next);
+            }
+        };
+
         debugLog(cfg.id, 'table dispatching', {
             spl,
             dispatchContext: cfg.dispatchContext,
@@ -1413,7 +1454,7 @@ export const useTableData = (
                 >;
                 if (allRows.length === 0) {
                     debugLog(cfg.id, 'table no rows', { rangeLabel: range.label });
-                    setResult(buildNoData('empty_rows'));
+                    setFinalResult(buildNoData('empty_rows'));
                     return;
                 }
                 // Walk every row's keys to build a stable, SPL-order
@@ -1440,7 +1481,7 @@ export const useTableData = (
                         rowCount: allRows.length,
                         firstRowKeys: Object.keys(allRows[0] ?? {}),
                     });
-                    setResult(buildNoData('no_numeric_column'));
+                    setFinalResult(buildNoData('no_numeric_column'));
                     return;
                 }
                 debugLog(cfg.id, 'table rendering', {
@@ -1448,7 +1489,7 @@ export const useTableData = (
                     columnCount: columns.length,
                     columns,
                 });
-                setResult({
+                setFinalResult({
                     rows: allRows.slice(0, rowLimit),
                     columns,
                     totalRowCount: allRows.length,
@@ -1473,7 +1514,7 @@ export const useTableData = (
                     reason: failure.reason,
                     spl,
                 });
-                setResult(buildNoData(failure.reason, failure));
+                setFinalResult(buildNoData(failure.reason, failure));
             });
 
         return () => {

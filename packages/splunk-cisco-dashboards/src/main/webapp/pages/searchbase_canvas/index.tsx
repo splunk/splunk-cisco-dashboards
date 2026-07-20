@@ -82,8 +82,10 @@ import {
     isTableViz,
     useMetric,
     useTableData,
+    type MetricResult,
     type MetricConfig,
     type NoDataReason,
+    type TableDataResult,
     type TimeRange,
 } from '@/common/hooks/useMetric';
 import {
@@ -151,6 +153,31 @@ const clampNumber = (value: number, min: number, max: number): number =>
 
 type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
 type TileSpan = 1 | 2 | 4;
+type TileResultFilter = 'all' | 'needs_attention' | 'working';
+type TileResultStatus = 'needs_attention' | 'working' | 'unobserved';
+type CachedTileResult = MetricResult | TableDataResult;
+
+const TILE_RESULT_FILTER_OPTIONS: Array<{
+    value: TileResultFilter;
+    label: string;
+    title: string;
+}> = [
+    {
+        value: 'all',
+        label: 'All',
+        title: 'Show all canvas tiles',
+    },
+    {
+        value: 'needs_attention',
+        label: 'Needs attention',
+        title: 'Show searches that failed or returned no data',
+    },
+    {
+        value: 'working',
+        label: 'Working',
+        title: 'Show searches that ran successfully and returned data',
+    },
+];
 
 interface CanvasTile {
     id: string;
@@ -468,6 +495,20 @@ const searchbaseTileBodyKey = (
     return `${tileId}:metric`;
 };
 
+const isTableBackedTileViz = (viz: string | undefined): boolean =>
+    isTableViz(viz) || isBarBreakdownViz(viz) || isPieViz(viz);
+
+const tileResultStatusFromResult = (
+    result: CachedTileResult | undefined
+): TileResultStatus => {
+    if (!result || result.source !== 'live') return 'unobserved';
+    if (result.noDataReason) return 'needs_attention';
+    if ('totalRowCount' in result) {
+        return result.totalRowCount > 0 ? 'working' : 'unobserved';
+    }
+    return Number.isFinite(result.value) ? 'working' : 'unobserved';
+};
+
 const TileVizSelect: React.FC<{
     tile: CanvasTile;
     record: SearchbaseRecord;
@@ -613,7 +654,7 @@ const buildObservedNoDataReportSearch = (
     if (sorted.length === 0) {
         return [
             '| makeresults',
-            '| eval message="No observed no-data tiles in the current Searchbase Canvas session."',
+            '| eval message="No observed failed or no-data tiles in the current Searchbase Canvas session."',
             '| table message',
         ].join('\n');
     }
@@ -849,12 +890,24 @@ const readRowString = (
     return text || fallback;
 };
 
+interface CachedMetricResultEntry {
+    key: string;
+    result: MetricResult;
+}
+
+interface CachedTableDataEntry {
+    key: string;
+    result: TableDataResult;
+}
+
 interface SearchbaseCanvasTileProps {
     tile: CanvasTile;
     record?: SearchbaseRecord;
     entryByName: Map<string, SearchbaseRecord>;
     range: TimeRange;
     refreshToken: number;
+    metricResultCache?: CachedMetricResultEntry;
+    tableDataCache?: CachedTableDataEntry;
     isRunning: boolean;
     presentationMode?: boolean;
     onRun: (tileId: string) => void;
@@ -871,6 +924,16 @@ interface SearchbaseCanvasTileProps {
     onNoDataObservation: (
         tileId: string,
         entry: ObservedNoDataEntry | null
+    ) => void;
+    onMetricResultCacheChange: (
+        tileId: string,
+        cacheKey: string,
+        result: MetricResult
+    ) => void;
+    onTableDataCacheChange: (
+        tileId: string,
+        cacheKey: string,
+        result: TableDataResult
     ) => void;
 }
 
@@ -910,6 +973,8 @@ interface SearchbaseTileBodyProps {
     record: SearchbaseRecord;
     range: TimeRange;
     refreshToken: number;
+    metricResultCache?: CachedMetricResultEntry;
+    tableDataCache?: CachedTableDataEntry;
     viz: string | undefined;
     color: string;
     description: string;
@@ -920,6 +985,16 @@ interface SearchbaseTileBodyProps {
     presentationMode?: boolean;
     onOverlayFieldsChange?: (tileId: string, fields: string[]) => void;
     onNoDataObservation: (entry: ObservedNoDataEntry | null) => void;
+    onMetricResultCacheChange: (
+        tileId: string,
+        cacheKey: string,
+        result: MetricResult
+    ) => void;
+    onTableDataCacheChange: (
+        tileId: string,
+        cacheKey: string,
+        result: TableDataResult
+    ) => void;
 }
 
 const noDataCopy = (
@@ -1121,6 +1196,7 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
     record,
     range,
     refreshToken,
+    metricResultCache,
     viz,
     color,
     description,
@@ -1131,6 +1207,7 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
     presentationMode = false,
     onOverlayFieldsChange,
     onNoDataObservation,
+    onMetricResultCacheChange,
 }) => {
     // `viz_options.deltaField` (new in Build 1224) names the SPL
     // column carrying the delta value the radial / gauge tiles render
@@ -1195,7 +1272,53 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
         ]
     );
 
-    const metric = useMetric(metricConfig, range, refreshToken);
+    const metricCacheKey = useMemo(
+        () =>
+            [
+                'metric',
+                tile.id,
+                record.id,
+                record.search,
+                record.dispatchContext,
+                range.earliest,
+                range.latest,
+                refreshToken,
+                viz ?? '',
+                valueFieldOverride ?? '',
+                sparkDataFieldOverride ?? '',
+                deltaFieldOverride ?? '',
+                selectedOverlayField ?? '',
+            ].join('\u0001'),
+        [
+            deltaFieldOverride,
+            record.dispatchContext,
+            record.id,
+            record.search,
+            range.earliest,
+            range.latest,
+            refreshToken,
+            selectedOverlayField,
+            sparkDataFieldOverride,
+            tile.id,
+            valueFieldOverride,
+            viz,
+        ]
+    );
+    const cachedMetricResult =
+        metricResultCache?.key === metricCacheKey
+            ? metricResultCache.result
+            : undefined;
+    const handleMetricResultChange = useCallback(
+        (cacheKey: string, result: MetricResult) =>
+            onMetricResultCacheChange(tile.id, cacheKey, result),
+        [onMetricResultCacheChange, tile.id]
+    );
+
+    const metric = useMetric(metricConfig, range, refreshToken, {
+        cacheKey: metricCacheKey,
+        cachedResult: cachedMetricResult,
+        onResultChange: handleMetricResultChange,
+    });
     const availableOverlayFieldsKey = metric.availableOverlayFields.join('\u0001');
 
     useEffect(() => {
@@ -1208,7 +1331,8 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
     ]);
 
     useEffect(() => {
-        if (metric.source === 'live' && metric.noDataReason === 'empty_rows') {
+        if (metric.source !== 'live') return;
+        if (metric.noDataReason) {
             onNoDataObservation(
                 observedNoDataEntry(tile, record, metric.noDataReason, metric.rangeLabel)
             );
@@ -1342,6 +1466,7 @@ const SearchbaseTableTileBody: React.FC<
     record,
     range,
     refreshToken,
+    tableDataCache,
     description,
     onConfigure,
     onOpenSearch,
@@ -1350,6 +1475,7 @@ const SearchbaseTableTileBody: React.FC<
     variant,
     presentationMode = false,
     onNoDataObservation,
+    onTableDataCacheChange,
 }) => {
     const tableConfig = useMemo(
         () => ({
@@ -1361,10 +1487,45 @@ const SearchbaseTableTileBody: React.FC<
         }),
         [record.dispatchContext, record.search, tile.id]
     );
-    const table = useTableData(tableConfig, range, refreshToken);
+    const tableCacheKey = useMemo(
+        () =>
+            [
+                'table',
+                tile.id,
+                record.id,
+                record.search,
+                record.dispatchContext,
+                range.earliest,
+                range.latest,
+                refreshToken,
+            ].join('\u0001'),
+        [
+            record.dispatchContext,
+            record.id,
+            record.search,
+            range.earliest,
+            range.latest,
+            refreshToken,
+            tile.id,
+        ]
+    );
+    const cachedTableData =
+        tableDataCache?.key === tableCacheKey ? tableDataCache.result : undefined;
+    const handleTableDataChange = useCallback(
+        (cacheKey: string, result: TableDataResult) =>
+            onTableDataCacheChange(tile.id, cacheKey, result),
+        [onTableDataCacheChange, tile.id]
+    );
+
+    const table = useTableData(tableConfig, range, refreshToken, {
+        cacheKey: tableCacheKey,
+        cachedResult: cachedTableData,
+        onResultChange: handleTableDataChange,
+    });
 
     useEffect(() => {
-        if (table.source === 'live' && table.noDataReason === 'empty_rows') {
+        if (table.source !== 'live') return;
+        if (table.noDataReason) {
             onNoDataObservation(
                 observedNoDataEntry(tile, record, table.noDataReason, table.rangeLabel)
             );
@@ -1458,6 +1619,8 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
     entryByName,
     range,
     refreshToken,
+    metricResultCache,
+    tableDataCache,
     onConfigure,
     onRemove,
     onCycleSize,
@@ -1467,6 +1630,8 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
     onOpenDetailTable,
     onOverlayFieldsChange,
     onNoDataObservation,
+    onMetricResultCacheChange,
+    onTableDataCacheChange,
     onStop,
     onRefresh,
     presentationMode = false,
@@ -1517,6 +1682,7 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                         record={record}
                         range={range}
                         refreshToken={refreshToken}
+                        tableDataCache={tableDataCache}
                         viz={viz}
                         color={color}
                         description={description}
@@ -1531,6 +1697,8 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                         onNoDataObservation={(entry) =>
                             onNoDataObservation(tile.id, entry)
                         }
+                        onMetricResultCacheChange={onMetricResultCacheChange}
+                        onTableDataCacheChange={onTableDataCacheChange}
                     />
                 ) : isBarBreakdownViz(viz) ? (
                     <SearchbaseTableTileBody
@@ -1539,6 +1707,7 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                         record={record}
                         range={range}
                         refreshToken={refreshToken}
+                        tableDataCache={tableDataCache}
                         viz={viz}
                         color={color}
                         description={description}
@@ -1553,6 +1722,8 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                         onNoDataObservation={(entry) =>
                             onNoDataObservation(tile.id, entry)
                         }
+                        onMetricResultCacheChange={onMetricResultCacheChange}
+                        onTableDataCacheChange={onTableDataCacheChange}
                     />
                 ) : isPieViz(viz) ? (
                     <SearchbaseTableTileBody
@@ -1561,6 +1732,7 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                         record={record}
                         range={range}
                         refreshToken={refreshToken}
+                        tableDataCache={tableDataCache}
                         viz={viz}
                         color={color}
                         description={description}
@@ -1575,6 +1747,8 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                         onNoDataObservation={(entry) =>
                             onNoDataObservation(tile.id, entry)
                         }
+                        onMetricResultCacheChange={onMetricResultCacheChange}
+                        onTableDataCacheChange={onTableDataCacheChange}
                     />
                 ) : (
                     <SearchbaseMetricTileBody
@@ -1583,6 +1757,7 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                         record={record}
                         range={range}
                         refreshToken={refreshToken}
+                        metricResultCache={metricResultCache}
                         viz={viz}
                         color={color}
                         description={description}
@@ -1597,6 +1772,8 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                         onNoDataObservation={(entry) =>
                             onNoDataObservation(tile.id, entry)
                         }
+                        onMetricResultCacheChange={onMetricResultCacheChange}
+                        onTableDataCacheChange={onTableDataCacheChange}
                     />
                 )}
             </div>
@@ -2342,12 +2519,12 @@ const NoDataReportModal: React.FC<{
                                 id="searchbase-no-data-report-title"
                                 className="text-base font-bold text-slate-900 dark:text-slate-100"
                             >
-                                No data report
+                                Needs attention report
                             </h2>
                         </div>
                         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                             {rows.length.toLocaleString()} observed{' '}
-                            {rows.length === 1 ? 'search' : 'searches'} returned 0 rows.
+                            {rows.length === 1 ? 'search' : 'searches'} failed or returned no data.
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -2364,7 +2541,7 @@ const NoDataReportModal: React.FC<{
                             type="button"
                             onClick={onClose}
                             title="Close"
-                            aria-label="Close no data report"
+                            aria-label="Close needs attention report"
                             className="rounded p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                         >
                             <X className="h-4 w-4" />
@@ -2389,7 +2566,7 @@ const NoDataReportModal: React.FC<{
                                         colSpan={8}
                                         className="px-5 py-10 text-center text-sm text-slate-500 dark:text-slate-400"
                                     >
-                                        Run tiles first; searches that complete with 0 rows
+                                        Run tiles first; searches that fail or return no data
                                         will appear here.
                                     </td>
                                 </tr>
@@ -2499,35 +2676,35 @@ const NoDataReportModal: React.FC<{
                 <button
                     type="button"
                     tabIndex={-1}
-                    aria-label="Resize no data report from the left edge"
+                    aria-label="Resize needs attention report from the left edge"
                     onPointerDown={(event) => startDialogResize(event, 'width', -1, 0)}
                     className="absolute bottom-10 left-0 top-14 z-20 w-2 cursor-ew-resize rounded-l-lg transition-colors hover:bg-sky-400/20"
                 />
                 <button
                     type="button"
                     tabIndex={-1}
-                    aria-label="Resize no data report from the right edge"
+                    aria-label="Resize needs attention report from the right edge"
                     onPointerDown={(event) => startDialogResize(event, 'width', 1, 0)}
                     className="absolute bottom-10 right-0 top-14 z-20 w-2 cursor-ew-resize rounded-r-lg transition-colors hover:bg-sky-400/20"
                 />
                 <button
                     type="button"
                     tabIndex={-1}
-                    aria-label="Resize no data report from the top edge"
+                    aria-label="Resize needs attention report from the top edge"
                     onPointerDown={(event) => startDialogResize(event, 'height', 0, -1)}
                     className="absolute left-10 right-10 top-0 z-20 h-2 cursor-ns-resize rounded-t-lg transition-colors hover:bg-sky-400/20"
                 />
                 <button
                     type="button"
                     tabIndex={-1}
-                    aria-label="Resize no data report from the bottom edge"
+                    aria-label="Resize needs attention report from the bottom edge"
                     onPointerDown={(event) => startDialogResize(event, 'height', 0, 1)}
                     className="absolute bottom-0 left-10 right-10 z-20 h-2 cursor-ns-resize transition-colors hover:bg-sky-400/20"
                 />
                 <button
                     type="button"
                     tabIndex={-1}
-                    aria-label="Resize no data report from the corner"
+                    aria-label="Resize needs attention report from the corner"
                     onPointerDown={(event) => startDialogResize(event, 'both', 1, 1)}
                     className="absolute bottom-0 right-0 z-30 h-8 w-8 cursor-nwse-resize rounded-br-lg transition-colors hover:bg-sky-400/20"
                 >
@@ -2554,6 +2731,24 @@ interface SearchbaseBrowserProps {
 const ALL = '__all__';
 const UNSET_VIZ = '__unset_viz__';
 
+const makeDefaultAppSelection = (): Set<string> => new Set([APP_NAME]);
+
+const appSelectionsEqual = (
+    left: ReadonlySet<string>,
+    right: ReadonlySet<string>
+): boolean => {
+    if (left.size !== right.size) return false;
+    for (const value of left) {
+        if (!right.has(value)) return false;
+    }
+    return true;
+};
+
+const isDefaultAppSelection = (
+    selection: ReadonlySet<string>,
+    defaultSelection: ReadonlySet<string> = makeDefaultAppSelection()
+): boolean => appSelectionsEqual(selection, defaultSelection);
+
 const vizFilterValue = (record: SearchbaseRecord): string => {
     const raw = record.defaultViz?.trim();
     return raw ? raw.toLowerCase() : UNSET_VIZ;
@@ -2567,6 +2762,21 @@ const recordOwnerApp = (record: SearchbaseRecord): string =>
 
 const recordDispatchContext = (record: SearchbaseRecord): string =>
     record.dispatchContext || recordOwnerApp(record);
+
+const makeOwnerAppSelection = (records: SearchbaseRecord[]): Set<string> => {
+    const selection = new Set<string>();
+    for (const record of records) {
+        if (recordOwnerApp(record) === APP_NAME) {
+            selection.add(recordDispatchContext(record));
+        }
+    }
+    return selection.size > 0 ? selection : makeDefaultAppSelection();
+};
+
+const recordMatchesAppSelection = (
+    record: SearchbaseRecord,
+    selection: ReadonlySet<string>
+): boolean => selection.size === 0 || selection.has(recordDispatchContext(record));
 
 const normalizeSearchIdentity = (value: unknown): string =>
     String(value ?? '').trim().toLowerCase();
@@ -2789,6 +2999,227 @@ const SearchableFilterSelect: React.FC<SearchableFilterSelectProps> = ({
     );
 };
 
+interface SearchableAppMultiSelectProps {
+    selectedApps: ReadonlySet<string>;
+    options: string[];
+    countsByApp: Map<string, number>;
+    ariaLabel: string;
+    onChange: (selection: Set<string>) => void;
+}
+
+const SearchableAppMultiSelect: React.FC<SearchableAppMultiSelectProps> = ({
+    selectedApps,
+    options,
+    countsByApp,
+    ariaLabel,
+    onChange,
+}) => {
+    const rootRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
+    const [open, setOpen] = useState(false);
+    const [search, setSearch] = useState('');
+
+    const selectableApps = useMemo(() => {
+        const values = new Set(options);
+        values.add(APP_NAME);
+        for (const selectedApp of selectedApps) {
+            values.add(selectedApp);
+        }
+        return Array.from(values).sort((left, right) => left.localeCompare(right));
+    }, [options, selectedApps]);
+
+    const totalCount = useMemo(
+        () =>
+            Array.from(countsByApp.values()).reduce(
+                (total, count) => total + count,
+                0
+            ),
+        [countsByApp]
+    );
+
+    const selectedLabel = useMemo(() => {
+        if (selectedApps.size === 0) return `All apps (${totalCount})`;
+        const selected = Array.from(selectedApps).sort((left, right) =>
+            left.localeCompare(right)
+        );
+        if (selected.length === 1) return selected[0];
+        return `${selected.length} apps selected`;
+    }, [selectedApps, totalCount]);
+
+    const filteredApps = useMemo(() => {
+        const normalized = search.trim().toLowerCase();
+        if (!normalized) return selectableApps;
+        return selectableApps.filter((option) =>
+            option.toLowerCase().includes(normalized)
+        );
+    }, [search, selectableApps]);
+
+    const allAppsMatches = useMemo(() => {
+        const normalized = search.trim().toLowerCase();
+        return !normalized || 'all apps'.includes(normalized);
+    }, [search]);
+
+    useEffect(() => {
+        if (!open) {
+            setSearch('');
+            return undefined;
+        }
+
+        const focusHandle = window.setTimeout(() => {
+            inputRef.current?.focus();
+        }, 0);
+        const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+            if (
+                rootRef.current &&
+                event.target instanceof Node &&
+                !rootRef.current.contains(event.target)
+            ) {
+                setOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handlePointerDown);
+        document.addEventListener('touchstart', handlePointerDown);
+        return () => {
+            window.clearTimeout(focusHandle);
+            document.removeEventListener('mousedown', handlePointerDown);
+            document.removeEventListener('touchstart', handlePointerDown);
+        };
+    }, [open]);
+
+    const setAllApps = () => onChange(new Set());
+
+    const toggleApp = (option: string) => {
+        const next = selectedApps.size === 0 ? new Set<string>() : new Set(selectedApps);
+        if (next.has(option)) next.delete(option);
+        else next.add(option);
+        onChange(next);
+    };
+
+    return (
+        <div ref={rootRef} className="relative">
+            <button
+                type="button"
+                aria-label={ariaLabel}
+                aria-haspopup="listbox"
+                aria-expanded={open}
+                onClick={() => setOpen((current) => !current)}
+                onKeyDown={(event) => {
+                    if (event.key === 'ArrowDown' || event.key === 'Enter') {
+                        event.preventDefault();
+                        setOpen(true);
+                    }
+                    if (event.key === 'Escape') {
+                        setOpen(false);
+                    }
+                }}
+                className="flex h-10 w-full items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-left text-sm font-semibold text-slate-700 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-900"
+            >
+                <span className="min-w-0 flex-1 truncate">{selectedLabel}</span>
+                <ChevronDown
+                    className={cn(
+                        'h-4 w-4 flex-shrink-0 text-slate-500 transition-transform',
+                        open && 'rotate-180'
+                    )}
+                />
+            </button>
+
+            {open && (
+                <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-md border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-950">
+                    <label className="relative block border-b border-slate-100 dark:border-slate-800">
+                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                        <input
+                            ref={inputRef}
+                            value={search}
+                            onChange={(event) => setSearch(event.target.value)}
+                            onKeyDown={(event) => {
+                                if (event.key === 'Escape') {
+                                    event.stopPropagation();
+                                    setOpen(false);
+                                }
+                                if (
+                                    event.key === 'Enter' &&
+                                    filteredApps.length === 1 &&
+                                    !allAppsMatches
+                                ) {
+                                    event.preventDefault();
+                                    toggleApp(filteredApps[0]);
+                                }
+                            }}
+                            placeholder="Search apps..."
+                            className="h-10 w-full bg-white pl-9 pr-3 text-sm text-slate-700 outline-none dark:bg-slate-950 dark:text-slate-100"
+                        />
+                    </label>
+                    <div
+                        role="listbox"
+                        aria-label={ariaLabel}
+                        aria-multiselectable="true"
+                        className="max-h-56 overflow-y-auto p-1"
+                    >
+                        {allAppsMatches && (
+                            <button
+                                type="button"
+                                role="option"
+                                aria-selected={selectedApps.size === 0}
+                                onClick={setAllApps}
+                                className={cn(
+                                    'flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm transition-colors',
+                                    selectedApps.size === 0
+                                        ? 'bg-sky-50 font-bold text-sky-700 dark:bg-sky-950 dark:text-sky-200'
+                                        : 'text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-900'
+                                )}
+                            >
+                                <span className="min-w-0 flex-1 truncate">All apps</span>
+                                <span className="text-xs font-bold text-slate-400">
+                                    {totalCount}
+                                </span>
+                                {selectedApps.size === 0 && (
+                                    <Check className="h-4 w-4 flex-shrink-0" />
+                                )}
+                            </button>
+                        )}
+                        {filteredApps.length === 0 && !allAppsMatches ? (
+                            <div className="px-3 py-3 text-sm text-slate-500 dark:text-slate-400">
+                                No matches
+                            </div>
+                        ) : (
+                            filteredApps.map((option) => {
+                                const selected =
+                                    selectedApps.size > 0 && selectedApps.has(option);
+                                return (
+                                    <button
+                                        key={option}
+                                        type="button"
+                                        role="option"
+                                        aria-selected={selected}
+                                        onClick={() => toggleApp(option)}
+                                        className={cn(
+                                            'flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm transition-colors',
+                                            selected
+                                                ? 'bg-sky-50 font-bold text-sky-700 dark:bg-sky-950 dark:text-sky-200'
+                                                : 'text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-900'
+                                        )}
+                                    >
+                                        <span className="min-w-0 flex-1 truncate">
+                                            {option}
+                                        </span>
+                                        <span className="text-xs font-bold text-slate-400">
+                                            {countsByApp.get(option) ?? 0}
+                                        </span>
+                                        {selected && (
+                                            <Check className="h-4 w-4 flex-shrink-0" />
+                                        )}
+                                    </button>
+                                );
+                            })
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
     open,
     records,
@@ -2801,7 +3232,9 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
     onIncludeHiddenSearchesChange,
 }) => {
     const [query, setQuery] = useState('');
-    const [app, setApp] = useState(APP_NAME);
+    const [selectedApps, setSelectedApps] = useState<Set<string>>(
+        makeDefaultAppSelection
+    );
     const [category, setCategory] = useState(ALL);
     const [subCategory, setSubCategory] = useState(ALL);
     const [vizType, setVizType] = useState(ALL);
@@ -2862,6 +3295,20 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
         ]
     );
 
+    const defaultAppSelection = useMemo(
+        () => makeOwnerAppSelection(records),
+        [records]
+    );
+
+    useEffect(() => {
+        setSelectedApps((current) => {
+            if (appSelectionsEqual(current, defaultAppSelection)) return current;
+            return isDefaultAppSelection(current)
+                ? new Set(defaultAppSelection)
+                : current;
+        });
+    }, [defaultAppSelection]);
+
     const blockedSearchNames = useMemo(() => {
         const names = new Set<string>();
         for (const tile of canvasTiles) {
@@ -2894,23 +3341,45 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
         [browserRecords]
     );
 
-    useEffect(() => {
-        if (
-            appOptions.length > 0 &&
-            !appOptions.includes(app) &&
-            app !== ALL &&
-            app !== APP_NAME
-        ) {
-            setApp(appOptions.includes(APP_NAME) ? APP_NAME : ALL);
+    const appCountsByName = useMemo(() => {
+        const counts = new Map<string, number>();
+        for (const record of browserRecords) {
+            const value = recordDispatchContext(record);
+            counts.set(value, (counts.get(value) ?? 0) + 1);
         }
-    }, [app, appOptions]);
+        return counts;
+    }, [browserRecords]);
+
+    useEffect(() => {
+        setSelectedApps((current) => {
+            if (current.size === 0) return current;
+
+            const availableApps = new Set(appOptions);
+            for (const defaultApp of defaultAppSelection) {
+                availableApps.add(defaultApp);
+            }
+
+            let changed = false;
+            const next = new Set<string>();
+            for (const selectedApp of current) {
+                if (availableApps.has(selectedApp)) {
+                    next.add(selectedApp);
+                } else {
+                    changed = true;
+                }
+            }
+
+            if (!changed) return current;
+            return next.size > 0 ? next : new Set(defaultAppSelection);
+        });
+    }, [appOptions, defaultAppSelection]);
 
     const appScopedRecords = useMemo(
         () =>
             browserRecords.filter((record) =>
-                app === ALL ? true : recordDispatchContext(record) === app
+                recordMatchesAppSelection(record, selectedApps)
             ),
-        [app, browserRecords]
+        [browserRecords, selectedApps]
     );
 
     const categoryOptions = useMemo(
@@ -3046,10 +3515,25 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
 
     const activeFilterChips = useMemo(() => {
         const chips: Array<{ id: string; label: string }> = [];
-        if (app !== APP_NAME) {
+        if (!isDefaultAppSelection(selectedApps, defaultAppSelection)) {
+            const selectedAppLabels = Array.from(selectedApps).sort((left, right) =>
+                left.localeCompare(right)
+            );
+            const label =
+                selectedAppLabels.length === 0
+                    ? 'All apps'
+                    : selectedAppLabels.length === 1
+                      ? `App: ${selectedAppLabels[0]}`
+                      : `Apps: ${selectedAppLabels
+                            .slice(0, 2)
+                            .join(', ')}${
+                            selectedAppLabels.length > 2
+                                ? ` +${selectedAppLabels.length - 2}`
+                                : ''
+                        }`;
             chips.push({
-                id: `app-${app}`,
-                label: app === ALL ? 'All apps' : `App: ${app}`,
+                id: 'app-selection',
+                label,
             });
         }
         if (includeHiddenSearches) {
@@ -3071,11 +3555,12 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
         for (const tag of selectedTags) chips.push({ id: `tag-${tag}`, label: tag });
         return chips;
     }, [
-        app,
         category,
+        defaultAppSelection,
         includeDrilldownSearches,
         includeHiddenSearches,
         includeTableSearches,
+        selectedApps,
         selectedTags,
         subCategory,
         vizType,
@@ -3086,7 +3571,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
 
     const resetFilters = () => {
         setQuery('');
-        setApp(appOptions.includes(APP_NAME) ? APP_NAME : ALL);
+        setSelectedApps(new Set(defaultAppSelection));
         onIncludeHiddenSearchesChange(false);
         setIncludeDrilldownSearches(false);
         setIncludeTableSearches(false);
@@ -3203,31 +3688,23 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                 ) : (
                     <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/80 p-3 dark:border-slate-800 dark:bg-slate-900/60">
                         <div className="grid grid-cols-[76px_minmax(0,1fr)] gap-x-3 gap-y-3">
-                            <label className="self-center text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                            <span className="self-center text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
                                 App
-                            </label>
-                            <select
-                                value={app}
-                                onChange={(event) => {
-                                    setApp(event.target.value);
+                            </span>
+                            <SearchableAppMultiSelect
+                                selectedApps={selectedApps}
+                                options={appOptions}
+                                countsByApp={appCountsByName}
+                                ariaLabel="Filter searches by app"
+                                onChange={(nextSelection) => {
+                                    setSelectedApps(nextSelection);
                                     setCategory(ALL);
                                     setSubCategory(ALL);
                                     setVizType(ALL);
                                     setSelectedTags([]);
                                     setTagInput('');
                                 }}
-                                className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-900"
-                            >
-                                <option value={ALL}>All apps ({appOptions.length})</option>
-                                {appOptions.map((option) => (
-                                    <option key={option} value={option}>
-                                        {option}
-                                    </option>
-                                ))}
-                                {!appOptions.includes(APP_NAME) && (
-                                    <option value={APP_NAME}>{APP_NAME}</option>
-                                )}
-                            </select>
+                            />
 
                             <span className="self-start pt-4 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
                                 Visibility
@@ -3561,6 +4038,8 @@ const SearchbaseCanvasPage: React.FC = () => {
     const [noDataReportOpen, setNoDataReportOpen] = useState(false);
     const [pageIndex, setPageIndex] = useState(0);
     const [tileSearchQuery, setTileSearchQuery] = useState('');
+    const [tileResultFilter, setTileResultFilter] =
+        useState<TileResultFilter>('all');
     const [presentationMode, setPresentationMode] = useState(false);
     const [runningTileIds, setRunningTileIds] = useState<Set<string>>(
         () => new Set()
@@ -3575,6 +4054,12 @@ const SearchbaseCanvasPage: React.FC = () => {
     >(() => new Map());
     const [overlayFieldsByTile, setOverlayFieldsByTile] = useState<
         Map<string, string[]>
+    >(() => new Map());
+    const [metricResultCacheByTile, setMetricResultCacheByTile] = useState<
+        Map<string, CachedMetricResultEntry>
+    >(() => new Map());
+    const [tableDataCacheByTile, setTableDataCacheByTile] = useState<
+        Map<string, CachedTableDataEntry>
     >(() => new Map());
     const [savedCanvases, setSavedCanvases] = useState<SearchbaseCanvasSummary[]>(
         []
@@ -3679,6 +4164,9 @@ const SearchbaseCanvasPage: React.FC = () => {
     useEffect(() => {
         setObservedNoDataByTile(new Map());
         setOverlayFieldsByTile(new Map());
+        setMetricResultCacheByTile(new Map());
+        setTableDataCacheByTile(new Map());
+        setTileResultFilter('all');
     }, [rangeLabel]);
 
     const entryByName = useMemo(() => {
@@ -3688,6 +4176,27 @@ const SearchbaseCanvasPage: React.FC = () => {
         }
         return map;
     }, [records]);
+
+    const cachedResultForTile = useCallback(
+        (tile: CanvasTile): CachedTileResult | undefined => {
+            const record = entryByName.get(tile.searchName);
+            if (!record) return undefined;
+            const viz = effectiveTileViz(tile, record);
+            if (isTableBackedTileViz(viz)) {
+                return tableDataCacheByTile.get(tile.id)?.result;
+            }
+            return metricResultCacheByTile.get(tile.id)?.result;
+        },
+        [entryByName, metricResultCacheByTile, tableDataCacheByTile]
+    );
+
+    const resultStatusForTile = useCallback(
+        (tile: CanvasTile): TileResultStatus => {
+            if (observedNoDataByTile.has(tile.id)) return 'needs_attention';
+            return tileResultStatusFromResult(cachedResultForTile(tile));
+        },
+        [cachedResultForTile, observedNoDataByTile]
+    );
 
     const tileSearchTerms = useMemo(
         () =>
@@ -3699,7 +4208,7 @@ const SearchbaseCanvasPage: React.FC = () => {
         [tileSearchQuery]
     );
     const hasTileSearch = tileSearchTerms.length > 0;
-    const filteredTiles = useMemo(() => {
+    const searchedTiles = useMemo(() => {
         if (!hasTileSearch) return tiles;
         return tiles.filter((tile) => {
             const record = entryByName.get(tile.searchName);
@@ -3719,6 +4228,23 @@ const SearchbaseCanvasPage: React.FC = () => {
             return tileSearchTerms.every((term) => searchableText.includes(term));
         });
     }, [entryByName, hasTileSearch, tileSearchTerms, tiles]);
+    const resultFilterCounts = useMemo(() => {
+        const counts: Record<TileResultStatus, number> = {
+            needs_attention: 0,
+            working: 0,
+            unobserved: 0,
+        };
+        for (const tile of searchedTiles) {
+            counts[resultStatusForTile(tile)] += 1;
+        }
+        return counts;
+    }, [resultStatusForTile, searchedTiles]);
+    const filteredTiles = useMemo(() => {
+        if (tileResultFilter === 'all') return searchedTiles;
+        return searchedTiles.filter(
+            (tile) => resultStatusForTile(tile) === tileResultFilter
+        );
+    }, [resultStatusForTile, searchedTiles, tileResultFilter]);
 
     const totalPages = Math.max(1, Math.ceil(filteredTiles.length / pageSize));
     const clampedPageIndex = Math.min(pageIndex, totalPages - 1);
@@ -3749,7 +4275,7 @@ const SearchbaseCanvasPage: React.FC = () => {
             ? `Run ${idleVisibleTileCount.toLocaleString()} visible ${
                   idleVisibleTileCount === 1 ? 'tile' : 'tiles'
               }`
-            : 'All visible tiles are already running';
+            : 'All visible tiles are already active';
 
     useEffect(() => {
         setPageIndex((current) => Math.min(current, totalPages - 1));
@@ -3757,7 +4283,7 @@ const SearchbaseCanvasPage: React.FC = () => {
 
     useEffect(() => {
         setPageIndex(0);
-    }, [tileSearchQuery]);
+    }, [tileResultFilter, tileSearchQuery]);
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -3790,6 +4316,56 @@ const SearchbaseCanvasPage: React.FC = () => {
             return changed ? next : current;
         });
     }, []);
+
+    const clearTileResultCache = useCallback((tileIds: string[]) => {
+        if (tileIds.length === 0) return;
+        setMetricResultCacheByTile((current) => {
+            let changed = false;
+            const next = new Map(current);
+            for (const tileId of tileIds) {
+                if (next.delete(tileId)) changed = true;
+            }
+            return changed ? next : current;
+        });
+        setTableDataCacheByTile((current) => {
+            let changed = false;
+            const next = new Map(current);
+            for (const tileId of tileIds) {
+                if (next.delete(tileId)) changed = true;
+            }
+            return changed ? next : current;
+        });
+    }, []);
+
+    const updateMetricResultCache = useCallback(
+        (tileId: string, cacheKey: string, result: MetricResult) => {
+            setMetricResultCacheByTile((current) => {
+                const previous = current.get(tileId);
+                if (previous?.key === cacheKey && previous.result === result) {
+                    return current;
+                }
+                const next = new Map(current);
+                next.set(tileId, { key: cacheKey, result });
+                return next;
+            });
+        },
+        []
+    );
+
+    const updateTableDataCache = useCallback(
+        (tileId: string, cacheKey: string, result: TableDataResult) => {
+            setTableDataCacheByTile((current) => {
+                const previous = current.get(tileId);
+                if (previous?.key === cacheKey && previous.result === result) {
+                    return current;
+                }
+                const next = new Map(current);
+                next.set(tileId, { key: cacheKey, result });
+                return next;
+            });
+        },
+        []
+    );
 
     const updateNoDataObservation = useCallback(
         (tileId: string, entry: ObservedNoDataEntry | null) => {
@@ -3906,9 +4482,12 @@ const SearchbaseCanvasPage: React.FC = () => {
                 setTiles(next.tiles);
                 setPageIndex(0);
                 setTileSearchQuery('');
+                setTileResultFilter('all');
                 setRunningTileIds(new Set());
                 setObservedNoDataByTile(new Map());
                 setOverlayFieldsByTile(new Map());
+                setMetricResultCacheByTile(new Map());
+                setTableDataCacheByTile(new Map());
                 setBrowserOpen(next.tiles.length === 0);
                 setReplaceTileId(null);
                 setActiveSavedCanvasName(name);
@@ -3984,6 +4563,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                 });
                 if (!replaced) return;
                 clearObservedNoData([replaceTileId]);
+                clearTileResultCache([replaceTileId]);
                 setOverlayFieldsByTile((current) => {
                     if (!current.has(replaceTileId)) return current;
                     const next = new Map(current);
@@ -3995,6 +4575,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                     next.add(replaceTileId);
                     return next;
                 });
+                setTileResultFilter('all');
                 setReplaceTileId(null);
                 setBrowserOpen(false);
                 return;
@@ -4010,9 +4591,17 @@ const SearchbaseCanvasPage: React.FC = () => {
                 return [...current, newTile];
             });
             runNewTiles([newTile], 1);
+            setTileResultFilter('all');
             setPageIndex(Math.floor(tiles.length / pageSize));
         },
-        [clearObservedNoData, pageSize, replaceTileId, runNewTiles, tiles]
+        [
+            clearObservedNoData,
+            clearTileResultCache,
+            pageSize,
+            replaceTileId,
+            runNewTiles,
+            tiles,
+        ]
     );
 
     const addRecords = useCallback(
@@ -4039,6 +4628,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                 return [...current, ...currentAdditions];
             });
             runNewTiles(additions);
+            setTileResultFilter('all');
             setPageIndex(Math.floor(tiles.length / pageSize));
         },
         [pageSize, replaceTileId, runNewTiles, tiles]
@@ -4070,17 +4660,17 @@ const SearchbaseCanvasPage: React.FC = () => {
             return next;
         });
         clearObservedNoData([tileId]);
-    }, [clearObservedNoData]);
+        clearTileResultCache([tileId]);
+    }, [clearObservedNoData, clearTileResultCache]);
 
     const runTile = useCallback((tileId: string) => {
-        clearObservedNoData([tileId]);
         setRunningTileIds((current) => {
             if (current.has(tileId)) return current;
             const next = new Set(current);
             next.add(tileId);
             return next;
         });
-    }, [clearObservedNoData]);
+    }, []);
 
     const stopTile = useCallback((tileId: string) => {
         setRunningTileIds((current) => {
@@ -4093,7 +4683,9 @@ const SearchbaseCanvasPage: React.FC = () => {
 
     const runVisibleTiles = useCallback(() => {
         userStoppedRef.current = false;
-        const tiles = runnableVisibleTilesRef.current;
+        const tiles = runnableVisibleTilesRef.current.filter(
+            (tile) => !runningTileIdsRef.current.has(tile.id)
+        );
         const tileIds = tiles.map((tile) => tile.id);
         canvasDebug('[canvas/run-visible] entry', {
             tileIds,
@@ -4104,20 +4696,6 @@ const SearchbaseCanvasPage: React.FC = () => {
             canvasDebug('[canvas/run-visible] bail-out', { reason: 'no_runnable_tiles' });
             return;
         }
-        clearObservedNoData(tileIds);
-        setTileRefreshCounts((current) => {
-            const next = { ...current };
-            for (const tileId of tileIds) {
-                const prev = current[tileId] ?? 0;
-                next[tileId] = prev + 1;
-                canvasDebug('[canvas/run-visible] refresh-count', {
-                    tileId,
-                    prev,
-                    next: next[tileId],
-                });
-            }
-            return next;
-        });
         setRunningTileIds((current) => {
             const next = new Set(current);
             for (const tileId of tileIds) {
@@ -4130,37 +4708,10 @@ const SearchbaseCanvasPage: React.FC = () => {
             });
             return next;
         });
-    }, [clearObservedNoData]);
+    }, []);
 
     runnableVisibleTilesRef.current = runnableVisibleTiles;
     runVisibleTilesRef.current = runVisibleTiles;
-
-    // Re-arm auto-run on navigation/filter changes. Drop stale running markers
-    // so the visible page always gets a fresh dispatch (not stuck loading).
-    useEffect(() => {
-        const visibleIds = runnableVisibleTilesRef.current.map((tile) => tile.id);
-        const runningBefore = runningTileIdsRef.current.size;
-        userStoppedRef.current = false;
-        setRunningTileIds((current) => {
-            if (current.size === 0) return current;
-            canvasDebug('[canvas/page-change] clear-running', {
-                page: clampedPageIndex + 1,
-                pageSize,
-                runningBefore: current.size,
-                runningIds: Array.from(current),
-                visibleTileIds: visibleIds,
-            });
-            return new Set();
-        });
-        canvasDebug('[canvas/page-change]', {
-            page: clampedPageIndex + 1,
-            pageSize,
-            totalPages,
-            visibleTileIds: visibleIds,
-            runningTileIdsBefore: runningBefore,
-            tileSearchQuery: tileSearchQuery.trim() || null,
-        });
-    }, [clampedPageIndex, pageSize, tileSearchQuery, visibleTilesRunKey, totalPages]);
 
     useEffect(() => {
         if (loadingCatalogue) {
@@ -4235,21 +4786,17 @@ const SearchbaseCanvasPage: React.FC = () => {
 
     const refreshRunningTiles = useCallback(() => {
         userStoppedRef.current = false;
-        const targets =
-            runningTileIds.size > 0
-                ? runnableVisibleTiles.filter((tile) => runningTileIds.has(tile.id))
-                : runnableVisibleTiles;
+        const targets = runnableVisibleTiles;
         const tileIds = targets.map((tile) => tile.id);
         canvasDebug('[canvas/refresh] click', {
             tileIds,
-            mode: runningTileIds.size > 0 ? 'running_subset' : 'all_visible',
+            mode: 'all_visible',
             runningCount: runningTileIds.size,
         });
         if (tileIds.length === 0) {
             canvasDebug('[canvas/refresh] bail-out', { reason: 'no_targets' });
             return;
         };
-        clearObservedNoData(tileIds);
         setTileRefreshCounts((current) => {
             const next = { ...current };
             for (const tileId of tileIds) {
@@ -4265,17 +4812,16 @@ const SearchbaseCanvasPage: React.FC = () => {
             return next;
         });
         setRefreshToken((current) => current + 1);
-    }, [clearObservedNoData, runningTileIds, runnableVisibleTiles]);
+    }, [runningTileIds.size, runnableVisibleTiles]);
 
     const refreshTile = useCallback(
         (tileId: string) => {
-            clearObservedNoData([tileId]);
             setTileRefreshCounts((current) => ({
                 ...current,
                 [tileId]: (current[tileId] ?? 0) + 1,
             }));
         },
-        [clearObservedNoData]
+        []
     );
 
     const cycleSize = useCallback((tileId: string) => {
@@ -4336,8 +4882,11 @@ const SearchbaseCanvasPage: React.FC = () => {
         setRunningTileIds(new Set());
         setObservedNoDataByTile(new Map());
         setOverlayFieldsByTile(new Map());
+        setMetricResultCacheByTile(new Map());
+        setTableDataCacheByTile(new Map());
         setPageIndex(0);
         setTileSearchQuery('');
+        setTileResultFilter('all');
         setBrowserOpen(true);
         setReplaceTileId(null);
         setActiveSavedCanvasName(null);
@@ -4359,8 +4908,11 @@ const SearchbaseCanvasPage: React.FC = () => {
         setRunningTileIds(new Set());
         setObservedNoDataByTile(new Map());
         setOverlayFieldsByTile(new Map());
+        setMetricResultCacheByTile(new Map());
+        setTableDataCacheByTile(new Map());
         setPageIndex(0);
         setTileSearchQuery('');
+        setTileResultFilter('all');
         setBrowserOpen(false);
         setReplaceTileId(null);
         setActiveSavedCanvasName(null);
@@ -4376,11 +4928,13 @@ const SearchbaseCanvasPage: React.FC = () => {
             : resolvedTheme === 'dark'
             ? 'Dark theme'
             : 'Light theme';
+    const hasTileResultFilter = tileResultFilter !== 'all';
+    const hasTileFilters = hasTileSearch || hasTileResultFilter;
     const visibleTileSummary =
         filteredTiles.length === 0
             ? '0 shown'
             : `${pageStart + 1}-${pageEnd} of ${
-                  hasTileSearch
+                  hasTileFilters
                       ? `${filteredTiles.length.toLocaleString()} matched`
                       : filteredTiles.length.toLocaleString()
               }`;
@@ -4403,6 +4957,8 @@ const SearchbaseCanvasPage: React.FC = () => {
                 entryByName={entryByName}
                 range={range}
                 refreshToken={refreshToken + (tileRefreshCounts[tile.id] ?? 0)}
+                metricResultCache={metricResultCacheByTile.get(tile.id)}
+                tableDataCache={tableDataCacheByTile.get(tile.id)}
                 isRunning={runningTileIds.has(tile.id)}
                 presentationMode={isPresentation}
                 onRun={runTile}
@@ -4417,6 +4973,8 @@ const SearchbaseCanvasPage: React.FC = () => {
                 onOpenDetailTable={setActiveDetailTable}
                 onOverlayFieldsChange={updateOverlayFields}
                 onNoDataObservation={updateNoDataObservation}
+                onMetricResultCacheChange={updateMetricResultCache}
+                onTableDataCacheChange={updateTableDataCache}
             />
         );
 
@@ -4484,9 +5042,9 @@ const SearchbaseCanvasPage: React.FC = () => {
                                             ? 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-200'
                                             : 'border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300'
                                     )}
-                                    title="Tiles currently dispatching or awaiting results"
+                                    title="Tiles with an active result view"
                                 >
-                                    {runningTileIds.size.toLocaleString()} running now
+                                    {runningTileIds.size.toLocaleString()} active
                                 </span>
                                 <button
                                     type="button"
@@ -4497,10 +5055,10 @@ const SearchbaseCanvasPage: React.FC = () => {
                                             ? 'border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300 hover:bg-amber-100 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200 dark:hover:bg-amber-900'
                                             : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
                                     )}
-                                    title="Open no data report"
-                                    aria-label={`Open no data report. ${observedNoDataRows.length.toLocaleString()} observed no-data tiles.`}
+                                    title="Open needs attention report"
+                                    aria-label={`Open needs attention report. ${observedNoDataRows.length.toLocaleString()} observed searches need attention.`}
                                 >
-                                    {observedNoDataRows.length.toLocaleString()} no data
+                                    {observedNoDataRows.length.toLocaleString()} attention
                                 </button>
                                 <span
                                     className="inline-flex h-6 items-center rounded-md border border-slate-200 bg-slate-50 px-2 text-xs font-bold text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
@@ -4580,16 +5138,8 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 type="button"
                                 onClick={refreshRunningTiles}
                                 disabled={runnableVisibleTiles.length === 0}
-                                title={
-                                    runningTileIds.size > 0
-                                        ? 'Refresh running tiles'
-                                        : 'Refresh visible tiles'
-                                }
-                                aria-label={
-                                    runningTileIds.size > 0
-                                        ? 'Refresh running tiles'
-                                        : 'Refresh visible tiles'
-                                }
+                                title="Refresh visible tiles"
+                                aria-label="Refresh visible tiles"
                                 className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus:ring-slate-700"
                             >
                                 <RefreshCw className="h-4 w-4" />
@@ -4645,7 +5195,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                             className="flex h-9 w-full items-center gap-2 rounded px-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
                                         >
                                             <Table2 className="h-3.5 w-3.5" />
-                                            No data report
+                                            Needs attention report
                                         </button>
                                         <button
                                             type="button"
@@ -4745,6 +5295,53 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 </button>
                             )}
                         </div>
+                        <div
+                            role="group"
+                            aria-label="Filter tiles by last observed search result"
+                            className="inline-flex h-11 max-w-full overflow-hidden rounded-md border border-slate-300 bg-white p-1 dark:border-slate-700 dark:bg-slate-950"
+                        >
+                            {TILE_RESULT_FILTER_OPTIONS.map((option) => {
+                                const selected = tileResultFilter === option.value;
+                                const count =
+                                    option.value === 'all'
+                                        ? searchedTiles.length
+                                        : resultFilterCounts[option.value];
+                                const Icon =
+                                    option.value === 'needs_attention'
+                                        ? AlertCircle
+                                        : option.value === 'working'
+                                        ? Check
+                                        : SlidersHorizontal;
+                                return (
+                                    <button
+                                        key={option.value}
+                                        type="button"
+                                        onClick={() => setTileResultFilter(option.value)}
+                                        title={option.title}
+                                        aria-pressed={selected}
+                                        className={cn(
+                                            'inline-flex min-w-0 items-center gap-1.5 rounded px-2.5 text-xs font-black transition focus:outline-none focus:ring-2 focus:ring-sky-300 sm:px-3',
+                                            selected
+                                                ? 'bg-slate-900 text-white shadow-sm dark:bg-slate-100 dark:text-slate-950'
+                                                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-50'
+                                        )}
+                                    >
+                                        <Icon className="h-3.5 w-3.5 flex-shrink-0" />
+                                        <span className="truncate">{option.label}</span>
+                                        <span
+                                            className={cn(
+                                                'rounded-full px-1.5 py-0.5 text-[10px] leading-none',
+                                                selected
+                                                    ? 'bg-white/20 text-current dark:bg-slate-950/10'
+                                                    : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300'
+                                            )}
+                                        >
+                                            {count.toLocaleString()}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
                         <div className="flex min-w-0 flex-wrap items-center gap-2">
                         <button
                             type="button"
@@ -4823,18 +5420,25 @@ const SearchbaseCanvasPage: React.FC = () => {
                                     <Search className="h-7 w-7" />
                                 </div>
                                 <h2 className="mt-4 text-xl font-black text-slate-950 dark:text-slate-50">
-                                    No matching tiles
+                                    {hasTileResultFilter
+                                        ? 'No tiles in this result state'
+                                        : 'No matching tiles'}
                                 </h2>
                                 <p className="mt-2 text-sm font-medium leading-6 text-slate-500 dark:text-slate-400">
-                                    Try a different tile name, tag, category, or SPL fragment.
+                                    {hasTileResultFilter
+                                        ? 'Run searches from the All view, or switch result filters after results come back.'
+                                        : 'Try a different tile name, tag, category, or SPL fragment.'}
                                 </p>
                                 <button
                                     type="button"
-                                    onClick={() => setTileSearchQuery('')}
+                                    onClick={() => {
+                                        setTileSearchQuery('');
+                                        setTileResultFilter('all');
+                                    }}
                                     className="mt-5 inline-flex items-center gap-2 rounded-md bg-slate-900 px-4 py-2 text-sm font-black text-white transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-white"
                                 >
                                     <X className="h-4 w-4" />
-                                    Clear search
+                                    {hasTileResultFilter ? 'Clear filters' : 'Clear search'}
                                 </button>
                             </div>
                         </div>

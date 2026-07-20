@@ -73,7 +73,7 @@ packages/splunk-cisco-dashboards/
         ├── webapp/
         │   ├── common/
         │   │   ├── components/
-        │   │   │   ├── florida/  # DashboardSection, MetricItem, Sparkline, FloridaMap
+        │   │   │   ├── florida/  # DashboardSection, MetricItem, Sparkline, CustomerTopologyMap
         │   │   │   └── *.jsx     # @splunk/react-ui based shared cards
         │   │   ├── hooks/        # useSplunkSearch
         │   │   ├── lib/          # cn() and other utilities
