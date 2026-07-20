@@ -2781,6 +2781,35 @@ const recordMatchesAppSelection = (
 const normalizeSearchIdentity = (value: unknown): string =>
     String(value ?? '').trim().toLowerCase();
 
+const recordIsDrilldownSearch = (
+    record: SearchbaseRecord,
+    drilldownSearchNames: ReadonlySet<string>
+): boolean =>
+    drilldownSearchNames.has(normalizeSearchIdentity(record.searchName)) ||
+    drilldownSearchNames.has(normalizeSearchIdentity(record.id));
+
+const recordMatchesBrowserVisibility = (
+    record: SearchbaseRecord,
+    drilldownSearchNames: ReadonlySet<string>,
+    includeHiddenSearches: boolean,
+    includeDrilldownSearches: boolean,
+    includeTableSearches: boolean
+): boolean => {
+    if (!includeHiddenSearches && record.searchHidden) {
+        return false;
+    }
+    if (
+        !includeDrilldownSearches &&
+        recordIsDrilldownSearch(record, drilldownSearchNames)
+    ) {
+        return false;
+    }
+    if (!includeTableSearches && isTableViz(record.defaultViz)) {
+        return false;
+    }
+    return true;
+};
+
 const normalizeCatalogueQueryText = (value: string): string =>
     value
         .toLowerCase()
@@ -3275,17 +3304,15 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
 
     const browserRecords = useMemo(
         () =>
-            records.filter((record) => {
-                if (!includeHiddenSearches && record.searchHidden) return false;
-                const isDrilldownSearch =
-                    drilldownSearchNames.has(
-                        normalizeSearchIdentity(record.searchName)
-                    ) ||
-                    drilldownSearchNames.has(normalizeSearchIdentity(record.id));
-                if (!includeDrilldownSearches && isDrilldownSearch) return false;
-                if (!includeTableSearches && isTableViz(record.defaultViz)) return false;
-                return true;
-            }),
+            records.filter((record) =>
+                recordMatchesBrowserVisibility(
+                    record,
+                    drilldownSearchNames,
+                    includeHiddenSearches,
+                    includeDrilldownSearches,
+                    includeTableSearches
+                )
+            ),
         [
             drilldownSearchNames,
             includeDrilldownSearches,
@@ -3390,6 +3417,16 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
         [appScopedRecords]
     );
 
+    useEffect(() => {
+        if (category !== ALL && !categoryOptions.includes(category)) {
+            setCategory(ALL);
+            setSubCategory(ALL);
+            setVizType(ALL);
+            setSelectedTags([]);
+            setTagInput('');
+        }
+    }, [category, categoryOptions]);
+
     const categoryScopedRecords = useMemo(
         () =>
             appScopedRecords.filter((record) =>
@@ -3409,6 +3446,15 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
             ).sort(),
         [categoryScopedRecords]
     );
+
+    useEffect(() => {
+        if (subCategory !== ALL && !subCategoryOptions.includes(subCategory)) {
+            setSubCategory(ALL);
+            setVizType(ALL);
+            setSelectedTags([]);
+            setTagInput('');
+        }
+    }, [subCategory, subCategoryOptions]);
 
     useEffect(() => {
         setSubCategory(ALL);
@@ -3494,6 +3540,10 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
             recordMatchesCatalogueQuery(record, query)
         );
     }, [query, tagScopedRecords]);
+    const availableSearchCount = filteredRecords.length;
+    const availableSearchLabel = `${availableSearchCount.toLocaleString()} ${
+        availableSearchCount === 1 ? 'search' : 'searches'
+    } available`;
 
     const selectedRecords = useMemo(
         () =>
@@ -3658,13 +3708,21 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                             )}
                         />
                     </button>
-                    <button
-                        type="button"
-                        onClick={resetFilters}
-                        className="ml-auto text-xs font-black uppercase tracking-[0.18em] text-slate-400 transition-colors hover:text-sky-600 dark:hover:text-sky-300"
-                    >
-                        Clear filters
-                    </button>
+                    <div className="ml-auto flex items-center gap-3">
+                        <span
+                            title="Searchbase stanzas matching the current app, visibility, category, sub-category, viz, tag, and text filters"
+                            className="text-xs font-black uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500"
+                        >
+                            {availableSearchLabel}
+                        </span>
+                        <button
+                            type="button"
+                            onClick={resetFilters}
+                            className="text-xs font-black uppercase tracking-[0.18em] text-slate-400 transition-colors hover:text-sky-600 dark:hover:text-sky-300"
+                        >
+                            Clear filters
+                        </button>
+                    </div>
                 </div>
 
                 {filtersCollapsed ? (
@@ -3815,7 +3873,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                 <input
                                     value={tagInput}
                                     onChange={(event) => setTagInput(event.target.value)}
-                                    placeholder={`Filter by tag (${availableTagCount} available, AND combined)...`}
+                                    placeholder={`Filter by tag (${availableTagCount} tags available, AND combined)...`}
                                     className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-900"
                                 />
                                 {(selectedTags.length > 0 || tagOptions.length > 0) && (
@@ -3857,9 +3915,11 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
             </div>
 
             <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 px-4 py-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                <span className="font-bold">
-                    {filteredRecords.length.toLocaleString()} of{' '}
-                    {browserRecords.length.toLocaleString()} searches
+                <span
+                    className="font-bold"
+                    title={`${browserRecords.length.toLocaleString()} searches are in the current app and visibility scope before category, tag, viz, and text filters`}
+                >
+                    {availableSearchLabel}
                 </span>
                 {!replaceMode && addableFilteredRecords.length !== filteredRecords.length && (
                     <span>{addableFilteredRecords.length.toLocaleString()} addable</span>

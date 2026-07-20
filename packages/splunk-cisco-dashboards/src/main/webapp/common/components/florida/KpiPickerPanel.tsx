@@ -495,6 +495,31 @@ const entryMatchesFacetSelection = (
     return true;
 };
 
+const entryIsDrilldownSearch = (
+    entry: SearchbaseRecord,
+    drilldownSearchNames: ReadonlySet<string>
+): boolean =>
+    drilldownSearchNames.has(entry.searchName.trim().toLowerCase()) ||
+    drilldownSearchNames.has(entry.id.trim().toLowerCase());
+
+const entryMatchesBrowseVisibility = (
+    entry: SearchbaseRecord,
+    drilldownSearchNames: ReadonlySet<string>,
+    includeDrilldownSearches: boolean,
+    includeTableSearches: boolean
+): boolean => {
+    if (
+        !includeDrilldownSearches &&
+        entryIsDrilldownSearch(entry, drilldownSearchNames)
+    ) {
+        return false;
+    }
+    if (!includeTableSearches && entry.defaultViz === 'splunk.table') {
+        return false;
+    }
+    return true;
+};
+
 const entryIsUsed = (entry: SearchbaseRecord, used: Set<string> | undefined): boolean => {
     if (!used) return false;
     return used.has(entry.id) || used.has(entry.searchName);
@@ -1236,39 +1261,85 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         return () => document.removeEventListener('mousedown', handler);
     }, [open, drilldownTagDropdownOpen]);
 
+    const drilldownSearchNames = useMemo(() => {
+        const names = new Set<string>();
+        for (const entry of catalogue) {
+            const name = entry.drilldownSearchName?.trim();
+            if (name) names.add(name.toLowerCase());
+        }
+        return names;
+    }, [catalogue]);
+
+    // Entries the main browse list is allowed to render after App and
+    // Visibility filters. Category / sub-category / tag option lists are
+    // derived from this same slice so hidden drilldown/table-only branches
+    // cannot be selected into an empty result list.
+    const browseVisibleEntries = useMemo(() => {
+        return catalogue.filter((entry) => {
+            if (!entryMatchesAppSelection(entry, selectedApps)) {
+                return false;
+            }
+            return entryMatchesBrowseVisibility(
+                entry,
+                drilldownSearchNames,
+                includeDrilldownSearches,
+                includeTableSearches
+            );
+        });
+    }, [
+        catalogue,
+        drilldownSearchNames,
+        includeDrilldownSearches,
+        includeTableSearches,
+        selectedApps,
+    ]);
+
     // Distinct, sorted category list - drives the Category dropdown.
-    // Scoped to the active App facet so app selections narrow the
-    // Category dropdown to that app vocabulary.
+    // Scoped to the active App and Visibility facets so app selections
+    // and "show drilldown/table" toggles narrow the Category dropdown to
+    // branches that can still render results.
     const categories = useMemo(() => {
         const set = new Set<string>();
-        for (const e of catalogue) {
-            if (!entryMatchesAppSelection(e, selectedApps)) {
-                continue;
-            }
+        for (const e of browseVisibleEntries) {
             if (e.category) set.add(e.category);
         }
         return Array.from(set).sort((a, b) =>
             a.localeCompare(b, undefined, { sensitivity: 'base' })
         );
-    }, [catalogue, selectedApps]);
+    }, [browseVisibleEntries]);
 
-    // Sub-categories scoped to the current category and dispatch
-    // context. Empty array when no category is picked — that hides
-    // the dropdown.
+    // Sub-categories scoped to the current category, dispatch context,
+    // and Visibility facets. Empty array when no category is picked —
+    // that hides the dropdown.
     const subCategories = useMemo(() => {
         if (selectedCategory === ALL_CATEGORIES) return [];
         const set = new Set<string>();
-        for (const e of catalogue) {
-            if (!entryMatchesAppSelection(e, selectedApps)) {
-                continue;
-            }
+        for (const e of browseVisibleEntries) {
             if (e.category !== selectedCategory) continue;
             if (e.subCategory) set.add(e.subCategory);
         }
         return Array.from(set).sort((a, b) =>
             a.localeCompare(b, undefined, { sensitivity: 'base' })
         );
-    }, [catalogue, selectedApps, selectedCategory]);
+    }, [browseVisibleEntries, selectedCategory]);
+
+    useEffect(() => {
+        if (
+            selectedCategory !== ALL_CATEGORIES &&
+            !categories.includes(selectedCategory)
+        ) {
+            setSelectedCategory(ALL_CATEGORIES);
+        }
+    }, [categories, selectedCategory]);
+
+    useEffect(() => {
+        if (
+            selectedSubCategory !== ALL_SUB_CATEGORIES &&
+            !subCategories.includes(selectedSubCategory)
+        ) {
+            setSelectedSubCategory(ALL_SUB_CATEGORIES);
+        }
+    }, [selectedSubCategory, subCategories]);
 
     // Distinct app namespaces (`dispatch_context` values) present in
     // the catalogue. Drives the App facet dropdown. Sorted
@@ -1356,10 +1427,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     // after choosing one tag, the dropdown shows only tags that still
     // co-occur in the narrowed results rather than the full catalogue.
     const tagFacetEntries = useMemo(() => {
-        return catalogue.filter((entry) => {
-            if (!entryMatchesAppSelection(entry, selectedApps)) {
-                return false;
-            }
+        return browseVisibleEntries.filter((entry) => {
             if (selectedCategory !== ALL_CATEGORIES && entry.category !== selectedCategory) {
                 return false;
             }
@@ -1376,7 +1444,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
             }
             return matchesQuery(entry, query);
         });
-    }, [catalogue, query, selectedApps, selectedCategory, selectedSubCategory, activeTags]);
+    }, [activeTags, browseVisibleEntries, query, selectedCategory, selectedSubCategory]);
 
     // Full tag counts for the narrowed slice. Sorted by frequency
     // desc, then alpha. Not capped — that happens in
@@ -1465,20 +1533,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         return m;
     }, [drilldownAllTagsWithCounts]);
 
-    const drilldownSearchNames = useMemo(() => {
-        const names = new Set<string>();
-        for (const entry of catalogue) {
-            const name = entry.drilldownSearchName?.trim();
-            if (name) names.add(name.toLowerCase());
-        }
-        return names;
-    }, [catalogue]);
-
     const filtered = useMemo(() => {
-        return catalogue.filter((entry) => {
-            if (!entryMatchesAppSelection(entry, selectedApps)) {
-                return false;
-            }
+        return browseVisibleEntries.filter((entry) => {
             if (selectedCategory !== ALL_CATEGORIES && entry.category !== selectedCategory) {
                 return false;
             }
@@ -1486,15 +1542,6 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                 selectedSubCategory !== ALL_SUB_CATEGORIES &&
                 entry.subCategory !== selectedSubCategory
             ) {
-                return false;
-            }
-            const isDrilldownSearch =
-                drilldownSearchNames.has(entry.searchName.trim().toLowerCase()) ||
-                drilldownSearchNames.has(entry.id.trim().toLowerCase());
-            if (!includeDrilldownSearches && isDrilldownSearch) {
-                return false;
-            }
-            if (!includeTableSearches && entry.defaultViz === 'splunk.table') {
                 return false;
             }
             if (activeTags.size > 0) {
@@ -1508,12 +1555,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         });
     }, [
         activeTags,
-        catalogue,
-        drilldownSearchNames,
-        includeDrilldownSearches,
-        includeTableSearches,
+        browseVisibleEntries,
         query,
-        selectedApps,
         selectedCategory,
         selectedSubCategory,
     ]);
@@ -1852,6 +1895,10 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         activeTags.size;
 
     const facetsActive = activeFilterCount > 0 || tagFilter.trim().length > 0;
+    const availableSearchCount = filtered.length;
+    const availableSearchLabel = `${availableSearchCount.toLocaleString()} ${
+        availableSearchCount === 1 ? 'search' : 'searches'
+    } available`;
     const drilldownActiveFilterCount =
         (!isDefaultAppSelection(drilldownSelectedApps) ? 1 : 0) +
         (drilldownSelectedCategory !== ALL_CATEGORIES ? 1 : 0) +
@@ -2174,16 +2221,26 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 </span>
                             )}
                         </button>
-                        {facetsActive && (
-                            <button
-                                type="button"
-                                onClick={handleClearFacets}
-                                title="Reset every filter to its default"
-                                className="text-[9px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200"
-                            >
-                                Clear filters
-                            </button>
-                        )}
+                        <div className="flex items-center gap-2">
+                            {loadState === 'idle' && (
+                                <span
+                                    title="Searchbase stanzas matching the current app, visibility, category, sub-category, tag, and text filters"
+                                    className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500"
+                                >
+                                    {availableSearchLabel}
+                                </span>
+                            )}
+                            {facetsActive && (
+                                <button
+                                    type="button"
+                                    onClick={handleClearFacets}
+                                    title="Reset every filter to its default"
+                                    className="text-[9px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200"
+                                >
+                                    Clear filters
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     {filtersOpen && (
@@ -2356,7 +2413,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 onKeyDown={handleTagInputKeyDown}
                                                 placeholder={
                                                     activeTags.size === 0
-                                                        ? `Filter by tag (${allTagsWithCounts.length} available, AND combined)...`
+                                                        ? `Filter by tag (${allTagsWithCounts.length} tags available, AND combined)...`
                                                         : 'Add tag...'
                                                 }
                                                 maxLength={64}
@@ -2506,6 +2563,19 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                         <div className="px-3 py-4 mx-2 rounded-md border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 text-[11px]">
                             <p className="font-bold mb-1">Couldn't load searchbase.conf.</p>
                             <p className="break-words font-mono text-[10px]">{errorMsg}</p>
+                        </div>
+                    )}
+
+                    {loadState === 'idle' && (
+                        <div className="mx-1 mb-1 flex items-center justify-between gap-2 px-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                            <span title={`${browseVisibleEntries.length.toLocaleString()} searches are in the current app and visibility scope before category, tag, and text filters`}>
+                                {availableSearchLabel}
+                            </span>
+                            <span
+                                title={`${allTagsWithCounts.length.toLocaleString()} distinct tags available in the current filter slice`}
+                            >
+                                {allTagsWithCounts.length.toLocaleString()} tags
+                            </span>
                         </div>
                     )}
 
@@ -3383,7 +3453,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                         placeholder={
                                                                             drilldownActiveTags.size ===
                                                                             0
-                                                                                ? `Filter by tag (${drilldownAllTagsWithCounts.length} available, AND combined)…`
+                                                                                ? `Filter by tag (${drilldownAllTagsWithCounts.length} tags available, AND combined)…`
                                                                                 : 'Add tag…'
                                                                         }
                                                                         maxLength={64}

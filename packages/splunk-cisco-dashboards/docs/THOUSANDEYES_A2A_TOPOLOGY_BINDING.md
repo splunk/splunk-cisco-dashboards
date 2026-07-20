@@ -31,6 +31,12 @@ Searchbase stanza:
 [overview_link_te_a2a_inventory]
 ```
 
+Required topology discovery metadata:
+
+```text
+viz_options = {"topologyMap":{"role":"teA2AInventory"}}
+```
+
 This search reads recent raw ThousandEyes metric events:
 
 ```spl
@@ -199,12 +205,12 @@ agent-to-agent tuple instead of trusting the display name alone.
    Click the line itself, not the site marker, to open the full link detail
    popup.
 
-7. Use `View in ThousandEyes` to pivot into the TE path view.
+7. Use `View in ThousandEyes` to pivot into the TE test view.
 
    The generated URL can work with a known test ID alone, for example:
 
    ```text
-   https://app.thousandeyes.com/network-app-synthetics/views/?testId=7148943&direction=BIDIRECTIONAL&detailId=pathvis&metrics=oneWayNetLoss
+   https://app.thousandeyes.com/network-app-synthetics/views/?testId=7148943
    ```
 
 ## Troubleshooting
