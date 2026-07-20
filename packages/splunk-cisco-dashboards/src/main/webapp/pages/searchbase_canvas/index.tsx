@@ -3711,7 +3711,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                     <div className="ml-auto flex items-center gap-3">
                         <span
                             title="Searchbase stanzas matching the current app, visibility, category, sub-category, viz, tag, and text filters"
-                            className="text-xs font-black uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500"
+                            className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-black uppercase tracking-wider text-sky-700 shadow-sm dark:border-sky-900/70 dark:bg-sky-950/50 dark:text-sky-200"
                         >
                             {availableSearchLabel}
                         </span>
@@ -3916,7 +3916,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
 
             <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 px-4 py-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
                 <span
-                    className="font-bold"
+                    className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 font-black uppercase tracking-wider text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/50 dark:text-sky-200"
                     title={`${browserRecords.length.toLocaleString()} searches are in the current app and visibility scope before category, tag, viz, and text filters`}
                 >
                     {availableSearchLabel}

@@ -2225,7 +2225,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             {loadState === 'idle' && (
                                 <span
                                     title="Searchbase stanzas matching the current app, visibility, category, sub-category, tag, and text filters"
-                                    className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500"
+                                    className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-sky-700 shadow-sm dark:border-sky-900/70 dark:bg-sky-950/50 dark:text-sky-200"
                                 >
                                     {availableSearchLabel}
                                 </span>
@@ -2568,7 +2568,10 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
 
                     {loadState === 'idle' && (
                         <div className="mx-1 mb-1 flex items-center justify-between gap-2 px-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                            <span title={`${browseVisibleEntries.length.toLocaleString()} searches are in the current app and visibility scope before category, tag, and text filters`}>
+                            <span
+                                title={`${browseVisibleEntries.length.toLocaleString()} searches are in the current app and visibility scope before category, tag, and text filters`}
+                                className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/50 dark:text-sky-200"
+                            >
                                 {availableSearchLabel}
                             </span>
                             <span
