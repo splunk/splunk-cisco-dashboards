@@ -153,6 +153,31 @@ const clampNumber = (value: number, min: number, max: number): number =>
 
 type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
 type TileSpan = 1 | 2 | 4;
+type TileResultFilter = 'all' | 'needs_attention' | 'working';
+type TileResultStatus = 'needs_attention' | 'working' | 'unobserved';
+type CachedTileResult = MetricResult | TableDataResult;
+
+const TILE_RESULT_FILTER_OPTIONS: Array<{
+    value: TileResultFilter;
+    label: string;
+    title: string;
+}> = [
+    {
+        value: 'all',
+        label: 'All',
+        title: 'Show all canvas tiles',
+    },
+    {
+        value: 'needs_attention',
+        label: 'Needs attention',
+        title: 'Show searches that failed or returned no data',
+    },
+    {
+        value: 'working',
+        label: 'Working',
+        title: 'Show searches that ran successfully and returned data',
+    },
+];
 
 interface CanvasTile {
     id: string;
@@ -470,6 +495,20 @@ const searchbaseTileBodyKey = (
     return `${tileId}:metric`;
 };
 
+const isTableBackedTileViz = (viz: string | undefined): boolean =>
+    isTableViz(viz) || isBarBreakdownViz(viz) || isPieViz(viz);
+
+const tileResultStatusFromResult = (
+    result: CachedTileResult | undefined
+): TileResultStatus => {
+    if (!result || result.source !== 'live') return 'unobserved';
+    if (result.noDataReason) return 'needs_attention';
+    if ('totalRowCount' in result) {
+        return result.totalRowCount > 0 ? 'working' : 'unobserved';
+    }
+    return Number.isFinite(result.value) ? 'working' : 'unobserved';
+};
+
 const TileVizSelect: React.FC<{
     tile: CanvasTile;
     record: SearchbaseRecord;
@@ -615,7 +654,7 @@ const buildObservedNoDataReportSearch = (
     if (sorted.length === 0) {
         return [
             '| makeresults',
-            '| eval message="No observed no-data tiles in the current Searchbase Canvas session."',
+            '| eval message="No observed failed or no-data tiles in the current Searchbase Canvas session."',
             '| table message',
         ].join('\n');
     }
@@ -1292,7 +1331,8 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
     ]);
 
     useEffect(() => {
-        if (metric.source === 'live' && metric.noDataReason === 'empty_rows') {
+        if (metric.source !== 'live') return;
+        if (metric.noDataReason) {
             onNoDataObservation(
                 observedNoDataEntry(tile, record, metric.noDataReason, metric.rangeLabel)
             );
@@ -1484,7 +1524,8 @@ const SearchbaseTableTileBody: React.FC<
     });
 
     useEffect(() => {
-        if (table.source === 'live' && table.noDataReason === 'empty_rows') {
+        if (table.source !== 'live') return;
+        if (table.noDataReason) {
             onNoDataObservation(
                 observedNoDataEntry(tile, record, table.noDataReason, table.rangeLabel)
             );
@@ -2478,12 +2519,12 @@ const NoDataReportModal: React.FC<{
                                 id="searchbase-no-data-report-title"
                                 className="text-base font-bold text-slate-900 dark:text-slate-100"
                             >
-                                No data report
+                                Needs attention report
                             </h2>
                         </div>
                         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                             {rows.length.toLocaleString()} observed{' '}
-                            {rows.length === 1 ? 'search' : 'searches'} returned 0 rows.
+                            {rows.length === 1 ? 'search' : 'searches'} failed or returned no data.
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -2500,7 +2541,7 @@ const NoDataReportModal: React.FC<{
                             type="button"
                             onClick={onClose}
                             title="Close"
-                            aria-label="Close no data report"
+                            aria-label="Close needs attention report"
                             className="rounded p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                         >
                             <X className="h-4 w-4" />
@@ -2525,7 +2566,7 @@ const NoDataReportModal: React.FC<{
                                         colSpan={8}
                                         className="px-5 py-10 text-center text-sm text-slate-500 dark:text-slate-400"
                                     >
-                                        Run tiles first; searches that complete with 0 rows
+                                        Run tiles first; searches that fail or return no data
                                         will appear here.
                                     </td>
                                 </tr>
@@ -2635,35 +2676,35 @@ const NoDataReportModal: React.FC<{
                 <button
                     type="button"
                     tabIndex={-1}
-                    aria-label="Resize no data report from the left edge"
+                    aria-label="Resize needs attention report from the left edge"
                     onPointerDown={(event) => startDialogResize(event, 'width', -1, 0)}
                     className="absolute bottom-10 left-0 top-14 z-20 w-2 cursor-ew-resize rounded-l-lg transition-colors hover:bg-sky-400/20"
                 />
                 <button
                     type="button"
                     tabIndex={-1}
-                    aria-label="Resize no data report from the right edge"
+                    aria-label="Resize needs attention report from the right edge"
                     onPointerDown={(event) => startDialogResize(event, 'width', 1, 0)}
                     className="absolute bottom-10 right-0 top-14 z-20 w-2 cursor-ew-resize rounded-r-lg transition-colors hover:bg-sky-400/20"
                 />
                 <button
                     type="button"
                     tabIndex={-1}
-                    aria-label="Resize no data report from the top edge"
+                    aria-label="Resize needs attention report from the top edge"
                     onPointerDown={(event) => startDialogResize(event, 'height', 0, -1)}
                     className="absolute left-10 right-10 top-0 z-20 h-2 cursor-ns-resize rounded-t-lg transition-colors hover:bg-sky-400/20"
                 />
                 <button
                     type="button"
                     tabIndex={-1}
-                    aria-label="Resize no data report from the bottom edge"
+                    aria-label="Resize needs attention report from the bottom edge"
                     onPointerDown={(event) => startDialogResize(event, 'height', 0, 1)}
                     className="absolute bottom-0 left-10 right-10 z-20 h-2 cursor-ns-resize transition-colors hover:bg-sky-400/20"
                 />
                 <button
                     type="button"
                     tabIndex={-1}
-                    aria-label="Resize no data report from the corner"
+                    aria-label="Resize needs attention report from the corner"
                     onPointerDown={(event) => startDialogResize(event, 'both', 1, 1)}
                     className="absolute bottom-0 right-0 z-30 h-8 w-8 cursor-nwse-resize rounded-br-lg transition-colors hover:bg-sky-400/20"
                 >
@@ -3997,6 +4038,8 @@ const SearchbaseCanvasPage: React.FC = () => {
     const [noDataReportOpen, setNoDataReportOpen] = useState(false);
     const [pageIndex, setPageIndex] = useState(0);
     const [tileSearchQuery, setTileSearchQuery] = useState('');
+    const [tileResultFilter, setTileResultFilter] =
+        useState<TileResultFilter>('all');
     const [presentationMode, setPresentationMode] = useState(false);
     const [runningTileIds, setRunningTileIds] = useState<Set<string>>(
         () => new Set()
@@ -4123,6 +4166,7 @@ const SearchbaseCanvasPage: React.FC = () => {
         setOverlayFieldsByTile(new Map());
         setMetricResultCacheByTile(new Map());
         setTableDataCacheByTile(new Map());
+        setTileResultFilter('all');
     }, [rangeLabel]);
 
     const entryByName = useMemo(() => {
@@ -4132,6 +4176,27 @@ const SearchbaseCanvasPage: React.FC = () => {
         }
         return map;
     }, [records]);
+
+    const cachedResultForTile = useCallback(
+        (tile: CanvasTile): CachedTileResult | undefined => {
+            const record = entryByName.get(tile.searchName);
+            if (!record) return undefined;
+            const viz = effectiveTileViz(tile, record);
+            if (isTableBackedTileViz(viz)) {
+                return tableDataCacheByTile.get(tile.id)?.result;
+            }
+            return metricResultCacheByTile.get(tile.id)?.result;
+        },
+        [entryByName, metricResultCacheByTile, tableDataCacheByTile]
+    );
+
+    const resultStatusForTile = useCallback(
+        (tile: CanvasTile): TileResultStatus => {
+            if (observedNoDataByTile.has(tile.id)) return 'needs_attention';
+            return tileResultStatusFromResult(cachedResultForTile(tile));
+        },
+        [cachedResultForTile, observedNoDataByTile]
+    );
 
     const tileSearchTerms = useMemo(
         () =>
@@ -4143,7 +4208,7 @@ const SearchbaseCanvasPage: React.FC = () => {
         [tileSearchQuery]
     );
     const hasTileSearch = tileSearchTerms.length > 0;
-    const filteredTiles = useMemo(() => {
+    const searchedTiles = useMemo(() => {
         if (!hasTileSearch) return tiles;
         return tiles.filter((tile) => {
             const record = entryByName.get(tile.searchName);
@@ -4163,6 +4228,23 @@ const SearchbaseCanvasPage: React.FC = () => {
             return tileSearchTerms.every((term) => searchableText.includes(term));
         });
     }, [entryByName, hasTileSearch, tileSearchTerms, tiles]);
+    const resultFilterCounts = useMemo(() => {
+        const counts: Record<TileResultStatus, number> = {
+            needs_attention: 0,
+            working: 0,
+            unobserved: 0,
+        };
+        for (const tile of searchedTiles) {
+            counts[resultStatusForTile(tile)] += 1;
+        }
+        return counts;
+    }, [resultStatusForTile, searchedTiles]);
+    const filteredTiles = useMemo(() => {
+        if (tileResultFilter === 'all') return searchedTiles;
+        return searchedTiles.filter(
+            (tile) => resultStatusForTile(tile) === tileResultFilter
+        );
+    }, [resultStatusForTile, searchedTiles, tileResultFilter]);
 
     const totalPages = Math.max(1, Math.ceil(filteredTiles.length / pageSize));
     const clampedPageIndex = Math.min(pageIndex, totalPages - 1);
@@ -4201,7 +4283,7 @@ const SearchbaseCanvasPage: React.FC = () => {
 
     useEffect(() => {
         setPageIndex(0);
-    }, [tileSearchQuery]);
+    }, [tileResultFilter, tileSearchQuery]);
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -4400,6 +4482,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                 setTiles(next.tiles);
                 setPageIndex(0);
                 setTileSearchQuery('');
+                setTileResultFilter('all');
                 setRunningTileIds(new Set());
                 setObservedNoDataByTile(new Map());
                 setOverlayFieldsByTile(new Map());
@@ -4492,6 +4575,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                     next.add(replaceTileId);
                     return next;
                 });
+                setTileResultFilter('all');
                 setReplaceTileId(null);
                 setBrowserOpen(false);
                 return;
@@ -4507,6 +4591,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                 return [...current, newTile];
             });
             runNewTiles([newTile], 1);
+            setTileResultFilter('all');
             setPageIndex(Math.floor(tiles.length / pageSize));
         },
         [
@@ -4543,6 +4628,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                 return [...current, ...currentAdditions];
             });
             runNewTiles(additions);
+            setTileResultFilter('all');
             setPageIndex(Math.floor(tiles.length / pageSize));
         },
         [pageSize, replaceTileId, runNewTiles, tiles]
@@ -4578,14 +4664,13 @@ const SearchbaseCanvasPage: React.FC = () => {
     }, [clearObservedNoData, clearTileResultCache]);
 
     const runTile = useCallback((tileId: string) => {
-        clearObservedNoData([tileId]);
         setRunningTileIds((current) => {
             if (current.has(tileId)) return current;
             const next = new Set(current);
             next.add(tileId);
             return next;
         });
-    }, [clearObservedNoData]);
+    }, []);
 
     const stopTile = useCallback((tileId: string) => {
         setRunningTileIds((current) => {
@@ -4611,7 +4696,6 @@ const SearchbaseCanvasPage: React.FC = () => {
             canvasDebug('[canvas/run-visible] bail-out', { reason: 'no_runnable_tiles' });
             return;
         }
-        clearObservedNoData(tileIds);
         setRunningTileIds((current) => {
             const next = new Set(current);
             for (const tileId of tileIds) {
@@ -4624,7 +4708,7 @@ const SearchbaseCanvasPage: React.FC = () => {
             });
             return next;
         });
-    }, [clearObservedNoData]);
+    }, []);
 
     runnableVisibleTilesRef.current = runnableVisibleTiles;
     runVisibleTilesRef.current = runVisibleTiles;
@@ -4713,8 +4797,6 @@ const SearchbaseCanvasPage: React.FC = () => {
             canvasDebug('[canvas/refresh] bail-out', { reason: 'no_targets' });
             return;
         };
-        clearObservedNoData(tileIds);
-        clearTileResultCache(tileIds);
         setTileRefreshCounts((current) => {
             const next = { ...current };
             for (const tileId of tileIds) {
@@ -4730,18 +4812,16 @@ const SearchbaseCanvasPage: React.FC = () => {
             return next;
         });
         setRefreshToken((current) => current + 1);
-    }, [clearObservedNoData, clearTileResultCache, runningTileIds.size, runnableVisibleTiles]);
+    }, [runningTileIds.size, runnableVisibleTiles]);
 
     const refreshTile = useCallback(
         (tileId: string) => {
-            clearObservedNoData([tileId]);
-            clearTileResultCache([tileId]);
             setTileRefreshCounts((current) => ({
                 ...current,
                 [tileId]: (current[tileId] ?? 0) + 1,
             }));
         },
-        [clearObservedNoData, clearTileResultCache]
+        []
     );
 
     const cycleSize = useCallback((tileId: string) => {
@@ -4806,6 +4886,7 @@ const SearchbaseCanvasPage: React.FC = () => {
         setTableDataCacheByTile(new Map());
         setPageIndex(0);
         setTileSearchQuery('');
+        setTileResultFilter('all');
         setBrowserOpen(true);
         setReplaceTileId(null);
         setActiveSavedCanvasName(null);
@@ -4831,6 +4912,7 @@ const SearchbaseCanvasPage: React.FC = () => {
         setTableDataCacheByTile(new Map());
         setPageIndex(0);
         setTileSearchQuery('');
+        setTileResultFilter('all');
         setBrowserOpen(false);
         setReplaceTileId(null);
         setActiveSavedCanvasName(null);
@@ -4846,11 +4928,13 @@ const SearchbaseCanvasPage: React.FC = () => {
             : resolvedTheme === 'dark'
             ? 'Dark theme'
             : 'Light theme';
+    const hasTileResultFilter = tileResultFilter !== 'all';
+    const hasTileFilters = hasTileSearch || hasTileResultFilter;
     const visibleTileSummary =
         filteredTiles.length === 0
             ? '0 shown'
             : `${pageStart + 1}-${pageEnd} of ${
-                  hasTileSearch
+                  hasTileFilters
                       ? `${filteredTiles.length.toLocaleString()} matched`
                       : filteredTiles.length.toLocaleString()
               }`;
@@ -4971,10 +5055,10 @@ const SearchbaseCanvasPage: React.FC = () => {
                                             ? 'border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300 hover:bg-amber-100 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200 dark:hover:bg-amber-900'
                                             : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
                                     )}
-                                    title="Open no data report"
-                                    aria-label={`Open no data report. ${observedNoDataRows.length.toLocaleString()} observed no-data tiles.`}
+                                    title="Open needs attention report"
+                                    aria-label={`Open needs attention report. ${observedNoDataRows.length.toLocaleString()} observed searches need attention.`}
                                 >
-                                    {observedNoDataRows.length.toLocaleString()} no data
+                                    {observedNoDataRows.length.toLocaleString()} attention
                                 </button>
                                 <span
                                     className="inline-flex h-6 items-center rounded-md border border-slate-200 bg-slate-50 px-2 text-xs font-bold text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
@@ -5111,7 +5195,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                             className="flex h-9 w-full items-center gap-2 rounded px-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
                                         >
                                             <Table2 className="h-3.5 w-3.5" />
-                                            No data report
+                                            Needs attention report
                                         </button>
                                         <button
                                             type="button"
@@ -5211,6 +5295,53 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 </button>
                             )}
                         </div>
+                        <div
+                            role="group"
+                            aria-label="Filter tiles by last observed search result"
+                            className="inline-flex h-11 max-w-full overflow-hidden rounded-md border border-slate-300 bg-white p-1 dark:border-slate-700 dark:bg-slate-950"
+                        >
+                            {TILE_RESULT_FILTER_OPTIONS.map((option) => {
+                                const selected = tileResultFilter === option.value;
+                                const count =
+                                    option.value === 'all'
+                                        ? searchedTiles.length
+                                        : resultFilterCounts[option.value];
+                                const Icon =
+                                    option.value === 'needs_attention'
+                                        ? AlertCircle
+                                        : option.value === 'working'
+                                        ? Check
+                                        : SlidersHorizontal;
+                                return (
+                                    <button
+                                        key={option.value}
+                                        type="button"
+                                        onClick={() => setTileResultFilter(option.value)}
+                                        title={option.title}
+                                        aria-pressed={selected}
+                                        className={cn(
+                                            'inline-flex min-w-0 items-center gap-1.5 rounded px-2.5 text-xs font-black transition focus:outline-none focus:ring-2 focus:ring-sky-300 sm:px-3',
+                                            selected
+                                                ? 'bg-slate-900 text-white shadow-sm dark:bg-slate-100 dark:text-slate-950'
+                                                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-50'
+                                        )}
+                                    >
+                                        <Icon className="h-3.5 w-3.5 flex-shrink-0" />
+                                        <span className="truncate">{option.label}</span>
+                                        <span
+                                            className={cn(
+                                                'rounded-full px-1.5 py-0.5 text-[10px] leading-none',
+                                                selected
+                                                    ? 'bg-white/20 text-current dark:bg-slate-950/10'
+                                                    : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300'
+                                            )}
+                                        >
+                                            {count.toLocaleString()}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
                         <div className="flex min-w-0 flex-wrap items-center gap-2">
                         <button
                             type="button"
@@ -5289,18 +5420,25 @@ const SearchbaseCanvasPage: React.FC = () => {
                                     <Search className="h-7 w-7" />
                                 </div>
                                 <h2 className="mt-4 text-xl font-black text-slate-950 dark:text-slate-50">
-                                    No matching tiles
+                                    {hasTileResultFilter
+                                        ? 'No tiles in this result state'
+                                        : 'No matching tiles'}
                                 </h2>
                                 <p className="mt-2 text-sm font-medium leading-6 text-slate-500 dark:text-slate-400">
-                                    Try a different tile name, tag, category, or SPL fragment.
+                                    {hasTileResultFilter
+                                        ? 'Run searches from the All view, or switch result filters after results come back.'
+                                        : 'Try a different tile name, tag, category, or SPL fragment.'}
                                 </p>
                                 <button
                                     type="button"
-                                    onClick={() => setTileSearchQuery('')}
+                                    onClick={() => {
+                                        setTileSearchQuery('');
+                                        setTileResultFilter('all');
+                                    }}
                                     className="mt-5 inline-flex items-center gap-2 rounded-md bg-slate-900 px-4 py-2 text-sm font-black text-white transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-white"
                                 >
                                     <X className="h-4 w-4" />
-                                    Clear search
+                                    {hasTileResultFilter ? 'Clear filters' : 'Clear search'}
                                 </button>
                             </div>
                         </div>
