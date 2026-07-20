@@ -1186,7 +1186,7 @@
 			"dataSources": {
 				"primary": "ds_bw"
 			},
-			"description": "Tallahassee Internet circuit bandwidth, broken down by protocol. Requires Netflow/Stream data.",
+			"description": "Internet circuit bandwidth, broken down by protocol. Requires Netflow/Stream data.",
 			"options": {
 				"nullValueDisplay": "connect",
 				"stackMode": "stacked",
@@ -1212,7 +1212,7 @@
 			"dataSources": {
 				"primary": "ds_bw_public"
 			},
-			"description": "Tallahassee Public Internet circuit bandwidth, broken down by protocol. Requires Netflow/Stream data.",
+			"description": "Public Internet circuit bandwidth, broken down by protocol. Requires Netflow/Stream data.",
 			"options": {
 				"nullValueDisplay": "connect",
 				"stackMode": "stacked",

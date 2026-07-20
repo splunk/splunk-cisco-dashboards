@@ -600,7 +600,7 @@
 			"dataSources": {
 				"primary": "ds_score_per_site_nrs_only"
 			},
-			"description": "NRS per site (Tallahassee: SEOC, Tallahassee: Betty Easley, Auburndale: AUB, Auburndale: Warehouse). Lowest bar = weakest building right now.",
+			"description": "NRS per site, broken down by building. Lowest bar = weakest building right now.",
 			"eventHandlers": [
 				{
 					"options": {
