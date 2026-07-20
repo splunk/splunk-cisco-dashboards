@@ -168,6 +168,46 @@ const escapeXml = (value = '') =>
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&apos;');
 
+const DEFAULT_USER_ERROR_MESSAGE = 'An unexpected error occurred. Please try again.';
+
+const getSafeErrorMessage = (error, fallback = DEFAULT_USER_ERROR_MESSAGE) => {
+    if (!error) {
+        return fallback;
+    }
+
+    if (typeof error === 'string') {
+        const firstLine = error.split('\n')[0].trim();
+        return firstLine || fallback;
+    }
+
+    if (error instanceof Error) {
+        const message = error.message?.trim();
+        return message ? message.split('\n')[0] : fallback;
+    }
+
+    return fallback;
+};
+
+const getSplunkResponseErrorMessage = (response, fallback = DEFAULT_USER_ERROR_MESSAGE) => {
+    const messages = response?.messages;
+    if (Array.isArray(messages) && messages.length > 0) {
+        const text = messages
+            .map((entry) => (typeof entry?.text === 'string' ? entry.text.trim() : ''))
+            .filter(Boolean)
+            .join(' ');
+
+        if (text) {
+            return text.split('\n')[0];
+        }
+    }
+
+    if (typeof response?.status === 'number' && response.status >= 400) {
+        return `Request failed with status ${response.status}.`;
+    }
+
+    return fallback;
+};
+
 export const initialDefinition = {
     visualizations: {},
     dataSources: {},
@@ -426,10 +466,7 @@ const formatJSON = (val = {}) => {
         const res = JSON.parse(val);
         return JSON.stringify(res, null, 4);
     } catch {
-        const errorJson = {
-            error: `${val}`,
-        };
-        return JSON.stringify(errorJson, null, 4);
+        return JSON.stringify({ error: 'Invalid JSON definition.' }, null, 4);
     }
 };
 
@@ -892,7 +929,7 @@ const DashboardStudioEditor = ({
             } else {
                 console.log(response);
                 makeCreateToast(Toaster)({
-                    message: `An error occured while saving the dashboard... ${JSON.stringify(
+                    message: `An error occurred while saving the dashboard. ${getSplunkResponseErrorMessage(
                         response,
                     )}`,
                     type: TOAST_TYPES.ERROR,
@@ -903,7 +940,7 @@ const DashboardStudioEditor = ({
         saveDashboard().catch((error) => {
             console.error(error);
             makeCreateToast(Toaster)({
-                message: `An error occured while saving the dashboard... ${error.message}`,
+                message: `An error occurred while saving the dashboard. ${getSafeErrorMessage(error)}`,
                 type: TOAST_TYPES.ERROR,
             });
         });
@@ -1285,7 +1322,10 @@ const DashboardStudioEditor = ({
                         searchStatuses.set(dataSourceId, {
                             dataSourceId,
                             dispatchState: 'error',
-                            error: error?.message || 'Failed to read dashboard search progress.',
+                            error: getSafeErrorMessage(
+                                error,
+                                'Failed to read dashboard search progress.',
+                            ),
                             isDone: false,
                             resultCount: 0,
                             sid: undefined,
@@ -1464,7 +1504,7 @@ const DashboardStudioEditor = ({
                 } else {
                     console.log(response);
                     makeCreateToast(Toaster)({
-                        message: `An error occured while creating the new dashboard... ${JSON.stringify(
+                        message: `An error occurred while creating the new dashboard. ${getSplunkResponseErrorMessage(
                             response,
                         )}`,
                         type: TOAST_TYPES.ERROR,
@@ -1498,7 +1538,7 @@ const DashboardStudioEditor = ({
         } catch (error) {
             console.error(error);
             makeCreateToast(Toaster)({
-                message: `An error occured while converting the dashboard... ${error.message}`,
+                message: `An error occurred while converting the dashboard. ${getSafeErrorMessage(error)}`,
                 type: TOAST_TYPES.ERROR,
             });
         }
