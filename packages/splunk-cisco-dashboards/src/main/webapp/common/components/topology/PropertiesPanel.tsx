@@ -922,7 +922,7 @@ const RegionPropertiesForm: React.FC<{
                     className={inputClass}
                     value={label}
                     onChange={(e) => setLabel(e.target.value)}
-                    placeholder="Tallahassee, Data Center, DMZ, …"
+                    placeholder="Site A, Data Center, DMZ, …"
                 />
             </Field>
             <Field label="Accent colour">

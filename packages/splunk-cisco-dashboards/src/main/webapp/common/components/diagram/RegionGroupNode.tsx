@@ -1,13 +1,13 @@
 /**
  * RegionGroupNode — a labelled container node that the diagram
  * canvas uses to organise devices into named "rooms" (sites,
- * zones, network segments). Mirrors the boxed regions in the
- * Florida DEM v8 PDF reference: Tallahassee, Orlando, Blanding,
+ * zones, network segments). Mirrors the boxed regions in a
+ * customer's reference network diagram: Site A, Site B,
  * Data Center, etc.
  *
  * Visual model:
  *   ┌─────────────────────────────────────────────┐
- *   │ ▢ Tallahassee                          12 → │  ← header bar
+ *   │ ▢ Site A                               12 → │  ← header bar
  *   ├─────────────────────────────────────────────┤
  *   │                                             │
  *   │           (devices live in here)            │

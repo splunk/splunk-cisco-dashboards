@@ -2,7 +2,7 @@
 #
 # One stanza per saved diagram. Stanza names are the human-friendly
 # diagram names shown in the page header dropdown (e.g. "Splunk Cloud
-# Deployment Architecture", "FDEM DR Plan").
+# Deployment Architecture", "Customer DR Plan").
 #
 # This file replaces the deprecated `network_diagrams.csv` lookup
 # (Build 108). Diagrams shipped in `default/` are inherited by every

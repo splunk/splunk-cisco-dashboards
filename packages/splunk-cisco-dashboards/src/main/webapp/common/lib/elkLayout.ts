@@ -28,8 +28,8 @@
  *   • Edges retain their cross-parent topology — ELK routes edges
  *     between parents naturally.
  *   • Top-level layout direction is left-to-right (`elk.direction:
- *     'RIGHT'`) to match the convention in the FDEM PDF reference
- *     (Tallahassee on the left, remotes flowing right).
+ *     'RIGHT'`) to match the convention in a customer's reference
+ *     diagram (primary site on the left, remotes flowing right).
  *
  * Override merge happens *after* this layout runs: caller passes
  * the result through `applyOverrides()` which preserves the elk

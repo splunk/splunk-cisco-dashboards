@@ -99,7 +99,7 @@ const mapTeStatus = (raw: string | undefined): HealthStatus => {
  * undefined and the caller drops the edge.
  *
  * Token matching is intentionally loose so customer-specific
- * naming (e.g. "Tallahassee Operations Center" vs "TLH Ops")
+ * naming (e.g. "Site A Operations Center" vs "Site A Ops")
  * doesn't break the join.
  */
 const pickRepresentativeDeviceId = (

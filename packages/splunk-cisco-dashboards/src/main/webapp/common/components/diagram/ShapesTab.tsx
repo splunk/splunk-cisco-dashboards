@@ -11,14 +11,14 @@
  * Why generic-shape tiles in addition to the inventory-row tiles
  * (in the sibling `InventoryTab`)? Two real authoring needs:
  *
- *   1. **Diagrammed boxes that aren't real devices** — the FDEM
- *      reference PDF includes "Internet", "Azure Cloud Services",
- *      "Web Servers / Email", "Remote Users". These are conceptual
- *      labels for things that don't (and shouldn't) appear in the
- *      asset_inventory feed.
+ *   1. **Diagrammed boxes that aren't real devices** — a customer's
+ *      reference diagram can include things like "Internet", "Azure
+ *      Cloud Services", "Web Servers / Email", "Remote Users". These
+ *      are conceptual labels for things that don't (and shouldn't)
+ *      appear in the asset_inventory feed.
  *
  *   2. **Region/site groupings** — labelled containers like
- *      "Tallahassee" or "Data Center" that organise devices
+ *      "Site A" or "Data Center" that organise devices
  *      visually. Always generic; never bound to an asset.
  *
  * Visual model: a 2-column grid of small icon+label tiles. Each
