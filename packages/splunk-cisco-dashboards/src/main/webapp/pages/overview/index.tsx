@@ -30,6 +30,7 @@ import React, {
     useState,
 } from 'react';
 import {
+    Activity,
     User,
     RefreshCw,
     Pause,
@@ -54,9 +55,17 @@ import {
     ArrowDown,
     ArrowUpDown,
     Sparkles,
+    Shield,
+    ShieldCheck,
+    ServerCog,
+    Network,
+    BrickWall,
+    Bot,
+    Building2,
     Plus,
     Eye,
     EyeOff,
+    type LucideIcon,
 } from 'lucide-react';
 import { DashboardSection } from '@/common/components/florida/DashboardSection';
 import { MetricItem } from '@/common/components/florida/MetricItem';
@@ -132,6 +141,14 @@ import { usePersistedSectionLayout } from '@/common/hooks/usePersistedSectionLay
 import { usePersistedSectionTileOrder } from '@/common/hooks/usePersistedSectionTileOrder';
 import { usePersistedSectionHeights } from '@/common/hooks/usePersistedSectionHeights';
 import { usePersistedSignalTicker } from '@/common/hooks/usePersistedSignalTicker';
+import {
+    DEFAULT_OVERVIEW_PROFILE_ID,
+    getOverviewProfileFromLocation,
+    isOverviewProfileId,
+    sectionIdsForProfile,
+    type OverviewProfile,
+    type OverviewSectionIcon,
+} from '@/common/config/overviewProfiles';
 import {
     useBrandingOverride,
     readImageAsDataUri,
@@ -322,13 +339,6 @@ const AUTO_REFRESH_OPTIONS: { label: string; seconds: number }[] = [
 // empty. Once loaded, searchbase.conf is the source for label, section, value
 // fields, thresholds, mock fallback, SPL, and dispatch context.
 
-const OVERVIEW_SECTION_IDS = new Set<SectionId>([
-    'it_health',
-    'security',
-    'building',
-    'custom',
-]);
-
 const DEFAULT_OVERVIEW_MOCK: MetricConfig['mock'] = {
     seed: 1,
     sparkMin: 0,
@@ -402,10 +412,22 @@ const plainTextFromHtml = (raw: string | undefined): string | undefined => {
     return text || undefined;
 };
 
-const parseOverviewSection = (raw: unknown): SectionId | undefined => {
+const parseOverviewProfile = (raw: unknown): OverviewProfile['id'] => {
+    if (typeof raw !== 'string') return DEFAULT_OVERVIEW_PROFILE_ID;
+    const trimmed = raw.trim();
+    if (!trimmed || trimmed === 'overview' || trimmed === 'default') {
+        return DEFAULT_OVERVIEW_PROFILE_ID;
+    }
+    return isOverviewProfileId(trimmed) ? trimmed : DEFAULT_OVERVIEW_PROFILE_ID;
+};
+
+const parseOverviewSection = (
+    raw: unknown,
+    profile: OverviewProfile
+): SectionId | undefined => {
     if (typeof raw !== 'string') return undefined;
     const candidate = raw.trim() as SectionId;
-    return OVERVIEW_SECTION_IDS.has(candidate) ? candidate : undefined;
+    return sectionIdsForProfile(profile).includes(candidate) ? candidate : undefined;
 };
 
 const parseOverviewThresholds = (
@@ -462,8 +484,44 @@ const overviewDefinitionsFromRecord = (
     return isRecord(raw) ? [raw] : [];
 };
 
+const slugifyOverviewId = (raw: string): string =>
+    raw
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .slice(0, 64);
+
+const discoverProfileDefinitionFromRecord = (
+    record: SearchbaseRecord,
+    profile: OverviewProfile
+): Record<string, unknown> | null => {
+    const auto = profile.autoDiscovery;
+    if (!auto) return null;
+    if (auto.stanzaPrefix && !record.id.startsWith(auto.stanzaPrefix)) {
+        return null;
+    }
+    if (
+        auto.requiredTag &&
+        !record.tags.some((tag) => tag.toLowerCase() === auto.requiredTag?.toLowerCase())
+    ) {
+        return null;
+    }
+    const section = record.subCategory
+        ? auto.subCategoryToSection[record.subCategory]
+        : undefined;
+    if (!section) return null;
+    return {
+        profile: profile.id,
+        tileId: slugifyOverviewId(record.id),
+        section,
+        label: record.searchName.replace(/^Secure Networking\s*-\s*/i, ''),
+        subLabel: record.category ?? record.subCategory,
+    };
+};
+
 const buildOverviewMetricConfig = (
-    records: SearchbaseRecord[] | null
+    records: SearchbaseRecord[] | null,
+    profile: OverviewProfile
 ): MetricConfig[] => {
     if (records === null) return [];
 
@@ -471,9 +529,18 @@ const buildOverviewMetricConfig = (
 
     for (const record of records) {
         if (!record.searchName || !record.search) continue;
-        for (const definition of overviewDefinitionsFromRecord(record)) {
+        const definitions = overviewDefinitionsFromRecord(record).filter(
+            (definition) => parseOverviewProfile(definition.profile) === profile.id
+        );
+        const autoDefinition =
+            definitions.length === 0
+                ? discoverProfileDefinitionFromRecord(record, profile)
+                : null;
+        for (const definition of autoDefinition
+            ? [...definitions, autoDefinition]
+            : definitions) {
             const id = readOverviewString(definition, 'tileId', 128);
-            const section = parseOverviewSection(definition.section);
+            const section = parseOverviewSection(definition.section, profile);
             if (!id || !section || discovered.has(id)) continue;
 
             const description =
@@ -588,33 +655,19 @@ const buildOverviewMapFooterConfig = (
 };
 
 // =============================================================================
-// Section meta (titles, drilldown hrefs)
+// Section icon rendering
 // =============================================================================
 
-const SECTION_META: Record<
-    SectionId,
-    { title: string; linkText: string; href: string }
-> = {
-    it_health: {
-        title: DEFAULT_CUSTOMER_TOPOLOGY_SECTION_TITLES.it_health,
-        linkText: 'Open IT health',
-        href: 'it_health_v1',
-    },
-    security: {
-        title: DEFAULT_CUSTOMER_TOPOLOGY_SECTION_TITLES.security,
-        linkText: 'Open security',
-        href: 'security_v1',
-    },
-    building: {
-        title: DEFAULT_CUSTOMER_TOPOLOGY_SECTION_TITLES.building,
-        linkText: 'Open building intelligence',
-        href: 'building_v1',
-    },
-    custom: {
-        title: DEFAULT_CUSTOMER_TOPOLOGY_SECTION_TITLES.custom,
-        linkText: 'Open dashboard builder',
-        href: 'dashboardbuilder',
-    },
+const SECTION_ICON_COMPONENTS: Record<OverviewSectionIcon, LucideIcon> = {
+    activity: Activity,
+    shield: Shield,
+    building: Building2,
+    sparkles: Sparkles,
+    'shield-check': ShieldCheck,
+    'server-cog': ServerCog,
+    network: Network,
+    firewall: BrickWall,
+    bot: Bot,
 };
 
 interface AppPriorityDrilldown {
@@ -1872,6 +1925,11 @@ const OverviewPage: React.FC = () => {
         }),
         [availableDashboardHeight]
     );
+    const overviewProfile = useMemo(() => getOverviewProfileFromLocation(), []);
+    const profileSectionIds = useMemo(
+        () => sectionIdsForProfile(overviewProfile),
+        [overviewProfile]
+    );
 
     // ------------------------------ Branding ------------------------------
     //
@@ -1898,17 +1956,20 @@ const OverviewPage: React.FC = () => {
         override: brandingOverride,
         setOverride: setBrandingOverride,
         resetAll: resetBrandingOverride,
-    } = useBrandingOverride();
+    } = useBrandingOverride(overviewProfile.id);
     const [isBrandingEditorOpen, setBrandingEditorOpen] = useState<boolean>(false);
     const [isSectionTitlesEditorOpen, setSectionTitlesEditorOpen] =
         useState<boolean>(false);
 
     const effectiveTitle =
         brandingOverride.title ||
+        overviewProfile.headerTitle ||
         customerName ||
         DEFAULT_HEADER_TITLE_FALLBACK;
     const effectiveSubtitle =
-        brandingOverride.subtitle || DEFAULT_HEADER_SUBTITLE;
+        brandingOverride.subtitle ||
+        overviewProfile.headerSubtitle ||
+        DEFAULT_HEADER_SUBTITLE;
     // Logo precedence: explicit override (data URI from upload) →
     // current `logoSrc` (the neutral built-in default unless this
     // session has recovered from an image error). Header branding is
@@ -1972,7 +2033,12 @@ const OverviewPage: React.FC = () => {
         maxSections: maxVisibleSections,
         setSections: setVisibleSections,
         resetAll: resetAllSectionLayout,
-    } = usePersistedSectionLayout();
+    } = usePersistedSectionLayout({
+        profileId: overviewProfile.id,
+        availableSections: profileSectionIds,
+        defaultSections: overviewProfile.defaultVisibleSections,
+        maxSections: overviewProfile.maxVisibleSections,
+    });
 
     // ------------------------------ Searchbase metadata ------------------------------
     // Loaded once at page mount and shared across the overview runtime.
@@ -2031,8 +2097,8 @@ const OverviewPage: React.FC = () => {
     }, [searchbaseRefreshToken]);
 
     const metricConfig = useMemo(
-        () => buildOverviewMetricConfig(searchbaseRecords),
-        [searchbaseRecords]
+        () => buildOverviewMetricConfig(searchbaseRecords, overviewProfile),
+        [overviewProfile, searchbaseRecords]
     );
     const mapFooterKpiConfig = useMemo(
         () => buildOverviewMapFooterConfig(searchbaseRecords),
@@ -2052,7 +2118,7 @@ const OverviewPage: React.FC = () => {
 
     useEffect(() => {
         let cancelled = false;
-        loadOverviewFactoryTiles()
+        loadOverviewFactoryTiles(overviewProfile.id)
             .then((config) => {
                 if (cancelled) return;
                 setOverviewFactoryTiles(config);
@@ -2068,7 +2134,7 @@ const OverviewPage: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, []);
+    }, [overviewProfile.id]);
 
     const factoryTileCountDefaults = useMemo(() => {
         const out: Partial<Record<SectionId, number>> = {};
@@ -2131,10 +2197,12 @@ const OverviewPage: React.FC = () => {
         setCount: setSectionTileCount,
         resetAll: resetAllSectionTileCounts,
     } = usePersistedSectionTileCounts({
-        minCount: 3,
-        maxCount: 9,
+        minCount: overviewProfile.minTileCount,
+        maxCount: overviewProfile.maxTileCount,
         defaultCount: factoryTileCountDefaults,
-        fallbackDefault: 3,
+        fallbackDefault: overviewProfile.fallbackTileCount,
+        profileId: overviewProfile.id,
+        availableSections,
     });
 
     // ------------------------------ Section height preference ------------------------------
@@ -2153,6 +2221,8 @@ const OverviewPage: React.FC = () => {
         minLevel: 1,
         maxLevel: 5,
         defaultLevel: 1,
+        profileId: overviewProfile.id,
+        availableSections,
     });
 
     // ------------------------------ Section tile-order preference ------------------------------
@@ -2171,7 +2241,10 @@ const OverviewPage: React.FC = () => {
         getOrder: getSectionTileOrder,
         setOrder: setSectionTileOrder,
         resetAll: resetAllSectionTileOrder,
-    } = usePersistedSectionTileOrder();
+    } = usePersistedSectionTileOrder({
+        profileId: overviewProfile.id,
+        availableSections,
+    });
 
     // Drag sensors:
     //   * PointerSensor with a small activationConstraint so a click
@@ -2301,7 +2374,7 @@ const OverviewPage: React.FC = () => {
         setConfig: setSignalTickerConfig,
         resetAll: resetSignalTickerConfig,
         itemCount: signalTickerItemCount,
-    } = usePersistedSignalTicker();
+    } = usePersistedSignalTicker(overviewProfile.id);
     const [signalTickerEditorOpen, setSignalTickerEditorOpen] = useState(false);
     const searchbaseCatalogue = useMemo(
         () => {
@@ -2768,7 +2841,7 @@ const OverviewPage: React.FC = () => {
         clearOverride,
         resetAll: resetAllOverrides,
         overrideCount,
-    } = usePersistedMetricOverrides();
+    } = usePersistedMetricOverrides(overviewProfile.id);
     const signalTickerMetricDefaults = useMemo(() => {
         const toDefault = (cfg: MetricConfig): SignalTickerMetricDefaults => ({
             label: cfg.label,
@@ -2796,7 +2869,7 @@ const OverviewPage: React.FC = () => {
     const {
         drilldowns: searchbaseDrilldowns,
         resetAll: resetAllSearchbaseDrilldowns,
-    } = usePersistedSearchbaseDrilldowns();
+    } = usePersistedSearchbaseDrilldowns(overviewProfile.id);
     const [pickerContext, setPickerContext] = useState<KpiPickerContext | null>(null);
     const [activeDetailTable, setActiveDetailTable] =
         useState<MetricDetailTableConfig | null>(null);
@@ -2824,39 +2897,37 @@ const OverviewPage: React.FC = () => {
     const topologyHeaderSubtitle =
         persistedTopology.subtitle?.trim() ||
         'Site connectivity and path health';
-    const effectiveSectionMeta = useMemo(
-        () =>
-            ({
-                it_health: {
-                    ...SECTION_META.it_health,
-                    title:
-                        sectionTitles.it_health ||
-                        SECTION_META.it_health.title,
-                },
-                security: {
-                    ...SECTION_META.security,
-                    title:
-                        sectionTitles.security ||
-                        SECTION_META.security.title,
-                },
-                building: {
-                    ...SECTION_META.building,
-                    title:
-                        sectionTitles.building ||
-                        SECTION_META.building.title,
-                },
-                custom: {
-                    ...SECTION_META.custom,
-                    title:
-                        sectionTitles.custom ||
-                        SECTION_META.custom.title,
-                },
-            } as Record<
+    const effectiveSectionMeta = useMemo(() => {
+        const out: Partial<
+            Record<
                 SectionId,
-                { title: string; linkText: string; href: string }
-            >),
-        [sectionTitles]
-    );
+                {
+                    title: string;
+                    linkText: string;
+                    href?: string;
+                    icon: React.ReactNode;
+                }
+            >
+        > = {};
+        for (const section of overviewProfile.sections) {
+            const Icon = SECTION_ICON_COMPONENTS[section.icon];
+            out[section.id] = {
+                title: sectionTitles[section.id] || section.title,
+                linkText: section.linkText,
+                href: section.href,
+                icon: <Icon className="h-3.5 w-3.5" strokeWidth={2.2} />,
+            };
+        }
+        return out as Record<
+            SectionId,
+            {
+                title: string;
+                linkText: string;
+                href?: string;
+                icon: React.ReactNode;
+            }
+        >;
+    }, [overviewProfile, sectionTitles]);
 
     // Saved-search names already bound across the dashboard, so the
     // picker can flag duplicates with an "in use" badge. Search
@@ -2990,7 +3061,11 @@ const OverviewPage: React.FC = () => {
             try {
                 await saveFactoryTileConfig({
                     tileId: patch.tileId,
-                    section: pickerContext?.sectionId ?? 'custom',
+                    profileId: overviewProfile.id,
+                    section:
+                        pickerContext?.sectionId ??
+                        overviewProfile.defaultVisibleSections[0] ??
+                        'custom',
                     fromStanzaId,
                     thresholds: patch.thresholds,
                     dataMapping: patch.dataMapping,
@@ -3016,7 +3091,7 @@ const OverviewPage: React.FC = () => {
                 }
             }
         },
-        [pickerContext, searchbaseByName]
+        [overviewProfile.id, pickerContext, searchbaseByName]
     );
 
     // Drilldown edits now go through `handleSaveFactoryTileConfig`
@@ -3158,10 +3233,15 @@ const OverviewPage: React.FC = () => {
 
         void (async () => {
             try {
-                await resetOverviewFactoryTiles();
-                await resetOverviewSearchbaseTileConfig(overviewSearchbaseStanzaIds);
+                await resetOverviewFactoryTiles(overviewProfile.id);
+                await resetOverviewSearchbaseTileConfig(
+                    overviewSearchbaseStanzaIds,
+                    overviewProfile.id
+                );
                 setSearchbaseRefreshToken((n) => n + 1);
-                const nextFactoryTiles = await loadOverviewFactoryTiles();
+                const nextFactoryTiles = await loadOverviewFactoryTiles(
+                    overviewProfile.id
+                );
                 setOverviewFactoryTiles(nextFactoryTiles);
             } catch (error) {
                 console.error('[overview] failed to reset shared factory config', error);
@@ -3186,6 +3266,7 @@ const OverviewPage: React.FC = () => {
         resetAllSectionHeights,
         resetAllSectionTileOrder,
         resetSignalTickerConfig,
+        overviewProfile.id,
         SPLIT_KEY,
         SPLIT_DEFAULT,
         setLeftPct,
@@ -3216,7 +3297,7 @@ const OverviewPage: React.FC = () => {
 
         setFactoryDefaultsStatus('saving');
         try {
-            await saveOverviewFactoryTiles(next);
+            await saveOverviewFactoryTiles(next, overviewProfile.id);
             setOverviewFactoryTiles(next);
             setFactoryDefaultsStatus('saved');
             if (typeof window !== 'undefined') {
@@ -3241,6 +3322,7 @@ const OverviewPage: React.FC = () => {
         metricConfig,
         sectionTileBounds.maxCount,
         sectionTileCounts,
+        overviewProfile.id,
     ]);
 
     // ------------------------------ Map footer ------------------------------
@@ -3380,23 +3462,30 @@ const OverviewPage: React.FC = () => {
 
     const SHORTCUTS = useMemo<
         { keys: string; description: string; handler: () => void }[]
-    >(
-        () => [
-            {
-                keys: 'g i',
-                description: `Open ${effectiveSectionMeta.it_health.title} dashboard (new tab)`,
-                handler: () => openDrilldown(effectiveSectionMeta.it_health.href),
-            },
-            {
-                keys: 'g s',
-                description: `Open ${effectiveSectionMeta.security.title} dashboard (new tab)`,
-                handler: () => openDrilldown(effectiveSectionMeta.security.href),
-            },
-            {
-                keys: 'g b',
-                description: `Open ${effectiveSectionMeta.building.title} (new tab)`,
-                handler: () => openDrilldown(effectiveSectionMeta.building.href),
-            },
+    >(() => {
+        const sectionShortcuts = visibleSections
+            .slice(0, 9)
+            .map((section, idx) => {
+                const meta = effectiveSectionMeta[section];
+                const href = meta?.href;
+                if (!meta || !href) return null;
+                return {
+                    keys: `g ${idx + 1}`,
+                    description: `${meta.linkText} (new tab)`,
+                    handler: () => openDrilldown(href),
+                };
+            })
+            .filter(
+                (
+                    shortcut
+                ): shortcut is {
+                    keys: string;
+                    description: string;
+                    handler: () => void;
+                } => Boolean(shortcut)
+            );
+        return [
+            ...sectionShortcuts,
             {
                 keys: 'g r',
                 description: 'Configure Signal Rail',
@@ -3414,21 +3503,16 @@ const OverviewPage: React.FC = () => {
                 description: 'Toggle this help overlay',
                 handler: () => setHelpOpen((o) => !o),
             },
-        ],
-        [
-            cycleTimeRange,
-            effectiveSectionMeta.building.href,
-            effectiveSectionMeta.building.title,
-            effectiveSectionMeta.it_health.href,
-            effectiveSectionMeta.it_health.title,
-            effectiveSectionMeta.security.href,
-            effectiveSectionMeta.security.title,
-            focusGlobalSearch,
-            openDrilldown,
-            openSignalTickerEditor,
-            refreshNow,
-        ]
-    );
+        ];
+    }, [
+        cycleTimeRange,
+        effectiveSectionMeta,
+        focusGlobalSearch,
+        openDrilldown,
+        openSignalTickerEditor,
+        refreshNow,
+        visibleSections,
+    ]);
     const helpShortcutRows = useMemo(
         () =>
             SHORTCUTS.map((s) => ({
@@ -3977,6 +4061,7 @@ const OverviewPage: React.FC = () => {
                                     title={meta.title}
                                     linkText={meta.linkText}
                                     href={meta.href}
+                                    icon={meta.icon}
                                     // Height level influences both
                                     // proportional growth on roomy
                                     // screens and the hard min-height
@@ -3995,13 +4080,21 @@ const OverviewPage: React.FC = () => {
                                         label: `${meta.title} height`,
                                     }}
                                     wrapTiles={wrapTiles}
-                                    tileCount={{
-                                        value: visibleCount,
-                                        min: sectionTileBounds.minCount,
-                                        max: sectionMaxAvailable,
-                                        onChange: (next) => setSectionTileCount(section, next),
-                                        label: `${meta.title} tiles`,
-                                    }}
+                                    tileCount={
+                                        sectionMaxAvailable > 0
+                                            ? {
+                                                  value: visibleCount,
+                                                  min: Math.min(
+                                                      sectionTileBounds.minCount,
+                                                      sectionMaxAvailable
+                                                  ),
+                                                  max: sectionMaxAvailable,
+                                                  onChange: (next) =>
+                                                      setSectionTileCount(section, next),
+                                                  label: `${meta.title} tiles`,
+                                              }
+                                            : undefined
+                                    }
                                     onEditTitle={() => setSectionTitlesEditorOpen(true)}
                                 >
                                     <DndContext
@@ -4017,6 +4110,11 @@ const OverviewPage: React.FC = () => {
                                                     : horizontalListSortingStrategy
                                             }
                                         >
+                                            {visibleIds.length === 0 && (
+                                                <div className="flex flex-1 items-center justify-center rounded-md border border-dashed border-slate-200 bg-slate-50/70 px-4 text-center text-xs font-semibold text-slate-400 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-500">
+                                                    No tiles configured.
+                                                </div>
+                                            )}
                                             {visibleIds.map((id, idx) => {
                                                 const cfg = byId.get(id);
                                                 if (!cfg) return null;
@@ -4398,8 +4496,14 @@ const OverviewPage: React.FC = () => {
                 isOpen={isBrandingEditorOpen}
                 onClose={() => setBrandingEditorOpen(false)}
                 override={brandingOverride}
-                titlePlaceholder={customerName || DEFAULT_HEADER_TITLE_FALLBACK}
-                subtitlePlaceholder={DEFAULT_HEADER_SUBTITLE}
+                titlePlaceholder={
+                    overviewProfile.headerTitle ||
+                    customerName ||
+                    DEFAULT_HEADER_TITLE_FALLBACK
+                }
+                subtitlePlaceholder={
+                    overviewProfile.headerSubtitle || DEFAULT_HEADER_SUBTITLE
+                }
                 logoFallbackSrc={logoSrc}
                 onSave={(next) => setBrandingOverride(next)}
                 onResetToDefaults={() => {
@@ -5080,12 +5184,11 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
         setIsSaving(true);
         setErrorMessage('');
         try {
-            await onSave({
-                it_health: draft.it_health.trim() || defaults.it_health,
-                security: draft.security.trim() || defaults.security,
-                building: draft.building.trim() || defaults.building,
-                custom: draft.custom.trim() || defaults.custom,
-            });
+            const next: CustomerTopologySectionTitles = { ...defaults, ...draft };
+            for (const section of availableSections) {
+                next[section] = draft[section]?.trim() || defaults[section];
+            }
+            await onSave(next);
             onLayoutChange(layoutDraft);
         } catch (err) {
             setErrorMessage(err instanceof Error ? err.message : String(err));

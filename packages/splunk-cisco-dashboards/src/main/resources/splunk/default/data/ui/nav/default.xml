@@ -2,6 +2,7 @@
     <!-- Core dashboards: keep top-level journey simple -->
     <collection label="Core Dashboards">
         <view name="overview" default="true" label="Executive Briefing"/>
+        <view name="secure_networking_overview" label="Secure Networking"/>
         <a href="it_health_v1">IT Health</a>
         <a href="security_v1">Security</a>
         <a href="building_v1">Building Intelligence</a>

@@ -38,6 +38,11 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import {
+    DEFAULT_OVERVIEW_PROFILE_ID,
+    profileStorageKey,
+    type OverviewProfileId,
+} from '@/common/config/overviewProfiles';
 
 const STORAGE_KEY = 'splunk-cisco-dashboards.branding.v1';
 const STORAGE_VERSION = 1;
@@ -111,10 +116,13 @@ const normalize = (raw: BrandingOverride | undefined | null): BrandingOverride =
     return out;
 };
 
-const readFromStorage = (): BrandingOverride => {
+const storageKeyForProfile = (profileId?: OverviewProfileId): string =>
+    profileStorageKey(STORAGE_KEY, profileId ?? DEFAULT_OVERVIEW_PROFILE_ID);
+
+const readFromStorage = (storageKey: string): BrandingOverride => {
     if (typeof window === 'undefined' || !window.localStorage) return EMPTY_OVERRIDE;
     try {
-        const raw = window.localStorage.getItem(STORAGE_KEY);
+        const raw = window.localStorage.getItem(storageKey);
         if (!raw) return EMPTY_OVERRIDE;
         const parsed = JSON.parse(raw) as Partial<PersistedShape>;
         if (!parsed || parsed.v !== STORAGE_VERSION) return EMPTY_OVERRIDE;
@@ -128,7 +136,7 @@ const readFromStorage = (): BrandingOverride => {
     }
 };
 
-const writeToStorage = (override: BrandingOverride): void => {
+const writeToStorage = (storageKey: string, override: BrandingOverride): void => {
     if (typeof window === 'undefined' || !window.localStorage) return;
     try {
         if (
@@ -140,11 +148,11 @@ const writeToStorage = (override: BrandingOverride): void => {
             // doesn't see an empty {v:1} object and have to special-case
             // it. Mirrors how the metric-overrides hook handles the
             // "all defaults" state.
-            window.localStorage.removeItem(STORAGE_KEY);
+            window.localStorage.removeItem(storageKey);
             return;
         }
         const payload: PersistedShape = { v: STORAGE_VERSION, ...override };
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+        window.localStorage.setItem(storageKey, JSON.stringify(payload));
     } catch {
         // Storage unavailable (private mode / quota). The override is
         // still active for the session; we just can't persist.
@@ -169,8 +177,13 @@ export interface UseBrandingOverrideResult {
     resetAll: () => void;
 }
 
-export const useBrandingOverride = (): UseBrandingOverrideResult => {
-    const [override, setOverrideState] = useState<BrandingOverride>(readFromStorage);
+export const useBrandingOverride = (
+    profileId: OverviewProfileId = DEFAULT_OVERVIEW_PROFILE_ID
+): UseBrandingOverrideResult => {
+    const storageKey = storageKeyForProfile(profileId);
+    const [override, setOverrideState] = useState<BrandingOverride>(() =>
+        readFromStorage(storageKey)
+    );
 
     // Cross-tab sync: pick up changes made in another tab via the
     // standard `storage` event so the header stays consistent across
@@ -178,12 +191,12 @@ export const useBrandingOverride = (): UseBrandingOverrideResult => {
     useEffect(() => {
         if (typeof window === 'undefined') return undefined;
         const onStorage = (e: StorageEvent) => {
-            if (e.key !== STORAGE_KEY) return;
-            setOverrideState(readFromStorage());
+            if (e.key !== storageKey) return;
+            setOverrideState(readFromStorage(storageKey));
         };
         window.addEventListener('storage', onStorage);
         return () => window.removeEventListener('storage', onStorage);
-    }, []);
+    }, [storageKey]);
 
     const setOverride = useCallback((next: BrandingOverride): boolean => {
         // Validate logo size BEFORE normalising so the caller can tell
@@ -199,20 +212,20 @@ export const useBrandingOverride = (): UseBrandingOverrideResult => {
         }
         const normalised = normalize(next);
         setOverrideState(normalised);
-        writeToStorage(normalised);
+        writeToStorage(storageKey, normalised);
         return true;
-    }, []);
+    }, [storageKey]);
 
     const resetAll = useCallback(() => {
         setOverrideState(EMPTY_OVERRIDE);
         if (typeof window !== 'undefined' && window.localStorage) {
             try {
-                window.localStorage.removeItem(STORAGE_KEY);
+                window.localStorage.removeItem(storageKey);
             } catch {
                 // ignore — in-memory state is still reset for the session
             }
         }
-    }, []);
+    }, [storageKey]);
 
     return { override, setOverride, resetAll };
 };

@@ -1,15 +1,15 @@
 import { createFetchInit } from '@splunk/splunk-utils/fetch';
 
 import type { SectionId } from '@/common/hooks/useMetric';
+import {
+    DEFAULT_OVERVIEW_PROFILE_ID,
+    getOverviewProfile,
+    isOverviewSectionId,
+    type OverviewProfileId,
+} from '@/common/config/overviewProfiles';
 
 const APP_NAME = 'splunk-cisco-dashboards';
 const CONF_BASENAME = 'overview_factory_tiles';
-const SECTION_IDS: readonly SectionId[] = [
-    'it_health',
-    'security',
-    'building',
-    'custom',
-] as const;
 const TILE_ID_PATTERN = /^[a-z0-9_]{1,64}$/;
 
 export interface OverviewFactorySection {
@@ -26,8 +26,37 @@ interface ConfRestEntry {
     content?: Record<string, unknown>;
 }
 
-const isSectionId = (raw: unknown): raw is SectionId =>
-    typeof raw === 'string' && (SECTION_IDS as readonly string[]).includes(raw);
+const sectionIdsForProfile = (profileId: OverviewProfileId): readonly SectionId[] =>
+    getOverviewProfile(profileId).sections.map((section) => section.id);
+
+const isProfileSectionId = (
+    raw: unknown,
+    profileId: OverviewProfileId
+): raw is SectionId =>
+    isOverviewSectionId(raw) &&
+    sectionIdsForProfile(profileId).includes(raw);
+
+const stanzaNameForSection = (
+    profileId: OverviewProfileId,
+    section: SectionId
+): string =>
+    profileId === DEFAULT_OVERVIEW_PROFILE_ID
+        ? section
+        : `${profileId}.${section}`;
+
+const sectionFromStanzaName = (
+    profileId: OverviewProfileId,
+    stanzaName: unknown
+): SectionId | undefined => {
+    if (typeof stanzaName !== 'string') return undefined;
+    if (profileId === DEFAULT_OVERVIEW_PROFILE_ID) {
+        return isProfileSectionId(stanzaName, profileId) ? stanzaName : undefined;
+    }
+    const prefix = `${profileId}.`;
+    if (!stanzaName.startsWith(prefix)) return undefined;
+    const section = stanzaName.slice(prefix.length);
+    return isProfileSectionId(section, profileId) ? section : undefined;
+};
 
 const isInSplunkRuntime = (): boolean => {
     if (typeof window === 'undefined') return false;
@@ -96,7 +125,9 @@ const extractErrorMessage = async (
     }
 };
 
-export const loadOverviewFactoryTiles = async (): Promise<OverviewFactoryTilesConfig> => {
+export const loadOverviewFactoryTiles = async (
+    profileId: OverviewProfileId = DEFAULT_OVERVIEW_PROFILE_ID
+): Promise<OverviewFactoryTilesConfig> => {
     if (!isInSplunkRuntime()) return {};
 
     const response = await fetch(`${buildBaseUrl(false)}?output_mode=json&count=0`, {
@@ -114,11 +145,12 @@ export const loadOverviewFactoryTiles = async (): Promise<OverviewFactoryTilesCo
     const entries = Array.isArray(json.entry) ? json.entry : [];
     const next: OverviewFactoryTilesConfig = {};
     for (const entry of entries) {
-        if (!isSectionId(entry.name)) continue;
+        const section = sectionFromStanzaName(profileId, entry.name);
+        if (!section) continue;
         const content = entry.content ?? {};
         const tiles = splitTiles(content.tiles);
         const visibleCount = optionalInt(content.visible_count);
-        next[entry.name] = {
+        next[section] = {
             tiles,
             visibleCount:
                 visibleCount !== undefined
@@ -130,6 +162,7 @@ export const loadOverviewFactoryTiles = async (): Promise<OverviewFactoryTilesCo
 };
 
 const upsertSection = async (
+    profileId: OverviewProfileId,
     section: SectionId,
     config: OverviewFactorySection
 ): Promise<void> => {
@@ -140,7 +173,8 @@ const upsertSection = async (
         updated_by: getCurrentUser(),
         output_mode: 'json',
     });
-    const updateUrl = `${buildBaseUrl(true)}/${encodeURIComponent(section)}`;
+    const stanzaName = stanzaNameForSection(profileId, section);
+    const updateUrl = `${buildBaseUrl(true)}/${encodeURIComponent(stanzaName)}`;
     const postInit = createFetchInit({
         method: 'POST',
         body: body.toString(),
@@ -152,7 +186,7 @@ const upsertSection = async (
 
     if (response.status === 404) {
         const createBody = new URLSearchParams(body);
-        createBody.set('name', section);
+        createBody.set('name', stanzaName);
         const createInit = createFetchInit({
             method: 'POST',
             body: createBody.toString(),
@@ -163,24 +197,28 @@ const upsertSection = async (
         throw new Error(
             await extractErrorMessage(
                 createResponse,
-                `Couldn't save Overview factory tiles for ${section}`
+                `Couldn't save Overview factory tiles for ${stanzaName}`
             )
         );
     }
 
     throw new Error(
         await extractErrorMessage(
-            response,
-            `Couldn't save Overview factory tiles for ${section}`
-        )
+        response,
+        `Couldn't save Overview factory tiles for ${stanzaName}`
+    )
     );
 };
 
-const deleteSectionLocalOverride = async (section: SectionId): Promise<void> => {
+const deleteSectionLocalOverride = async (
+    profileId: OverviewProfileId,
+    section: SectionId
+): Promise<void> => {
     if (!isInSplunkRuntime()) return;
 
+    const stanzaName = stanzaNameForSection(profileId, section);
     const deleteUrl = `${buildBaseUrl(true)}/${encodeURIComponent(
-        section
+        stanzaName
     )}?output_mode=json`;
     const deleteInit = createFetchInit({
         method: 'DELETE',
@@ -193,27 +231,32 @@ const deleteSectionLocalOverride = async (section: SectionId): Promise<void> => 
     throw new Error(
         await extractErrorMessage(
             response,
-            `Couldn't reset Overview factory tiles for ${section}`
+            `Couldn't reset Overview factory tiles for ${stanzaName}`
         )
     );
 };
 
 export const saveOverviewFactoryTiles = async (
-    config: OverviewFactoryTilesConfig
+    config: OverviewFactoryTilesConfig,
+    profileId: OverviewProfileId = DEFAULT_OVERVIEW_PROFILE_ID
 ): Promise<void> => {
     if (!isInSplunkRuntime()) return;
 
-    for (const section of SECTION_IDS) {
+    for (const section of sectionIdsForProfile(profileId)) {
         const sectionConfig = config[section];
         if (!sectionConfig) continue;
-        await upsertSection(section, sectionConfig);
+        await upsertSection(profileId, section, sectionConfig);
     }
 };
 
-export const resetOverviewFactoryTiles = async (): Promise<void> => {
+export const resetOverviewFactoryTiles = async (
+    profileId: OverviewProfileId = DEFAULT_OVERVIEW_PROFILE_ID
+): Promise<void> => {
     if (!isInSplunkRuntime()) return;
 
     await Promise.all(
-        SECTION_IDS.map((section) => deleteSectionLocalOverride(section))
+        sectionIdsForProfile(profileId).map((section) =>
+            deleteSectionLocalOverride(profileId, section)
+        )
     );
 };

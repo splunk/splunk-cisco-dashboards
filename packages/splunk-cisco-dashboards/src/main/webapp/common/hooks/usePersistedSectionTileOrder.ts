@@ -40,12 +40,29 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { SectionId } from '@/common/hooks/useMetric';
 import { ALL_SECTION_IDS } from '@/common/hooks/usePersistedSectionLayout';
+import {
+    DEFAULT_OVERVIEW_PROFILE_ID,
+    profileStorageKey,
+    type OverviewProfileId,
+} from '@/common/config/overviewProfiles';
 
 const STORAGE_KEY = 'splunk-cisco-dashboards.sectionTileOrder.v1';
 const STORAGE_VERSION = 1;
 
-const isSectionId = (raw: unknown): raw is SectionId =>
-    typeof raw === 'string' && (ALL_SECTION_IDS as readonly string[]).includes(raw);
+export interface SectionTileOrderOptions {
+    profileId?: OverviewProfileId;
+    availableSections?: readonly SectionId[];
+}
+
+const storageKeyForProfile = (profileId?: OverviewProfileId): string =>
+    profileStorageKey(STORAGE_KEY, profileId ?? DEFAULT_OVERVIEW_PROFILE_ID);
+
+const isSectionId = (
+    raw: unknown,
+    availableSections: readonly SectionId[] = ALL_SECTION_IDS
+): raw is SectionId =>
+    typeof raw === 'string' &&
+    (availableSections as readonly string[]).includes(raw);
 
 // Same vocabulary as `MetricConfig.id` — lowercase alnum + underscores,
 // short. Anything outside this gate is dropped on read so a hand-edited
@@ -59,16 +76,19 @@ interface PersistedShape {
     order: SectionTileOrderMap;
 }
 
-const readFromStorage = (): SectionTileOrderMap => {
+const readFromStorage = (
+    storageKey: string,
+    availableSections: readonly SectionId[]
+): SectionTileOrderMap => {
     if (typeof window === 'undefined' || !window.localStorage) return {};
     try {
-        const raw = window.localStorage.getItem(STORAGE_KEY);
+        const raw = window.localStorage.getItem(storageKey);
         if (!raw) return {};
         const parsed = JSON.parse(raw) as Partial<PersistedShape>;
         if (!parsed || parsed.v !== STORAGE_VERSION || !parsed.order) return {};
         const out: SectionTileOrderMap = {};
         for (const [section, ids] of Object.entries(parsed.order)) {
-            if (!isSectionId(section) || !Array.isArray(ids)) continue;
+            if (!isSectionId(section, availableSections) || !Array.isArray(ids)) continue;
             const cleaned: string[] = [];
             const seen = new Set<string>();
             for (const id of ids) {
@@ -86,11 +106,11 @@ const readFromStorage = (): SectionTileOrderMap => {
     }
 };
 
-const writeToStorage = (order: SectionTileOrderMap): void => {
+const writeToStorage = (storageKey: string, order: SectionTileOrderMap): void => {
     if (typeof window === 'undefined' || !window.localStorage) return;
     try {
         const payload: PersistedShape = { v: STORAGE_VERSION, order };
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+        window.localStorage.setItem(storageKey, JSON.stringify(payload));
     } catch {
         // Storage may be unavailable; the in-memory state still works
         // for the current session.
@@ -151,8 +171,18 @@ export interface UsePersistedSectionTileOrderResult {
     hasAnyOrder: boolean;
 }
 
-export const usePersistedSectionTileOrder = (): UsePersistedSectionTileOrderResult => {
-    const [orderMap, setOrderMap] = useState<SectionTileOrderMap>(() => readFromStorage());
+export const usePersistedSectionTileOrder = (
+    options: SectionTileOrderOptions = {}
+): UsePersistedSectionTileOrderResult => {
+    const storageKey = storageKeyForProfile(options.profileId);
+    const availableSections = options.availableSections ?? ALL_SECTION_IDS;
+    const optionsSignature = JSON.stringify({
+        storageKey,
+        availableSections,
+    });
+    const [orderMap, setOrderMap] = useState<SectionTileOrderMap>(() =>
+        readFromStorage(storageKey, availableSections)
+    );
 
     // Cross-tab sync: pick up changes made in another tab via the
     // standard `storage` event so the layout stays consistent across
@@ -160,12 +190,12 @@ export const usePersistedSectionTileOrder = (): UsePersistedSectionTileOrderResu
     useEffect(() => {
         if (typeof window === 'undefined') return undefined;
         const onStorage = (e: StorageEvent) => {
-            if (e.key !== STORAGE_KEY) return;
-            setOrderMap(readFromStorage());
+            if (e.key !== storageKey) return;
+            setOrderMap(readFromStorage(storageKey, availableSections));
         };
         window.addEventListener('storage', onStorage);
         return () => window.removeEventListener('storage', onStorage);
-    }, []);
+    }, [optionsSignature, storageKey]);
 
     const getOrder = useCallback(
         (section: SectionId, canonicalIds: string[]): string[] => {
@@ -177,7 +207,7 @@ export const usePersistedSectionTileOrder = (): UsePersistedSectionTileOrderResu
     );
 
     const setOrder = useCallback((section: SectionId, ids: string[]) => {
-        if (!isSectionId(section)) return;
+        if (!isSectionId(section, availableSections)) return;
         const cleaned: string[] = [];
         const seen = new Set<string>();
         for (const id of ids) {
@@ -194,26 +224,26 @@ export const usePersistedSectionTileOrder = (): UsePersistedSectionTileOrderResu
             } else {
                 next[section] = cleaned;
             }
-            writeToStorage(next);
+            writeToStorage(storageKey, next);
             return next;
         });
-    }, []);
+    }, [optionsSignature, storageKey]);
 
     const resetSection = useCallback((section: SectionId) => {
-        if (!isSectionId(section)) return;
+        if (!isSectionId(section, availableSections)) return;
         setOrderMap((prev) => {
             if (!(section in prev)) return prev;
             const next: SectionTileOrderMap = { ...prev };
             delete next[section];
-            writeToStorage(next);
+            writeToStorage(storageKey, next);
             return next;
         });
-    }, []);
+    }, [optionsSignature, storageKey]);
 
     const resetAll = useCallback(() => {
-        writeToStorage({});
+        writeToStorage(storageKey, {});
         setOrderMap({});
-    }, []);
+    }, [storageKey]);
 
     return {
         getOrder,

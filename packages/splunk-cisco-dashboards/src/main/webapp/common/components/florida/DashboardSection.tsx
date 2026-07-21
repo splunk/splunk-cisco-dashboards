@@ -46,6 +46,7 @@ interface DashboardSectionProps {
      * the link is non-interactive.
      */
     href?: string;
+    icon?: React.ReactNode;
     children: React.ReactNode;
     className?: string;
     style?: React.CSSProperties;
@@ -206,6 +207,7 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
     title,
     linkText,
     href,
+    icon,
     children,
     className,
     style,
@@ -235,6 +237,24 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
     // The `linkText` prop is repurposed as the hover/title tooltip
     // ("Open IT health (new tab)") so existing callers don't need
     // to change their contract.
+    const labelNode = (
+        <>
+            {icon && (
+                <span
+                    className={cn(
+                        'inline-flex h-5 w-5 items-center justify-center rounded-md',
+                        'bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-200',
+                        'border border-sky-100 dark:border-sky-900/70'
+                    )}
+                    aria-hidden="true"
+                >
+                    {icon}
+                </span>
+            )}
+            <h3 className="leading-none">{title}</h3>
+        </>
+    );
+
     const titleNode = href ? (
         <a
             href={href}
@@ -250,7 +270,7 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
                 'text-sky-950 hover:text-sky-700 dark:text-sky-100 dark:hover:text-sky-300'
             )}
         >
-            <h3 className="leading-none">{title}</h3>
+            {labelNode}
             {/* Affordance group: chevron nudges right on hover, an
                 ArrowUpRight fades in to telegraph "opens new tab".
                 Same animation language the old footer link used so
@@ -268,9 +288,9 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
             />
         </a>
     ) : (
-        <h3 className="text-[14px] font-black text-sky-950 dark:text-sky-100 uppercase tracking-tight leading-none">
-            {title}
-        </h3>
+        <div className="inline-flex items-center gap-1.5 text-[14px] font-black text-sky-950 dark:text-sky-100 uppercase tracking-tight leading-none">
+            {labelNode}
+        </div>
     );
 
     return (

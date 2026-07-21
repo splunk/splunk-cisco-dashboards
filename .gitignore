@@ -105,3 +105,4 @@ packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase_fd
 # Standalone FDEM prototype (never built/shipped) - kept locally, not tracked
 reference_design/splunk-executive-florida-dashboard/
 reference_design/splunk-executive-florida-dashboard.zip
+/docs/Secure_Networking

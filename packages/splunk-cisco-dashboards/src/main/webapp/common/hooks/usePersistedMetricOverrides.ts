@@ -43,6 +43,11 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import {
+    DEFAULT_OVERVIEW_PROFILE_ID,
+    profileStorageKey,
+    type OverviewProfileId,
+} from '@/common/config/overviewProfiles';
 
 const STORAGE_KEY = 'splunk-cisco-dashboards.metricOverrides.v1';
 const STORAGE_VERSION = 2;
@@ -140,10 +145,13 @@ const sanitizeOverride = (raw: unknown): MetricOverride | null => {
     return out;
 };
 
-const readFromStorage = (): MetricOverrideMap => {
+const storageKeyForProfile = (profileId?: OverviewProfileId): string =>
+    profileStorageKey(STORAGE_KEY, profileId ?? DEFAULT_OVERVIEW_PROFILE_ID);
+
+const readFromStorage = (storageKey: string): MetricOverrideMap => {
     if (typeof window === 'undefined' || !window.localStorage) return {};
     try {
-        const raw = window.localStorage.getItem(STORAGE_KEY);
+        const raw = window.localStorage.getItem(storageKey);
         if (!raw) return {};
         const parsed = JSON.parse(raw) as Partial<PersistedShape>;
         if (!parsed || parsed.v !== STORAGE_VERSION || !parsed.overrides) return {};
@@ -159,11 +167,11 @@ const readFromStorage = (): MetricOverrideMap => {
     }
 };
 
-const writeToStorage = (overrides: MetricOverrideMap): void => {
+const writeToStorage = (storageKey: string, overrides: MetricOverrideMap): void => {
     if (typeof window === 'undefined' || !window.localStorage) return;
     try {
         const payload: PersistedShape = { v: STORAGE_VERSION, overrides };
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+        window.localStorage.setItem(storageKey, JSON.stringify(payload));
     } catch {
         // Storage may be unavailable (private mode / quota). The picker
         // still works for the current session — we just won't persist.
@@ -179,20 +187,25 @@ export interface UsePersistedMetricOverridesResult {
     overrideCount: number;
 }
 
-export const usePersistedMetricOverrides = (): UsePersistedMetricOverridesResult => {
-    const [overrides, setOverrides] = useState<MetricOverrideMap>(() => readFromStorage());
+export const usePersistedMetricOverrides = (
+    profileId: OverviewProfileId = DEFAULT_OVERVIEW_PROFILE_ID
+): UsePersistedMetricOverridesResult => {
+    const storageKey = storageKeyForProfile(profileId);
+    const [overrides, setOverrides] = useState<MetricOverrideMap>(() =>
+        readFromStorage(storageKey)
+    );
 
     // Cross-tab sync: pick up changes made in another tab via the
     // standard `storage` event so the dashboard stays consistent.
     useEffect(() => {
         if (typeof window === 'undefined') return undefined;
         const onStorage = (e: StorageEvent) => {
-            if (e.key !== STORAGE_KEY) return;
-            setOverrides(readFromStorage());
+            if (e.key !== storageKey) return;
+            setOverrides(readFromStorage(storageKey));
         };
         window.addEventListener('storage', onStorage);
         return () => window.removeEventListener('storage', onStorage);
-    }, []);
+    }, [storageKey]);
 
     const setOverride = useCallback((tileId: string, override: MetricOverride) => {
         if (!TILE_ID_PATTERN.test(tileId)) return;
@@ -204,10 +217,10 @@ export const usePersistedMetricOverrides = (): UsePersistedMetricOverridesResult
             } else {
                 delete next[tileId];
             }
-            writeToStorage(next);
+            writeToStorage(storageKey, next);
             return next;
         });
-    }, []);
+    }, [storageKey]);
 
     const clearOverride = useCallback((tileId: string) => {
         if (!TILE_ID_PATTERN.test(tileId)) return;
@@ -215,15 +228,15 @@ export const usePersistedMetricOverrides = (): UsePersistedMetricOverridesResult
             if (!(tileId in prev)) return prev;
             const next = { ...prev };
             delete next[tileId];
-            writeToStorage(next);
+            writeToStorage(storageKey, next);
             return next;
         });
-    }, []);
+    }, [storageKey]);
 
     const resetAll = useCallback(() => {
-        writeToStorage({});
+        writeToStorage(storageKey, {});
         setOverrides({});
-    }, []);
+    }, [storageKey]);
 
     return {
         overrides,

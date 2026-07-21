@@ -33,6 +33,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { SectionId } from '@/common/hooks/useMetric';
 import { ALL_SECTION_IDS } from '@/common/hooks/usePersistedSectionLayout';
+import {
+    DEFAULT_OVERVIEW_PROFILE_ID,
+    OVERVIEW_PROFILES,
+    profileStorageKey,
+    type OverviewProfileId,
+} from '@/common/config/overviewProfiles';
 
 const STORAGE_KEY = 'splunk-cisco-dashboards.sectionTileCounts.v1';
 const STORAGE_VERSION = 1;
@@ -58,6 +64,8 @@ export interface SectionTileCountBounds {
      * to 5 to preserve the historical "all sections start at 5" UX.
      */
     fallbackDefault?: number;
+    profileId?: OverviewProfileId;
+    availableSections?: readonly SectionId[];
 }
 
 export type SectionTileCountMap = Record<SectionId, number>;
@@ -85,18 +93,22 @@ const resolveSectionDefault = (
     return clamp(raw, bounds.minCount, bounds.maxCount);
 };
 
-const buildDefaults = (bounds: SectionTileCountBounds): SectionTileCountMap => ({
-    it_health: resolveSectionDefault('it_health', bounds),
-    security: resolveSectionDefault('security', bounds),
-    building: resolveSectionDefault('building', bounds),
-    custom: resolveSectionDefault('custom', bounds),
-});
+const buildDefaults = (bounds: SectionTileCountBounds): SectionTileCountMap =>
+    Object.fromEntries(
+        ALL_SECTION_IDS.map((section) => [section, resolveSectionDefault(section, bounds)])
+    ) as SectionTileCountMap;
+
+const storageKeyForBounds = (bounds: SectionTileCountBounds): string =>
+    profileStorageKey(
+        STORAGE_KEY,
+        bounds.profileId ?? DEFAULT_OVERVIEW_PROFILE_ID
+    );
 
 const readFromStorage = (bounds: SectionTileCountBounds): SectionTileCountMap => {
     const fallback = buildDefaults(bounds);
     if (typeof window === 'undefined' || !window.localStorage) return fallback;
     try {
-        const raw = window.localStorage.getItem(STORAGE_KEY);
+        const raw = window.localStorage.getItem(storageKeyForBounds(bounds));
         if (!raw) return fallback;
         const parsed = JSON.parse(raw) as Partial<PersistedShape>;
         if (!parsed || parsed.v !== STORAGE_VERSION || !parsed.counts) return fallback;
@@ -112,30 +124,33 @@ const readFromStorage = (bounds: SectionTileCountBounds): SectionTileCountMap =>
     }
 };
 
-const writeToStorage = (counts: SectionTileCountMap): void => {
+const writeToStorage = (
+    counts: SectionTileCountMap,
+    bounds: SectionTileCountBounds
+): void => {
     if (typeof window === 'undefined' || !window.localStorage) return;
     try {
         const payload: PersistedShape = { v: STORAGE_VERSION, counts };
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+        window.localStorage.setItem(storageKeyForBounds(bounds), JSON.stringify(payload));
     } catch {
         // Storage may be unavailable (private mode / quota). The pill
         // still works for the current session — we just won't persist.
     }
 };
 
-const clearStorage = (): void => {
+const clearStorage = (bounds: SectionTileCountBounds): void => {
     if (typeof window === 'undefined' || !window.localStorage) return;
     try {
-        window.localStorage.removeItem(STORAGE_KEY);
+        window.localStorage.removeItem(storageKeyForBounds(bounds));
     } catch {
         // Storage may be unavailable. The in-memory state still resets.
     }
 };
 
-const hasStoredCounts = (): boolean => {
+const hasStoredCounts = (bounds: SectionTileCountBounds): boolean => {
     if (typeof window === 'undefined' || !window.localStorage) return false;
     try {
-        return window.localStorage.getItem(STORAGE_KEY) !== null;
+        return window.localStorage.getItem(storageKeyForBounds(bounds)) !== null;
     } catch {
         return false;
     }
@@ -154,18 +169,27 @@ export interface UsePersistedSectionTileCountsResult {
 
 export const usePersistedSectionTileCounts = (
     bounds: SectionTileCountBounds = {
-        minCount: 3,
-        maxCount: 9,
-        defaultCount: 5,
+        minCount: OVERVIEW_PROFILES[DEFAULT_OVERVIEW_PROFILE_ID].minTileCount,
+        maxCount: OVERVIEW_PROFILES[DEFAULT_OVERVIEW_PROFILE_ID].maxTileCount,
+        defaultCount: OVERVIEW_PROFILES[DEFAULT_OVERVIEW_PROFILE_ID].fallbackTileCount,
+        profileId: DEFAULT_OVERVIEW_PROFILE_ID,
     }
 ): UsePersistedSectionTileCountsResult => {
     const [counts, setCounts] = useState<SectionTileCountMap>(() => readFromStorage(bounds));
     const defaultSignature = JSON.stringify(buildDefaults(bounds));
+    const storageKey = storageKeyForBounds(bounds);
+    const boundsSignature = JSON.stringify({
+        minCount: bounds.minCount,
+        maxCount: bounds.maxCount,
+        defaultSignature,
+        fallbackDefault: bounds.fallbackDefault,
+        profileId: bounds.profileId ?? DEFAULT_OVERVIEW_PROFILE_ID,
+    });
 
     useEffect(() => {
-        if (hasStoredCounts()) return;
+        if (hasStoredCounts(bounds)) return;
         setCounts(buildDefaults(bounds));
-    }, [bounds.minCount, bounds.maxCount, defaultSignature]);
+    }, [boundsSignature]);
 
     // Cross-tab sync: pick up changes made in another tab via the
     // standard `storage` event so the layout stays consistent across
@@ -173,12 +197,12 @@ export const usePersistedSectionTileCounts = (
     useEffect(() => {
         if (typeof window === 'undefined') return undefined;
         const onStorage = (e: StorageEvent) => {
-            if (e.key !== STORAGE_KEY) return;
+            if (e.key !== storageKey) return;
             setCounts(readFromStorage(bounds));
         };
         window.addEventListener('storage', onStorage);
         return () => window.removeEventListener('storage', onStorage);
-    }, [bounds]);
+    }, [boundsSignature, storageKey]);
 
     const setCount = useCallback(
         (section: SectionId, count: number) => {
@@ -187,18 +211,18 @@ export const usePersistedSectionTileCounts = (
             setCounts((prev) => {
                 if (prev[section] === clamped) return prev;
                 const next = { ...prev, [section]: clamped };
-                writeToStorage(next);
+                writeToStorage(next, bounds);
                 return next;
             });
         },
-        [bounds.minCount, bounds.maxCount]
+        [boundsSignature]
     );
 
     const resetAll = useCallback(() => {
         const fresh = buildDefaults(bounds);
-        clearStorage();
+        clearStorage(bounds);
         setCounts(fresh);
-    }, [bounds]);
+    }, [boundsSignature]);
 
     return { counts, bounds, setCount, resetAll };
 };

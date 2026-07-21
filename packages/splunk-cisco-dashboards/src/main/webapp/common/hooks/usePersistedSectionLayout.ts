@@ -7,74 +7,102 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { SectionId } from '@/common/hooks/useMetric';
+import {
+    ALL_OVERVIEW_SECTION_IDS,
+    DEFAULT_OVERVIEW_PROFILE_ID,
+    OVERVIEW_PROFILES,
+    profileStorageKey,
+    type OverviewProfileId,
+} from '@/common/config/overviewProfiles';
 
 const STORAGE_KEY = 'splunk-cisco-dashboards.sectionLayout.v1';
 const STORAGE_VERSION = 1;
 
-export const ALL_SECTION_IDS: readonly SectionId[] = [
-    'it_health',
-    'security',
-    'building',
-    'custom',
-] as const;
+export const ALL_SECTION_IDS: readonly SectionId[] = ALL_OVERVIEW_SECTION_IDS;
+export const DEFAULT_SECTION_LAYOUT: readonly SectionId[] =
+    OVERVIEW_PROFILES[DEFAULT_OVERVIEW_PROFILE_ID].defaultVisibleSections;
 
-export const DEFAULT_SECTION_LAYOUT: readonly SectionId[] = [
-    'it_health',
-    'security',
-    'building',
-] as const;
-
-const MAX_VISIBLE_SECTIONS = 4;
 const MIN_VISIBLE_SECTIONS = 1;
 
-const isSectionId = (raw: unknown): raw is SectionId =>
-    typeof raw === 'string' && (ALL_SECTION_IDS as readonly string[]).includes(raw);
+export interface SectionLayoutOptions {
+    profileId?: OverviewProfileId;
+    availableSections?: readonly SectionId[];
+    defaultSections?: readonly SectionId[];
+    maxSections?: number;
+    minSections?: number;
+}
 
 interface PersistedShape {
     v: number;
     sections: SectionId[];
 }
 
-const sanitizeSections = (raw: unknown): SectionId[] => {
-    const source = Array.isArray(raw) ? raw : DEFAULT_SECTION_LAYOUT;
+const buildOptions = (options: SectionLayoutOptions = {}) => {
+    const profile = OVERVIEW_PROFILES[options.profileId ?? DEFAULT_OVERVIEW_PROFILE_ID];
+    const availableSections = options.availableSections ?? profile.sections.map((s) => s.id);
+    const defaultSections = options.defaultSections ?? profile.defaultVisibleSections;
+    const maxSections = options.maxSections ?? profile.maxVisibleSections;
+    const minSections = options.minSections ?? MIN_VISIBLE_SECTIONS;
+    const availableSet = new Set(availableSections);
+    return {
+        profile,
+        availableSections,
+        defaultSections,
+        maxSections,
+        minSections,
+        availableSet,
+        storageKey: profileStorageKey(STORAGE_KEY, profile.id),
+    };
+};
+
+const sanitizeSections = (
+    raw: unknown,
+    options: ReturnType<typeof buildOptions>
+): SectionId[] => {
+    const source = Array.isArray(raw) ? raw : options.defaultSections;
     const next: SectionId[] = [];
     const seen = new Set<SectionId>();
     for (const value of source) {
-        if (!isSectionId(value)) continue;
+        if (!options.availableSet.has(value)) continue;
         if (seen.has(value)) continue;
         seen.add(value);
         next.push(value);
-        if (next.length >= MAX_VISIBLE_SECTIONS) break;
+        if (next.length >= options.maxSections) break;
     }
-    if (next.length < MIN_VISIBLE_SECTIONS) {
-        return [...DEFAULT_SECTION_LAYOUT];
+    if (next.length < options.minSections) {
+        return [...options.defaultSections].slice(0, options.maxSections);
     }
     return next;
 };
 
-const readFromStorage = (): SectionId[] => {
+const readFromStorage = (options: ReturnType<typeof buildOptions>): SectionId[] => {
     if (typeof window === 'undefined' || !window.localStorage) {
-        return [...DEFAULT_SECTION_LAYOUT];
+        return sanitizeSections(options.defaultSections, options);
     }
     try {
-        const raw = window.localStorage.getItem(STORAGE_KEY);
-        if (!raw) return [...DEFAULT_SECTION_LAYOUT];
+        const raw = window.localStorage.getItem(options.storageKey);
+        if (!raw) return sanitizeSections(options.defaultSections, options);
         const parsed = JSON.parse(raw) as Partial<PersistedShape>;
-        if (!parsed || parsed.v !== STORAGE_VERSION) return [...DEFAULT_SECTION_LAYOUT];
-        return sanitizeSections(parsed.sections);
+        if (!parsed || parsed.v !== STORAGE_VERSION) {
+            return sanitizeSections(options.defaultSections, options);
+        }
+        return sanitizeSections(parsed.sections, options);
     } catch {
-        return [...DEFAULT_SECTION_LAYOUT];
+        return sanitizeSections(options.defaultSections, options);
     }
 };
 
-const writeToStorage = (sections: SectionId[]): void => {
+const writeToStorage = (
+    sections: SectionId[],
+    options: ReturnType<typeof buildOptions>
+): void => {
     if (typeof window === 'undefined' || !window.localStorage) return;
     try {
         const payload: PersistedShape = {
             v: STORAGE_VERSION,
-            sections: sanitizeSections(sections),
+            sections: sanitizeSections(sections, options),
         };
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+        window.localStorage.setItem(options.storageKey, JSON.stringify(payload));
     } catch {
         // Storage may be unavailable; the in-memory state still works.
     }
@@ -90,60 +118,68 @@ export interface UsePersistedSectionLayoutResult {
     resetAll: () => void;
 }
 
-export const usePersistedSectionLayout = (): UsePersistedSectionLayoutResult => {
-    const [sections, setSectionsState] = useState<SectionId[]>(() => readFromStorage());
+export const usePersistedSectionLayout = (
+    layoutOptions: SectionLayoutOptions = {}
+): UsePersistedSectionLayoutResult => {
+    const options = buildOptions(layoutOptions);
+    const [sections, setSectionsState] = useState<SectionId[]>(() =>
+        readFromStorage(options)
+    );
 
     useEffect(() => {
         if (typeof window === 'undefined') return undefined;
         const onStorage = (e: StorageEvent) => {
-            if (e.key !== STORAGE_KEY) return;
-            setSectionsState(readFromStorage());
+            if (e.key !== options.storageKey) return;
+            setSectionsState(readFromStorage(options));
         };
         window.addEventListener('storage', onStorage);
         return () => window.removeEventListener('storage', onStorage);
-    }, []);
+    }, [options]);
 
     const setSections = useCallback((nextSections: SectionId[]) => {
-        const clean = sanitizeSections(nextSections);
-        writeToStorage(clean);
+        const clean = sanitizeSections(nextSections, options);
+        writeToStorage(clean, options);
         setSectionsState(clean);
-    }, []);
+    }, [options]);
 
     const addSection = useCallback(
         (section?: SectionId) => {
             setSectionsState((prev) => {
-                if (prev.length >= MAX_VISIBLE_SECTIONS) return prev;
+                if (prev.length >= options.maxSections) return prev;
                 const nextSection =
                     section ??
-                    ALL_SECTION_IDS.find((candidate) => !prev.includes(candidate));
+                    options.availableSections.find((candidate) => !prev.includes(candidate));
                 if (!nextSection || prev.includes(nextSection)) return prev;
-                const next = sanitizeSections([...prev, nextSection]);
-                writeToStorage(next);
+                const next = sanitizeSections([...prev, nextSection], options);
+                writeToStorage(next, options);
                 return next;
             });
         },
-        []
+        [options]
     );
 
     const removeSection = useCallback((section: SectionId) => {
         setSectionsState((prev) => {
-            if (!prev.includes(section) || prev.length <= MIN_VISIBLE_SECTIONS) return prev;
-            const next = sanitizeSections(prev.filter((candidate) => candidate !== section));
-            writeToStorage(next);
+            if (!prev.includes(section) || prev.length <= options.minSections) return prev;
+            const next = sanitizeSections(
+                prev.filter((candidate) => candidate !== section),
+                options
+            );
+            writeToStorage(next, options);
             return next;
         });
-    }, []);
+    }, [options]);
 
     const resetAll = useCallback(() => {
-        const fresh = [...DEFAULT_SECTION_LAYOUT];
-        writeToStorage(fresh);
+        const fresh = sanitizeSections(options.defaultSections, options);
+        writeToStorage(fresh, options);
         setSectionsState(fresh);
-    }, []);
+    }, [options]);
 
     return {
         sections,
-        availableSections: ALL_SECTION_IDS,
-        maxSections: MAX_VISIBLE_SECTIONS,
+        availableSections: options.availableSections,
+        maxSections: options.maxSections,
         setSections,
         addSection,
         removeSection,

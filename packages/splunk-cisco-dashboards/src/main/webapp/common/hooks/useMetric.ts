@@ -22,12 +22,14 @@ import {
     isAbortError,
     runSearch,
 } from '../services/splunkSearchService';
+import type { SectionId } from '@/common/config/overviewProfiles';
+
+export type { SectionId };
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export type SectionId = 'it_health' | 'security' | 'building' | 'custom';
 export type MetricStatus = 'healthy' | 'warning' | 'critical' | 'unknown';
 export type DataSource = 'live' | 'mock' | 'loading';
 
