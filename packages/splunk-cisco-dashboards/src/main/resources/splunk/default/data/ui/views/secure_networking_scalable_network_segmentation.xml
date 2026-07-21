@@ -1,0 +1,77 @@
+<dashboard version="2" theme="light">
+    <label>Scalable Network Segmentation</label>
+    <description>Secure Networking drill-down dashboard for Scalable Network Segmentation.</description>
+    <definition><![CDATA[
+{
+	"title": "Scalable Network Segmentation",
+	"description": "Secure Networking drill-down dashboard for Scalable Network Segmentation.",
+	"inputs": {
+		"input_time_range": {
+			"options": {
+				"defaultValue": "-24h@h,now",
+				"token": "time_tok"
+			},
+			"title": "Time Range",
+			"type": "input.timerange"
+		}
+	},
+	"defaults": {
+		"dataSources": {
+			"ds.search": {
+				"options": {
+					"queryParameters": {
+						"earliest": "$time_tok.earliest$",
+						"latest": "$time_tok.latest$"
+					}
+				}
+			},
+			"ds.spl2": {
+				"options": {
+					"queryParameters": {
+						"earliest": "$time_tok.earliest$",
+						"latest": "$time_tok.latest$"
+					}
+				}
+			}
+		}
+	},
+	"visualizations": {},
+	"dataSources": {},
+	"layout": {
+		"globalInputs": [
+			"input_time_range"
+		],
+		"layoutDefinitions": {
+			"layout_overview": {
+				"options": {
+					"backgroundColor": "#f5f7fb",
+					"display": "auto-scale",
+					"height": 900,
+					"width": 1440
+				},
+				"structure": [],
+				"type": "absolute"
+			}
+		},
+		"options": {
+			"showTitleAndDescription": false,
+			"submitButton": false,
+			"submitOnDashboardLoad": true
+		},
+		"tabs": {
+			"items": [
+				{
+					"label": "overview",
+					"layoutId": "layout_overview"
+				}
+			]
+		}
+	},
+	"applicationProperties": {
+		"collapseNavigation": false,
+		"hideEdit": true,
+		"hideExport": false
+	}
+}
+    ]]></definition>
+</dashboard>
