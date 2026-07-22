@@ -34,7 +34,7 @@
  */
 
 import React from 'react';
-import { GripVertical } from 'lucide-react';
+import { GripVertical, X } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/common/lib/utils';
@@ -53,6 +53,12 @@ interface SortableMetricCardProps {
     children: React.ReactNode;
     /** Optional layout override from the containing section. */
     className?: string;
+    tileAction?: {
+        label: string;
+        title: string;
+        onClick: () => void;
+        tone?: 'hide' | 'remove';
+    };
 }
 
 export const SortableMetricCard: React.FC<SortableMetricCardProps> = ({
@@ -60,6 +66,7 @@ export const SortableMetricCard: React.FC<SortableMetricCardProps> = ({
     ariaLabel,
     children,
     className,
+    tileAction,
 }) => {
     const {
         setNodeRef,
@@ -167,6 +174,37 @@ export const SortableMetricCard: React.FC<SortableMetricCardProps> = ({
             >
                 <GripVertical className="w-3 h-3" />
             </button>
+            {tileAction && (
+                <button
+                    type="button"
+                    onClick={tileAction.onClick}
+                    aria-label={tileAction.label}
+                    title={tileAction.title}
+                    data-tile-control="true"
+                    className={cn(
+                        'absolute top-0.5 right-0.5 z-20',
+                        'flex items-center justify-center w-4 h-4 rounded',
+                        'bg-white/90 dark:bg-slate-900/90 backdrop-blur-[2px]',
+                        'shadow-sm ring-1',
+                        'transition-opacity duration-150',
+                        isDragging
+                            ? 'opacity-0 pointer-events-none'
+                            : 'opacity-0 group-hover/sortable:opacity-100 focus:opacity-100',
+                        tileAction.tone === 'remove'
+                            ? [
+                                  'text-red-500 hover:text-red-600',
+                                  'ring-red-200/80 dark:ring-red-900/70',
+                              ]
+                            : [
+                                  'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200',
+                                  'ring-slate-200/70 dark:ring-slate-700/60',
+                              ],
+                        'focus:outline-none focus-visible:ring-1 focus-visible:ring-sky-400'
+                    )}
+                >
+                    <X className="w-3 h-3" />
+                </button>
+            )}
             {children}
         </div>
     );

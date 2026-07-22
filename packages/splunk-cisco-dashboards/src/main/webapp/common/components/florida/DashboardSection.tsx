@@ -36,6 +36,13 @@ interface HeightControlConfig {
     label?: string;
 }
 
+interface HeaderActionConfig {
+    onClick: () => void;
+    label: string;
+    title?: string;
+    disabled?: boolean;
+}
+
 interface DashboardSectionProps {
     title: string;
     linkText: string;
@@ -65,6 +72,8 @@ interface DashboardSectionProps {
     height?: HeightControlConfig;
     /** True when a dense tile section should flow into multiple rows. */
     wrapTiles?: boolean;
+    /** Optional section-level action rendered as a compact icon button. */
+    addTileAction?: HeaderActionConfig;
     onEditTitle?: () => void;
 }
 
@@ -214,6 +223,7 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
     tileCount,
     height,
     wrapTiles = false,
+    addTileAction,
     onEditTitle,
 }) => {
     // Build 101 (2026-05-13): the drill-down link moved from a
@@ -320,6 +330,29 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
             <div className="flex items-center justify-between gap-2 mb-1.5">
                 {titleNode}
                 <div className="flex items-center gap-1.5">
+                    {addTileAction && (
+                        <button
+                            type="button"
+                            onClick={addTileAction.onClick}
+                            disabled={addTileAction.disabled}
+                            title={addTileAction.title ?? addTileAction.label}
+                            aria-label={addTileAction.label}
+                            className={cn(
+                                'flex items-center justify-center w-6 h-6 rounded-md',
+                                'transition focus:outline-none focus-visible:ring-1 focus-visible:ring-sky-400',
+                                addTileAction.disabled
+                                    ? 'cursor-not-allowed text-slate-300 dark:text-slate-700'
+                                    : [
+                                          'border border-sky-100 dark:border-sky-900/70',
+                                          'bg-sky-50/80 dark:bg-sky-950/50',
+                                          'text-sky-700 dark:text-sky-200',
+                                          'hover:bg-sky-100 dark:hover:bg-sky-900/70',
+                                      ]
+                            )}
+                        >
+                            <Plus className="w-3.5 h-3.5" />
+                        </button>
+                    )}
                     {onEditTitle && (
                         <button
                             type="button"

@@ -46,7 +46,10 @@ import {
     Edit3,
     Upload,
     X,
+    Check,
     CheckCircle2,
+    ChevronDown,
+    ChevronRight,
     AlertCircle,
     Table2,
     ClipboardCheck,
@@ -65,6 +68,9 @@ import {
     Plus,
     Eye,
     EyeOff,
+    Search,
+    Tag,
+    Trash2,
     type LucideIcon,
 } from 'lucide-react';
 import { DashboardSection } from '@/common/components/florida/DashboardSection';
@@ -137,6 +143,11 @@ import {
     type SearchbaseDrilldownMap,
 } from '@/common/hooks/usePersistedSearchbaseDrilldowns';
 import { usePersistedSectionTileCounts } from '@/common/hooks/usePersistedSectionTileCounts';
+import {
+    usePersistedSectionTileAdditions,
+    type SectionTileAdditionMap,
+} from '@/common/hooks/usePersistedSectionTileAdditions';
+import { usePersistedSectionHiddenTiles } from '@/common/hooks/usePersistedSectionHiddenTiles';
 import { usePersistedSectionLayout } from '@/common/hooks/usePersistedSectionLayout';
 import { usePersistedSectionTileOrder } from '@/common/hooks/usePersistedSectionTileOrder';
 import { usePersistedSectionHeights } from '@/common/hooks/usePersistedSectionHeights';
@@ -519,6 +530,62 @@ const discoverProfileDefinitionFromRecord = (
     };
 };
 
+interface OverviewMetricBuildOptions {
+    tileId?: string;
+    section?: SectionId;
+    suppressMockOnEmpty?: boolean;
+}
+
+const buildOverviewMetricFromDefinition = (
+    record: SearchbaseRecord,
+    definition: Record<string, unknown>,
+    profile: OverviewProfile,
+    options: OverviewMetricBuildOptions = {}
+): MetricConfig | null => {
+    const id = options.tileId ?? readOverviewString(definition, 'tileId', 128);
+    const section = options.section ?? parseOverviewSection(definition.section, profile);
+    if (!id || !section) return null;
+
+    const description =
+        readOverviewString(definition, 'description', 4000) ??
+        plainTextFromHtml(record.explanation) ??
+        plainTextFromHtml(record.description);
+    const color =
+        readOverviewString(definition, 'color', 32) ??
+        readFirstSeriesColor(record.vizOptions);
+    const comparePeriod = readOverviewBoolean(definition, 'comparePeriod');
+
+    return {
+        id,
+        section,
+        label:
+            readOverviewString(definition, 'label', 160) ??
+            record.searchName,
+        subLabel:
+            readOverviewString(definition, 'subLabel', 160) ??
+            record.subCategory ??
+            record.category,
+        description,
+        searchbaseId: record.id,
+        savedSearch: record.searchName,
+        spl: undefined,
+        dispatchContext: record.dispatchContext,
+        valueField: readOverviewString(definition, 'valueField', 160),
+        changeField: readOverviewString(definition, 'changeField', 160),
+        displayField: readOverviewString(definition, 'displayField', 160),
+        sparkDataField: readOverviewString(definition, 'sparkDataField', 160),
+        baselineField: readOverviewString(definition, 'baselineField', 160),
+        overlayLabel: readOverviewString(definition, 'overlayLabel', 80),
+        comparePeriod,
+        unit: readOverviewString(definition, 'unit', 32),
+        color,
+        thresholds: parseOverviewThresholds(definition.thresholds),
+        thresholdNote: readOverviewString(definition, 'thresholdNote', 2000),
+        suppressMockOnEmpty: options.suppressMockOnEmpty ? true : undefined,
+        mock: parseOverviewMock(definition.mock),
+    };
+};
+
 const buildOverviewMetricConfig = (
     records: SearchbaseRecord[] | null,
     profile: OverviewProfile
@@ -539,59 +606,80 @@ const buildOverviewMetricConfig = (
         for (const definition of autoDefinition
             ? [...definitions, autoDefinition]
             : definitions) {
-            const id = readOverviewString(definition, 'tileId', 128);
-            const section = parseOverviewSection(definition.section, profile);
-            if (!id || !section || discovered.has(id)) continue;
-
-            const description =
-                readOverviewString(definition, 'description', 4000) ??
-                plainTextFromHtml(record.explanation) ??
-                plainTextFromHtml(record.description);
-            const color =
-                readOverviewString(definition, 'color', 32) ??
-                readFirstSeriesColor(record.vizOptions);
-            const comparePeriod = readOverviewBoolean(definition, 'comparePeriod');
-
-            discovered.set(id, {
-                id,
-                section,
-                label:
-                    readOverviewString(definition, 'label', 160) ??
-                    record.searchName,
-                subLabel:
-                    readOverviewString(definition, 'subLabel', 160) ??
-                    record.subCategory ??
-                    record.category,
-                description,
-                searchbaseId: record.id,
-                savedSearch: record.searchName,
-                spl: undefined,
-                dispatchContext: record.dispatchContext,
-                valueField:
-                    readOverviewString(definition, 'valueField', 160),
-                changeField:
-                    readOverviewString(definition, 'changeField', 160),
-                displayField:
-                    readOverviewString(definition, 'displayField', 160),
-                sparkDataField:
-                    readOverviewString(definition, 'sparkDataField', 160),
-                baselineField:
-                    readOverviewString(definition, 'baselineField', 160),
-                overlayLabel:
-                    readOverviewString(definition, 'overlayLabel', 80),
-                comparePeriod,
-                unit:
-                    readOverviewString(definition, 'unit', 32),
-                color,
-                thresholds: parseOverviewThresholds(definition.thresholds),
-                thresholdNote:
-                    readOverviewString(definition, 'thresholdNote', 2000),
-                mock: parseOverviewMock(definition.mock),
-            });
+            const metric = buildOverviewMetricFromDefinition(record, definition, profile);
+            if (!metric || discovered.has(metric.id)) continue;
+            discovered.set(metric.id, metric);
         }
     }
 
     return Array.from(discovered.values());
+};
+
+const shortStableHash = (raw: string): string => {
+    let hash = 5381;
+    for (let i = 0; i < raw.length; i += 1) {
+        hash = ((hash * 33) ^ raw.charCodeAt(i)) >>> 0;
+    }
+    return hash.toString(36).slice(0, 7);
+};
+
+const overviewAdditionTileId = (section: SectionId, searchbaseId: string): string => {
+    const sectionSlug = slugifyOverviewId(section).slice(0, 24) || 'section';
+    const hash = shortStableHash(`${section}:${searchbaseId}`);
+    const prefix = `add_${sectionSlug}_`;
+    const suffix = `_${hash}`;
+    const maxRecordSlugLength = Math.max(8, 64 - prefix.length - suffix.length);
+    const recordSlug = slugifyOverviewId(searchbaseId).slice(0, maxRecordSlugLength) || 'search';
+    return `${prefix}${recordSlug}${suffix}`;
+};
+
+const buildAddedOverviewMetricConfig = (
+    records: SearchbaseRecord[] | null,
+    additions: SectionTileAdditionMap,
+    profile: OverviewProfile,
+    existingMetrics: MetricConfig[]
+): MetricConfig[] => {
+    if (records === null) return [];
+
+    const recordsById = new Map(records.map((record) => [record.id, record]));
+    const existingIds = new Set(existingMetrics.map((metric) => metric.id));
+    const existingSearchesBySection = new Set(
+        existingMetrics
+            .filter((metric) => metric.searchbaseId)
+            .map((metric) => `${metric.section}:${metric.searchbaseId}`)
+    );
+    const out: MetricConfig[] = [];
+
+    for (const section of sectionIdsForProfile(profile)) {
+        const searchbaseIds = additions[section] ?? [];
+        for (const searchbaseId of searchbaseIds) {
+            if (existingSearchesBySection.has(`${section}:${searchbaseId}`)) continue;
+            const record = recordsById.get(searchbaseId);
+            if (!record?.searchName || !record.search) continue;
+            const tileId = overviewAdditionTileId(section, searchbaseId);
+            if (existingIds.has(tileId)) continue;
+
+            const definitions = overviewDefinitionsFromRecord(record).filter(
+                (definition) => parseOverviewProfile(definition.profile) === profile.id
+            );
+            const autoDefinition =
+                definitions.length === 0
+                    ? discoverProfileDefinitionFromRecord(record, profile)
+                    : null;
+            const definition = definitions[0] ?? autoDefinition ?? {};
+            const metric = buildOverviewMetricFromDefinition(record, definition, profile, {
+                tileId,
+                section,
+                suppressMockOnEmpty: true,
+            });
+            if (!metric) continue;
+            out.push(metric);
+            existingIds.add(tileId);
+            existingSearchesBySection.add(`${section}:${searchbaseId}`);
+        }
+    }
+
+    return out;
 };
 
 const MAP_FOOTER_SLOTS = ['primary', 'secondary'] as const;
@@ -2096,9 +2184,50 @@ const OverviewPage: React.FC = () => {
         };
     }, [searchbaseRefreshToken]);
 
-    const metricConfig = useMemo(
+    const {
+        additions: sectionTileAdditions,
+        getAdditions: getSectionTileAdditions,
+        addTile: addSectionTile,
+        removeTile: removeSectionTile,
+        resetAll: resetAllSectionTileAdditions,
+    } = usePersistedSectionTileAdditions({
+        profileId: overviewProfile.id,
+        availableSections,
+    });
+    const {
+        isHidden: isSectionTileHidden,
+        hideTile: hideSectionTile,
+        showTile: showSectionTile,
+        resetAll: resetAllSectionHiddenTiles,
+    } = usePersistedSectionHiddenTiles({
+        profileId: overviewProfile.id,
+        availableSections,
+    });
+
+    const baseMetricConfig = useMemo(
         () => buildOverviewMetricConfig(searchbaseRecords, overviewProfile),
         [overviewProfile, searchbaseRecords]
+    );
+    const addedMetricConfig = useMemo(
+        () =>
+            buildAddedOverviewMetricConfig(
+                searchbaseRecords,
+                sectionTileAdditions,
+                overviewProfile,
+                baseMetricConfig
+            ),
+        [baseMetricConfig, overviewProfile, searchbaseRecords, sectionTileAdditions]
+    );
+    const metricConfig = useMemo(
+        () => [...baseMetricConfig, ...addedMetricConfig],
+        [addedMetricConfig, baseMetricConfig]
+    );
+    const renderMetricConfig = useMemo(
+        () =>
+            metricConfig.filter(
+                (metric) => !isSectionTileHidden(metric.section, metric.id)
+            ),
+        [isSectionTileHidden, metricConfig]
     );
     const mapFooterKpiConfig = useMemo(
         () => buildOverviewMapFooterConfig(searchbaseRecords),
@@ -2284,7 +2413,9 @@ const OverviewPage: React.FC = () => {
             // tile dragged into the visible window also gets its
             // status counted in the aggregate, and a tile dragged
             // out is dropped immediately.
-            const sectionMetrics = metricConfig.filter((m) => m.section === section);
+            const sectionMetrics = renderMetricConfig.filter(
+                (m) => m.section === section
+            );
             const canonicalIds = getFactoryTileOrder(section, sectionMetrics);
             const orderedIds = getSectionTileOrder(section, canonicalIds);
             const visible = orderedIds.slice(0, sectionTileCounts[section]);
@@ -2294,7 +2425,7 @@ const OverviewPage: React.FC = () => {
     }, [
         visibleSections,
         sectionTileCounts,
-        metricConfig,
+        renderMetricConfig,
         getFactoryTileOrder,
         getSectionTileOrder,
     ]);
@@ -2679,7 +2810,7 @@ const OverviewPage: React.FC = () => {
     const firstVisibleSectionMinHeight = useMemo(() => {
         const section = visibleSections[0];
         if (!section) return verticalMetricsMinHeight;
-        const sectionMetricCount = metricConfig.filter(
+        const sectionMetricCount = renderMetricConfig.filter(
             (metric) => metric.section === section
         ).length;
         const visibleCount = Math.min(
@@ -2709,7 +2840,7 @@ const OverviewPage: React.FC = () => {
         sectionHeights,
         sectionTileBounds.maxCount,
         sectionTileCounts,
-        metricConfig,
+        renderMetricConfig,
         verticalMetricsMinHeight,
         visibleSections,
     ]);
@@ -2871,8 +3002,174 @@ const OverviewPage: React.FC = () => {
         resetAll: resetAllSearchbaseDrilldowns,
     } = usePersistedSearchbaseDrilldowns(overviewProfile.id);
     const [pickerContext, setPickerContext] = useState<KpiPickerContext | null>(null);
+    const [addTileSection, setAddTileSection] = useState<SectionId | null>(null);
     const [activeDetailTable, setActiveDetailTable] =
         useState<MetricDetailTableConfig | null>(null);
+
+    const closeAddTilePicker = useCallback(() => setAddTileSection(null), []);
+
+    const handleAddSearchToSection = useCallback(
+        (section: SectionId, record: SearchbaseRecord) => {
+            if (!record.id) return;
+            const sectionMetrics = metricConfig.filter((m) => m.section === section);
+            const visibleSectionMetrics = renderMetricConfig.filter(
+                (m) => m.section === section
+            );
+            const currentSearchbaseIds = new Set(
+                sectionMetrics
+                    .map((metric) => metric.searchbaseId)
+                    .filter((id): id is string => Boolean(id))
+            );
+            if (currentSearchbaseIds.has(record.id)) return;
+
+            const currentVisibleCount = Math.min(
+                sectionTileCounts[section],
+                Math.min(sectionTileBounds.maxCount, visibleSectionMetrics.length)
+            );
+
+            const newTileId = overviewAdditionTileId(section, record.id);
+            const canonicalIds = getFactoryTileOrder(section, visibleSectionMetrics);
+            const orderedIds = getSectionTileOrder(section, canonicalIds);
+            const nextOrder = orderedIds.filter((id) => id !== newTileId);
+            const insertAt =
+                currentVisibleCount >= sectionTileBounds.maxCount
+                    ? Math.max(0, currentVisibleCount - 1)
+                    : Math.min(currentVisibleCount, nextOrder.length);
+            nextOrder.splice(insertAt, 0, newTileId);
+
+            addSectionTile(section, record.id);
+            setSectionTileOrder(section, nextOrder);
+            setSectionTileCount(
+                section,
+                Math.min(
+                    sectionTileBounds.maxCount,
+                    currentVisibleCount + 1,
+                    visibleSectionMetrics.length + 1
+                )
+            );
+        },
+        [
+            addSectionTile,
+            getFactoryTileOrder,
+            getSectionTileOrder,
+            metricConfig,
+            renderMetricConfig,
+            sectionTileBounds.maxCount,
+            sectionTileCounts,
+            setSectionTileCount,
+            setSectionTileOrder,
+        ]
+    );
+
+    const removeAddedSearchbaseIdFromSection = useCallback(
+        (section: SectionId, searchbaseId: string) => {
+            if (!searchbaseId) return;
+            const tileId = overviewAdditionTileId(section, searchbaseId);
+            const sectionMetrics = metricConfig.filter((m) => m.section === section);
+            const canonicalIds = getFactoryTileOrder(section, sectionMetrics);
+            const orderedIds = getSectionTileOrder(section, canonicalIds);
+
+            removeSectionTile(section, searchbaseId);
+            showSectionTile(section, tileId);
+            clearOverride(tileId);
+            setSectionTileOrder(
+                section,
+                orderedIds.filter((id) => id !== tileId)
+            );
+            setStatuses((prev) => {
+                if (!(tileId in prev)) return prev;
+                const next = { ...prev };
+                delete next[tileId];
+                return next;
+            });
+        },
+        [
+            clearOverride,
+            getFactoryTileOrder,
+            getSectionTileOrder,
+            metricConfig,
+            removeSectionTile,
+            setSectionTileOrder,
+            showSectionTile,
+        ]
+    );
+
+    const handleRemoveAddedSearchFromSection = useCallback(
+        (section: SectionId, record: SearchbaseRecord) => {
+            removeAddedSearchbaseIdFromSection(section, record.id);
+        },
+        [removeAddedSearchbaseIdFromSection]
+    );
+
+    const handleHideTileFromSection = useCallback(
+        (cfg: MetricConfig) => {
+            hideSectionTile(cfg.section, cfg.id);
+            setStatuses((prev) => {
+                if (!(cfg.id in prev)) return prev;
+                const next = { ...prev };
+                delete next[cfg.id];
+                return next;
+            });
+        },
+        [hideSectionTile]
+    );
+
+    const handleShowSearchInSection = useCallback(
+        (section: SectionId, record: SearchbaseRecord) => {
+            if (!record.id) return;
+            const sectionMetrics = metricConfig.filter((m) => m.section === section);
+            const target = sectionMetrics.find(
+                (metric) =>
+                    metric.searchbaseId === record.id &&
+                    isSectionTileHidden(section, metric.id)
+            );
+            if (!target) return;
+
+            const visibleSectionMetrics = renderMetricConfig.filter(
+                (metric) => metric.section === section
+            );
+            const currentVisibleCount = Math.min(
+                sectionTileCounts[section],
+                Math.min(sectionTileBounds.maxCount, visibleSectionMetrics.length)
+            );
+            const nextSectionMetrics = sectionMetrics.filter(
+                (metric) =>
+                    metric.id === target.id ||
+                    !isSectionTileHidden(section, metric.id)
+            );
+            const canonicalIds = getFactoryTileOrder(section, nextSectionMetrics);
+            const orderedIds = getSectionTileOrder(section, canonicalIds);
+            const nextOrder = orderedIds.filter((id) => id !== target.id);
+            const insertAt =
+                currentVisibleCount >= sectionTileBounds.maxCount
+                    ? Math.max(0, currentVisibleCount - 1)
+                    : Math.min(currentVisibleCount, nextOrder.length);
+            nextOrder.splice(insertAt, 0, target.id);
+
+            showSectionTile(section, target.id);
+            setSectionTileOrder(section, nextOrder);
+            setSectionTileCount(
+                section,
+                Math.min(
+                    sectionTileBounds.maxCount,
+                    currentVisibleCount + 1,
+                    visibleSectionMetrics.length + 1
+                )
+            );
+        },
+        [
+            getFactoryTileOrder,
+            getSectionTileOrder,
+            isSectionTileHidden,
+            metricConfig,
+            renderMetricConfig,
+            sectionTileBounds.maxCount,
+            sectionTileCounts,
+            setSectionTileCount,
+            setSectionTileOrder,
+            showSectionTile,
+        ]
+    );
 
     // Bump this counter to force a fresh mount of <CustomerTopologyMap>.
     // localStorage `storage` events only fire across tabs, so wiping
@@ -2928,6 +3225,52 @@ const OverviewPage: React.FC = () => {
             }
         >;
     }, [overviewProfile, sectionTitles]);
+
+    const addTilePickerState = useMemo(() => {
+        if (!addTileSection) return null;
+        const sectionMetrics = metricConfig.filter((m) => m.section === addTileSection);
+        const visibleSectionMetrics = renderMetricConfig.filter(
+            (m) => m.section === addTileSection
+        );
+        const currentSearchbaseIds = new Set(
+            sectionMetrics
+                .map((metric) => metric.searchbaseId)
+                .filter((id): id is string => Boolean(id))
+        );
+        const hiddenSearchbaseIds = new Set(
+            sectionMetrics
+                .filter((metric) =>
+                    isSectionTileHidden(addTileSection, metric.id)
+                )
+                .map((metric) => metric.searchbaseId)
+                .filter((id): id is string => Boolean(id))
+        );
+        const currentVisibleCount = Math.min(
+            sectionTileCounts[addTileSection],
+            Math.min(sectionTileBounds.maxCount, visibleSectionMetrics.length)
+        );
+        return {
+            section: addTileSection,
+            sectionTitle:
+                effectiveSectionMeta[addTileSection]?.title ?? addTileSection,
+            currentSearchbaseIds,
+            hiddenSearchbaseIds,
+            locallyAddedSearchbaseIds: new Set(
+                getSectionTileAdditions(addTileSection)
+            ),
+            currentTileCount: sectionMetrics.length,
+            currentVisibleCount,
+        };
+    }, [
+        addTileSection,
+        effectiveSectionMeta,
+        getSectionTileAdditions,
+        isSectionTileHidden,
+        metricConfig,
+        renderMetricConfig,
+        sectionTileBounds.maxCount,
+        sectionTileCounts,
+    ]);
 
     // Saved-search names already bound across the dashboard, so the
     // picker can flag duplicates with an "in use" badge. Search
@@ -3144,7 +3487,9 @@ const OverviewPage: React.FC = () => {
             // Resolve siblings from the metric catalogue only. Display
             // flags are the only thing left in the per-user override,
             // so no need to carry a search binding through anymore.
-            const sectionMetrics = metricConfig.filter((m) => m.section === sectionId);
+            const sectionMetrics = renderMetricConfig.filter(
+                (m) => m.section === sectionId
+            );
             for (const m of sectionMetrics) {
                 const existing = overrides[m.id];
                 const next: MetricOverride = {
@@ -3161,7 +3506,7 @@ const OverviewPage: React.FC = () => {
             }
             setPickerContext(null);
         },
-        [metricConfig, overrides, setOverride]
+        [overrides, renderMetricConfig, setOverride]
     );
 
     // "Factory reset" — wipes every persisted dashboard customisation
@@ -3176,6 +3521,9 @@ const OverviewPage: React.FC = () => {
     //   • sectionTileCounts.v1          — visible tile count per section
     //                                      (forced back to the original
     //                                      three-tile executive summary)
+    //   • sectionTileAdditions.v1       — per-user searchbase tiles added
+    //                                      into profile sections
+    //   • sectionHiddenTiles.v1         — per-user hidden factory tiles
     //   • sectionHeights.v1             — vertical room per section
     //   • sectionTileOrder.v1           — drag-to-reorder preference
     //   • local/overview_factory_tiles.conf — shared saved order/count overlay
@@ -3206,6 +3554,8 @@ const OverviewPage: React.FC = () => {
         resetAllSearchbaseDrilldowns();
         resetAllSectionLayout();
         resetAllSectionTileCounts();
+        resetAllSectionTileAdditions();
+        resetAllSectionHiddenTiles();
         availableSections.forEach((section) => {
             setSectionTileCount(section, sectionTileBounds.minCount);
         });
@@ -3219,6 +3569,7 @@ const OverviewPage: React.FC = () => {
         setMapVisible(MAP_VISIBLE_DEFAULT);
         setSelectedPriorityDrilldownView(DEFAULT_PRIORITY_DRILLDOWN_VIEW);
         clearPriorityDrilldownView();
+        setAddTileSection(null);
         if (typeof window !== 'undefined' && window.localStorage) {
             try {
                 window.localStorage.removeItem(SPLIT_KEY);
@@ -3261,6 +3612,8 @@ const OverviewPage: React.FC = () => {
         resetAllSearchbaseDrilldowns,
         resetAllSectionLayout,
         resetAllSectionTileCounts,
+        resetAllSectionTileAdditions,
+        resetAllSectionHiddenTiles,
         setSectionTileCount,
         sectionTileBounds.minCount,
         resetAllSectionHeights,
@@ -3281,7 +3634,11 @@ const OverviewPage: React.FC = () => {
     const handleSaveOverviewFactoryDefaults = useCallback(async () => {
         const next: OverviewFactoryTilesConfig = {};
         for (const section of availableSections) {
-            const sectionMetrics = metricConfig.filter((m) => m.section === section);
+            // Shared factory defaults must stay tied to searchbase-owned
+            // Overview definitions. Local additions are intentionally
+            // per-user until an admin promotes them by adding proper
+            // viz_options.overview metadata to searchbase.conf.
+            const sectionMetrics = baseMetricConfig.filter((m) => m.section === section);
             if (sectionMetrics.length === 0) continue;
             const factoryOrder = getFactoryTileOrder(section, sectionMetrics);
             const effectiveOrder = getSectionTileOrder(section, factoryOrder);
@@ -3317,9 +3674,9 @@ const OverviewPage: React.FC = () => {
         }
     }, [
         availableSections,
+        baseMetricConfig,
         getFactoryTileOrder,
         getSectionTileOrder,
-        metricConfig,
         sectionTileBounds.maxCount,
         sectionTileCounts,
         overviewProfile.id,
@@ -3987,8 +4344,11 @@ const OverviewPage: React.FC = () => {
                     >
                         {visibleSections.map((section) => {
                             const meta = effectiveSectionMeta[section];
-                            const allSectionMetrics = metricConfig.filter(
+                            const allSectionMetrics = renderMetricConfig.filter(
                                 (m) => m.section === section
+                            );
+                            const locallyAddedSearchbaseIds = new Set(
+                                getSectionTileAdditions(section)
                             );
                             // The pill's max is whichever is smaller —
                             // the global cap (sectionTileBounds.maxCount)
@@ -4095,6 +4455,11 @@ const OverviewPage: React.FC = () => {
                                               }
                                             : undefined
                                     }
+                                    addTileAction={{
+                                        label: `Add search to ${meta.title}`,
+                                        title: `Add search to ${meta.title}`,
+                                        onClick: () => setAddTileSection(section),
+                                    }}
                                     onEditTitle={() => setSectionTitlesEditorOpen(true)}
                                 >
                                     <DndContext
@@ -4118,11 +4483,43 @@ const OverviewPage: React.FC = () => {
                                             {visibleIds.map((id, idx) => {
                                                 const cfg = byId.get(id);
                                                 if (!cfg) return null;
+                                                const isLocalAddition =
+                                                    cfg.searchbaseId
+                                                        ? locallyAddedSearchbaseIds.has(
+                                                              cfg.searchbaseId
+                                                          ) &&
+                                                          cfg.id ===
+                                                              overviewAdditionTileId(
+                                                                  section,
+                                                                  cfg.searchbaseId
+                                                              )
+                                                        : false;
                                                 return (
                                                     <SortableMetricCard
                                                         key={cfg.id}
                                                         id={cfg.id}
                                                         ariaLabel={cfg.label}
+                                                        tileAction={{
+                                                            label: isLocalAddition
+                                                                ? `Remove ${cfg.label}`
+                                                                : `Hide ${cfg.label}`,
+                                                            title: isLocalAddition
+                                                                ? `Remove added tile ${cfg.label}`
+                                                                : `Hide ${cfg.label} from this overview`,
+                                                            tone: isLocalAddition
+                                                                ? 'remove'
+                                                                : 'hide',
+                                                            onClick: () =>
+                                                                isLocalAddition &&
+                                                                cfg.searchbaseId
+                                                                    ? removeAddedSearchbaseIdFromSection(
+                                                                          section,
+                                                                          cfg.searchbaseId
+                                                                      )
+                                                                    : handleHideTileFromSection(
+                                                                          cfg
+                                                                      ),
+                                                        }}
                                                         className={
                                                             wrapTiles
                                                                 ? 'min-w-[240px] md:min-w-[250px] min-h-[148px]'
@@ -4430,6 +4827,38 @@ const OverviewPage: React.FC = () => {
                 shortcuts={helpShortcutRows}
             />
 
+            {addTilePickerState && (
+                <OverviewAddTilePanel
+                    open={addTileSection !== null}
+                    profile={overviewProfile}
+                    section={addTilePickerState.section}
+                    sectionTitle={addTilePickerState.sectionTitle}
+                    records={searchbaseRecords ?? []}
+                    loading={searchbaseRecords === null}
+                    currentSearchbaseIds={addTilePickerState.currentSearchbaseIds}
+                    hiddenSearchbaseIds={addTilePickerState.hiddenSearchbaseIds}
+                    locallyAddedSearchbaseIds={
+                        addTilePickerState.locallyAddedSearchbaseIds
+                    }
+                    currentTileCount={addTilePickerState.currentTileCount}
+                    currentVisibleCount={addTilePickerState.currentVisibleCount}
+                    maxTileCount={sectionTileBounds.maxCount}
+                    onAdd={(record) =>
+                        handleAddSearchToSection(addTilePickerState.section, record)
+                    }
+                    onRemove={(record) =>
+                        handleRemoveAddedSearchFromSection(
+                            addTilePickerState.section,
+                            record
+                        )
+                    }
+                    onUnhide={(record) =>
+                        handleShowSearchInSection(addTilePickerState.section, record)
+                    }
+                    onClose={closeAddTilePicker}
+                />
+            )}
+
             <KpiPickerPanel
                 open={pickerContext !== null}
                 context={pickerContext}
@@ -4532,6 +4961,1252 @@ const OverviewPage: React.FC = () => {
                 onResetLayout={resetAllSectionLayout}
             />
         </div>
+    );
+};
+
+// =============================================================================
+// Section add-search drawer
+// =============================================================================
+
+const ALL_ADD_TILE_CATEGORIES = '__all_add_tile_categories';
+const ALL_ADD_TILE_SUB_CATEGORIES = '__all_add_tile_sub_categories';
+const DEFAULT_ADD_TILE_APP_SCOPE = 'splunk-cisco-dashboards';
+const ADD_TILE_TAG_CHIP_LIMIT = 24;
+
+const makeDefaultAddTileAppSelection = (): Set<string> =>
+    new Set([DEFAULT_ADD_TILE_APP_SCOPE]);
+
+const isDefaultAddTileAppSelection = (selection: ReadonlySet<string>): boolean =>
+    selection.size === 1 && selection.has(DEFAULT_ADD_TILE_APP_SCOPE);
+
+const recordMatchesAddTileAppSelection = (
+    record: SearchbaseRecord,
+    selection: ReadonlySet<string>
+): boolean => selection.size === 0 || selection.has(record.dispatchContext);
+
+const recordHasTag = (record: SearchbaseRecord, tagName: string): boolean =>
+    record.tags.some((tag) => tag.toLowerCase() === tagName.toLowerCase());
+
+const recordMatchesProfileScope = (
+    record: SearchbaseRecord,
+    profile: OverviewProfile
+): boolean => {
+    if (!record.search?.trim()) return false;
+    const requiredTag = profile.autoDiscovery?.requiredTag;
+    return requiredTag ? recordHasTag(record, requiredTag) : true;
+};
+
+const recordMatchesProfileSection = (
+    record: SearchbaseRecord,
+    profile: OverviewProfile,
+    section: SectionId
+): boolean => {
+    const explicitOverviewMatch = overviewDefinitionsFromRecord(record).some(
+        (definition) =>
+            parseOverviewProfile(definition.profile) === profile.id &&
+            parseOverviewSection(definition.section, profile) === section
+    );
+    if (explicitOverviewMatch) return true;
+
+    const auto = profile.autoDiscovery;
+    if (!auto) return true;
+    return record.subCategory
+        ? auto.subCategoryToSection[record.subCategory] === section
+        : false;
+};
+
+const recordIsAddTileDrilldownSearch = (
+    record: SearchbaseRecord,
+    drilldownSearchNames: ReadonlySet<string>
+): boolean =>
+    drilldownSearchNames.has(record.searchName.trim().toLowerCase()) ||
+    drilldownSearchNames.has(record.id.trim().toLowerCase());
+
+const recordMatchesAddTileVisibility = (
+    record: SearchbaseRecord,
+    drilldownSearchNames: ReadonlySet<string>,
+    includeDrilldownSearches: boolean,
+    includeTableSearches: boolean
+): boolean => {
+    if (
+        !includeDrilldownSearches &&
+        recordIsAddTileDrilldownSearch(record, drilldownSearchNames)
+    ) {
+        return false;
+    }
+    if (
+        !includeTableSearches &&
+        (record.defaultViz ?? '').trim().toLowerCase() === 'splunk.table'
+    ) {
+        return false;
+    }
+    return true;
+};
+
+const recordMatchesAddTileQuery = (
+    record: SearchbaseRecord,
+    query: string
+): boolean => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    const description =
+        plainTextFromHtml(record.explanation) ??
+        plainTextFromHtml(record.description) ??
+        '';
+    return (
+        record.searchName.toLowerCase().includes(q) ||
+        record.id.toLowerCase().includes(q) ||
+        record.category.toLowerCase().includes(q) ||
+        record.subCategory.toLowerCase().includes(q) ||
+        description.toLowerCase().includes(q) ||
+        record.tags.some((tag) => tag.toLowerCase().includes(q))
+    );
+};
+
+interface OverviewAddTileAppMultiSelectProps {
+    apps: string[];
+    appCountByName: ReadonlyMap<string, number>;
+    selectedApps: ReadonlySet<string>;
+    onChange: (next: Set<string>) => void;
+}
+
+const OverviewAddTileAppMultiSelect: React.FC<OverviewAddTileAppMultiSelectProps> = ({
+    apps,
+    appCountByName,
+    selectedApps,
+    onChange,
+}) => {
+    const [open, setOpen] = useState(false);
+    const containerRef = useRef<HTMLDivElement | null>(null);
+    const isAllApps = selectedApps.size === 0;
+    const appOptions = useMemo(() => {
+        const set = new Set(apps);
+        if (!set.has(DEFAULT_ADD_TILE_APP_SCOPE)) {
+            set.add(DEFAULT_ADD_TILE_APP_SCOPE);
+        }
+        return Array.from(set).sort((a, b) =>
+            a.localeCompare(b, undefined, { sensitivity: 'base' })
+        );
+    }, [apps]);
+    const selectedList = appOptions.filter((app) => selectedApps.has(app));
+
+    useEffect(() => {
+        if (!open) return undefined;
+        const handler = (e: MouseEvent) => {
+            if (!containerRef.current?.contains(e.target as Node)) {
+                setOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [open]);
+
+    const toggleApp = (app: string) => {
+        const next = new Set<string>(isAllApps ? [] : selectedApps);
+        if (next.has(app)) {
+            next.delete(app);
+        } else {
+            next.add(app);
+        }
+        onChange(next);
+    };
+
+    const removeApp = (app: string) => {
+        const next = new Set<string>(selectedApps);
+        next.delete(app);
+        onChange(next);
+    };
+
+    return (
+        <div className="relative min-w-0" ref={containerRef}>
+            <div
+                role="combobox"
+                aria-label="Filter searches by app"
+                aria-controls="overview-add-search-app-filter-options"
+                aria-expanded={open}
+                tabIndex={0}
+                onClick={() => setOpen(true)}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setOpen((v) => !v);
+                    } else if (e.key === 'Escape') {
+                        setOpen(false);
+                    }
+                }}
+                className={cn(
+                    'flex min-h-[42px] w-full cursor-pointer flex-wrap items-center gap-1 rounded-lg border bg-white px-2 py-1.5 text-sm transition-shadow dark:bg-slate-950',
+                    open
+                        ? 'border-sky-400 ring-2 ring-sky-400/25'
+                        : 'border-slate-200 dark:border-slate-800'
+                )}
+            >
+                {isAllApps ? (
+                    <span className="min-w-0 flex-1 truncate font-semibold text-slate-700 dark:text-slate-100">
+                        All apps ({appOptions.length})
+                    </span>
+                ) : (
+                    selectedList.map((app) => {
+                        const count = appCountByName.get(app) ?? 0;
+                        return (
+                            <span
+                                key={app}
+                                className="inline-flex max-w-full items-center gap-1 rounded-full bg-sky-500 py-0.5 pl-2 pr-1 text-[10px] font-bold uppercase tracking-wide text-white"
+                            >
+                                <span className="max-w-[220px] truncate">{app}</span>
+                                {count > 0 && (
+                                    <span className="font-normal opacity-75">{count}</span>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        removeApp(app);
+                                    }}
+                                    title={`Remove ${app} app filter`}
+                                    aria-label={`Remove ${app} app filter`}
+                                    className="rounded-full p-0.5 hover:bg-sky-700/40"
+                                >
+                                    <X className="h-2.5 w-2.5" />
+                                </button>
+                            </span>
+                        );
+                    })
+                )}
+                {!isAllApps && selectedList.length === 0 && (
+                    <span className="min-w-0 flex-1 truncate font-semibold text-slate-500 dark:text-slate-400">
+                        No matching apps selected
+                    </span>
+                )}
+                <ChevronDown className="ml-auto h-4 w-4 shrink-0 text-slate-400" />
+            </div>
+
+            {open && (
+                <div
+                    id="overview-add-search-app-filter-options"
+                    role="listbox"
+                    aria-label="Filter searches by app"
+                    aria-multiselectable="true"
+                    className="absolute left-0 right-0 top-full z-30 mt-1 max-h-64 overflow-auto rounded-lg border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900"
+                >
+                    <button
+                        type="button"
+                        role="option"
+                        aria-selected={isAllApps}
+                        onClick={() => onChange(new Set())}
+                        className={cn(
+                            'flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-xs transition-colors focus:outline-none',
+                            isAllApps
+                                ? 'bg-sky-50 dark:bg-sky-900/30'
+                                : 'hover:bg-sky-50 dark:hover:bg-sky-900/30'
+                        )}
+                    >
+                        <span className="flex min-w-0 items-center gap-2 truncate font-semibold text-slate-700 dark:text-slate-200">
+                            <span
+                                className={cn(
+                                    'flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border',
+                                    isAllApps
+                                        ? 'border-sky-500 bg-sky-500 text-white'
+                                        : 'border-slate-300 dark:border-slate-700'
+                                )}
+                            >
+                                {isAllApps && <Check className="h-3 w-3" />}
+                            </span>
+                            <span className="truncate">All apps</span>
+                        </span>
+                        <span className="shrink-0 text-[10px] font-bold text-slate-400 dark:text-slate-500">
+                            {appOptions.length}
+                        </span>
+                    </button>
+                    {appOptions.map((app) => {
+                        const selected = selectedApps.has(app);
+                        const count = appCountByName.get(app) ?? 0;
+                        return (
+                            <button
+                                key={app}
+                                type="button"
+                                role="option"
+                                aria-selected={selected}
+                                onClick={() => toggleApp(app)}
+                                className={cn(
+                                    'flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-xs transition-colors focus:outline-none',
+                                    selected
+                                        ? 'bg-sky-50 dark:bg-sky-900/30'
+                                        : 'hover:bg-sky-50 dark:hover:bg-sky-900/30'
+                                )}
+                            >
+                                <span className="flex min-w-0 items-center gap-2 truncate text-slate-700 dark:text-slate-200">
+                                    <span
+                                        className={cn(
+                                            'flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border',
+                                            selected
+                                                ? 'border-sky-500 bg-sky-500 text-white'
+                                                : 'border-slate-300 dark:border-slate-700'
+                                        )}
+                                    >
+                                        {selected && <Check className="h-3 w-3" />}
+                                    </span>
+                                    <span className="truncate">{app}</span>
+                                </span>
+                                <span className="shrink-0 text-[10px] font-bold text-slate-400 dark:text-slate-500">
+                                    {count}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+};
+
+interface OverviewAddTilePanelProps {
+    open: boolean;
+    profile: OverviewProfile;
+    section: SectionId;
+    sectionTitle: string;
+    records: SearchbaseRecord[];
+    loading: boolean;
+    currentSearchbaseIds: ReadonlySet<string>;
+    hiddenSearchbaseIds: ReadonlySet<string>;
+    locallyAddedSearchbaseIds: ReadonlySet<string>;
+    currentTileCount: number;
+    currentVisibleCount: number;
+    maxTileCount: number;
+    onAdd: (record: SearchbaseRecord) => void;
+    onRemove: (record: SearchbaseRecord) => void;
+    onUnhide: (record: SearchbaseRecord) => void;
+    onClose: () => void;
+}
+
+const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
+    open,
+    profile,
+    section,
+    sectionTitle,
+    records,
+    loading,
+    currentSearchbaseIds,
+    hiddenSearchbaseIds,
+    locallyAddedSearchbaseIds,
+    currentTileCount,
+    currentVisibleCount,
+    maxTileCount,
+    onAdd,
+    onRemove,
+    onUnhide,
+    onClose,
+}) => {
+    const [query, setQuery] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState(ALL_ADD_TILE_CATEGORIES);
+    const [selectedSubCategory, setSelectedSubCategory] = useState(
+        ALL_ADD_TILE_SUB_CATEGORIES
+    );
+    const [selectedApps, setSelectedApps] = useState<Set<string>>(
+        makeDefaultAddTileAppSelection
+    );
+    const [includeHiddenSearches, setIncludeHiddenSearches] = useState(false);
+    const [includeDrilldownSearches, setIncludeDrilldownSearches] = useState(false);
+    const [includeTableSearches, setIncludeTableSearches] = useState(false);
+    const [activeTags, setActiveTags] = useState<Set<string>>(() => new Set());
+    const [tagFilter, setTagFilter] = useState('');
+    const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
+    const [filtersOpen, setFiltersOpen] = useState(false);
+    const [showAllProfileSearches, setShowAllProfileSearches] = useState(false);
+    const searchInputRef = useRef<HTMLInputElement | null>(null);
+    const tagSelectRef = useRef<HTMLDivElement | null>(null);
+    const tagInputRef = useRef<HTMLInputElement | null>(null);
+
+    useEffect(() => {
+        if (!open) return;
+        setQuery('');
+        setSelectedCategory(ALL_ADD_TILE_CATEGORIES);
+        setSelectedSubCategory(ALL_ADD_TILE_SUB_CATEGORIES);
+        setSelectedApps(makeDefaultAddTileAppSelection());
+        setIncludeHiddenSearches(false);
+        setIncludeDrilldownSearches(false);
+        setIncludeTableSearches(false);
+        setActiveTags(new Set());
+        setTagFilter('');
+        setTagDropdownOpen(false);
+        setFiltersOpen(false);
+        setShowAllProfileSearches(false);
+        if (typeof window === 'undefined') return;
+        const id = window.setTimeout(() => searchInputRef.current?.focus(), 30);
+        return () => window.clearTimeout(id);
+    }, [open, profile.id, section]);
+
+    useEffect(() => {
+        if (!open) return undefined;
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [open, onClose]);
+
+    useEffect(() => {
+        if (!open || !tagDropdownOpen) return undefined;
+        const handler = (e: MouseEvent) => {
+            if (!tagSelectRef.current?.contains(e.target as Node)) {
+                setTagDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [open, tagDropdownOpen]);
+
+    const profileRecords = useMemo(
+        () =>
+            records
+                .filter((record) => recordMatchesProfileScope(record, profile))
+                .sort((a, b) =>
+                    a.searchName.localeCompare(b.searchName, undefined, {
+                        sensitivity: 'base',
+                    })
+                ),
+        [profile, records]
+    );
+
+    const drilldownSearchNames = useMemo(() => {
+        const names = new Set<string>();
+        for (const record of profileRecords) {
+            const name = record.drilldownSearchName?.trim();
+            if (name) names.add(name.toLowerCase());
+        }
+        return names;
+    }, [profileRecords]);
+
+    const sectionRecords = useMemo(
+        () =>
+            profileRecords.filter((record) =>
+                recordMatchesProfileSection(record, profile, section)
+            ),
+        [profile, profileRecords, section]
+    );
+
+    const sectionScopedRecords =
+        sectionRecords.length > 0 ? sectionRecords : profileRecords;
+    const browseRecords = showAllProfileSearches
+        ? profileRecords
+        : sectionScopedRecords;
+    const showScopeToggle =
+        Boolean(profile.autoDiscovery) &&
+        profileRecords.length > sectionScopedRecords.length;
+
+    const browseVisibleRecords = useMemo(() => {
+        return browseRecords.filter((record) => {
+            if (
+                !includeHiddenSearches &&
+                (record.searchHidden || hiddenSearchbaseIds.has(record.id))
+            ) {
+                return false;
+            }
+            if (!recordMatchesAddTileAppSelection(record, selectedApps)) {
+                return false;
+            }
+            return recordMatchesAddTileVisibility(
+                record,
+                drilldownSearchNames,
+                includeDrilldownSearches,
+                includeTableSearches
+            );
+        });
+    }, [
+        browseRecords,
+        drilldownSearchNames,
+        hiddenSearchbaseIds,
+        includeDrilldownSearches,
+        includeHiddenSearches,
+        includeTableSearches,
+        selectedApps,
+    ]);
+
+    const apps = useMemo(() => {
+        const set = new Set<string>();
+        for (const record of profileRecords) {
+            if (record.dispatchContext) set.add(record.dispatchContext);
+        }
+        return Array.from(set).sort((a, b) =>
+            a.localeCompare(b, undefined, { sensitivity: 'base' })
+        );
+    }, [profileRecords]);
+
+    const appCountByName = useMemo(() => {
+        const map = new Map<string, number>();
+        for (const record of profileRecords) {
+            if (record.dispatchContext) {
+                map.set(
+                    record.dispatchContext,
+                    (map.get(record.dispatchContext) ?? 0) + 1
+                );
+            }
+        }
+        return map;
+    }, [profileRecords]);
+
+    const categories = useMemo(() => {
+        const set = new Set<string>();
+        for (const record of browseVisibleRecords) {
+            if (record.category) set.add(record.category);
+        }
+        return Array.from(set).sort((a, b) =>
+            a.localeCompare(b, undefined, { sensitivity: 'base' })
+        );
+    }, [browseVisibleRecords]);
+
+    const subCategories = useMemo(() => {
+        if (selectedCategory === ALL_ADD_TILE_CATEGORIES) return [];
+        const set = new Set<string>();
+        for (const record of browseVisibleRecords) {
+            if (record.category !== selectedCategory) continue;
+            if (record.subCategory) set.add(record.subCategory);
+        }
+        return Array.from(set).sort((a, b) =>
+            a.localeCompare(b, undefined, { sensitivity: 'base' })
+        );
+    }, [browseVisibleRecords, selectedCategory]);
+
+    useEffect(() => {
+        if (
+            selectedCategory !== ALL_ADD_TILE_CATEGORIES &&
+            !categories.includes(selectedCategory)
+        ) {
+            setSelectedCategory(ALL_ADD_TILE_CATEGORIES);
+        }
+    }, [categories, selectedCategory]);
+
+    useEffect(() => {
+        if (
+            selectedSubCategory !== ALL_ADD_TILE_SUB_CATEGORIES &&
+            !subCategories.includes(selectedSubCategory)
+        ) {
+            setSelectedSubCategory(ALL_ADD_TILE_SUB_CATEGORIES);
+        }
+    }, [selectedSubCategory, subCategories]);
+
+    useEffect(() => {
+        setSelectedSubCategory(ALL_ADD_TILE_SUB_CATEGORIES);
+        setActiveTags(new Set());
+    }, [selectedCategory]);
+
+    useEffect(() => {
+        setSelectedCategory(ALL_ADD_TILE_CATEGORIES);
+        setSelectedSubCategory(ALL_ADD_TILE_SUB_CATEGORIES);
+        setActiveTags(new Set());
+    }, [selectedApps]);
+
+    useEffect(() => {
+        if (
+            showAllProfileSearches ||
+            !isDefaultAddTileAppSelection(selectedApps) ||
+            includeHiddenSearches ||
+            includeDrilldownSearches ||
+            includeTableSearches ||
+            selectedCategory !== ALL_ADD_TILE_CATEGORIES ||
+            selectedSubCategory !== ALL_ADD_TILE_SUB_CATEGORIES ||
+            activeTags.size > 0
+        ) {
+            setFiltersOpen(true);
+        }
+    }, [
+        activeTags,
+        includeDrilldownSearches,
+        includeHiddenSearches,
+        includeTableSearches,
+        selectedApps,
+        selectedCategory,
+        selectedSubCategory,
+        showAllProfileSearches,
+    ]);
+
+    const tagFacetRecords = useMemo(() => {
+        return browseVisibleRecords.filter((record) => {
+            if (
+                selectedCategory !== ALL_ADD_TILE_CATEGORIES &&
+                record.category !== selectedCategory
+            ) {
+                return false;
+            }
+            if (
+                selectedSubCategory !== ALL_ADD_TILE_SUB_CATEGORIES &&
+                record.subCategory !== selectedSubCategory
+            ) {
+                return false;
+            }
+            if (activeTags.size > 0) {
+                for (const tag of activeTags) {
+                    if (!record.tags.includes(tag)) return false;
+                }
+            }
+            return recordMatchesAddTileQuery(record, query);
+        });
+    }, [
+        activeTags,
+        browseVisibleRecords,
+        query,
+        selectedCategory,
+        selectedSubCategory,
+    ]);
+
+    const allTagsWithCounts = useMemo(() => {
+        const map = new Map<string, number>();
+        for (const record of tagFacetRecords) {
+            for (const tag of record.tags) map.set(tag, (map.get(tag) ?? 0) + 1);
+        }
+        return Array.from(map.entries()).sort(
+            (a, b) => b[1] - a[1] || a[0].localeCompare(b[0])
+        );
+    }, [tagFacetRecords]);
+
+    const tagDropdownOptions = useMemo(() => {
+        const filter = tagFilter.trim().toLowerCase();
+        const available = allTagsWithCounts.filter(([tag]) => !activeTags.has(tag));
+        if (!filter) return available.slice(0, ADD_TILE_TAG_CHIP_LIMIT);
+        return available.filter(([tag]) => tag.toLowerCase().includes(filter));
+    }, [activeTags, allTagsWithCounts, tagFilter]);
+
+    const tagCountByName = useMemo(() => {
+        const map = new Map<string, number>();
+        for (const [tag, count] of allTagsWithCounts) map.set(tag, count);
+        return map;
+    }, [allTagsWithCounts]);
+
+    const filteredRecords = useMemo(() => {
+        return browseVisibleRecords.filter((record) => {
+            if (
+                selectedCategory !== ALL_ADD_TILE_CATEGORIES &&
+                record.category !== selectedCategory
+            ) {
+                return false;
+            }
+            if (
+                selectedSubCategory !== ALL_ADD_TILE_SUB_CATEGORIES &&
+                record.subCategory !== selectedSubCategory
+            ) {
+                return false;
+            }
+            if (activeTags.size > 0) {
+                for (const tag of activeTags) {
+                    if (!record.tags.includes(tag)) return false;
+                }
+            }
+            return recordMatchesAddTileQuery(record, query);
+        });
+    }, [
+        activeTags,
+        browseVisibleRecords,
+        query,
+        selectedCategory,
+        selectedSubCategory,
+    ]);
+
+    const addTag = (tag: string) => {
+        setActiveTags((prev) => {
+            if (prev.has(tag)) return prev;
+            const next = new Set(prev);
+            next.add(tag);
+            return next;
+        });
+        setTagFilter('');
+        tagInputRef.current?.focus();
+    };
+
+    const removeTag = (tag: string) => {
+        setActiveTags((prev) => {
+            if (!prev.has(tag)) return prev;
+            const next = new Set(prev);
+            next.delete(tag);
+            return next;
+        });
+    };
+
+    const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Backspace' && tagFilter === '' && activeTags.size > 0) {
+            const arr = Array.from(activeTags);
+            removeTag(arr[arr.length - 1]);
+        } else if (e.key === 'Escape') {
+            setTagDropdownOpen(false);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (tagDropdownOptions.length > 0) addTag(tagDropdownOptions[0][0]);
+        } else if (e.key === 'ArrowDown' && !tagDropdownOpen) {
+            setTagDropdownOpen(true);
+        }
+    };
+
+    const activeFilterCount =
+        (showAllProfileSearches ? 1 : 0) +
+        (!isDefaultAddTileAppSelection(selectedApps) ? 1 : 0) +
+        (includeHiddenSearches ? 1 : 0) +
+        (includeDrilldownSearches ? 1 : 0) +
+        (includeTableSearches ? 1 : 0) +
+        (selectedCategory !== ALL_ADD_TILE_CATEGORIES ? 1 : 0) +
+        (selectedSubCategory !== ALL_ADD_TILE_SUB_CATEGORIES ? 1 : 0) +
+        activeTags.size;
+    const facetsActive = activeFilterCount > 0 || tagFilter.trim().length > 0;
+    const availableSearchLabel = `${filteredRecords.length.toLocaleString()} ${
+        filteredRecords.length === 1 ? 'search' : 'searches'
+    } available`;
+
+    const handleClearFacets = () => {
+        setSelectedApps(makeDefaultAddTileAppSelection());
+        setIncludeHiddenSearches(false);
+        setIncludeDrilldownSearches(false);
+        setIncludeTableSearches(false);
+        setSelectedCategory(ALL_ADD_TILE_CATEGORIES);
+        setSelectedSubCategory(ALL_ADD_TILE_SUB_CATEGORIES);
+        setActiveTags(new Set());
+        setTagFilter('');
+        setShowAllProfileSearches(false);
+    };
+
+    if (!open) return null;
+
+    const atVisibleMax = currentVisibleCount >= maxTileCount;
+    const countLabel = `${currentVisibleCount}/${maxTileCount} visible`;
+
+    return (
+        <>
+            <div
+                className="fixed inset-0 z-[1500] bg-slate-950/30 backdrop-blur-sm"
+                onClick={onClose}
+                aria-hidden="true"
+            />
+            <aside
+                role="dialog"
+                aria-modal="true"
+                aria-label={`Add search to ${sectionTitle}`}
+                className="fixed top-0 right-0 z-[1600] h-full w-full max-w-[calc(100vw-12px)] border-l border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900 sm:w-[500px] xl:w-[540px] flex flex-col"
+            >
+                <div className="flex flex-shrink-0 items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+                    <div className="min-w-0">
+                        <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                            Add search
+                        </p>
+                        <p className="truncate text-sm font-black text-slate-800 dark:text-slate-100">
+                            {sectionTitle}
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span
+                            title={`${currentVisibleCount} visible, ${currentTileCount} configured, maximum ${maxTileCount}`}
+                            className={cn(
+                                'rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-wider',
+                                atVisibleMax
+                                    ? 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/40 dark:text-amber-200'
+                                    : 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/50 dark:text-sky-200'
+                            )}
+                        >
+                            {countLabel}
+                        </span>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            title="Close (Esc)"
+                            aria-label="Close add search panel"
+                            className="rounded p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                    </div>
+                </div>
+
+                <div className="flex-shrink-0 space-y-2 px-4 py-3">
+                    <label className="relative block">
+                        <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                        <input
+                            ref={searchInputRef}
+                            type="text"
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            placeholder="Filter by name, description, or tag..."
+                            maxLength={120}
+                            className="w-full rounded-md border border-slate-200 bg-white py-1.5 pl-8 pr-2.5 text-[12px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                        />
+                    </label>
+
+                    <div className="flex items-center justify-between gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setFiltersOpen((o) => !o)}
+                            aria-expanded={filtersOpen}
+                            aria-controls="overview-add-search-filters"
+                            title={
+                                filtersOpen
+                                    ? 'Hide filters'
+                                    : 'Show filters (App, Visibility, Category, Sub-cat, Tags)'
+                            }
+                            className="flex items-center gap-1.5 rounded px-1.5 py-1 -ml-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-slate-100"
+                        >
+                            {filtersOpen ? (
+                                <ChevronDown className="h-3 w-3" />
+                            ) : (
+                                <ChevronRight className="h-3 w-3" />
+                            )}
+                            <span>Filters</span>
+                            {activeFilterCount > 0 && (
+                                <span
+                                    className="ml-1 rounded-full bg-sky-100 px-1.5 py-px text-[9px] font-semibold normal-case tracking-normal text-sky-700 dark:bg-sky-900/50 dark:text-sky-300"
+                                    title={`${activeFilterCount} active filter${activeFilterCount === 1 ? '' : 's'}`}
+                                >
+                                    {activeFilterCount} active
+                                </span>
+                            )}
+                        </button>
+                        <div className="flex items-center gap-2">
+                            <span
+                                title="Searchbase stanzas matching the current app, visibility, category, sub-category, tag, scope, and text filters"
+                                className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-sky-700 shadow-sm dark:border-sky-900/70 dark:bg-sky-950/50 dark:text-sky-200"
+                            >
+                                {availableSearchLabel}
+                            </span>
+                            {facetsActive && (
+                                <button
+                                    type="button"
+                                    onClick={handleClearFacets}
+                                    title="Reset every filter to its default"
+                                    className="text-[9px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200"
+                                >
+                                    Clear filters
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {filtersOpen && (
+                        <div
+                            id="overview-add-search-filters"
+                            className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-900/50"
+                        >
+                            {showScopeToggle && (
+                                <div className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-center">
+                                    <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+                                        Scope
+                                    </span>
+                                    <div
+                                        className="inline-flex w-fit rounded-md border border-slate-200 bg-white p-0.5 dark:border-slate-800 dark:bg-slate-950"
+                                        role="group"
+                                        aria-label="Search scope"
+                                    >
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowAllProfileSearches(false)}
+                                            className={cn(
+                                                'rounded px-2 py-1 text-[10px] font-black uppercase tracking-wider transition-colors',
+                                                !showAllProfileSearches
+                                                    ? 'bg-sky-50 text-sky-700 shadow-sm dark:bg-sky-950/50 dark:text-sky-200'
+                                                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'
+                                            )}
+                                        >
+                                            Suggested
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowAllProfileSearches(true)}
+                                            className={cn(
+                                                'rounded px-2 py-1 text-[10px] font-black uppercase tracking-wider transition-colors',
+                                                showAllProfileSearches
+                                                    ? 'bg-sky-50 text-sky-700 shadow-sm dark:bg-sky-950/50 dark:text-sky-200'
+                                                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'
+                                            )}
+                                        >
+                                            All profile
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-center">
+                                <span
+                                    className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400"
+                                    title="Splunk app the search dispatches in"
+                                >
+                                    App
+                                </span>
+                                <OverviewAddTileAppMultiSelect
+                                    apps={apps}
+                                    appCountByName={appCountByName}
+                                    selectedApps={selectedApps}
+                                    onChange={setSelectedApps}
+                                />
+                            </div>
+
+                            <div className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-start">
+                                <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+                                    Visibility
+                                </span>
+                                <div className="grid grid-cols-3 gap-2">
+                                    <label className="flex min-h-[58px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px] font-bold leading-snug text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                                        <input
+                                            type="checkbox"
+                                            checked={includeHiddenSearches}
+                                            onChange={(e) =>
+                                                setIncludeHiddenSearches(e.target.checked)
+                                            }
+                                            className="h-4 w-4 shrink-0 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-900"
+                                        />
+                                        <span>Show hidden searches</span>
+                                    </label>
+                                    <label className="flex min-h-[58px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px] font-bold leading-snug text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                                        <input
+                                            type="checkbox"
+                                            checked={includeDrilldownSearches}
+                                            onChange={(e) =>
+                                                setIncludeDrilldownSearches(
+                                                    e.target.checked
+                                                )
+                                            }
+                                            className="h-4 w-4 shrink-0 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-900"
+                                        />
+                                        <span>Show drill-down searches</span>
+                                    </label>
+                                    <label className="flex min-h-[58px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px] font-bold leading-snug text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                                        <input
+                                            type="checkbox"
+                                            checked={includeTableSearches}
+                                            onChange={(e) =>
+                                                setIncludeTableSearches(e.target.checked)
+                                            }
+                                            className="h-4 w-4 shrink-0 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-900"
+                                        />
+                                        <span>Show table searches</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            {categories.length > 0 && (
+                                <label className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-center">
+                                    <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+                                        Category
+                                    </span>
+                                    <select
+                                        value={selectedCategory}
+                                        onChange={(e) =>
+                                            setSelectedCategory(e.target.value)
+                                        }
+                                        aria-label="Filter searches by category"
+                                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-950"
+                                    >
+                                        <option value={ALL_ADD_TILE_CATEGORIES}>
+                                            All categories
+                                        </option>
+                                        {categories.map((category) => (
+                                            <option key={category} value={category}>
+                                                {category}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+                            )}
+
+                            {selectedCategory !== ALL_ADD_TILE_CATEGORIES &&
+                                subCategories.length > 0 && (
+                                    <label className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-center">
+                                        <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+                                            Sub-cat
+                                        </span>
+                                        <select
+                                            value={selectedSubCategory}
+                                            onChange={(e) =>
+                                                setSelectedSubCategory(e.target.value)
+                                            }
+                                            aria-label="Filter searches by sub-category"
+                                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-950"
+                                        >
+                                            <option value={ALL_ADD_TILE_SUB_CATEGORIES}>
+                                                All sub-categories (
+                                                {subCategories.length})
+                                            </option>
+                                            {subCategories.map((subCategory) => (
+                                                <option
+                                                    key={subCategory}
+                                                    value={subCategory}
+                                                >
+                                                    {subCategory}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                )}
+
+                            {(allTagsWithCounts.length > 0 || activeTags.size > 0) && (
+                                <div className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-start">
+                                    <span className="pt-2 text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+                                        Tags
+                                    </span>
+                                    <div className="relative" ref={tagSelectRef}>
+                                        <div
+                                            onClick={() => {
+                                                setTagDropdownOpen(true);
+                                                tagInputRef.current?.focus();
+                                            }}
+                                            className={cn(
+                                                'flex min-h-[42px] cursor-text flex-wrap items-center gap-1 rounded-lg border bg-white px-2 py-1.5 transition-shadow dark:bg-slate-950',
+                                                tagDropdownOpen
+                                                    ? 'border-sky-400 ring-2 ring-sky-400/25'
+                                                    : 'border-slate-200 dark:border-slate-800'
+                                            )}
+                                        >
+                                            <Tag className="ml-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
+                                            {Array.from(activeTags).map((tag) => {
+                                                const count =
+                                                    tagCountByName.get(tag) ?? 0;
+                                                return (
+                                                    <span
+                                                        key={tag}
+                                                        className="inline-flex items-center gap-1 rounded-full bg-sky-500 py-0.5 pl-2 pr-1 text-[10px] font-bold uppercase tracking-wide text-white"
+                                                    >
+                                                        {tag}
+                                                        {count > 0 && (
+                                                            <span className="font-normal opacity-75">
+                                                                {count}
+                                                            </span>
+                                                        )}
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                removeTag(tag);
+                                                            }}
+                                                            title={`Remove ${tag} filter`}
+                                                            aria-label={`Remove ${tag} filter`}
+                                                            className="rounded-full p-0.5 hover:bg-sky-700/40"
+                                                        >
+                                                            <X className="h-2.5 w-2.5" />
+                                                        </button>
+                                                    </span>
+                                                );
+                                            })}
+                                            <input
+                                                ref={tagInputRef}
+                                                type="text"
+                                                value={tagFilter}
+                                                onChange={(e) => {
+                                                    setTagFilter(e.target.value);
+                                                    setTagDropdownOpen(true);
+                                                }}
+                                                onFocus={() => setTagDropdownOpen(true)}
+                                                onKeyDown={handleTagInputKeyDown}
+                                                placeholder={
+                                                    activeTags.size === 0
+                                                        ? `Filter by tag (${allTagsWithCounts.length} tags available, AND combined)...`
+                                                        : 'Add tag...'
+                                                }
+                                                maxLength={64}
+                                                aria-label="Filter results by tag"
+                                                className="min-w-[120px] flex-1 border-0 bg-transparent py-1 text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-slate-100"
+                                            />
+                                        </div>
+
+                                        {tagDropdownOpen && (
+                                            <div
+                                                role="listbox"
+                                                aria-label="Available tags"
+                                                className="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-auto rounded-lg border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900"
+                                            >
+                                                {tagDropdownOptions.length === 0 ? (
+                                                    <p className="px-3 py-2 text-xs italic text-slate-400 dark:text-slate-500">
+                                                        {tagFilter.trim()
+                                                            ? `No more tags match "${tagFilter.trim()}".`
+                                                            : activeTags.size > 0
+                                                              ? 'All available tags already selected.'
+                                                              : 'No tags available in this slice.'}
+                                                    </p>
+                                                ) : (
+                                                    <>
+                                                        {tagDropdownOptions.map(
+                                                            ([tag, count], idx) => {
+                                                                const isFirstTyped =
+                                                                    idx === 0 &&
+                                                                    Boolean(
+                                                                        tagFilter.trim()
+                                                                    );
+                                                                return (
+                                                                    <button
+                                                                        key={tag}
+                                                                        type="button"
+                                                                        role="option"
+                                                                        aria-selected={
+                                                                            isFirstTyped
+                                                                        }
+                                                                        onClick={() =>
+                                                                            addTag(tag)
+                                                                        }
+                                                                        title={`${count} search${count === 1 ? '' : 'es'} tagged ${tag}`}
+                                                                        className={cn(
+                                                                            'flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-xs transition-colors focus:outline-none',
+                                                                            isFirstTyped
+                                                                                ? 'bg-sky-50 dark:bg-sky-900/30'
+                                                                                : 'hover:bg-sky-50 dark:hover:bg-sky-900/30'
+                                                                        )}
+                                                                    >
+                                                                        <span className="flex min-w-0 items-center gap-1.5 truncate text-slate-700 dark:text-slate-200">
+                                                                            <Tag className="h-3 w-3 shrink-0 text-slate-400" />
+                                                                            <span className="truncate">
+                                                                                {tag}
+                                                                            </span>
+                                                                        </span>
+                                                                        <span className="shrink-0 text-[10px] font-bold text-slate-400 dark:text-slate-500">
+                                                                            {count}
+                                                                        </span>
+                                                                    </button>
+                                                                );
+                                                            }
+                                                        )}
+                                                        {!tagFilter.trim() &&
+                                                            allTagsWithCounts.length -
+                                                                activeTags.size >
+                                                                tagDropdownOptions.length && (
+                                                                <p className="border-t border-slate-100 px-3 py-1.5 text-[10px] text-slate-400 dark:border-slate-800 dark:text-slate-500">
+                                                                    Top{' '}
+                                                                    {
+                                                                        tagDropdownOptions.length
+                                                                    }{' '}
+                                                                    of{' '}
+                                                                    {allTagsWithCounts.length -
+                                                                        activeTags.size}{' '}
+                                                                    - type to filter.
+                                                                </p>
+                                                            )}
+                                                    </>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                <div className="min-h-0 flex-1 overflow-auto px-3 pb-3">
+                    {loading && (
+                        <div className="px-3 py-8 text-center text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                            Loading searchbase.conf
+                        </div>
+                    )}
+                    {!loading && filteredRecords.length === 0 && (
+                        <div className="px-3 py-8 text-center text-xs font-semibold text-slate-400 dark:text-slate-500">
+                            No searches match the current filters.
+                        </div>
+                    )}
+                    {!loading &&
+                        filteredRecords.map((record) => {
+                            const alreadyInSection = currentSearchbaseIds.has(record.id);
+                            const hiddenInSection = hiddenSearchbaseIds.has(record.id);
+                            const locallyAdded = locallyAddedSearchbaseIds.has(record.id);
+                            const disabled = alreadyInSection && !hiddenInSection;
+                            const description =
+                                plainTextFromHtml(record.explanation) ??
+                                plainTextFromHtml(record.description);
+                            const tags = record.tags.slice(0, 3);
+                            return (
+                                <div
+                                    key={record.id}
+                                    className={cn(
+                                        'mb-2 rounded-lg border p-3 transition-colors',
+                                        hiddenInSection
+                                            ? 'border-amber-200 bg-amber-50/70 dark:border-amber-900/70 dark:bg-amber-950/30'
+                                            : alreadyInSection
+                                            ? 'border-sky-200 bg-sky-50/70 dark:border-sky-900/70 dark:bg-sky-950/30'
+                                            : 'border-slate-200 bg-white hover:border-sky-200 hover:bg-sky-50/40 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-sky-900/70 dark:hover:bg-sky-950/20'
+                                    )}
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex min-w-0 items-center gap-2">
+                                                <p
+                                                    className="truncate text-[12px] font-black text-slate-800 dark:text-slate-100"
+                                                    title={record.searchName}
+                                                >
+                                                    {record.searchName}
+                                                </p>
+                                                {hiddenInSection ? (
+                                                    <EyeOff className="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-300" />
+                                                ) : alreadyInSection ? (
+                                                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-sky-600 dark:text-sky-300" />
+                                                ) : null}
+                                                {record.searchHidden && (
+                                                    <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-slate-400 dark:bg-slate-800 dark:text-slate-500">
+                                                        Hidden
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="mt-0.5 truncate text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                                                {[record.category, record.subCategory]
+                                                    .filter(Boolean)
+                                                    .join(' / ') || record.id}
+                                            </p>
+                                            {description && (
+                                                <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-slate-500 dark:text-slate-400">
+                                                    {description}
+                                                </p>
+                                            )}
+                                            {tags.length > 0 && (
+                                                <div className="mt-2 flex flex-wrap gap-1">
+                                                    {tags.map((tag) => (
+                                                        <span
+                                                            key={tag}
+                                                            className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-300"
+                                                        >
+                                                            {tag}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {hiddenInSection ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => onUnhide(record)}
+                                                title={`Show ${record.searchName} in ${sectionTitle}`}
+                                                className="inline-flex h-8 shrink-0 items-center gap-1 rounded-md bg-amber-500 px-2 text-[10px] font-black uppercase tracking-wider text-white transition-colors hover:bg-amber-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+                                            >
+                                                <Eye className="h-3.5 w-3.5" />
+                                                Show
+                                            </button>
+                                        ) : locallyAdded ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => onRemove(record)}
+                                                title={`Remove ${record.searchName} from ${sectionTitle}`}
+                                                className="inline-flex h-8 shrink-0 items-center gap-1 rounded-md border border-red-200 bg-white px-2 text-[10px] font-black uppercase tracking-wider text-red-600 transition-colors hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-300 dark:border-red-900/70 dark:bg-slate-950 dark:text-red-300 dark:hover:bg-red-950/30"
+                                            >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                                Remove
+                                            </button>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                onClick={() => onAdd(record)}
+                                                disabled={disabled}
+                                                title={
+                                                    alreadyInSection
+                                                        ? 'Already in this section'
+                                                        : atVisibleMax
+                                                          ? `Add ${record.searchName} as the last visible tile`
+                                                          : `Add ${record.searchName}`
+                                                }
+                                                className={cn(
+                                                    'inline-flex h-8 shrink-0 items-center gap-1 rounded-md px-2 text-[10px] font-black uppercase tracking-wider transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
+                                                    disabled
+                                                        ? 'cursor-not-allowed bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500'
+                                                        : 'bg-sky-600 text-white hover:bg-sky-500 active:bg-sky-700'
+                                                )}
+                                            >
+                                                <Plus className="h-3.5 w-3.5" />
+                                                {alreadyInSection ? 'Added' : 'Add'}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                </div>
+            </aside>
+        </>
     );
 };
 

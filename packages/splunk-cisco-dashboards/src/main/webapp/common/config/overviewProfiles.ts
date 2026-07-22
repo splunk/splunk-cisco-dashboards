@@ -156,7 +156,7 @@ export const OVERVIEW_PROFILES: Record<OverviewProfileId, OverviewProfile> = {
         ],
         maxVisibleSections: 5,
         minTileCount: 1,
-        maxTileCount: 12,
+        maxTileCount: 9,
         fallbackTileCount: 3,
         autoDiscovery: {
             stanzaPrefix: 'secure_networking_',
