@@ -167,6 +167,7 @@ export const OVERVIEW_PROFILES: Record<OverviewProfileId, OverviewProfile> = {
                 'Scalable Network Segmentation': 'scalable_network_segmentation',
                 'Hybrid Mesh Firewalling': 'hybrid_mesh_firewalling',
                 'Agentic Ops': 'agentic_ops',
+                'Agentic Operations': 'agentic_ops',
             },
         },
     },

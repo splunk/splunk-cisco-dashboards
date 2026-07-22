@@ -33,10 +33,322 @@
 					}
 				}
 			}
+		},
+		"visualizations": {
+			"global": {
+				"showLastUpdated": true,
+				"showProgressBar": true
+			}
 		}
 	},
-	"visualizations": {},
-	"dataSources": {},
+	"visualizations": {
+		"viz_header": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#ffffff",
+				"fontColor": "#111827",
+				"markdown": "# Secure Infrastructure\nDevice posture, advisory exposure, SD-WAN health, and wireless infrastructure risk."
+			}
+		},
+		"viz_infra_sdwan_edges": {
+			"type": "splunk.singlevalue",
+			"title": "SD-WAN Edge Sites",
+			"dataSources": {
+				"primary": "ds_infra_sdwan_edge_count"
+			},
+			"options": {
+				"backgroundColor": "#ffffff",
+				"majorFontSize": 36,
+				"majorValue": "> primary | seriesByName('sdwan_site_count') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"sparklineDisplay": "off",
+				"trendDisplay": "off",
+				"majorColor": "#0ea5e9"
+			}
+		},
+		"viz_infra_dc_anomaly_count": {
+			"type": "splunk.singlevalue",
+			"title": "DC Fabric Anomalies",
+			"dataSources": {
+				"primary": "ds_infra_dc_anomalies"
+			},
+			"options": {
+				"backgroundColor": "#ffffff",
+				"majorFontSize": 36,
+				"majorValue": "> primary | seriesByName('anomaly_count') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"sparklineDisplay": "off",
+				"trendDisplay": "off",
+				"majorColor": "#f59e0b"
+			}
+		},
+		"viz_infra_dc_advisory_count": {
+			"type": "splunk.singlevalue",
+			"title": "DC Security Advisories",
+			"dataSources": {
+				"primary": "ds_infra_dc_advisories"
+			},
+			"options": {
+				"backgroundColor": "#ffffff",
+				"majorFontSize": 36,
+				"majorValue": "> primary | seriesByName('advisory_count') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"sparklineDisplay": "off",
+				"trendDisplay": "off",
+				"majorColor": "#dc2626"
+			}
+		},
+		"viz_infra_rogue_ap_count": {
+			"type": "splunk.singlevalue",
+			"title": "Rogue APs",
+			"dataSources": {
+				"primary": "ds_infra_rogue_ap_count"
+			},
+			"options": {
+				"backgroundColor": "#ffffff",
+				"majorFontSize": 36,
+				"majorValue": "> primary | seriesByName('rogue_ap_count') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"sparklineDisplay": "off",
+				"trendDisplay": "off",
+				"majorColor": "#dc2626"
+			}
+		},
+		"viz_infra_dc_trend": {
+			"type": "splunk.area",
+			"title": "DC Health Signals Trend",
+			"dataSources": {
+				"primary": "ds_infra_dc_trend"
+			},
+			"options": {
+				"backgroundColor": "#ffffff",
+				"legendDisplay": "right",
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"seriesColors": [
+					"#f59e0b",
+					"#dc2626"
+				],
+				"stackMode": "stacked",
+				"lineWidth": 2,
+				"nullValueDisplay": "gaps"
+			}
+		},
+		"viz_infra_sdwan_apps": {
+			"type": "splunk.bar",
+			"title": "SD-WAN Application Health",
+			"dataSources": {
+				"primary": "ds_infra_sdwan_apps_health"
+			},
+			"options": {
+				"backgroundColor": "#ffffff",
+				"legendDisplay": "right",
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"seriesColors": [
+					"#16a34a",
+					"#f59e0b",
+					"#dc2626",
+					"#64748b"
+				]
+			}
+		},
+		"viz_infra_status_rollup": {
+			"type": "splunk.table",
+			"title": "Infrastructure Status Rollup",
+			"dataSources": {
+				"primary": "ds_infra_status_rollup"
+			},
+			"options": {
+				"backgroundColor": "#ffffff",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_infra_psirt_exposure": {
+			"type": "splunk.table",
+			"title": "PSIRT Exposure by Site and Family",
+			"dataSources": {
+				"primary": "ds_infra_psirt_exposure"
+			},
+			"options": {
+				"backgroundColor": "#ffffff",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_infra_software_versions": {
+			"type": "splunk.table",
+			"title": "Software Version Mix",
+			"dataSources": {
+				"primary": "ds_infra_software_versions"
+			},
+			"options": {
+				"backgroundColor": "#ffffff",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_infra_rogue_containment": {
+			"type": "splunk.table",
+			"title": "Rogue AP Containment",
+			"dataSources": {
+				"primary": "ds_infra_rogue_containment"
+			},
+			"options": {
+				"backgroundColor": "#ffffff",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		}
+	},
+	"dataSources": {
+		"ds_infra_status_rollup": {
+			"name": "Secure Networking - Secure Infrastructure Status Rollup",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:catalyst:center:inventory:report\"\n| dedup \"Serial No.\"\n| eval device=coalesce('Serial No.', 'Device Name', Hostname, IP_Address), family=coalesce('Device Family', DeviceFamily, \"Unknown\"), software=coalesce('Software Version', ImageVersion, \"Unknown\")\n| stats dc(device) as devices dc(software) as software_versions values(software) as versions by family\n| append [ search `index_catalyst` sourcetype IN (cisco:dnac:devicehealth, cisco:catalyst:devicehealth) | eval family=coalesce(DeviceFamily, Family, \"Unknown\"), reachable=if(Reachability=\"Reachable\",1,0), managed=if(match(Manageability,\"Managed\"),1,0) | stats dc(DeviceID) as health_devices sum(reachable) as reachable_devices sum(managed) as managed_devices by family ]\n| append [ search `index_catalyst` sourcetype IN (cisco:dnac:compliance, cisco:catalyst:compliance) ComplianceStatus!=\"NOT_APPLICABLE\" | eval family=coalesce(DeviceFamily, Family, \"Unknown\"), noncompliant=if(ComplianceStatus!=\"COMPLIANT\",1,0) | stats dc(DeviceName) as compliance_devices dc(eval(if(noncompliant=1,DeviceName,null()))) as noncompliant_devices by family ]\n| stats sum(devices) as \"Inventory Devices\", sum(health_devices) as \"Health Devices\", sum(reachable_devices) as \"Reachable Devices\", sum(managed_devices) as \"Managed Devices\", sum(compliance_devices) as \"Compliance Devices\", sum(noncompliant_devices) as \"Noncompliant Devices\", max(software_versions) as \"Software Versions\", values(versions) as versions by family\n| eval versions=mvjoin(versions,\", \")\n| rename family as \"Device Family\", versions as \"Versions Seen\"\n| table \"Device Family\", \"Inventory Devices\", \"Health Devices\", \"Reachable Devices\", \"Managed Devices\", \"Compliance Devices\", \"Noncompliant Devices\", \"Software Versions\", \"Versions Seen\"\n| sort - \"Inventory Devices\"",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_infra_psirt_exposure": {
+			"name": "Secure Networking - PSIRT Exposure by Site and Family",
+			"options": {
+				"query": "`index_catalyst` sourcetype IN (cisco:dnac:securityadvisory, cisco:catalyst:securityadvisory)\n| eval severity=upper(AdvisorySir), site=coalesce(Site, Location, siteHierarchy, \"Unknown\")\n| stats dc(AdvisoryID) as Advisories, count(eval(severity=\"CRITICAL\")) as Critical, count(eval(severity=\"HIGH\")) as High, dc(DeviceName) as \"Affected Devices\", values(AdvisoryCvesStr) as CVEs latest(_time) as last_seen by site, DeviceFamily\n| eval \"Last Seen\"=strftime(last_seen,\"%Y-%m-%d %H:%M:%S\"), CVEs=mvjoin(CVEs,\", \")\n| rename site as \"Site\", DeviceFamily as \"Device Family\"\n| table \"Site\", \"Device Family\", Advisories, Critical, High, \"Affected Devices\", CVEs, \"Last Seen\"\n| sort - Critical - High - \"Affected Devices\"",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_infra_software_versions": {
+			"name": "Secure Networking - Catalyst Center Software Version Inventory",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:catalyst:center:inventory:report\"\n| dedup \"Serial No.\"\n| stats count as \"Device Count\" by \"Device Family\", \"Software Version\"\n| rename \"Device Family\" as \"Device Family\", \"Software Version\" as \"Software Version\"\n| sort - \"Device Count\"",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_infra_sdwan_site_view": {
+			"name": "Secure Networking - SD-WAN Site View",
+			"options": {
+				"query": "`index_sdwan` sourcetype=\"cisco:sdwan:sitehealth\"\n| stats latest(site_name) as site_name, latest(site_role) as site_role, latest(site_health) as site_health, latest(devices_health) as devices_health, latest(devices_health_score) as devices_score, latest(tunnels_health) as tunnels_health, latest(tunnels_health_score) as tunnels_score, latest(apps_health) as apps_health, latest(apps_health_score) as apps_score, latest(device_type{}) as device_types, latest(_time) as last_seen by site_id\n| eval devices_score=if(devices_score>=0,round(devices_score,1),null()), tunnels_score=if(tunnels_score>=0,round(tunnels_score,1),null()), apps_score=if(apps_score>=0,round(apps_score,1),null()), device_types=mvjoin(device_types,\", \"), \"Last Seen\"=strftime(last_seen,\"%Y-%m-%d %H:%M:%S\")\n| rename site_id as \"Site ID\", site_name as \"Site Name\", site_role as \"Site Role\", site_health as \"Site Health\", devices_health as \"Devices Health\", devices_score as \"Devices Score\", tunnels_health as \"Tunnels Health\", tunnels_score as \"Tunnels Score\", apps_health as \"Apps Health\", apps_score as \"Apps Score\", device_types as \"Device Types\"\n| table \"Site ID\", \"Site Name\", \"Site Role\", \"Site Health\", \"Devices Health\", \"Devices Score\", \"Tunnels Health\", \"Tunnels Score\", \"Apps Health\", \"Apps Score\", \"Device Types\", \"Last Seen\"\n| sort \"Site Health\", \"Site Name\"",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_infra_sdwan_apps_health": {
+			"name": "Secure Networking - SD-WAN Application Health Breakdown",
+			"options": {
+				"query": "`index_sdwan` sourcetype=\"cisco:sdwan:sitehealth\" apps_health!=\"no_data\" apps_health!=\"\"\n| stats dc(site_id) as site_count by apps_health\n| sort - site_count\n| rename apps_health as \"App Health Status\", site_count as \"Site Count\"",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_infra_sdwan_edge_count": {
+			"name": "Secure Networking - Infrastructure SD-WAN Edge Site Count",
+			"options": {
+				"query": "`index_sdwan` sourcetype=\"cisco:sdwan:sitehealth\"\n| stats dc(site_id) as sdwan_site_count\n| eval label=\"SD-WAN Edge Sites\"\n| table label, sdwan_site_count",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_base_infra_dc": {
+			"name": "Secure Networking base - DC health signals",
+			"options": {
+				"query": "(`index_dc` sourcetype=\"cisco:dc:nd:anomalies\") OR (`index_dc` sourcetype=\"cisco:dc:nd:advisories\")\n| eval signal_type=case(sourcetype=\"cisco:dc:nd:anomalies\",\"Anomaly\",sourcetype=\"cisco:dc:nd:advisories\",\"Advisory\",1==1,\"Unknown\")",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_infra_dc_anomalies": {
+			"name": "Secure Networking chain - DC anomaly count",
+			"options": {
+				"extend": "ds_base_infra_dc",
+				"query": "| search sourcetype=\"cisco:dc:nd:anomalies\"\n| stats count as anomaly_count, dc(fabricName) as unique_fabrics, dc(eval(if(calculated_severity=\"CRITICAL\" OR calculated_severity=\"HIGH\",entityName,null()))) as critical_entities\n| eval label=\"DC Fabric Anomalies\"\n| fields label anomaly_count unique_fabrics critical_entities"
+			},
+			"type": "ds.chain"
+		},
+		"ds_infra_dc_advisories": {
+			"name": "Secure Networking chain - DC advisory count",
+			"options": {
+				"extend": "ds_base_infra_dc",
+				"query": "| search sourcetype=\"cisco:dc:nd:advisories\"\n| stats count as advisory_count, dc(advisory_id) as unique_advisories, dc(eval(if(severity=\"CRITICAL\",advisory_id,null()))) as critical_count\n| eval label=\"DC Security Advisories\"\n| fields label advisory_count unique_advisories critical_count"
+			},
+			"type": "ds.chain"
+		},
+		"ds_infra_dc_trend": {
+			"name": "Secure Networking chain - DC health signal trend",
+			"options": {
+				"extend": "ds_base_infra_dc",
+				"query": "| timechart span=1h count by signal_type"
+			},
+			"type": "ds.chain"
+		},
+		"ds_base_infra_airmarshal": {
+			"name": "Secure Networking base - Meraki Air Marshal",
+			"options": {
+				"query": "`index_meraki` sourcetype=\"meraki:airmarshal\"\n| eval bssid=coalesce(mvindex('bssids{}.bssid',0),bssid), contained=coalesce(contained,\"false\"), encryption=coalesce(encryption,\"Unknown\")",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_infra_rogue_ap_count": {
+			"name": "Secure Networking chain - rogue AP count",
+			"options": {
+				"extend": "ds_base_infra_airmarshal",
+				"query": "| stats dc(bssid) as rogue_ap_count\n| eval label=\"Rogue APs Detected\"\n| fields label rogue_ap_count"
+			},
+			"type": "ds.chain"
+		},
+		"ds_infra_open_ssids": {
+			"name": "Secure Networking chain - open SSID count",
+			"options": {
+				"extend": "ds_base_infra_airmarshal",
+				"query": "| where encryption=\"open\" OR encryption=\"Open\" OR encryption=\"none\" OR encryption=\"None\" OR encryption=\"OPEN\"\n| stats dc(ssid) as unencrypted_ssid_count, dc(bssid) as unencrypted_ap_count\n| eval label=\"Open/Unencrypted SSIDs Detected\"\n| fields label unencrypted_ssid_count unencrypted_ap_count"
+			},
+			"type": "ds.chain"
+		},
+		"ds_infra_rogue_containment": {
+			"name": "Secure Networking chain - rogue containment",
+			"options": {
+				"extend": "ds_base_infra_airmarshal",
+				"query": "| stats dc(eval(if(contained=\"true\",bssid,null()))) as Contained, dc(eval(if(contained!=\"true\",bssid,null()))) as Uncontained, dc(bssid) as \"Total Rogues\" by ssid\n| sort - \"Total Rogues\"\n| head 20\n| rename ssid as \"SSID\"\n| table SSID \"Total Rogues\" Contained Uncontained"
+			},
+			"type": "ds.chain"
+		}
+	},
 	"layout": {
 		"globalInputs": [
 			"input_time_range"
@@ -46,10 +358,121 @@
 				"options": {
 					"backgroundColor": "#f5f7fb",
 					"display": "auto-scale",
-					"height": 900,
+					"height": 1490,
 					"width": 1440
 				},
-				"structure": [],
+				"structure": [
+					{
+						"item": "viz_header",
+						"position": {
+							"x": 20,
+							"y": 0,
+							"w": 1400,
+							"h": 90
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_infra_sdwan_edges",
+						"position": {
+							"x": 20,
+							"y": 110,
+							"w": 335,
+							"h": 180
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_infra_dc_anomaly_count",
+						"position": {
+							"x": 375,
+							"y": 110,
+							"w": 335,
+							"h": 180
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_infra_dc_advisory_count",
+						"position": {
+							"x": 730,
+							"y": 110,
+							"w": 335,
+							"h": 180
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_infra_rogue_ap_count",
+						"position": {
+							"x": 1085,
+							"y": 110,
+							"w": 335,
+							"h": 180
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_infra_dc_trend",
+						"position": {
+							"x": 20,
+							"y": 310,
+							"w": 690,
+							"h": 340
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_infra_sdwan_apps",
+						"position": {
+							"x": 730,
+							"y": 310,
+							"w": 690,
+							"h": 340
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_infra_status_rollup",
+						"position": {
+							"x": 20,
+							"y": 670,
+							"w": 690,
+							"h": 390
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_infra_psirt_exposure",
+						"position": {
+							"x": 730,
+							"y": 670,
+							"w": 690,
+							"h": 390
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_infra_software_versions",
+						"position": {
+							"x": 20,
+							"y": 1080,
+							"w": 690,
+							"h": 390
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_infra_rogue_containment",
+						"position": {
+							"x": 730,
+							"y": 1080,
+							"w": 690,
+							"h": 390
+						},
+						"type": "block"
+					}
+				],
 				"type": "absolute"
 			}
 		},

@@ -33,10 +33,290 @@
 					}
 				}
 			}
+		},
+		"visualizations": {
+			"global": {
+				"showLastUpdated": true,
+				"showProgressBar": true
+			}
 		}
 	},
-	"visualizations": {},
-	"dataSources": {},
+	"visualizations": {
+		"viz_header": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#ffffff",
+				"fontColor": "#111827",
+				"markdown": "# Scalable Network Segmentation\nSGT adoption, endpoint coverage, TrustSec readiness, and OT/IoT segmentation visibility."
+			}
+		},
+		"viz_seg_total_assignments": {
+			"type": "splunk.singlevalue",
+			"title": "Active SGT Assignments",
+			"dataSources": {
+				"primary": "ds_seg_total_assignments"
+			},
+			"options": {
+				"backgroundColor": "#ffffff",
+				"majorFontSize": 36,
+				"majorValue": "> primary | seriesByName('total_assignments') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"sparklineDisplay": "off",
+				"trendDisplay": "off",
+				"majorColor": "#0ea5e9"
+			}
+		},
+		"viz_seg_unique_sgts": {
+			"type": "splunk.singlevalue",
+			"title": "Unique SGTs",
+			"dataSources": {
+				"primary": "ds_seg_unique_sgts"
+			},
+			"options": {
+				"backgroundColor": "#ffffff",
+				"majorFontSize": 36,
+				"majorValue": "> primary | seriesByName('unique_sgts') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"sparklineDisplay": "off",
+				"trendDisplay": "off",
+				"majorColor": "#14b8a6"
+			}
+		},
+		"viz_seg_sgt_blocks": {
+			"type": "splunk.singlevalue",
+			"title": "SGT-Enforced Blocks",
+			"dataSources": {
+				"primary": "ds_seg_sgt_blocks_total"
+			},
+			"options": {
+				"backgroundColor": "#ffffff",
+				"majorFontSize": 36,
+				"majorValue": "> primary | seriesByName('sgt_enforced_blocks') | lastPoint()",
+				"shouldAbbreviateMajorValue": true,
+				"sparklineDisplay": "off",
+				"trendDisplay": "off",
+				"majorColor": "#dc2626"
+			}
+		},
+		"viz_seg_binding_mix": {
+			"type": "splunk.pie",
+			"title": "IP-SGT Binding Mix",
+			"dataSources": {
+				"primary": "ds_seg_ip_sgt_bindings"
+			},
+			"options": {
+				"backgroundColor": "#ffffff",
+				"legendDisplay": "right",
+				"seriesColors": [
+					"#0ea5e9",
+					"#16a34a",
+					"#f59e0b",
+					"#dc2626",
+					"#7c3aed"
+				]
+			}
+		},
+		"viz_seg_status_rollup": {
+			"type": "splunk.table",
+			"title": "Segmentation Status by Site",
+			"dataSources": {
+				"primary": "ds_seg_status_rollup"
+			},
+			"options": {
+				"backgroundColor": "#ffffff",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_seg_sgt_distribution": {
+			"type": "splunk.table",
+			"title": "SGT Distribution by Site and Device",
+			"dataSources": {
+				"primary": "ds_seg_sgt_distribution"
+			},
+			"options": {
+				"backgroundColor": "#ffffff",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_seg_policy_hits": {
+			"type": "splunk.table",
+			"title": "ISE Policy Hits by Network Device",
+			"dataSources": {
+				"primary": "ds_seg_policy_hits"
+			},
+			"options": {
+				"backgroundColor": "#ffffff",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_seg_trustsec_readiness": {
+			"type": "splunk.table",
+			"title": "TrustSec Hardware Readiness",
+			"dataSources": {
+				"primary": "ds_seg_trustsec_readiness"
+			},
+			"options": {
+				"backgroundColor": "#ffffff",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_seg_excessive_mac": {
+			"type": "splunk.table",
+			"title": "Excessive MACs per Wired Port",
+			"dataSources": {
+				"primary": "ds_seg_excessive_mac"
+			},
+			"options": {
+				"backgroundColor": "#ffffff",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_seg_ot_iot": {
+			"type": "splunk.table",
+			"title": "OT/IoT Device Visibility",
+			"dataSources": {
+				"primary": "ds_seg_ot_iot"
+			},
+			"options": {
+				"backgroundColor": "#ffffff",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		}
+	},
+	"dataSources": {
+		"ds_base_seg_ise": {
+			"name": "Secure Networking base - segmentation ISE auth events",
+			"options": {
+				"query": "`index_identity` sourcetype=\"cisco:ise:syslog\" (CISE_Passed_Authentications OR CISE_Failed_Attempts OR security_group_tag=*)\n| rex field=Location \"Location#All Locations#(?<site_from_location>.*)\"\n| eval site=coalesce(site_from_location, Location, \"Unknown\"), endpoint=upper(replace(coalesce(EndPointMACAddress, Calling_Station_ID), \"-\", \":\")), tagged=if(isnotnull(security_group_tag) AND security_group_tag!=\"\" AND security_group_tag!=\"0000-0 Unknown\" AND security_group_tag!=\"0-0 Unknown\",1,0)",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_seg_total_assignments": {
+			"name": "Secure Networking chain - SGT assignment count",
+			"options": {
+				"extend": "ds_base_seg_ise",
+				"query": "| search tagged=1\n| stats dc(eval(coalesce(UserName,\"_\").\"|\".coalesce(NetworkDeviceName,\"_\"))) as total_assignments\n| eval label=\"Active SGT Assignments\"\n| fields label total_assignments"
+			},
+			"type": "ds.chain"
+		},
+		"ds_seg_unique_sgts": {
+			"name": "Secure Networking chain - unique SGT count",
+			"options": {
+				"extend": "ds_base_seg_ise",
+				"query": "| search tagged=1\n| stats dc(security_group_tag) as unique_sgts\n| eval label=\"Unique SGTs in Use\"\n| fields label unique_sgts"
+			},
+			"type": "ds.chain"
+		},
+		"ds_seg_status_rollup": {
+			"name": "Secure Networking chain - segmentation status",
+			"options": {
+				"extend": "ds_base_seg_ise",
+				"query": "| stats count as \"Auth Events\", dc(endpoint) as \"Endpoints\", sum(tagged) as \"SGT Auth Events\", dc(eval(if(tagged=1,security_group_tag,null()))) as \"Distinct SGTs\", dc(NetworkDeviceName) as \"Network Devices\" by site\n| eval \"SGT Coverage %\"=if('Auth Events'>0, round('SGT Auth Events'/'Auth Events'*100, 1), 0)\n| rename site as \"Site\"\n| table \"Site\", \"Auth Events\", \"Endpoints\", \"SGT Auth Events\", \"Distinct SGTs\", \"SGT Coverage %\", \"Network Devices\"\n| sort - \"Auth Events\""
+			},
+			"type": "ds.chain"
+		},
+		"ds_seg_sgt_distribution": {
+			"name": "Secure Networking chain - SGT distribution",
+			"options": {
+				"extend": "ds_base_seg_ise",
+				"query": "| search tagged=1\n| stats count as \"Auth Events\", dc(endpoint) as \"Endpoints\", latest(_time) as last_seen by site, NetworkDeviceName, security_group_tag\n| eval \"Last Seen\"=strftime(last_seen,\"%Y-%m-%d %H:%M:%S\")\n| rename site as \"Site\", NetworkDeviceName as \"Network Device\", security_group_tag as \"SGT\"\n| table \"Site\", \"Network Device\", \"SGT\", \"Auth Events\", \"Endpoints\", \"Last Seen\"\n| sort \"Site\", \"Network Device\", - \"Auth Events\""
+			},
+			"type": "ds.chain"
+		},
+		"ds_seg_policy_hits": {
+			"name": "Secure Networking - ISE Policy Hits by Network Device",
+			"options": {
+				"query": "`index_identity` sourcetype=\"cisco:ise:syslog\" MESSAGE_CODE IN (5200,5201,5206,5232,5233,5236) ISEPolicySetName=* NetworkDeviceName=*\n| stats count as \"Policy Hits\" by ISEPolicySetName, NetworkDeviceName\n| rename ISEPolicySetName as \"Policy Set\", NetworkDeviceName as \"Network Device\"\n| sort - \"Policy Hits\"",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_seg_ip_sgt_bindings": {
+			"name": "Secure Networking - IP-SGT Bindings by Security Group",
+			"options": {
+				"query": "`index_identity` sourcetype=\"cisco:ise:sgtbindings\"\n| eval sgt=coalesce(sgt_tag, tag, \"Unknown\"), ise_node=coalesce(host, src, \"Unknown\")\n| stats dc(ipPrefix) as \"Bound IPs\", count as \"Binding Events\" by sgt, ise_node\n| rename sgt as \"SGT Tag\", ise_node as \"ISE Node\"\n| sort - \"Bound IPs\"",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_seg_trustsec_readiness": {
+			"name": "Secure Networking - TrustSec Hardware Readiness",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:catalyst:center:inventory:report\"\n| dedup \"Serial No.\"\n| stats count as \"Device Count\" by \"Device Family\", \"Device Type\"\n| sort - \"Device Count\"",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_seg_excessive_mac": {
+			"name": "Secure Networking - Excessive Unique MAC per Wired Port",
+			"options": {
+				"query": "`index_identity` sourcetype=\"cisco:ise:syslog\" NAS_Port_Type=\"Ethernet\" NAS_Port_Id=*\n| eval mac=upper(replace(coalesce(EndPointMACAddress, Calling_Station_ID), \"-\", \":\"))\n| stats dc(mac) as unique_macs values(NAS_IP_Address) as address latest(Location) as location by NetworkDeviceName, NAS_Port_Id\n| rename unique_macs as \"Unique MACs\", NetworkDeviceName as \"Network Device\", NAS_Port_Id as \"Port\", address as \"Address\", location as \"Location\"\n| sort - \"Unique MACs\"",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_seg_ot_iot": {
+			"name": "Secure Networking - OT/IoT Device Visibility",
+			"options": {
+				"query": "`index_cybervision` sourcetype=\"cisco:cybervision:devices\"\n| spath deviceType | spath riskScore\n| stats dc(id) as devices avg(riskScore) as avg_risk by deviceType\n| eval \"Avg Risk Score\"=round(avg_risk,1)\n| rename deviceType as \"Device Type\", devices as \"Devices\"\n| table \"Device Type\", \"Devices\", \"Avg Risk Score\"\n| sort - \"Devices\"",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_base_seg_sgt_blocks": {
+			"name": "Secure Networking base - SGT FMC blocks",
+			"options": {
+				"query": "`index_firewall` sourcetype=\"cisco:ftd:syslog\" (AC_RuleAction=\"Block\" OR AC_RuleAction=\"Block with reset\") SourceSecurityGroupTag!=\"\" SourceSecurityGroupTag!=\"0\"\n| eval sgt_hex=printf(\"%04X\",tonumber(SourceSecurityGroupTag))\n| lookup sgt_naming.csv SGT_Hex as sgt_hex OUTPUT Name as sgt_name\n| eval sgt_label=coalesce(sgt_name,\"SGT-\".SourceSecurityGroupTag)",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_seg_sgt_blocks_total": {
+			"name": "Secure Networking chain - SGT block count",
+			"options": {
+				"extend": "ds_base_seg_sgt_blocks",
+				"query": "| stats count as sgt_enforced_blocks\n| eval label=\"SGT-Enforced Firewall Blocks\"\n| fields label sgt_enforced_blocks"
+			},
+			"type": "ds.chain"
+		}
+	},
 	"layout": {
 		"globalInputs": [
 			"input_time_range"
@@ -46,10 +326,121 @@
 				"options": {
 					"backgroundColor": "#f5f7fb",
 					"display": "auto-scale",
-					"height": 900,
+					"height": 1490,
 					"width": 1440
 				},
-				"structure": [],
+				"structure": [
+					{
+						"item": "viz_header",
+						"position": {
+							"x": 20,
+							"y": 0,
+							"w": 1400,
+							"h": 90
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_seg_total_assignments",
+						"position": {
+							"x": 20,
+							"y": 110,
+							"w": 335,
+							"h": 180
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_seg_unique_sgts",
+						"position": {
+							"x": 375,
+							"y": 110,
+							"w": 335,
+							"h": 180
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_seg_sgt_blocks",
+						"position": {
+							"x": 730,
+							"y": 110,
+							"w": 335,
+							"h": 180
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_seg_binding_mix",
+						"position": {
+							"x": 1085,
+							"y": 110,
+							"w": 335,
+							"h": 180
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_seg_status_rollup",
+						"position": {
+							"x": 20,
+							"y": 310,
+							"w": 690,
+							"h": 340
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_seg_sgt_distribution",
+						"position": {
+							"x": 730,
+							"y": 310,
+							"w": 690,
+							"h": 340
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_seg_policy_hits",
+						"position": {
+							"x": 20,
+							"y": 670,
+							"w": 690,
+							"h": 390
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_seg_trustsec_readiness",
+						"position": {
+							"x": 730,
+							"y": 670,
+							"w": 690,
+							"h": 390
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_seg_excessive_mac",
+						"position": {
+							"x": 20,
+							"y": 1080,
+							"w": 690,
+							"h": 390
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_seg_ot_iot",
+						"position": {
+							"x": 730,
+							"y": 1080,
+							"w": 690,
+							"h": 390
+						},
+						"type": "block"
+					}
+				],
 				"type": "absolute"
 			}
 		},
