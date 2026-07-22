@@ -203,20 +203,21 @@ const dependencyApps = [
 
 const dataSources = [
   ["Catalyst Center", "`cisco:dnac:*`, `cisco:catalyst:center:*`", "`index_catalyst`"],
-  ["Firewall", "`cisco:asa`, `cisco:ftd*`, `cisco:sfw:estreamer`, `cisco:estreamer:*`", "`index_firewall`"],
+  ["Firewall", "`cisco:asa`, `cisco:ftd*`, `cisco:sfw:estreamer`, `cisco:sfw:policy`, `cisco:sourcefire:*`, `cisco:estreamer:*`, `cisco:multicloud:defense:*`", "`index_firewall`"],
   ["Identity", "`cisco:ise:*`, Windows and Active Directory sourcetypes", "`index_identity`, `index_windows`"],
   ["Network infrastructure", "`cisco:ios`, `cisco:ios:*`, `cisco:telemetry`, network syslog", "`index_network`"],
   ["Zeek NSM", "`zeek:conn`, `zeek:dns`, `zeek:ssl`, `zeek:http`, `zeek:notice`, and related Zeek logs", "`index_zeek`"],
   ["Meraki", "`meraki:*`", "`index_meraki`"],
   ["Cisco Spaces", "`cisco:spaces:*`", "`index_spaces`"],
-  ["Security stack", "XDR, Umbrella/Secure Access, ESA, WSA, ETD, Defender, Secure Workload", "`index_security`"],
+  ["Security stack", "XDR, Umbrella/Secure Access, ESA, WSA, ETD, SMA, CVI, Isovalent, AI Defense (`cisco:ai:defense*`), Secure Workload, SCA, Secure Endpoint, Defender", "`index_security`"],
   ["DHCP", "Windows DHCP Server logs such as `DhcpSrvLog`", "`index_dhcp`"],
   ["ThousandEyes", "`cisco:thousandeyes:*` plus TA data model macros", "`index_thousandeyes`"],
   ["F5 BIG-IP", "`f5:bigip:*`", "`index_f5`"],
   ["Duo", "`cisco:duo:*`", "`index_duo`"],
   ["CyberVision", "`cisco:cybervision:*`", "`index_cybervision`"],
   ["UCS", "`cisco:ucs`, `cisco:ucs:*`", "`index_ucs`"],
-  ["Cisco SD-WAN", "`cisco:sdwan:tunnelhealth`, `cisco:sdwan:sitehealth`, `cisco:sdwan:linkhealth`, `cisco:sdwan:*`", "`index_sdwan`"],
+  ["Intersight", "`cisco:intersight:*` (advisories, inventory, and related feeds)", "`index_intersight`"],
+  ["Cisco SD-WAN", "`cisco:sdwan:*` including UTD health and logs", "`index_sdwan`"],
   ["Data Center", "`cisco:dc:aci:*`, `cisco:dc:nd:*`, `cisco:dc:nexus9k`", "`index_dc`"],
   ["Network Visibility Module", "`cisco:nvm:*`", "`index_nvm`"],
 ];
@@ -418,7 +419,10 @@ export default function UserGuidePage(): JSX.Element {
                   by <code className="rounded bg-slate-100 px-1 py-0.5">macro_index_tuning.xml</code>.
                   The fast scan uses the <code className="rounded bg-slate-100 px-1 py-0.5">admin_macro_index_tuning</code>
                   searchbase entry, which performs a tstats pass over known Cisco
-                  sourcetypes and generates macro definitions.
+                  sourcetypes and generates macro definitions. The UI discovers every
+                  SCD macro whose name starts with <code className="rounded bg-slate-100 px-1 py-0.5">index_</code>
+                  from this app at runtime, so newly added index macros appear in the
+                  scan without updating a hardcoded list.
                 </p>
                 <p className="m-0">
                   CIM discovery is intentionally separate because it uses tag-based raw
