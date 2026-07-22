@@ -101,6 +101,8 @@ TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 cp -R "$STAGE_DIR" "${TMP_DIR}/${APP_NAME}"
 find "${TMP_DIR}" -name ".DS_Store" -delete
+find "${TMP_DIR}" -name "* copy.*" -delete
+find "${TMP_DIR}" -name "* copy" -delete
 # Remove Splunk-generated runtime artifacts — they should never ship in the package.
 # Because /opt/splunk/etc/apps/splunk-cisco-dashboards symlinks to stage/,
 # Splunk creates local.meta and local/ at runtime inside our build output.
