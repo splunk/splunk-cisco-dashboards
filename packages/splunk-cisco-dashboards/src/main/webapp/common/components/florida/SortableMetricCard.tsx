@@ -182,7 +182,7 @@ export const SortableMetricCard: React.FC<SortableMetricCardProps> = ({
                     title={tileAction.title}
                     data-tile-control="true"
                     className={cn(
-                        'absolute top-0.5 right-0.5 z-20',
+                        'absolute top-0.5 left-5 z-20',
                         'flex items-center justify-center w-4 h-4 rounded',
                         'bg-white/90 dark:bg-slate-900/90 backdrop-blur-[2px]',
                         'shadow-sm ring-1',

@@ -5312,7 +5312,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     const [tagFilter, setTagFilter] = useState('');
     const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
     const [filtersOpen, setFiltersOpen] = useState(false);
-    const [showAllProfileSearches, setShowAllProfileSearches] = useState(false);
+    const [showAllProfileSearches, setShowAllProfileSearches] = useState(true);
     const searchInputRef = useRef<HTMLInputElement | null>(null);
     const tagSelectRef = useRef<HTMLDivElement | null>(null);
     const tagInputRef = useRef<HTMLInputElement | null>(null);
@@ -5330,7 +5330,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
         setTagFilter('');
         setTagDropdownOpen(false);
         setFiltersOpen(false);
-        setShowAllProfileSearches(false);
+        setShowAllProfileSearches(true);
         if (typeof window === 'undefined') return;
         const id = window.setTimeout(() => searchInputRef.current?.focus(), 30);
         return () => window.clearTimeout(id);
@@ -5356,26 +5356,34 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
         return () => document.removeEventListener('mousedown', handler);
     }, [open, tagDropdownOpen]);
 
-    const profileRecords = useMemo(
+    const addableRecords = useMemo(
         () =>
             records
-                .filter((record) => recordMatchesProfileScope(record, profile))
+                .filter((record) => record.search?.trim())
                 .sort((a, b) =>
                     a.searchName.localeCompare(b.searchName, undefined, {
                         sensitivity: 'base',
                     })
                 ),
-        [profile, records]
+        [records]
+    );
+
+    const profileRecords = useMemo(
+        () =>
+            addableRecords.filter((record) =>
+                recordMatchesProfileScope(record, profile)
+            ),
+        [addableRecords, profile]
     );
 
     const drilldownSearchNames = useMemo(() => {
         const names = new Set<string>();
-        for (const record of profileRecords) {
+        for (const record of addableRecords) {
             const name = record.drilldownSearchName?.trim();
             if (name) names.add(name.toLowerCase());
         }
         return names;
-    }, [profileRecords]);
+    }, [addableRecords]);
 
     const sectionRecords = useMemo(
         () =>
@@ -5385,14 +5393,13 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
         [profile, profileRecords, section]
     );
 
-    const sectionScopedRecords =
+    const suggestedRecords =
         sectionRecords.length > 0 ? sectionRecords : profileRecords;
     const browseRecords = showAllProfileSearches
-        ? profileRecords
-        : sectionScopedRecords;
+        ? addableRecords
+        : suggestedRecords;
     const showScopeToggle =
-        Boolean(profile.autoDiscovery) &&
-        profileRecords.length > sectionScopedRecords.length;
+        suggestedRecords.length > 0 && addableRecords.length > suggestedRecords.length;
 
     const browseVisibleRecords = useMemo(() => {
         return browseRecords.filter((record) => {
@@ -5422,19 +5429,29 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
         selectedApps,
     ]);
 
+    const appFacetRecords = useMemo(
+        () =>
+            addableRecords.filter(
+                (record) =>
+                    includeHiddenSearches ||
+                    !(record.searchHidden || hiddenSearchbaseIds.has(record.id))
+            ),
+        [addableRecords, hiddenSearchbaseIds, includeHiddenSearches]
+    );
+
     const apps = useMemo(() => {
         const set = new Set<string>();
-        for (const record of profileRecords) {
+        for (const record of appFacetRecords) {
             if (record.dispatchContext) set.add(record.dispatchContext);
         }
         return Array.from(set).sort((a, b) =>
             a.localeCompare(b, undefined, { sensitivity: 'base' })
         );
-    }, [profileRecords]);
+    }, [appFacetRecords]);
 
     const appCountByName = useMemo(() => {
         const map = new Map<string, number>();
-        for (const record of profileRecords) {
+        for (const record of appFacetRecords) {
             if (record.dispatchContext) {
                 map.set(
                     record.dispatchContext,
@@ -5443,7 +5460,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
             }
         }
         return map;
-    }, [profileRecords]);
+    }, [appFacetRecords]);
 
     const categories = useMemo(() => {
         const set = new Set<string>();
@@ -5498,7 +5515,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
 
     useEffect(() => {
         if (
-            showAllProfileSearches ||
+            !showAllProfileSearches ||
             !isDefaultAddTileAppSelection(selectedApps) ||
             includeHiddenSearches ||
             includeDrilldownSearches ||
@@ -5636,7 +5653,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     };
 
     const activeFilterCount =
-        (showAllProfileSearches ? 1 : 0) +
+        (!showAllProfileSearches ? 1 : 0) +
         (!isDefaultAddTileAppSelection(selectedApps) ? 1 : 0) +
         (includeHiddenSearches ? 1 : 0) +
         (includeDrilldownSearches ? 1 : 0) +
@@ -5658,7 +5675,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
         setSelectedSubCategory(ALL_ADD_TILE_SUB_CATEGORIES);
         setActiveTags(new Set());
         setTagFilter('');
-        setShowAllProfileSearches(false);
+        setShowAllProfileSearches(true);
     };
 
     if (!open) return null;
@@ -5811,7 +5828,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                                                     : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'
                                             )}
                                         >
-                                            All profile
+                                            All searches
                                         </button>
                                     </div>
                                 </div>
