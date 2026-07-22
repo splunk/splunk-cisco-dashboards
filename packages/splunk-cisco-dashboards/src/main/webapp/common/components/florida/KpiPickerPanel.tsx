@@ -2063,13 +2063,14 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         const ok = window.confirm(
             'Reset all dashboard customisations?\n\n' +
                 'This will undo every change you have made to:\n' +
-                "  • Each tile's bound search, value field, label, and description\n" +
-                '  • Searchbase drilldown bindings chosen in this picker\n' +
+                "  • Each tile's personal display options\n" +
+                '  • Personal drilldown bindings chosen in this picker\n' +
                 '  • The visible tile count in each section\n' +
-                '  • The order of tiles within each section\n' +
-                '  • The map topology (sites, links, names, positions)\n' +
+                '  • Added, hidden, and reordered tiles within each section\n' +
+                '  • Section heights and the signal rail selection\n' +
+                '  • Your saved map position and visibility\n' +
                 '  • The map ↔ tiles splitter position\n\n' +
-                'Your header title, subtitle, logo, and light/dark theme preference will be kept.\n\n' +
+                'Shared factory defaults, tile configuration, map topology, header branding, and your light/dark theme preference will be kept.\n\n' +
                 'This action cannot be undone.'
         );
         if (!ok) return;

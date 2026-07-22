@@ -192,12 +192,10 @@ import {
 } from '@/common/services/searchbaseCatalogue';
 import {
     loadOverviewFactoryTiles,
-    resetOverviewFactoryTiles,
     saveOverviewFactoryTiles,
     type OverviewFactoryTilesConfig,
 } from '@/common/services/overviewFactoryTilesService';
 import {
-    resetOverviewSearchbaseTileConfig,
     saveFactoryTileConfig,
 } from '@/common/services/searchbaseTileConfigService';
 import { useCanManageFactoryTileConfig } from '@/common/hooks/useCanManageFactoryTileConfig';
@@ -2309,11 +2307,12 @@ const OverviewPage: React.FC = () => {
     // who customises tile #5, dials down to 3, then back up to 5,
     // gets their customisation back unchanged.
     //
-    // Bounds: 3..9 with per-section defaults from
-    // overview_factory_tiles.conf. The packaged baseline currently
-    // exposes nine tiles per section; operators can save a different
-    // shared default from the picker footer, and individual users can
-    // still dial the visible count up/down with the section pill.
+    // Bounds come from the active overview profile, with per-section
+    // defaults from overview_factory_tiles.conf. Secure Networking ships
+    // with nine factory KPIs per section but only the first three visible
+    // by default; operators can save a different shared default from the
+    // picker footer, and individual users can still dial the visible count
+    // up/down with the section pill.
     // Returning users keep whatever count they had configured because
     // the per-section preference is keyed off localStorage.
     //
@@ -3519,16 +3518,13 @@ const OverviewPage: React.FC = () => {
     //   • searchbaseDrilldowns.v1       — picker-wired drilldown bindings
     //   • sectionLayout.v1              — visible section roster
     //   • sectionTileCounts.v1          — visible tile count per section
-    //                                      (forced back to the original
-    //                                      three-tile executive summary)
+    //                                      (restored to the active shared
+    //                                      factory default)
     //   • sectionTileAdditions.v1       — per-user searchbase tiles added
     //                                      into profile sections
     //   • sectionHiddenTiles.v1         — per-user hidden factory tiles
     //   • sectionHeights.v1             — vertical room per section
     //   • sectionTileOrder.v1           — drag-to-reorder preference
-    //   • local/overview_factory_tiles.conf — shared saved order/count overlay
-    //   • local/searchbase.conf overview keys — org-wide tile binding /
-    //                                      thresholds / mapping overlays
     //   • customerTopology.v4           — retired per-browser map payload
     //   • scd_overview_split_pct        — tiles ↔ map splitter position
     //   • scd_overview_map_pos          — map position (right / below / above)
@@ -3540,25 +3536,22 @@ const OverviewPage: React.FC = () => {
     //   • header branding (title / subtitle / logo) — identity, not
     //     dashboard layout or tile state
     //   • theme (light / dark) — UI preference, not layout
+    //   • shared Overview factory defaults — app-wide state, not a
+    //     per-user customisation
+    //   • shared searchbase tile configuration — app-wide state, not a
+    //     per-user customisation
     //   • shared customer_topology.conf — site/link and section-title
     //     edits are global app state, not per-user layout preference
     //
     // After reset, we close the picker and bump `topologyResetKey` to
     // clear any retired in-browser topology payload from old builds.
     const handleResetAllCustomizations = useCallback(() => {
-        const overviewSearchbaseStanzaIds = metricConfig.map(
-            (metric) => metric.searchbaseId
-        );
-
         resetAllOverrides();
         resetAllSearchbaseDrilldowns();
         resetAllSectionLayout();
         resetAllSectionTileCounts();
         resetAllSectionTileAdditions();
         resetAllSectionHiddenTiles();
-        availableSections.forEach((section) => {
-            setSectionTileCount(section, sectionTileBounds.minCount);
-        });
         resetAllSectionHeights();
         resetAllSectionTileOrder();
         resetSignalTickerConfig();
@@ -3581,45 +3574,16 @@ const OverviewPage: React.FC = () => {
             }
         }
         setPickerContext(null);
-
-        void (async () => {
-            try {
-                await resetOverviewFactoryTiles(overviewProfile.id);
-                await resetOverviewSearchbaseTileConfig(
-                    overviewSearchbaseStanzaIds,
-                    overviewProfile.id
-                );
-                setSearchbaseRefreshToken((n) => n + 1);
-                const nextFactoryTiles = await loadOverviewFactoryTiles(
-                    overviewProfile.id
-                );
-                setOverviewFactoryTiles(nextFactoryTiles);
-            } catch (error) {
-                console.error('[overview] failed to reset shared factory config', error);
-                if (typeof window !== 'undefined') {
-                    window.alert(
-                        error instanceof Error
-                            ? error.message
-                            : 'Personal reset completed, but shared Overview factory settings could not be reset.'
-                    );
-                }
-            }
-        })();
     }, [
-        availableSections,
-        metricConfig,
         resetAllOverrides,
         resetAllSearchbaseDrilldowns,
         resetAllSectionLayout,
         resetAllSectionTileCounts,
         resetAllSectionTileAdditions,
         resetAllSectionHiddenTiles,
-        setSectionTileCount,
-        sectionTileBounds.minCount,
         resetAllSectionHeights,
         resetAllSectionTileOrder,
         resetSignalTickerConfig,
-        overviewProfile.id,
         SPLIT_KEY,
         SPLIT_DEFAULT,
         setLeftPct,
