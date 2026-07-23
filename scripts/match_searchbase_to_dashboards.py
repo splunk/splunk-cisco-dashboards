@@ -1,0 +1,622 @@
+#!/usr/bin/env python3
+"""Match searchbase.conf stanzas to dashboard queries across Splunk apps."""
+
+from __future__ import annotations
+
+import configparser
+import csv
+import json
+import re
+import sys
+import xml.etree.ElementTree as ET
+from collections import Counter, defaultdict
+from dataclasses import dataclass, field
+from difflib import SequenceMatcher
+from pathlib import Path
+from typing import Iterable
+
+APPS_ROOT = Path("/opt/10/etc/apps")
+SEARCHBASE_PATH = Path(
+    "/Users/akhamis/repo/splunk-cisco-dashboards/"
+    "packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf"
+)
+OUTPUT_PATH = Path(
+    "/Users/akhamis/repo/splunk-cisco-dashboards/"
+    "docs/searchbase-dashboard-matches.csv"
+)
+UNMATCHED_PATH = Path(
+    "/Users/akhamis/repo/splunk-cisco-dashboards/"
+    "docs/searchbase-dashboard-unmatched.csv"
+)
+CONFIDENCE_THRESHOLD = 0.5
+MAX_MATCHES_PER_STANZA = 5
+MAX_SNIPPET_LEN = 180
+
+# Downstream / derivative apps whose dashboards were built from searchbase.conf,
+# not upstream Cisco TA sources we are trying to identify.
+EXCLUDED_APP_DIRS = {
+    "splunk-cisco-dashboards",
+    "splunk_insights",
+    "splunk-cisco-app-navigator",
+    "splunk-dashboard-studio",
+    "splunk_monitoring_console",
+    "search",
+    "launcher",
+    "learned",
+}
+
+GENERIC_PATTERNS = [
+    r"\|\s*rest\s+",
+    r"\|\s*metadata\s+",
+    r"\|\s*inputlookup\s+",
+    r"\|\s*makeresults\s+",
+    r"\|\s*dbinspect\s+",
+    r"\|\s*eventcount\s+",
+    r"splunk_server=local",
+    r"services/apps/local",
+]
+
+SKIP_QUERY_PATTERNS = [
+    r"^\s*\|\s*rest\s+services/apps/local",
+    r"^\s*\|\s*rest\s+/servicesNS",
+    r"^\s*\|\s*rest\s+/services/",
+    r"^\s*\|\s*rest\s+services/apps/local",
+    r"^\s*\|\s*rest\s+.*splunk_server=local.*\|\s*fields\s+version",
+]
+
+
+@dataclass
+class DashboardQuery:
+    app_dir: str
+    app_name: str
+    dashboard_file: str
+    dashboard_name: str
+    query: str
+    sourcetypes: set[str] = field(default_factory=set)
+    datamodels: set[str] = field(default_factory=set)
+    index_macros: set[str] = field(default_factory=set)
+    tokens: set[str] = field(default_factory=set)
+    normalized: str = ""
+
+
+@dataclass
+class SearchStanza:
+    stanza_id: str
+    search_name: str
+    search: str
+    tags: str
+    sourcetypes: set[str] = field(default_factory=set)
+    datamodels: set[str] = field(default_factory=set)
+    index_macros: set[str] = field(default_factory=set)
+    tokens: set[str] = field(default_factory=set)
+    normalized: str = ""
+
+
+def read_app_label(app_dir: Path) -> str:
+    app_conf = app_dir / "default" / "app.conf"
+    if not app_conf.exists():
+        return app_dir.name
+    cp = configparser.ConfigParser()
+    cp.read(app_conf, encoding="utf-8")
+    for section in ("ui", "launcher", "package"):
+        if cp.has_section(section):
+            for key in ("label", "description", "id"):
+                if cp.has_option(section, key):
+                    val = cp.get(section, key).strip()
+                    if val:
+                        return val
+    return app_dir.name
+
+
+def collapse_spl(text: str) -> str:
+    text = text.replace("\\\n", " ").replace("\\\r\n", " ")
+    text = re.sub(r"\s+", " ", text.strip())
+    return text
+
+
+def normalize_spl(text: str) -> str:
+    text = collapse_spl(text).lower()
+    text = re.sub(r"\$(\w+)\.[\w.$]+\$", r"$\1$", text)
+    text = re.sub(r"`[^`]+`", "`macro`", text)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+
+def extract_sourcetypes(text: str) -> set[str]:
+    found: set[str] = set()
+    for m in re.finditer(
+        r'sourcetype\s*=\s*["\']?([^"\')\s,]+)["\']?',
+        text,
+        re.I,
+    ):
+        val = m.group(1).lower()
+        if val not in {"*", "in"}:
+            found.add(val)
+    for m in re.finditer(
+        r'sourcetype\s*IN\s*\(([^)]+)\)',
+        text,
+        re.I,
+    ):
+        for part in re.split(r",", m.group(1)):
+            val = part.strip().strip("\"'")
+            if val and val.lower() not in {"*", "in"}:
+                found.add(val.lower())
+    return found
+
+
+def extract_datamodels(text: str) -> set[str]:
+    found: set[str] = set()
+    for m in re.finditer(
+        r"(?:from\s+)?datamodel(?:=|:)\s*([A-Za-z0-9_.:-]+)",
+        text,
+        re.I,
+    ):
+        found.add(m.group(1))
+    for m in re.finditer(
+        r"\|\s*from\s+datamodel:([A-Za-z0-9_.:-]+)",
+        text,
+        re.I,
+    ):
+        found.add(m.group(1))
+    return found
+
+
+def extract_index_macros(text: str) -> set[str]:
+    return {m.group(1).lower() for m in re.finditer(r"`([^`]+)`", text)}
+
+
+def extract_tokens(text: str) -> set[str]:
+    tokens: set[str] = set()
+    tokens |= extract_sourcetypes(text)
+    tokens |= {dm.lower() for dm in extract_datamodels(text)}
+    tokens |= extract_index_macros(text)
+    for m in re.finditer(r"\b([a-zA-Z_][\w.:-]{2,})\b", text):
+        tok = m.group(1).lower()
+        if tok in {"search", "index", "where", "stats", "eval", "timechart", "table", "sort", "by", "as", "from", "and", "or", "not", "in", "null", "true", "false", "latest", "earliest", "now", "count", "avg", "sum", "values", "dc", "first", "last", "rename", "fields", "head", "tail", "append", "join", "lookup", "output", "fillnull", "coalesce", "case", "match", "isnotnull", "isnull", "if", "round", "tostring", "strftime", "relative_time", "mvindex", "mvjoin", "mvfilter", "mvexpand", "split", "replace", "lower", "upper", "trim", "len", "like", "top", "rare", "dedup", "eventstats", "streamstats", "chart", "xyseries", "tstats", "pivot", "datamodel", "sourcetype", "action", "all_traffic", "authentication", "failed_authentication"}:
+            continue
+        if re.match(r"^\d", tok):
+            continue
+        tokens.add(tok)
+    return tokens
+
+
+def enrich_query_obj(obj: DashboardQuery | SearchStanza) -> None:
+    obj.sourcetypes = extract_sourcetypes(obj.search if hasattr(obj, "search") else obj.query)
+    obj.datamodels = extract_datamodels(obj.search if hasattr(obj, "search") else obj.query)
+    obj.index_macros = extract_index_macros(obj.search if hasattr(obj, "search") else obj.query)
+    obj.tokens = extract_tokens(obj.search if hasattr(obj, "search") else obj.query)
+    obj.normalized = normalize_spl(obj.search if hasattr(obj, "search") else obj.query)
+
+
+def should_skip_query(query: str) -> bool:
+    q = collapse_spl(query)
+    for pat in SKIP_QUERY_PATTERNS:
+        if re.search(pat, q, re.I):
+            return True
+    return len(q) < 12
+
+
+def is_generic_search(text: str) -> bool:
+    norm = normalize_spl(text)
+    hits = sum(1 for pat in GENERIC_PATTERNS if re.search(pat, norm, re.I))
+    if hits >= 2:
+        return True
+    if hits == 1 and not extract_sourcetypes(text) and not extract_datamodels(text):
+        return True
+    return False
+
+
+def parse_searchbase(path: Path) -> list[SearchStanza]:
+    stanzas: list[SearchStanza] = []
+    current_id: str | None = None
+    current: dict[str, str] = {}
+    search_lines: list[str] = []
+    in_search = False
+
+    def flush() -> None:
+        nonlocal current_id, current, search_lines, in_search
+        if not current_id:
+            return
+        search_text = collapse_spl(" ".join(search_lines))
+        stanza = SearchStanza(
+            stanza_id=current_id,
+            search_name=current.get("search_name", current_id),
+            search=search_text,
+            tags=current.get("tags", ""),
+        )
+        enrich_query_obj(stanza)
+        stanzas.append(stanza)
+        current_id = None
+        current = {}
+        search_lines = []
+        in_search = False
+
+    for raw_line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = raw_line.rstrip()
+        if line.startswith("[") and line.endswith("]") and not line.startswith("[default]"):
+            flush()
+            current_id = line[1:-1].strip()
+            continue
+        if current_id is None:
+            continue
+        if line.startswith("search ="):
+            in_search = True
+            search_lines = [line.split("=", 1)[1].strip()]
+            continue
+        if in_search and line.endswith("\\"):
+            search_lines.append(line[:-1].strip())
+            continue
+        if in_search and (line.startswith("|") or (search_lines and not re.match(r"^[a-zA-Z_][\w ]+\s*=", line))):
+            search_lines.append(line.strip())
+            continue
+        if in_search:
+            in_search = False
+        if "=" in line and not line.startswith("#"):
+            key, val = line.split("=", 1)
+            current[key.strip()] = val.strip()
+    flush()
+    return stanzas
+
+
+def extract_xml_queries(xml_path: Path) -> list[tuple[str, str]]:
+    results: list[tuple[str, str]] = []
+    try:
+        text = xml_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return results
+
+    dashboard_label = xml_path.stem.replace("_", " ")
+    label_match = re.search(r"<label>([^<]+)</label>", text, re.I)
+    if label_match:
+        dashboard_label = label_match.group(1).strip()
+
+    # Dashboard Studio JSON embedded in <definition><![CDATA[...]]></definition>
+    for m in re.finditer(
+        r"<definition>\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*</definition>",
+        text,
+        re.I,
+    ):
+        blob = m.group(1).strip()
+        try:
+            data = json.loads(blob)
+        except json.JSONDecodeError:
+            continue
+        ds = data.get("dataSources") or {}
+        if isinstance(ds, dict):
+            for ds_obj in ds.values():
+                if not isinstance(ds_obj, dict):
+                    continue
+                opts = ds_obj.get("options") or {}
+                query = opts.get("query") or opts.get("queryParameters", {}).get("query")
+                if isinstance(query, str) and query.strip():
+                    name = ds_obj.get("name") or dashboard_label
+                    results.append((dashboard_label if name == dashboard_label else f"{dashboard_label} / {name}", query))
+
+    # Traditional XML <search><query>...</query></search>
+    try:
+        root = ET.fromstring(text)
+    except ET.ParseError:
+        root = None
+    if root is not None:
+        for search_el in root.iter("search"):
+            query_el = search_el.find("query")
+            if query_el is not None and query_el.text and query_el.text.strip():
+                results.append((dashboard_label, query_el.text.strip()))
+
+    # Fallback regex for malformed XML
+    if not results:
+        for m in re.finditer(r"<query>([\s\S]*?)</query>", text, re.I):
+            q = m.group(1).strip()
+            if q and not should_skip_query(q):
+                results.append((dashboard_label, q))
+
+    deduped: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for name, q in results:
+        key = normalize_spl(q)
+        if key in seen or should_skip_query(q):
+            continue
+        seen.add(key)
+        deduped.append((name, q))
+    return deduped
+
+
+def extract_json_dashboard_queries(json_path: Path) -> list[tuple[str, str]]:
+    results: list[tuple[str, str]] = []
+    try:
+        data = json.loads(json_path.read_text(encoding="utf-8", errors="replace"))
+    except (OSError, json.JSONDecodeError):
+        return results
+    dashboard_label = json_path.stem.replace("_", " ")
+    if isinstance(data, dict):
+        dashboard_label = data.get("title") or data.get("label") or dashboard_label
+        ds = data.get("dataSources") or {}
+        if isinstance(ds, dict):
+            for ds_obj in ds.values():
+                if not isinstance(ds_obj, dict):
+                    continue
+                opts = ds_obj.get("options") or {}
+                query = opts.get("query")
+                if isinstance(query, str) and query.strip() and not should_skip_query(query):
+                    name = ds_obj.get("name") or dashboard_label
+                    results.append((f"{dashboard_label} / {name}" if name != dashboard_label else dashboard_label, query))
+    return results
+
+
+def collect_dashboard_queries(apps_root: Path) -> list[DashboardQuery]:
+    queries: list[DashboardQuery] = []
+    if not apps_root.exists():
+        print(f"ERROR: apps root not found: {apps_root}", file=sys.stderr)
+        return queries
+
+    for app_dir in sorted(apps_root.iterdir()):
+        if not app_dir.is_dir() or app_dir.name in EXCLUDED_APP_DIRS:
+            continue
+        views_dir = app_dir / "default" / "data" / "ui" / "views"
+        if not views_dir.exists():
+            continue
+        app_name = read_app_label(app_dir)
+        for view_file in sorted(views_dir.iterdir()):
+            if view_file.suffix.lower() == ".xml":
+                extracted = extract_xml_queries(view_file)
+            elif view_file.suffix.lower() == ".json":
+                extracted = extract_json_dashboard_queries(view_file)
+            else:
+                continue
+            for dash_name, query in extracted:
+                obj = DashboardQuery(
+                    app_dir=app_dir.name,
+                    app_name=app_name,
+                    dashboard_file=view_file.name,
+                    dashboard_name=dash_name,
+                    query=query,
+                )
+                enrich_query_obj(obj)
+                queries.append(obj)
+    return queries
+
+
+def anchor_overlap(a: SearchStanza, b: DashboardQuery) -> tuple[float, list[str]]:
+    notes: list[str] = []
+    score_parts: list[float] = []
+
+    st_overlap = a.sourcetypes & b.sourcetypes
+    if a.sourcetypes or b.sourcetypes:
+        if st_overlap:
+            notes.append(f"matched sourcetype={','.join(sorted(st_overlap)[:3])}")
+            score_parts.append(0.35)
+        elif a.sourcetypes and b.sourcetypes:
+            return 0.0, ["sourcetype mismatch"]
+    else:
+        score_parts.append(0.05)
+
+    dm_overlap = a.datamodels & b.datamodels
+    if a.datamodels or b.datamodels:
+        if dm_overlap:
+            notes.append(f"matched datamodel={','.join(sorted(dm_overlap)[:2])}")
+            score_parts.append(0.35)
+        elif a.datamodels and b.datamodels:
+            return 0.0, ["datamodel mismatch"]
+    else:
+        score_parts.append(0.05)
+
+    macro_overlap = a.index_macros & b.index_macros
+    if macro_overlap:
+        notes.append(f"matched macro={','.join(sorted(macro_overlap)[:3])}")
+        score_parts.append(min(0.15, 0.05 * len(macro_overlap)))
+
+    if not a.sourcetypes and not a.datamodels and not b.sourcetypes and not b.datamodels:
+        token_overlap = a.tokens & b.tokens
+        if len(token_overlap) < 3:
+            return 0.0, ["insufficient shared tokens"]
+
+    return sum(score_parts), notes
+
+
+def build_query_index(queries: list[DashboardQuery]) -> dict[str, list[DashboardQuery]]:
+    index: dict[str, list[DashboardQuery]] = defaultdict(list)
+    for q in queries:
+        keys = set()
+        for st in q.sourcetypes:
+            keys.add(f"st:{st}")
+        for dm in q.datamodels:
+            keys.add(f"dm:{dm.lower()}")
+        for macro in q.index_macros:
+            keys.add(f"macro:{macro}")
+        if not keys:
+            keys.add("generic")
+        for key in keys:
+            index[key].append(q)
+    return index
+
+
+def candidate_queries(
+    stanza: SearchStanza, index: dict[str, list[DashboardQuery]]
+) -> list[DashboardQuery]:
+    keys: set[str] = set()
+    for st in stanza.sourcetypes:
+        keys.add(f"st:{st}")
+    for dm in stanza.datamodels:
+        keys.add(f"dm:{dm.lower()}")
+    for macro in stanza.index_macros:
+        keys.add(f"macro:{macro}")
+
+    if keys:
+        seen: set[int] = set()
+        out: list[DashboardQuery] = []
+        for key in keys:
+            for q in index.get(key, []):
+                qid = id(q)
+                if qid not in seen:
+                    seen.add(qid)
+                    out.append(q)
+        return out
+
+    # No sourcetype/datamodel/macro anchors: fall back to token overlap prefilter.
+    out = []
+    for q in index.get("generic", []):
+        if len(stanza.tokens & q.tokens) >= 3:
+            out.append(q)
+    return out
+
+
+def similarity_score(a: SearchStanza, b: DashboardQuery) -> tuple[float, str]:
+    anchor, anchor_notes = anchor_overlap(a, b)
+    if anchor <= 0.0:
+        return 0.0, anchor_notes[0] if anchor_notes else "no anchor overlap"
+
+    seq = SequenceMatcher(None, a.normalized, b.normalized).ratio()
+    token_a, token_b = a.tokens, b.tokens
+    if token_a or token_b:
+        jaccard = len(token_a & token_b) / max(1, len(token_a | token_b))
+    else:
+        jaccard = 0.0
+
+    structural = 0.55 * seq + 0.45 * jaccard
+    confidence = min(0.99, anchor + 0.55 * structural)
+
+    notes = list(anchor_notes)
+    if seq >= 0.85:
+        notes.append("high sequence similarity")
+    elif seq >= 0.65:
+        notes.append("moderate sequence similarity")
+    if jaccard >= 0.45:
+        notes.append(f"token overlap {jaccard:.0%}")
+
+    if is_generic_search(a.search) or is_generic_search(b.query):
+        notes.append("generic/multi-app")
+        confidence = min(confidence, 0.62)
+
+    if a.normalized == b.normalized:
+        notes.append("exact normalized match")
+        confidence = 0.99
+
+    return round(confidence, 2), "; ".join(notes)
+
+
+def snippet(text: str) -> str:
+    s = collapse_spl(text)
+    if len(s) <= MAX_SNIPPET_LEN:
+        return s
+    return s[: MAX_SNIPPET_LEN - 3] + "..."
+
+
+def main() -> int:
+    print("Parsing searchbase.conf...", file=sys.stderr)
+    stanzas = parse_searchbase(SEARCHBASE_PATH)
+    print(f"  {len(stanzas)} stanzas", file=sys.stderr)
+
+    print(f"Scanning dashboards under {APPS_ROOT}...", file=sys.stderr)
+    dashboard_queries = collect_dashboard_queries(APPS_ROOT)
+    print(f"  {len(dashboard_queries)} dashboard queries from apps", file=sys.stderr)
+
+    query_index = build_query_index(dashboard_queries)
+    matches: list[dict[str, str | float]] = []
+    stanza_best: dict[str, float] = defaultdict(float)
+
+    for i, stanza in enumerate(stanzas, 1):
+        if i % 100 == 0:
+            print(f"  matching stanza {i}/{len(stanzas)}...", file=sys.stderr)
+        candidates: list[tuple[float, DashboardQuery, str]] = []
+        for dq in candidate_queries(stanza, query_index):
+            if stanza.tokens and dq.tokens:
+                quick = len(stanza.tokens & dq.tokens) / max(1, len(stanza.tokens | dq.tokens))
+                if quick < 0.08 and stanza.normalized[:40] not in dq.normalized:
+                    continue
+            conf, notes = similarity_score(stanza, dq)
+            if conf >= CONFIDENCE_THRESHOLD:
+                candidates.append((conf, dq, notes))
+
+        candidates.sort(key=lambda x: (-x[0], x[1].app_name, x[1].dashboard_name))
+        candidates = candidates[:MAX_MATCHES_PER_STANZA]
+
+        if not candidates:
+            matches.append(
+                {
+                    "stanza_id": stanza.stanza_id,
+                    "app_name": "",
+                    "dashboard_name": "",
+                    "source_query_snippet": snippet(stanza.search),
+                    "confidence": 0.0,
+                    "notes": "unmatched",
+                }
+            )
+            continue
+
+        for conf, dq, notes in candidates:
+            stanza_best[stanza.stanza_id] = max(stanza_best[stanza.stanza_id], conf)
+            matches.append(
+                {
+                    "stanza_id": stanza.stanza_id,
+                    "app_name": dq.app_name,
+                    "dashboard_name": dq.dashboard_name,
+                    "source_query_snippet": snippet(dq.query),
+                    "confidence": conf,
+                    "notes": notes,
+                }
+            )
+
+    matches.sort(key=lambda r: (-float(r["confidence"]), str(r["app_name"]), str(r["stanza_id"])))
+
+    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    fieldnames = [
+        "stanza_id",
+        "app_name",
+        "dashboard_name",
+        "source_query_snippet",
+        "confidence",
+        "notes",
+    ]
+    matched_rows = [m for m in matches if float(m["confidence"]) >= CONFIDENCE_THRESHOLD]
+    unmatched_rows = [m for m in matches if m["notes"] == "unmatched"]
+
+    with OUTPUT_PATH.open("w", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(fh, fieldnames=fieldnames, quoting=csv.QUOTE_MINIMAL)
+        writer.writeheader()
+        writer.writerows(matched_rows)
+
+    with UNMATCHED_PATH.open("w", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(
+            fh,
+            fieldnames=["stanza_id", "search_name", "source_query_snippet", "notes"],
+            quoting=csv.QUOTE_MINIMAL,
+        )
+        writer.writeheader()
+        for row in unmatched_rows:
+            stanza = next(s for s in stanzas if s.stanza_id == row["stanza_id"])
+            writer.writerow(
+                {
+                    "stanza_id": row["stanza_id"],
+                    "search_name": stanza.search_name,
+                    "source_query_snippet": row["source_query_snippet"],
+                    "notes": row["notes"],
+                }
+            )
+
+    matched_stanzas = {s for s, best in stanza_best.items() if best >= CONFIDENCE_THRESHOLD}
+    unmatched_stanzas = len(stanzas) - len(matched_stanzas)
+    unique_apps = len({m["app_name"] for m in matched_rows if m["app_name"]})
+    total_matches = len(matched_rows)
+
+    summary_path = OUTPUT_PATH.with_suffix(".summary.txt")
+    summary = (
+        f"Total potential matches: {total_matches}\n"
+        f"Unique apps matched: {unique_apps}\n"
+        f"Unmatched stanzas: {unmatched_stanzas}\n"
+        f"Total stanzas: {len(stanzas)}\n"
+        f"Dashboard queries scanned: {len(dashboard_queries)}\n"
+        f"Max matches per stanza: {MAX_MATCHES_PER_STANZA}\n"
+        f"Excluded app dirs: {', '.join(sorted(EXCLUDED_APP_DIRS))}\n"
+        f"Confidence threshold: {CONFIDENCE_THRESHOLD}\n"
+        f"Matches output: {OUTPUT_PATH}\n"
+        f"Unmatched output: {UNMATCHED_PATH}\n"
+    )
+    summary_path.write_text(summary, encoding="utf-8")
+
+    print(summary, file=sys.stderr)
+    print(f"Wrote {OUTPUT_PATH}", file=sys.stderr)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

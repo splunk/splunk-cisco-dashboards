@@ -1,0 +1,10 @@
+Total potential matches: 972
+Unique apps matched: 7
+Unmatched stanzas: 643
+Total stanzas: 906
+Dashboard queries scanned: 3908
+Max matches per stanza: 5
+Excluded app dirs: launcher, learned, search, splunk-cisco-app-navigator, splunk-cisco-dashboards, splunk-dashboard-studio, splunk_insights, splunk_monitoring_console
+Confidence threshold: 0.5
+Matches output: /Users/akhamis/repo/splunk-cisco-dashboards/docs/searchbase-dashboard-matches.csv
+Unmatched output: /Users/akhamis/repo/splunk-cisco-dashboards/docs/searchbase-dashboard-unmatched.csv
