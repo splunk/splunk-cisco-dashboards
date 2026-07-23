@@ -64,6 +64,33 @@ SKIP_QUERY_PATTERNS = [
     r"^\s*\|\s*rest\s+.*splunk_server=local.*\|\s*fields\s+version",
 ]
 
+# Map sourcetype families to Cisco Security Cloud datamodel/dashboard signals.
+# Tuple: (sourcetype prefix, dataset substrings, dashboard file substrings, product key)
+PRODUCT_FAMILIES: list[tuple[str, list[str], list[str], str]] = [
+    ("cisco:xdr", ["xdr_dataset"], ["xdr_dashboard"], "xdr"),
+    ("cisco:secure:workload", ["csw_dataset"], ["csw_dashboard"], "secure_workload"),
+    ("cisco:ai:defense", ["ai:defense", "ai_defense"], ["aid_dashboard"], "ai_defense"),
+    ("cisco:cii", ["cii_dataset"], ["cii_dashboard"], "cloud_security"),
+    ("cisco:etd", ["email_threat", "secure_email"], ["etd_dashboard"], "etd"),
+    ("cisco:cvi", ["cvm_dataset", "cisco:cvi"], ["cvi_dashboard"], "cvi"),
+    ("cisco:sna", ["secure_network_analytics", "cisco:sna"], ["sna"], "sna"),
+    ("cisco:multicloud:defense", ["mcd_"], ["mcd_dashboard"], "mcd"),
+    ("cisco:cloud_security", ["cii_dataset", "cloud_security"], ["cii_dashboard"], "cloud_security"),
+    ("cisco:asa", ["asa_dataset", "cisco:asa"], ["asa_dashboard"], "asa"),
+    ("cisco:duo", ["duo_"], ["duo_overview"], "duo"),
+    ("cisco:esa", ["email_threat", "secure_email"], ["etd_dashboard"], "esa"),
+    ("cisco:sma", ["malware_analytics", "secure_malware"], ["sma"], "sma"),
+    ("cisco:sfw", ["secure_firewall"], ["secure_firewall", "advanced_logging"], "secure_firewall"),
+    ("cisco:estreamer", ["secure_firewall", "estreamer"], ["secure_firewall", "advanced_logging"], "secure_firewall"),
+    ("cisco:ftd", ["secure_firewall"], ["secure_firewall", "advanced_logging"], "secure_firewall"),
+    ("cisco:firepower", ["secure_firewall"], ["secure_firewall"], "secure_firewall"),
+    ("ms:defender", ["security_endpoint", "endpoint"], ["cse_dashboard"], "secure_endpoint"),
+    ("cisco:se", ["security_endpoint"], ["cse_dashboard"], "secure_endpoint"),
+    ("cisco:ise:syslog", ["authentication"], [], "ise"),
+    ("cisco:wsa", ["wsa"], ["wsa"], "wsa"),
+    ("cisco:isovalent", ["isovalent"], ["isovalent"], "isovalent"),
+]
+
 
 @dataclass
 class DashboardQuery:
@@ -76,6 +103,7 @@ class DashboardQuery:
     datamodels: set[str] = field(default_factory=set)
     index_macros: set[str] = field(default_factory=set)
     tokens: set[str] = field(default_factory=set)
+    product_keys: set[str] = field(default_factory=set)
     normalized: str = ""
 
 
@@ -89,6 +117,7 @@ class SearchStanza:
     datamodels: set[str] = field(default_factory=set)
     index_macros: set[str] = field(default_factory=set)
     tokens: set[str] = field(default_factory=set)
+    product_keys: set[str] = field(default_factory=set)
     normalized: str = ""
 
 
@@ -180,12 +209,62 @@ def extract_tokens(text: str) -> set[str]:
     return tokens
 
 
-def enrich_query_obj(obj: DashboardQuery | SearchStanza) -> None:
-    obj.sourcetypes = extract_sourcetypes(obj.search if hasattr(obj, "search") else obj.query)
-    obj.datamodels = extract_datamodels(obj.search if hasattr(obj, "search") else obj.query)
-    obj.index_macros = extract_index_macros(obj.search if hasattr(obj, "search") else obj.query)
-    obj.tokens = extract_tokens(obj.search if hasattr(obj, "search") else obj.query)
-    obj.normalized = normalize_spl(obj.search if hasattr(obj, "search") else obj.query)
+def sourcetype_matches_prefix(sourcetype: str, prefix: str) -> bool:
+    st = sourcetype.lower().rstrip("*")
+    pf = prefix.lower().rstrip("*")
+    return st == pf or st.startswith(f"{pf}:")
+
+
+def derive_product_keys_from_sourcetypes(sourcetypes: set[str]) -> set[str]:
+    keys: set[str] = set()
+    for st in sourcetypes:
+        for prefix, _, _, product in PRODUCT_FAMILIES:
+            if sourcetype_matches_prefix(st, prefix):
+                keys.add(product)
+    return keys
+
+
+def derive_product_keys_from_datamodels(datamodels: set[str]) -> set[str]:
+    keys: set[str] = set()
+    for dm in datamodels:
+        dm_lower = dm.lower()
+        for _, datasets, _, product in PRODUCT_FAMILIES:
+            if any(ds in dm_lower for ds in datasets):
+                keys.add(product)
+    return keys
+
+
+def derive_product_keys_from_dashboard(dashboard_file: str) -> set[str]:
+    keys: set[str] = set()
+    fname = dashboard_file.lower()
+    for _, _, dashboards, product in PRODUCT_FAMILIES:
+        if any(dash in fname for dash in dashboards):
+            keys.add(product)
+    return keys
+
+
+def enrich_product_keys(
+    obj: DashboardQuery | SearchStanza,
+    dashboard_file: str | None = None,
+) -> None:
+    obj.product_keys = set()
+    obj.product_keys |= derive_product_keys_from_sourcetypes(obj.sourcetypes)
+    obj.product_keys |= derive_product_keys_from_datamodels(obj.datamodels)
+    if dashboard_file:
+        obj.product_keys |= derive_product_keys_from_dashboard(dashboard_file)
+
+
+def enrich_query_obj(
+    obj: DashboardQuery | SearchStanza,
+    dashboard_file: str | None = None,
+) -> None:
+    text = obj.search if hasattr(obj, "search") else obj.query
+    obj.sourcetypes = extract_sourcetypes(text)
+    obj.datamodels = extract_datamodels(text)
+    obj.index_macros = extract_index_macros(text)
+    obj.tokens = extract_tokens(text)
+    obj.normalized = normalize_spl(text)
+    enrich_product_keys(obj, dashboard_file=dashboard_file)
 
 
 def should_skip_query(query: str) -> bool:
@@ -204,6 +283,23 @@ def is_generic_search(text: str) -> bool:
     if hits == 1 and not extract_sourcetypes(text) and not extract_datamodels(text):
         return True
     return False
+
+
+def is_data_integrity_boilerplate(query: DashboardQuery) -> bool:
+    if query.dashboard_file != "data_integrity_overview.xml":
+        return False
+    norm = normalize_spl(query.query)
+    return bool(
+        re.search(r"\|\s*tstats\s+prestats\s*=\s*t\s+count\s+where\s+index\s+in", norm, re.I)
+        or re.search(r"\|\s*tstats\s+count\s+where\s+index\s+in", norm, re.I)
+    )
+
+
+def is_metadata_dashboard(query: DashboardQuery) -> bool:
+    return query.dashboard_file in {
+        "data_integrity_overview.xml",
+        "resource_utilization.xml",
+    }
 
 
 def parse_searchbase(path: Path) -> list[SearchStanza]:
@@ -343,8 +439,13 @@ def extract_json_dashboard_queries(json_path: Path) -> list[tuple[str, str]]:
     return results
 
 
+def is_cisco_upstream_app(app_dir: Path) -> bool:
+    return "cisco" in app_dir.name.casefold()
+
+
 def collect_dashboard_queries(apps_root: Path) -> list[DashboardQuery]:
     queries: list[DashboardQuery] = []
+    scanned_apps: list[str] = []
     if not apps_root.exists():
         print(f"ERROR: apps root not found: {apps_root}", file=sys.stderr)
         return queries
@@ -352,10 +453,13 @@ def collect_dashboard_queries(apps_root: Path) -> list[DashboardQuery]:
     for app_dir in sorted(apps_root.iterdir()):
         if not app_dir.is_dir() or app_dir.name in EXCLUDED_APP_DIRS:
             continue
+        if not is_cisco_upstream_app(app_dir):
+            continue
         views_dir = app_dir / "default" / "data" / "ui" / "views"
         if not views_dir.exists():
             continue
         app_name = read_app_label(app_dir)
+        scanned_apps.append(app_dir.name)
         for view_file in sorted(views_dir.iterdir()):
             if view_file.suffix.lower() == ".xml":
                 extracted = extract_xml_queries(view_file)
@@ -371,8 +475,12 @@ def collect_dashboard_queries(apps_root: Path) -> list[DashboardQuery]:
                     dashboard_name=dash_name,
                     query=query,
                 )
-                enrich_query_obj(obj)
+                enrich_query_obj(obj, dashboard_file=view_file.name)
                 queries.append(obj)
+    print(
+        f"  scanned {len(scanned_apps)} Cisco apps under default/data/ui/views",
+        file=sys.stderr,
+    )
     return queries
 
 
@@ -380,37 +488,37 @@ def anchor_overlap(a: SearchStanza, b: DashboardQuery) -> tuple[float, list[str]
     notes: list[str] = []
     score_parts: list[float] = []
 
+    product_overlap = a.product_keys & b.product_keys
+    if product_overlap:
+        notes.append(f"matched product={','.join(sorted(product_overlap)[:3])}")
+        score_parts.append(0.40)
+
     st_overlap = a.sourcetypes & b.sourcetypes
-    if a.sourcetypes or b.sourcetypes:
-        if st_overlap:
-            notes.append(f"matched sourcetype={','.join(sorted(st_overlap)[:3])}")
-            score_parts.append(0.35)
-        elif a.sourcetypes and b.sourcetypes:
-            return 0.0, ["sourcetype mismatch"]
-    else:
-        score_parts.append(0.05)
+    if st_overlap:
+        notes.append(f"matched sourcetype={','.join(sorted(st_overlap)[:3])}")
+        score_parts.append(0.35)
 
     dm_overlap = a.datamodels & b.datamodels
-    if a.datamodels or b.datamodels:
-        if dm_overlap:
-            notes.append(f"matched datamodel={','.join(sorted(dm_overlap)[:2])}")
-            score_parts.append(0.35)
-        elif a.datamodels and b.datamodels:
-            return 0.0, ["datamodel mismatch"]
-    else:
-        score_parts.append(0.05)
+    if dm_overlap:
+        notes.append(f"matched datamodel={','.join(sorted(dm_overlap)[:2])}")
+        score_parts.append(0.35)
 
     macro_overlap = a.index_macros & b.index_macros
     if macro_overlap:
         notes.append(f"matched macro={','.join(sorted(macro_overlap)[:3])}")
         score_parts.append(min(0.15, 0.05 * len(macro_overlap)))
 
-    if not a.sourcetypes and not a.datamodels and not b.sourcetypes and not b.datamodels:
+    if not score_parts:
+        if a.sourcetypes and b.sourcetypes:
+            return 0.0, ["sourcetype mismatch"]
+        if a.datamodels and b.datamodels:
+            return 0.0, ["datamodel mismatch"]
         token_overlap = a.tokens & b.tokens
         if len(token_overlap) < 3:
             return 0.0, ["insufficient shared tokens"]
+        score_parts.append(0.05)
 
-    return sum(score_parts), notes
+    return min(0.75, sum(score_parts)), notes
 
 
 def build_query_index(queries: list[DashboardQuery]) -> dict[str, list[DashboardQuery]]:
@@ -423,6 +531,8 @@ def build_query_index(queries: list[DashboardQuery]) -> dict[str, list[Dashboard
             keys.add(f"dm:{dm.lower()}")
         for macro in q.index_macros:
             keys.add(f"macro:{macro}")
+        for product in q.product_keys:
+            keys.add(f"prod:{product}")
         if not keys:
             keys.add("generic")
         for key in keys:
@@ -440,6 +550,8 @@ def candidate_queries(
         keys.add(f"dm:{dm.lower()}")
     for macro in stanza.index_macros:
         keys.add(f"macro:{macro}")
+    for product in stanza.product_keys:
+        keys.add(f"prod:{product}")
 
     if keys:
         seen: set[int] = set()
@@ -452,7 +564,7 @@ def candidate_queries(
                     out.append(q)
         return out
 
-    # No sourcetype/datamodel/macro anchors: fall back to token overlap prefilter.
+    # No sourcetype/datamodel/macro/product anchors: fall back to token overlap prefilter.
     out = []
     for q in index.get("generic", []):
         if len(stanza.tokens & q.tokens) >= 3:
@@ -487,6 +599,20 @@ def similarity_score(a: SearchStanza, b: DashboardQuery) -> tuple[float, str]:
         notes.append("generic/multi-app")
         confidence = min(confidence, 0.62)
 
+    product_overlap = a.product_keys & b.product_keys
+    if product_overlap and not (a.datamodels & b.datamodels) and not (a.sourcetypes & b.sourcetypes):
+        notes.append("product-family bridge (sourcetype/datamodel)")
+        confidence = max(confidence, 0.55 + 0.20 * structural)
+        if not is_metadata_dashboard(b):
+            confidence = max(confidence, 0.62)
+
+    if is_data_integrity_boilerplate(b):
+        notes.append("data integrity boilerplate")
+        confidence = min(confidence, 0.52)
+    elif b.dashboard_file == "resource_utilization.xml":
+        notes.append("resource utilization meta-dashboard")
+        confidence = min(confidence, 0.58)
+
     if a.normalized == b.normalized:
         notes.append("exact normalized match")
         confidence = 0.99
@@ -519,10 +645,11 @@ def main() -> int:
             print(f"  matching stanza {i}/{len(stanzas)}...", file=sys.stderr)
         candidates: list[tuple[float, DashboardQuery, str]] = []
         for dq in candidate_queries(stanza, query_index):
-            if stanza.tokens and dq.tokens:
-                quick = len(stanza.tokens & dq.tokens) / max(1, len(stanza.tokens | dq.tokens))
-                if quick < 0.08 and stanza.normalized[:40] not in dq.normalized:
-                    continue
+            if not (stanza.product_keys & dq.product_keys):
+                if stanza.tokens and dq.tokens:
+                    quick = len(stanza.tokens & dq.tokens) / max(1, len(stanza.tokens | dq.tokens))
+                    if quick < 0.08 and stanza.normalized[:40] not in dq.normalized:
+                        continue
             conf, notes = similarity_score(stanza, dq)
             if conf >= CONFIDENCE_THRESHOLD:
                 candidates.append((conf, dq, notes))
@@ -607,6 +734,7 @@ def main() -> int:
         f"Dashboard queries scanned: {len(dashboard_queries)}\n"
         f"Max matches per stanza: {MAX_MATCHES_PER_STANZA}\n"
         f"Excluded app dirs: {', '.join(sorted(EXCLUDED_APP_DIRS))}\n"
+        f"Cisco app filter: directory name contains 'cisco'\n"
         f"Confidence threshold: {CONFIDENCE_THRESHOLD}\n"
         f"Matches output: {OUTPUT_PATH}\n"
         f"Unmatched output: {UNMATCHED_PATH}\n"

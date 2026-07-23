@@ -1,10 +1,11 @@
-Total potential matches: 972
-Unique apps matched: 7
-Unmatched stanzas: 643
+Total potential matches: 1462
+Unique apps matched: 10
+Unmatched stanzas: 572
 Total stanzas: 906
-Dashboard queries scanned: 3908
+Dashboard queries scanned: 2656
 Max matches per stanza: 5
 Excluded app dirs: launcher, learned, search, splunk-cisco-app-navigator, splunk-cisco-dashboards, splunk-dashboard-studio, splunk_insights, splunk_monitoring_console
+Cisco app filter: directory name contains 'cisco'
 Confidence threshold: 0.5
 Matches output: /Users/akhamis/repo/splunk-cisco-dashboards/docs/searchbase-dashboard-matches.csv
 Unmatched output: /Users/akhamis/repo/splunk-cisco-dashboards/docs/searchbase-dashboard-unmatched.csv
