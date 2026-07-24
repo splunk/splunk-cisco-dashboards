@@ -46,6 +46,7 @@
 #
 # Useful options:
 #   ./build.sh --splunk-bin /some/custom/path/splunk          # override the Splunk CLI path directly
+#   ./build.sh --minify                                       # slower, smaller release package
 #
 # Environment:
 #   SPLUNK_HOME   Splunk install root. Defaults to /Applications/Splunk on
@@ -68,6 +69,7 @@ do_install=0
 do_deploy=0
 no_build=0
 from_stage=0
+minify=0
 restart_after_install=0
 verbose=0
 splunk_bin_override=""
@@ -113,12 +115,13 @@ run_quietly() {
     # See FSDG build.sh for the full rationale on:
     #  * `|| rc=$?` / PIPESTATUS to capture the real rc under set -e
     #  * pipe (not process substitution) for synchronous filter delivery
-    #  * filtering out _NOISE_LINES in both verbose and capture-dump paths
+    # Verbose mode deliberately bypasses filtering so progress renderers keep
+    # their terminal semantics and the caller sees the command's exact output.
     local logfile rc=0
     if [[ "$verbose" -eq 1 ]]; then
         set +e
-        "$@" 2>&1 | _noise_filter
-        rc="${PIPESTATUS[0]}"
+        "$@"
+        rc=$?
         set -e
         return "$rc"
     fi
@@ -173,6 +176,9 @@ Other options:
                          for use with a long-running 'yarn start' watcher.
                          Still creates a fresh tarball and can still use
                          --install, so splunkd remains the installer.
+  --minify               Enable JavaScript minification for this clean release
+                         build. Slower, but produces smaller browser bundles.
+                         Not valid with --fast or --no-build.
   --auth user:pass       Splunk CLI credentials. Passed through as
                          '-auth user:pass'. Aliases: -auth, --auth=user:pass.
   --restart              Restart Splunk after install/deploy.
@@ -190,6 +196,8 @@ Examples:
   SPLUNK_HOME=/opt/10 ./build.sh --install --auth admin:******** --restart
   ./build.sh --deploy                                         # build + filesystem swap
   SPLUNK_HOME=/opt/10 ./build.sh --deploy --restart           # ... against /opt/10 + restart
+  ./build.sh --minify                                         # minified release package
+  ./build.sh --minify --install --auth admin:********          # minify + install
 
   # Build once, install to multiple instances:
   ./build.sh
@@ -221,6 +229,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --fast|--from-stage|--stage)
             from_stage=1
+            shift
+            ;;
+        --minify)
+            minify=1
             shift
             ;;
         -v|--verbose)
@@ -264,6 +276,12 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+# Ask webpack for live phase/percentage updates only in verbose mode. Quiet
+# builds still capture output and print it in full if the command fails.
+if [[ "$verbose" -eq 1 ]]; then
+    export SCD_WEBPACK_PROGRESS=1
+fi
 
 # Resolution order for the auth value:
 #   1. --auth / -auth / --auth= on the command line (preferred, matches
@@ -314,6 +332,19 @@ if [[ "$from_stage" -eq 1 && "$no_build" -eq 1 ]]; then
     echo "ERROR: --from-stage and --no-build are mutually exclusive." >&2
     echo "       --from-stage creates a fresh tarball from stage/." >&2
     echo "       --no-build reuses the newest tarball already in dist/." >&2
+    exit 2
+fi
+
+# Minification changes webpack output, so it cannot be applied to a stage/
+# directory or tarball that was already built.
+if [[ "$minify" -eq 1 && "$from_stage" -eq 1 ]]; then
+    echo "ERROR: --minify and --from-stage are mutually exclusive." >&2
+    echo "       --minify requires a clean webpack build; --from-stage reuses existing output." >&2
+    exit 2
+fi
+if [[ "$minify" -eq 1 && "$no_build" -eq 1 ]]; then
+    echo "ERROR: --minify and --no-build are mutually exclusive." >&2
+    echo "       --minify requires a clean webpack build; --no-build reuses an existing tarball." >&2
     exit 2
 fi
 
@@ -370,8 +401,13 @@ elif [[ "$from_stage" -eq 1 ]]; then
     hdr "Packaging current stage/ v${build_version} (--from-stage)..."
     run_quietly bash "${APP_DIR}/bin/package_app.sh" --from-stage
 else
-    hdr "Packaging ${APP_NAME} v${build_version}..."
-    run_quietly bash -c "cd '$APP_DIR' && yarn run package:app"
+    if [[ "$minify" -eq 1 ]]; then
+        hdr "Packaging ${APP_NAME} v${build_version} (minified release build; may take 10+ minutes)..."
+        run_quietly bash -c "cd '$APP_DIR' && yarn run package:app --minify"
+    else
+        hdr "Packaging ${APP_NAME} v${build_version}..."
+        run_quietly bash -c "cd '$APP_DIR' && yarn run package:app"
+    fi
 fi
 
 if [[ "$no_build" -eq 1 ]]; then
@@ -514,6 +550,9 @@ if [[ "$no_build" -eq 1 ]]; then
 fi
 if [[ "$from_stage" -eq 1 ]]; then
     mode_label="--from-stage (packaged existing stage/) + ${mode_label}"
+fi
+if [[ "$minify" -eq 1 ]]; then
+    mode_label="minified release build + ${mode_label}"
 fi
 
 echo ""

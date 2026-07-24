@@ -115,7 +115,11 @@ package as a tarball.
 ```bash
 yarn build                   # webpack build → ./stage
 node bin/build.js pack       # build + tar → ./splunk-cisco-dashboards.tar.gz
+node bin/build.js pack --minify  # slower, minified release build + tar
 ```
+
+Minification is opt-in; normal builds and `yarn start` keep fast,
+unminified production-React bundles.
 
 ## Mounting model
 

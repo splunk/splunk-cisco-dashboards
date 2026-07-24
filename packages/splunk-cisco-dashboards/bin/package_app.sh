@@ -8,12 +8,13 @@ PKG_ROOT="${SCRIPT_DIR}/.."
 STAGE_DIR="${PKG_ROOT}/stage"
 APP_NAME="splunk-cisco-dashboards"
 FROM_STAGE=0
+MINIFY=0
 ROOT_DIR="${PKG_ROOT}/../.."
 VERSION_FILE="${ROOT_DIR}/VERSION"
 
 usage() {
   cat <<EOF
-Usage: bin/package_app.sh [--from-stage]
+Usage: bin/package_app.sh [--from-stage] [--minify]
 
 Default behavior: clean stage/, run production webpack, then package stage/.
 
@@ -22,6 +23,8 @@ Options:
                           clean_build.sh or webpack. Useful when webpack --watch
                           is already maintaining stage/ and you still want to
                           create a tarball for splunkd install.
+  --minify                Enable JavaScript minification for a slower, smaller
+                          release build. Not valid with --from-stage.
   -h, --help              Show this help.
 EOF
 }
@@ -30,6 +33,10 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --from-stage|--stage)
       FROM_STAGE=1
+      shift
+      ;;
+    --minify)
+      MINIFY=1
       shift
       ;;
     -h|--help)
@@ -43,6 +50,12 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+if [[ "$FROM_STAGE" -eq 1 && "$MINIFY" -eq 1 ]]; then
+  echo "ERROR: --minify and --from-stage are mutually exclusive." >&2
+  echo "       Minification requires a clean webpack build." >&2
+  exit 2
+fi
 
 # Read version from repo-root VERSION (source of truth)
 APP_CONF="${PKG_ROOT}/src/main/resources/splunk/default/app.conf"
@@ -84,7 +97,11 @@ else
 
   # Always run clean build (preserving local) to ensure package is fresh
   bash "${SCRIPT_DIR}/clean_build.sh"
-  node "${PKG_ROOT}/bin/build.js" build
+  build_args=(build)
+  if [[ "$MINIFY" -eq 1 ]]; then
+    build_args+=(--minify)
+  fi
+  node "${PKG_ROOT}/bin/build.js" "${build_args[@]}"
 fi
 
 bash "${SCRIPT_DIR}/stamp_version.sh" "$STAGE_DIR"

@@ -5,7 +5,8 @@
  * Minimal build orchestrator for the Splunk Cisco Dashboards app.
  *
  * Subcommands:
- *   build   — runs webpack with production React and fast, unminified output;
+ *   build   — runs webpack with production React and fast, unminified output
+ *             by default; pass --minify for a smaller release build;
  *             webpack's CopyPlugin lays out the app under ./stage
  *   watch   — runs webpack watch with the same production environment
  *   clean   — wipes ./stage
@@ -15,7 +16,7 @@
  *   unlink  — removes the symlink (only if it points back into this repo)
  *
  * Usage:
- *   node bin/build.js build
+ *   node bin/build.js build [--minify]
  *   node bin/build.js watch
  *   node bin/build.js clean
  *   node bin/build.js pack
@@ -61,17 +62,33 @@ function clean() {
     rimraf(TARBALL);
 }
 
-function build() {
-    console.log('› Running webpack (production React, minification disabled)');
+function build({ minify = false } = {}) {
+    console.log(
+        minify
+            ? '› Running webpack (production React, minification enabled — release build)'
+            : '› Running webpack (production React, minification disabled)'
+    );
+    if (minify) {
+        console.log(
+            '› Minifying the large dashboard bundles can take 10+ minutes'
+        );
+    }
+    const webpackArgs = ['--mode', 'production'];
+    if (!minify) {
+        webpackArgs.push('--no-optimization-minimize');
+    }
+    if (process.env.SCD_WEBPACK_PROGRESS === '1') {
+        webpackArgs.push('--progress');
+    }
     run(
         'node_modules/.bin/webpack',
-        ['--mode', 'production', '--no-optimization-minimize'],
+        webpackArgs,
         {
             // Webpack's CLI mode controls its optimizer, but the inherited
             // Splunk webpack config and Babel preset inspect these process
-            // variables while configuration is loading. Minification is
-            // intentionally disabled because these large multi-entry bundles
-            // otherwise spend several minutes and gigabytes in Terser.
+            // variables while configuration is loading. Minification remains
+            // opt-in because these large multi-entry bundles can spend several
+            // minutes and gigabytes in Terser.
             env: {
                 ...process.env,
                 NODE_ENV: 'production',
@@ -90,8 +107,8 @@ function watch() {
         ['--watch', '--mode', 'production', '--no-optimization-minimize'],
         {
             // Fast packaging consumes stage/ directly, so watch output must use
-            // production React just like a clean package build. Minification is
-            // disabled consistently in both paths until explicitly re-enabled.
+            // production React just like a clean package build. Watch mode stays
+            // unminified for responsive rebuilds; release builds opt in explicitly.
             env: {
                 ...process.env,
                 NODE_ENV: 'production',
@@ -101,8 +118,8 @@ function watch() {
     );
 }
 
-function pack() {
-    build();
+function pack({ minify = false } = {}) {
+    build({ minify });
     console.log('› Packaging Splunk app tarball');
     run('tar', [
         '-czf',
@@ -206,15 +223,35 @@ function unlink() {
 
 function main() {
     const cmd = process.argv[2];
+    const commandArgs = process.argv.slice(3);
     if (!cmd || !ALLOWED_COMMANDS.has(cmd)) {
         console.error(
-            `Usage: node bin/build.js <${[...ALLOWED_COMMANDS].join('|')}>`
+            `Usage: node bin/build.js <${[...ALLOWED_COMMANDS].join('|')}> [--minify]`
         );
         process.exit(2);
     }
+    const supportsMinify = cmd === 'build' || cmd === 'pack';
+    const invalidArgs = supportsMinify
+        ? commandArgs.filter((arg) => arg !== '--minify')
+        : cmd === 'link' || cmd === 'unlink'
+          ? commandArgs.slice(1)
+          : commandArgs;
+    if (
+        invalidArgs.length > 0 ||
+        (!supportsMinify && commandArgs.includes('--minify'))
+    ) {
+        console.error(
+            `ERROR: unsupported option for ${cmd}: ${
+                invalidArgs[0] || '--minify'
+            }`
+        );
+        console.error('--minify is supported only by build and pack.');
+        process.exit(2);
+    }
+    const minify = supportsMinify && commandArgs.includes('--minify');
     switch (cmd) {
         case 'build':
-            build();
+            build({ minify });
             break;
         case 'watch':
             watch();
@@ -223,7 +260,7 @@ function main() {
             clean();
             break;
         case 'pack':
-            pack();
+            pack({ minify });
             break;
         case 'link':
             link();
