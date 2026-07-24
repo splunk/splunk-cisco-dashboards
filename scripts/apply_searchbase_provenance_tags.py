@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Apply upstream dashboard provenance tags to searchbase.conf from match CSV."""
+"""Apply dCloud dashboard provenance tags to searchbase.conf from match CSV."""
 
 from __future__ import annotations
 
@@ -19,56 +19,56 @@ CONFIDENCE_THRESHOLD = 0.60
 UPDATED_AUTHOR = "akhamis"
 DATE_UPDATED = date.today().strftime("%Y-%m-%d %H:%M:%S")
 PROVENANCE_MARKER = "TA Stock Dashboard"
+PROVENANCE_APP = "dCloud"
 
-# Canonical upstream app tag names (from app.conf labels in /opt/10/etc/apps).
-APP_TAG_ALIASES = {
-    "Cisco Meraki Add-on for Splunk": "Cisco Meraki Add-on for Splunk",
-    "Cisco Enterprise Networking for Splunk Platform": "Cisco Enterprise Networking for Splunk",
-    "Splunk Add-on for Cisco ISE": "Splunk Add-on for Cisco ISE",
-    "Cisco Spaces Add-on for Splunk": "Cisco Spaces Add-on for Splunk",
-    "Splunk Add-on for Cisco ASA": "Splunk Add-on for Cisco ASA",
-    "Cisco Cyber Vision App for Splunk": "Cisco Cyber Vision App for Splunk",
-    "Cisco Cyber Vision Add-on for Splunk": "Cisco Cyber Vision Add-on for Splunk",
-    "Cisco Security Cloud": "Cisco Security Cloud",
-    "Cisco Catalyst Add-on for Splunk": "Cisco Catalyst Add-on for Splunk",
-    "Cisco Catalyst Center Add-on": "Cisco Catalyst Center Add-on",
-    "Cisco Control Center": "Cisco Control Center",
-    "Cisco DC Networking App for Splunk": "Cisco DC Networking App for Splunk",
-    "Cisco Intersight Add-On for Splunk": "Cisco Intersight Add-on for Splunk",
-    "Cisco Networks": "Cisco Networks",
-    "Cisco SD-WAN App for Splunk": "Cisco SD-WAN App for Splunk",
-    "Cisco SNA App": "Cisco SNA App",
-    "Cisco Secure Access Add-on for Splunk": "Cisco Secure Access Add-on for Splunk",
-    "Cisco Secure Access App for Splunk": "Cisco Secure Access App for Splunk",
-    "Cisco ThousandEyes App for Splunk": "Cisco ThousandEyes App for Splunk",
-    "Cisco CESA Dashboard": "Cisco CESA Dashboard",
-    "Splunk Add-on for Cisco ESA": "Splunk Add-on for Cisco ESA",
-    "Splunk Add-on for Cisco UCS": "Splunk Add-on for Cisco UCS",
-    "Splunk Add-on for Cisco WSA": "Splunk Add-on for Cisco WSA",
+# Legacy upstream app tags to strip when re-tagging from older matcher runs.
+LEGACY_APP_TAGS = {
+    "dCloud",
+    "Cisco Meraki Add-on for Splunk",
+    "Cisco Enterprise Networking for Splunk",
+    "Cisco Enterprise Networking for Splunk Platform",
+    "Splunk Add-on for Cisco ISE",
+    "Cisco Spaces Add-on for Splunk",
+    "Splunk Add-on for Cisco ASA",
+    "Cisco Cyber Vision App for Splunk",
+    "Cisco Cyber Vision Add-on for Splunk",
+    "Cisco Security Cloud",
+    "Cisco Catalyst Add-on for Splunk",
+    "Cisco Catalyst Center Add-on",
+    "Cisco Control Center",
+    "Cisco DC Networking App for Splunk",
+    "Cisco Intersight Add-on for Splunk",
+    "Cisco Intersight Add-On for Splunk",
+    "Cisco Networks",
+    "Cisco SD-WAN App for Splunk",
+    "Cisco SNA App",
+    "Cisco Secure Access Add-on for Splunk",
+    "Cisco Secure Access App for Splunk",
+    "Cisco ThousandEyes App for Splunk",
+    "Cisco CESA Dashboard",
+    "Splunk Add-on for Cisco ESA",
+    "Splunk Add-on for Cisco UCS",
+    "Splunk Add-on for Cisco WSA",
 }
 
 
-def dashboard_tag(name: str) -> str:
-    leaf = name.split(" / ")[-1].strip()
-    leaf = re.sub(r"\s+", " ", leaf)
-    if len(leaf) > 64:
-        leaf = leaf[:61] + "..."
-    return leaf
+def dashboard_label(name: str) -> str:
+    label = name.split(" / ", 1)[0].strip()
+    label = re.sub(r"\s+", " ", label)
+    if len(label) > 64:
+        label = label[:61] + "..."
+    return label
 
 
 def known_app_labels() -> set[str]:
-    labels: set[str] = set()
-    for raw, canonical in APP_TAG_ALIASES.items():
-        labels.add(raw)
-        labels.add(canonical)
-    return labels
+    return set(LEGACY_APP_TAGS)
 
 
 def load_dashboard_tags(path: Path) -> set[str]:
     tags: set[str] = set()
     with path.open(encoding="utf-8") as fh:
         for row in csv.DictReader(fh):
-            tags.add(dashboard_tag(row["dashboard_name"]))
+            tags.add(dashboard_label(row["dashboard_name"]))
     return tags
 
 
@@ -115,9 +115,8 @@ def merge_tags(existing: str, additions: list[str]) -> str:
 
 
 def provenance_tags(match: dict[str, str]) -> list[str]:
-    app = APP_TAG_ALIASES.get(match["app_name"], match["app_name"])
-    dash = dashboard_tag(match["dashboard_name"])
-    return [PROVENANCE_MARKER, app, dash]
+    dash = dashboard_label(match["dashboard_name"])
+    return [PROVENANCE_MARKER, PROVENANCE_APP, dash]
 
 
 def apply_tags(content: str, matches: dict[str, dict[str, str]]) -> tuple[str, int]:
@@ -173,15 +172,16 @@ def main() -> None:
     original = SEARCHBASE.read_text(encoding="utf-8")
     updated, changed = apply_tags(original, matches)
     SEARCHBASE.write_text(updated, encoding="utf-8")
-    by_app: dict[str, int] = {}
+    by_dashboard: dict[str, int] = {}
     for match in matches.values():
-        app = APP_TAG_ALIASES.get(match["app_name"], match["app_name"])
-        by_app[app] = by_app.get(app, 0) + 1
+        dash = dashboard_label(match["dashboard_name"])
+        by_dashboard[dash] = by_dashboard.get(dash, 0) + 1
     print(f"Applied provenance tags to {changed} stanzas (threshold >= {CONFIDENCE_THRESHOLD}).")
     print(f"Candidate stanzas in CSV: {len(matches)}")
-    print("Tags by upstream app:")
-    for app, count in sorted(by_app.items(), key=lambda item: (-item[1], item[0])):
-        print(f"  {count:4d}  {app}")
+    print(f"Provenance app tag: {PROVENANCE_APP}")
+    print("Tags by dCloud dashboard:")
+    for dash, count in sorted(by_dashboard.items(), key=lambda item: (-item[1], item[0])):
+        print(f"  {count:4d}  {dash}")
 
 
 if __name__ == "__main__":

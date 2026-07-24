@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Match searchbase.conf stanzas to dashboard queries across Splunk apps."""
+"""Match searchbase.conf stanzas to dCloud dashboard queries (splunk-cisco-dashboards local views)."""
 
 from __future__ import annotations
 
@@ -16,6 +16,11 @@ from pathlib import Path
 from typing import Iterable
 
 APPS_ROOT = Path("/opt/10/etc/apps")
+DCLOUD_VIEWS_DIR = Path(
+    "/opt/10/etc/apps/splunk-cisco-dashboards/local/data/ui/views"
+)
+DCLOUD_APP_NAME = "dCloud"
+DCLOUD_SKIP_VIEWS = {"scd_Test1.xml"}
 SEARCHBASE_PATH = Path(
     "/Users/akhamis/repo/splunk-cisco-dashboards/"
     "packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf"
@@ -439,46 +444,36 @@ def extract_json_dashboard_queries(json_path: Path) -> list[tuple[str, str]]:
     return results
 
 
-def is_cisco_upstream_app(app_dir: Path) -> bool:
-    return "cisco" in app_dir.name.casefold()
-
-
-def collect_dashboard_queries(apps_root: Path) -> list[DashboardQuery]:
+def collect_dashboard_queries(_apps_root: Path) -> list[DashboardQuery]:
     queries: list[DashboardQuery] = []
-    scanned_apps: list[str] = []
-    if not apps_root.exists():
-        print(f"ERROR: apps root not found: {apps_root}", file=sys.stderr)
+    views_dir = DCLOUD_VIEWS_DIR
+    if not views_dir.exists():
+        print(f"ERROR: dCloud views dir not found: {views_dir}", file=sys.stderr)
         return queries
 
-    for app_dir in sorted(apps_root.iterdir()):
-        if not app_dir.is_dir() or app_dir.name in EXCLUDED_APP_DIRS:
+    dashboard_files: list[str] = []
+    for view_file in sorted(views_dir.iterdir()):
+        if not view_file.is_file() or view_file.name in DCLOUD_SKIP_VIEWS:
             continue
-        if not is_cisco_upstream_app(app_dir):
+        if view_file.suffix.lower() not in {".xml", ".json"}:
             continue
-        views_dir = app_dir / "default" / "data" / "ui" / "views"
-        if not views_dir.exists():
-            continue
-        app_name = read_app_label(app_dir)
-        scanned_apps.append(app_dir.name)
-        for view_file in sorted(views_dir.iterdir()):
-            if view_file.suffix.lower() == ".xml":
-                extracted = extract_xml_queries(view_file)
-            elif view_file.suffix.lower() == ".json":
-                extracted = extract_json_dashboard_queries(view_file)
-            else:
-                continue
-            for dash_name, query in extracted:
-                obj = DashboardQuery(
-                    app_dir=app_dir.name,
-                    app_name=app_name,
-                    dashboard_file=view_file.name,
-                    dashboard_name=dash_name,
-                    query=query,
-                )
-                enrich_query_obj(obj, dashboard_file=view_file.name)
-                queries.append(obj)
+        dashboard_files.append(view_file.name)
+        if view_file.suffix.lower() == ".xml":
+            extracted = extract_xml_queries(view_file)
+        else:
+            extracted = extract_json_dashboard_queries(view_file)
+        for dash_name, query in extracted:
+            obj = DashboardQuery(
+                app_dir="splunk-cisco-dashboards",
+                app_name=DCLOUD_APP_NAME,
+                dashboard_file=view_file.name,
+                dashboard_name=dash_name,
+                query=query,
+            )
+            enrich_query_obj(obj, dashboard_file=view_file.name)
+            queries.append(obj)
     print(
-        f"  scanned {len(scanned_apps)} Cisco apps under default/data/ui/views",
+        f"  scanned {len(dashboard_files)} dCloud dashboards under local/data/ui/views",
         file=sys.stderr,
     )
     return queries
@@ -632,9 +627,9 @@ def main() -> int:
     stanzas = parse_searchbase(SEARCHBASE_PATH)
     print(f"  {len(stanzas)} stanzas", file=sys.stderr)
 
-    print(f"Scanning dashboards under {APPS_ROOT}...", file=sys.stderr)
+    print(f"Scanning dCloud dashboards under {DCLOUD_VIEWS_DIR}...", file=sys.stderr)
     dashboard_queries = collect_dashboard_queries(APPS_ROOT)
-    print(f"  {len(dashboard_queries)} dashboard queries from apps", file=sys.stderr)
+    print(f"  {len(dashboard_queries)} dashboard queries from dCloud", file=sys.stderr)
 
     query_index = build_query_index(dashboard_queries)
     matches: list[dict[str, str | float]] = []
@@ -733,8 +728,8 @@ def main() -> int:
         f"Total stanzas: {len(stanzas)}\n"
         f"Dashboard queries scanned: {len(dashboard_queries)}\n"
         f"Max matches per stanza: {MAX_MATCHES_PER_STANZA}\n"
-        f"Excluded app dirs: {', '.join(sorted(EXCLUDED_APP_DIRS))}\n"
-        f"Cisco app filter: directory name contains 'cisco'\n"
+        f"Provenance source: {DCLOUD_APP_NAME} ({DCLOUD_VIEWS_DIR})\n"
+        f"Skipped dCloud views: {', '.join(sorted(DCLOUD_SKIP_VIEWS)) or '(none)'}\n"
         f"Confidence threshold: {CONFIDENCE_THRESHOLD}\n"
         f"Matches output: {OUTPUT_PATH}\n"
         f"Unmatched output: {UNMATCHED_PATH}\n"
