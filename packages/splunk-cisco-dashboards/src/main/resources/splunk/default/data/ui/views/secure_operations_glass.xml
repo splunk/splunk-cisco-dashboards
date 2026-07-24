@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<!--
+    React-mounted Secure Operations Glass dashboard.
+
+    Simple XML provides the Splunk view shell. The bootstrap file loads the
+    production webpack bundle, which mounts into #scan-root.
+-->
+<dashboard version="1.1" theme="light" hideEdit="true" hideExport="true" hideTitle="true"
+           script="secure_operations_glass_bootstrap.js">
+    <label>Secure Operations Glass</label>
+    <description>Unified operational view of Secure Networking identity, firewall, site health, and investigation telemetry.</description>
+    <row>
+        <panel>
+            <html>
+                <div id="scan-root">
+                    <div style="padding: 24px; color: #475569;">Loading Secure Operations Glass...</div>
+                </div>
+            </html>
+        </panel>
+    </row>
+</dashboard>

@@ -1,0 +1,1735 @@
+import React, {
+    useCallback,
+    useEffect,
+    useMemo,
+    useState,
+} from 'react';
+import {
+    Activity,
+    AlertTriangle,
+    Bell,
+    CheckCircle2,
+    ChevronLeft,
+    ChevronRight,
+    CircleDot,
+    Cloud,
+    Filter,
+    Globe2,
+    Menu,
+    Moon,
+    Network,
+    PanelRightClose,
+    PanelRightOpen,
+    RefreshCw,
+    Search,
+    Server,
+    Shield,
+    ShieldAlert,
+    Sun,
+    UserRoundSearch,
+    Wifi,
+    X,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import {
+    Area,
+    AreaChart,
+    Bar,
+    BarChart,
+    CartesianGrid,
+    Cell,
+    Line,
+    LineChart,
+    Pie,
+    PieChart,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
+} from 'recharts';
+
+import type { SearchbaseRecord } from '@/common/services/searchbaseCatalogue';
+import {
+    asNumber,
+    formatNumber,
+    getLabelKey,
+    getNumericKeys,
+    getScalarValue,
+    sanitizeSearchValue,
+    type SearchRow,
+    useFilteredRows,
+    useSearchbaseCatalogueMap,
+    useSearchbaseRows,
+} from './search';
+
+const VIEW_NAME = 'secure_operations_glass';
+
+type Theme = 'light' | 'dark';
+type TabId =
+    | 'overview'
+    | 'identity'
+    | 'firewall'
+    | 'network'
+    | 'investigation';
+type FilterKey =
+    | 'location'
+    | 'user'
+    | 'threatType'
+    | 'source'
+    | 'severity'
+    | 'host';
+type Filters = Record<FilterKey, string>;
+type ChartKind = 'line' | 'area' | 'bar' | 'pie';
+type Tone = 'default' | 'good' | 'warning' | 'critical' | 'info';
+
+interface PageContext {
+    catalogue: Map<string, SearchbaseRecord> | null;
+    earliest: string;
+    refreshToken: number;
+    filters: Filters;
+    theme: Theme;
+}
+
+interface SearchPanelProps {
+    context: PageContext;
+    searchId: string;
+    title: string;
+    subtitle?: string;
+    chartKind?: ChartKind;
+    className?: string;
+    useGlobalFilters?: boolean;
+}
+
+interface SearchMetricProps {
+    context: PageContext;
+    searchId: string;
+    label: string;
+    preferredFields?: string[];
+    suffix?: string;
+    tone?: Tone;
+    icon?: LucideIcon;
+    onClick?: () => void;
+}
+
+interface SearchTableProps {
+    context: PageContext;
+    searchId: string;
+    title: string;
+    subtitle?: string;
+    className?: string;
+    maxRows?: number;
+    useGlobalFilters?: boolean;
+    transformSearch?: (spl: string) => string;
+}
+
+const TABS: Array<{ id: TabId; label: string; icon: LucideIcon }> = [
+    { id: 'overview', label: 'Overview', icon: Activity },
+    { id: 'identity', label: 'Identity & Access', icon: Shield },
+    { id: 'firewall', label: 'Firewall & Threats', icon: ShieldAlert },
+    { id: 'network', label: 'Network Health', icon: Network },
+    { id: 'investigation', label: 'User Investigation', icon: UserRoundSearch },
+];
+
+const TIME_RANGES = [
+    { label: 'Last 24 hours', value: '-24h' },
+    { label: 'Last 7 days', value: '-7d@d' },
+    { label: 'Last 30 days', value: '-30d@d' },
+    { label: 'Today', value: '@d' },
+];
+
+const DEFAULT_FILTERS: Filters = {
+    location: 'All Regions',
+    user: 'Any',
+    threatType: 'All',
+    source: 'All',
+    severity: 'All',
+    host: 'Any',
+};
+
+const FILTER_LABELS: Record<FilterKey, string> = {
+    location: 'Location',
+    user: 'User',
+    threatType: 'Threat Type',
+    source: 'Source',
+    severity: 'Severity',
+    host: 'Host',
+};
+
+const FILTER_OPTIONS: Record<FilterKey, string[]> = {
+    location: ['All Regions', 'AMER', 'EMEAR', 'APJC'],
+    user: ['Any', 'admin', 'jsmith', 'jdoe'],
+    threatType: ['All', 'Firewall', 'DNS', 'ZTNA', 'Authentication'],
+    source: ['All', 'FMC', 'ISE', 'Meraki', 'SD-WAN', 'ThousandEyes'],
+    severity: ['All', 'critical', 'high', 'medium', 'low'],
+    host: ['Any'],
+};
+
+const LIGHT_COLORS = ['#00a6d2', '#6cc04a', '#f58220', '#7c5cff', '#e5534b'];
+const DARK_COLORS = ['#35cff5', '#8bd45b', '#ff9a4a', '#a88cff', '#ff6f68'];
+
+const titleFromPath = (): string => {
+    if (typeof window === 'undefined') return VIEW_NAME;
+    return window.location.pathname.split('/').pop() || VIEW_NAME;
+};
+
+const compactLabel = (value: unknown): string => {
+    const text = String(value ?? 'Unknown');
+    if (text.length <= 22) return text;
+    return `${text.slice(0, 20)}…`;
+};
+
+const getColumns = (rows: SearchRow[]): string[] => {
+    const keys = new Set<string>();
+    rows.slice(0, 12).forEach((row) => {
+        Object.keys(row).forEach((key) => {
+            if (!key.startsWith('_') || key === '_time') keys.add(key);
+        });
+    });
+    return [...keys].slice(0, 7);
+};
+
+const displayCell = (value: unknown): string => {
+    if (Array.isArray(value)) return value.join(', ');
+    if (value === null || value === undefined || value === '') return '—';
+    return String(value);
+};
+
+const toneClass = (tone: Tone): string => `scd-glass-tone-${tone}`;
+
+const EmptyState = ({
+    loading,
+    error,
+    message = 'No matching data returned for this time range.',
+}: {
+    loading: boolean;
+    error: string | null;
+    message?: string;
+}): JSX.Element => (
+    <div className="scd-glass-empty">
+        {loading ? (
+            <>
+                <RefreshCw size={22} className="scd-glass-spin" />
+                <span>Running Splunk search…</span>
+            </>
+        ) : error ? (
+            <>
+                <AlertTriangle size={22} />
+                <span>{error}</span>
+            </>
+        ) : (
+            <>
+                <CircleDot size={22} />
+                <span>{message}</span>
+            </>
+        )}
+    </div>
+);
+
+const Panel = ({
+    title,
+    subtitle,
+    children,
+    className = '',
+    action,
+}: {
+    title: string;
+    subtitle?: string;
+    children: React.ReactNode;
+    className?: string;
+    action?: React.ReactNode;
+}): JSX.Element => (
+    <section className={`scd-glass-panel ${className}`}>
+        <header className="scd-glass-panel-header">
+            <div>
+                <h2>{title}</h2>
+                {subtitle ? <p>{subtitle}</p> : null}
+            </div>
+            {action}
+        </header>
+        <div className="scd-glass-panel-body">{children}</div>
+    </section>
+);
+
+const SearchMetric = ({
+    context,
+    searchId,
+    label,
+    preferredFields = [],
+    suffix = '',
+    tone = 'default',
+    icon: Icon = Activity,
+    onClick,
+}: SearchMetricProps): JSX.Element => {
+    const state = useSearchbaseRows({
+        catalogue: context.catalogue,
+        searchId,
+        earliest: context.earliest,
+        refreshToken: context.refreshToken,
+        count: 10,
+    });
+    const value = getScalarValue(state.rows, preferredFields);
+
+    return (
+        <button
+            type="button"
+            className={`scd-glass-metric ${toneClass(tone)}`}
+            onClick={onClick}
+            aria-label={`${label}: ${formatNumber(value, suffix)}`}
+        >
+            <div className="scd-glass-metric-label">
+                <Icon size={16} strokeWidth={2} />
+                <span>{label}</span>
+            </div>
+            <strong>{state.loading ? '…' : formatNumber(value, suffix)}</strong>
+            <span className="scd-glass-metric-status">
+                {state.error ? 'Search unavailable' : 'Live Searchbase result'}
+            </span>
+        </button>
+    );
+};
+
+const SearchChartPanel = ({
+    context,
+    searchId,
+    title,
+    subtitle,
+    chartKind = 'line',
+    className = '',
+    useGlobalFilters = true,
+}: SearchPanelProps): JSX.Element => {
+    const state = useSearchbaseRows({
+        catalogue: context.catalogue,
+        searchId,
+        earliest: context.earliest,
+        refreshToken: context.refreshToken,
+        count: 200,
+    });
+    const filteredRows = useFilteredRows(
+        state.rows,
+        useGlobalFilters ? context.filters : DEFAULT_FILTERS
+    );
+    const labelKey = getLabelKey(filteredRows);
+    const numericKeys = getNumericKeys(filteredRows).slice(0, 4);
+    const colors = context.theme === 'dark' ? DARK_COLORS : LIGHT_COLORS;
+    const axisColor = context.theme === 'dark' ? '#8fa2bd' : '#61728a';
+    const gridColor = context.theme === 'dark' ? '#1c2a3d' : '#dce5ef';
+    const tooltipStyle = {
+        background: context.theme === 'dark' ? '#101a29' : '#ffffff',
+        border: `1px solid ${context.theme === 'dark' ? '#28415d' : '#cbd8e6'}`,
+        borderRadius: 8,
+        color: context.theme === 'dark' ? '#e7f2ff' : '#16243a',
+        fontSize: 12,
+    };
+
+    const renderChart = (): React.ReactNode => {
+        if (!labelKey || numericKeys.length === 0) {
+            return (
+                <EmptyState
+                    loading={state.loading}
+                    error={state.error}
+                />
+            );
+        }
+
+        if (chartKind === 'pie') {
+            const valueKey = numericKeys[0];
+            const data = filteredRows.slice(0, 8).map((row) => ({
+                name: compactLabel(row[labelKey]),
+                value: asNumber(row[valueKey]) ?? 0,
+            }));
+            return (
+                <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                        <Pie
+                            data={data}
+                            dataKey="value"
+                            nameKey="name"
+                            innerRadius="52%"
+                            outerRadius="78%"
+                            paddingAngle={2}
+                        >
+                            {data.map((entry, index) => (
+                                <Cell
+                                    key={`${entry.name}-${index}`}
+                                    fill={colors[index % colors.length]}
+                                />
+                            ))}
+                        </Pie>
+                        <Tooltip contentStyle={tooltipStyle} />
+                    </PieChart>
+                </ResponsiveContainer>
+            );
+        }
+
+        if (chartKind === 'bar') {
+            return (
+                <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={filteredRows.slice(0, 12)}>
+                        <CartesianGrid
+                            stroke={gridColor}
+                            strokeDasharray="3 4"
+                            vertical={false}
+                        />
+                        <XAxis
+                            dataKey={labelKey}
+                            stroke={axisColor}
+                            tick={{ fill: axisColor, fontSize: 10 }}
+                            tickFormatter={compactLabel}
+                        />
+                        <YAxis
+                            stroke={axisColor}
+                            tick={{ fill: axisColor, fontSize: 10 }}
+                            width={42}
+                        />
+                        <Tooltip contentStyle={tooltipStyle} />
+                        {numericKeys.slice(0, 3).map((key, index) => (
+                            <Bar
+                                key={key}
+                                dataKey={key}
+                                fill={colors[index % colors.length]}
+                                radius={[4, 4, 0, 0]}
+                            />
+                        ))}
+                    </BarChart>
+                </ResponsiveContainer>
+            );
+        }
+
+        if (chartKind === 'area') {
+            return (
+                <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={filteredRows.slice(-48)}>
+                        <CartesianGrid
+                            stroke={gridColor}
+                            strokeDasharray="3 4"
+                            vertical={false}
+                        />
+                        <XAxis
+                            dataKey={labelKey}
+                            stroke={axisColor}
+                            tick={{ fill: axisColor, fontSize: 10 }}
+                            tickFormatter={compactLabel}
+                        />
+                        <YAxis
+                            stroke={axisColor}
+                            tick={{ fill: axisColor, fontSize: 10 }}
+                            width={42}
+                        />
+                        <Tooltip contentStyle={tooltipStyle} />
+                        {numericKeys.slice(0, 3).map((key, index) => (
+                            <Area
+                                key={key}
+                                type="monotone"
+                                dataKey={key}
+                                stroke={colors[index % colors.length]}
+                                fill={colors[index % colors.length]}
+                                fillOpacity={0.12}
+                                strokeWidth={2}
+                            />
+                        ))}
+                    </AreaChart>
+                </ResponsiveContainer>
+            );
+        }
+
+        return (
+            <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={filteredRows.slice(-48)}>
+                    <CartesianGrid
+                        stroke={gridColor}
+                        strokeDasharray="3 4"
+                        vertical={false}
+                    />
+                    <XAxis
+                        dataKey={labelKey}
+                        stroke={axisColor}
+                        tick={{ fill: axisColor, fontSize: 10 }}
+                        tickFormatter={compactLabel}
+                    />
+                    <YAxis
+                        stroke={axisColor}
+                        tick={{ fill: axisColor, fontSize: 10 }}
+                        width={42}
+                    />
+                    <Tooltip contentStyle={tooltipStyle} />
+                    {numericKeys.slice(0, 3).map((key, index) => (
+                        <Line
+                            key={key}
+                            type="monotone"
+                            dataKey={key}
+                            stroke={colors[index % colors.length]}
+                            dot={false}
+                            strokeWidth={2}
+                        />
+                    ))}
+                </LineChart>
+            </ResponsiveContainer>
+        );
+    };
+
+    return (
+        <Panel
+            title={title}
+            subtitle={subtitle}
+            className={`scd-glass-chart-panel ${className}`}
+            action={<span className="scd-glass-linked">◆ Linked</span>}
+        >
+            <div className="scd-glass-chart">{renderChart()}</div>
+        </Panel>
+    );
+};
+
+const SearchTablePanel = ({
+    context,
+    searchId,
+    title,
+    subtitle,
+    className = '',
+    maxRows = 8,
+    useGlobalFilters = true,
+    transformSearch,
+}: SearchTableProps): JSX.Element => {
+    const state = useSearchbaseRows({
+        catalogue: context.catalogue,
+        searchId,
+        earliest: context.earliest,
+        refreshToken: context.refreshToken,
+        count: 200,
+        transformSearch,
+    });
+    const rows = useFilteredRows(
+        state.rows,
+        useGlobalFilters ? context.filters : DEFAULT_FILTERS
+    );
+    const columns = getColumns(rows);
+
+    return (
+        <Panel
+            title={title}
+            subtitle={subtitle}
+            className={`scd-glass-table-panel ${className}`}
+            action={<span className="scd-glass-linked">◆ Linked</span>}
+        >
+            {rows.length === 0 ? (
+                <EmptyState loading={state.loading} error={state.error} />
+            ) : (
+                <div className="scd-glass-table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                {columns.map((column) => (
+                                    <th key={column}>{column}</th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {rows.slice(0, maxRows).map((row, rowIndex) => (
+                                <tr key={`${searchId}-${rowIndex}`}>
+                                    {columns.map((column) => (
+                                        <td key={column}>
+                                            {displayCell(row[column])}
+                                        </td>
+                                    ))}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </Panel>
+    );
+};
+
+const SectionBand = ({ children }: { children: React.ReactNode }): JSX.Element => (
+    <div className="scd-glass-section-band">{children}</div>
+);
+
+const OverviewTab = ({ context }: { context: PageContext }): JSX.Element => (
+    <div className="scd-glass-tab-content">
+        <div className="scd-glass-metric-grid scd-glass-metric-grid-six">
+            <SearchMetric
+                context={context}
+                searchId="secure_networking_sse_total_security_events"
+                label="Total Security Events"
+                preferredFields={['total_events']}
+                icon={Shield}
+            />
+            <SearchMetric
+                context={context}
+                searchId="secure_networking_fmc_blocked_count"
+                label="Firewall Blocks"
+                preferredFields={['blocked_events']}
+                tone="critical"
+                icon={ShieldAlert}
+            />
+            <SearchMetric
+                context={context}
+                searchId="secure_networking_sse_dns_blocked_categories"
+                label="DNS Threat Categories"
+                preferredFields={['Block Count']}
+                tone="warning"
+                icon={Globe2}
+            />
+            <SearchMetric
+                context={context}
+                searchId="secure_networking_zta_ise_auth_events_count"
+                label="Authentication Events"
+                preferredFields={['auth_events']}
+                icon={Shield}
+            />
+            <SearchMetric
+                context={context}
+                searchId="secure_networking_zta_ise_failed_auth_count"
+                label="Failed Authentications"
+                preferredFields={['failed_auth']}
+                tone="critical"
+                icon={AlertTriangle}
+            />
+            <SearchMetric
+                context={context}
+                searchId="secure_networking_dc_anomaly_count"
+                label="DC Issues"
+                preferredFields={['anomaly_count']}
+                tone="warning"
+                icon={Server}
+            />
+        </div>
+        <div className="scd-glass-grid-three">
+            <SearchChartPanel
+                context={context}
+                searchId="secure_networking_sse_dns_activity_trend"
+                title="Security Events by Source"
+                subtitle="SSE DNS activity over time"
+                chartKind="area"
+            />
+            <SearchChartPanel
+                context={context}
+                searchId="secure_networking_zta_auth_outcome_trend"
+                title="Authentication Activity"
+                subtitle="Passed versus failed authentications"
+            />
+            <SearchChartPanel
+                context={context}
+                searchId="secure_networking_fmc_activity_trend"
+                title="On-Prem Firewall Activity"
+                subtitle="FMC allow, block, trust, and other actions"
+                chartKind="bar"
+            />
+        </div>
+        <div className="scd-glass-grid-two">
+            <SearchChartPanel
+                context={context}
+                searchId="secure_networking_sse_cloud_firewall_verdict_split"
+                title="Cloud Firewall Verdicts"
+                subtitle="Cisco SSE enforcement distribution"
+                chartKind="pie"
+            />
+            <SearchTablePanel
+                context={context}
+                searchId="secure_networking_source_health_by_pillar"
+                title="Secure Networking Source Health"
+                subtitle="Ingestion freshness across security pillars"
+            />
+        </div>
+    </div>
+);
+
+const IdentityTab = ({ context }: { context: PageContext }): JSX.Element => (
+    <div className="scd-glass-tab-content">
+        <div className="scd-glass-metric-grid scd-glass-metric-grid-five">
+            <SearchMetric
+                context={context}
+                searchId="secure_networking_zta_ise_auth_events_count"
+                label="Auth Events"
+                preferredFields={['auth_events']}
+                icon={Shield}
+            />
+            <SearchMetric
+                context={context}
+                searchId="secure_networking_zta_ise_failed_auth_count"
+                label="Failed Auth"
+                preferredFields={['failed_auth']}
+                tone="critical"
+                icon={ShieldAlert}
+            />
+            <SearchMetric
+                context={context}
+                searchId="secure_networking_sgt_total_assignments_count"
+                label="SGT Assignments"
+                preferredFields={['sgt_assignments']}
+                icon={Network}
+            />
+            <SearchMetric
+                context={context}
+                searchId="secure_networking_sgt_unique_count"
+                label="Unique SGTs"
+                preferredFields={['unique_sgts']}
+                tone="info"
+                icon={CircleDot}
+            />
+            <SearchMetric
+                context={context}
+                searchId="secure_networking_zta_ztna_session_count"
+                label="ZTNA Sessions"
+                preferredFields={['session_count']}
+                tone="good"
+                icon={CheckCircle2}
+            />
+        </div>
+        <div className="scd-glass-grid-identity">
+            <SearchChartPanel
+                context={context}
+                searchId="secure_networking_zta_auth_outcome_trend"
+                title="Authentication — Passed vs Failed"
+                subtitle="CIM-normalized ISE authentication outcomes"
+                className="scd-glass-span-two"
+            />
+            <SearchChartPanel
+                context={context}
+                searchId="secure_networking_zta_ise_enforcement_by_domain"
+                title="Enforcement by Policy Set"
+                chartKind="pie"
+            />
+            <SearchChartPanel
+                context={context}
+                searchId="secure_networking_zta_ztna_connection_status_trend"
+                title="ZTNA Connection Status"
+                chartKind="bar"
+            />
+        </div>
+        <div className="scd-glass-grid-two">
+            <SearchTablePanel
+                context={context}
+                searchId="secure_networking_sgacl_policy_matrix"
+                title="SGT Policy Activity"
+                subtitle="Observed SGT-to-SGT enforcement hits"
+            />
+            <SearchTablePanel
+                context={context}
+                searchId="secure_networking_zta_ise_auth_by_device_fail_rate"
+                title="ISE Authentication by Device"
+                subtitle="Network-device failure-rate analysis"
+            />
+        </div>
+    </div>
+);
+
+const PolicyDrilldown = ({
+    context,
+}: {
+    context: PageContext;
+}): JSX.Element => {
+    const policies = useSearchbaseRows({
+        catalogue: context.catalogue,
+        searchId: 'secure_networking_fmc_top_policies_by_action',
+        earliest: context.earliest,
+        refreshToken: context.refreshToken,
+        count: 50,
+    });
+    const [selectedPolicy, setSelectedPolicy] = useState('');
+    const policyKey =
+        policies.rows[0] && 'Firewall Policy' in policies.rows[0]
+            ? 'Firewall Policy'
+            : getLabelKey(policies.rows);
+
+    useEffect(() => {
+        if (!selectedPolicy && policyKey && policies.rows[0]) {
+            const firstPolicy = String(policies.rows[0][policyKey] ?? '');
+            setSelectedPolicy(firstPolicy);
+        }
+    }, [selectedPolicy, policyKey, policies.rows]);
+
+    const transformRules = useMemo(() => {
+        const safePolicy = sanitizeSearchValue(selectedPolicy);
+        if (!safePolicy) return undefined;
+        return (spl: string): string =>
+            spl.replace(
+                ' FirewallRule!=""',
+                ` FirewallPolicy="${safePolicy}" FirewallRule!=""`
+            );
+    }, [selectedPolicy]);
+
+    const rules = useSearchbaseRows({
+        catalogue: context.catalogue,
+        searchId: 'secure_networking_fmc_top_rules_hit',
+        earliest: context.earliest,
+        refreshToken: context.refreshToken,
+        count: 100,
+        transformSearch: transformRules,
+    });
+    const ruleColumns = getColumns(rules.rows);
+
+    const selectPolicy = (policy: string): void => {
+        setSelectedPolicy(policy);
+    };
+
+    return (
+        <section className="scd-glass-policy-panel">
+            <div className="scd-glass-policy-list">
+                <header>
+                    <h2>Firewall Policies (FMC)</h2>
+                    <p>Select a policy to inspect its access-control rules.</p>
+                </header>
+                <div className="scd-glass-policy-items">
+                    {policies.rows.length === 0 ? (
+                        <EmptyState
+                            loading={policies.loading}
+                            error={policies.error}
+                        />
+                    ) : (
+                        policies.rows.slice(0, 10).map((row, index) => {
+                            const policy = policyKey
+                                ? String(row[policyKey] ?? `Policy ${index + 1}`)
+                                : `Policy ${index + 1}`;
+                            const count =
+                                getScalarValue([row], ['Total Events']) ?? 0;
+                            return (
+                                <button
+                                    type="button"
+                                    key={policy}
+                                    className={
+                                        selectedPolicy === policy
+                                            ? 'is-selected'
+                                            : ''
+                                    }
+                                    onClick={() => selectPolicy(policy)}
+                                >
+                                    <span>{policy}</span>
+                                    <strong>{formatNumber(count)}</strong>
+                                    <ChevronRight size={16} />
+                                </button>
+                            );
+                        })
+                    )}
+                </div>
+            </div>
+            <div className="scd-glass-policy-detail">
+                <header>
+                    <div>
+                        <h2>
+                            Rules Hit For:{' '}
+                            <span>{selectedPolicy || 'Select a policy'}</span>
+                        </h2>
+                        <p>
+                            Live FMC rule activity scoped to the selected
+                            firewall policy.
+                        </p>
+                    </div>
+                    <span className="scd-glass-count-badge">
+                        {rules.rows.length} rules found
+                    </span>
+                </header>
+                {rules.rows.length === 0 ? (
+                    <EmptyState loading={rules.loading} error={rules.error} />
+                ) : (
+                    <div className="scd-glass-table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    {ruleColumns.map((column) => (
+                                        <th key={column}>{column}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {rules.rows.slice(0, 12).map((row, rowIndex) => (
+                                    <tr key={`${selectedPolicy}-${rowIndex}`}>
+                                        {ruleColumns.map((column) => (
+                                            <td key={column}>
+                                                {displayCell(row[column])}
+                                            </td>
+                                        ))}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+        </section>
+    );
+};
+
+const FirewallTab = ({ context }: { context: PageContext }): JSX.Element => {
+    return (
+        <div className="scd-glass-tab-content">
+            <div className="scd-glass-metric-grid scd-glass-metric-grid-five">
+                <SearchMetric
+                    context={context}
+                    searchId="secure_networking_fmc_total_events_count"
+                    label="FMC Total Events"
+                    preferredFields={['total_events']}
+                    icon={Shield}
+                />
+                <SearchMetric
+                    context={context}
+                    searchId="secure_networking_fmc_blocked_count"
+                    label="FMC Blocked"
+                    preferredFields={['blocked_events']}
+                    tone="critical"
+                    icon={ShieldAlert}
+                />
+                <SearchMetric
+                    context={context}
+                    searchId="secure_networking_sse_dns_blocked_categories"
+                    label="DNS Block Categories"
+                    preferredFields={['Block Count']}
+                    tone="warning"
+                    icon={Globe2}
+                />
+                <SearchMetric
+                    context={context}
+                    searchId="secure_networking_sse_amp_malware_detections"
+                    label="AMP Detections"
+                    preferredFields={['threat_events']}
+                    tone="critical"
+                    icon={AlertTriangle}
+                />
+                <SearchMetric
+                    context={context}
+                    searchId="secure_networking_secure_access_dlp_findings"
+                    label="DLP Policy Hits"
+                    preferredFields={['finding_count', 'total_findings']}
+                    tone="warning"
+                    icon={Cloud}
+                />
+            </div>
+            <PolicyDrilldown context={context} />
+            <div className="scd-glass-grid-two">
+                <SearchChartPanel
+                    context={context}
+                    searchId="secure_networking_sse_dns_blocked_categories"
+                    title="Top DNS Blocked Categories"
+                    chartKind="bar"
+                    useGlobalFilters={false}
+                />
+                <SearchChartPanel
+                    context={context}
+                    searchId="secure_networking_sse_dns_activity_trend"
+                    title="DNS Activity — Allowed vs Blocked"
+                    chartKind="area"
+                    useGlobalFilters={false}
+                />
+            </div>
+            <div className="scd-glass-grid-two">
+                <SearchChartPanel
+                    context={context}
+                    searchId="secure_networking_fmc_top_applications"
+                    title="Top Applications Through FMC"
+                    chartKind="bar"
+                    useGlobalFilters={false}
+                />
+                <SearchChartPanel
+                    context={context}
+                    searchId="secure_networking_fmc_top_url_categories_blocked"
+                    title="Top FMC URL Categories Blocked"
+                    chartKind="bar"
+                    useGlobalFilters={false}
+                />
+            </div>
+            <SearchTablePanel
+                context={context}
+                searchId="secure_networking_sse_amp_threat_detail_table"
+                title="AMP Threat Investigation"
+                subtitle="Identity, file disposition, hash, and domain details"
+                useGlobalFilters={false}
+            />
+        </div>
+    );
+};
+
+const siteNameForRow = (row: SearchRow, index: number): string =>
+    String(
+        row['Site Name'] ??
+            row.Site ??
+            row['Site ID'] ??
+            `Site ${index + 1}`
+    );
+
+const siteStatusForRow = (row: SearchRow): string =>
+    String(
+        row['Site Health'] ??
+            row['Device Health'] ??
+            row.Status ??
+            'Unknown'
+    );
+
+const SiteHealthPanel = ({
+    context,
+    setFilter,
+}: {
+    context: PageContext;
+    setFilter: (key: FilterKey, value: string) => void;
+}): JSX.Element => {
+    const sites = useSearchbaseRows({
+        catalogue: context.catalogue,
+        searchId: 'secure_networking_sdwan_site_view',
+        earliest: context.earliest,
+        refreshToken: context.refreshToken,
+        count: 100,
+    });
+    const [selectedSite, setSelectedSite] = useState('');
+    const visibleSites = sites.rows.slice(0, 8);
+    const selectedRow = visibleSites.find(
+        (row, index) => siteNameForRow(row, index) === selectedSite
+    );
+    const onlineCount = visibleSites.filter((row) =>
+        /good|healthy|online|normal/i.test(siteStatusForRow(row))
+    ).length;
+    const offlineCount = visibleSites.filter((row) =>
+        /poor|critical|offline|down|failed/i.test(siteStatusForRow(row))
+    ).length;
+    const positions = [
+        [16, 42],
+        [29, 35],
+        [49, 31],
+        [64, 40],
+        [82, 44],
+        [40, 61],
+        [71, 66],
+        [24, 70],
+    ];
+
+    const chooseSite = (name: string): void => {
+        setSelectedSite(name);
+        setFilter('location', name);
+    };
+
+    const clearSite = (): void => {
+        setSelectedSite('');
+        setFilter('location', 'All Regions');
+    };
+
+    return (
+        <>
+            <SectionBand>Site Health &amp; Reachability</SectionBand>
+            <section className="scd-glass-site-panel">
+                <div className="scd-glass-site-map">
+                    <header>
+                        <h2>Site Health Overview</h2>
+                        <span>◆ Linked</span>
+                    </header>
+                    <div className="scd-glass-map-canvas">
+                        <div className="scd-glass-map-land land-a" />
+                        <div className="scd-glass-map-land land-b" />
+                        <div className="scd-glass-map-land land-c" />
+                        <div className="scd-glass-map-land land-d" />
+                        {visibleSites.map((row, index) => {
+                            const name = siteNameForRow(row, index);
+                            const status = siteStatusForRow(row);
+                            const [left, top] = positions[index];
+                            const isBad =
+                                /poor|critical|offline|down|failed/i.test(status);
+                            return (
+                                <button
+                                    type="button"
+                                    key={name}
+                                    className={`scd-glass-map-site ${
+                                        selectedSite === name
+                                            ? 'is-selected'
+                                            : ''
+                                    } ${isBad ? 'is-bad' : 'is-good'}`}
+                                    style={{ left: `${left}%`, top: `${top}%` }}
+                                    onClick={() => chooseSite(name)}
+                                    title={`${name}: ${status}`}
+                                >
+                                    <span className="scd-glass-map-dot" />
+                                    <strong>{compactLabel(name)}</strong>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+                <div className="scd-glass-site-detail">
+                    {visibleSites.length === 0 ? (
+                        <EmptyState loading={sites.loading} error={sites.error} />
+                    ) : selectedRow ? (
+                        <>
+                            <button
+                                type="button"
+                                className="scd-glass-back"
+                                onClick={clearSite}
+                            >
+                                <ChevronLeft size={15} />
+                                Back to all sites
+                            </button>
+                            <div className="scd-glass-site-heading">
+                                <div>
+                                    <span>Selected Site</span>
+                                    <h2>{selectedSite}</h2>
+                                </div>
+                                <strong>
+                                    {displayCell(
+                                        selectedRow['Devices Score'] ??
+                                            selectedRow['Apps Score'] ??
+                                            '—'
+                                    )}
+                                </strong>
+                            </div>
+                            <div className="scd-glass-site-kpis">
+                                {([
+                                    ['Status', selectedRow['Site Health']],
+                                    ['Devices', selectedRow['Devices Health']],
+                                    ['Tunnels', selectedRow['Tunnels Health']],
+                                    ['Applications', selectedRow['Apps Health']],
+                                    ['Tunnel Score', selectedRow['Tunnels Score']],
+                                    ['Last Seen', selectedRow['Last Seen']],
+                                ] as Array<[string, unknown]>).map(([label, value]) => (
+                                    <div key={String(label)}>
+                                        <span>{label}</span>
+                                        <strong>{displayCell(value)}</strong>
+                                    </div>
+                                ))}
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <div className="scd-glass-site-summary">
+                                <div>
+                                    <span>Total Sites</span>
+                                    <strong>{visibleSites.length}</strong>
+                                </div>
+                                <div className="is-good">
+                                    <span>Healthy</span>
+                                    <strong>{onlineCount}</strong>
+                                </div>
+                                <div className="is-bad">
+                                    <span>Attention</span>
+                                    <strong>{offlineCount}</strong>
+                                </div>
+                            </div>
+                            <div className="scd-glass-site-list">
+                                {visibleSites.map((row, index) => {
+                                    const name = siteNameForRow(row, index);
+                                    const status = siteStatusForRow(row);
+                                    const isBad =
+                                        /poor|critical|offline|down|failed/i.test(
+                                            status
+                                        );
+                                    return (
+                                        <button
+                                            type="button"
+                                            key={name}
+                                            onClick={() => chooseSite(name)}
+                                        >
+                                            <span
+                                                className={
+                                                    isBad ? 'is-bad' : 'is-good'
+                                                }
+                                            />
+                                            <strong>{name}</strong>
+                                            <em>{status}</em>
+                                            <ChevronRight size={14} />
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </>
+                    )}
+                </div>
+            </section>
+        </>
+    );
+};
+
+const NetworkTab = ({
+    context,
+    setFilter,
+}: {
+    context: PageContext;
+    setFilter: (key: FilterKey, value: string) => void;
+}): JSX.Element => (
+    <div className="scd-glass-tab-content">
+        <SiteHealthPanel context={context} setFilter={setFilter} />
+        <SectionBand>Nexus Dashboard</SectionBand>
+        <div className="scd-glass-network-row">
+            <div className="scd-glass-network-metrics">
+                <SearchMetric
+                    context={context}
+                    searchId="secure_networking_dc_anomaly_count"
+                    label="Nexus Anomalies"
+                    preferredFields={['anomaly_count']}
+                    tone="warning"
+                    icon={AlertTriangle}
+                />
+                <SearchMetric
+                    context={context}
+                    searchId="secure_networking_dc_advisory_count"
+                    label="Nexus Advisories"
+                    preferredFields={['advisory_count']}
+                    tone="critical"
+                    icon={ShieldAlert}
+                />
+            </div>
+            <SearchTablePanel
+                context={context}
+                searchId="secure_networking_dc_anomalies_by_severity"
+                title="Nexus Fabric Anomalies by Severity"
+                className="scd-glass-flex-one"
+                useGlobalFilters={false}
+            />
+        </div>
+        <SectionBand>SD-WAN</SectionBand>
+        <div className="scd-glass-grid-three">
+            <SearchChartPanel
+                context={context}
+                searchId="secure_networking_sdwan_apps_health_breakdown"
+                title="SD-WAN Application Experience"
+                chartKind="pie"
+                useGlobalFilters={false}
+            />
+            <SearchChartPanel
+                context={context}
+                searchId="secure_networking_sdwan_site_health_breakdown"
+                title="SD-WAN Site Health"
+                chartKind="pie"
+                useGlobalFilters={false}
+            />
+            <SearchTablePanel
+                context={context}
+                searchId="secure_networking_sdwan_tunnel_health_log"
+                title="SD-WAN Tunnel Health"
+                maxRows={6}
+                useGlobalFilters={false}
+            />
+        </div>
+        <SectionBand>Meraki</SectionBand>
+        <div className="scd-glass-metric-grid scd-glass-metric-grid-four">
+            <SearchMetric
+                context={context}
+                searchId="secure_networking_meraki_switch_count"
+                label="Switches"
+                preferredFields={['switch_count']}
+                icon={Network}
+            />
+            <SearchMetric
+                context={context}
+                searchId="secure_networking_meraki_ap_count"
+                label="Access Points"
+                preferredFields={['ap_count']}
+                icon={Wifi}
+            />
+            <SearchMetric
+                context={context}
+                searchId="secure_networking_meraki_wired_client_count"
+                label="Wired Clients"
+                preferredFields={['wired_clients']}
+                icon={Server}
+            />
+            <SearchMetric
+                context={context}
+                searchId="secure_networking_meraki_wireless_client_count"
+                label="Wireless Clients"
+                preferredFields={['wireless_clients']}
+                icon={Wifi}
+            />
+        </div>
+        <div className="scd-glass-grid-two">
+            <SearchChartPanel
+                context={context}
+                searchId="secure_networking_meraki_ssid_encryption_breakdown"
+                title="SSID Encryption Posture"
+                chartKind="bar"
+                useGlobalFilters={false}
+            />
+            <SearchTablePanel
+                context={context}
+                searchId="secure_networking_meraki_top_clients_by_bandwidth"
+                title="Top Clients by Bandwidth"
+                useGlobalFilters={false}
+            />
+        </div>
+        <SectionBand>ThousandEyes</SectionBand>
+        <div className="scd-glass-metric-grid scd-glass-metric-grid-four">
+            <SearchMetric
+                context={context}
+                searchId="secure_networking_thousandeyes_test_success_vs_failed"
+                label="Degraded Tests"
+                preferredFields={['degraded_tests']}
+                tone="warning"
+                icon={AlertTriangle}
+            />
+            <SearchMetric
+                context={context}
+                searchId="secure_networking_thousandeyes_avg_latency"
+                label="Average Latency"
+                preferredFields={['avg_latency_ms']}
+                suffix=" ms"
+                tone="info"
+                icon={Activity}
+            />
+            <SearchMetric
+                context={context}
+                searchId="secure_networking_thousandeyes_avg_loss_pct"
+                label="Average Loss"
+                preferredFields={['avg_loss_pct']}
+                suffix="%"
+                tone="critical"
+                icon={Network}
+            />
+            <SearchMetric
+                context={context}
+                searchId="secure_networking_thousandeyes_avg_jitter"
+                label="Average Jitter"
+                preferredFields={['avg_jitter_ms']}
+                suffix=" ms"
+                tone="warning"
+                icon={Activity}
+            />
+        </div>
+        <div className="scd-glass-grid-two">
+            <SearchChartPanel
+                context={context}
+                searchId="secure_networking_thousandeyes_network_loss_trend"
+                title="Network Loss Trend"
+                chartKind="area"
+                useGlobalFilters={false}
+            />
+            <SearchTablePanel
+                context={context}
+                searchId="secure_networking_thousandeyes_http_availability_by_test"
+                title="HTTP Availability by Test"
+                useGlobalFilters={false}
+            />
+        </div>
+    </div>
+);
+
+const UserInvestigationTab = ({
+    context,
+    setFilter,
+}: {
+    context: PageContext;
+    setFilter: (key: FilterKey, value: string) => void;
+}): JSX.Element => {
+    const [draftUser, setDraftUser] = useState('');
+    const [appliedUser, setAppliedUser] = useState('');
+    const safeUser = sanitizeSearchValue(appliedUser);
+    const transformSearch = useMemo(() => {
+        if (!safeUser) return undefined;
+        return (spl: string): string =>
+            `${spl}\n| search "Identity"="${safeUser}"`;
+    }, [safeUser]);
+    const activity = useSearchbaseRows({
+        catalogue: context.catalogue,
+        searchId: 'secure_networking_zta_user_activity_cross_source',
+        earliest: context.earliest,
+        refreshToken: context.refreshToken,
+        enabled: Boolean(safeUser),
+        transformSearch,
+        count: 100,
+    });
+    const row = activity.rows[0] ?? {};
+    const columns = getColumns(activity.rows);
+
+    const submit = (event: React.FormEvent): void => {
+        event.preventDefault();
+        const next = sanitizeSearchValue(draftUser);
+        setAppliedUser(next);
+        setFilter('user', next || 'Any');
+    };
+
+    return (
+        <div className="scd-glass-tab-content">
+            <section className="scd-glass-investigation-hero">
+                <div>
+                    <UserRoundSearch size={28} />
+                    <div>
+                        <h2>
+                            Trace a user session across Campus Wireless → ISE
+                            Auth → Cloud Firewall → Web Proxy → ZTNA
+                        </h2>
+                        <p>
+                            Enter an identity to correlate its activity across
+                            the Secure Networking enforcement stack.
+                        </p>
+                    </div>
+                </div>
+                <form onSubmit={submit}>
+                    <Search size={17} />
+                    <input
+                        value={draftUser}
+                        onChange={(event) => setDraftUser(event.target.value)}
+                        placeholder="Enter username to investigate…"
+                        aria-label="Username to investigate"
+                    />
+                    <button type="submit">Search</button>
+                </form>
+            </section>
+            <div className="scd-glass-metric-grid scd-glass-metric-grid-five">
+                {([
+                    ['Total Events', row['Total Events'], 'default'],
+                    ['Layers Seen', row['Layers Seen'], 'info'],
+                    ['Fail / Block Layers', row['Fail/Block Layers'], 'critical'],
+                    ['Sources', row.Sources, 'good'],
+                    ['Last Seen', row['Last Seen'], 'warning'],
+                ] as Array<[string, unknown, Tone]>).map(([label, value, tone]) => (
+                    <div
+                        key={String(label)}
+                        className={`scd-glass-metric scd-glass-investigation-metric ${toneClass(
+                            tone
+                        )}`}
+                    >
+                        <span className="scd-glass-metric-label">{label}</span>
+                        <strong>{safeUser ? displayCell(value) : '—'}</strong>
+                        <span className="scd-glass-metric-status">
+                            {safeUser ? safeUser : 'Waiting for a username'}
+                        </span>
+                    </div>
+                ))}
+            </div>
+            <Panel
+                title="Activity Timeline — Enforcement Layers"
+                subtitle={
+                    safeUser
+                        ? `Correlated activity for ${safeUser}`
+                        : 'Run a user search to populate this view.'
+                }
+            >
+                {!safeUser || activity.rows.length === 0 ? (
+                    <EmptyState
+                        loading={activity.loading && Boolean(safeUser)}
+                        error={activity.error}
+                        message="No user has been selected."
+                    />
+                ) : (
+                    <div className="scd-glass-layer-flow">
+                        {['Campus Wireless', 'ISE / NAC', 'Cloud Firewall', 'Web Proxy', 'ZTNA'].map(
+                            (layer, index) => (
+                                <React.Fragment key={layer}>
+                                    <div className="scd-glass-layer-node">
+                                        <span>{index + 1}</span>
+                                        <strong>{layer}</strong>
+                                    </div>
+                                    {index < 4 ? (
+                                        <ChevronRight size={20} />
+                                    ) : null}
+                                </React.Fragment>
+                            )
+                        )}
+                    </div>
+                )}
+            </Panel>
+            <Panel
+                title="User Activity Log"
+                subtitle="Searchbase cross-source correlation results"
+            >
+                {activity.rows.length === 0 ? (
+                    <EmptyState
+                        loading={activity.loading && Boolean(safeUser)}
+                        error={activity.error}
+                        message="No matching identity activity returned."
+                    />
+                ) : (
+                    <div className="scd-glass-table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    {columns.map((column) => (
+                                        <th key={column}>{column}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {activity.rows.map((activityRow, index) => (
+                                    <tr key={`${safeUser}-${index}`}>
+                                        {columns.map((column) => (
+                                            <td key={column}>
+                                                {displayCell(activityRow[column])}
+                                            </td>
+                                        ))}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </Panel>
+        </div>
+    );
+};
+
+const EventLog = ({ context }: { context: PageContext }): JSX.Element => {
+    const events = useSearchbaseRows({
+        catalogue: context.catalogue,
+        searchId: 'secure_networking_fmc_blocked_connection_detail',
+        earliest: context.earliest,
+        refreshToken: context.refreshToken,
+        count: 30,
+    });
+    const filtered = useFilteredRows(events.rows, context.filters);
+
+    return (
+        <div className="scd-glass-event-log">
+            {filtered.length === 0 ? (
+                <EmptyState loading={events.loading} error={events.error} />
+            ) : (
+                filtered.slice(0, 18).map((row, index) => {
+                    const time =
+                        row._time ?? row['Last Seen'] ?? row['Last Event'] ?? '';
+                    const messageFields = Object.entries(row).filter(
+                        ([key]) => !/^(_time|time|last seen|last event)$/i.test(key)
+                    );
+                    return (
+                        <div key={`event-${index}`}>
+                            <time>{compactLabel(time)}</time>
+                            <span className="scd-glass-event-tag">[FMC]</span>
+                            <p>
+                                {messageFields
+                                    .slice(0, 3)
+                                    .map(([, value]) => displayCell(value))
+                                    .join(' · ')}
+                            </p>
+                        </div>
+                    );
+                })
+            )}
+        </div>
+    );
+};
+
+const FilterSidebar = ({
+    context,
+    filters,
+    setFilter,
+}: {
+    context: PageContext;
+    filters: Filters;
+    setFilter: (key: FilterKey, value: string) => void;
+}): JSX.Element => (
+    <aside className="scd-glass-sidebar">
+        <section className="scd-glass-sidebar-filters">
+            <header>
+                <Filter size={18} />
+                <h2>Filters</h2>
+            </header>
+            {(Object.keys(FILTER_LABELS) as FilterKey[]).map((key) => {
+                const options = FILTER_OPTIONS[key];
+                const values = options.includes(filters[key])
+                    ? options
+                    : [...options, filters[key]];
+                return (
+                    <label key={key}>
+                        <span>{FILTER_LABELS[key]}</span>
+                        <select
+                            value={filters[key]}
+                            onChange={(event) => setFilter(key, event.target.value)}
+                        >
+                            {values.map((value) => (
+                                <option key={value} value={value}>
+                                    {value}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                );
+            })}
+        </section>
+        <section className="scd-glass-sidebar-events">
+            <header>
+                <Activity size={18} />
+                <h2>Event Log Viewer</h2>
+            </header>
+            <EventLog context={context} />
+        </section>
+    </aside>
+);
+
+const SecureOperationsGlassPage = (): JSX.Element => {
+    const [theme, setTheme] = useState<Theme>('light');
+    const [activeTab, setActiveTab] = useState<TabId>('overview');
+    const [earliest, setEarliest] = useState('-7d@d');
+    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+    const [refreshToken, setRefreshToken] = useState(0);
+    const { catalogue, error: catalogueError } = useSearchbaseCatalogueMap();
+
+    const setFilter = useCallback((key: FilterKey, value: string): void => {
+        setFilters((current) => ({ ...current, [key]: value }));
+    }, []);
+    const clearFilter = (key: FilterKey): void =>
+        setFilter(key, DEFAULT_FILTERS[key]);
+    const clearFilters = (): void => setFilters(DEFAULT_FILTERS);
+    const activeFilters = (Object.keys(filters) as FilterKey[]).filter(
+        (key) => filters[key] !== DEFAULT_FILTERS[key]
+    );
+    const context = useMemo<PageContext>(
+        () => ({
+            catalogue,
+            earliest,
+            refreshToken,
+            filters,
+            theme,
+        }),
+        [catalogue, earliest, refreshToken, filters, theme]
+    );
+
+    const renderTab = (): React.ReactNode => {
+        switch (activeTab) {
+            case 'identity':
+                return <IdentityTab context={context} />;
+            case 'firewall':
+                return <FirewallTab context={context} />;
+            case 'network':
+                return <NetworkTab context={context} setFilter={setFilter} />;
+            case 'investigation':
+                return (
+                    <UserInvestigationTab
+                        context={context}
+                        setFilter={setFilter}
+                    />
+                );
+            case 'overview':
+            default:
+                return <OverviewTab context={context} />;
+        }
+    };
+
+    return (
+        <div className="scd-glass" data-theme={theme}>
+            <header className="scd-glass-header">
+                <div className="scd-glass-title-block">
+                    <div className="scd-glass-title-row">
+                        <button
+                            type="button"
+                            className="scd-glass-menu-button"
+                            aria-label="Dashboard menu"
+                        >
+                            <Menu size={18} />
+                        </button>
+                        <div>
+                            <h1>Cisco Secure Networking — Operations Glass</h1>
+                            <p>
+                                Security Operations · Identity · Firewall ·
+                                Health · Investigation
+                            </p>
+                        </div>
+                    </div>
+                    <label className="scd-glass-time">
+                        <span>Time Range</span>
+                        <select
+                            value={earliest}
+                            onChange={(event) => setEarliest(event.target.value)}
+                        >
+                            {TIME_RANGES.map((range) => (
+                                <option key={range.value} value={range.value}>
+                                    {range.label}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                </div>
+                <div className="scd-glass-header-actions">
+                    <button
+                        type="button"
+                        className="scd-glass-theme-toggle"
+                        onClick={() =>
+                            setTheme((current) =>
+                                current === 'light' ? 'dark' : 'light'
+                            )
+                        }
+                    >
+                        {theme === 'light' ? (
+                            <Sun size={16} />
+                        ) : (
+                            <Moon size={16} />
+                        )}
+                        <span>{theme === 'light' ? 'Light' : 'Dark'}</span>
+                    </button>
+                    <button
+                        type="button"
+                        className="scd-glass-icon-button"
+                        onClick={() => setRefreshToken((token) => token + 1)}
+                        aria-label="Refresh all dashboard searches"
+                    >
+                        <RefreshCw size={17} />
+                    </button>
+                    <button
+                        type="button"
+                        className="scd-glass-icon-button"
+                        aria-label="Notifications"
+                    >
+                        <Bell size={17} />
+                    </button>
+                    <button
+                        type="button"
+                        className="scd-glass-panel-toggle"
+                        onClick={() => setSidebarOpen((current) => !current)}
+                    >
+                        {sidebarOpen ? (
+                            <PanelRightClose size={17} />
+                        ) : (
+                            <PanelRightOpen size={17} />
+                        )}
+                        <span>{sidebarOpen ? 'Close Panel' : 'Open Panel'}</span>
+                    </button>
+                </div>
+            </header>
+            <nav className="scd-glass-tabs" aria-label="Dashboard sections">
+                {TABS.map((tab) => {
+                    const Icon = tab.icon;
+                    return (
+                        <button
+                            type="button"
+                            key={tab.id}
+                            className={activeTab === tab.id ? 'is-active' : ''}
+                            onClick={() => setActiveTab(tab.id)}
+                        >
+                            <Icon size={16} />
+                            <span>{tab.label}</span>
+                        </button>
+                    );
+                })}
+            </nav>
+            {activeFilters.length > 0 ? (
+                <div className="scd-glass-active-filters">
+                    <Filter size={15} />
+                    <strong>Active Filters</strong>
+                    {activeFilters.map((key) => (
+                        <button
+                            type="button"
+                            key={key}
+                            onClick={() => clearFilter(key)}
+                        >
+                            <span>{FILTER_LABELS[key]}:</span>
+                            {filters[key]}
+                            <X size={13} />
+                        </button>
+                    ))}
+                    <button
+                        type="button"
+                        className="scd-glass-clear"
+                        onClick={clearFilters}
+                    >
+                        Clear all
+                    </button>
+                </div>
+            ) : null}
+            {catalogueError ? (
+                <div className="scd-glass-catalogue-warning">
+                    <AlertTriangle size={16} />
+                    {catalogueError}
+                </div>
+            ) : null}
+            <div
+                className={`scd-glass-workspace ${
+                    sidebarOpen ? 'has-sidebar' : ''
+                }`}
+            >
+                <main>{renderTab()}</main>
+                {sidebarOpen ? (
+                    <FilterSidebar
+                        context={context}
+                        filters={filters}
+                        setFilter={setFilter}
+                    />
+                ) : null}
+            </div>
+            <span className="scd-glass-view-id" aria-hidden="true">
+                {titleFromPath()}
+            </span>
+        </div>
+    );
+};
+
+export default SecureOperationsGlassPage;

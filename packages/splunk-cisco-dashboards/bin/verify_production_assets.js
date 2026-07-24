@@ -24,6 +24,7 @@ const ENTRY_NAMES = [
     'm365_activity_monitoring',
     'macro_index_tuning',
     'user_guide',
+    'secure_operations_glass',
     'dashboardbuilder',
 ];
 

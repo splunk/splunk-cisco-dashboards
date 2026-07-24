@@ -1,0 +1,1332 @@
+#scan-root {
+    height: calc(100vh - 118px) !important;
+    overflow: hidden !important;
+    width: 100%;
+}
+
+#scan-root,
+#scan-root * {
+    box-sizing: border-box;
+}
+
+#scan-root .scd-glass {
+    --glass-accent: #00bceb;
+    --glass-accent-strong: #049fd9;
+    --glass-accent-soft: #e6f8fd;
+    --glass-bg: #eef3f8;
+    --glass-panel: #ffffff;
+    --glass-panel-subtle: #f7f9fc;
+    --glass-panel-strong: #e8eff7;
+    --glass-border: #d5e0ec;
+    --glass-border-strong: #9ddff2;
+    --glass-text: #152238;
+    --glass-muted: #63758d;
+    --glass-faint: #8ca0ba;
+    --glass-good: #65bd3e;
+    --glass-warning: #f58220;
+    --glass-critical: #e5534b;
+    --glass-info: #0875d1;
+    --glass-shadow: 0 7px 20px rgba(35, 56, 85, 0.08);
+    background: var(--glass-bg);
+    color: var(--glass-text);
+    display: flex;
+    flex-direction: column;
+    font-family:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    height: 100%;
+    min-width: 0;
+}
+
+#scan-root .scd-glass[data-theme="dark"] {
+    --glass-accent: #35cff5;
+    --glass-accent-strong: #00a7d0;
+    --glass-accent-soft: #0c3043;
+    --glass-bg: #07101d;
+    --glass-panel: #0f1a2a;
+    --glass-panel-subtle: #111f31;
+    --glass-panel-strong: #16283c;
+    --glass-border: #22364d;
+    --glass-border-strong: #216a84;
+    --glass-text: #e8f1fb;
+    --glass-muted: #9aacc1;
+    --glass-faint: #6f849e;
+    --glass-good: #8bd45b;
+    --glass-warning: #ff9a4a;
+    --glass-critical: #ff7169;
+    --glass-info: #53bfff;
+    --glass-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+#scan-root .scd-glass button,
+#scan-root .scd-glass input,
+#scan-root .scd-glass select {
+    font: inherit;
+}
+
+#scan-root .scd-glass button {
+    color: inherit;
+}
+
+#scan-root .scd-glass-header {
+    align-items: flex-start;
+    background: var(--glass-panel);
+    border-bottom: 1px solid var(--glass-border);
+    display: flex;
+    flex: 0 0 auto;
+    gap: 24px;
+    justify-content: space-between;
+    min-height: 104px;
+    padding: 16px 22px 13px;
+}
+
+#scan-root .scd-glass-title-block {
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    min-width: 0;
+}
+
+#scan-root .scd-glass-title-row {
+    align-items: flex-start;
+    display: flex;
+    gap: 9px;
+}
+
+#scan-root .scd-glass-title-row h1 {
+    color: var(--glass-text);
+    font-size: 19px;
+    font-weight: 760;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+    margin: 0;
+}
+
+#scan-root .scd-glass-title-row p {
+    color: var(--glass-faint);
+    font-size: 11px;
+    font-weight: 600;
+    margin: 4px 0 0;
+}
+
+#scan-root .scd-glass-menu-button,
+#scan-root .scd-glass-icon-button {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: 7px;
+    cursor: pointer;
+    display: inline-flex;
+    justify-content: center;
+    min-height: 31px;
+    min-width: 31px;
+    padding: 0;
+}
+
+#scan-root .scd-glass-menu-button:hover,
+#scan-root .scd-glass-icon-button:hover {
+    background: var(--glass-panel-strong);
+    color: var(--glass-accent-strong);
+}
+
+#scan-root .scd-glass-time {
+    align-items: center;
+    color: var(--glass-muted);
+    display: flex;
+    font-size: 11px;
+    font-weight: 650;
+    gap: 8px;
+    width: max-content;
+}
+
+#scan-root .scd-glass-time select,
+#scan-root .scd-glass-sidebar select {
+    appearance: auto;
+    background: var(--glass-panel);
+    border: 1px solid var(--glass-border);
+    border-radius: 7px;
+    color: var(--glass-text);
+    min-height: 31px;
+    outline: none;
+    padding: 5px 27px 5px 10px;
+}
+
+#scan-root .scd-glass-time select:focus,
+#scan-root .scd-glass-sidebar select:focus,
+#scan-root .scd-glass-investigation-hero input:focus {
+    border-color: var(--glass-accent-strong);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--glass-accent) 23%, transparent);
+}
+
+#scan-root .scd-glass-header-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-end;
+}
+
+#scan-root .scd-glass-theme-toggle,
+#scan-root .scd-glass-panel-toggle {
+    align-items: center;
+    background: var(--glass-panel-subtle);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 11px;
+    font-weight: 700;
+    gap: 6px;
+    min-height: 32px;
+    padding: 5px 10px;
+}
+
+#scan-root .scd-glass-theme-toggle:hover,
+#scan-root .scd-glass-panel-toggle:hover {
+    border-color: var(--glass-accent);
+    color: var(--glass-accent-strong);
+}
+
+#scan-root .scd-glass-tabs {
+    align-items: stretch;
+    background: var(--glass-panel);
+    border-bottom: 1px solid var(--glass-border);
+    display: flex;
+    flex: 0 0 auto;
+    gap: 2px;
+    overflow-x: auto;
+    padding: 0 22px;
+}
+
+#scan-root .scd-glass-tabs button {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    color: var(--glass-muted);
+    cursor: pointer;
+    display: flex;
+    font-size: 12px;
+    font-weight: 650;
+    gap: 7px;
+    min-height: 48px;
+    padding: 0 18px;
+    white-space: nowrap;
+}
+
+#scan-root .scd-glass-tabs button:hover {
+    background: var(--glass-panel-subtle);
+    color: var(--glass-text);
+}
+
+#scan-root .scd-glass-tabs button.is-active {
+    border-bottom-color: var(--glass-accent);
+    color: var(--glass-text);
+}
+
+#scan-root .scd-glass-active-filters {
+    align-items: center;
+    background: var(--glass-panel);
+    border-bottom: 1px solid var(--glass-border);
+    color: var(--glass-muted);
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    font-size: 11px;
+    gap: 7px;
+    min-height: 42px;
+    padding: 6px 22px;
+}
+
+#scan-root .scd-glass-active-filters > button {
+    align-items: center;
+    background: var(--glass-accent-soft);
+    border: 1px solid var(--glass-border-strong);
+    border-radius: 999px;
+    color: var(--glass-text);
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 10px;
+    gap: 4px;
+    min-height: 25px;
+    padding: 3px 8px;
+}
+
+#scan-root .scd-glass-active-filters > button span {
+    color: var(--glass-muted);
+}
+
+#scan-root .scd-glass-active-filters .scd-glass-clear {
+    background: transparent;
+    border-color: transparent;
+    color: var(--glass-accent-strong);
+    font-weight: 700;
+}
+
+#scan-root .scd-glass-catalogue-warning {
+    align-items: center;
+    background: color-mix(in srgb, var(--glass-warning) 13%, var(--glass-panel));
+    border-bottom: 1px solid var(--glass-warning);
+    color: var(--glass-text);
+    display: flex;
+    flex: 0 0 auto;
+    font-size: 12px;
+    gap: 8px;
+    padding: 8px 22px;
+}
+
+#scan-root .scd-glass-workspace {
+    display: grid;
+    flex: 1 1 auto;
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+    overflow: hidden;
+}
+
+#scan-root .scd-glass-workspace.has-sidebar {
+    grid-template-columns: minmax(0, 1fr) 320px;
+}
+
+#scan-root .scd-glass-workspace > main {
+    min-width: 0;
+    overflow: auto;
+}
+
+#scan-root .scd-glass-tab-content {
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+    min-width: 0;
+    padding: 15px 18px 48px;
+}
+
+#scan-root .scd-glass-metric-grid {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+}
+
+#scan-root .scd-glass-metric-grid-six {
+    grid-template-columns: repeat(6, minmax(130px, 1fr));
+}
+
+#scan-root .scd-glass-metric-grid-five {
+    grid-template-columns: repeat(5, minmax(145px, 1fr));
+}
+
+#scan-root .scd-glass-metric-grid-four {
+    grid-template-columns: repeat(4, minmax(150px, 1fr));
+}
+
+#scan-root .scd-glass-metric {
+    background: var(--glass-panel);
+    border: 1px solid var(--glass-border-strong);
+    border-radius: 9px;
+    box-shadow: none;
+    cursor: default;
+    display: flex;
+    flex-direction: column;
+    min-height: 86px;
+    min-width: 0;
+    overflow: hidden;
+    padding: 12px 14px 10px;
+    text-align: left;
+}
+
+#scan-root button.scd-glass-metric:focus-visible {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--glass-accent) 28%, transparent);
+    outline: 0;
+}
+
+#scan-root .scd-glass-metric-label {
+    align-items: center;
+    color: var(--glass-faint);
+    display: flex;
+    font-size: 9px;
+    font-weight: 780;
+    gap: 6px;
+    letter-spacing: 0.1em;
+    min-height: 16px;
+    overflow: hidden;
+    text-transform: uppercase;
+}
+
+#scan-root .scd-glass-metric-label span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#scan-root .scd-glass-metric > strong {
+    color: var(--glass-text);
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    font-size: clamp(23px, 2vw, 31px);
+    font-weight: 760;
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+    margin-top: 5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#scan-root .scd-glass-metric-status {
+    color: var(--glass-faint);
+    font-size: 9px;
+    margin-top: auto;
+    overflow: hidden;
+    padding-top: 5px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#scan-root .scd-glass-tone-good > strong,
+#scan-root .scd-glass-tone-good .scd-glass-metric-label svg {
+    color: var(--glass-good);
+}
+
+#scan-root .scd-glass-tone-warning > strong,
+#scan-root .scd-glass-tone-warning .scd-glass-metric-label svg {
+    color: var(--glass-warning);
+}
+
+#scan-root .scd-glass-tone-critical > strong,
+#scan-root .scd-glass-tone-critical .scd-glass-metric-label svg {
+    color: var(--glass-critical);
+}
+
+#scan-root .scd-glass-tone-info > strong,
+#scan-root .scd-glass-tone-info .scd-glass-metric-label svg {
+    color: var(--glass-info);
+}
+
+#scan-root .scd-glass-grid-two,
+#scan-root .scd-glass-grid-three,
+#scan-root .scd-glass-grid-identity {
+    display: grid;
+    gap: 13px;
+    min-width: 0;
+}
+
+#scan-root .scd-glass-grid-two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+#scan-root .scd-glass-grid-three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+#scan-root .scd-glass-grid-identity {
+    grid-template-columns: 2fr minmax(220px, 0.8fr) minmax(220px, 0.8fr);
+}
+
+#scan-root .scd-glass-span-two {
+    grid-column: span 1;
+}
+
+#scan-root .scd-glass-panel,
+#scan-root .scd-glass-chart-panel,
+#scan-root .scd-glass-table-panel {
+    background: var(--glass-panel);
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+    box-shadow: var(--glass-shadow);
+    min-width: 0;
+    overflow: hidden;
+}
+
+#scan-root .scd-glass-panel-header {
+    align-items: flex-start;
+    display: flex;
+    gap: 14px;
+    justify-content: space-between;
+    min-height: 53px;
+    padding: 14px 17px 8px;
+}
+
+#scan-root .scd-glass-panel-header h2,
+#scan-root .scd-glass-policy-panel h2,
+#scan-root .scd-glass-site-panel h2 {
+    color: var(--glass-text);
+    font-size: 13px;
+    font-weight: 750;
+    line-height: 1.35;
+    margin: 0;
+}
+
+#scan-root .scd-glass-panel-header p,
+#scan-root .scd-glass-policy-panel p {
+    color: var(--glass-faint);
+    font-size: 10px;
+    margin: 3px 0 0;
+}
+
+#scan-root .scd-glass-panel-body {
+    min-width: 0;
+}
+
+#scan-root .scd-glass-chart-panel .scd-glass-panel-body {
+    height: 228px;
+    padding: 0 9px 12px;
+}
+
+#scan-root .scd-glass-chart {
+    height: 100%;
+    min-height: 190px;
+    min-width: 0;
+}
+
+#scan-root .scd-glass-linked {
+    color: var(--glass-accent-strong);
+    flex: 0 0 auto;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+#scan-root .scd-glass-empty {
+    align-items: center;
+    color: var(--glass-faint);
+    display: flex;
+    flex-direction: column;
+    font-size: 11px;
+    gap: 8px;
+    height: 100%;
+    justify-content: center;
+    min-height: 110px;
+    padding: 18px;
+    text-align: center;
+}
+
+#scan-root .scd-glass-spin {
+    animation: scd-glass-spin 1s linear infinite;
+}
+
+@keyframes scd-glass-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+#scan-root .scd-glass-table-wrap {
+    min-width: 0;
+    overflow: auto;
+    width: 100%;
+}
+
+#scan-root .scd-glass-table-wrap table {
+    border-collapse: collapse;
+    color: var(--glass-text);
+    font-size: 10px;
+    min-width: 100%;
+    table-layout: auto;
+    width: 100%;
+}
+
+#scan-root .scd-glass-table-wrap th {
+    background: var(--glass-panel-subtle);
+    color: var(--glass-faint);
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    padding: 8px 10px;
+    text-align: left;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+#scan-root .scd-glass-table-wrap td {
+    border-top: 1px solid var(--glass-border);
+    max-width: 260px;
+    overflow: hidden;
+    padding: 8px 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#scan-root .scd-glass-table-wrap tr:hover td {
+    background: var(--glass-accent-soft);
+}
+
+#scan-root .scd-glass-table-panel .scd-glass-panel-body {
+    max-height: 310px;
+    overflow: auto;
+}
+
+#scan-root .scd-glass-section-band {
+    background: var(--glass-accent-strong);
+    border-radius: 6px;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    padding: 7px 12px;
+    text-transform: uppercase;
+}
+
+#scan-root .scd-glass-policy-panel {
+    background: var(--glass-panel);
+    border: 1px solid var(--glass-border-strong);
+    border-radius: 10px;
+    box-shadow: var(--glass-shadow);
+    display: grid;
+    grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
+    min-height: 330px;
+    overflow: hidden;
+}
+
+#scan-root .scd-glass-policy-list {
+    background: var(--glass-panel-subtle);
+    border-right: 1px solid var(--glass-border);
+    min-width: 0;
+}
+
+#scan-root .scd-glass-policy-list > header,
+#scan-root .scd-glass-policy-detail > header {
+    border-bottom: 1px solid var(--glass-border);
+    min-height: 70px;
+    padding: 15px 16px;
+}
+
+#scan-root .scd-glass-policy-items {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 360px;
+    overflow: auto;
+    padding: 10px;
+}
+
+#scan-root .scd-glass-policy-items > button {
+    align-items: center;
+    background: var(--glass-panel);
+    border: 1px solid var(--glass-border);
+    border-radius: 7px;
+    cursor: pointer;
+    display: grid;
+    font-size: 11px;
+    gap: 7px;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    min-height: 43px;
+    padding: 8px 10px;
+    text-align: left;
+}
+
+#scan-root .scd-glass-policy-items > button span {
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#scan-root .scd-glass-policy-items > button strong {
+    color: var(--glass-muted);
+    font-family: "SFMono-Regular", Consolas, monospace;
+}
+
+#scan-root .scd-glass-policy-items > button:hover,
+#scan-root .scd-glass-policy-items > button.is-selected {
+    background: var(--glass-accent-soft);
+    border-color: var(--glass-accent);
+    color: var(--glass-accent-strong);
+}
+
+#scan-root .scd-glass-policy-detail {
+    min-width: 0;
+}
+
+#scan-root .scd-glass-policy-detail > header {
+    align-items: flex-start;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+}
+
+#scan-root .scd-glass-policy-detail > header h2 span {
+    color: var(--glass-accent-strong);
+}
+
+#scan-root .scd-glass-count-badge {
+    background: var(--glass-accent-soft);
+    border: 1px solid var(--glass-border-strong);
+    border-radius: 999px;
+    color: var(--glass-accent-strong);
+    font-size: 9px;
+    font-weight: 750;
+    padding: 5px 9px;
+    white-space: nowrap;
+}
+
+#scan-root .scd-glass-site-panel {
+    background: var(--glass-panel);
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+    box-shadow: var(--glass-shadow);
+    display: grid;
+    grid-template-columns: minmax(0, 1.65fr) minmax(280px, 0.9fr);
+    min-height: 370px;
+    overflow: hidden;
+}
+
+#scan-root .scd-glass-site-map {
+    border-right: 1px solid var(--glass-border);
+    min-width: 0;
+}
+
+#scan-root .scd-glass-site-map > header {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    min-height: 48px;
+    padding: 11px 16px;
+}
+
+#scan-root .scd-glass-site-map > header span {
+    color: var(--glass-accent-strong);
+    font-size: 9px;
+    font-weight: 700;
+}
+
+#scan-root .scd-glass-map-canvas {
+    background-color: var(--glass-panel-strong);
+    background-image:
+        linear-gradient(var(--glass-border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--glass-border) 1px, transparent 1px);
+    background-size: 64px 64px;
+    height: 320px;
+    overflow: hidden;
+    position: relative;
+}
+
+#scan-root .scd-glass-map-land {
+    background: color-mix(in srgb, var(--glass-faint) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--glass-faint) 24%, transparent);
+    position: absolute;
+}
+
+#scan-root .scd-glass-map-land.land-a {
+    clip-path: polygon(5% 20%, 76% 5%, 96% 52%, 72% 92%, 22% 82%, 0 53%);
+    height: 45%;
+    left: 9%;
+    top: 18%;
+    width: 20%;
+}
+
+#scan-root .scd-glass-map-land.land-b {
+    clip-path: polygon(12% 12%, 73% 4%, 100% 32%, 82% 74%, 38% 92%, 0 52%);
+    height: 42%;
+    left: 42%;
+    top: 14%;
+    width: 34%;
+}
+
+#scan-root .scd-glass-map-land.land-c {
+    clip-path: polygon(28% 0, 87% 9%, 100% 48%, 68% 100%, 8% 79%, 0 31%);
+    height: 30%;
+    left: 38%;
+    top: 54%;
+    width: 13%;
+}
+
+#scan-root .scd-glass-map-land.land-d {
+    clip-path: polygon(24% 0, 88% 9%, 100% 56%, 69% 92%, 21% 100%, 0 55%);
+    height: 27%;
+    left: 69%;
+    top: 56%;
+    width: 12%;
+}
+
+#scan-root .scd-glass-map-site {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    position: absolute;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+}
+
+#scan-root .scd-glass-map-site strong {
+    background: color-mix(in srgb, var(--glass-panel) 88%, transparent);
+    border-radius: 4px;
+    font-size: 9px;
+    max-width: 130px;
+    overflow: hidden;
+    padding: 2px 5px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#scan-root .scd-glass-map-dot {
+    background: var(--glass-good);
+    border: 4px solid color-mix(in srgb, var(--glass-good) 25%, transparent);
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px var(--glass-good);
+    height: 17px;
+    width: 17px;
+}
+
+#scan-root .scd-glass-map-site.is-bad .scd-glass-map-dot {
+    background: var(--glass-critical);
+    border-color: color-mix(in srgb, var(--glass-critical) 25%, transparent);
+    box-shadow: 0 0 0 1px var(--glass-critical);
+}
+
+#scan-root .scd-glass-map-site.is-selected .scd-glass-map-dot {
+    box-shadow:
+        0 0 0 2px var(--glass-panel),
+        0 0 0 5px var(--glass-accent);
+}
+
+#scan-root .scd-glass-site-detail {
+    min-width: 0;
+    padding: 16px;
+}
+
+#scan-root .scd-glass-site-summary {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+#scan-root .scd-glass-site-summary > div,
+#scan-root .scd-glass-site-kpis > div {
+    background: var(--glass-panel-subtle);
+    border: 1px solid var(--glass-border);
+    border-radius: 7px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    padding: 9px 10px;
+}
+
+#scan-root .scd-glass-site-summary span,
+#scan-root .scd-glass-site-kpis span,
+#scan-root .scd-glass-site-heading span {
+    color: var(--glass-faint);
+    font-size: 8px;
+    font-weight: 750;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+#scan-root .scd-glass-site-summary strong {
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 20px;
+}
+
+#scan-root .scd-glass-site-summary .is-good strong,
+#scan-root .scd-glass-site-list .is-good {
+    color: var(--glass-good);
+}
+
+#scan-root .scd-glass-site-summary .is-bad strong,
+#scan-root .scd-glass-site-list .is-bad {
+    color: var(--glass-critical);
+}
+
+#scan-root .scd-glass-site-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 12px;
+    max-height: 255px;
+    overflow: auto;
+}
+
+#scan-root .scd-glass-site-list button {
+    align-items: center;
+    background: var(--glass-panel-subtle);
+    border: 1px solid var(--glass-border);
+    border-radius: 6px;
+    cursor: pointer;
+    display: grid;
+    font-size: 10px;
+    gap: 8px;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    min-height: 34px;
+    padding: 6px 8px;
+    text-align: left;
+}
+
+#scan-root .scd-glass-site-list button:hover {
+    border-color: var(--glass-accent);
+}
+
+#scan-root .scd-glass-site-list button > span {
+    background: currentColor;
+    border-radius: 50%;
+    height: 8px;
+    width: 8px;
+}
+
+#scan-root .scd-glass-site-list button strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#scan-root .scd-glass-site-list button em {
+    color: var(--glass-muted);
+    font-style: normal;
+}
+
+#scan-root .scd-glass-back {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    color: var(--glass-accent-strong);
+    cursor: pointer;
+    display: flex;
+    font-size: 10px;
+    gap: 3px;
+    margin: 0 0 15px;
+    padding: 0;
+}
+
+#scan-root .scd-glass-site-heading {
+    align-items: center;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+}
+
+#scan-root .scd-glass-site-heading h2 {
+    font-size: 18px;
+    margin-top: 3px;
+}
+
+#scan-root .scd-glass-site-heading > strong {
+    color: var(--glass-accent-strong);
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 28px;
+}
+
+#scan-root .scd-glass-site-kpis {
+    display: grid;
+    gap: 7px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 18px;
+}
+
+#scan-root .scd-glass-site-kpis strong {
+    font-size: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#scan-root .scd-glass-network-row {
+    display: flex;
+    gap: 13px;
+    min-width: 0;
+}
+
+#scan-root .scd-glass-network-metrics {
+    display: grid;
+    flex: 0 0 310px;
+    gap: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+#scan-root .scd-glass-flex-one {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+#scan-root .scd-glass-investigation-hero {
+    background: color-mix(in srgb, var(--glass-info) 11%, var(--glass-panel));
+    border: 1px solid color-mix(in srgb, var(--glass-info) 32%, var(--glass-border));
+    border-radius: 9px;
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+    padding: 15px 18px;
+}
+
+#scan-root .scd-glass-investigation-hero > div {
+    align-items: flex-start;
+    display: flex;
+    gap: 10px;
+}
+
+#scan-root .scd-glass-investigation-hero > div > svg {
+    color: var(--glass-info);
+    flex: 0 0 auto;
+}
+
+#scan-root .scd-glass-investigation-hero h2 {
+    color: var(--glass-text);
+    font-size: 13px;
+    line-height: 1.4;
+    margin: 0;
+}
+
+#scan-root .scd-glass-investigation-hero p {
+    color: var(--glass-muted);
+    font-size: 10px;
+    margin: 3px 0 0;
+}
+
+#scan-root .scd-glass-investigation-hero form {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    max-width: 590px;
+    position: relative;
+}
+
+#scan-root .scd-glass-investigation-hero form > svg {
+    color: var(--glass-faint);
+    left: 10px;
+    position: absolute;
+}
+
+#scan-root .scd-glass-investigation-hero input {
+    background: var(--glass-panel);
+    border: 1px solid var(--glass-border);
+    border-radius: 7px;
+    color: var(--glass-text);
+    flex: 1 1 auto;
+    min-height: 36px;
+    min-width: 0;
+    outline: none;
+    padding: 7px 10px 7px 34px;
+}
+
+#scan-root .scd-glass-investigation-hero form button {
+    background: var(--glass-info);
+    border: 1px solid var(--glass-info);
+    border-radius: 7px;
+    color: #ffffff;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 750;
+    min-height: 36px;
+    padding: 7px 17px;
+}
+
+#scan-root .scd-glass-investigation-metric {
+    cursor: default;
+}
+
+#scan-root .scd-glass-layer-flow {
+    align-items: center;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    min-height: 145px;
+    overflow-x: auto;
+    padding: 20px;
+}
+
+#scan-root .scd-glass-layer-flow > svg {
+    color: var(--glass-faint);
+    flex: 0 0 auto;
+}
+
+#scan-root .scd-glass-layer-node {
+    align-items: center;
+    background: var(--glass-panel-subtle);
+    border: 1px solid var(--glass-border-strong);
+    border-radius: 9px;
+    display: flex;
+    flex: 0 0 130px;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 82px;
+    justify-content: center;
+    padding: 10px;
+    text-align: center;
+}
+
+#scan-root .scd-glass-layer-node span {
+    align-items: center;
+    background: var(--glass-accent-soft);
+    border-radius: 50%;
+    color: var(--glass-accent-strong);
+    display: flex;
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 10px;
+    height: 24px;
+    justify-content: center;
+    width: 24px;
+}
+
+#scan-root .scd-glass-layer-node strong {
+    font-size: 10px;
+}
+
+#scan-root .scd-glass-sidebar {
+    background: var(--glass-panel-subtle);
+    border-left: 1px solid var(--glass-border);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+
+#scan-root .scd-glass-sidebar-filters,
+#scan-root .scd-glass-sidebar-events {
+    min-width: 0;
+}
+
+#scan-root .scd-glass-sidebar-filters {
+    border-bottom: 1px solid var(--glass-border);
+    flex: 0 0 auto;
+    padding: 14px 14px 15px;
+}
+
+#scan-root .scd-glass-sidebar-filters > header,
+#scan-root .scd-glass-sidebar-events > header {
+    align-items: center;
+    color: var(--glass-text);
+    display: flex;
+    gap: 8px;
+    min-height: 30px;
+}
+
+#scan-root .scd-glass-sidebar-filters > header svg,
+#scan-root .scd-glass-sidebar-events > header svg {
+    color: var(--glass-accent-strong);
+}
+
+#scan-root .scd-glass-sidebar h2 {
+    font-size: 13px;
+    margin: 0;
+}
+
+#scan-root .scd-glass-sidebar-filters label {
+    align-items: center;
+    background: var(--glass-panel);
+    border: 1px solid var(--glass-border);
+    border-radius: 7px;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: minmax(0, 1fr) minmax(125px, auto);
+    margin-top: 7px;
+    min-height: 36px;
+    padding: 4px 5px 4px 10px;
+}
+
+#scan-root .scd-glass-sidebar-filters label > span {
+    color: var(--glass-muted);
+    font-size: 10px;
+    font-weight: 650;
+}
+
+#scan-root .scd-glass-sidebar-filters select {
+    border: 0;
+    font-size: 10px;
+    min-height: 26px;
+    min-width: 0;
+    padding-bottom: 3px;
+    padding-top: 3px;
+    text-align: right;
+}
+
+#scan-root .scd-glass-sidebar-events {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+}
+
+#scan-root .scd-glass-sidebar-events > header {
+    border-bottom: 1px solid var(--glass-border);
+    flex: 0 0 auto;
+    padding: 10px 14px;
+}
+
+#scan-root .scd-glass-event-log {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: 6px 13px 24px;
+}
+
+#scan-root .scd-glass-event-log > div:not(.scd-glass-empty) {
+    align-items: baseline;
+    border-bottom: 1px solid var(--glass-border);
+    display: grid;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    font-size: 9px;
+    gap: 5px;
+    grid-template-columns: 55px 40px minmax(0, 1fr);
+    padding: 8px 0;
+}
+
+#scan-root .scd-glass-event-log time {
+    color: var(--glass-faint);
+}
+
+#scan-root .scd-glass-event-tag {
+    color: var(--glass-warning);
+    font-weight: 750;
+}
+
+#scan-root .scd-glass-event-log p {
+    color: var(--glass-text);
+    line-height: 1.35;
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+#scan-root .scd-glass-view-id {
+    display: none;
+}
+
+@media (max-width: 1500px) {
+    #scan-root .scd-glass-metric-grid-six {
+        grid-template-columns: repeat(3, minmax(145px, 1fr));
+    }
+
+    #scan-root .scd-glass-workspace.has-sidebar {
+        grid-template-columns: minmax(0, 1fr) 290px;
+    }
+
+    #scan-root .scd-glass-grid-identity {
+        grid-template-columns: minmax(0, 1.7fr) minmax(210px, 1fr);
+    }
+
+    #scan-root .scd-glass-grid-identity > :last-child {
+        grid-column: span 2;
+    }
+}
+
+@media (max-width: 1180px) {
+    #scan-root .scd-glass-workspace.has-sidebar {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    #scan-root .scd-glass-sidebar {
+        border-left: 0;
+        border-top: 1px solid var(--glass-border);
+        max-height: 500px;
+    }
+
+    #scan-root .scd-glass-sidebar-filters {
+        display: grid;
+        gap: 7px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    #scan-root .scd-glass-sidebar-filters > header {
+        grid-column: 1 / -1;
+    }
+
+    #scan-root .scd-glass-sidebar-filters label {
+        margin-top: 0;
+    }
+
+    #scan-root .scd-glass-metric-grid-five {
+        grid-template-columns: repeat(3, minmax(145px, 1fr));
+    }
+
+    #scan-root .scd-glass-grid-three {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    #scan-root .scd-glass-grid-three > :last-child {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 850px) {
+    #scan-root {
+        height: auto !important;
+        min-height: calc(100vh - 118px);
+        overflow: visible !important;
+    }
+
+    #scan-root .scd-glass {
+        height: auto;
+        min-height: calc(100vh - 118px);
+    }
+
+    #scan-root .scd-glass-header {
+        flex-direction: column;
+    }
+
+    #scan-root .scd-glass-header-actions {
+        justify-content: flex-start;
+    }
+
+    #scan-root .scd-glass-workspace,
+    #scan-root .scd-glass-workspace > main {
+        overflow: visible;
+    }
+
+    #scan-root .scd-glass-metric-grid-six,
+    #scan-root .scd-glass-metric-grid-five,
+    #scan-root .scd-glass-metric-grid-four,
+    #scan-root .scd-glass-grid-two,
+    #scan-root .scd-glass-grid-three,
+    #scan-root .scd-glass-grid-identity {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    #scan-root .scd-glass-grid-three > :last-child,
+    #scan-root .scd-glass-grid-identity > :last-child {
+        grid-column: auto;
+    }
+
+    #scan-root .scd-glass-policy-panel,
+    #scan-root .scd-glass-site-panel {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    #scan-root .scd-glass-policy-list,
+    #scan-root .scd-glass-site-map {
+        border-bottom: 1px solid var(--glass-border);
+        border-right: 0;
+    }
+
+    #scan-root .scd-glass-network-row {
+        flex-direction: column;
+    }
+
+    #scan-root .scd-glass-network-metrics {
+        flex-basis: auto;
+    }
+}
+
+@media (max-width: 560px) {
+    #scan-root .scd-glass-tab-content {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    #scan-root .scd-glass-metric-grid-six,
+    #scan-root .scd-glass-metric-grid-five,
+    #scan-root .scd-glass-metric-grid-four,
+    #scan-root .scd-glass-grid-two,
+    #scan-root .scd-glass-grid-three,
+    #scan-root .scd-glass-grid-identity {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    #scan-root .scd-glass-sidebar-filters {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    #scan-root .scd-glass-layer-flow {
+        justify-content: flex-start;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #scan-root .scd-glass-spin {
+        animation: none;
+    }
+}
