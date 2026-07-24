@@ -59,7 +59,7 @@ PILOT_STANZAS: list[tuple[str, dict[str, str]]] = [
             "related_info": (
                 "<ul><li><b>Source dashboard</b><br>"
                 "<code>events_and_incident_viewer</code> in cisco-catalyst-app.</li>"
-                "<li><b>Dispatch</b><br>Requires <code>cisco-catalyst-app</code> namespace "
+                "<li><b>Dispatch</b><br>Runs in the <code>splunk-cisco-dashboards</code> namespace "
                 "for <code>Cisco_Catalyst_App</code> acceleration.</li></ul>"
             ),
             "search": (
@@ -410,7 +410,7 @@ def build_stanza_fields(meta: dict[str, str]) -> dict[str, str]:
         "category": meta["category"],
         "sub_category": meta["sub_category"],
         "tags": meta["tags"],
-        "dispatch_context": "cisco-catalyst-app",
+        "dispatch_context": "splunk-cisco-dashboards",
         "dispatch_context_force": "1",
         "description": meta["description"],
         "explanation": meta["explanation"],
@@ -460,7 +460,7 @@ def meta_from_manifest(entry: dict) -> dict[str, str]:
         "related_info": (
             f"<ul><li><b>Provenance</b><br>Harvested from cisco-catalyst-app "
             f"<code>{dash}</code> dashboard.</li>"
-            "<li><b>Dispatch</b><br>Runs in <code>cisco-catalyst-app</code> app context.</li></ul>"
+            "<li><b>Dispatch</b><br>Runs in <code>splunk-cisco-dashboards</code> app context.</li></ul>"
         ),
         "search": spl,
     }

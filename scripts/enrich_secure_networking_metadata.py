@@ -39,6 +39,7 @@ CATEGORY_COLORS = {
     "Cisco Spaces": ["#16A34A", "#0EA5E9", "#F59E0B", "#DC2626"],
 }
 DEFAULT_COLORS = ["#0284C7", "#16A34A", "#F59E0B", "#DC2626"]
+REQUIRED_DISPATCH_CONTEXT = "splunk-cisco-dashboards"
 
 PILLAR_SECTIONS = {
     "Zero Trust Access": "zta",
@@ -307,6 +308,18 @@ def enrich(content: str) -> tuple[str, int]:
         fields = parse_fields(body)
         next_body = set_field(
             body,
+            "dispatch_context",
+            REQUIRED_DISPATCH_CONTEXT,
+            after="tags",
+        )
+        next_body = set_field(
+            next_body,
+            "dispatch_context_force",
+            "1",
+            after="dispatch_context",
+        )
+        next_body = set_field(
+            next_body,
             "viz_options",
             merge_viz_options(name, fields),
             after="default_viz",

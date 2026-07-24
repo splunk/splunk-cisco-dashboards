@@ -569,7 +569,7 @@ def convert_file(
 
         fields = dict(fields)
         fields["search"] = fold_search(new_pipeline)
-        fields["dispatch_context"] = "cisco-catalyst-app"
+        fields["dispatch_context"] = "splunk-cisco-dashboards"
         fields["dispatch_context_force"] = "1"
         fields["date_updated"] = "2026-07-01"
         fields["version"] = bump_version(fields.get("version", "1.0.0"))

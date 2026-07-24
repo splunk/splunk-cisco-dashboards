@@ -3,7 +3,7 @@
 Validate Cisco Catalyst DM / harvest stanzas in searchbase.conf.
 
 Runs without restarting Splunk. When live prerequisites are not met
-(cisco-catalyst-app namespace or Cisco_Catalyst_App DM unavailable),
+(splunk-cisco-dashboards namespace or Cisco_Catalyst_App DM unavailable),
 static checks still run and live dispatch is skipped with a clear reason.
 
 Environment (live dispatch only):
@@ -41,6 +41,7 @@ from validate_searchbase_live import (  # noqa: E402
 )
 
 CATALYST_APP = "cisco-catalyst-app"
+SEARCHBASE_APP = "splunk-cisco-dashboards"
 DM_NAME = "Cisco_Catalyst_App"
 TOKEN_RE = re.compile(r"(?<!\\)\$[A-Za-z_][A-Za-z0-9_]*\$")
 DM_PROBE = f"| tstats count FROM datamodel={DM_NAME}"
@@ -50,7 +51,7 @@ DM_PROBE = f"| tstats count FROM datamodel={DM_NAME}"
 class PrerequisiteReport:
     ok: bool
     checks: list[dict[str, str]] = field(default_factory=list)
-    dispatch_app: str = CATALYST_APP
+    dispatch_app: str = SEARCHBASE_APP
     dispatch_owner: str = "codex"
 
 
@@ -63,9 +64,6 @@ class StaticIssue:
 
 
 def is_catalyst_stanza(stanza) -> bool:
-    ctx = stanza.fields.get("dispatch_context", "").strip()
-    if ctx == CATALYST_APP:
-        return True
     if stanza.name.startswith("catalyst_harvest_"):
         return True
     spl = stanza.search or ""
@@ -94,13 +92,13 @@ def static_validate(stanza) -> list[StaticIssue]:
     force = stanza.fields.get("dispatch_context_force", "").strip()
 
     if uses_dm:
-        if ctx != CATALYST_APP:
+        if ctx != SEARCHBASE_APP:
             issues.append(
                 StaticIssue(
                     stanza.name,
                     stanza.line_start,
                     "error",
-                    f"DM search must set dispatch_context = {CATALYST_APP}",
+                    f"DM search must set dispatch_context = {SEARCHBASE_APP}",
                 )
             )
         if force != "1":
@@ -123,13 +121,13 @@ def static_validate(stanza) -> list[StaticIssue]:
             )
 
     if stanza.name.startswith("catalyst_harvest_"):
-        if ctx != CATALYST_APP:
+        if ctx != SEARCHBASE_APP:
             issues.append(
                 StaticIssue(
                     stanza.name,
                     stanza.line_start,
                     "error",
-                    f"harvest stanza must set dispatch_context = {CATALYST_APP}",
+                    f"harvest stanza must set dispatch_context = {SEARCHBASE_APP}",
                 )
             )
 
@@ -188,10 +186,8 @@ def check_prerequisites(
 ) -> PrerequisiteReport:
     report = PrerequisiteReport(ok=False, dispatch_owner=owner)
     candidates = [
-        (owner, CATALYST_APP),
-        ("nobody", CATALYST_APP),
-        (owner, "splunk-cisco-dashboards"),
-        ("nobody", "search"),
+        (owner, SEARCHBASE_APP),
+        ("nobody", SEARCHBASE_APP),
     ]
     for cand_owner, cand_app in candidates:
         ok, detail = probe_namespace(

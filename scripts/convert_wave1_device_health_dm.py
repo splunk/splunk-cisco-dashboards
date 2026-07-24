@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Convert raw cisco:dnac/catalyst:devicehealth searches to Cisco_Catalyst_App tstats.
 
-Wave 1 pilot pattern: dedupe by device_health_ip_address, dispatch in cisco-catalyst-app.
+Wave 1 pilot pattern: dedupe by device_health_ip_address, dispatch in splunk-cisco-dashboards.
 Skips stanzas already converted, RF-only fields not in DM, and composite multi-sourcetype searches.
 """
 
@@ -500,7 +500,7 @@ def convert_file(path: Path, dry_run: bool = False) -> tuple[int, int, list[str]
 
         fields = dict(fields)
         fields["search"] = fold_search(new_pipeline)
-        fields["dispatch_context"] = "cisco-catalyst-app"
+        fields["dispatch_context"] = "splunk-cisco-dashboards"
         fields["dispatch_context_force"] = "1"
         fields["date_updated"] = "2026-07-01"
         fields["version"] = bump_version(fields.get("version", "1.0.0"))
