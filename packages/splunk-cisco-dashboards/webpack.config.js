@@ -83,6 +83,7 @@ const APP_VERSION = readBuildVersion();
 const webappRoot = path.join(__dirname, 'src/main/webapp');
 const splunkRoot = path.join(__dirname, 'src/main/resources/splunk');
 const stageRoot = path.join(__dirname, 'stage');
+const workspaceRoot = path.resolve(__dirname, '..', '..');
 
 const commonConfig = webpackMerge(baseConfig, {
     entry: {
@@ -166,6 +167,16 @@ const commonConfig = webpackMerge(baseConfig, {
                     globOptions: {
                         ignore: ['**/.DS_Store', '**/__pycache__/**', '**/*.pyc'],
                     },
+                },
+                {
+                    from: path.join(workspaceRoot, 'LICENSE'),
+                    to: path.join(stageRoot, 'LICENSE'),
+                    toType: 'file',
+                },
+                {
+                    from: path.join(workspaceRoot, 'NOTICE'),
+                    to: path.join(stageRoot, 'NOTICE'),
+                    toType: 'file',
                 },
             ],
         }),

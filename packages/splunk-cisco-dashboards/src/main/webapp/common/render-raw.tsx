@@ -1,5 +1,6 @@
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
+import CopyrightMark from '@/common/components/CopyrightMark';
 
 /**
  * Raw mount helper — same retry semantics as `common/render.jsx` but
@@ -28,7 +29,10 @@ export default function mountPageRaw(PageComponent: React.ComponentType): void {
         }
         reactRoot.render(
             <React.StrictMode>
-                <PageComponent />
+                <>
+                    <PageComponent />
+                    <CopyrightMark />
+                </>
             </React.StrictMode>
         );
     };

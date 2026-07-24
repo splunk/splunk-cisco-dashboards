@@ -62,6 +62,7 @@ The actual Splunk app source, dashboards, and packaging scripts live in
 
 ## License
 
-This repository is maintained by the Splunk Field Solutions team. Use and
-distribution are governed by the applicable Splunk project and customer
-engagement terms.
+Copyright 2026 Splunk Inc.
+
+Licensed under the [Apache License, Version 2.0](LICENSE). See
+[NOTICE](NOTICE) for attribution information.

@@ -73,6 +73,7 @@ function build() {
             BABEL_ENV: 'production',
         },
     });
+    run(process.execPath, ['bin/verify_production_assets.js']);
     console.log(`✓ App staged at ${path.relative(REPO_ROOT, STAGE_DIR)}/`);
 }
 

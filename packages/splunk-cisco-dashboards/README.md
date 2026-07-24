@@ -167,3 +167,10 @@ You can force one mode or the other with `window.__SPLUNK_RUNTIME__`.
   enumerated list and re-validated before the search params are formed.
 * No Splunk credentials are held by the client — Splunk Web manages auth
   via HttpOnly cookies; the app never touches `localStorage`.
+
+## License
+
+Copyright 2026 Splunk Inc.
+
+Licensed under the [Apache License, Version 2.0](../../LICENSE). See
+[NOTICE](../../NOTICE) for attribution information.

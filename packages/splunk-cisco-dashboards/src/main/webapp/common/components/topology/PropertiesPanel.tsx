@@ -40,6 +40,7 @@ import {
     Bold,
     Italic,
     Activity,
+    type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/common/lib/utils';
 import type {
@@ -1469,7 +1470,7 @@ const TextBoxPropertiesForm: React.FC<{
 const EDGE_DIRECTION_OPTIONS: Array<{
     id: EdgeDirection;
     label: string;
-    icon: React.ComponentType<{ className?: string; 'aria-hidden'?: boolean }>;
+    icon: LucideIcon;
     hint: string;
 }> = [
     { id: 'none', label: 'No arrow', icon: Minus, hint: 'Plain line' },

@@ -173,6 +173,11 @@ awk -v line="$PROVENANCE" '
 # Strip macOS extended attributes to keep archive clean
 xattr -cr "${TMP_DIR}/${APP_NAME}" 2>/dev/null || true
 
+# Validate the exact directory that will be archived. This deliberately runs
+# after copying out of stage/ so a concurrent webpack --watch process cannot
+# replace the checked JavaScript between verification and packaging.
+node "${PKG_ROOT}/bin/verify_production_assets.js" "${TMP_DIR}/${APP_NAME}"
+
 cd "$TMP_DIR"
 # COPYFILE_DISABLE prevents macOS tar from embedding AppleDouble resource forks
 COPYFILE_DISABLE=1 tar czf "$PKG_PATH" "$APP_NAME"
