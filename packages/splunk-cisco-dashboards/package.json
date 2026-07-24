@@ -10,7 +10,7 @@
         "pack:app": "node bin/build.js pack",
         "link:app": "node bin/build.js link",
         "unlink:app": "node bin/build.js unlink",
-        "start": "webpack --watch",
+        "start": "node bin/build.js watch",
         "test:catalogue-search": "node test/catalogueSearch.test.cjs",
         "typecheck": "tsc --noEmit",
         "verify:production-assets": "node bin/verify_production_assets.js",

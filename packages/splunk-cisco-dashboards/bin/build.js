@@ -5,8 +5,9 @@
  * Minimal build orchestrator for the Splunk Cisco Dashboards app.
  *
  * Subcommands:
- *   build   — runs webpack (production mode); webpack's CopyPlugin lays
- *             out the staged Splunk app under ./stage
+ *   build   — runs webpack with production React and fast, unminified output;
+ *             webpack's CopyPlugin lays out the app under ./stage
+ *   watch   — runs webpack watch with the same production environment
  *   clean   — wipes ./stage
  *   pack    — builds, then creates a Splunk-packaged tarball
  *   link    — symlinks $SPLUNK_HOME/etc/apps/splunk-cisco-dashboards
@@ -15,6 +16,7 @@
  *
  * Usage:
  *   node bin/build.js build
+ *   node bin/build.js watch
  *   node bin/build.js clean
  *   node bin/build.js pack
  *   node bin/build.js link [/path/to/SPLUNK_HOME]
@@ -32,7 +34,7 @@ const STAGE_DIR = path.join(REPO_ROOT, 'stage');
 const APP_DIR_NAME = 'splunk-cisco-dashboards';
 const TARBALL = path.join(REPO_ROOT, `${APP_DIR_NAME}.tar.gz`);
 
-const ALLOWED_COMMANDS = new Set(['build', 'clean', 'pack', 'link', 'unlink']);
+const ALLOWED_COMMANDS = new Set(['build', 'watch', 'clean', 'pack', 'link', 'unlink']);
 
 function run(cmd, args, opts = {}) {
     // We only ever spawn allow-listed binaries with hard-coded arguments;
@@ -60,21 +62,43 @@ function clean() {
 }
 
 function build() {
-    console.log('› Running webpack (production)');
-    run('node_modules/.bin/webpack', ['--mode', 'production'], {
-        // Webpack's CLI mode controls its optimizer, but the inherited
-        // Splunk webpack config and Babel preset inspect these process
-        // variables while configuration is loading. Keep them scoped to
-        // this child so production builds are consistent without changing
-        // `yarn start` or the caller's environment.
-        env: {
-            ...process.env,
-            NODE_ENV: 'production',
-            BABEL_ENV: 'production',
-        },
-    });
+    console.log('› Running webpack (production React, minification disabled)');
+    run(
+        'node_modules/.bin/webpack',
+        ['--mode', 'production', '--no-optimization-minimize'],
+        {
+            // Webpack's CLI mode controls its optimizer, but the inherited
+            // Splunk webpack config and Babel preset inspect these process
+            // variables while configuration is loading. Minification is
+            // intentionally disabled because these large multi-entry bundles
+            // otherwise spend several minutes and gigabytes in Terser.
+            env: {
+                ...process.env,
+                NODE_ENV: 'production',
+                BABEL_ENV: 'production',
+            },
+        }
+    );
     run(process.execPath, ['bin/verify_production_assets.js']);
     console.log(`✓ App staged at ${path.relative(REPO_ROOT, STAGE_DIR)}/`);
+}
+
+function watch() {
+    console.log('› Running webpack watch (production React, fast rebuilds)');
+    run(
+        'node_modules/.bin/webpack',
+        ['--watch', '--mode', 'production', '--no-optimization-minimize'],
+        {
+            // Fast packaging consumes stage/ directly, so watch output must use
+            // production React just like a clean package build. Minification is
+            // disabled consistently in both paths until explicitly re-enabled.
+            env: {
+                ...process.env,
+                NODE_ENV: 'production',
+                BABEL_ENV: 'production',
+            },
+        }
+    );
 }
 
 function pack() {
@@ -191,6 +215,9 @@ function main() {
     switch (cmd) {
         case 'build':
             build();
+            break;
+        case 'watch':
+            watch();
             break;
         case 'clean':
             clean();
