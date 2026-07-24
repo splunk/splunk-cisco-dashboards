@@ -174,6 +174,8 @@ Other options:
   --fast, --from-stage   Package the current packages/<app>/stage directory
                          without running clean_build.sh or webpack. Designed
                          for use with a long-running 'yarn start' watcher.
+                         Refreshes non-JavaScript Splunk resources from src/
+                         before packaging; React bundles come from the watcher.
                          Still creates a fresh tarball and can still use
                          --install, so splunkd remains the installer.
   --minify               Enable JavaScript minification for this clean release

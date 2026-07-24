@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Trim redundant Searchbase tags without removing semantic or provenance tags."""
+"""Normalize and trim Searchbase tags without removing semantic or provenance tags."""
 
 from __future__ import annotations
 
@@ -50,6 +50,35 @@ VIZ_TAGS = {
     "splunk.bar": "Bar",
     "splunk.pie": "Pie",
 }
+TAG_ALIASES = {
+    "Advisories": "Advisory",
+    "Blocked": "Block",
+    "Blocks": "Block",
+    "Cisco Catalyst SD-WAN": "SD-WAN",
+    "Clients": "Client",
+    "Connections": "Connection",
+    "Devices": "Device",
+    "DNAC": "Catalyst Center",
+    "Endpoints": "Endpoint",
+    "Events": "Event",
+    "Failed": "Failure",
+    "Failures": "Failure",
+    "Flows": "Flow",
+    "Hotspots": "Hotspot",
+    "Leases": "Lease",
+    "Metrics": "Metric",
+    "Path Changes": "Path Change",
+    "Ports": "Port",
+    "Rooms": "Room",
+    "Sessions": "Session",
+    "Traces": "Trace",
+    "Tunneling": "Tunnel",
+    "Tunnels": "Tunnel",
+    "URL Filtering": "URL Filter",
+    "Users": "User",
+    "Verdicts": "Verdict",
+    "Web Transactions": "Web Transaction",
+}
 STANZA_PATTERN = re.compile(
     r"(?ms)^\[(?P<name>[A-Za-z0-9_.:-]+)\]\n"
     r"(?P<body>.*?)(?=^\[[A-Za-z0-9_.:-]+\]\n|\Z)"
@@ -73,7 +102,8 @@ def parse_fields(body: str) -> dict[str, str]:
 
 
 def trim_tags(fields: dict[str, str], protected: set[str]) -> tuple[list[str], list[str]]:
-    tags = [tag.strip() for tag in fields.get("tags", "").split(",") if tag.strip()]
+    raw_tags = [tag.strip() for tag in fields.get("tags", "").split(",") if tag.strip()]
+    tags = [TAG_ALIASES.get(tag, tag) for tag in raw_tags]
     tag_set = set(tags)
     facets = {
         fields.get("category", "").strip().casefold(),
@@ -84,18 +114,22 @@ def trim_tags(fields: dict[str, str], protected: set[str]) -> tuple[list[str], l
     removed: list[str] = []
     seen: set[str] = set()
 
-    for tag in tags:
+    for raw_tag, tag in zip(raw_tags, tags):
         folded = tag.casefold()
         remove = (
             tag in INTERNAL_TAGS
             or (tag not in protected and folded in facets)
             or tag == redundant_viz_tag
+            or (tag == "Firepower" and "FTD" in tag_set)
             or (tag == "ZTA" and "Zero Trust Access" in tag_set)
             or (tag == "Time Series" and "Trend" in tag_set)
             or folded in seen
         )
+        if raw_tag != tag:
+            removed.append(f"{raw_tag} -> {tag}")
         if remove:
-            removed.append(tag)
+            if raw_tag == tag:
+                removed.append(tag)
         else:
             kept.append(tag)
             seen.add(folded)
@@ -128,10 +162,13 @@ def main() -> int:
 
     original = SEARCHBASE.read_text(encoding="utf-8")
     updated, changes = trim(original)
-    removed = Counter(tag for tags in changes.values() for tag in tags)
+    tag_changes = Counter(tag for tags in changes.values() for tag in tags)
     action = "updated" if args.apply else "would update"
-    print(f"{action} {len(changes)} stanzas; remove {sum(removed.values())} tag tokens")
-    for tag, count in removed.most_common():
+    print(
+        f"{action} {len(changes)} stanzas; "
+        f"normalize/remove {sum(tag_changes.values())} tag tokens"
+    )
+    for tag, count in tag_changes.most_common():
         print(f"{count:4d}  {tag}")
     if args.apply and updated != original:
         SEARCHBASE.write_text(updated, encoding="utf-8")

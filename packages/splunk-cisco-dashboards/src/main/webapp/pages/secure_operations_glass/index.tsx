@@ -34,11 +34,14 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import {
-    CircleMarker,
     MapContainer,
+    Marker,
     TileLayer,
     Tooltip as MapTooltip,
+    ZoomControl,
+    useMap,
 } from 'react-leaflet';
+import L from 'leaflet';
 import {
     Area,
     AreaChart,
@@ -91,6 +94,7 @@ type FilterKey =
 type Filters = Record<FilterKey, string>;
 type ChartKind = 'line' | 'area' | 'bar' | 'pie';
 type Tone = 'default' | 'good' | 'warning' | 'critical' | 'info';
+type SiteMapStyle = 'terrain' | 'street' | 'satellite';
 
 interface PageContext {
     catalogue: Map<string, SearchbaseRecord> | null;
@@ -1149,6 +1153,158 @@ const siteCoordinateForRow = (row: SearchRow): [number, number] | null => {
     return [latitude, longitude];
 };
 
+interface SiteMapStylePreset {
+    id: SiteMapStyle;
+    label: string;
+    lightUrl: string;
+    darkUrl: string;
+    attribution: string;
+}
+
+const SITE_MAP_STYLE_PRESETS: SiteMapStylePreset[] = [
+    {
+        id: 'terrain',
+        label: 'Terrain',
+        lightUrl:
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+        darkUrl:
+            'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+        attribution: 'Tiles &copy; Esri',
+    },
+    {
+        id: 'street',
+        label: 'Street',
+        lightUrl:
+            'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+        darkUrl:
+            'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+        attribution:
+            '&copy; OpenStreetMap contributors &copy; CARTO',
+    },
+    {
+        id: 'satellite',
+        label: 'Satellite',
+        lightUrl:
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        darkUrl:
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        attribution: 'Tiles &copy; Esri',
+    },
+];
+
+const escapeMapText = (value: string): string =>
+    value.replace(/[&<>"']/g, (character) => {
+        switch (character) {
+            case '&':
+                return '&amp;';
+            case '<':
+                return '&lt;';
+            case '>':
+                return '&gt;';
+            case '"':
+                return '&quot;';
+            case "'":
+                return '&#39;';
+            default:
+                return character;
+        }
+    });
+
+const siteShortCode = (name: string): string => {
+    const numericSuffix = name.match(/(\d{1,3})$/)?.[1];
+    if (numericSuffix) return numericSuffix;
+    const words = name
+        .split(/[\s_-]+/)
+        .map((word) => word.trim())
+        .filter(Boolean);
+    if (words.length > 1) {
+        return words
+            .slice(0, 3)
+            .map((word) => word[0])
+            .join('')
+            .toUpperCase();
+    }
+    return name.replace(/[^a-z0-9]/gi, '').slice(0, 3).toUpperCase() || 'SITE';
+};
+
+const siteHealthTone = (status: string): 'good' | 'bad' | 'unknown' => {
+    if (/poor|critical|offline|down|failed/i.test(status)) return 'bad';
+    if (/good|healthy|online|normal|fair/i.test(status)) return 'good';
+    return 'unknown';
+};
+
+const createOperationsSiteIcon = ({
+    name,
+    status,
+    selected,
+    theme,
+}: {
+    name: string;
+    status: string;
+    selected: boolean;
+    theme: Theme;
+}): L.DivIcon => {
+    const safeName = escapeMapText(name);
+    const safeStatus = escapeMapText(status);
+    const safeCode = escapeMapText(siteShortCode(name));
+    return L.divIcon({
+        className: 'scd-glass-map-marker-icon',
+        html: `
+            <div
+                class="scd-glass-map-marker is-${siteHealthTone(status)}${
+                    selected ? ' is-selected' : ''
+                } is-${theme}"
+                role="button"
+                aria-label="${safeName}, ${safeStatus}"
+            >
+                <span class="scd-glass-map-marker-wave" aria-hidden="true"></span>
+                <span class="scd-glass-map-marker-core">${safeCode}</span>
+                <span class="scd-glass-map-marker-label">
+                    <strong>${safeName}</strong>
+                    <em>${safeStatus}</em>
+                </span>
+            </div>
+        `,
+        iconSize: [144, 72],
+        iconAnchor: [72, 28],
+        tooltipAnchor: [0, -30],
+    });
+};
+
+const SiteMapViewport = ({
+    coordinateKey,
+}: {
+    coordinateKey: string;
+}): null => {
+    const map = useMap();
+
+    useEffect(() => {
+        const coordinates = coordinateKey
+            .split('|')
+            .filter(Boolean)
+            .map((coordinate) => coordinate.split(':').map(Number))
+            .filter(
+                (coordinate): coordinate is [number, number] =>
+                    coordinate.length === 2 &&
+                    coordinate.every(Number.isFinite)
+            );
+        map.invalidateSize({ pan: false });
+        if (coordinates.length === 1) {
+            map.setView(coordinates[0], 5, { animate: false });
+            return;
+        }
+        if (coordinates.length > 1) {
+            map.fitBounds(L.latLngBounds(coordinates), {
+                animate: false,
+                maxZoom: 5,
+                padding: [44, 44],
+            });
+        }
+    }, [coordinateKey, map]);
+
+    return null;
+};
+
 const SiteHealthPanel = ({
     context,
     setFilter,
@@ -1164,6 +1320,7 @@ const SiteHealthPanel = ({
         count: 100,
     });
     const [selectedSite, setSelectedSite] = useState('');
+    const [mapStyle, setMapStyle] = useState<SiteMapStyle>('terrain');
     const visibleSites = sites.rows.slice(0, 8);
     const selectedRow = visibleSites.find(
         (row, index) => siteNameForRow(row, index) === selectedSite
@@ -1188,6 +1345,13 @@ const SiteHealthPanel = ({
             },
         ];
     });
+    const selectedMapStyle =
+        SITE_MAP_STYLE_PRESETS.find((preset) => preset.id === mapStyle) ??
+        SITE_MAP_STYLE_PRESETS[0];
+    const tileUrl =
+        context.theme === 'dark'
+            ? selectedMapStyle.darkUrl
+            : selectedMapStyle.lightUrl;
 
     const chooseSite = (name: string): void => {
         setSelectedSite(name);
@@ -1219,55 +1383,88 @@ const SiteHealthPanel = ({
                                 message="No latitude and longitude fields were returned for these sites."
                             />
                         ) : (
-                            <MapContainer
-                                center={[22, 0]}
-                                zoom={1}
-                                minZoom={1}
-                                maxZoom={12}
-                                scrollWheelZoom
-                                worldCopyJump
-                                className="scd-glass-leaflet-map"
-                            >
-                                <TileLayer
-                                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>'
-                                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                />
-                                {mappableSites.map(
-                                    ({ name, status, coordinate, isBad }) => (
-                                        <CircleMarker
-                                            key={name}
-                                            center={coordinate}
-                                            radius={selectedSite === name ? 10 : 8}
-                                            pathOptions={{
-                                                color:
-                                                    selectedSite === name
-                                                        ? '#00bceb'
-                                                        : isBad
-                                                          ? '#e5534b'
-                                                          : '#65bd3e',
-                                                fillColor: isBad
-                                                    ? '#e5534b'
-                                                    : '#65bd3e',
-                                                fillOpacity: 0.9,
-                                                opacity: 1,
-                                                weight:
-                                                    selectedSite === name ? 4 : 2,
-                                            }}
-                                            eventHandlers={{
-                                                click: () => chooseSite(name),
-                                            }}
-                                        >
-                                            <MapTooltip
-                                                direction="top"
-                                                offset={[0, -7]}
+                            <>
+                                <MapContainer
+                                    center={[22, 0]}
+                                    zoom={2}
+                                    minZoom={1}
+                                    maxZoom={12}
+                                    scrollWheelZoom
+                                    worldCopyJump
+                                    zoomControl={false}
+                                    className="scd-glass-leaflet-map"
+                                >
+                                    <TileLayer
+                                        key={`${context.theme}-${selectedMapStyle.id}`}
+                                        attribution={selectedMapStyle.attribution}
+                                        url={tileUrl}
+                                    />
+                                    <SiteMapViewport
+                                        coordinateKey={mappableSites
+                                            .map(
+                                                ({ coordinate }) =>
+                                                    `${coordinate[0]}:${coordinate[1]}`
+                                            )
+                                            .join('|')}
+                                    />
+                                    <ZoomControl position="bottomright" />
+                                    {mappableSites.map(
+                                        ({ name, status, coordinate, isBad }) => (
+                                            <Marker
+                                                key={name}
+                                                position={coordinate}
+                                                icon={createOperationsSiteIcon({
+                                                    name,
+                                                    status,
+                                                    selected: selectedSite === name,
+                                                    theme: context.theme,
+                                                })}
+                                                title={`${name} — ${status}`}
+                                                eventHandlers={{
+                                                    click: () => chooseSite(name),
+                                                }}
                                             >
-                                                <strong>{name}</strong>
-                                                <span>{status}</span>
-                                            </MapTooltip>
-                                        </CircleMarker>
-                                    )
-                                )}
-                            </MapContainer>
+                                                <MapTooltip
+                                                    direction="top"
+                                                    offset={[0, -7]}
+                                                >
+                                                    <strong>{name}</strong>
+                                                    <span>
+                                                        {isBad
+                                                            ? 'Needs attention'
+                                                            : status}
+                                                    </span>
+                                                </MapTooltip>
+                                            </Marker>
+                                        )
+                                    )}
+                                </MapContainer>
+                                <div
+                                    className="scd-glass-map-style-switcher"
+                                    role="group"
+                                    aria-label="Map style"
+                                >
+                                    {SITE_MAP_STYLE_PRESETS.map((preset) => (
+                                        <button
+                                            type="button"
+                                            key={preset.id}
+                                            className={
+                                                mapStyle === preset.id
+                                                    ? 'is-active'
+                                                    : undefined
+                                            }
+                                            onClick={() => setMapStyle(preset.id)}
+                                        >
+                                            {preset.label}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="scd-glass-map-legend">
+                                    <span className="is-good">Healthy</span>
+                                    <span className="is-bad">Attention</span>
+                                    <span className="is-unknown">Unknown</span>
+                                </div>
+                            </>
                         )}
                     </div>
                 </div>

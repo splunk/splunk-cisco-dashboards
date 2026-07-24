@@ -6,6 +6,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PKG_ROOT="${SCRIPT_DIR}/.."
 STAGE_DIR="${PKG_ROOT}/stage"
+SPLUNK_RESOURCES_DIR="${PKG_ROOT}/src/main/resources/splunk"
 APP_NAME="splunk-cisco-dashboards"
 FROM_STAGE=0
 MINIFY=0
@@ -20,9 +21,9 @@ Default behavior: clean stage/, run production webpack, then package stage/.
 
 Options:
   --from-stage, --stage   Package the current stage/ directory without running
-                          clean_build.sh or webpack. Useful when webpack --watch
-                          is already maintaining stage/ and you still want to
-                          create a tarball for splunkd install.
+                          clean_build.sh or webpack. Current non-JavaScript
+                          Splunk resources are overlaid from src/ first; React
+                          bundles still come from the webpack --watch output.
   --minify                Enable JavaScript minification for a slower, smaller
                           release build. Not valid with --from-stage.
   -h, --help              Show this help.
@@ -89,7 +90,20 @@ if [[ "$FROM_STAGE" -eq 1 ]]; then
     echo "       stage/ is incomplete. Wait for webpack --watch to finish or run 'yarn run build'." >&2
     exit 1
   fi
-  echo "[package] using existing stage/ (--from-stage); skipping clean build and webpack"
+  if [[ ! -d "$SPLUNK_RESOURCES_DIR" ]]; then
+    echo "ERROR: Splunk resource source directory is missing: ${SPLUNK_RESOURCES_DIR}" >&2
+    exit 1
+  fi
+
+  # CopyWebpackPlugin emits these files during the initial webpack compile,
+  # but changes below src/main/resources/splunk are not reliably invalidating
+  # the long-running watcher. Overlay them here so --from-stage always packages
+  # current conf/XML/static resources while still reusing the watcher's React
+  # bundles and avoiding a full webpack build.
+  cp -R "${SPLUNK_RESOURCES_DIR}/." "${STAGE_DIR}/"
+  cp "${ROOT_DIR}/LICENSE" "${STAGE_DIR}/LICENSE"
+  cp "${ROOT_DIR}/NOTICE" "${STAGE_DIR}/NOTICE"
+  echo "[package] refreshed Splunk resources from src/; reusing watcher-built React bundles"
 else
   if [[ ! -d "$STAGE_DIR" ]]; then
     echo "stage/ not found; running clean:build first..."
