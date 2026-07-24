@@ -12,6 +12,7 @@
 #scan-root .scd-glass {
     --glass-accent: #00bceb;
     --glass-accent-strong: #049fd9;
+    --glass-accent-text: #00749a;
     --glass-accent-soft: #e6f8fd;
     --glass-bg: #eef3f8;
     --glass-panel: #ffffff;
@@ -46,6 +47,7 @@
 #scan-root .scd-glass[data-theme="dark"] {
     --glass-accent: #35cff5;
     --glass-accent-strong: #00a7d0;
+    --glass-accent-text: #35cff5;
     --glass-accent-soft: #0c3043;
     --glass-bg: #07101d;
     --glass-panel: #0f1a2a;
@@ -207,16 +209,23 @@
     align-items: center;
     background: transparent;
     border: 0;
-    border-bottom: 3px solid transparent;
+    border-bottom: 2px solid transparent;
     color: var(--glass-muted);
     cursor: pointer;
     display: flex;
     font-size: 12px;
-    font-weight: 650;
+    font-weight: 520;
     gap: 7px;
     min-height: 48px;
     padding: 0 18px;
+    transition:
+        background-color 120ms ease,
+        color 120ms ease;
     white-space: nowrap;
+}
+
+#scan-root .scd-glass-tabs button svg {
+    opacity: 0.62;
 }
 
 #scan-root .scd-glass-tabs button:hover {
@@ -226,7 +235,12 @@
 
 #scan-root .scd-glass-tabs button.is-active {
     border-bottom-color: var(--glass-accent);
-    color: var(--glass-text);
+    color: var(--glass-accent-text);
+    font-weight: 760;
+}
+
+#scan-root .scd-glass-tabs button.is-active svg {
+    opacity: 1;
 }
 
 #scan-root .scd-glass-active-filters {
@@ -289,7 +303,7 @@
 }
 
 #scan-root .scd-glass-workspace.has-sidebar {
-    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-columns: minmax(0, 1fr) 340px;
 }
 
 #scan-root .scd-glass-workspace > main {
@@ -369,16 +383,113 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-variant-numeric: tabular-nums;
 }
 
 #scan-root .scd-glass-metric-status {
+    align-items: center;
     color: var(--glass-faint);
+    display: flex;
     font-size: 9px;
+    gap: 7px;
+    justify-content: space-between;
     margin-top: auto;
     overflow: hidden;
     padding-top: 5px;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+#scan-root .scd-glass-metric-status > span:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#scan-root .scd-glass-metric-trend {
+    align-items: center;
+    color: var(--glass-info);
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-variant-numeric: tabular-nums;
+    font-weight: 760;
+    gap: 2px;
+}
+
+#scan-root .scd-glass-metric-trend.is-down {
+    color: var(--glass-critical);
+}
+
+#scan-root .scd-glass-metric-trend.is-flat {
+    color: var(--glass-faint);
+}
+
+#scan-root .scd-glass-status-badge {
+    --status-color: var(--glass-faint);
+    align-items: center;
+    background: color-mix(in srgb, var(--status-color) 11%, var(--glass-panel));
+    border: 1px solid color-mix(in srgb, var(--status-color) 35%, var(--glass-border));
+    border-radius: 999px;
+    color: var(--status-color);
+    display: inline-flex;
+    font-size: 8px;
+    font-weight: 780;
+    gap: 5px;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    max-width: 100%;
+    min-height: 20px;
+    padding: 4px 7px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+#scan-root .scd-glass-status-badge.is-compact {
+    font-size: 7px;
+    min-height: 17px;
+    padding: 3px 5px;
+}
+
+#scan-root .scd-glass-status-badge > span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#scan-root .scd-glass-status-good {
+    --status-color: var(--glass-good);
+}
+
+#scan-root .scd-glass-status-warning {
+    --status-color: var(--glass-warning);
+}
+
+#scan-root .scd-glass-status-critical {
+    --status-color: var(--glass-critical);
+}
+
+#scan-root .scd-glass-status-info {
+    --status-color: var(--glass-info);
+}
+
+#scan-root .scd-glass-status-symbol {
+    background: currentColor;
+    border-radius: 50%;
+    flex: 0 0 auto;
+    height: 6px;
+    width: 6px;
+}
+
+#scan-root .scd-glass-status-warning .scd-glass-status-symbol {
+    border-radius: 0;
+    clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+#scan-root .scd-glass-status-critical .scd-glass-status-symbol {
+    border-radius: 1px;
+    transform: rotate(45deg);
+}
+
+#scan-root .scd-glass-status-info .scd-glass-status-symbol {
+    border-radius: 1px;
 }
 
 #scan-root .scd-glass-tone-good > strong,
@@ -443,6 +554,17 @@
     justify-content: space-between;
     min-height: 53px;
     padding: 14px 17px 8px;
+}
+
+#scan-root .scd-glass-panel-heading {
+    min-width: 0;
+}
+
+#scan-root .scd-glass-panel-title {
+    align-items: center;
+    display: flex;
+    gap: 7px;
+    min-width: 0;
 }
 
 #scan-root .scd-glass-search-actions {
@@ -517,7 +639,7 @@
 }
 
 #scan-root .scd-glass-linked {
-    color: var(--glass-accent-strong);
+    color: var(--glass-accent-text);
     flex: 0 0 auto;
     font-size: 9px;
     font-weight: 700;
@@ -585,6 +707,17 @@
     white-space: nowrap;
 }
 
+#scan-root .scd-glass-table-wrap td > .scd-glass-human-label,
+#scan-root .scd-glass-table-wrap td > .scd-glass-status-badge {
+    max-width: 100%;
+}
+
+#scan-root .scd-glass-table-wrap td > .scd-glass-human-label {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 #scan-root .scd-glass-table-wrap tr:hover td {
     background: var(--glass-accent-soft);
 }
@@ -595,14 +728,38 @@
 }
 
 #scan-root .scd-glass-section-band {
-    background: var(--glass-accent-strong);
-    border-radius: 6px;
-    color: #ffffff;
+    align-items: center;
+    color: var(--glass-accent-text);
+    display: flex;
     font-size: 10px;
     font-weight: 800;
+    gap: 7px;
     letter-spacing: 0.1em;
-    padding: 7px 12px;
+    min-height: 28px;
+    padding: 4px 2px;
     text-transform: uppercase;
+}
+
+#scan-root .scd-glass-section-band > svg {
+    flex: 0 0 auto;
+}
+
+#scan-root .scd-glass-section-count {
+    background: var(--glass-accent-soft);
+    border: 1px solid var(--glass-border-strong);
+    border-radius: 999px;
+    color: var(--glass-accent-text);
+    font-size: 7px;
+    letter-spacing: 0.04em;
+    padding: 3px 6px;
+    white-space: nowrap;
+}
+
+#scan-root .scd-glass-section-rule {
+    background: var(--glass-border);
+    flex: 1 1 auto;
+    height: 1px;
+    min-width: 28px;
 }
 
 #scan-root .scd-glass-policy-panel {
@@ -734,6 +891,10 @@
     justify-content: space-between;
     min-height: 48px;
     padding: 11px 16px;
+}
+
+#scan-root .scd-glass-site-map > header .scd-glass-panel-title {
+    min-width: 0;
 }
 
 #scan-root .scd-glass-site-map > header span {
@@ -1094,7 +1255,7 @@
     display: grid;
     font-size: 10px;
     gap: 8px;
-    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     min-height: 34px;
     padding: 6px 8px;
     text-align: left;
@@ -1104,22 +1265,10 @@
     border-color: var(--glass-accent);
 }
 
-#scan-root .scd-glass-site-list button > span {
-    background: currentColor;
-    border-radius: 50%;
-    height: 8px;
-    width: 8px;
-}
-
 #scan-root .scd-glass-site-list button strong {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-
-#scan-root .scd-glass-site-list button em {
-    color: var(--glass-muted);
-    font-style: normal;
 }
 
 #scan-root .scd-glass-back {
@@ -1165,6 +1314,11 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+#scan-root .scd-glass-site-kpis .scd-glass-status-badge {
+    align-self: flex-start;
+    margin-top: 2px;
 }
 
 #scan-root .scd-glass-network-row {
@@ -1344,6 +1498,25 @@
     min-height: 30px;
 }
 
+#scan-root .scd-glass-live-indicator {
+    align-items: center;
+    color: var(--glass-good);
+    display: inline-flex;
+    font-size: 8px;
+    font-weight: 780;
+    gap: 4px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+#scan-root .scd-glass-live-indicator > span {
+    background: currentColor;
+    border-radius: 50%;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--glass-good) 15%, transparent);
+    height: 6px;
+    width: 6px;
+}
+
 #scan-root
     .scd-glass-sidebar-events
     > header
@@ -1407,27 +1580,36 @@
     flex: 1 1 auto;
     min-height: 0;
     overflow: auto;
-    padding: 6px 13px 24px;
+    padding: 6px 10px 24px;
 }
 
 #scan-root .scd-glass-event-log > div:not(.scd-glass-empty) {
-    align-items: baseline;
+    align-items: center;
     border-bottom: 1px solid var(--glass-border);
     display: grid;
     font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
     font-size: 9px;
-    gap: 5px;
-    grid-template-columns: 55px 40px minmax(0, 1fr);
-    padding: 8px 0;
+    gap: 6px;
+    grid-template-columns: 54px 48px 48px minmax(0, 1fr);
+    padding: 8px 4px;
+    transition: background-color 100ms ease;
+}
+
+#scan-root .scd-glass-event-log > div:not(.scd-glass-empty):hover {
+    background: var(--glass-accent-soft);
 }
 
 #scan-root .scd-glass-event-log time {
     color: var(--glass-faint);
+    font-variant-numeric: tabular-nums;
 }
 
-#scan-root .scd-glass-event-tag {
-    color: var(--glass-warning);
+#scan-root .scd-glass-event-source {
+    color: var(--glass-accent-text);
     font-weight: 750;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 #scan-root .scd-glass-event-log p {
@@ -1435,6 +1617,52 @@
     line-height: 1.35;
     margin: 0;
     overflow-wrap: anywhere;
+}
+
+#scan-root .scd-glass-workspace > main,
+#scan-root .scd-glass-event-log,
+#scan-root .scd-glass-site-list,
+#scan-root .scd-glass-policy-items,
+#scan-root .scd-glass-table-wrap,
+#scan-root .scd-glass-table-panel .scd-glass-panel-body {
+    scrollbar-color: color-mix(in srgb, var(--glass-faint) 48%, transparent)
+        transparent;
+    scrollbar-width: thin;
+}
+
+#scan-root .scd-glass-workspace > main::-webkit-scrollbar,
+#scan-root .scd-glass-event-log::-webkit-scrollbar,
+#scan-root .scd-glass-site-list::-webkit-scrollbar,
+#scan-root .scd-glass-policy-items::-webkit-scrollbar,
+#scan-root .scd-glass-table-wrap::-webkit-scrollbar,
+#scan-root
+    .scd-glass-table-panel
+    .scd-glass-panel-body::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+}
+
+#scan-root .scd-glass-workspace > main::-webkit-scrollbar-thumb,
+#scan-root .scd-glass-event-log::-webkit-scrollbar-thumb,
+#scan-root .scd-glass-site-list::-webkit-scrollbar-thumb,
+#scan-root .scd-glass-policy-items::-webkit-scrollbar-thumb,
+#scan-root .scd-glass-table-wrap::-webkit-scrollbar-thumb,
+#scan-root
+    .scd-glass-table-panel
+    .scd-glass-panel-body::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--glass-faint) 48%, transparent);
+    border-radius: 999px;
+}
+
+#scan-root .scd-glass-workspace > main::-webkit-scrollbar-thumb:hover,
+#scan-root .scd-glass-event-log::-webkit-scrollbar-thumb:hover,
+#scan-root .scd-glass-site-list::-webkit-scrollbar-thumb:hover,
+#scan-root .scd-glass-policy-items::-webkit-scrollbar-thumb:hover,
+#scan-root .scd-glass-table-wrap::-webkit-scrollbar-thumb:hover,
+#scan-root
+    .scd-glass-table-panel
+    .scd-glass-panel-body::-webkit-scrollbar-thumb:hover {
+    background: var(--glass-accent-strong);
 }
 
 #scan-root .scd-glass-view-id {

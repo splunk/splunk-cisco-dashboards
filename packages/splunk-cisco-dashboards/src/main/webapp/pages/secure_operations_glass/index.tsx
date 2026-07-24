@@ -18,6 +18,7 @@ import {
     Globe2,
     Info,
     Menu,
+    Minus,
     Moon,
     Network,
     PanelRightClose,
@@ -28,6 +29,8 @@ import {
     Shield,
     ShieldAlert,
     Sun,
+    TrendingDown,
+    TrendingUp,
     UserRoundSearch,
     Wifi,
     X,
@@ -94,6 +97,8 @@ type FilterKey =
 type Filters = Record<FilterKey, string>;
 type ChartKind = 'line' | 'area' | 'bar' | 'pie';
 type Tone = 'default' | 'good' | 'warning' | 'critical' | 'info';
+type StatusTone = 'good' | 'warning' | 'critical' | 'info' | 'neutral';
+type TrendDirection = 'up' | 'down' | 'flat';
 type SiteMapStyle = 'terrain' | 'street' | 'satellite';
 
 interface PageContext {
@@ -206,6 +211,173 @@ const displayCell = (value: unknown): string => {
     if (Array.isArray(value)) return value.join(', ');
     if (value === null || value === undefined || value === '') return '—';
     return String(value);
+};
+
+const MACHINE_LABEL_ACRONYMS = new Set([
+    'ACL',
+    'API',
+    'APP',
+    'BGP',
+    'CDN',
+    'DNS',
+    'EPG',
+    'FMC',
+    'ISE',
+    'IP',
+    'L3OUT',
+    'SDWAN',
+    'SGT',
+    'URL',
+    'VLAN',
+]);
+
+const humanizeMachineLabel = (value: string): string => {
+    const trimmed = value.trim();
+    if (!trimmed || trimmed === '—') return trimmed;
+    if (
+        /^(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?$/.test(trimmed) ||
+        /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ||
+        /^\d{4}-\d{2}-\d{2}T/.test(trimmed)
+    ) {
+        return trimmed;
+    }
+    const separatorCount = (trimmed.match(/[_-]/g) ?? []).length;
+    const looksMachineGenerated =
+        !/\s/.test(trimmed) &&
+        (separatorCount >= 2 ||
+            (trimmed.length > 34 && /^[a-z0-9_.:-]+$/i.test(trimmed)));
+    if (!looksMachineGenerated) return trimmed;
+
+    return trimmed
+        .split(/[_-]+/)
+        .filter(Boolean)
+        .map((word) => {
+            const upper = word.toUpperCase();
+            if (upper === 'SDWAN') return 'SD-WAN';
+            if (MACHINE_LABEL_ACRONYMS.has(upper)) return upper;
+            return `${word.charAt(0).toUpperCase()}${word.slice(1).toLowerCase()}`;
+        })
+        .join(' ');
+};
+
+const humanizeColumnLabel = (value: string): string =>
+    value
+        .replace(/^_/, '')
+        .replace(/[_.-]+/g, ' ')
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((word) => {
+            const upper = word.toUpperCase();
+            return MACHINE_LABEL_ACRONYMS.has(upper)
+                ? upper === 'SDWAN'
+                    ? 'SD-WAN'
+                    : upper
+                : `${word.charAt(0).toUpperCase()}${word.slice(1)}`;
+        })
+        .join(' ');
+
+const statusToneForValue = (value: unknown): StatusTone => {
+    const normalized = displayCell(value).toLowerCase();
+    if (
+        /critical|crit|blocked|block|denied|deny|failed|failure|poor|down|offline|fired/.test(
+            normalized
+        )
+    ) {
+        return 'critical';
+    }
+    if (/warning|warn|fair|degraded|attention|medium/.test(normalized)) {
+        return 'warning';
+    }
+    if (
+        /healthy|good|online|active|normal|allow|success|passed|pass|green/.test(
+            normalized
+        )
+    ) {
+        return 'good';
+    }
+    if (/info|informational|unknown|notable/.test(normalized)) return 'info';
+    return 'neutral';
+};
+
+const StatusBadge = ({
+    value,
+    label,
+    compact = false,
+}: {
+    value: unknown;
+    label?: string;
+    compact?: boolean;
+}): JSX.Element => {
+    const raw = displayCell(value);
+    const display = label ?? humanizeMachineLabel(raw);
+    const tone = statusToneForValue(`${raw} ${display}`);
+    return (
+        <span
+            className={`scd-glass-status-badge scd-glass-status-${tone}${
+                compact ? ' is-compact' : ''
+            }`}
+            title={raw !== display ? raw : undefined}
+        >
+            <span className="scd-glass-status-symbol" aria-hidden="true" />
+            <span>{display}</span>
+        </span>
+    );
+};
+
+const isStatusColumn = (column: string): boolean =>
+    /(?:^|[\s_.-])(action|health|result|severity|state|status|verdict)(?:$|[\s_.-])/i.test(
+        column
+    );
+
+const TableCellContent = ({
+    column,
+    value,
+}: {
+    column: string;
+    value: unknown;
+}): JSX.Element => {
+    const raw = displayCell(value);
+    if (raw !== '—' && isStatusColumn(column)) {
+        return <StatusBadge value={raw} compact />;
+    }
+    const display = humanizeMachineLabel(raw);
+    return (
+        <span
+            className={display !== raw ? 'scd-glass-human-label' : undefined}
+            title={display !== raw ? raw : undefined}
+        >
+            {display}
+        </span>
+    );
+};
+
+const metricTrendForRow = (
+    row: SearchRow | undefined
+): { direction: TrendDirection; label: string } | null => {
+    if (!row) return null;
+    const entry = Object.entries(row).find(([key]) =>
+        /^(trend|delta|change|change_pct|pct_change|percent_change)$/i.test(key)
+    );
+    if (!entry) return null;
+    const [key, value] = entry;
+    const numeric = asNumber(value);
+    if (numeric !== null) {
+        const suffix = /pct|percent/i.test(key) ? '%' : '';
+        return {
+            direction: numeric > 0 ? 'up' : numeric < 0 ? 'down' : 'flat',
+            label: `${numeric > 0 ? '+' : ''}${numeric}${suffix}`,
+        };
+    }
+    const text = displayCell(value);
+    if (!text || text === '—') return null;
+    return {
+        direction: /up|increase|higher|positive/i.test(text)
+            ? 'up'
+            : /down|decrease|lower|negative/i.test(text)
+              ? 'down'
+              : 'flat',
+        label: text,
+    };
 };
 
 const toneClass = (tone: Tone): string => `scd-glass-tone-${tone}`;
@@ -379,17 +551,30 @@ const Panel = ({
     children,
     className = '',
     action,
+    linked = false,
 }: {
     title: string;
     subtitle?: string;
     children: React.ReactNode;
     className?: string;
     action?: React.ReactNode;
+    linked?: boolean;
 }): JSX.Element => (
     <section className={`scd-glass-panel ${className}`}>
         <header className="scd-glass-panel-header">
-            <div>
-                <h2>{title}</h2>
+            <div className="scd-glass-panel-heading">
+                <div className="scd-glass-panel-title">
+                    <h2>{title}</h2>
+                    {linked ? (
+                        <span
+                            className="scd-glass-linked"
+                            aria-label="Linked to live dashboard context"
+                            title="Linked to live dashboard context"
+                        >
+                            ◆
+                        </span>
+                    ) : null}
+                </div>
                 {subtitle ? <p>{subtitle}</p> : null}
             </div>
             {action}
@@ -415,6 +600,13 @@ const SearchMetric = ({
         count: 10,
     });
     const value = getScalarValue(state.rows, preferredFields);
+    const trend = metricTrendForRow(state.rows[0]);
+    const TrendIcon =
+        trend?.direction === 'up'
+            ? TrendingUp
+            : trend?.direction === 'down'
+              ? TrendingDown
+              : Minus;
 
     return (
         <article
@@ -431,7 +623,18 @@ const SearchMetric = ({
             </div>
             <strong>{state.loading ? '…' : formatNumber(value, suffix)}</strong>
             <span className="scd-glass-metric-status">
-                {state.error ? 'Search unavailable' : 'Live Searchbase result'}
+                <span>
+                    {state.error ? 'Search unavailable' : 'Live Searchbase result'}
+                </span>
+                {!state.loading && !state.error && trend ? (
+                    <span
+                        className={`scd-glass-metric-trend is-${trend.direction}`}
+                        title="Trend returned by the live search"
+                    >
+                        <TrendIcon size={11} aria-hidden="true" />
+                        {trend.label}
+                    </span>
+                ) : null}
             </span>
         </article>
     );
@@ -627,6 +830,7 @@ const SearchChartPanel = ({
             title={title}
             subtitle={subtitle}
             className={`scd-glass-chart-panel ${className}`}
+            linked
             action={
                 <SearchActions
                     context={context}
@@ -668,6 +872,7 @@ const SearchTablePanel = ({
             title={title}
             subtitle={subtitle}
             className={`scd-glass-table-panel ${className}`}
+            linked
             action={
                 <SearchActions
                     context={context}
@@ -684,7 +889,9 @@ const SearchTablePanel = ({
                         <thead>
                             <tr>
                                 {columns.map((column) => (
-                                    <th key={column}>{column}</th>
+                                    <th key={column} title={column}>
+                                        {humanizeColumnLabel(column)}
+                                    </th>
                                 ))}
                             </tr>
                         </thead>
@@ -693,7 +900,10 @@ const SearchTablePanel = ({
                                 <tr key={`${searchId}-${rowIndex}`}>
                                     {columns.map((column) => (
                                         <td key={column}>
-                                            {displayCell(row[column])}
+                                            <TableCellContent
+                                                column={column}
+                                                value={row[column]}
+                                            />
                                         </td>
                                     ))}
                                 </tr>
@@ -706,8 +916,23 @@ const SearchTablePanel = ({
     );
 };
 
-const SectionBand = ({ children }: { children: React.ReactNode }): JSX.Element => (
-    <div className="scd-glass-section-band">{children}</div>
+const SectionBand = ({
+    children,
+    icon: Icon,
+    count,
+}: {
+    children: React.ReactNode;
+    icon: LucideIcon;
+    count?: React.ReactNode;
+}): JSX.Element => (
+    <div className="scd-glass-section-band">
+        <Icon size={14} strokeWidth={2} aria-hidden="true" />
+        <span>{children}</span>
+        {count !== undefined ? (
+            <span className="scd-glass-section-count">{count}</span>
+        ) : null}
+        <span className="scd-glass-section-rule" aria-hidden="true" />
+    </div>
 );
 
 const OverviewTab = ({ context }: { context: PageContext }): JSX.Element => (
@@ -1006,7 +1231,9 @@ const PolicyDrilldown = ({
                             <thead>
                                 <tr>
                                     {ruleColumns.map((column) => (
-                                        <th key={column}>{column}</th>
+                                        <th key={column} title={column}>
+                                            {humanizeColumnLabel(column)}
+                                        </th>
                                     ))}
                                 </tr>
                             </thead>
@@ -1015,7 +1242,10 @@ const PolicyDrilldown = ({
                                     <tr key={`${selectedPolicy}-${rowIndex}`}>
                                         {ruleColumns.map((column) => (
                                             <td key={column}>
-                                                {displayCell(row[column])}
+                                                <TableCellContent
+                                                    column={column}
+                                                    value={row[column]}
+                                                />
                                             </td>
                                         ))}
                                     </tr>
@@ -1365,11 +1595,25 @@ const SiteHealthPanel = ({
 
     return (
         <>
-            <SectionBand>Site Health &amp; Reachability</SectionBand>
+            <SectionBand
+                icon={Globe2}
+                count={`${visibleSites.length} sites`}
+            >
+                Site Health &amp; Reachability
+            </SectionBand>
             <section className="scd-glass-site-panel">
                 <div className="scd-glass-site-map">
                     <header>
-                        <h2>Site Health Overview</h2>
+                        <div className="scd-glass-panel-title">
+                            <h2>Site Health Overview</h2>
+                            <span
+                                className="scd-glass-linked"
+                                aria-label="Linked to live dashboard context"
+                                title="Linked to live dashboard context"
+                            >
+                                ◆
+                            </span>
+                        </div>
                         <SearchActions
                             context={context}
                             searchId="secure_networking_sdwan_site_view"
@@ -1505,7 +1749,13 @@ const SiteHealthPanel = ({
                                 ] as Array<[string, unknown]>).map(([label, value]) => (
                                     <div key={String(label)}>
                                         <span>{label}</span>
-                                        <strong>{displayCell(value)}</strong>
+                                        {/^(Status|Devices|Tunnels|Applications)$/.test(
+                                            label
+                                        ) ? (
+                                            <StatusBadge value={value} compact />
+                                        ) : (
+                                            <strong>{displayCell(value)}</strong>
+                                        )}
                                     </div>
                                 ))}
                             </div>
@@ -1540,13 +1790,16 @@ const SiteHealthPanel = ({
                                             key={name}
                                             onClick={() => chooseSite(name)}
                                         >
-                                            <span
-                                                className={
-                                                    isBad ? 'is-bad' : 'is-good'
-                                                }
-                                            />
                                             <strong>{name}</strong>
-                                            <em>{status}</em>
+                                            <StatusBadge
+                                                value={status}
+                                                label={
+                                                    isBad
+                                                        ? 'Attention'
+                                                        : status
+                                                }
+                                                compact
+                                            />
                                             <ChevronRight size={14} />
                                         </button>
                                     );
@@ -1569,7 +1822,7 @@ const NetworkTab = ({
 }): JSX.Element => (
     <div className="scd-glass-tab-content">
         <SiteHealthPanel context={context} setFilter={setFilter} />
-        <SectionBand>Nexus Dashboard</SectionBand>
+        <SectionBand icon={Server}>Nexus Dashboard</SectionBand>
         <div className="scd-glass-network-row">
             <div className="scd-glass-network-metrics">
                 <SearchMetric
@@ -1597,7 +1850,7 @@ const NetworkTab = ({
                 useGlobalFilters={false}
             />
         </div>
-        <SectionBand>SD-WAN</SectionBand>
+        <SectionBand icon={Network}>SD-WAN</SectionBand>
         <div className="scd-glass-grid-three">
             <SearchChartPanel
                 context={context}
@@ -1621,7 +1874,7 @@ const NetworkTab = ({
                 useGlobalFilters={false}
             />
         </div>
-        <SectionBand>Meraki</SectionBand>
+        <SectionBand icon={Wifi}>Meraki</SectionBand>
         <div className="scd-glass-metric-grid scd-glass-metric-grid-four">
             <SearchMetric
                 context={context}
@@ -1667,7 +1920,7 @@ const NetworkTab = ({
                 useGlobalFilters={false}
             />
         </div>
-        <SectionBand>ThousandEyes</SectionBand>
+        <SectionBand icon={Cloud}>ThousandEyes</SectionBand>
         <div className="scd-glass-metric-grid scd-glass-metric-grid-four">
             <SearchMetric
                 context={context}
@@ -1867,6 +2120,7 @@ const UserInvestigationTab = ({
             </div>
             <Panel
                 title="Activity Timeline — Enforcement Layers"
+                linked
                 subtitle={
                     safeUser
                         ? `Correlated activity for ${safeUser}`
@@ -1910,6 +2164,7 @@ const UserInvestigationTab = ({
             </Panel>
             <Panel
                 title="User Activity Log"
+                linked
                 subtitle="Searchbase cross-source correlation results"
                 action={
                     <SearchActions
@@ -1931,7 +2186,9 @@ const UserInvestigationTab = ({
                             <thead>
                                 <tr>
                                     {columns.map((column) => (
-                                        <th key={column}>{column}</th>
+                                        <th key={column} title={column}>
+                                            {humanizeColumnLabel(column)}
+                                        </th>
                                     ))}
                                 </tr>
                             </thead>
@@ -1940,7 +2197,10 @@ const UserInvestigationTab = ({
                                     <tr key={`${safeUser}-${index}`}>
                                         {columns.map((column) => (
                                             <td key={column}>
-                                                {displayCell(activityRow[column])}
+                                                <TableCellContent
+                                                    column={column}
+                                                    value={activityRow[column]}
+                                                />
                                             </td>
                                         ))}
                                     </tr>
@@ -1952,6 +2212,40 @@ const UserInvestigationTab = ({
             </Panel>
         </div>
     );
+};
+
+const formatEventTime = (value: unknown): string => {
+    const raw = displayCell(value);
+    const timestamp = raw.match(/T(\d{2}:\d{2}:\d{2})/);
+    if (timestamp) return timestamp[1];
+    const clock = raw.match(/\b(\d{2}:\d{2}(?::\d{2})?)\b/);
+    return clock?.[1] ?? compactLabel(raw);
+};
+
+const eventSeverityForRow = (
+    row: SearchRow
+): { raw: string; label: string } => {
+    const raw = displayCell(
+        row.Severity ??
+            row.severity ??
+            row.Action ??
+            row.action ??
+            row.AC_RuleAction ??
+            row.result ??
+            row.status ??
+            'info'
+    );
+    if (/critical|crit|high/i.test(raw)) return { raw, label: 'CRIT' };
+    if (/block|deny|fail|drop|reset/i.test(raw)) {
+        return { raw, label: 'BLOCK' };
+    }
+    if (/warn|medium|fair|degrad/i.test(raw)) {
+        return { raw, label: 'WARN' };
+    }
+    if (/allow|success|pass|permit/i.test(raw)) {
+        return { raw, label: 'ALLOW' };
+    }
+    return { raw, label: 'INFO' };
 };
 
 const EventLog = ({ context }: { context: PageContext }): JSX.Element => {
@@ -1972,17 +2266,34 @@ const EventLog = ({ context }: { context: PageContext }): JSX.Element => {
                 filtered.slice(0, 18).map((row, index) => {
                     const time =
                         row._time ?? row['Last Seen'] ?? row['Last Event'] ?? '';
+                    const severity = eventSeverityForRow(row);
+                    const source = displayCell(row.product ?? 'FMC');
                     const messageFields = Object.entries(row).filter(
-                        ([key]) => !/^(_time|time|last seen|last event)$/i.test(key)
+                        ([key]) =>
+                            !/^(_time|time|last seen|last event|severity|action|ac_ruleaction|result|status|product)$/i.test(
+                                key
+                            )
                     );
                     return (
                         <div key={`event-${index}`}>
-                            <time>{compactLabel(time)}</time>
-                            <span className="scd-glass-event-tag">[FMC]</span>
+                            <time>{formatEventTime(time)}</time>
+                            <StatusBadge
+                                value={severity.raw}
+                                label={severity.label}
+                                compact
+                            />
+                            <span
+                                className="scd-glass-event-source"
+                                title={source}
+                            >
+                                {humanizeMachineLabel(source)}
+                            </span>
                             <p>
                                 {messageFields
                                     .slice(0, 3)
-                                    .map(([, value]) => displayCell(value))
+                                    .map(([, value]) =>
+                                        humanizeMachineLabel(displayCell(value))
+                                    )
                                     .join(' · ')}
                             </p>
                         </div>
@@ -2033,7 +2344,11 @@ const FilterSidebar = ({
         <section className="scd-glass-sidebar-events">
             <header>
                 <Activity size={18} />
-                <h2>Event Log Viewer</h2>
+                <h2>Event Log</h2>
+                <span className="scd-glass-live-indicator">
+                    <span aria-hidden="true" />
+                    Live
+                </span>
                 <SearchActions
                     context={context}
                     searchId="secure_networking_fmc_blocked_connection_detail"
