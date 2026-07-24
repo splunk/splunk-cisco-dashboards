@@ -61,7 +61,18 @@ function clean() {
 
 function build() {
     console.log('› Running webpack (production)');
-    run('node_modules/.bin/webpack', ['--mode', 'production']);
+    run('node_modules/.bin/webpack', ['--mode', 'production'], {
+        // Webpack's CLI mode controls its optimizer, but the inherited
+        // Splunk webpack config and Babel preset inspect these process
+        // variables while configuration is loading. Keep them scoped to
+        // this child so production builds are consistent without changing
+        // `yarn start` or the caller's environment.
+        env: {
+            ...process.env,
+            NODE_ENV: 'production',
+            BABEL_ENV: 'production',
+        },
+    });
     console.log(`✓ App staged at ${path.relative(REPO_ROOT, STAGE_DIR)}/`);
 }
 
