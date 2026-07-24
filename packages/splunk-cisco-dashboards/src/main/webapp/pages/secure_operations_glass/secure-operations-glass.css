@@ -334,13 +334,9 @@
     min-height: 86px;
     min-width: 0;
     overflow: hidden;
-    padding: 12px 14px 10px;
+    padding: 12px 46px 10px 14px;
+    position: relative;
     text-align: left;
-}
-
-#scan-root button.scd-glass-metric:focus-visible {
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--glass-accent) 28%, transparent);
-    outline: 0;
 }
 
 #scan-root .scd-glass-metric-label {
@@ -447,6 +443,45 @@
     justify-content: space-between;
     min-height: 53px;
     padding: 14px 17px 8px;
+}
+
+#scan-root .scd-glass-search-actions {
+    align-items: center;
+    display: inline-flex;
+    flex: 0 0 auto;
+    gap: 4px;
+}
+
+#scan-root .scd-glass-metric > .scd-glass-search-actions {
+    position: absolute;
+    right: 9px;
+    top: 9px;
+}
+
+#scan-root .scd-glass-search-actions > button,
+#scan-root .scd-glass-search-actions > a {
+    align-items: center;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: var(--glass-faint);
+    cursor: pointer;
+    display: inline-flex;
+    height: 27px;
+    justify-content: center;
+    padding: 0;
+    text-decoration: none;
+    width: 27px;
+}
+
+#scan-root .scd-glass-search-actions > button:hover,
+#scan-root .scd-glass-search-actions > button:focus-visible,
+#scan-root .scd-glass-search-actions > a:hover,
+#scan-root .scd-glass-search-actions > a:focus-visible {
+    background: var(--glass-accent-soft);
+    border-color: var(--glass-border-strong);
+    color: var(--glass-accent-strong);
+    outline: none;
 }
 
 #scan-root .scd-glass-panel-header h2,
@@ -594,6 +629,13 @@
     padding: 15px 16px;
 }
 
+#scan-root .scd-glass-policy-list > header {
+    align-items: flex-start;
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+}
+
 #scan-root .scd-glass-policy-items {
     display: flex;
     flex-direction: column;
@@ -648,6 +690,13 @@
     justify-content: space-between;
 }
 
+#scan-root .scd-glass-search-toolbar {
+    align-items: center;
+    display: flex;
+    flex: 0 0 auto;
+    gap: 6px;
+}
+
 #scan-root .scd-glass-policy-detail > header h2 span {
     color: var(--glass-accent-strong);
 }
@@ -694,97 +743,53 @@
 }
 
 #scan-root .scd-glass-map-canvas {
-    background-color: var(--glass-panel-strong);
-    background-image:
-        linear-gradient(var(--glass-border) 1px, transparent 1px),
-        linear-gradient(90deg, var(--glass-border) 1px, transparent 1px);
-    background-size: 64px 64px;
+    background: var(--glass-panel-strong);
     height: 320px;
     overflow: hidden;
     position: relative;
 }
 
-#scan-root .scd-glass-map-land {
-    background: color-mix(in srgb, var(--glass-faint) 16%, transparent);
-    border: 1px solid color-mix(in srgb, var(--glass-faint) 24%, transparent);
-    position: absolute;
+#scan-root .scd-glass-leaflet-map {
+    background: #dce7ee;
+    height: 100%;
+    width: 100%;
 }
 
-#scan-root .scd-glass-map-land.land-a {
-    clip-path: polygon(5% 20%, 76% 5%, 96% 52%, 72% 92%, 22% 82%, 0 53%);
-    height: 45%;
-    left: 9%;
-    top: 18%;
-    width: 20%;
+#scan-root .scd-glass-leaflet-map .leaflet-control-zoom a {
+    background: var(--glass-panel);
+    border-color: var(--glass-border);
+    color: var(--glass-text);
 }
 
-#scan-root .scd-glass-map-land.land-b {
-    clip-path: polygon(12% 12%, 73% 4%, 100% 32%, 82% 74%, 38% 92%, 0 52%);
-    height: 42%;
-    left: 42%;
-    top: 14%;
-    width: 34%;
+#scan-root .scd-glass-leaflet-map .leaflet-control-attribution {
+    background: color-mix(in srgb, var(--glass-panel) 86%, transparent);
+    color: var(--glass-muted);
+    font-size: 8px;
 }
 
-#scan-root .scd-glass-map-land.land-c {
-    clip-path: polygon(28% 0, 87% 9%, 100% 48%, 68% 100%, 8% 79%, 0 31%);
-    height: 30%;
-    left: 38%;
-    top: 54%;
-    width: 13%;
+#scan-root .scd-glass-leaflet-map .leaflet-control-attribution a {
+    color: var(--glass-accent-strong);
 }
 
-#scan-root .scd-glass-map-land.land-d {
-    clip-path: polygon(24% 0, 88% 9%, 100% 56%, 69% 92%, 21% 100%, 0 55%);
-    height: 27%;
-    left: 69%;
-    top: 56%;
-    width: 12%;
-}
-
-#scan-root .scd-glass-map-site {
-    align-items: center;
-    background: transparent;
-    border: 0;
-    cursor: pointer;
+#scan-root .scd-glass-leaflet-map .leaflet-tooltip {
+    background: var(--glass-panel);
+    border: 1px solid var(--glass-border-strong);
+    box-shadow: var(--glass-shadow);
+    color: var(--glass-text);
     display: flex;
     flex-direction: column;
-    gap: 3px;
-    position: absolute;
-    transform: translate(-50%, -50%);
-    z-index: 2;
+    font-size: 10px;
+    gap: 2px;
+    padding: 6px 8px;
 }
 
-#scan-root .scd-glass-map-site strong {
-    background: color-mix(in srgb, var(--glass-panel) 88%, transparent);
-    border-radius: 4px;
+#scan-root .scd-glass-leaflet-map .leaflet-tooltip span {
+    color: var(--glass-muted);
     font-size: 9px;
-    max-width: 130px;
-    overflow: hidden;
-    padding: 2px 5px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
-#scan-root .scd-glass-map-dot {
-    background: var(--glass-good);
-    border: 4px solid color-mix(in srgb, var(--glass-good) 25%, transparent);
-    border-radius: 50%;
-    box-shadow: 0 0 0 1px var(--glass-good);
-    height: 17px;
-    width: 17px;
-}
-
-#scan-root .scd-glass-map-site.is-bad .scd-glass-map-dot {
-    background: var(--glass-critical);
-    border-color: color-mix(in srgb, var(--glass-critical) 25%, transparent);
-    box-shadow: 0 0 0 1px var(--glass-critical);
-}
-
-#scan-root .scd-glass-map-site.is-selected .scd-glass-map-dot {
-    box-shadow:
-        0 0 0 2px var(--glass-panel),
-        0 0 0 5px var(--glass-accent);
+#scan-root .scd-glass[data-theme="dark"] .scd-glass-leaflet-map .leaflet-tile-pane {
+    filter: brightness(0.64) saturate(0.78) contrast(1.15);
 }
 
 #scan-root .scd-glass-site-detail {
@@ -960,6 +965,13 @@
     gap: 10px;
 }
 
+#scan-root
+    .scd-glass-investigation-hero
+    > div
+    > .scd-glass-search-actions {
+    margin-left: auto;
+}
+
 #scan-root .scd-glass-investigation-hero > div > svg {
     color: var(--glass-info);
     flex: 0 0 auto;
@@ -1096,6 +1108,13 @@
     min-height: 30px;
 }
 
+#scan-root
+    .scd-glass-sidebar-events
+    > header
+    .scd-glass-search-actions {
+    margin-left: auto;
+}
+
 #scan-root .scd-glass-sidebar-filters > header svg,
 #scan-root .scd-glass-sidebar-events > header svg {
     color: var(--glass-accent-strong);
@@ -1184,6 +1203,126 @@
 
 #scan-root .scd-glass-view-id {
     display: none;
+}
+
+#scan-root .scd-glass-info-backdrop {
+    align-items: center;
+    background: rgba(5, 13, 24, 0.66);
+    display: flex;
+    inset: 0;
+    justify-content: center;
+    padding: 24px;
+    position: fixed;
+    z-index: 10000;
+}
+
+#scan-root .scd-glass-info-dialog {
+    background: var(--glass-panel);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    box-shadow: 0 22px 60px rgba(0, 0, 0, 0.34);
+    color: var(--glass-text);
+    max-height: min(620px, calc(100vh - 48px));
+    max-width: 660px;
+    overflow: auto;
+    width: 100%;
+}
+
+#scan-root .scd-glass-info-dialog > header {
+    align-items: flex-start;
+    border-bottom: 1px solid var(--glass-border);
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+    padding: 17px 19px;
+}
+
+#scan-root .scd-glass-info-dialog > header span {
+    color: var(--glass-accent-strong);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+}
+
+#scan-root .scd-glass-info-dialog > header h2 {
+    font-size: 18px;
+    margin: 4px 0 0;
+}
+
+#scan-root .scd-glass-info-dialog > header button {
+    align-items: center;
+    background: transparent;
+    border: 1px solid var(--glass-border);
+    border-radius: 7px;
+    cursor: pointer;
+    display: flex;
+    height: 31px;
+    justify-content: center;
+    padding: 0;
+    width: 31px;
+}
+
+#scan-root .scd-glass-info-dialog > header button:hover {
+    background: var(--glass-panel-strong);
+}
+
+#scan-root .scd-glass-info-body {
+    padding: 18px 19px 20px;
+}
+
+#scan-root .scd-glass-info-body > p {
+    color: var(--glass-muted);
+    font-size: 12px;
+    line-height: 1.65;
+    margin: 0;
+}
+
+#scan-root .scd-glass-info-body dl {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 18px 0 0;
+}
+
+#scan-root .scd-glass-info-body dl > div {
+    background: var(--glass-panel-subtle);
+    border: 1px solid var(--glass-border);
+    border-radius: 7px;
+    min-width: 0;
+    padding: 9px 10px;
+}
+
+#scan-root .scd-glass-info-body dt {
+    color: var(--glass-faint);
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+#scan-root .scd-glass-info-body dd {
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 10px;
+    margin: 4px 0 0;
+    overflow-wrap: anywhere;
+}
+
+#scan-root .scd-glass-info-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 16px;
+}
+
+#scan-root .scd-glass-info-tags span {
+    background: var(--glass-accent-soft);
+    border: 1px solid var(--glass-border-strong);
+    border-radius: 999px;
+    color: var(--glass-accent-strong);
+    font-size: 9px;
+    font-weight: 700;
+    padding: 4px 8px;
 }
 
 @media (max-width: 1500px) {

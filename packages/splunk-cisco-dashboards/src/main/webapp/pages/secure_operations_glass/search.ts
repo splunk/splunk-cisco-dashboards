@@ -248,3 +248,6 @@ export const useFilteredRows = (
 
 export const sanitizeSearchValue = (value: string): string =>
     value.replace(/[^A-Za-z0-9@._:\-\s]/g, '').trim().slice(0, 128);
+
+export const sanitizeWildcardSearchValue = (value: string): string =>
+    value.replace(/[^A-Za-z0-9@._:\-\s*]/g, '').trim().slice(0, 128);

@@ -13,8 +13,10 @@ import {
     ChevronRight,
     CircleDot,
     Cloud,
+    ExternalLink,
     Filter,
     Globe2,
+    Info,
     Menu,
     Moon,
     Network,
@@ -31,6 +33,12 @@ import {
     X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import {
+    CircleMarker,
+    MapContainer,
+    TileLayer,
+    Tooltip as MapTooltip,
+} from 'react-leaflet';
 import {
     Area,
     AreaChart,
@@ -49,6 +57,7 @@ import {
 } from 'recharts';
 
 import type { SearchbaseRecord } from '@/common/services/searchbaseCatalogue';
+import { splunkSearchAppUrl } from '@/common/lib/splunkSearchUrl';
 import {
     asNumber,
     formatNumber,
@@ -56,6 +65,7 @@ import {
     getNumericKeys,
     getScalarValue,
     sanitizeSearchValue,
+    sanitizeWildcardSearchValue,
     type SearchRow,
     useFilteredRows,
     useSearchbaseCatalogueMap,
@@ -88,6 +98,7 @@ interface PageContext {
     refreshToken: number;
     filters: Filters;
     theme: Theme;
+    showSearchInfo: (record: SearchbaseRecord) => void;
 }
 
 interface SearchPanelProps {
@@ -108,7 +119,6 @@ interface SearchMetricProps {
     suffix?: string;
     tone?: Tone;
     icon?: LucideIcon;
-    onClick?: () => void;
 }
 
 interface SearchTableProps {
@@ -196,6 +206,140 @@ const displayCell = (value: unknown): string => {
 
 const toneClass = (tone: Tone): string => `scd-glass-tone-${tone}`;
 
+const plainTextFromHtml = (value: string): string =>
+    value
+        .replace(/<br\s*\/?>/gi, ' ')
+        .replace(/<\/(p|li|div|ul|ol)>/gi, ' ')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&amp;/gi, '&')
+        .replace(/&lt;/gi, '<')
+        .replace(/&gt;/gi, '>')
+        .replace(/&quot;/gi, '"')
+        .replace(/&#39;/gi, "'")
+        .replace(/\s+/g, ' ')
+        .trim();
+
+const SearchActions = ({
+    context,
+    searchId,
+    transformSearch,
+}: {
+    context: PageContext;
+    searchId: string;
+    transformSearch?: (spl: string) => string;
+}): JSX.Element | null => {
+    const record = context.catalogue?.get(searchId);
+    if (!record) return null;
+    const spl = transformSearch ? transformSearch(record.search) : record.search;
+    const searchUrl = splunkSearchAppUrl(
+        spl,
+        { earliest: context.earliest, latest: 'now' },
+        record.dispatchContext
+    );
+
+    return (
+        <div className="scd-glass-search-actions">
+            <button
+                type="button"
+                title={`About ${record.searchName}`}
+                aria-label={`Information about ${record.searchName}`}
+                onClick={() => context.showSearchInfo(record)}
+            >
+                <Info size={14} />
+            </button>
+            <a
+                href={searchUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={`Open ${record.searchName} in Search`}
+                aria-label={`Open ${record.searchName} in Search`}
+            >
+                <ExternalLink size={14} />
+            </a>
+        </div>
+    );
+};
+
+const SearchInfoDialog = ({
+    record,
+    onClose,
+}: {
+    record: SearchbaseRecord;
+    onClose: () => void;
+}): JSX.Element => {
+    const description = plainTextFromHtml(
+        record.explanation || record.description || record.solution
+    );
+
+    useEffect(() => {
+        const closeOnEscape = (event: KeyboardEvent): void => {
+            if (event.key === 'Escape') onClose();
+        };
+        window.addEventListener('keydown', closeOnEscape);
+        return () => window.removeEventListener('keydown', closeOnEscape);
+    }, [onClose]);
+
+    return (
+        <div
+            className="scd-glass-info-backdrop"
+            role="presentation"
+            onMouseDown={(event) => {
+                if (event.currentTarget === event.target) onClose();
+            }}
+        >
+            <section
+                className="scd-glass-info-dialog"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="scd-glass-info-title"
+            >
+                <header>
+                    <div>
+                        <span>Searchbase search</span>
+                        <h2 id="scd-glass-info-title">{record.searchName}</h2>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        aria-label="Close search information"
+                    >
+                        <X size={17} />
+                    </button>
+                </header>
+                <div className="scd-glass-info-body">
+                    <p>{description || 'No description is available.'}</p>
+                    <dl>
+                        <div>
+                            <dt>Category</dt>
+                            <dd>{record.category || '—'}</dd>
+                        </div>
+                        <div>
+                            <dt>Subcategory</dt>
+                            <dd>{record.subCategory || '—'}</dd>
+                        </div>
+                        <div>
+                            <dt>Dispatch app</dt>
+                            <dd>{record.dispatchContext || record.ownerApp}</dd>
+                        </div>
+                        <div>
+                            <dt>Search ID</dt>
+                            <dd>{record.id}</dd>
+                        </div>
+                    </dl>
+                    {record.tags.length > 0 ? (
+                        <div className="scd-glass-info-tags">
+                            {record.tags.map((tag) => (
+                                <span key={tag}>{tag}</span>
+                            ))}
+                        </div>
+                    ) : null}
+                </div>
+            </section>
+        </div>
+    );
+};
+
 const EmptyState = ({
     loading,
     error,
@@ -258,7 +402,6 @@ const SearchMetric = ({
     suffix = '',
     tone = 'default',
     icon: Icon = Activity,
-    onClick,
 }: SearchMetricProps): JSX.Element => {
     const state = useSearchbaseRows({
         catalogue: context.catalogue,
@@ -270,12 +413,14 @@ const SearchMetric = ({
     const value = getScalarValue(state.rows, preferredFields);
 
     return (
-        <button
-            type="button"
+        <article
             className={`scd-glass-metric ${toneClass(tone)}`}
-            onClick={onClick}
             aria-label={`${label}: ${formatNumber(value, suffix)}`}
         >
+            <SearchActions
+                context={context}
+                searchId={searchId}
+            />
             <div className="scd-glass-metric-label">
                 <Icon size={16} strokeWidth={2} />
                 <span>{label}</span>
@@ -284,7 +429,7 @@ const SearchMetric = ({
             <span className="scd-glass-metric-status">
                 {state.error ? 'Search unavailable' : 'Live Searchbase result'}
             </span>
-        </button>
+        </article>
     );
 };
 
@@ -362,9 +507,15 @@ const SearchChartPanel = ({
         }
 
         if (chartKind === 'bar') {
+            const isTimeSeries =
+                labelKey === '_time' || /(?:^|[_\s-])(time|date)(?:$|[_\s-])/i.test(labelKey);
+            const barRows = isTimeSeries
+                ? filteredRows.slice(-12)
+                : filteredRows.slice(0, 12);
+
             return (
                 <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={filteredRows.slice(0, 12)}>
+                    <BarChart data={barRows}>
                         <CartesianGrid
                             stroke={gridColor}
                             strokeDasharray="3 4"
@@ -472,7 +623,12 @@ const SearchChartPanel = ({
             title={title}
             subtitle={subtitle}
             className={`scd-glass-chart-panel ${className}`}
-            action={<span className="scd-glass-linked">◆ Linked</span>}
+            action={
+                <SearchActions
+                    context={context}
+                    searchId={searchId}
+                />
+            }
         >
             <div className="scd-glass-chart">{renderChart()}</div>
         </Panel>
@@ -508,7 +664,13 @@ const SearchTablePanel = ({
             title={title}
             subtitle={subtitle}
             className={`scd-glass-table-panel ${className}`}
-            action={<span className="scd-glass-linked">◆ Linked</span>}
+            action={
+                <SearchActions
+                    context={context}
+                    searchId={searchId}
+                    transformSearch={transformSearch}
+                />
+            }
         >
             {rows.length === 0 ? (
                 <EmptyState loading={state.loading} error={state.error} />
@@ -767,8 +929,14 @@ const PolicyDrilldown = ({
         <section className="scd-glass-policy-panel">
             <div className="scd-glass-policy-list">
                 <header>
-                    <h2>Firewall Policies (FMC)</h2>
-                    <p>Select a policy to inspect its access-control rules.</p>
+                    <div>
+                        <h2>Firewall Policies (FMC)</h2>
+                        <p>Select a policy to inspect its access-control rules.</p>
+                    </div>
+                    <SearchActions
+                        context={context}
+                        searchId="secure_networking_fmc_top_policies_by_action"
+                    />
                 </header>
                 <div className="scd-glass-policy-items">
                     {policies.rows.length === 0 ? (
@@ -815,9 +983,16 @@ const PolicyDrilldown = ({
                             firewall policy.
                         </p>
                     </div>
-                    <span className="scd-glass-count-badge">
-                        {rules.rows.length} rules found
-                    </span>
+                    <div className="scd-glass-search-toolbar">
+                        <span className="scd-glass-count-badge">
+                            {rules.rows.length} rules found
+                        </span>
+                        <SearchActions
+                            context={context}
+                            searchId="secure_networking_fmc_top_rules_hit"
+                            transformSearch={transformRules}
+                        />
+                    </div>
                 </header>
                 {rules.rows.length === 0 ? (
                     <EmptyState loading={rules.loading} error={rules.error} />
@@ -954,6 +1129,26 @@ const siteStatusForRow = (row: SearchRow): string =>
             'Unknown'
     );
 
+const siteCoordinateForRow = (row: SearchRow): [number, number] | null => {
+    const latitude = asNumber(
+        row.Latitude ?? row.latitude ?? row.lat ?? row['Site Latitude']
+    );
+    const longitude = asNumber(
+        row.Longitude ?? row.longitude ?? row.lon ?? row.lng ?? row['Site Longitude']
+    );
+    if (
+        latitude === null ||
+        longitude === null ||
+        latitude < -90 ||
+        latitude > 90 ||
+        longitude < -180 ||
+        longitude > 180
+    ) {
+        return null;
+    }
+    return [latitude, longitude];
+};
+
 const SiteHealthPanel = ({
     context,
     setFilter,
@@ -979,16 +1174,20 @@ const SiteHealthPanel = ({
     const offlineCount = visibleSites.filter((row) =>
         /poor|critical|offline|down|failed/i.test(siteStatusForRow(row))
     ).length;
-    const positions = [
-        [16, 42],
-        [29, 35],
-        [49, 31],
-        [64, 40],
-        [82, 44],
-        [40, 61],
-        [71, 66],
-        [24, 70],
-    ];
+    const mappableSites = visibleSites.flatMap((row, index) => {
+        const coordinate = siteCoordinateForRow(row);
+        if (!coordinate) return [];
+        const status = siteStatusForRow(row);
+        return [
+            {
+                row,
+                name: siteNameForRow(row, index),
+                status,
+                coordinate,
+                isBad: /poor|critical|offline|down|failed/i.test(status),
+            },
+        ];
+    });
 
     const chooseSite = (name: string): void => {
         setSelectedSite(name);
@@ -1007,37 +1206,69 @@ const SiteHealthPanel = ({
                 <div className="scd-glass-site-map">
                     <header>
                         <h2>Site Health Overview</h2>
-                        <span>◆ Linked</span>
+                        <SearchActions
+                            context={context}
+                            searchId="secure_networking_sdwan_site_view"
+                        />
                     </header>
                     <div className="scd-glass-map-canvas">
-                        <div className="scd-glass-map-land land-a" />
-                        <div className="scd-glass-map-land land-b" />
-                        <div className="scd-glass-map-land land-c" />
-                        <div className="scd-glass-map-land land-d" />
-                        {visibleSites.map((row, index) => {
-                            const name = siteNameForRow(row, index);
-                            const status = siteStatusForRow(row);
-                            const [left, top] = positions[index];
-                            const isBad =
-                                /poor|critical|offline|down|failed/i.test(status);
-                            return (
-                                <button
-                                    type="button"
-                                    key={name}
-                                    className={`scd-glass-map-site ${
-                                        selectedSite === name
-                                            ? 'is-selected'
-                                            : ''
-                                    } ${isBad ? 'is-bad' : 'is-good'}`}
-                                    style={{ left: `${left}%`, top: `${top}%` }}
-                                    onClick={() => chooseSite(name)}
-                                    title={`${name}: ${status}`}
-                                >
-                                    <span className="scd-glass-map-dot" />
-                                    <strong>{compactLabel(name)}</strong>
-                                </button>
-                            );
-                        })}
+                        {mappableSites.length === 0 ? (
+                            <EmptyState
+                                loading={sites.loading}
+                                error={sites.error}
+                                message="No latitude and longitude fields were returned for these sites."
+                            />
+                        ) : (
+                            <MapContainer
+                                center={[22, 0]}
+                                zoom={1}
+                                minZoom={1}
+                                maxZoom={12}
+                                scrollWheelZoom
+                                worldCopyJump
+                                className="scd-glass-leaflet-map"
+                            >
+                                <TileLayer
+                                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>'
+                                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                />
+                                {mappableSites.map(
+                                    ({ name, status, coordinate, isBad }) => (
+                                        <CircleMarker
+                                            key={name}
+                                            center={coordinate}
+                                            radius={selectedSite === name ? 10 : 8}
+                                            pathOptions={{
+                                                color:
+                                                    selectedSite === name
+                                                        ? '#00bceb'
+                                                        : isBad
+                                                          ? '#e5534b'
+                                                          : '#65bd3e',
+                                                fillColor: isBad
+                                                    ? '#e5534b'
+                                                    : '#65bd3e',
+                                                fillOpacity: 0.9,
+                                                opacity: 1,
+                                                weight:
+                                                    selectedSite === name ? 4 : 2,
+                                            }}
+                                            eventHandlers={{
+                                                click: () => chooseSite(name),
+                                            }}
+                                        >
+                                            <MapTooltip
+                                                direction="top"
+                                                offset={[0, -7]}
+                                            >
+                                                <strong>{name}</strong>
+                                                <span>{status}</span>
+                                            </MapTooltip>
+                                        </CircleMarker>
+                                    )
+                                )}
+                            </MapContainer>
+                        )}
                     </div>
                 </div>
                 <div className="scd-glass-site-detail">
@@ -1304,11 +1535,20 @@ const UserInvestigationTab = ({
 }): JSX.Element => {
     const [draftUser, setDraftUser] = useState('');
     const [appliedUser, setAppliedUser] = useState('');
-    const safeUser = sanitizeSearchValue(appliedUser);
+    const safeUser = sanitizeWildcardSearchValue(appliedUser);
+    const isWildcardSearch = safeUser.includes('*');
     const transformSearch = useMemo(() => {
         if (!safeUser) return undefined;
-        return (spl: string): string =>
-            `${spl}\n| search "Identity"="${safeUser}"`;
+        return (spl: string): string => {
+            const aggregateMarker = '\n| stats count as event_count';
+            if (spl.includes(aggregateMarker)) {
+                return spl.replace(
+                    aggregateMarker,
+                    `\n| search identity="${safeUser}"${aggregateMarker}`
+                );
+            }
+            return `${spl}\n| search "Identity"="${safeUser}"`;
+        };
     }, [safeUser]);
     const activity = useSearchbaseRows({
         catalogue: context.catalogue,
@@ -1321,10 +1561,54 @@ const UserInvestigationTab = ({
     });
     const row = activity.rows[0] ?? {};
     const columns = getColumns(activity.rows);
+    const summary = useMemo(() => {
+        if (!isWildcardSearch) {
+            return {
+                totalEvents: row['Total Events'],
+                secondLabel: 'Layers Seen',
+                secondValue: row['Layers Seen'],
+                thirdLabel: 'Fail / Block Layers',
+                thirdValue: row['Fail/Block Layers'],
+                sources: row.Sources,
+                lastSeen: row['Last Seen'],
+            };
+        }
+
+        const sourceSet = new Set<string>();
+        let totalEvents = 0;
+        let identitiesWithBlocks = 0;
+        let lastSeen = '';
+
+        activity.rows.forEach((activityRow) => {
+            totalEvents += asNumber(activityRow['Total Events']) ?? 0;
+            if ((asNumber(activityRow['Fail/Block Layers']) ?? 0) > 0) {
+                identitiesWithBlocks += 1;
+            }
+            String(activityRow.Sources ?? '')
+                .split(',')
+                .map((source) => source.trim())
+                .filter(Boolean)
+                .forEach((source) => sourceSet.add(source));
+            const candidateLastSeen = String(activityRow['Last Seen'] ?? '');
+            if (candidateLastSeen > lastSeen) {
+                lastSeen = candidateLastSeen;
+            }
+        });
+
+        return {
+            totalEvents,
+            secondLabel: 'Matching Identities',
+            secondValue: activity.rows.length,
+            thirdLabel: 'Identities with Blocks',
+            thirdValue: identitiesWithBlocks,
+            sources: Array.from(sourceSet).join(', '),
+            lastSeen,
+        };
+    }, [activity.rows, isWildcardSearch, row]);
 
     const submit = (event: React.FormEvent): void => {
         event.preventDefault();
-        const next = sanitizeSearchValue(draftUser);
+        const next = sanitizeWildcardSearchValue(draftUser);
         setAppliedUser(next);
         setFilter('user', next || 'Any');
     };
@@ -1341,16 +1625,22 @@ const UserInvestigationTab = ({
                         </h2>
                         <p>
                             Enter an identity to correlate its activity across
-                            the Secure Networking enforcement stack.
+                            the Secure Networking enforcement stack. Use * for
+                            wildcard matches, for example user47*.
                         </p>
                     </div>
+                    <SearchActions
+                        context={context}
+                        searchId="secure_networking_zta_user_activity_cross_source"
+                        transformSearch={transformSearch}
+                    />
                 </div>
                 <form onSubmit={submit}>
                     <Search size={17} />
                     <input
                         value={draftUser}
                         onChange={(event) => setDraftUser(event.target.value)}
-                        placeholder="Enter username to investigate…"
+                        placeholder="Enter username or wildcard, e.g. user47*…"
                         aria-label="Username to investigate"
                     />
                     <button type="submit">Search</button>
@@ -1358,11 +1648,11 @@ const UserInvestigationTab = ({
             </section>
             <div className="scd-glass-metric-grid scd-glass-metric-grid-five">
                 {([
-                    ['Total Events', row['Total Events'], 'default'],
-                    ['Layers Seen', row['Layers Seen'], 'info'],
-                    ['Fail / Block Layers', row['Fail/Block Layers'], 'critical'],
-                    ['Sources', row.Sources, 'good'],
-                    ['Last Seen', row['Last Seen'], 'warning'],
+                    ['Total Events', summary.totalEvents, 'default'],
+                    [summary.secondLabel, summary.secondValue, 'info'],
+                    [summary.thirdLabel, summary.thirdValue, 'critical'],
+                    ['Sources', summary.sources, 'good'],
+                    ['Last Seen', summary.lastSeen, 'warning'],
                 ] as Array<[string, unknown, Tone]>).map(([label, value, tone]) => (
                     <div
                         key={String(label)}
@@ -1385,12 +1675,23 @@ const UserInvestigationTab = ({
                         ? `Correlated activity for ${safeUser}`
                         : 'Run a user search to populate this view.'
                 }
+                action={
+                    <SearchActions
+                        context={context}
+                        searchId="secure_networking_zta_user_activity_cross_source"
+                        transformSearch={transformSearch}
+                    />
+                }
             >
                 {!safeUser || activity.rows.length === 0 ? (
                     <EmptyState
                         loading={activity.loading && Boolean(safeUser)}
                         error={activity.error}
-                        message="No user has been selected."
+                        message={
+                            safeUser
+                                ? 'No matching identity activity returned.'
+                                : 'No user has been selected.'
+                        }
                     />
                 ) : (
                     <div className="scd-glass-layer-flow">
@@ -1413,6 +1714,13 @@ const UserInvestigationTab = ({
             <Panel
                 title="User Activity Log"
                 subtitle="Searchbase cross-source correlation results"
+                action={
+                    <SearchActions
+                        context={context}
+                        searchId="secure_networking_zta_user_activity_cross_source"
+                        transformSearch={transformSearch}
+                    />
+                }
             >
                 {activity.rows.length === 0 ? (
                     <EmptyState
@@ -1529,6 +1837,10 @@ const FilterSidebar = ({
             <header>
                 <Activity size={18} />
                 <h2>Event Log Viewer</h2>
+                <SearchActions
+                    context={context}
+                    searchId="secure_networking_fmc_blocked_connection_detail"
+                />
             </header>
             <EventLog context={context} />
         </section>
@@ -1542,11 +1854,16 @@ const SecureOperationsGlassPage = (): JSX.Element => {
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
     const [refreshToken, setRefreshToken] = useState(0);
+    const [infoRecord, setInfoRecord] = useState<SearchbaseRecord | null>(null);
     const { catalogue, error: catalogueError } = useSearchbaseCatalogueMap();
 
     const setFilter = useCallback((key: FilterKey, value: string): void => {
         setFilters((current) => ({ ...current, [key]: value }));
     }, []);
+    const showSearchInfo = useCallback(
+        (record: SearchbaseRecord): void => setInfoRecord(record),
+        []
+    );
     const clearFilter = (key: FilterKey): void =>
         setFilter(key, DEFAULT_FILTERS[key]);
     const clearFilters = (): void => setFilters(DEFAULT_FILTERS);
@@ -1560,8 +1877,9 @@ const SecureOperationsGlassPage = (): JSX.Element => {
             refreshToken,
             filters,
             theme,
+            showSearchInfo,
         }),
-        [catalogue, earliest, refreshToken, filters, theme]
+        [catalogue, earliest, refreshToken, filters, theme, showSearchInfo]
     );
 
     const renderTab = (): React.ReactNode => {
@@ -1728,6 +2046,12 @@ const SecureOperationsGlassPage = (): JSX.Element => {
             <span className="scd-glass-view-id" aria-hidden="true">
                 {titleFromPath()}
             </span>
+            {infoRecord ? (
+                <SearchInfoDialog
+                    record={infoRecord}
+                    onClose={() => setInfoRecord(null)}
+                />
+            ) : null}
         </div>
     );
 };
