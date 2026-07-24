@@ -15,6 +15,7 @@ SOURCE = REPO_ROOT / (
     "searchbase.conf"
 )
 DEFAULT_BASELINE = "9c7a684^"
+BARE_WHERE_RE = re.compile(r"\\\n[ \t]*where\b", re.IGNORECASE)
 
 # Stanzas allowed to differ outside search (metadata/related_info alignment fixes).
 ALIGNMENT_STANZAS = frozenset(
@@ -121,6 +122,9 @@ def main() -> int:
     if failed:
         print("\nMismatched stanzas:")
         for sid in failed[:50]:
+            if sid not in baseline or sid not in current:
+                print(f"  {sid}")
+                continue
             b = normalize_search(baseline[sid]["search"])
             c = normalize_search(current[sid]["search"])
             print(f"  {sid}")
