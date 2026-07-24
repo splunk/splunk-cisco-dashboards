@@ -234,16 +234,20 @@
 			}
 		},
 		"viz_zta_failure_reasons": {
-			"type": "splunk.table",
-			"title": "Failure Reasons by Site",
+			"type": "splunk.bar",
+			"title": "Top Authentication Failure Reasons",
 			"dataSources": {
 				"primary": "ds_zta_failure_reasons"
 			},
 			"options": {
 				"backgroundColor": "#ffffff",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
+				"legendDisplay": "off",
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"seriesColors": [
+					"#dc2626"
+				]
 			}
 		},
 		"viz_zta_user_cross_source": {
@@ -316,7 +320,7 @@
 			"name": "Secure Networking chain - ZTA failure reasons by site",
 			"options": {
 				"extend": "ds_base_zta_ise_auth",
-				"query": "| search outcome=\"Failure\"\n| stats count as Failures, dc(identity) as Users, dc(endpoint) as Endpoints, latest(_time) as last_seen by site, NetworkDeviceName, failure_reason\n| eval \"Last Seen\"=strftime(last_seen,\"%Y-%m-%d %H:%M:%S\")\n| rename site as \"Site\", NetworkDeviceName as \"Network Device\", failure_reason as \"Failure Reason\"\n| table \"Site\", \"Network Device\", \"Failure Reason\", Failures, Users, Endpoints, \"Last Seen\"\n| sort - Failures"
+				"query": "| search outcome=\"Failure\"\n| stats count as Failures by site, failure_reason\n| rename site as \"Site\", failure_reason as \"Failure Reason\"\n| eval \"Site / Failure Reason\"='Site'.\" / \".'Failure Reason'\n| sort - Failures\n| head 15\n| table \"Site / Failure Reason\", Failures"
 			},
 			"type": "ds.chain"
 		},
@@ -356,7 +360,7 @@
 		"ds_zta_user_cross_source": {
 			"name": "Secure Networking - ZTA User Activity Cross-Source Correlation",
 			"options": {
-				"query": "(`index_identity` sourcetype=\"cisco:ise:syslog\" (log_type=\"Passed-Authentication\" OR log_type=\"Failed-Attempt\" OR log_type=\"Authentication\") UserName!=\"\") OR (`index_security` sourcetype=\"cisco:cloud_security:ztnaflow\" identity!=\"\") OR (`index_firewall` sourcetype=\"cisco:ftd:syslog\" User!=\"\" User!=\"N/A\")\n| eval identity=coalesce(UserName,identity,User,\"Unknown\"), source_layer=case(sourcetype=\"cisco:ise:syslog\",\"ISE/NAC\",sourcetype=\"cisco:cloud_security:ztnaflow\",\"ZTNA\",sourcetype=\"cisco:ftd:syslog\",\"FMC Firewall\",1=1,\"Unknown\"), event_result=case(sourcetype=\"cisco:ise:syslog\" AND (log_type=\"Failed-Attempt\" OR AuthenticationStatus=\"Fail\"),\"Fail\",sourcetype=\"cisco:ise:syslog\",\"Pass\",sourcetype=\"cisco:cloud_security:ztnaflow\",coalesce(action,\"Allow\"),sourcetype=\"cisco:ftd:syslog\",coalesce(AC_RuleAction,\"Allow\"),1=1,\"Unknown\")\n| stats count as event_count, dc(source_layer) as layers_seen, values(source_layer) as sources, dc(eval(if(event_result=\"Fail\" OR event_result=\"Block\" OR event_result=\"Block with reset\",source_layer,null()))) as fail_layers, latest(_time) as last_seen by identity\n| eval \"Sources\"=mvjoin(sources,\", \"), \"Last Seen\"=strftime(last_seen,\"%Y-%m-%d %H:%M:%S\")\n| sort - event_count\n| head 25\n| rename identity as \"Identity\", event_count as \"Total Events\", layers_seen as \"Layers Seen\", fail_layers as \"Fail/Block Layers\"\n| table \"Identity\", \"Total Events\", \"Layers Seen\", \"Fail/Block Layers\", \"Sources\", \"Last Seen\"",
+				"query": "(`index_identity` sourcetype=\"cisco:ise:syslog\" (log_type=\"Passed_Authentications\" OR log_type=\"Failed_Attempts\") UserName!=\"\") OR (`index_security` sourcetype=\"cisco:cloud_security:ztnaflow\" user!=\"\") OR (`index_firewall` sourcetype=\"cisco:ftd:syslog\" SourceSecurityGroup!=\"\")\n| eval identity=coalesce(UserName,user,\"Unknown\"), source_layer=case(sourcetype=\"cisco:ise:syslog\",\"ISE/NAC\",sourcetype=\"cisco:cloud_security:ztnaflow\",\"ZTNA\",sourcetype=\"cisco:ftd:syslog\",\"FMC Firewall\",1=1,\"Unknown\"), event_result=case(sourcetype=\"cisco:ise:syslog\" AND (log_type=\"Failed_Attempts\" OR action=\"failure\"),\"Fail\",sourcetype=\"cisco:ise:syslog\",\"Pass\",sourcetype=\"cisco:cloud_security:ztnaflow\",coalesce(connection_status,\"Allow\"),sourcetype=\"cisco:ftd:syslog\",coalesce(AC_RuleAction,\"Allow\"),1=1,\"Unknown\")\n| stats count as event_count, dc(source_layer) as layers_seen, values(source_layer) as sources, dc(eval(if(event_result=\"Fail\" OR event_result=\"Block\" OR event_result=\"Block with reset\",source_layer,null()))) as fail_layers, latest(_time) as last_seen by identity\n| eval \"Sources\"=mvjoin(sources,\", \"), \"Last Seen\"=strftime(last_seen,\"%Y-%m-%d %H:%M:%S\")\n| sort - event_count\n| head 25\n| rename identity as \"Identity\", event_count as \"Total Events\", layers_seen as \"Layers Seen\", fail_layers as \"Fail/Block Layers\"\n| table \"Identity\", \"Total Events\", \"Layers Seen\", \"Fail/Block Layers\", \"Sources\", \"Last Seen\"",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"

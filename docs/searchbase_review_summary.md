@@ -4,17 +4,17 @@ Generated on 2026-07-23 from `packages/splunk-cisco-dashboards/src/main/resource
 
 | Measure | Count |
 |---|---:|
-| Searches processed | 913 |
+| Searches processed | 918 |
 | SPL searches changed | 5 |
 | Metadata stanzas changed | 12 |
 | Data Model tstats searches | 303 |
 | Other tstats searches | 22 |
-| Raw searches retained for parity validation | 572 |
+| Raw searches retained for parity validation | 577 |
 | Non-event-source searches | 16 |
-| Secure Networking sub-categories preserved | 167 |
+| Secure Networking sub-categories preserved | 172 |
 | Origin tags removed or renamed | 0 |
 | Proposed tag additions, not applied | 153 |
-| Remaining static review notes | 481 |
+| Remaining static review notes | 486 |
 
 The complete per-search original/optimized SPL, metadata, rationale, classification review, tag proposals, and residual findings are in `docs/searchbase_review_report.json`.
 

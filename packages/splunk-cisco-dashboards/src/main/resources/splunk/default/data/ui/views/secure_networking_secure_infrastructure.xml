@@ -185,29 +185,39 @@
 			}
 		},
 		"viz_infra_software_versions": {
-			"type": "splunk.table",
+			"type": "splunk.bar",
 			"title": "Software Version Mix",
 			"dataSources": {
 				"primary": "ds_infra_software_versions"
 			},
 			"options": {
 				"backgroundColor": "#ffffff",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
+				"legendDisplay": "off",
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"seriesColors": [
+					"#0ea5e9"
+				]
 			}
 		},
 		"viz_infra_rogue_containment": {
-			"type": "splunk.table",
+			"type": "splunk.column",
 			"title": "Rogue AP Containment",
 			"dataSources": {
 				"primary": "ds_infra_rogue_containment"
 			},
 			"options": {
 				"backgroundColor": "#ffffff",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
+				"legendDisplay": "right",
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"seriesColors": [
+					"#16a34a",
+					"#dc2626"
+				],
+				"stackMode": "stacked"
 			}
 		}
 	},
@@ -237,7 +247,7 @@
 		"ds_infra_software_versions": {
 			"name": "Secure Networking - Catalyst Center Software Version Inventory",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:catalyst:center:inventory:report\"\n| dedup \"Serial No.\"\n| stats count as \"Device Count\" by \"Device Family\", \"Software Version\"\n| rename \"Device Family\" as \"Device Family\", \"Software Version\" as \"Software Version\"\n| sort - \"Device Count\"",
+				"query": "`index_catalyst` sourcetype=\"cisco:catalyst:center:inventory:report\"\n| dedup \"Serial No.\"\n| stats count as \"Device Count\" by \"Device Family\", \"Software Version\"\n| eval \"Family / Version\"='Device Family'.\" / \".'Software Version'\n| sort - \"Device Count\"\n| head 20\n| table \"Family / Version\", \"Device Count\"",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -344,7 +354,7 @@
 			"name": "Secure Networking chain - rogue containment",
 			"options": {
 				"extend": "ds_base_infra_airmarshal",
-				"query": "| stats dc(eval(if(contained=\"true\",bssid,null()))) as Contained, dc(eval(if(contained!=\"true\",bssid,null()))) as Uncontained, dc(bssid) as \"Total Rogues\" by ssid\n| sort - \"Total Rogues\"\n| head 20\n| rename ssid as \"SSID\"\n| table SSID \"Total Rogues\" Contained Uncontained"
+				"query": "| stats dc(eval(if(contained=\"true\",bssid,null()))) as Contained, dc(eval(if(contained!=\"true\",bssid,null()))) as Uncontained, dc(bssid) as total_rogues by ssid\n| sort - total_rogues\n| head 20\n| rename ssid as \"SSID\"\n| table SSID Contained Uncontained"
 			},
 			"type": "ds.chain"
 		}

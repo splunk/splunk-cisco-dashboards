@@ -146,29 +146,37 @@
 			}
 		},
 		"viz_seg_policy_hits": {
-			"type": "splunk.table",
+			"type": "splunk.bar",
 			"title": "ISE Policy Hits by Network Device",
 			"dataSources": {
 				"primary": "ds_seg_policy_hits"
 			},
 			"options": {
 				"backgroundColor": "#ffffff",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
+				"legendDisplay": "off",
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"seriesColors": [
+					"#7c3aed"
+				]
 			}
 		},
 		"viz_seg_trustsec_readiness": {
-			"type": "splunk.table",
+			"type": "splunk.bar",
 			"title": "TrustSec Hardware Readiness",
 			"dataSources": {
 				"primary": "ds_seg_trustsec_readiness"
 			},
 			"options": {
 				"backgroundColor": "#ffffff",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
+				"legendDisplay": "off",
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"seriesColors": [
+					"#14b8a6"
+				]
 			}
 		},
 		"viz_seg_excessive_mac": {
@@ -245,7 +253,7 @@
 		"ds_seg_policy_hits": {
 			"name": "Secure Networking - ISE Policy Hits by Network Device",
 			"options": {
-				"query": "`index_identity` sourcetype=\"cisco:ise:syslog\" MESSAGE_CODE IN (5200,5201,5206,5232,5233,5236) ISEPolicySetName=* NetworkDeviceName=*\n| stats count as \"Policy Hits\" by ISEPolicySetName, NetworkDeviceName\n| rename ISEPolicySetName as \"Policy Set\", NetworkDeviceName as \"Network Device\"\n| sort - \"Policy Hits\"",
+				"query": "`index_identity` sourcetype=\"cisco:ise:syslog\" MESSAGE_CODE IN (5200,5201,5206,5232,5233,5236) ISEPolicySetName=* NetworkDeviceName=*\n| stats count as \"Policy Hits\" by ISEPolicySetName, NetworkDeviceName\n| eval \"Policy / Device\"=ISEPolicySetName.\" / \".NetworkDeviceName\n| sort - \"Policy Hits\"\n| head 20\n| table \"Policy / Device\", \"Policy Hits\"",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -267,7 +275,7 @@
 		"ds_seg_trustsec_readiness": {
 			"name": "Secure Networking - TrustSec Hardware Readiness",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:catalyst:center:inventory:report\"\n| dedup \"Serial No.\"\n| stats count as \"Device Count\" by \"Device Family\", \"Device Type\"\n| sort - \"Device Count\"",
+				"query": "`index_catalyst` sourcetype=\"cisco:catalyst:center:inventory:report\"\n| dedup \"Serial No.\"\n| stats count as \"Device Count\" by \"Device Family\", \"Device Type\"\n| eval \"Family / Type\"='Device Family'.\" / \".'Device Type'\n| sort - \"Device Count\"\n| head 20\n| table \"Family / Type\", \"Device Count\"",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"

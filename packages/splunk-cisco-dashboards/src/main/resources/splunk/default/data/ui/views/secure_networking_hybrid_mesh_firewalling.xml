@@ -213,16 +213,21 @@
 			}
 		},
 		"viz_hmf_fmc_top_rules": {
-			"type": "splunk.table",
-			"title": "Top FMC Access Rules",
+			"type": "splunk.bar",
+			"title": "Top FMC Access Rule Hits",
 			"dataSources": {
 				"primary": "ds_hmf_fmc_top_rules"
 			},
 			"options": {
 				"backgroundColor": "#ffffff",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
+				"legendDisplay": "right",
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"seriesColors": [
+					"#f59e0b",
+					"#0ea5e9"
+				]
 			}
 		},
 		"viz_hmf_dlp_findings": {
@@ -359,7 +364,7 @@
 			"name": "Secure Networking chain - FMC top rules",
 			"options": {
 				"extend": "ds_base_hmf_fmc",
-				"query": "| search FirewallRule!=\"\" FirewallRule!=\"N/A\"\n| stats count as \"Hit Count\", dc(src_ip) as \"Unique Sources\", values(AC_RuleAction) as actions by FirewallRule\n| eval Actions=mvjoin(actions, \", \")\n| sort - \"Hit Count\"\n| head 20\n| rename FirewallRule as \"Firewall Rule\"\n| table \"Firewall Rule\", \"Hit Count\", \"Unique Sources\", Actions"
+				"query": "| search FirewallRule!=\"\" FirewallRule!=\"N/A\"\n| stats count as \"Hit Count\", dc(src_ip) as \"Unique Sources\" by FirewallRule\n| sort - \"Hit Count\"\n| head 20\n| rename FirewallRule as \"Firewall Rule\"\n| table \"Firewall Rule\", \"Hit Count\", \"Unique Sources\""
 			},
 			"type": "ds.chain"
 		}

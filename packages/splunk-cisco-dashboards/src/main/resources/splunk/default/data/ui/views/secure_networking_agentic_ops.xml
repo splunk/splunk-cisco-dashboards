@@ -231,29 +231,39 @@
 			}
 		},
 		"viz_agentic_test_health": {
-			"type": "splunk.table",
-			"title": "ThousandEyes Test Health",
+			"type": "splunk.column",
+			"title": "Healthy vs Degraded Tests",
 			"dataSources": {
 				"primary": "ds_agentic_test_health"
 			},
 			"options": {
 				"backgroundColor": "#ffffff",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
+				"legendDisplay": "right",
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"seriesColors": [
+					"#16a34a",
+					"#dc2626"
+				]
 			}
 		},
 		"viz_agentic_http_availability": {
-			"type": "splunk.table",
+			"type": "splunk.bar",
 			"title": "HTTP Availability by Test",
 			"dataSources": {
 				"primary": "ds_agentic_http_availability"
 			},
 			"options": {
 				"backgroundColor": "#ffffff",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
+				"legendDisplay": "right",
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"seriesColors": [
+					"#16a34a",
+					"#f59e0b"
+				]
 			}
 		},
 		"viz_agentic_web_errors": {
@@ -335,7 +345,7 @@
 			"name": "Secure Networking chain - ThousandEyes test health",
 			"options": {
 				"extend": "ds_base_agentic_te",
-				"query": "| eval degraded=case(metric_name=\"network.loss\" AND value>5,1, metric_name=\"http.server.request.availability\" AND value<95,1, 1==1,0)\n| stats dc(test_name) as total_tests, dc(eval(if(degraded=1,test_name,null()))) as degraded_tests\n| eval healthy_tests=total_tests-degraded_tests\n| eval label=\"ThousandEyes Test Health\"\n| fields label total_tests healthy_tests degraded_tests"
+				"query": "| eval degraded=case(metric_name=\"network.loss\" AND value>5,1, metric_name=\"http.server.request.availability\" AND value<95,1, 1==1,0)\n| stats dc(test_name) as total_tests, dc(eval(if(degraded=1,test_name,null()))) as degraded_tests\n| eval healthy_tests=total_tests-degraded_tests\n| eval label=\"ThousandEyes Test Health\"\n| fields label healthy_tests degraded_tests"
 			},
 			"type": "ds.chain"
 		},
@@ -383,7 +393,7 @@
 			"name": "Secure Networking chain - ThousandEyes HTTP availability",
 			"options": {
 				"extend": "ds_base_agentic_te",
-				"query": "| search metric_name=\"http.server.request.availability\"\n| stats avg(value) as avg_availability, min(value) as min_availability, dc(agent) as agent_count, count as sample_count by test_name\n| eval avg_availability=round(avg_availability,2), min_availability=round(min_availability,2)\n| eval Status=case(avg_availability>=99,\"Healthy\",avg_availability>=95,\"Monitor\",1==1,\"Critical\")\n| sort avg_availability\n| rename test_name as \"Test Name\", avg_availability as \"Avg Availability %\", min_availability as \"Min Availability %\", agent_count as \"Agents\", sample_count as \"Samples\"\n| table \"Test Name\", \"Avg Availability %\", \"Min Availability %\", Status, Agents, Samples"
+				"query": "| search metric_name=\"http.server.request.availability\"\n| stats avg(value) as avg_availability, min(value) as min_availability by test_name\n| eval avg_availability=round(avg_availability,2), min_availability=round(min_availability,2)\n| sort avg_availability\n| head 15\n| rename test_name as \"Test Name\", avg_availability as \"Avg Availability %\", min_availability as \"Min Availability %\"\n| table \"Test Name\", \"Avg Availability %\", \"Min Availability %\""
 			},
 			"type": "ds.chain"
 		}
