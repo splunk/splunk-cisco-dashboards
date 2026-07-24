@@ -11,6 +11,7 @@
         "link:app": "node bin/build.js link",
         "unlink:app": "node bin/build.js unlink",
         "start": "webpack --watch",
+        "test:catalogue-search": "node test/catalogueSearch.test.cjs",
         "typecheck": "tsc --noEmit",
         "eslint": "eslint src --ext \".js,.jsx,.ts,.tsx\"",
         "eslint:fix": "eslint src --ext \".js,.jsx,.ts,.tsx\" --fix",

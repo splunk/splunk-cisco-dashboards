@@ -110,6 +110,7 @@ import {
     plainTextFromHtml,
     type SearchbaseRecord,
 } from '@/common/services/searchbaseCatalogue';
+import { recordMatchesCatalogueQuery } from './catalogueSearch';
 
 const APP_NAME = 'splunk-cisco-dashboards';
 const STORAGE_KEY = 'scd_searchbase_canvas_v1';
@@ -2810,55 +2811,6 @@ const recordMatchesBrowserVisibility = (
     return true;
 };
 
-const normalizeCatalogueQueryText = (value: string): string =>
-    value
-        .toLowerCase()
-        .replace(/\s*=\s*/g, '=')
-        .replace(/\s+/g, ' ')
-        .trim();
-
-const compactCatalogueQueryText = (value: string): string =>
-    normalizeCatalogueQueryText(value).replace(/\s+/g, '');
-
-const recordCatalogueText = (record: SearchbaseRecord): string =>
-    [
-        record.id,
-        record.searchName,
-        record.category,
-        record.subCategory,
-        recordOwnerApp(record),
-        record.dispatchContext,
-        record.tags.join(' '),
-        plainTextFromHtml(record.description),
-        plainTextFromHtml(record.explanation),
-        plainTextFromHtml(record.solution),
-        plainTextFromHtml(record.relatedInfo),
-        record.search,
-        record.drilldownSearchName,
-        record.drilldownButtonTitle,
-        record.defaultViz,
-        record.vizOptions ? JSON.stringify(record.vizOptions) : '',
-    ]
-        .filter(Boolean)
-        .join(' ');
-
-const recordMatchesCatalogueQuery = (
-    record: SearchbaseRecord,
-    rawQuery: string
-): boolean => {
-    const normalizedQuery = normalizeCatalogueQueryText(rawQuery);
-    if (!normalizedQuery) return true;
-
-    const normalizedHaystack = normalizeCatalogueQueryText(recordCatalogueText(record));
-    if (normalizedHaystack.includes(normalizedQuery)) return true;
-
-    const compactQuery = compactCatalogueQueryText(rawQuery);
-    return (
-        compactQuery.length > 0 &&
-        compactCatalogueQueryText(recordCatalogueText(record)).includes(compactQuery)
-    );
-};
-
 interface SearchableFilterSelectProps {
     value: string;
     options: string[];
@@ -3537,7 +3489,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
 
     const filteredRecords = useMemo(() => {
         return tagScopedRecords.filter((record) =>
-            recordMatchesCatalogueQuery(record, query)
+            recordMatchesCatalogueQuery(record, query, plainTextFromHtml)
         );
     }, [query, tagScopedRecords]);
     const availableSearchCount = filteredRecords.length;
@@ -3683,7 +3635,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                     <input
                         value={query}
                         onChange={(event) => setQuery(event.target.value)}
-                        placeholder="Filter by stanza, name, SPL, description, or tag..."
+                        placeholder="Filter by stanza, name, SPL, or description..."
                         className="h-11 w-full rounded-md border border-slate-300 bg-white pl-10 pr-3 text-sm font-medium text-slate-900 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
                     />
                 </label>
