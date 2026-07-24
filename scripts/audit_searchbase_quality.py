@@ -82,6 +82,8 @@ _KV_RE = re.compile(r"^([A-Za-z_][\w.]*)\s*=\s*(.*)$")
 _MACRO_RE = re.compile(r"`([A-Za-z_][\w-]*)(?:\([^`]*\))?`")
 _SAVEDSEARCH_RE = re.compile(r"\|\s*savedsearch\s+\"([^\"]+)\"", re.I)
 _CISCO_TAG = "Cisco"
+_INVALID_FMC_SYSLOG = "cisco:" + "fmc:syslog"
+_REQUIRED_DISPATCH_CONTEXT = "splunk-cisco-dashboards"
 _TIMECHART_AGG_RE = re.compile(
     r"\b(?:"
     r"count|c|dc|distinct_count|estdc|sum|avg|mean|min|max|median|mode|"
@@ -172,6 +174,7 @@ def audit_conf_keys(conf_path: Path, spec_path: Path) -> list[Finding]:
     findings: list[Finding] = []
     current_stanza = ""
     current_search_name = ""
+    continuing = False
 
     with conf_path.open("r", encoding="utf-8") as fh:
         for lineno, raw in enumerate(fh, 1):
@@ -181,8 +184,12 @@ def audit_conf_keys(conf_path: Path, spec_path: Path) -> list[Finding]:
             if header:
                 current_stanza = header.group(1)
                 current_search_name = current_stanza
+                continuing = False
                 continue
             if not current_stanza or not stripped or stripped.startswith("#"):
+                continue
+            if continuing:
+                continuing = line.rstrip().endswith("\\")
                 continue
             match = _KV_RE.match(line)
             if not match:
@@ -190,6 +197,7 @@ def audit_conf_keys(conf_path: Path, spec_path: Path) -> list[Finding]:
             key = match.group(1)
             if key == "search_name":
                 current_search_name = match.group(2).strip() or current_stanza
+            continuing = line.rstrip().endswith("\\")
             if key not in allowed:
                 findings.append(
                     Finding(
@@ -457,10 +465,36 @@ def audit_stanza(
     include_style: bool = False,
 ) -> list[Finding]:
     findings: list[Finding] = []
+    dispatch_context = stanza.fields.get("dispatch_context", "").strip()
+    if dispatch_context != _REQUIRED_DISPATCH_CONTEXT:
+        add_finding(
+            findings,
+            stanza,
+            "invalid_dispatch_context",
+            f"Every search must set dispatch_context = {_REQUIRED_DISPATCH_CONTEXT}.",
+            "error",
+        )
+    if stanza.fields.get("dispatch_context_force", "").strip() != "1":
+        add_finding(
+            findings,
+            stanza,
+            "invalid_dispatch_context_force",
+            "Every search must set dispatch_context_force = 1.",
+            "error",
+        )
     spl = stanza.search.strip()
     if not spl:
         add_finding(findings, stanza, "missing_search", "No search field.", "error")
         return findings
+
+    if any(_INVALID_FMC_SYSLOG in value.lower() for value in stanza.fields.values()):
+        add_finding(
+            findings,
+            stanza,
+            "invalid_fmc_syslog_sourcetype",
+            "Use sourcetype='cisco:ftd:syslog'; the FMC-named syslog sourcetype is not a valid source contract.",
+            "error",
+        )
 
     lower = spl.lower()
     cisco_tagged = has_cisco_tag(stanza)

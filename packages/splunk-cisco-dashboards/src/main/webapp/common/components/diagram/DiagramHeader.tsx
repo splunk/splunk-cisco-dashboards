@@ -46,6 +46,7 @@ import {
     X,
     AlertTriangle,
     RefreshCw,
+    type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/common/lib/utils';
 // Build 115.11 — alias the helper so it doesn't collide with the
@@ -912,7 +913,7 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
 };
 
 interface HeaderButtonProps {
-    icon: React.ComponentType<{ className?: string; 'aria-hidden'?: boolean }>;
+    icon: LucideIcon;
     label: string;
     onClick: () => void;
     disabled?: boolean;

@@ -43,6 +43,14 @@ yarn package:app
 
 The packaged Splunk app tarball is written to `dist/`.
 
+For a smaller, minified release package (slower to build):
+
+```bash
+./build.sh --minify
+```
+
+Minification is opt-in and does not affect the fast `yarn start` watch workflow.
+
 ## Usage
 
 For local development, run the app package webpack watcher:
@@ -62,6 +70,7 @@ The actual Splunk app source, dashboards, and packaging scripts live in
 
 ## License
 
-This repository is maintained by the Splunk Field Solutions team. Use and
-distribution are governed by the applicable Splunk project and customer
-engagement terms.
+Copyright 2026 Splunk Inc.
+
+Licensed under the [Apache License, Version 2.0](LICENSE). See
+[NOTICE](NOTICE) for attribution information.

@@ -36,6 +36,13 @@ interface HeightControlConfig {
     label?: string;
 }
 
+interface HeaderActionConfig {
+    onClick: () => void;
+    label: string;
+    title?: string;
+    disabled?: boolean;
+}
+
 interface DashboardSectionProps {
     title: string;
     linkText: string;
@@ -46,6 +53,7 @@ interface DashboardSectionProps {
      * the link is non-interactive.
      */
     href?: string;
+    icon?: React.ReactNode;
     children: React.ReactNode;
     className?: string;
     style?: React.CSSProperties;
@@ -64,6 +72,8 @@ interface DashboardSectionProps {
     height?: HeightControlConfig;
     /** True when a dense tile section should flow into multiple rows. */
     wrapTiles?: boolean;
+    /** Optional section-level action rendered as a compact icon button. */
+    addTileAction?: HeaderActionConfig;
     onEditTitle?: () => void;
 }
 
@@ -206,12 +216,14 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
     title,
     linkText,
     href,
+    icon,
     children,
     className,
     style,
     tileCount,
     height,
     wrapTiles = false,
+    addTileAction,
     onEditTitle,
 }) => {
     // Build 101 (2026-05-13): the drill-down link moved from a
@@ -235,6 +247,24 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
     // The `linkText` prop is repurposed as the hover/title tooltip
     // ("Open IT health (new tab)") so existing callers don't need
     // to change their contract.
+    const labelNode = (
+        <>
+            {icon && (
+                <span
+                    className={cn(
+                        'inline-flex h-5 w-5 items-center justify-center rounded-md',
+                        'bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-200',
+                        'border border-sky-100 dark:border-sky-900/70'
+                    )}
+                    aria-hidden="true"
+                >
+                    {icon}
+                </span>
+            )}
+            <h3 className="leading-none">{title}</h3>
+        </>
+    );
+
     const titleNode = href ? (
         <a
             href={href}
@@ -250,7 +280,7 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
                 'text-sky-950 hover:text-sky-700 dark:text-sky-100 dark:hover:text-sky-300'
             )}
         >
-            <h3 className="leading-none">{title}</h3>
+            {labelNode}
             {/* Affordance group: chevron nudges right on hover, an
                 ArrowUpRight fades in to telegraph "opens new tab".
                 Same animation language the old footer link used so
@@ -268,9 +298,9 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
             />
         </a>
     ) : (
-        <h3 className="text-[14px] font-black text-sky-950 dark:text-sky-100 uppercase tracking-tight leading-none">
-            {title}
-        </h3>
+        <div className="inline-flex items-center gap-1.5 text-[14px] font-black text-sky-950 dark:text-sky-100 uppercase tracking-tight leading-none">
+            {labelNode}
+        </div>
     );
 
     return (
@@ -300,6 +330,29 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
             <div className="flex items-center justify-between gap-2 mb-1.5">
                 {titleNode}
                 <div className="flex items-center gap-1.5">
+                    {addTileAction && (
+                        <button
+                            type="button"
+                            onClick={addTileAction.onClick}
+                            disabled={addTileAction.disabled}
+                            title={addTileAction.title ?? addTileAction.label}
+                            aria-label={addTileAction.label}
+                            className={cn(
+                                'flex items-center justify-center w-6 h-6 rounded-md',
+                                'transition focus:outline-none focus-visible:ring-1 focus-visible:ring-sky-400',
+                                addTileAction.disabled
+                                    ? 'cursor-not-allowed text-slate-300 dark:text-slate-700'
+                                    : [
+                                          'border border-sky-100 dark:border-sky-900/70',
+                                          'bg-sky-50/80 dark:bg-sky-950/50',
+                                          'text-sky-700 dark:text-sky-200',
+                                          'hover:bg-sky-100 dark:hover:bg-sky-900/70',
+                                      ]
+                            )}
+                        >
+                            <Plus className="w-3.5 h-3.5" />
+                        </button>
+                    )}
                     {onEditTitle && (
                         <button
                             type="button"

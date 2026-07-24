@@ -85,10 +85,10 @@ const STATUS_DOT_CLASS = {
 };
 
 const STATUS_BG_CLASS = {
-    healthy: 'bg-white/94 hover:bg-white dark:bg-emerald-950/55 dark:hover:bg-emerald-950/70',
-    warning: 'bg-amber-50/95 hover:bg-amber-50 dark:bg-amber-950/55 dark:hover:bg-amber-950/70',
+    healthy: 'bg-white/[0.94] hover:bg-white dark:bg-emerald-950/[0.55] dark:hover:bg-emerald-950/70',
+    warning: 'bg-amber-50/95 hover:bg-amber-50 dark:bg-amber-950/[0.55] dark:hover:bg-amber-950/70',
     critical: 'bg-red-50/95 hover:bg-red-50 dark:bg-red-950/60 dark:hover:bg-red-950/75',
-    unknown: 'bg-white/92 hover:bg-white dark:bg-slate-900/95 dark:hover:bg-slate-900',
+    unknown: 'bg-white/[0.92] hover:bg-white dark:bg-slate-900/95 dark:hover:bg-slate-900',
 };
 
 const STATUS_TEXT_CLASS = {
@@ -99,9 +99,9 @@ const STATUS_TEXT_CLASS = {
 };
 
 const STATUS_PILL_CLASS = {
-    healthy: 'bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-200',
-    warning: 'bg-amber-500/12 text-amber-700 dark:bg-amber-400/15 dark:text-amber-200',
-    critical: 'bg-red-500/12 text-red-700 dark:bg-red-400/15 dark:text-red-200',
+    healthy: 'bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/[0.15] dark:text-emerald-200',
+    warning: 'bg-amber-500/[0.12] text-amber-700 dark:bg-amber-400/[0.15] dark:text-amber-200',
+    critical: 'bg-red-500/[0.12] text-red-700 dark:bg-red-400/[0.15] dark:text-red-200',
     unknown: 'bg-slate-500/10 text-slate-500 dark:bg-slate-400/10 dark:text-slate-300',
 };
 
@@ -941,7 +941,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
 
     return (
         <div
-            className="fixed inset-0 z-[1800] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm"
+            className="fixed inset-0 z-[1800] flex items-center justify-center bg-slate-950/[0.55] p-4 backdrop-blur-sm"
             role="dialog"
             aria-modal="true"
             aria-label="Signal rail editor"

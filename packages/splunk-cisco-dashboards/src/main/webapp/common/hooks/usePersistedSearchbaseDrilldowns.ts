@@ -8,6 +8,11 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import {
+    DEFAULT_OVERVIEW_PROFILE_ID,
+    profileStorageKey,
+    type OverviewProfileId,
+} from '@/common/config/overviewProfiles';
 
 const STORAGE_KEY = 'splunk-cisco-dashboards.searchbaseDrilldowns.v1';
 const STORAGE_VERSION = 1;
@@ -25,10 +30,13 @@ const isValidSearchName = (value: unknown): value is string =>
     value.trim().length <= 256 &&
     !/[\x00-\x1F\x7F]/.test(value);
 
-const readFromStorage = (): SearchbaseDrilldownMap => {
+const storageKeyForProfile = (profileId?: OverviewProfileId): string =>
+    profileStorageKey(STORAGE_KEY, profileId ?? DEFAULT_OVERVIEW_PROFILE_ID);
+
+const readFromStorage = (storageKey: string): SearchbaseDrilldownMap => {
     if (typeof window === 'undefined' || !window.localStorage) return {};
     try {
-        const raw = window.localStorage.getItem(STORAGE_KEY);
+        const raw = window.localStorage.getItem(storageKey);
         if (!raw) return {};
         const parsed = JSON.parse(raw) as Partial<PersistedShape>;
         if (!parsed || parsed.v !== STORAGE_VERSION || !parsed.drilldowns) {
@@ -47,23 +55,29 @@ const readFromStorage = (): SearchbaseDrilldownMap => {
     }
 };
 
-const writeToStorage = (drilldowns: SearchbaseDrilldownMap): void => {
+const writeToStorage = (
+    storageKey: string,
+    drilldowns: SearchbaseDrilldownMap
+): void => {
     if (typeof window === 'undefined' || !window.localStorage) return;
     try {
         const payload: PersistedShape = { v: STORAGE_VERSION, drilldowns };
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+        window.localStorage.setItem(storageKey, JSON.stringify(payload));
     } catch {
         // Ignore quota / privacy-mode failures; the in-memory state still works.
     }
 };
 
-export const usePersistedSearchbaseDrilldowns = () => {
+export const usePersistedSearchbaseDrilldowns = (
+    profileId: OverviewProfileId = DEFAULT_OVERVIEW_PROFILE_ID
+) => {
+    const storageKey = storageKeyForProfile(profileId);
     const [drilldowns, setDrilldowns] =
-        useState<SearchbaseDrilldownMap>(() => readFromStorage());
+        useState<SearchbaseDrilldownMap>(() => readFromStorage(storageKey));
 
     useEffect(() => {
-        writeToStorage(drilldowns);
-    }, [drilldowns]);
+        writeToStorage(storageKey, drilldowns);
+    }, [drilldowns, storageKey]);
 
     const setDrilldown = useCallback(
         (sourceSearchName: string, drilldownSearchName: string | null) => {

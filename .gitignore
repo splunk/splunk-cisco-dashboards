@@ -105,3 +105,12 @@ packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase_fd
 # Standalone FDEM prototype (never built/shipped) - kept locally, not tracked
 reference_design/splunk-executive-florida-dashboard/
 reference_design/splunk-executive-florida-dashboard.zip
+# /docs/Secure_Networking
+docs/Secure_Networking/Splunk and SN Personas and Pillars.pptx
+docs/Secure_Networking/GSX Accelerator Secure Networking App and TA remediation.pdf
+docs/Secure_Networking/Novo Nordisk - Customer Video - GSX.pdf
+docs/Secure_Networking/SN Splunk Use Case mapping.xlsx
+docs/Secure_Networking/SN_Pillar_Deep_Dive_v1.csv
+docs/Secure_Networking/SN_Pillar_Deep_Dive_v1.xlsx
+/docs/Secure_Networking/SN_TA_APP
+*.xlsx

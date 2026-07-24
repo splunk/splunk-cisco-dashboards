@@ -511,6 +511,10 @@ const TOPOLOGY_STATUS_FIELD_HELP =
     'override it after they load.';
 
 const TE_A2A_INVENTORY_ROLE = 'teA2AInventory';
+const TE_A2A_INVENTORY_STANZA_ID = 'overview_link_te_a2a_inventory';
+const TE_A2A_INVENTORY_SEARCH_NAME = 'Overview - Link ThousandEyes A2A Inventory';
+const TE_A2A_INVENTORY_MISSING_MESSAGE =
+    'Install Searchbase [overview_link_te_a2a_inventory] / "Overview - Link ThousandEyes A2A Inventory", or set viz_options.topologyMap.role="teA2AInventory" on an equivalent A2A inventory stanza.';
 const TE_A2A_MATCH_THRESHOLD = 72;
 const TE_A2A_CLOSE_MATCH_DELTA = 8;
 const TE_A2A_STOP_WORDS = new Set([
@@ -1159,6 +1163,34 @@ const findSearchbaseByTopologyMapRole = (
         (record) => searchbaseTopologyMapRole(record) === role
     ) ?? null;
 
+const searchbaseIsTeA2AInventory = (record: SearchbaseRecord): boolean => {
+    if (searchbaseTopologyMapRole(record) === TE_A2A_INVENTORY_ROLE) {
+        return true;
+    }
+    const stanzaId = record.id.trim().toLowerCase();
+    const searchName = record.searchName.trim().toLowerCase();
+    if (
+        stanzaId === TE_A2A_INVENTORY_STANZA_ID ||
+        searchName === TE_A2A_INVENTORY_SEARCH_NAME.toLowerCase()
+    ) {
+        return true;
+    }
+    const tags = new Set(record.tags.map((tag) => tag.trim().toLowerCase()));
+    return (
+        tags.has('thousandeyes') &&
+        tags.has('a2a') &&
+        tags.has('inventory') &&
+        tags.has('binding')
+    );
+};
+
+const findTeA2AInventorySearchbase = (
+    catalogueByName: Record<string, SearchbaseRecord>
+): SearchbaseRecord | null =>
+    findSearchbaseByTopologyMapRole(catalogueByName, TE_A2A_INVENTORY_ROLE) ??
+    Object.values(catalogueByName).find(searchbaseIsTeA2AInventory) ??
+    null;
+
 const textValue = (value: unknown, fallback = ''): string => {
     if (value === null || value === undefined) return fallback;
     const text = String(value).trim();
@@ -1521,20 +1553,10 @@ const selectAutoTeMatch = (
     return best;
 };
 
-const buildThousandEyesPathLink = (
-    teAccountId?: string,
-    teTestId?: string
-): string | undefined => {
+const buildThousandEyesTestLink = (teTestId?: string): string | undefined => {
     if (!teTestId) return undefined;
-    const params = [
-        `testId=${encodeURIComponent(teTestId)}`,
-        'direction=BIDIRECTIONAL',
-        'detailId=pathvis',
-        'metrics=oneWayNetLoss',
-    ];
-    if (teAccountId) params.push(`__a=${encodeURIComponent(teAccountId)}`);
-    return `https://app.thousandeyes.com/network-app-synthetics/views/?${params.join(
-        '&'
+    return `https://app.thousandeyes.com/network-app-synthetics/views/?testId=${encodeURIComponent(
+        teTestId
     )}`;
 };
 
@@ -3335,6 +3357,14 @@ const parseLinkRow = (
                 'thousandeyes.target.agent.geo.region.iso_code',
             ]) ?? base.targetRegion,
         teLink:
+            buildThousandEyesTestLink(
+                textFromRow(row, [
+                    'teTestId',
+                    'testId',
+                    'test_id',
+                    'thousandeyes.test.id',
+                ])
+            ) ??
             textFromRow(row, [
                 'teLink',
                 'te_link',
@@ -3356,7 +3386,12 @@ const parseTeA2ACandidateRow = (
     row: Record<string, unknown>
 ): ThousandEyesA2ACandidate | null => {
     const teAccountId = textFromRow(row, ['teAccountId', 'accountId']);
-    const teTestId = textFromRow(row, ['teTestId', 'testId']);
+    const teTestId = textFromRow(row, [
+        'teTestId',
+        'testId',
+        'test_id',
+        'thousandeyes.test.id',
+    ]);
     const sourceAgent = textFromRow(row, ['sourceAgent', 'sourceAgents']);
     const targetAgent = textFromRow(row, ['targetAgent', 'targetAgents']);
     const fallbackId = [teAccountId, teTestId, sourceAgent, targetAgent]
@@ -3369,8 +3404,8 @@ const parseTeA2ACandidateRow = (
     const status =
         normalizeStatus(textFromRow(row, ['status', 'linkStatus'])) ?? 'unknown';
     const teLink =
-        textFromRow(row, ['teLink', 'te_link', 'thousandeyes.permalink']) ??
-        buildThousandEyesPathLink(teAccountId, teTestId);
+        buildThousandEyesTestLink(teTestId) ??
+        textFromRow(row, ['teLink', 'te_link', 'thousandeyes.permalink']);
 
     return {
         candidateId,
@@ -3449,7 +3484,7 @@ const missingTeBindingPatch = (link: TopologyLink): Partial<TopologyLink> => {
         targetLocation: binding?.targetLocation ?? link.targetLocation,
         teLink:
             link.teLink ??
-            buildThousandEyesPathLink(binding?.teAccountId, binding?.teTestId),
+            buildThousandEyesTestLink(binding?.teTestId),
         dataState: 'error',
         dataError: 'No recent ThousandEyes A2A metric rows matched this binding',
         telemetrySource: 'ThousandEyes A2A binding awaiting recent metrics',
@@ -4866,15 +4901,10 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
 
     useEffect(() => {
         if (catalogueByName === null) return undefined;
-        const record = findSearchbaseByTopologyMapRole(
-            catalogueByName,
-            TE_A2A_INVENTORY_ROLE
-        );
+        const record = findTeA2AInventorySearchbase(catalogueByName);
         if (!record?.search?.trim()) {
             setTeA2ACandidates([]);
-            setTeA2AInventoryError(
-                'ThousandEyes A2A inventory search is not installed'
-            );
+            setTeA2AInventoryError(TE_A2A_INVENTORY_MISSING_MESSAGE);
             return undefined;
         }
 
@@ -7487,7 +7517,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
         updateLink(linkId, {
             thousandEyesA2A: teBindingFromCandidate(candidate),
             searchName: '',
-            teLink: candidate.teLink,
+            teLink: buildThousandEyesTestLink(candidate.teTestId) ?? candidate.teLink,
             telemetrySource: `ThousandEyes A2A binding: ${formatTeCandidateLabel(candidate)}`,
             dataState: 'loading',
             dataError: undefined,
@@ -8517,12 +8547,12 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                               )
                                             : '');
                                     const teLink =
+                                        buildThousandEyesTestLink(
+                                            boundTeMatch?.candidate.teTestId ??
+                                                link.thousandEyesA2A?.teTestId
+                                        ) ??
                                         boundTeMatch?.candidate.teLink ??
-                                        link.teLink ??
-                                        buildThousandEyesPathLink(
-                                            link.thousandEyesA2A?.teAccountId,
-                                            link.thousandEyesA2A?.teTestId
-                                        );
+                                        link.teLink;
                                     return (
                                     <div
                                         key={link.id}
@@ -8980,6 +9010,21 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                         Multiple close A2A matches found
                                                     </p>
                                                 )}
+                                                {!teA2AInventoryError &&
+                                                    teA2ACandidates !== null &&
+                                                    teA2ACandidates.length === 0 && (
+                                                        <p
+                                                            className={cn(
+                                                                'mt-1 text-[9px] font-semibold',
+                                                                isDark
+                                                                    ? 'text-slate-500'
+                                                                    : 'text-slate-400'
+                                                            )}
+                                                            title={`Run "${TE_A2A_INVENTORY_SEARCH_NAME}" to verify Splunk is receiving cisco:thousandeyes:metric agent-to-agent events.`}
+                                                        >
+                                                            {TE_A2A_INVENTORY_SEARCH_NAME} returned no A2A rows.
+                                                        </p>
+                                                    )}
                                             </div>
                                         </div>
                                         <div
@@ -9453,6 +9498,8 @@ const LinkDetails: React.FC<LinkDetailsProps> = ({ link, siteById, isDark }) => 
     // "no integration wired" case — Alan misread the in-flight
     // state as a removal regression on 2026-05-14.
     const isLoading = link.dataState === 'loading';
+    const thousandEyesLink =
+        buildThousandEyesTestLink(link.thousandEyesA2A?.teTestId) ?? link.teLink;
     return (
         <>
             <div className="grid grid-cols-2 gap-2">
@@ -9629,9 +9676,9 @@ const LinkDetails: React.FC<LinkDetailsProps> = ({ link, siteById, isDark }) => 
                         ? ` - ${link.dataError}`
                         : ''}
                 </p>
-                {link.teLink && (
+                {thousandEyesLink && (
                     <a
-                        href={link.teLink}
+                        href={thousandEyesLink}
                         target="_blank"
                         rel="noopener noreferrer"
                         className={cn(

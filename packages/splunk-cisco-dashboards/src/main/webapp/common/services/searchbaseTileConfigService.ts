@@ -36,6 +36,11 @@ import { createFetchInit } from '@splunk/splunk-utils/fetch';
 
 import { getSearchAppContext } from './splunkSearchService';
 import { clearSearchbaseCache } from './searchbaseCatalogue';
+import {
+    DEFAULT_OVERVIEW_PROFILE_ID,
+    isOverviewProfileId,
+    type OverviewProfileId,
+} from '@/common/config/overviewProfiles';
 
 const APP_NAME = 'splunk-cisco-dashboards';
 const CONF_BASENAME = 'searchbase';
@@ -77,6 +82,30 @@ const DEFAULT_OVERVIEW_FACTORY_STANZA_IDS = [
 ] as const;
 
 const STANZA_ID_PATTERN = /^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,255}$/;
+
+const entryProfile = (entry: Record<string, unknown>): OverviewProfileId => {
+    const raw = entry.profile;
+    return isOverviewProfileId(raw) ? raw : DEFAULT_OVERVIEW_PROFILE_ID;
+};
+
+const entryMatchesTile = (
+    entry: Record<string, unknown>,
+    tileId: string,
+    profileId: OverviewProfileId
+): boolean =>
+    entry.tileId === tileId && entryProfile(entry) === profileId;
+
+const withProfile = (
+    entry: Record<string, unknown>,
+    profileId: OverviewProfileId
+): Record<string, unknown> => {
+    if (profileId === DEFAULT_OVERVIEW_PROFILE_ID) {
+        const rest = { ...entry };
+        delete rest.profile;
+        return rest;
+    }
+    return { ...entry, profile: profileId };
+};
 
 export interface TileThresholdsPatch {
     warning?: number;
@@ -230,6 +259,7 @@ const deleteStanzaLocalOverride = async (stanza: string): Promise<void> => {
 const patchOverviewEntry = (
     vizOptions: Record<string, unknown>,
     tileId: string,
+    profileId: OverviewProfileId,
     patch: (entry: Record<string, unknown>) => Record<string, unknown>
 ): Record<string, unknown> => {
     const next: Record<string, unknown> = { ...vizOptions };
@@ -242,33 +272,40 @@ const patchOverviewEntry = (
                 entry &&
                 typeof entry === 'object' &&
                 !Array.isArray(entry) &&
-                (entry as Record<string, unknown>).tileId === tileId
+                entryMatchesTile(entry as Record<string, unknown>, tileId, profileId)
             ) {
                 matched = true;
-                return patch({ ...(entry as Record<string, unknown>) });
+                return withProfile(
+                    patch({ ...(entry as Record<string, unknown>) }),
+                    profileId
+                );
             }
             return entry;
         });
-        next.overview = matched ? nextArray : [...raw, patch({ tileId })];
+        next.overview = matched
+            ? nextArray
+            : [...raw, withProfile(patch({ tileId }), profileId)];
         return next;
     }
 
     if (raw && typeof raw === 'object') {
         const entry = raw as Record<string, unknown>;
-        next.overview = entry.tileId === tileId || entry.tileId === undefined
-            ? patch({ ...entry, tileId })
-            : entry; // Different tile than expected for a single-object stanza — leave untouched.
+        next.overview =
+            entryMatchesTile(entry, tileId, profileId) || entry.tileId === undefined
+                ? withProfile(patch({ ...entry, tileId }), profileId)
+                : [entry, withProfile(patch({ tileId }), profileId)];
         return next;
     }
 
-    next.overview = [patch({ tileId })];
+    next.overview = [withProfile(patch({ tileId }), profileId)];
     return next;
 };
 
 /** Removes any `overview` entry matching `tileId` from a stanza's viz_options. */
 const removeOverviewEntry = (
     vizOptions: Record<string, unknown>,
-    tileId: string
+    tileId: string,
+    profileId: OverviewProfileId
 ): Record<string, unknown> => {
     const next: Record<string, unknown> = { ...vizOptions };
     const raw = next.overview;
@@ -279,10 +316,18 @@ const removeOverviewEntry = (
                     entry &&
                     typeof entry === 'object' &&
                     !Array.isArray(entry) &&
-                    (entry as Record<string, unknown>).tileId === tileId
+                    entryMatchesTile(
+                        entry as Record<string, unknown>,
+                        tileId,
+                        profileId
+                    )
                 )
         );
-    } else if (raw && typeof raw === 'object' && (raw as Record<string, unknown>).tileId === tileId) {
+    } else if (
+        raw &&
+        typeof raw === 'object' &&
+        entryMatchesTile(raw as Record<string, unknown>, tileId, profileId)
+    ) {
         delete next.overview;
     }
     return next;
@@ -292,10 +337,11 @@ const removeOverviewEntry = (
 export const saveTileThresholds = async (
     stanzaId: string,
     tileId: string,
-    thresholds: TileThresholdsPatch
+    thresholds: TileThresholdsPatch,
+    profileId: OverviewProfileId = DEFAULT_OVERVIEW_PROFILE_ID
 ): Promise<void> => {
     const { vizOptions } = await loadEffectiveStanza(stanzaId);
-    const patched = patchOverviewEntry(vizOptions, tileId, (entry) => ({
+    const patched = patchOverviewEntry(vizOptions, tileId, profileId, (entry) => ({
         ...entry,
         thresholds: {
             ...(entry.thresholds && typeof entry.thresholds === 'object' ? entry.thresholds : {}),
@@ -312,10 +358,11 @@ export const saveTileThresholds = async (
 export const saveTileDataMapping = async (
     stanzaId: string,
     tileId: string,
-    mapping: TileDataMappingPatch
+    mapping: TileDataMappingPatch,
+    profileId: OverviewProfileId = DEFAULT_OVERVIEW_PROFILE_ID
 ): Promise<void> => {
     const { vizOptions } = await loadEffectiveStanza(stanzaId);
-    const patched = patchOverviewEntry(vizOptions, tileId, (entry) => ({
+    const patched = patchOverviewEntry(vizOptions, tileId, profileId, (entry) => ({
         ...entry,
         ...(mapping.label !== undefined ? { label: mapping.label } : {}),
         ...(mapping.valueField !== undefined ? { valueField: mapping.valueField } : {}),
@@ -341,12 +388,13 @@ export const saveTileSearchBinding = async (
     toStanzaId: string,
     tileId: string,
     section: string,
-    carryForward: { label?: string; valueField?: string; thresholds?: TileThresholdsPatch }
+    carryForward: { label?: string; valueField?: string; thresholds?: TileThresholdsPatch },
+    profileId: OverviewProfileId = DEFAULT_OVERVIEW_PROFILE_ID
 ): Promise<void> => {
     if (fromStanzaId === toStanzaId) return;
 
     const { vizOptions: toVizOptions } = await loadEffectiveStanza(toStanzaId);
-    const patchedTo = patchOverviewEntry(toVizOptions, tileId, (entry) => ({
+    const patchedTo = patchOverviewEntry(toVizOptions, tileId, profileId, (entry) => ({
         ...entry,
         tileId,
         section,
@@ -365,7 +413,7 @@ export const saveTileSearchBinding = async (
     clearSearchbaseCache();
 
     const { vizOptions: fromVizOptions } = await loadEffectiveStanza(fromStanzaId);
-    const patchedFrom = removeOverviewEntry(fromVizOptions, tileId);
+    const patchedFrom = removeOverviewEntry(fromVizOptions, tileId, profileId);
     await writeStanzaKeys(fromStanzaId, { viz_options: JSON.stringify(patchedFrom) });
     clearSearchbaseCache();
 };
@@ -383,6 +431,7 @@ export const saveTileDrilldown = async (
 
 export interface FactoryTileConfigPatch {
     tileId: string;
+    profileId?: OverviewProfileId;
     section: string;
     /** Current stanza id the tile is defined on (before this save). */
     fromStanzaId: string;
@@ -409,6 +458,7 @@ export interface FactoryTileConfigPatch {
  */
 export const saveFactoryTileConfig = async (patch: FactoryTileConfigPatch): Promise<void> => {
     let ownerStanzaId = patch.fromStanzaId;
+    const profileId = patch.profileId ?? DEFAULT_OVERVIEW_PROFILE_ID;
 
     if (patch.searchRebind && patch.searchRebind.toStanzaId !== patch.fromStanzaId) {
         await saveTileSearchBinding(
@@ -416,15 +466,16 @@ export const saveFactoryTileConfig = async (patch: FactoryTileConfigPatch): Prom
             patch.searchRebind.toStanzaId,
             patch.tileId,
             patch.section,
-            { label: patch.dataMapping?.label, valueField: patch.dataMapping?.valueField, thresholds: patch.thresholds }
+            { label: patch.dataMapping?.label, valueField: patch.dataMapping?.valueField, thresholds: patch.thresholds },
+            profileId
         );
         ownerStanzaId = patch.searchRebind.toStanzaId;
     } else {
         if (patch.thresholds && Object.keys(patch.thresholds).length > 0) {
-            await saveTileThresholds(ownerStanzaId, patch.tileId, patch.thresholds);
+            await saveTileThresholds(ownerStanzaId, patch.tileId, patch.thresholds, profileId);
         }
         if (patch.dataMapping && Object.keys(patch.dataMapping).length > 0) {
-            await saveTileDataMapping(ownerStanzaId, patch.tileId, patch.dataMapping);
+            await saveTileDataMapping(ownerStanzaId, patch.tileId, patch.dataMapping, profileId);
         }
     }
 
@@ -434,11 +485,16 @@ export const saveFactoryTileConfig = async (patch: FactoryTileConfigPatch): Prom
 };
 
 export const resetOverviewSearchbaseTileConfig = async (
-    currentOwnerStanzaIds: readonly (string | undefined | null)[]
+    currentOwnerStanzaIds: readonly (string | undefined | null)[],
+    profileId: OverviewProfileId = DEFAULT_OVERVIEW_PROFILE_ID
 ): Promise<void> => {
     if (!isInSplunkRuntime()) return;
 
-    const stanzaIds = new Set<string>(DEFAULT_OVERVIEW_FACTORY_STANZA_IDS);
+    const stanzaIds = new Set<string>(
+        profileId === DEFAULT_OVERVIEW_PROFILE_ID
+            ? DEFAULT_OVERVIEW_FACTORY_STANZA_IDS
+            : []
+    );
     currentOwnerStanzaIds.forEach((raw) => {
         const stanza = typeof raw === 'string' ? raw.trim() : '';
         if (!stanza || !STANZA_ID_PATTERN.test(stanza)) return;

@@ -61,6 +61,7 @@ import {
     House,
     Maximize2,
     HelpCircle,
+    type LucideIcon,
 } from 'lucide-react';
 import {
     ReactFlow,
@@ -84,6 +85,7 @@ import {
     type XYPosition,
     type Viewport,
     type OnConnectStartParams,
+    type NodeTypes,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { cn } from '@/common/lib/utils';
@@ -3724,7 +3726,7 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
             <ReactFlow
                 nodes={nodes}
                 edges={runtimeEdges}
-                nodeTypes={DIAGRAM_NODE_TYPES}
+                nodeTypes={DIAGRAM_NODE_TYPES as NodeTypes}
                 edgeTypes={DIAGRAM_EDGE_TYPES}
                 defaultEdgeOptions={DEFAULT_EDGE_OPTIONS}
                 onNodesChange={handleNodesChange}
@@ -4010,7 +4012,7 @@ const CanvasViewportControls: React.FC<{
     const controls: Array<{
         label: string;
         title: string;
-        Icon: React.ComponentType<{ className?: string; 'aria-hidden'?: boolean }>;
+        Icon: LucideIcon;
         onClick: () => void;
     }> = [
         {
@@ -4095,7 +4097,7 @@ const CanvasViewportControls: React.FC<{
 const ViewportButton: React.FC<{
     label: string;
     title: string;
-    Icon: React.ComponentType<{ className?: string; 'aria-hidden'?: boolean }>;
+    Icon: LucideIcon;
     onClick: () => void;
 }> = ({ label, title, Icon, onClick }) => (
     <button

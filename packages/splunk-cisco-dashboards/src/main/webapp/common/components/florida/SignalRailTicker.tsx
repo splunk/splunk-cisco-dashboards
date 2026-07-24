@@ -177,30 +177,41 @@ const STATUS_LABEL: Record<SignalRailStatus, string> = {
 const STATUS_COLOR = {
     healthy: {
         accent: 'bg-emerald-500',
-        border: 'border-emerald-300',
-        text: 'text-emerald-600',
-        soft: 'bg-emerald-500/10 text-emerald-700 border-emerald-400/50',
+        border: 'border-emerald-300 dark:border-emerald-400/50',
+        text: 'text-emerald-600 dark:text-emerald-300',
+        textOnDark: 'text-emerald-200',
+        soft: 'bg-emerald-500/10 text-emerald-700 border-emerald-400/50 dark:bg-emerald-400/[0.16] dark:text-emerald-200 dark:border-emerald-300/40',
+        softOnDark:
+            'bg-emerald-300/[0.14] text-emerald-100 border-emerald-200/35',
         glow: 'bg-emerald-400 shadow-[0_0_14px_rgba(52,211,153,0.8)]',
     },
     warning: {
         accent: 'bg-amber-500',
-        border: 'border-amber-300',
-        text: 'text-amber-600',
-        soft: 'bg-amber-500/10 text-amber-700 border-amber-400/60',
+        border: 'border-amber-300 dark:border-amber-400/60',
+        text: 'text-amber-600 dark:text-amber-300',
+        textOnDark: 'text-amber-200',
+        soft: 'bg-amber-500/10 text-amber-700 border-amber-400/60 dark:bg-amber-400/[0.18] dark:text-amber-200 dark:border-amber-300/50',
+        softOnDark:
+            'bg-amber-300/[0.16] text-amber-100 border-amber-200/40',
         glow: 'bg-amber-400 shadow-[0_0_14px_rgba(251,191,36,0.85)]',
     },
     critical: {
         accent: 'bg-red-500',
-        border: 'border-red-300',
-        text: 'text-red-600',
-        soft: 'bg-red-500/10 text-red-700 border-red-400/60',
+        border: 'border-red-300 dark:border-red-400/60',
+        text: 'text-red-600 dark:text-red-300',
+        textOnDark: 'text-red-200',
+        soft: 'bg-red-500/10 text-red-700 border-red-400/60 dark:bg-red-400/[0.18] dark:text-red-200 dark:border-red-300/50',
+        softOnDark: 'bg-red-300/[0.16] text-red-100 border-red-200/40',
         glow: 'bg-red-400 shadow-[0_0_14px_rgba(248,113,113,0.85)]',
     },
     unknown: {
         accent: 'bg-slate-400',
-        border: 'border-slate-300',
-        text: 'text-slate-500',
-        soft: 'bg-slate-500/10 text-slate-600 border-slate-300',
+        border: 'border-slate-300 dark:border-slate-600',
+        text: 'text-slate-500 dark:text-slate-300',
+        textOnDark: 'text-slate-200',
+        soft: 'bg-slate-500/10 text-slate-600 border-slate-300 dark:bg-slate-300/[0.14] dark:text-slate-200 dark:border-slate-300/35',
+        softOnDark:
+            'bg-slate-300/[0.14] text-slate-100 border-slate-200/35',
         glow: 'bg-slate-400 shadow-[0_0_12px_rgba(148,163,184,0.65)]',
     },
 } satisfies Record<SignalRailStatus, Record<string, string>>;
@@ -357,7 +368,7 @@ const KpiItem: React.FC<KpiItemProps> = ({
             >
                 <span className={cn('mr-4 h-2.5 w-2.5 shrink-0 rounded-full', status.glow)} />
                 <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13px] font-bold uppercase tracking-[0.18em] text-blue-300/65">
+                    <span className="block truncate text-[13px] font-bold uppercase tracking-[0.18em] text-blue-300/70">
                         {label}
                     </span>
                     <span className="mt-1 flex items-baseline gap-3">
@@ -384,11 +395,11 @@ const KpiItem: React.FC<KpiItemProps> = ({
                 data-status={kpi.status}
             >
                 <div className="min-w-0 flex-1">
-                    <span className="block truncate text-[10px] font-black uppercase tracking-[0.2em] text-white/42">
+                    <span className="block truncate text-[10px] font-black uppercase tracking-[0.2em] text-white/60">
                         {category}
                     </span>
                     <span className="mt-1 flex min-w-0 items-center gap-4">
-                        <span className="truncate text-[15px] font-black uppercase tracking-[0.08em] text-white/88">
+                        <span className="truncate text-[15px] font-black uppercase tracking-[0.08em] text-white/90">
                             {label}
                         </span>
                         <span className="shrink-0 text-[28px] font-black leading-none text-white">
@@ -397,7 +408,7 @@ const KpiItem: React.FC<KpiItemProps> = ({
                         <span
                             className={cn(
                                 'shrink-0 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] shadow-[0_0_16px_rgba(255,255,255,0.12)]',
-                                status.soft
+                                status.softOnDark
                             )}
                         >
                             {STATUS_LABEL[kpi.status]}
@@ -413,22 +424,22 @@ const KpiItem: React.FC<KpiItemProps> = ({
         return (
             <div
                 className={cn(
-                    'scd-signal-rail-item relative flex items-center overflow-hidden rounded-lg border border-slate-200 bg-white text-slate-900 shadow-sm',
+                    'scd-signal-rail-item relative flex items-center overflow-hidden rounded-lg border border-slate-200 bg-white text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100',
                     itemSizeClass(variant, density)
                 )}
                 data-status={kpi.status}
             >
                 <span className={cn('absolute inset-y-0 left-0 w-1', status.accent)} />
                 <div className="min-w-0 flex-1 pl-2">
-                    <span className="block truncate text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+                    <span className="block truncate text-[10px] font-black uppercase tracking-[0.12em] text-slate-400 dark:text-slate-300">
                         {label}
                     </span>
-                    <span className="mt-0.5 block truncate text-[11px] font-semibold text-slate-400">
+                    <span className="mt-0.5 block truncate text-[11px] font-semibold text-slate-400 dark:text-slate-500">
                         {kpi.category}
                     </span>
                 </div>
-                <span className="mx-4 h-8 w-px bg-slate-200" />
-                <span className="shrink-0 text-[26px] font-black leading-none text-slate-900">
+                <span className="mx-4 h-8 w-px bg-slate-200 dark:bg-slate-700" />
+                <span className="shrink-0 text-[26px] font-black leading-none text-slate-900 dark:text-white">
                     {valueText(kpi)}
                 </span>
                 <span className="ml-4 flex shrink-0 items-center gap-1.5">
@@ -453,7 +464,7 @@ const KpiItem: React.FC<KpiItemProps> = ({
             >
                 <span className={cn('relative z-10 mr-4 h-3 w-3 shrink-0 rounded-full ring-4 ring-cyan-300/10', status.glow)} />
                 <span className="relative z-10 min-w-0 flex-1">
-                    <span className="block truncate text-[9px] font-black uppercase tracking-[0.22em] text-cyan-200/55">
+                    <span className="block truncate text-[9px] font-black uppercase tracking-[0.22em] text-cyan-200/60">
                         {category}
                     </span>
                     <span className="mt-1 flex min-w-0 items-baseline gap-3">
@@ -466,7 +477,7 @@ const KpiItem: React.FC<KpiItemProps> = ({
                     </span>
                 </span>
                 <span className="relative z-10 ml-4 flex shrink-0 items-center gap-2 pr-1">
-                    <span className={cn('text-[10px] font-black uppercase tracking-[0.16em]', status.text)}>
+                    <span className={cn('text-[10px] font-black uppercase tracking-[0.16em]', status.textOnDark)}>
                         {STATUS_LABEL[kpi.status]}
                     </span>
                     {openLink}
@@ -478,7 +489,7 @@ const KpiItem: React.FC<KpiItemProps> = ({
     return (
         <div
             className={cn(
-                'scd-signal-rail-item group relative overflow-hidden rounded-lg border bg-white/94 text-left shadow-sm transition-all',
+                'scd-signal-rail-item group relative overflow-hidden rounded-lg border bg-white/[0.94] text-left shadow-sm transition-all dark:bg-slate-900/95 dark:text-slate-100',
                 itemSizeClass(variant, density),
                 status.border
             )}
@@ -486,15 +497,15 @@ const KpiItem: React.FC<KpiItemProps> = ({
         >
             <span className={cn('absolute left-0 top-0 h-full w-1', status.accent)} />
             <span
-                className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent"
+                className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent dark:via-sky-300/30"
                 aria-hidden="true"
             />
             <span className="flex items-start justify-between gap-3">
                 <span className="min-w-0">
-                    <span className="block truncate text-[22px] font-black leading-none tracking-normal text-slate-900">
+                    <span className="block truncate text-[22px] font-black leading-none tracking-normal text-slate-900 dark:text-white">
                         {valueText(kpi)}
                     </span>
-                    <span className="mt-1.5 block line-clamp-2 text-[9px] font-black uppercase leading-tight tracking-[0.08em] text-slate-600">
+                    <span className="mt-1.5 block line-clamp-2 text-[9px] font-black uppercase leading-tight tracking-[0.08em] text-slate-600 dark:text-slate-300">
                         {label}
                     </span>
                 </span>
@@ -510,7 +521,7 @@ const KpiItem: React.FC<KpiItemProps> = ({
                     {openLink}
                 </span>
             </span>
-            <span className="mt-0.5 block truncate text-[8px] font-semibold text-slate-400">
+            <span className="mt-0.5 block truncate text-[8px] font-semibold text-slate-400 dark:text-slate-500">
                 {kpi.category}
             </span>
         </div>
@@ -594,13 +605,13 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
             className={cn(
                 'scd-signal-rail-ticker group/signal-rail relative z-40 flex-shrink-0 border-b',
                 variant === 'original' &&
-                    'border-slate-200 bg-white/82 px-1.5 py-1 dark:border-slate-800 dark:bg-slate-950/95',
+                    'border-slate-200 bg-white/[0.82] px-1.5 py-1 dark:border-slate-800 dark:bg-slate-950/95',
                 variant === 'bloomberg' &&
                     'border-[#1e2d4a] bg-[#0a0e1a] px-1.5 py-1 text-slate-100',
                 variant === 'cisco-blue-gradient' &&
                     'scd-signal-rail-cisco border-sky-900/60 px-1.5 py-1 text-white',
                 variant === 'minimal-enterprise' &&
-                    'border-slate-200 bg-[#f8fafc] px-1.5 py-2 text-slate-900',
+                    'border-slate-200 bg-[#f8fafc] px-1.5 py-2 text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100',
                 variant === 'telemetry-constellation' &&
                     'scd-signal-rail-constellation border-cyan-500/30 px-1.5 py-1.5 text-cyan-50',
                 className
@@ -632,9 +643,9 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                         variant === 'bloomberg' &&
                             'border-[#1e2d4a] bg-[#070b14] font-mono text-blue-300',
                         variant === 'cisco-blue-gradient' &&
-                            'border-white/15 bg-white/10 text-white backdrop-blur-sm',
+                            'border-white/20 bg-white/10 text-white backdrop-blur-sm',
                         variant === 'minimal-enterprise' &&
-                            'border-slate-200 bg-white text-sky-700',
+                            'border-slate-200 bg-white text-sky-700 dark:border-slate-800 dark:bg-slate-900/95 dark:text-sky-300',
                         variant === 'telemetry-constellation' &&
                             'border-cyan-300/20 bg-slate-950/70 text-cyan-100 shadow-[0_0_28px_rgba(34,211,238,0.16)] backdrop-blur-md'
                     )}
@@ -689,10 +700,10 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                             variant === 'bloomberg'
                                 ? 'border-[#1e2d4a] bg-[#070b14] text-blue-300 hover:text-white'
                                 : variant === 'telemetry-constellation'
-                                ? 'border-cyan-300/25 bg-slate-950/78 text-cyan-200 shadow-[0_0_18px_rgba(34,211,238,0.14)] hover:bg-cyan-950/70 hover:text-white'
+                                ? 'border-cyan-300/25 bg-slate-950/80 text-cyan-200 shadow-[0_0_18px_rgba(34,211,238,0.14)] hover:bg-cyan-950/70 hover:text-white'
                                 : variant === 'cisco-blue-gradient'
-                                ? 'border-white/20 bg-white/10 text-white hover:bg-white/18'
-                                : 'border-slate-200 bg-white text-slate-500 hover:bg-sky-50 hover:text-sky-700'
+                                ? 'border-white/20 bg-white/10 text-white hover:bg-white/[0.18]'
+                                : 'border-slate-200 bg-white text-slate-500 hover:bg-sky-50 hover:text-sky-700 dark:border-slate-800 dark:bg-slate-900/95 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-sky-200'
                         )}
                     >
                         {manualPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
@@ -709,10 +720,10 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                             variant === 'bloomberg'
                                 ? 'border-[#1e2d4a] bg-[#070b14] text-blue-300 hover:text-white'
                                 : variant === 'telemetry-constellation'
-                                ? 'border-cyan-300/25 bg-slate-950/78 text-cyan-200 shadow-[0_0_18px_rgba(34,211,238,0.14)] hover:bg-cyan-950/70 hover:text-white'
+                                ? 'border-cyan-300/25 bg-slate-950/80 text-cyan-200 shadow-[0_0_18px_rgba(34,211,238,0.14)] hover:bg-cyan-950/70 hover:text-white'
                                 : variant === 'cisco-blue-gradient'
-                                ? 'border-white/20 bg-white/10 text-white hover:bg-white/18'
-                                : 'border-slate-200 bg-white text-slate-500 hover:bg-sky-50 hover:text-sky-700'
+                                ? 'border-white/20 bg-white/10 text-white hover:bg-white/[0.18]'
+                                : 'border-slate-200 bg-white text-slate-500 hover:bg-sky-50 hover:text-sky-700 dark:border-slate-800 dark:bg-slate-900/95 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-sky-200'
                         )}
                     >
                         <Palette className="h-4 w-4" />
@@ -728,10 +739,10 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                                 variant === 'bloomberg'
                                     ? 'border-[#1e2d4a] bg-[#070b14] text-blue-300 hover:text-white'
                                     : variant === 'telemetry-constellation'
-                                    ? 'border-cyan-300/25 bg-slate-950/78 text-cyan-200 shadow-[0_0_18px_rgba(34,211,238,0.14)] hover:bg-cyan-950/70 hover:text-white'
+                                    ? 'border-cyan-300/25 bg-slate-950/80 text-cyan-200 shadow-[0_0_18px_rgba(34,211,238,0.14)] hover:bg-cyan-950/70 hover:text-white'
                                     : variant === 'cisco-blue-gradient'
-                                    ? 'border-white/20 bg-white/10 text-white hover:bg-white/18'
-                                    : 'border-slate-200 bg-white text-slate-500 hover:bg-sky-50 hover:text-sky-700'
+                                    ? 'border-white/20 bg-white/10 text-white hover:bg-white/[0.18]'
+                                    : 'border-slate-200 bg-white text-slate-500 hover:bg-sky-50 hover:text-sky-700 dark:border-slate-800 dark:bg-slate-900/95 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-sky-200'
                             )}
                         >
                             <Settings2 className="h-4 w-4" />
@@ -770,7 +781,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                                             'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-sky-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:hover:bg-slate-900',
                                             variant === option.id && 'bg-sky-50 dark:bg-sky-950/40',
                                             option.id === 'telemetry-constellation' &&
-                                                'border border-cyan-200/70 bg-cyan-50/55 hover:bg-cyan-50 dark:border-cyan-900/70 dark:bg-cyan-950/20 dark:hover:bg-cyan-950/32'
+                                                'border border-cyan-200/70 bg-cyan-50/60 hover:bg-cyan-50 dark:border-cyan-900/70 dark:bg-cyan-950/20 dark:hover:bg-cyan-950/30'
                                         )}
                                     >
                                         <span
@@ -800,18 +811,18 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
             </div>
 
             {variant === 'bloomberg' && (
-                <div className="relative z-10 border-t border-[#1e2d4a] px-8 py-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-blue-300/55">
+                <div className="relative z-10 border-t border-[#1e2d4a] px-8 py-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-blue-300/60">
                     Signal Rail · Live · {kpis.length} KPIs Monitored
                 </div>
             )}
             {variant === 'cisco-blue-gradient' && (
-                <div className="relative z-10 border-t border-white/10 bg-[#0a2d64]/45 px-8 py-2 text-[11px] font-black uppercase tracking-[0.16em] text-white/48">
+                <div className="relative z-10 border-t border-white/10 bg-[#0a2d64]/[0.45] px-8 py-2 text-[11px] font-black uppercase tracking-[0.16em] text-white/60">
                     <span className="mr-2 inline-block h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.85)]" />
                     Signal Rail · Live Feed · All Systems Nominal
                 </div>
             )}
             {variant === 'minimal-enterprise' && (
-                <div className="relative z-0 flex items-center justify-between border-t border-slate-200 px-8 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-slate-400">
+                <div className="relative z-0 flex items-center justify-between border-t border-slate-200 px-8 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-slate-400 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-500">
                     <span>Signal Rail · {kpis.length} KPIs</span>
                     <span className="normal-case tracking-normal">
                         <span className="text-emerald-500">• {counts.healthy} Healthy</span>
@@ -821,7 +832,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                 </div>
             )}
             {variant === 'telemetry-constellation' && (
-                <div className="relative z-0 flex items-center justify-between border-t border-cyan-300/12 bg-slate-950/24 px-8 py-2 font-mono text-[11px] font-black uppercase tracking-[0.16em] text-cyan-200/58">
+                <div className="relative z-0 flex items-center justify-between border-t border-cyan-300/20 bg-slate-950/25 px-8 py-2 font-mono text-[11px] font-black uppercase tracking-[0.16em] text-cyan-200/60">
                     <span>
                         <span className="mr-2 inline-block h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_14px_rgba(103,232,249,0.9)]" />
                         Telemetry Constellation

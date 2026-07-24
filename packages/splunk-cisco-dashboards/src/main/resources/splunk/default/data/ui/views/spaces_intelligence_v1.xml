@@ -1082,14 +1082,14 @@
 			"dataSources": {
 				"primary": "ds_visitor_map"
 			},
-			"description": "buildings on a Florida map; tooltips show latest counts.",
+			"description": "buildings on a map; tooltips show latest counts. Generic two-site template — update the building match logic, coordinates, and map center/zoom below for the deployment's actual sites.",
 			"options": {
 				"backgroundColor": "#F0F0F0",
 				"baseLayerTileServer": "https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
 				"baseLayerTileServerType": "raster",
 				"center": [
-					29,
-					-82.5
+					39.8283,
+					-98.5795
 				],
 				"layers": [
 					{
@@ -1106,7 +1106,7 @@
 				],
 				"showScale": false,
 				"showZoomControls": false,
-				"zoom": 6
+				"zoom": 4
 			},
 			"showLastUpdated": false,
 			"showProgressBar": false,
@@ -1800,7 +1800,7 @@
 		"ds_visitor_map": {
 			"name": "Visitor volume by campus",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=BUILDING\n| eval building='deviceCounts.location.name',\n devices='deviceCounts.deviceCount',\n users='deviceCounts.userCount'\n| stats latest(devices) as devices, latest(users) as visitors by building\n| eval lat=case(building=\"SEOC\", 30.4551,\n building=\"AUB\", 28.0653,\n match(building, \"(?i)tallahassee\"), 30.4383,\n match(building, \"(?i)auburndale\"), 28.0653,\n 1=1, 29.0),\n lon=case(building=\"SEOC\", -84.2530,\n building=\"AUB\", -81.7887,\n match(building, \"(?i)tallahassee\"), -84.2807,\n match(building, \"(?i)auburndale\"), -81.7887,\n 1=1, -82.0)\n| where isnotnull(lat)\n| eval devices=round(devices, 2), visitors=round(visitors, 2)\n| rename building as city\n| table city devices visitors lat lon",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=BUILDING\n| eval building='deviceCounts.location.name',\n devices='deviceCounts.deviceCount',\n users='deviceCounts.userCount'\n| stats latest(devices) as devices, latest(users) as visitors by building\n| eval lat=case(match(building, \"(?i)site ?1\"), 0.0,\n match(building, \"(?i)site ?2\"), 1.0,\n 1=1, 0.0),\n lon=case(match(building, \"(?i)site ?1\"), 0.0,\n match(building, \"(?i)site ?2\"), 1.0,\n 1=1, 0.0)\n| where isnotnull(lat)\n| eval devices=round(devices, 2), visitors=round(visitors, 2)\n| rename building as city\n| table city devices visitors lat lon",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"

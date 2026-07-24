@@ -17,7 +17,7 @@
  */
 
 import React, { useState } from 'react';
-import { Boxes, ListTree } from 'lucide-react';
+import { Boxes, ListTree, type LucideIcon } from 'lucide-react';
 import { cn } from '@/common/lib/utils';
 import { ShapesTab } from './ShapesTab';
 import { InventoryTab } from './InventoryTab';
@@ -27,7 +27,7 @@ type TabId = 'shapes' | 'inventory';
 const TAB_DEFS: Array<{
     id: TabId;
     label: string;
-    Icon: React.ComponentType<{ className?: string; 'aria-hidden'?: boolean }>;
+    Icon: LucideIcon;
 }> = [
     { id: 'shapes', label: 'Shapes', Icon: Boxes },
     { id: 'inventory', label: 'Inventory', Icon: ListTree },

@@ -83,6 +83,7 @@ const APP_VERSION = readBuildVersion();
 const webappRoot = path.join(__dirname, 'src/main/webapp');
 const splunkRoot = path.join(__dirname, 'src/main/resources/splunk');
 const stageRoot = path.join(__dirname, 'stage');
+const workspaceRoot = path.resolve(__dirname, '..', '..');
 
 const commonConfig = webpackMerge(baseConfig, {
     entry: {
@@ -112,6 +113,10 @@ const commonConfig = webpackMerge(baseConfig, {
             'pages/macro_index_tuning/render.tsx'
         ),
         user_guide: path.join(webappRoot, 'pages/user_guide/render.tsx'),
+        secure_operations_glass: path.join(
+            webappRoot,
+            'pages/secure_operations_glass/render.tsx'
+        ),
         dashboardbuilder: path.join(webappRoot, 'pages/dashboardbuilder/index.jsx'),
     },
     output: {
@@ -166,6 +171,16 @@ const commonConfig = webpackMerge(baseConfig, {
                     globOptions: {
                         ignore: ['**/.DS_Store', '**/__pycache__/**', '**/*.pyc'],
                     },
+                },
+                {
+                    from: path.join(workspaceRoot, 'LICENSE'),
+                    to: path.join(stageRoot, 'LICENSE'),
+                    toType: 'file',
+                },
+                {
+                    from: path.join(workspaceRoot, 'NOTICE'),
+                    to: path.join(stageRoot, 'NOTICE'),
+                    toType: 'file',
                 },
             ],
         }),

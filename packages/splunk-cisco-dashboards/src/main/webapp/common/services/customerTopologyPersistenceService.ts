@@ -18,6 +18,11 @@
 import { createFetchInit } from '@splunk/splunk-utils/fetch';
 
 import type { CustomerTopology } from '@/common/types';
+import {
+    ALL_OVERVIEW_SECTION_IDS,
+    OVERVIEW_PROFILES,
+    type SectionId,
+} from '@/common/config/overviewProfiles';
 
 import { getSearchAppContext } from './splunkSearchService';
 
@@ -28,15 +33,10 @@ const PAYLOAD_VERSION = 1;
 const MAX_PAYLOAD_BYTES = 128 * 1024;
 const DEV_STORAGE_KEY = 'splunk-cisco-dashboards.customerTopologyConfig.v1';
 
-export const CUSTOMER_TOPOLOGY_SECTION_IDS = [
-    'it_health',
-    'security',
-    'building',
-    'custom',
-] as const;
+export const CUSTOMER_TOPOLOGY_SECTION_IDS = ALL_OVERVIEW_SECTION_IDS;
 
 export type CustomerTopologySectionId =
-    (typeof CUSTOMER_TOPOLOGY_SECTION_IDS)[number];
+    SectionId;
 
 export type CustomerTopologySectionTitles = Record<
     CustomerTopologySectionId,
@@ -44,11 +44,12 @@ export type CustomerTopologySectionTitles = Record<
 >;
 
 export const DEFAULT_CUSTOMER_TOPOLOGY_SECTION_TITLES: CustomerTopologySectionTitles = {
-    it_health: 'IT Health',
-    security: 'Security',
-    building: 'Building Intelligence',
-    custom: 'Executive Signals',
-};
+    ...Object.fromEntries(
+        Object.values(OVERVIEW_PROFILES).flatMap((profile) =>
+            profile.sections.map((section) => [section.id, section.title])
+        )
+    ),
+} as CustomerTopologySectionTitles;
 
 export interface SavedCustomerTopologyPayload {
     version: number;

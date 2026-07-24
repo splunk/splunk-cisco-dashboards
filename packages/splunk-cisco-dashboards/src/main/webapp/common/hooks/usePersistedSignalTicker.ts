@@ -1,4 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+    DEFAULT_OVERVIEW_PROFILE_ID,
+    profileStorageKey,
+    type OverviewProfileId,
+} from '@/common/config/overviewProfiles';
 
 export type SignalTickerSpeed = number;
 export type SignalTickerRows = 1 | 2;
@@ -303,12 +308,15 @@ const migrateSignalTickerConfig = (
     return changed ? { ...config, items } : config;
 };
 
-const readFromStorage = (): SignalTickerConfig => {
+const storageKeyForProfile = (profileId?: OverviewProfileId): string =>
+    profileStorageKey(STORAGE_KEY, profileId ?? DEFAULT_OVERVIEW_PROFILE_ID);
+
+const readFromStorage = (storageKey: string): SignalTickerConfig => {
     if (typeof window === 'undefined' || !window.localStorage) {
         return DEFAULT_SIGNAL_TICKER_CONFIG;
     }
     try {
-        const raw = window.localStorage.getItem(STORAGE_KEY);
+        const raw = window.localStorage.getItem(storageKey);
         if (!raw) return DEFAULT_SIGNAL_TICKER_CONFIG;
         const parsed = JSON.parse(raw) as Partial<PersistedShape>;
         if (!parsed || parsed.v !== STORAGE_VERSION) {
@@ -323,11 +331,11 @@ const readFromStorage = (): SignalTickerConfig => {
     }
 };
 
-const writeToStorage = (config: SignalTickerConfig): void => {
+const writeToStorage = (storageKey: string, config: SignalTickerConfig): void => {
     if (typeof window === 'undefined' || !window.localStorage) return;
     try {
         const payload: PersistedShape = { v: STORAGE_VERSION, config };
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+        window.localStorage.setItem(storageKey, JSON.stringify(payload));
     } catch {
         // Storage may be unavailable; the ticker still works for this session.
     }
@@ -341,32 +349,35 @@ export interface UsePersistedSignalTickerResult {
 }
 
 export const usePersistedSignalTicker =
-    (): UsePersistedSignalTickerResult => {
+    (
+        profileId: OverviewProfileId = DEFAULT_OVERVIEW_PROFILE_ID
+    ): UsePersistedSignalTickerResult => {
+        const storageKey = storageKeyForProfile(profileId);
         const [config, setConfigState] = useState<SignalTickerConfig>(() =>
-            readFromStorage()
+            readFromStorage(storageKey)
         );
 
         useEffect(() => {
             if (typeof window === 'undefined') return undefined;
             const onStorage = (event: StorageEvent) => {
-                if (event.key !== STORAGE_KEY) return;
-                setConfigState(readFromStorage());
+                if (event.key !== storageKey) return;
+                setConfigState(readFromStorage(storageKey));
             };
             window.addEventListener('storage', onStorage);
             return () => window.removeEventListener('storage', onStorage);
-        }, []);
+        }, [storageKey]);
 
         const setConfig = useCallback((nextConfig: SignalTickerConfig) => {
             const sanitized = sanitizeConfig(nextConfig);
             if (!sanitized) return;
-            writeToStorage(sanitized);
+            writeToStorage(storageKey, sanitized);
             setConfigState(sanitized);
-        }, []);
+        }, [storageKey]);
 
         const resetAll = useCallback(() => {
-            writeToStorage(DEFAULT_SIGNAL_TICKER_CONFIG);
+            writeToStorage(storageKey, DEFAULT_SIGNAL_TICKER_CONFIG);
             setConfigState(DEFAULT_SIGNAL_TICKER_CONFIG);
-        }, []);
+        }, [storageKey]);
 
         const itemCount = useMemo(
             () => config.items.length,

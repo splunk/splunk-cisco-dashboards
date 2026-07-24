@@ -115,7 +115,11 @@ package as a tarball.
 ```bash
 yarn build                   # webpack build → ./stage
 node bin/build.js pack       # build + tar → ./splunk-cisco-dashboards.tar.gz
+node bin/build.js pack --minify  # slower, minified release build + tar
 ```
+
+Minification is opt-in; normal builds and `yarn start` keep fast,
+unminified production-React bundles.
 
 ## Mounting model
 
@@ -167,3 +171,10 @@ You can force one mode or the other with `window.__SPLUNK_RUNTIME__`.
   enumerated list and re-validated before the search params are formed.
 * No Splunk credentials are held by the client — Splunk Web manages auth
   via HttpOnly cookies; the app never touches `localStorage`.
+
+## License
+
+Copyright 2026 Splunk Inc.
+
+Licensed under the [Apache License, Version 2.0](../../LICENSE). See
+[NOTICE](../../NOTICE) for attribution information.

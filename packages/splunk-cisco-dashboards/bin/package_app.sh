@@ -6,22 +6,26 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PKG_ROOT="${SCRIPT_DIR}/.."
 STAGE_DIR="${PKG_ROOT}/stage"
+SPLUNK_RESOURCES_DIR="${PKG_ROOT}/src/main/resources/splunk"
 APP_NAME="splunk-cisco-dashboards"
 FROM_STAGE=0
+MINIFY=0
 ROOT_DIR="${PKG_ROOT}/../.."
 VERSION_FILE="${ROOT_DIR}/VERSION"
 
 usage() {
   cat <<EOF
-Usage: bin/package_app.sh [--from-stage]
+Usage: bin/package_app.sh [--from-stage] [--minify]
 
 Default behavior: clean stage/, run production webpack, then package stage/.
 
 Options:
   --from-stage, --stage   Package the current stage/ directory without running
-                          clean_build.sh or webpack. Useful when webpack --watch
-                          is already maintaining stage/ and you still want to
-                          create a tarball for splunkd install.
+                          clean_build.sh or webpack. Current non-JavaScript
+                          Splunk resources are overlaid from src/ first; React
+                          bundles still come from the webpack --watch output.
+  --minify                Enable JavaScript minification for a slower, smaller
+                          release build. Not valid with --from-stage.
   -h, --help              Show this help.
 EOF
 }
@@ -30,6 +34,10 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --from-stage|--stage)
       FROM_STAGE=1
+      shift
+      ;;
+    --minify)
+      MINIFY=1
       shift
       ;;
     -h|--help)
@@ -43,6 +51,12 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+if [[ "$FROM_STAGE" -eq 1 && "$MINIFY" -eq 1 ]]; then
+  echo "ERROR: --minify and --from-stage are mutually exclusive." >&2
+  echo "       Minification requires a clean webpack build." >&2
+  exit 2
+fi
 
 # Read version from repo-root VERSION (source of truth)
 APP_CONF="${PKG_ROOT}/src/main/resources/splunk/default/app.conf"
@@ -76,7 +90,20 @@ if [[ "$FROM_STAGE" -eq 1 ]]; then
     echo "       stage/ is incomplete. Wait for webpack --watch to finish or run 'yarn run build'." >&2
     exit 1
   fi
-  echo "[package] using existing stage/ (--from-stage); skipping clean build and webpack"
+  if [[ ! -d "$SPLUNK_RESOURCES_DIR" ]]; then
+    echo "ERROR: Splunk resource source directory is missing: ${SPLUNK_RESOURCES_DIR}" >&2
+    exit 1
+  fi
+
+  # CopyWebpackPlugin emits these files during the initial webpack compile,
+  # but changes below src/main/resources/splunk are not reliably invalidating
+  # the long-running watcher. Overlay them here so --from-stage always packages
+  # current conf/XML/static resources while still reusing the watcher's React
+  # bundles and avoiding a full webpack build.
+  cp -R "${SPLUNK_RESOURCES_DIR}/." "${STAGE_DIR}/"
+  cp "${ROOT_DIR}/LICENSE" "${STAGE_DIR}/LICENSE"
+  cp "${ROOT_DIR}/NOTICE" "${STAGE_DIR}/NOTICE"
+  echo "[package] refreshed Splunk resources from src/; reusing watcher-built React bundles"
 else
   if [[ ! -d "$STAGE_DIR" ]]; then
     echo "stage/ not found; running clean:build first..."
@@ -84,7 +111,11 @@ else
 
   # Always run clean build (preserving local) to ensure package is fresh
   bash "${SCRIPT_DIR}/clean_build.sh"
-  node "${PKG_ROOT}/bin/build.js" build
+  build_args=(build)
+  if [[ "$MINIFY" -eq 1 ]]; then
+    build_args+=(--minify)
+  fi
+  node "${PKG_ROOT}/bin/build.js" "${build_args[@]}"
 fi
 
 bash "${SCRIPT_DIR}/stamp_version.sh" "$STAGE_DIR"
@@ -101,6 +132,8 @@ TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 cp -R "$STAGE_DIR" "${TMP_DIR}/${APP_NAME}"
 find "${TMP_DIR}" -name ".DS_Store" -delete
+find "${TMP_DIR}" -name "* copy.*" -delete
+find "${TMP_DIR}" -name "* copy" -delete
 # Remove Splunk-generated runtime artifacts — they should never ship in the package.
 # Because /opt/splunk/etc/apps/splunk-cisco-dashboards symlinks to stage/,
 # Splunk creates local.meta and local/ at runtime inside our build output.
@@ -170,6 +203,11 @@ awk -v line="$PROVENANCE" '
 
 # Strip macOS extended attributes to keep archive clean
 xattr -cr "${TMP_DIR}/${APP_NAME}" 2>/dev/null || true
+
+# Validate the exact directory that will be archived. This deliberately runs
+# after copying out of stage/ so a concurrent webpack --watch process cannot
+# replace the checked JavaScript between verification and packaging.
+node "${PKG_ROOT}/bin/verify_production_assets.js" "${TMP_DIR}/${APP_NAME}"
 
 cd "$TMP_DIR"
 # COPYFILE_DISABLE prevents macOS tar from embedding AppleDouble resource forks

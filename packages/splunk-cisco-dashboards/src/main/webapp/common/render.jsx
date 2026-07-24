@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { SplunkThemeProvider } from '@splunk/themes';
 import layout from '@splunk/react-page';
 import { getUserTheme } from '@splunk/splunk-utils/themes';
+import CopyrightMark from './components/CopyrightMark';
 
 /**
  * Shared mount helper used by every page entrypoint.
@@ -33,7 +34,10 @@ export default function mountPage(PageComponent) {
         }
         reactRoot.render(
             <SplunkThemeProvider family="prisma" colorScheme="light" density="comfortable">
-                <PageComponent />
+                <>
+                    <PageComponent />
+                    <CopyrightMark />
+                </>
             </SplunkThemeProvider>
         );
     };
@@ -48,7 +52,10 @@ export function renderAsPage(pageElement, options = {}) {
         .then((theme) => {
             layout(
                 <SplunkThemeProvider family="prisma" colorScheme="light" density="comfortable">
-                    {pageElement}
+                    <>
+                        {pageElement}
+                        <CopyrightMark />
+                    </>
                 </SplunkThemeProvider>,
                 {
                     hideAppBar,

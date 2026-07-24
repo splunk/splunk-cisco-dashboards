@@ -127,7 +127,7 @@ export interface TopologyLink {
     /**
      * Geo-enriched agent location strings sourced from
      * `thousandeyes.source.agent.location` / `.target.agent.location`
-     * (e.g. "Tallahassee, Florida, US"). Each A2A event ships full geo
+     * (e.g. "Chicago, Illinois, US"). Each A2A event ships full geo
      * metadata; we surface the human-readable location string for the map
      * popup so operators can see *where* each agent is, not just the agent
      * name. See `[overview_link_auburndale_tallahassee_health]` v1.6.0.

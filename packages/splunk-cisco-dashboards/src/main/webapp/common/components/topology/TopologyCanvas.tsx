@@ -53,6 +53,7 @@ import {
     type Edge as RFEdge,
     type Connection,
     useReactFlow,
+    type NodeTypes,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Loader2, RefreshCw, RotateCcw, Network as NetworkIcon, Save } from 'lucide-react';
@@ -548,7 +549,7 @@ const TopologyCanvasInner: React.FC<TopologyCanvasProps> = ({
             <ReactFlow
                 nodes={nodes}
                 edges={edges}
-                nodeTypes={TOPOLOGY_NODE_TYPES}
+                nodeTypes={TOPOLOGY_NODE_TYPES as NodeTypes}
                 onNodeDragStop={handleNodeDragStop}
                 onConnect={handleConnect}
                 onNodeClick={handleNodeClick}

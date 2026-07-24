@@ -378,7 +378,7 @@ def convert_file(path: Path, dry_run: bool = False) -> tuple[int, int, list[str]
         if name in MISROUTED_FIXES:
             fields = dict(fields)
             fields["search"] = fold_search(MISROUTED_FIXES[name])
-            fields["dispatch_context"] = "cisco-catalyst-app"
+            fields["dispatch_context"] = "splunk-cisco-dashboards"
             fields["dispatch_context_force"] = "1"
             fields["date_updated"] = "2026-07-01"
             fields["version"] = bump_version(fields.get("version", "1.0.0"))
@@ -402,7 +402,7 @@ def convert_file(path: Path, dry_run: bool = False) -> tuple[int, int, list[str]
 
         fields = dict(fields)
         fields["search"] = fold_search(new_pipeline)
-        fields["dispatch_context"] = "cisco-catalyst-app"
+        fields["dispatch_context"] = "splunk-cisco-dashboards"
         fields["dispatch_context_force"] = "1"
         fields["date_updated"] = "2026-07-01"
         fields["version"] = bump_version(fields.get("version", "1.0.0"))

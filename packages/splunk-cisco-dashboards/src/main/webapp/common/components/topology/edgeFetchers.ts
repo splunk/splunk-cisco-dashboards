@@ -26,6 +26,8 @@ import type {
 
 /** Searchbase role that identifies the generic TE A2A inventory stanza. */
 const TE_A2A_INVENTORY_ROLE = 'teA2AInventory';
+const TE_A2A_INVENTORY_STANZA_ID = 'overview_link_te_a2a_inventory';
+const TE_A2A_INVENTORY_SEARCH_NAME = 'Overview - Link ThousandEyes A2A Inventory';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
     Boolean(value && typeof value === 'object' && !Array.isArray(value));
@@ -35,6 +37,27 @@ const searchbaseTopologyMapRole = (record: SearchbaseRecord): string => {
     if (!isRecord(raw)) return '';
     const role = raw.role;
     return typeof role === 'string' ? role.trim() : '';
+};
+
+const searchbaseIsTeA2AInventory = (record: SearchbaseRecord): boolean => {
+    if (searchbaseTopologyMapRole(record) === TE_A2A_INVENTORY_ROLE) {
+        return true;
+    }
+    const stanzaId = record.id.trim().toLowerCase();
+    const searchName = record.searchName.trim().toLowerCase();
+    if (
+        stanzaId === TE_A2A_INVENTORY_STANZA_ID ||
+        searchName === TE_A2A_INVENTORY_SEARCH_NAME.toLowerCase()
+    ) {
+        return true;
+    }
+    const tags = new Set(record.tags.map((tag) => tag.trim().toLowerCase()));
+    return (
+        tags.has('thousandeyes') &&
+        tags.has('a2a') &&
+        tags.has('inventory') &&
+        tags.has('binding')
+    );
 };
 
 const optionalString = (raw: unknown): string | undefined => {
@@ -99,7 +122,7 @@ const mapTeStatus = (raw: string | undefined): HealthStatus => {
  * undefined and the caller drops the edge.
  *
  * Token matching is intentionally loose so customer-specific
- * naming (e.g. "Tallahassee Operations Center" vs "TLH Ops")
+ * naming (e.g. "Site A Operations Center" vs "Site A Ops")
  * doesn't break the join.
  */
 const pickRepresentativeDeviceId = (
@@ -139,9 +162,7 @@ export const fetchThousandEyesA2AEdges = async (
     let record: SearchbaseRecord;
     try {
         const catalogue = await getSearchbaseCatalogue({ includeHidden: true });
-        const match = catalogue.find(
-            (r) => searchbaseTopologyMapRole(r) === TE_A2A_INVENTORY_ROLE
-        );
+        const match = catalogue.find(searchbaseIsTeA2AInventory);
         if (!match || match.search.trim().length === 0) {
             // Stanza not shipped on this stack (older install or
             // edited conf); skip silently — the canvas just renders

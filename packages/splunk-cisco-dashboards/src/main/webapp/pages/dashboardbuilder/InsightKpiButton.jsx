@@ -119,7 +119,7 @@ const applyKpiLayout = (dashboardApi, visualizationConfigs) => {
     );
     const startY =
         existingStructure.length === 0
-            ? 0
+            ? LAYOUT_MARGIN
             : Math.ceil((getLayoutBounds(existingStructure).bottom + LAYOUT_GAP) / LAYOUT_GAP) *
               LAYOUT_GAP;
 

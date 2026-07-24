@@ -41,25 +41,27 @@ const DEFAULT_SUMMARIESONLY_DEFINITION =
   "summariesonly=false allow_old_summaries=false fillnull_value=null";
 const DEFAULT_INDEX_IN_DEFINITION = "index IN (*)";
 const DEFAULT_INDEX_OR_DEFINITION = "(index=*)";
-const INDEX_MACRO_NAMES = [
+const SCD_INDEX_MACRO_OR_PLACEHOLDER = "__SCD_INDEX_MACRO_OR__";
+const FALLBACK_SCD_INDEX_MACRO_NAMES = [
   "index_catalyst",
+  "index_cybervision",
+  "index_dc",
+  "index_dhcp",
+  "index_duo",
+  "index_f5",
   "index_firewall",
   "index_identity",
-  "index_windows",
-  "index_network",
-  "index_zeek",
+  "index_intersight",
   "index_meraki",
-  "index_spaces",
-  "index_security",
-  "index_dhcp",
-  "index_thousandeyes",
-  "index_f5",
-  "index_duo",
-  "index_cybervision",
-  "index_ucs",
-  "index_sdwan",
-  "index_dc",
+  "index_network",
   "index_nvm",
+  "index_sdwan",
+  "index_security",
+  "index_spaces",
+  "index_thousandeyes",
+  "index_ucs",
+  "index_windows",
+  "index_zeek",
 ] as const;
 const CIM_MACRO_NAMES = [
   "cim_Authentication_indexes",
@@ -129,14 +131,6 @@ interface TunableMacroConfig {
   family: "scd" | "cim" | "ciscoSecurity" | "thousandEyes";
 }
 
-const INDEX_MACRO_CONFIGS: TunableMacroConfig[] = INDEX_MACRO_NAMES.map(
-  (macro) => ({
-    macro,
-    targetApp: APP_NAME,
-    definitionFormat: "indexIn",
-    family: "scd",
-  }),
-);
 const CIM_MACRO_CONFIGS: TunableMacroConfig[] = CIM_MACRO_NAMES.map(
   (macro) => ({
     macro,
@@ -160,28 +154,51 @@ const THOUSAND_EYES_MODEL_MACRO_CONFIGS: TunableMacroConfig[] =
     definitionFormat: "indexOr",
     family: "thousandEyes",
   }));
-const TUNABLE_MACRO_CONFIGS: TunableMacroConfig[] = [
-  ...INDEX_MACRO_CONFIGS,
-  ...CIM_MACRO_CONFIGS,
-  ...CISCO_SECURITY_MODEL_MACRO_CONFIGS,
-  ...THOUSAND_EYES_MODEL_MACRO_CONFIGS,
-];
-const FAST_TUNING_MACRO_CONFIGS: TunableMacroConfig[] = [
-  ...INDEX_MACRO_CONFIGS,
-  ...CISCO_SECURITY_MODEL_MACRO_CONFIGS,
-  ...THOUSAND_EYES_MODEL_MACRO_CONFIGS,
-];
-const TUNABLE_MACRO_NAME_SET = new Set<string>(
-  TUNABLE_MACRO_CONFIGS.map((config) => config.macro),
+
+const buildScdIndexMacroConfigs = (
+  macroNames: readonly string[],
+): TunableMacroConfig[] =>
+  macroNames.map((macro) => ({
+    macro,
+    targetApp: APP_NAME,
+    definitionFormat: "indexIn",
+    family: "scd",
+  }));
+
+const buildTuningMacroCatalog = (scdIndexMacroNames: readonly string[]) => {
+  const indexMacroConfigs = buildScdIndexMacroConfigs(scdIndexMacroNames);
+  const fastTuningMacroConfigs: TunableMacroConfig[] = [
+    ...indexMacroConfigs,
+    ...CISCO_SECURITY_MODEL_MACRO_CONFIGS,
+    ...THOUSAND_EYES_MODEL_MACRO_CONFIGS,
+  ];
+  const tunableMacroConfigs: TunableMacroConfig[] = [
+    ...fastTuningMacroConfigs,
+    ...CIM_MACRO_CONFIGS,
+  ];
+
+  return {
+    indexMacroConfigs,
+    fastTuningMacroConfigs,
+    tunableMacroConfigs,
+    indexMacroNameSet: new Set<string>(scdIndexMacroNames),
+    fastTuningMacroNameSet: new Set<string>(
+      fastTuningMacroConfigs.map((config) => config.macro),
+    ),
+    tunableMacroNameSet: new Set<string>(
+      tunableMacroConfigs.map((config) => config.macro),
+    ),
+    macroConfigByName: new Map<string, TunableMacroConfig>(
+      tunableMacroConfigs.map((config) => [config.macro, config]),
+    ),
+  };
+};
+
+const DEFAULT_TUNING_MACRO_CATALOG = buildTuningMacroCatalog(
+  FALLBACK_SCD_INDEX_MACRO_NAMES,
 );
-const FAST_TUNING_MACRO_NAME_SET = new Set<string>(
-  FAST_TUNING_MACRO_CONFIGS.map((config) => config.macro),
-);
-const INDEX_MACRO_NAME_SET = new Set<string>(INDEX_MACRO_NAMES);
+
 const CIM_MACRO_NAME_SET = new Set<string>(CIM_MACRO_NAMES);
-const MACRO_CONFIG_BY_NAME = new Map<string, TunableMacroConfig>(
-  TUNABLE_MACRO_CONFIGS.map((config) => [config.macro, config]),
-);
 
 interface MacroRow {
   macro: string;
@@ -282,8 +299,10 @@ const normalizeNumber = (value: unknown): number => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
-const getMacroConfig = (macro: string): TunableMacroConfig | undefined =>
-  MACRO_CONFIG_BY_NAME.get(macro);
+const getMacroConfig = (
+  macro: string,
+  macroConfigByName: Map<string, TunableMacroConfig> = DEFAULT_TUNING_MACRO_CATALOG.macroConfigByName,
+): TunableMacroConfig | undefined => macroConfigByName.get(macro);
 
 const getTargetAppLabel = (targetApp: string): string =>
   TARGET_APP_LABELS[targetApp] || targetApp;
@@ -293,10 +312,13 @@ const normalizeDefinitionFormat = (value: unknown): DefinitionFormat => {
   return normalized === "indexOr" ? "indexOr" : "indexIn";
 };
 
-const parseSearchResult = (row: Record<string, unknown>): MacroRow | null => {
+const parseSearchResult = (
+  row: Record<string, unknown>,
+  macroConfigByName: Map<string, TunableMacroConfig> = DEFAULT_TUNING_MACRO_CATALOG.macroConfigByName,
+): MacroRow | null => {
   const macro = normalizeText(row.macro).trim();
   if (!macro) return null;
-  const config = getMacroConfig(macro);
+  const config = getMacroConfig(macro, macroConfigByName);
   const rowTargetApp = normalizeText(row.target_app ?? row.app).trim();
   return {
     macro,
@@ -382,12 +404,13 @@ const formatIndexDefinition = (
 const buildMacroStanzas = (
   rows: EditableMacroRow[],
   targetApp: string,
+  tunableMacroNameSet: Set<string> = DEFAULT_TUNING_MACRO_CATALOG.tunableMacroNameSet,
 ): string =>
   rows
     .filter(
       (row) =>
         row.targetApp === targetApp &&
-        TUNABLE_MACRO_NAME_SET.has(row.macro) &&
+        tunableMacroNameSet.has(row.macro) &&
         row.draftDefinition.trim(),
     )
     .map(
@@ -502,6 +525,66 @@ const macroConfigUrl = (
   return `/en-US/splunkd/__raw/servicesNS/nobody/${app}/configs/conf-macros/${encodeURIComponent(
     macro,
   )}?output_mode=json`;
+};
+
+const scdMacrosCatalogUrl = (): string => {
+  const app = encodeURIComponent(APP_NAME);
+  return `/en-US/splunkd/__raw/servicesNS/nobody/${app}/configs/conf-macros?count=0&output_mode=json`;
+};
+
+const buildIndexMacroOrClause = (macroNames: readonly string[]): string => {
+  const names = [...macroNames].sort();
+  if (!names.length) {
+    return "index=*";
+  }
+  if (names.length === 1) {
+    return `\`${names[0]}\``;
+  }
+  return names.map((name) => `\`${name}\``).join(" OR ");
+};
+
+const injectIndexMacroOrClause = (
+  spl: string,
+  macroNames: readonly string[],
+): string => {
+  const clause = buildIndexMacroOrClause(macroNames);
+  if (spl.includes(SCD_INDEX_MACRO_OR_PLACEHOLDER)) {
+    return spl.replace(SCD_INDEX_MACRO_OR_PLACEHOLDER, clause);
+  }
+  return spl.replace(
+    /`\s*index_[a-z0-9_]+\s*`(?:\s+OR\s+`\s*index_[a-z0-9_]+\s*`)+/i,
+    clause,
+  );
+};
+
+const loadScdIndexMacroNames = async (): Promise<string[]> => {
+  const response = await fetch(scdMacrosCatalogUrl(), {
+    ...getDefaultFetchInit(),
+    method: "GET",
+  });
+
+  let payload: unknown = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      extractSplunkError(payload) ||
+        `Could not list SCD index macros (HTTP ${response.status}).`,
+    );
+  }
+
+  const entries = (
+    payload as { entry?: Array<{ name?: unknown }> } | null
+  )?.entry;
+  const names = (entries ?? [])
+    .map((entry) => normalizeText(entry?.name).trim())
+    .filter((name) => name.startsWith("index_"));
+
+  return names.length ? Array.from(new Set(names)).sort() : [...FALLBACK_SCD_INDEX_MACRO_NAMES];
 };
 
 const saveMacroDefinition = async (
@@ -846,16 +929,30 @@ export default function MacroIndexTuningPage(): JSX.Element {
   const fastTimeParser = useTimeRangeParser();
   const cimTimeParser = useTimeRangeParser();
   const allRows = useMemo(() => [...rows, ...cimRows], [cimRows, rows]);
+  const [scdIndexMacroNames, setScdIndexMacroNames] = useState<string[]>([
+    ...FALLBACK_SCD_INDEX_MACRO_NAMES,
+  ]);
+  const tuningMacroCatalog = useMemo(
+    () => buildTuningMacroCatalog(scdIndexMacroNames),
+    [scdIndexMacroNames],
+  );
+  const {
+    fastTuningMacroConfigs,
+    fastTuningMacroNameSet,
+    indexMacroNameSet,
+    tunableMacroNameSet,
+    macroConfigByName,
+  } = tuningMacroCatalog;
 
   const generatedMacroStanzasByApp = useMemo<Record<string, string>>(
     () =>
       Object.fromEntries(
         TARGET_APP_ORDER.map((targetApp) => [
           targetApp,
-          buildMacroStanzas(allRows, targetApp),
+          buildMacroStanzas(allRows, targetApp, tunableMacroNameSet),
         ]),
       ),
-    [allRows],
+    [allRows, tunableMacroNameSet],
   );
   const macroStanzas = useMemo(
     () => {
@@ -876,14 +973,14 @@ export default function MacroIndexTuningPage(): JSX.Element {
   );
   const hasUnknown = rows.some((row) => row.macro === "unknown");
   const fastTunableRows = rows.filter((row) =>
-    FAST_TUNING_MACRO_NAME_SET.has(row.macro),
+    fastTuningMacroNameSet.has(row.macro),
   );
   const cimMacroRows = cimRows.filter((row) =>
     CIM_MACRO_NAME_SET.has(row.macro),
   );
   const tunableRows = [...fastTunableRows, ...cimMacroRows];
   const indexMacroRows = tunableRows.filter((row) =>
-    INDEX_MACRO_NAME_SET.has(row.macro),
+    indexMacroNameSet.has(row.macro),
   );
   const modelMacroRows = tunableRows.filter(
     (row) =>
@@ -928,8 +1025,15 @@ export default function MacroIndexTuningPage(): JSX.Element {
   const isSavingAll = Object.values(saveStatuses).some(
     (status) => status.state === "saving",
   );
-  const openSearchUrl = searchSpl
-    ? splunkSearchAppUrl(searchSpl, timeRange)
+  const resolvedSearchSpl = useMemo(
+    () =>
+      searchSpl
+        ? injectIndexMacroOrClause(searchSpl, scdIndexMacroNames)
+        : "",
+    [scdIndexMacroNames, searchSpl],
+  );
+  const openSearchUrl = resolvedSearchSpl
+    ? splunkSearchAppUrl(resolvedSearchSpl, timeRange)
     : "";
   const openCimSearchUrl = splunkSearchAppUrl(
     CIM_DISCOVERY_SEARCH,
@@ -990,7 +1094,11 @@ export default function MacroIndexTuningPage(): JSX.Element {
     setSaveStatuses({});
 
     try {
-      const spl = await loadTuningSearch();
+      const rawSpl = await loadTuningSearch();
+      const discoveredIndexMacroNames = await loadScdIndexMacroNames();
+      setScdIndexMacroNames(discoveredIndexMacroNames);
+      const catalog = buildTuningMacroCatalog(discoveredIndexMacroNames);
+      const spl = injectIndexMacroOrClause(rawSpl, discoveredIndexMacroNames);
       const result = await runSearch({
         spl,
         earliestTime: timeRange.earliest,
@@ -999,20 +1107,21 @@ export default function MacroIndexTuningPage(): JSX.Element {
         tag: TUNING_SEARCHBASE_ID,
         signal: controller.signal,
       });
-      const currentDefinitions =
-        await loadMacroDefinitions(FAST_TUNING_MACRO_CONFIGS);
+      const currentDefinitions = await loadMacroDefinitions(
+        catalog.fastTuningMacroConfigs,
+      );
       const parsed = ((result.results || []) as Record<string, unknown>[])
-        .map(parseSearchResult)
+        .map((row) => parseSearchResult(row, catalog.macroConfigByName))
         .filter((row): row is MacroRow => Boolean(row));
       const expectedRows = buildExpectedEditableRows(
-        FAST_TUNING_MACRO_CONFIGS,
+        catalog.fastTuningMacroConfigs,
         parsed,
         currentDefinitions,
       );
       const extraRows = parsed
         .filter(
           (row) =>
-            !FAST_TUNING_MACRO_NAME_SET.has(row.macro) &&
+            !catalog.fastTuningMacroNameSet.has(row.macro) &&
             !CIM_MACRO_NAME_SET.has(row.macro),
         )
         .map((row) => ({
@@ -1062,7 +1171,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
       });
       const currentDefinitions = await loadMacroDefinitions(CIM_MACRO_CONFIGS);
       const parsed = ((result.results || []) as Record<string, unknown>[])
-        .map(parseSearchResult)
+        .map((row) => parseSearchResult(row, macroConfigByName))
         .filter((row): row is MacroRow => Boolean(row));
       setCimRows(
         buildExpectedEditableRows(
@@ -1077,7 +1186,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
       setCimScanState("error");
       setCimError(err instanceof Error ? err.message : String(err));
     }
-  }, [cimTimeRange.earliest, cimTimeRange.latest]);
+  }, [cimTimeRange.earliest, cimTimeRange.latest, macroConfigByName]);
 
   useEffect(() => {
     void loadCimMacroRows();
@@ -1305,9 +1414,11 @@ export default function MacroIndexTuningPage(): JSX.Element {
               Macro Index Tuning
             </h1>
             <p className="mt-1 max-w-3xl text-sm text-slate-600">
-              Scan known Cisco sourcetypes for fast dashboard macro tuning,
-              then run CIM data model discovery separately when you need the
-              slower tag-based index search.
+              Scan known Cisco sourcetypes for fast dashboard macro tuning.
+              SCD <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">index_*</code>{" "}
+              macros are discovered from this app at runtime, so new index
+              macros are picked up automatically. Run CIM data model discovery
+              separately when you need the slower tag-based index search.
             </p>
             <p className="mt-1 max-w-3xl text-xs text-slate-500">
               Powered by searchbase entry{" "}
