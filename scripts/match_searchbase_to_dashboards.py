@@ -8,12 +8,14 @@ import csv
 import json
 import re
 import sys
-import xml.etree.ElementTree as ET
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Iterable
+
+from defusedxml import ElementTree as ET
+from defusedxml.common import DefusedXmlException
 
 APPS_ROOT = Path("/opt/10/etc/apps")
 DCLOUD_VIEWS_DIR = Path(
@@ -395,7 +397,16 @@ def extract_xml_queries(xml_path: Path) -> list[tuple[str, str]]:
 
     # Traditional XML <search><query>...</query></search>
     try:
-        root = ET.fromstring(text)
+        root = ET.fromstring(
+            text,
+            forbid_dtd=True,
+            forbid_entities=True,
+            forbid_external=True,
+        )
+    except DefusedXmlException:
+        # Reject the entire dashboard rather than falling back to regex parsing
+        # when the document contains a DTD, entity, or external reference.
+        return []
     except ET.ParseError:
         root = None
     if root is not None:

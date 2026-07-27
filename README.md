@@ -35,6 +35,12 @@ Install workspace dependencies from the repository root:
 yarn install
 ```
 
+For repository-level Python analysis scripts, install their dependency:
+
+```bash
+python3 -m pip install -r requirements.txt
+```
+
 To build the Splunk app package locally:
 
 ```bash
