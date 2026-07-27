@@ -13,6 +13,7 @@
         "start": "node bin/build.js watch",
         "test:app-version": "node test/appVersion.test.cjs",
         "test:catalogue-search": "node test/catalogueSearch.test.cjs",
+        "test:overview-profiles": "node test/overviewProfiles.test.cjs",
         "typecheck": "tsc --noEmit",
         "verify:production-assets": "node bin/verify_production_assets.js",
         "eslint": "eslint src --ext \".js,.jsx,.ts,.tsx\"",

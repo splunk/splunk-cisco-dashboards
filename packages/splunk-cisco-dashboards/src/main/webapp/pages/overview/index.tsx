@@ -59,6 +59,7 @@ import {
   ArrowDown,
   ArrowUpDown,
   Sparkles,
+  Layers3,
   Shield,
   ShieldCheck,
   ServerCog,
@@ -155,10 +156,14 @@ import { usePersistedSectionHeights } from "@/common/hooks/usePersistedSectionHe
 import { usePersistedSignalTicker } from "@/common/hooks/usePersistedSignalTicker";
 import {
   DEFAULT_OVERVIEW_PROFILE_ID,
+  OVERVIEW_PROFILE_IDS,
+  getOverviewProfile,
   getOverviewProfileFromLocation,
+  getOverviewProfileViewName,
   isOverviewProfileId,
   sectionIdsForProfile,
   type OverviewProfile,
+  type OverviewProfileId,
   type OverviewSectionIcon,
 } from "@/common/config/overviewProfiles";
 import {
@@ -2077,6 +2082,20 @@ const OverviewPage: React.FC = () => {
     () => sectionIdsForProfile(overviewProfile),
     [overviewProfile],
   );
+  const handleOverviewProfileChange = useCallback(
+    (nextProfileId: OverviewProfileId) => {
+      if (
+        nextProfileId === overviewProfile.id ||
+        typeof window === "undefined"
+      ) {
+        return;
+      }
+      window.location.assign(
+        splunkViewAppUrl(getOverviewProfileViewName(nextProfileId)),
+      );
+    },
+    [overviewProfile.id],
+  );
 
   // ------------------------------ Branding ------------------------------
   //
@@ -2087,17 +2106,19 @@ const OverviewPage: React.FC = () => {
   //   2. `customerName` (per-deployment, Splunk macro) — the
   //      `[customer_name]` macro value fetched at mount. Operator-
   //      controlled via `local/macros.conf`.
-  //   3. Hardcoded fallbacks (`DEFAULT_HEADER_TITLE_FALLBACK`,
-  //      `DEFAULT_HEADER_SUBTITLE`, `DEFAULT_LOGO_DATA_URI`) — what
-  //      every fresh install ships with. The default logo is a
-  //      neutral network mark so the app doesn't imply a specific
-  //      customer, agency, or vendor brand before setup.
+  //   3. Profile/hardcoded fallbacks (`DEFAULT_HEADER_TITLE_FALLBACK`,
+  //      `DEFAULT_HEADER_SUBTITLE`, `overviewProfile.defaultLogoSrc`,
+  //      `DEFAULT_LOGO_DATA_URI`) — what every fresh install ships
+  //      with. Profiles may provide their own packaged logo; the
+  //      neutral network mark remains the final fallback.
   //
   // `effectiveTitle` / `effectiveSubtitle` / `effectiveLogoSrc`
   // (derived below) collapse those layers into the strings the
   // JSX actually renders.
   const [customerName, setCustomerName] = useState<string>("");
-  const [logoSrc, setLogoSrc] = useState<string>(DEFAULT_LOGO_DATA_URI);
+  const [logoSrc, setLogoSrc] = useState<string>(
+    overviewProfile.defaultLogoSrc || DEFAULT_LOGO_DATA_URI,
+  );
   const [splunkUsername, setSplunkUsername] = useState<string>("");
   const [appVersionLabel, setAppVersionLabel] =
     useState<string>(APP_VERSION_LABEL);
@@ -2127,9 +2148,10 @@ const OverviewPage: React.FC = () => {
     overviewProfile.headerSubtitle ||
     DEFAULT_HEADER_SUBTITLE;
   // Logo precedence: explicit override (data URI from upload) →
-  // current `logoSrc` (the neutral built-in default unless this
-  // session has recovered from an image error). Header branding is
-  // intentionally independent from tile/layout factory reset.
+  // current `logoSrc` (the profile-specific packaged default, or the
+  // neutral built-in mark if the profile has none / its image failed).
+  // Header branding is intentionally independent from tile/layout
+  // factory reset.
   const effectiveLogoSrc = brandingOverride.logoDataUri || logoSrc;
 
   // ------------------------------ Time + refresh ------------------------------
@@ -3329,11 +3351,37 @@ const OverviewPage: React.FC = () => {
     > = {};
     for (const section of overviewProfile.sections) {
       const Icon = SECTION_ICON_COMPONENTS[section.icon];
+      const fallbackIcon = (
+        <Icon className="h-3.5 w-3.5" strokeWidth={2.2} />
+      );
+      const iconMaskStyle: React.CSSProperties | undefined = section.iconSrc
+        ? {
+            WebkitMaskImage: `url("${section.iconSrc}")`,
+            maskImage: `url("${section.iconSrc}")`,
+            WebkitMaskPosition: "center",
+            maskPosition: "center",
+            WebkitMaskRepeat: "no-repeat",
+            maskRepeat: "no-repeat",
+            WebkitMaskSize: "contain",
+            maskSize: "contain",
+          }
+        : undefined;
       out[section.id] = {
         title: sectionTitles[section.id] || section.title,
         linkText: section.linkText,
         href: section.href,
-        icon: <Icon className="h-3.5 w-3.5" strokeWidth={2.2} />,
+        icon: section.iconSrc ? (
+          <span className="relative inline-flex h-full w-full items-center justify-center">
+            {fallbackIcon}
+            <span
+              aria-hidden="true"
+              className="absolute inset-[2px] bg-current"
+              style={iconMaskStyle}
+            />
+          </span>
+        ) : (
+          fallbackIcon
+        ),
       };
     }
     return out as Record<
@@ -4242,48 +4290,78 @@ const OverviewPage: React.FC = () => {
           >
             <Keyboard className="w-4 h-4" />
           </button>
-          {splunkUsername && (
-            <div className="flex items-center gap-2">
-              <div className="text-right hidden xl:block">
-                <p
-                  className="text-[11px] font-bold text-slate-700 dark:text-slate-200 leading-none max-w-[140px] truncate"
-                  title={splunkUsername}
+          <div className="flex items-center gap-2">
+            <div className="flex flex-col items-end">
+              <label
+                className="relative m-0 inline-flex h-7 max-w-[180px] cursor-pointer items-center gap-1 rounded-md px-1.5 text-slate-600 transition-colors hover:bg-slate-50 hover:text-sky-700 focus-within:ring-2 focus-within:ring-sky-500 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-sky-200"
+                title={`Switch Overview profile. Current: ${overviewProfile.label}`}
+              >
+                <Layers3
+                  className="h-4 w-4 flex-shrink-0"
+                  aria-hidden="true"
+                />
+                <span className="hidden truncate text-[11px] font-bold leading-none xl:block">
+                  {overviewProfile.label}
+                </span>
+                <ChevronDown
+                  className="hidden h-3 w-3 flex-shrink-0 xl:block"
+                  aria-hidden="true"
+                />
+                <select
+                  value={overviewProfile.id}
+                  onChange={(event) => {
+                    const nextProfileId = event.target.value;
+                    if (isOverviewProfileId(nextProfileId)) {
+                      handleOverviewProfileChange(nextProfileId);
+                    }
+                  }}
+                  aria-label="Overview profile"
+                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                 >
-                  {splunkUsername}
-                </p>
-                <div className="flex items-center justify-end gap-1 leading-tight">
+                  {OVERVIEW_PROFILE_IDS.map((profileId) => {
+                    const profile = getOverviewProfile(profileId);
+                    return (
+                      <option key={profile.id} value={profile.id}>
+                        {profile.label}
+                      </option>
+                    );
+                  })}
+                </select>
+              </label>
+              <div className="hidden items-center justify-end gap-1 leading-tight xl:flex">
+                <a
+                  href={appCatalogUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[9px] text-slate-400 no-underline transition-colors hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+                  title={`Installed: ${appVersionLabel} — click to review Splunk for Secure Networking and upgrades`}
+                  aria-label={`Splunk for Secure Networking and upgrades; installed app ${appVersionLabel}`}
+                >
+                  {appVersionLabel}
+                </a>
+                {appUpdateVersion && (
                   <a
                     href={appCatalogUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[9px] text-slate-400 no-underline transition-colors hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
-                    title={`Installed: ${appVersionLabel} — click to review Splunk for Secure Networking and upgrades`}
-                    aria-label={`Splunk for Secure Networking and upgrades; installed app ${appVersionLabel}`}
+                    className="inline-flex items-center rounded-full border border-amber-500 bg-amber-500 px-1.5 py-px text-[9px] font-semibold text-white no-underline transition-colors hover:border-amber-600 hover:bg-amber-600"
+                    title={`A newer version, v${appUpdateVersion}, is available — open Manage Apps to upgrade`}
+                    aria-label={`Update available: v${appUpdateVersion}. Open Manage Apps to upgrade`}
                   >
-                    {appVersionLabel}
+                    ⬆ v{appUpdateVersion}
                   </a>
-                  {appUpdateVersion && (
-                    <a
-                      href={appCatalogUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center rounded-full border border-amber-500 bg-amber-500 px-1.5 py-px text-[9px] font-semibold text-white no-underline transition-colors hover:border-amber-600 hover:bg-amber-600"
-                      title={`A newer version, v${appUpdateVersion}, is available — open Manage Apps to upgrade`}
-                      aria-label={`Update available: v${appUpdateVersion}. Open Manage Apps to upgrade`}
-                    >
-                      ⬆ v{appUpdateVersion}
-                    </a>
-                  )}
-                </div>
+                )}
               </div>
+            </div>
+            {splunkUsername && (
               <div
                 className="w-8 h-8 rounded-full bg-sky-100 dark:bg-sky-900/40 border border-sky-200 dark:border-sky-800 flex items-center justify-center text-sky-600 dark:text-sky-300"
                 title={`Signed in as ${splunkUsername}`}
               >
                 <User className="w-4 h-4" />
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </header>
 

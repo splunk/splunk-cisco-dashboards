@@ -1,9 +1,14 @@
+// Keep Executive as the legacy unscoped persistence profile so existing
+// localStorage keys and Splunk config stanzas remain compatible. The
+// user-facing landing/default profile is defined separately below.
 export const DEFAULT_OVERVIEW_PROFILE_ID = 'executive' as const;
 export const SECURE_NETWORKING_PROFILE_ID = 'secure_networking' as const;
+export const DEFAULT_OVERVIEW_LANDING_PROFILE_ID =
+    SECURE_NETWORKING_PROFILE_ID;
 
 export const OVERVIEW_PROFILE_IDS = [
-    DEFAULT_OVERVIEW_PROFILE_ID,
     SECURE_NETWORKING_PROFILE_ID,
+    DEFAULT_OVERVIEW_PROFILE_ID,
 ] as const;
 
 export type OverviewProfileId = (typeof OVERVIEW_PROFILE_IDS)[number];
@@ -28,6 +33,8 @@ export interface OverviewSectionMeta {
     linkText: string;
     href?: string;
     icon: OverviewSectionIcon;
+    /** Optional packaged SVG used as a color-aware mask over the Lucide fallback. */
+    iconSrc?: string;
 }
 
 export type OverviewSectionIcon =
@@ -49,9 +56,17 @@ interface OverviewAutoDiscoveryConfig {
 
 export interface OverviewProfile {
     id: OverviewProfileId;
-    viewNames: readonly string[];
+    /** Short user-facing name shown in the Overview profile switcher. */
+    label: string;
+    /**
+     * Splunk views that render this profile. The first entry is canonical and
+     * is used by the profile switcher; later entries may be legacy aliases.
+     */
+    viewNames: readonly [string, ...string[]];
     headerTitle?: string;
     headerSubtitle?: string;
+    /** Packaged default logo used when the user has not uploaded one. */
+    defaultLogoSrc?: string;
     sections: readonly OverviewSectionMeta[];
     defaultVisibleSections: readonly SectionId[];
     maxVisibleSections: number;
@@ -60,6 +75,9 @@ export interface OverviewProfile {
     fallbackTileCount: number;
     autoDiscovery?: OverviewAutoDiscoveryConfig;
 }
+
+const SECURE_NETWORKING_IMAGE_ROOT =
+    '/static/app/splunk-cisco-dashboards/images/overview/secure-networking';
 
 const EXECUTIVE_SECTIONS: readonly OverviewSectionMeta[] = [
     {
@@ -99,6 +117,7 @@ const SECURE_NETWORKING_SECTIONS: readonly OverviewSectionMeta[] = [
         linkText: 'Open Zero Trust Access',
         href: 'secure_networking_zta',
         icon: 'shield-check',
+        iconSrc: `${SECURE_NETWORKING_IMAGE_ROOT}/zero-trust-access.svg`,
     },
     {
         id: 'secure_infrastructure',
@@ -106,6 +125,7 @@ const SECURE_NETWORKING_SECTIONS: readonly OverviewSectionMeta[] = [
         linkText: 'Open Secure Infrastructure',
         href: 'secure_networking_secure_infrastructure',
         icon: 'server-cog',
+        iconSrc: `${SECURE_NETWORKING_IMAGE_ROOT}/secure-infrastructure.svg`,
     },
     {
         id: 'scalable_network_segmentation',
@@ -113,6 +133,7 @@ const SECURE_NETWORKING_SECTIONS: readonly OverviewSectionMeta[] = [
         linkText: 'Open Scalable Network Segmentation',
         href: 'secure_networking_scalable_network_segmentation',
         icon: 'network',
+        iconSrc: `${SECURE_NETWORKING_IMAGE_ROOT}/segmentation.svg`,
     },
     {
         id: 'hybrid_mesh_firewalling',
@@ -120,6 +141,7 @@ const SECURE_NETWORKING_SECTIONS: readonly OverviewSectionMeta[] = [
         linkText: 'Open Hybrid Mesh Firewalling',
         href: 'secure_networking_hybrid_mesh_firewalling',
         icon: 'firewall',
+        iconSrc: `${SECURE_NETWORKING_IMAGE_ROOT}/hybrid-mesh-firewalling.svg`,
     },
     {
         id: 'agentic_ops',
@@ -127,12 +149,14 @@ const SECURE_NETWORKING_SECTIONS: readonly OverviewSectionMeta[] = [
         linkText: 'Open Agentic Ops',
         href: 'secure_networking_agentic_ops',
         icon: 'bot',
+        iconSrc: `${SECURE_NETWORKING_IMAGE_ROOT}/agentic-ops.svg`,
     },
 ] as const;
 
 export const OVERVIEW_PROFILES: Record<OverviewProfileId, OverviewProfile> = {
     executive: {
         id: DEFAULT_OVERVIEW_PROFILE_ID,
+        label: 'Executive Briefing',
         viewNames: ['overview'],
         sections: EXECUTIVE_SECTIONS,
         defaultVisibleSections: ['it_health', 'security', 'building'],
@@ -143,9 +167,11 @@ export const OVERVIEW_PROFILES: Record<OverviewProfileId, OverviewProfile> = {
     },
     secure_networking: {
         id: SECURE_NETWORKING_PROFILE_ID,
+        label: 'Secure Networking',
         viewNames: ['secure_networking_overview'],
         headerTitle: 'Splunk for Secure Networking',
         headerSubtitle: 'Secure Networking Executive Insights',
+        defaultLogoSrc: `${SECURE_NETWORKING_IMAGE_ROOT}/secure-campus-branch-networking.png`,
         sections: SECURE_NETWORKING_SECTIONS,
         defaultVisibleSections: [
             'zta',
@@ -185,6 +211,10 @@ export const getOverviewProfile = (
     profileId: OverviewProfileId
 ): OverviewProfile => OVERVIEW_PROFILES[profileId];
 
+export const getOverviewProfileViewName = (
+    profileId: OverviewProfileId
+): string => OVERVIEW_PROFILES[profileId].viewNames[0];
+
 export const getOverviewProfileForViewName = (
     rawViewName: string | undefined
 ): OverviewProfile => {
@@ -194,12 +224,12 @@ export const getOverviewProfileForViewName = (
             if (profile.viewNames.includes(viewName)) return profile;
         }
     }
-    return OVERVIEW_PROFILES[DEFAULT_OVERVIEW_PROFILE_ID];
+    return OVERVIEW_PROFILES[DEFAULT_OVERVIEW_LANDING_PROFILE_ID];
 };
 
 export const getOverviewProfileFromLocation = (): OverviewProfile => {
     if (typeof window === 'undefined') {
-        return OVERVIEW_PROFILES[DEFAULT_OVERVIEW_PROFILE_ID];
+        return OVERVIEW_PROFILES[DEFAULT_OVERVIEW_LANDING_PROFILE_ID];
     }
     const params = new URLSearchParams(window.location.search);
     const explicit = params.get('overview_profile');
