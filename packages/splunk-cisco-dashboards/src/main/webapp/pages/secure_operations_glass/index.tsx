@@ -382,19 +382,27 @@ const metricTrendForRow = (
 
 const toneClass = (tone: Tone): string => `scd-glass-tone-${tone}`;
 
-const plainTextFromHtml = (value: string): string =>
-    value
+const plainTextFromHtml = (value: string): string => {
+    let text = value
         .replace(/<br\s*\/?>/gi, ' ')
-        .replace(/<\/(p|li|div|ul|ol)>/gi, ' ')
-        .replace(/<[^>]+>/g, '')
+        .replace(/<\/(p|li|div|ul|ol)>/gi, ' ');
+
+    let previous: string;
+    do {
+        previous = text;
+        text = text.replace(/<[^>]+>/g, '');
+    } while (text !== previous);
+
+    return text
         .replace(/&nbsp;/gi, ' ')
         .replace(/&amp;/gi, '&')
-        .replace(/&lt;/gi, '<')
-        .replace(/&gt;/gi, '>')
+        .replace(/&lt;/gi, '')
+        .replace(/&gt;/gi, '')
         .replace(/&quot;/gi, '"')
         .replace(/&#39;/gi, "'")
         .replace(/\s+/g, ' ')
         .trim();
+};
 
 const SearchActions = ({
     context,
