@@ -11,6 +11,7 @@
         "link:app": "node bin/build.js link",
         "unlink:app": "node bin/build.js unlink",
         "start": "node bin/build.js watch",
+        "test:app-version": "node test/appVersion.test.cjs",
         "test:catalogue-search": "node test/catalogueSearch.test.cjs",
         "typecheck": "tsc --noEmit",
         "verify:production-assets": "node bin/verify_production_assets.js",

@@ -29,6 +29,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { createURL } from "@splunk/splunk-utils/url";
 import {
   Activity,
   User,
@@ -167,6 +168,8 @@ import {
   BRANDING_ACCEPTED_LOGO_MIME_TYPES,
   type BrandingOverride,
 } from "@/common/hooks/useBrandingOverride";
+import { resolveAppVersions } from "@/common/lib/appVersion";
+import { APP_VERSION_LABEL } from "@/common/lib/buildInfo";
 import { SortableMetricCard } from "@/common/components/florida/SortableMetricCard";
 import {
   DndContext,
@@ -204,6 +207,7 @@ import { cn } from "@/common/lib/utils";
 // =============================================================================
 
 const APP_NAME = "splunk-cisco-dashboards";
+const APP_CATALOG_SEARCH_NAME = "Splunk for Secure Networking";
 
 // Default subtitle shown beneath the customer name when no per-user
 // override is set in localStorage. Operators can change the visible
@@ -2095,6 +2099,14 @@ const OverviewPage: React.FC = () => {
   const [customerName, setCustomerName] = useState<string>("");
   const [logoSrc, setLogoSrc] = useState<string>(DEFAULT_LOGO_DATA_URI);
   const [splunkUsername, setSplunkUsername] = useState<string>("");
+  const [appVersionLabel, setAppVersionLabel] =
+    useState<string>(APP_VERSION_LABEL);
+  const [appUpdateVersion, setAppUpdateVersion] = useState<string>("");
+  const appCatalogUrl = createURL("/manager/launcher/appsremote", {
+    order: "relevance",
+    query: APP_CATALOG_SEARCH_NAME,
+    offset: 0,
+  });
   const {
     override: brandingOverride,
     setOverride: setBrandingOverride,
@@ -2963,6 +2975,57 @@ const OverviewPage: React.FC = () => {
       cancelled = true;
     };
   }, [refreshToken]);
+
+  // ------------------------------ Installed app identity fetch ------------------------------
+  // The package step stamps the release build into the installed app.conf
+  // after webpack has compiled the bundle. Prefer that live value so the
+  // operator sees the version/build Splunk is actually running. Splunk's own
+  // Splunkbase poll writes a pending release to `update.version`; when present,
+  // the header exposes the same Manage Apps upgrade link used by the Catalyst TA.
+  // Retain the compile-time label as a resilient fallback when the endpoint is
+  // unavailable.
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    let cancelled = false;
+
+    fetch(
+      `${splunkLocalePrefix()}/splunkd/__raw/services/apps/local/${encodeURIComponent(APP_NAME)}?output_mode=json`,
+      {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+      },
+    )
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json() as Promise<{
+          entry?: Array<{ content?: Record<string, unknown> }>;
+        }>;
+      })
+      .then((json) => {
+        if (cancelled) return;
+        const content = json.entry?.[0]?.content ?? {};
+        const { version, updateVersion } = resolveAppVersions({
+          installedVersion: content.version,
+          updateVersion: content["update.version"],
+        });
+        const build =
+          typeof content.build === "string" ||
+          typeof content.build === "number"
+            ? String(content.build).trim()
+            : "";
+        if (version) {
+          setAppVersionLabel(`v${version}${build ? ` · Build ${build}` : ""}`);
+        }
+        setAppUpdateVersion(updateVersion);
+      })
+      .catch(() => {
+        // Keep the compile-time label when app metadata is unavailable.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // ------------------------------ Splunk user fetch ------------------------------
   useEffect(() => {
@@ -4188,9 +4251,30 @@ const OverviewPage: React.FC = () => {
                 >
                   {splunkUsername}
                 </p>
-                <p className="text-[9px] text-slate-400 dark:text-slate-500 leading-tight">
-                  Splunk session
-                </p>
+                <div className="flex items-center justify-end gap-1 leading-tight">
+                  <a
+                    href={appCatalogUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[9px] text-slate-400 no-underline transition-colors hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+                    title={`Installed: ${appVersionLabel} — click to review Splunk for Secure Networking and upgrades`}
+                    aria-label={`Splunk for Secure Networking and upgrades; installed app ${appVersionLabel}`}
+                  >
+                    {appVersionLabel}
+                  </a>
+                  {appUpdateVersion && (
+                    <a
+                      href={appCatalogUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center rounded-full border border-amber-500 bg-amber-500 px-1.5 py-px text-[9px] font-semibold text-white no-underline transition-colors hover:border-amber-600 hover:bg-amber-600"
+                      title={`A newer version, v${appUpdateVersion}, is available — open Manage Apps to upgrade`}
+                      aria-label={`Update available: v${appUpdateVersion}. Open Manage Apps to upgrade`}
+                    >
+                      ⬆ v{appUpdateVersion}
+                    </a>
+                  )}
+                </div>
               </div>
               <div
                 className="w-8 h-8 rounded-full bg-sky-100 dark:bg-sky-900/40 border border-sky-200 dark:border-sky-800 flex items-center justify-center text-sky-600 dark:text-sky-300"
