@@ -492,7 +492,8 @@ def audit_stanza(
             findings,
             stanza,
             "invalid_fmc_syslog_sourcetype",
-            "Use sourcetype='cisco:ftd:syslog'; the FMC-named syslog sourcetype is not a valid source contract.",
+            "Use the routed cisco:ftd:connection sourcetypes for connection analytics or "
+            "sourcetype='cisco:ftd:*' for aggregate FTD coverage; cisco:fmc:syslog is not valid.",
             "error",
         )
 

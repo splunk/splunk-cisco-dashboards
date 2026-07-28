@@ -49,8 +49,8 @@ assert.equal(
   "Secure Networking",
 );
 assert.equal(
-  getOverviewProfile("secure_networking").defaultLogoSrc,
-  "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/secure-campus-branch-networking.png",
+  getOverviewProfile("secure_networking").hideDefaultLogo,
+  true,
 );
 assert.deepEqual(
   getOverviewProfile("secure_networking").sections.map(

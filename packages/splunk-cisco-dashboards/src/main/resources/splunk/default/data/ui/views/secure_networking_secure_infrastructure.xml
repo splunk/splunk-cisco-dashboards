@@ -42,13 +42,28 @@
 		}
 	},
 	"visualizations": {
+		"viz_header_bg": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#ffffff",
+				"strokeColor": "rgba(15,23,42,0.06)"
+			}
+		},
+		"viz_header_icon": {
+			"type": "splunk.image",
+			"title": "Secure Infrastructure",
+			"options": {
+				"preserveAspectRatio": true,
+				"src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/secure-infrastructure.svg"
+			}
+		},
 		"viz_header": {
 			"type": "splunk.markdown",
 			"title": "",
 			"showLastUpdated": false,
 			"showProgressBar": false,
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "transparent",
 				"fontColor": "#111827",
 				"markdown": "# Secure Infrastructure\nDevice posture, advisory exposure, SD-WAN health, and wireless infrastructure risk."
 			}
@@ -373,11 +388,31 @@
 				},
 				"structure": [
 					{
-						"item": "viz_header",
+						"item": "viz_header_bg",
 						"position": {
 							"x": 20,
 							"y": 0,
 							"w": 1400,
+							"h": 90
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_header_icon",
+						"position": {
+							"x": 36,
+							"y": 9,
+							"w": 72,
+							"h": 72
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_header",
+						"position": {
+							"x": 120,
+							"y": 0,
+							"w": 1300,
 							"h": 90
 						},
 						"type": "block"

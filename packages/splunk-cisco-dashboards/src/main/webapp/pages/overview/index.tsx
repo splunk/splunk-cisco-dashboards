@@ -803,6 +803,19 @@ const SECTION_ICON_COMPONENTS: Record<OverviewSectionIcon, LucideIcon> = {
   bot: Bot,
 };
 
+// Cisco's technical SVGs are authored for much larger canvases, where their
+// thin strokes read well. At this compact dashboard size those strokes land
+// below one CSS pixel and look faint even though the source remains perfectly
+// sharp. Layering the same vector mask at sub-pixel offsets gives the icons an
+// optical small-size weight without rasterizing or altering the official art.
+const SECTION_ICON_MASK_OFFSETS = [
+  [0, 0],
+  [0.5, 0],
+  [-0.5, 0],
+  [0, 0.5],
+  [0, -0.5],
+] as const;
+
 interface AppPriorityDrilldown {
   viewName: string;
   title: string;
@@ -2109,15 +2122,17 @@ const OverviewPage: React.FC = () => {
   //   3. Profile/hardcoded fallbacks (`DEFAULT_HEADER_TITLE_FALLBACK`,
   //      `DEFAULT_HEADER_SUBTITLE`, `overviewProfile.defaultLogoSrc`,
   //      `DEFAULT_LOGO_DATA_URI`) — what every fresh install ships
-  //      with. Profiles may provide their own packaged logo; the
-  //      neutral network mark remains the final fallback.
+  //      with. Profiles may provide their own packaged logo, hide the
+  //      default logo entirely, or use the neutral network mark.
   //
   // `effectiveTitle` / `effectiveSubtitle` / `effectiveLogoSrc`
   // (derived below) collapse those layers into the strings the
   // JSX actually renders.
   const [customerName, setCustomerName] = useState<string>("");
   const [logoSrc, setLogoSrc] = useState<string>(
-    overviewProfile.defaultLogoSrc || DEFAULT_LOGO_DATA_URI,
+    overviewProfile.hideDefaultLogo
+      ? ""
+      : overviewProfile.defaultLogoSrc || DEFAULT_LOGO_DATA_URI,
   );
   const [splunkUsername, setSplunkUsername] = useState<string>("");
   const [appVersionLabel, setAppVersionLabel] =
@@ -2148,8 +2163,8 @@ const OverviewPage: React.FC = () => {
     overviewProfile.headerSubtitle ||
     DEFAULT_HEADER_SUBTITLE;
   // Logo precedence: explicit override (data URI from upload) →
-  // current `logoSrc` (the profile-specific packaged default, or the
-  // neutral built-in mark if the profile has none / its image failed).
+  // current `logoSrc` (the profile-specific packaged default, an
+  // intentionally empty value, or the neutral built-in mark).
   // Header branding is intentionally independent from tile/layout
   // factory reset.
   const effectiveLogoSrc = brandingOverride.logoDataUri || logoSrc;
@@ -3352,7 +3367,7 @@ const OverviewPage: React.FC = () => {
     for (const section of overviewProfile.sections) {
       const Icon = SECTION_ICON_COMPONENTS[section.icon];
       const fallbackIcon = (
-        <Icon className="h-3.5 w-3.5" strokeWidth={2.2} />
+        <Icon className="h-5 w-5" strokeWidth={2.2} />
       );
       const iconMaskStyle: React.CSSProperties | undefined = section.iconSrc
         ? {
@@ -3371,13 +3386,20 @@ const OverviewPage: React.FC = () => {
         linkText: section.linkText,
         href: section.href,
         icon: section.iconSrc ? (
-          <span className="relative inline-flex h-full w-full items-center justify-center">
-            {fallbackIcon}
-            <span
-              aria-hidden="true"
-              className="absolute inset-[2px] bg-current"
-              style={iconMaskStyle}
-            />
+          <span
+            aria-hidden="true"
+            className="relative inline-flex h-full w-full"
+          >
+            {SECTION_ICON_MASK_OFFSETS.map(([x, y]) => (
+              <span
+                key={`${x}:${y}`}
+                className="absolute inset-0 bg-current"
+                style={{
+                  ...iconMaskStyle,
+                  transform: `translate(${x}px, ${y}px)`,
+                }}
+              />
+            ))}
           </span>
         ) : (
           fallbackIcon
@@ -4076,28 +4098,35 @@ const OverviewPage: React.FC = () => {
          * cluster so any future ancestor `group` class doesn't
          * accidentally fire the same reveal.
          */}
-        <div className="flex items-center gap-3 min-w-0 group/branding">
-          <div className="w-9 h-9 bg-sky-600 rounded-lg flex items-center justify-center text-white overflow-hidden p-1 flex-shrink-0">
-            <img
-              src={effectiveLogoSrc}
-              alt="Dashboard logo"
-              className="w-full h-full object-contain"
-              onError={() => {
-                // If a future non-data default logo fails to
-                // load, recover to the neutral built-in mark
-                // instead of leaving a broken image in the
-                // executive header. User-uploaded data URIs
-                // are self-contained and managed by the
-                // branding editor.
-                if (
-                  !brandingOverride.logoDataUri &&
-                  logoSrc !== DEFAULT_LOGO_DATA_URI
-                ) {
-                  setLogoSrc(DEFAULT_LOGO_DATA_URI);
-                }
-              }}
-            />
-          </div>
+        <div
+          className={cn(
+            "flex items-center min-w-0 group/branding",
+            effectiveLogoSrc ? "gap-3" : "gap-0",
+          )}
+        >
+          {effectiveLogoSrc ? (
+            <div className="w-9 h-9 bg-sky-600 rounded-lg flex items-center justify-center text-white overflow-hidden p-1 flex-shrink-0">
+              <img
+                src={effectiveLogoSrc}
+                alt="Dashboard logo"
+                className="w-full h-full object-contain"
+                onError={() => {
+                  // If a future non-data default logo fails to
+                  // load, recover to the neutral built-in mark
+                  // instead of leaving a broken image in the
+                  // executive header. User-uploaded data URIs
+                  // are self-contained and managed by the
+                  // branding editor.
+                  if (
+                    !brandingOverride.logoDataUri &&
+                    logoSrc !== DEFAULT_LOGO_DATA_URI
+                  ) {
+                    setLogoSrc(DEFAULT_LOGO_DATA_URI);
+                  }
+                }}
+              />
+            </div>
+          ) : null}
           <div className="min-w-0">
             <h1 className="text-base font-black text-sky-900 dark:text-sky-200 tracking-tight leading-none uppercase truncate">
               {effectiveTitle}
@@ -7491,11 +7520,17 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
             </span>
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-sky-600 rounded-lg flex items-center justify-center text-white overflow-hidden p-1 flex-shrink-0">
-                <img
-                  src={previewLogoSrc}
-                  alt="Logo preview"
-                  className="w-full h-full object-contain"
-                />
+                {previewLogoSrc ? (
+                  <img
+                    src={previewLogoSrc}
+                    alt="Logo preview"
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <span className="text-center text-[9px] font-bold leading-tight">
+                    No logo
+                  </span>
+                )}
               </div>
               <div className="flex flex-col gap-1.5">
                 <button

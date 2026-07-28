@@ -67,6 +67,8 @@ export interface OverviewProfile {
     headerSubtitle?: string;
     /** Packaged default logo used when the user has not uploaded one. */
     defaultLogoSrc?: string;
+    /** Suppress the built-in logo while still allowing a user-uploaded override. */
+    hideDefaultLogo?: boolean;
     sections: readonly OverviewSectionMeta[];
     defaultVisibleSections: readonly SectionId[];
     maxVisibleSections: number;
@@ -171,7 +173,7 @@ export const OVERVIEW_PROFILES: Record<OverviewProfileId, OverviewProfile> = {
         viewNames: ['secure_networking_overview'],
         headerTitle: 'Splunk for Secure Networking',
         headerSubtitle: 'Secure Networking Executive Insights',
-        defaultLogoSrc: `${SECURE_NETWORKING_IMAGE_ROOT}/secure-campus-branch-networking.png`,
+        hideDefaultLogo: true,
         sections: SECURE_NETWORKING_SECTIONS,
         defaultVisibleSections: [
             'zta',
