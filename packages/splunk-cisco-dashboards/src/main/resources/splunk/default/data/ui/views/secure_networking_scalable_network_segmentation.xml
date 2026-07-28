@@ -323,7 +323,7 @@
 		"ds_base_seg_sgt_blocks": {
 			"name": "Secure Networking base - SGT FMC blocks",
 			"options": {
-				"query": "`index_firewall` sourcetype=\"cisco:ftd:syslog\" (AC_RuleAction=\"Block\" OR AC_RuleAction=\"Block with reset\") SourceSecurityGroupTag!=\"\" SourceSecurityGroupTag!=\"0\"\n| eval sgt_hex=printf(\"%04X\",tonumber(SourceSecurityGroupTag))\n| lookup sgt_naming.csv SGT_Hex as sgt_hex OUTPUT Name as sgt_name\n| eval sgt_label=coalesce(sgt_name,\"SGT-\".SourceSecurityGroupTag)",
+				"query": "(`index_firewall` (sourcetype=\"cisco:ftd:connection\" OR sourcetype=\"cisco:ftd:connection:security\") (AC_RuleAction=\"Block\" OR AC_RuleAction=\"Block with reset\")) OR (`index_identity` sourcetype=\"cisco:ise:syslog\" security_group_tag=* Framed_IP_Address=*)\n| eval is_ftd=if(match(sourcetype,\"^cisco:ftd:\"),1,0), source_ip=if(is_ftd=1,coalesce(src_ip,InitiatorIP),Framed_IP_Address), direct_sgt=if(is_ftd=1,src_sgt,null()), ise_sgt_candidate=if(is_ftd=0,security_group_tag,null())\n| where isnotnull(source_ip) AND source_ip!=\"\"\n| eventstats latest(ise_sgt_candidate) as ise_sgt by source_ip\n| where is_ftd=1\n| eval sgt_value=coalesce(direct_sgt,ise_sgt)\n| where isnotnull(sgt_value) AND sgt_value!=\"\" AND sgt_value!=\"0\" AND NOT match(sgt_value,\"^0{1,4}-0(?:\\s|$)\")",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -335,7 +335,7 @@
 			"name": "Secure Networking chain - SGT block count",
 			"options": {
 				"extend": "ds_base_seg_sgt_blocks",
-				"query": "| stats count as sgt_enforced_blocks\n| eval label=\"SGT-Enforced Firewall Blocks\"\n| fields label sgt_enforced_blocks"
+				"query": "| stats count as sgt_enforced_blocks\n| fillnull value=0 sgt_enforced_blocks\n| eval label=\"SGT-Enforced Firewall Blocks\"\n| fields label sgt_enforced_blocks"
 			},
 			"type": "ds.chain"
 		}

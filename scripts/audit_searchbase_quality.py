@@ -84,6 +84,22 @@ _SAVEDSEARCH_RE = re.compile(r"\|\s*savedsearch\s+\"([^\"]+)\"", re.I)
 _CISCO_TAG = "Cisco"
 _INVALID_FMC_SYSLOG = "cisco:" + "fmc:syslog"
 _REQUIRED_DISPATCH_CONTEXT = "splunk-cisco-dashboards"
+_SUPPORTED_DEFAULT_VIZ = {
+    "splunk.area",
+    "splunk.bar",
+    "splunk.column",
+    "splunk.fillergauge",
+    "splunk.line",
+    "splunk.map",
+    "splunk.pie",
+    "splunk.punchcard",
+    "splunk.sankey",
+    "splunk.scatter",
+    "splunk.singlevalue",
+    "splunk.singlevalueradial",
+    "splunk.table",
+}
+_TIME_SERIES_VIZ = {"splunk.area", "splunk.line"}
 _TIMECHART_AGG_RE = re.compile(
     r"\b(?:"
     r"count|c|dc|distinct_count|estdc|sum|avg|mean|min|max|median|mode|"
@@ -336,6 +352,45 @@ def final_command_name(spl: str) -> str:
     return command_name(parts[-1]) or parts[-1][:40]
 
 
+def final_transform_command(spl: str) -> str:
+    transforms = {"chart", "stats", "timechart", "tstats"}
+    commands = [
+        command
+        for command in split_spl_commands(spl)
+        if command_name(command) in transforms
+    ]
+    return commands[-1] if commands else ""
+
+
+def produces_time_series(spl: str) -> bool:
+    if timechart_command_indexes(spl):
+        return True
+    transform = final_transform_command(spl)
+    return bool(re.search(r"\bby\b[^|]*\b_time\b", transform, re.I))
+
+
+def parse_viz_options(stanza: Stanza) -> tuple[dict, str | None]:
+    raw = stanza.fields.get("viz_options", "").strip()
+    if not raw:
+        return {}, None
+    try:
+        value = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        return {}, str(exc)
+    if not isinstance(value, dict):
+        return {}, "viz_options must be a JSON object"
+    return value, None
+
+
+def overview_entries(viz_options: dict) -> list[dict]:
+    overview = viz_options.get("overview", [])
+    if isinstance(overview, dict):
+        overview = [overview]
+    if not isinstance(overview, list):
+        return []
+    return [entry for entry in overview if isinstance(entry, dict)]
+
+
 def command_after_last_timechart(spl: str) -> str | None:
     parts = split_spl_commands(spl)
     last_timechart = None
@@ -486,6 +541,54 @@ def audit_stanza(
     if not spl:
         add_finding(findings, stanza, "missing_search", "No search field.", "error")
         return findings
+
+    default_viz = stanza.fields.get("default_viz", "").strip()
+    if not default_viz:
+        add_finding(
+            findings,
+            stanza,
+            "missing_default_viz",
+            "Every search must declare a default_viz.",
+            "error",
+        )
+    elif default_viz not in _SUPPORTED_DEFAULT_VIZ:
+        add_finding(
+            findings,
+            stanza,
+            "unsupported_default_viz",
+            f"Unsupported default_viz '{default_viz}'.",
+            "error",
+        )
+
+    viz_options, viz_error = parse_viz_options(stanza)
+    if viz_error:
+        add_finding(
+            findings,
+            stanza,
+            "invalid_viz_options_json",
+            viz_error,
+            "error",
+        )
+    overviews = overview_entries(viz_options)
+    if default_viz != "splunk.table":
+        for index, overview in enumerate(overviews):
+            note = overview.get("thresholdNote", "")
+            if not isinstance(note, str) or not note.strip():
+                add_finding(
+                    findings,
+                    stanza,
+                    "missing_threshold_guidance",
+                    f"Overview entry {index + 1} requires a non-empty thresholdNote.",
+                    "error",
+                )
+    if default_viz in _TIME_SERIES_VIZ and not produces_time_series(spl):
+        add_finding(
+            findings,
+            stanza,
+            "default_viz_requires_time_series",
+            f"{default_viz} requires the final aggregation to retain _time.",
+            "error",
+        )
 
     if any(_INVALID_FMC_SYSLOG in value.lower() for value in stanza.fields.values()):
         add_finding(
