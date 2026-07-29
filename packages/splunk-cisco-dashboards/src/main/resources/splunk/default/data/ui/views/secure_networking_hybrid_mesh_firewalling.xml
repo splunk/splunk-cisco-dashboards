@@ -1,4 +1,4 @@
-<dashboard version="2" theme="light">
+<dashboard version="2" theme="dark">
     <label>Hybrid Mesh Firewalling</label>
     <description>Secure Networking drill-down dashboard for Hybrid Mesh Firewalling.</description>
     <definition><![CDATA[

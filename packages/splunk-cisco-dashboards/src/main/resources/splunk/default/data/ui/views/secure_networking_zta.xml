@@ -1,4 +1,4 @@
-<dashboard version="2" theme="light">
+<dashboard version="2" theme="dark">
     <label>Zero Trust Access</label>
     <description>Secure Networking drill-down dashboard for Zero Trust Access.</description>
     <definition><![CDATA[
@@ -277,6 +277,41 @@
 				"fontSize": "small",
 				"showInternalFields": false
 			}
+		},
+		"viz_zta_ravpn_connection_rate": {
+			"type": "splunk.line",
+			"title": "Remote Access VPN Clients, Sessions, and Connect Rate",
+			"dataSources": {
+				"primary": "ds_zta_ravpn_connection_rate"
+			},
+			"options": {
+				"backgroundColor": "#ffffff",
+				"legendDisplay": "right",
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"seriesColors": [
+					"#2563eb",
+					"#0ea5e9",
+					"#16a34a",
+					"#dc2626"
+				],
+				"lineWidth": 2,
+				"nullValueDisplay": "gaps"
+			}
+		},
+		"viz_zta_ravpn_posture_alerts": {
+			"type": "splunk.table",
+			"title": "Remote Access VPN Posture Alerts and Logs",
+			"dataSources": {
+				"primary": "ds_zta_ravpn_posture_alerts"
+			},
+			"options": {
+				"backgroundColor": "#ffffff",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
 		}
 	},
 	"dataSources": {
@@ -382,6 +417,28 @@
 				}
 			},
 			"type": "ds.search"
+		},
+		"ds_zta_ravpn_connection_rate": {
+			"name": "Secure Networking - ZTA RaVPN Connection Rate and Clients",
+			"options": {
+				"query": "`index_security` (sourcetype=\"cisco:cloud_security:ravpn\" OR sourcetype=\"cisco:secure_access:security_events_ravpn\")\n| eval event_value=lower(coalesce(event_type,eventType,action,result,status,\"unknown\")), user_value=coalesce(userID,user,identity,username,src_user,\"Unknown\"), session_value=coalesce(session_id,sessionId,connection_id,connectionId,assigned_ip,assigned_ipv6)\n| eval outcome=case(match(event_value,\"fail|deny|reject|error\"),\"Failed\",match(event_value,\"connect|success|allow|establish\"),\"Connected\",match(event_value,\"disconnect|terminate|close\"),\"Disconnected\",match(event_value,\"warn\"),\"Warning\",1==1,\"Other\")\n| bin _time span=15m\n| stats count(eval(outcome=\"Connected\")) as Connects, count(eval(outcome=\"Failed\")) as \"Connect Failures\", dc(user_value) as Clients, dc(session_value) as Sessions by _time\n| eval \"Connect Rate / min\"=round(Connects/15,2)\n| table _time, Clients, Sessions, \"Connect Rate / min\", \"Connect Failures\"",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_zta_ravpn_posture_alerts": {
+			"name": "Secure Networking - ZTA RaVPN Posture Alerts and Logs",
+			"options": {
+				"query": "`index_security` (sourcetype=\"cisco:cloud_security:ravpn\" OR sourcetype=\"cisco:secure_access:security_events_ravpn\")\n| eval event_value=lower(coalesce(event_type,eventType,action,result,status,\"unknown\")), posture_value=coalesce(posture_status,postureStatus,device_posture,posture,\"Unknown\"), severity_value=upper(coalesce(severity,priority,\"UNKNOWN\")), reason_value=coalesce(failed_reasons,failure_reason,reason,disconnection_reason,asa_syslog_descriptor,message,\"Unknown\"), user_value=coalesce(userID,user,identity,username,\"Unknown\"), profile_value=coalesce(vpn_profile,profile,\"Unknown\"), region_value=coalesce(region,location,\"Unknown\"), device_value=coalesce(device_name,device,hostname,src_host,\"Unknown\")\n| where match(event_value,\"fail|deny|reject|error|warn|alert\") OR match(posture_value,\"(?i)fail|non.?compliant|block|deny|unhealthy\") OR match(reason_value,\"(?i)posture|fail|deny|reject|error|malware|compromis\")\n| eval \"Last Seen\"=strftime(_time,\"%Y-%m-%d %H:%M:%S\")\n| rename severity_value as Severity, posture_value as Posture, reason_value as Reason, user_value as User, profile_value as \"VPN Profile\", region_value as Region, device_value as Device\n| table \"Last Seen\", Severity, Posture, Reason, User, Device, \"VPN Profile\", Region\n| sort - \"Last Seen\"\n| head 100",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
 		}
 	},
 	"layout": {
@@ -393,7 +450,7 @@
 				"options": {
 					"backgroundColor": "#f5f7fb",
 					"display": "auto-scale",
-					"height": 1490,
+					"height": 1900,
 					"width": 1440
 				},
 				"structure": [
@@ -522,6 +579,26 @@
 						"position": {
 							"x": 730,
 							"y": 1080,
+							"w": 690,
+							"h": 390
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_zta_ravpn_connection_rate",
+						"position": {
+							"x": 20,
+							"y": 1490,
+							"w": 690,
+							"h": 390
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_zta_ravpn_posture_alerts",
+						"position": {
+							"x": 730,
+							"y": 1490,
 							"w": 690,
 							"h": 390
 						},

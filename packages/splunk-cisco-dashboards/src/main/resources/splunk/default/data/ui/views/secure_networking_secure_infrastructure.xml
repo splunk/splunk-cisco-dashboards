@@ -1,4 +1,4 @@
-<dashboard version="2" theme="light">
+<dashboard version="2" theme="dark">
     <label>Secure Infrastructure</label>
     <description>Secure Networking drill-down dashboard for Secure Infrastructure.</description>
     <definition><![CDATA[
@@ -234,6 +234,45 @@
 				],
 				"stackMode": "stacked"
 			}
+		},
+		"viz_infra_secure_endpoint_incidents": {
+			"type": "splunk.table",
+			"title": "Secure Endpoint Incidents and Malware",
+			"dataSources": {
+				"primary": "ds_infra_secure_endpoint_incidents"
+			},
+			"options": {
+				"backgroundColor": "#ffffff",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_infra_duo_blocked_posture": {
+			"type": "splunk.table",
+			"title": "Duo Blocked Posture and Identity Events",
+			"dataSources": {
+				"primary": "ds_infra_duo_blocked_posture"
+			},
+			"options": {
+				"backgroundColor": "#ffffff",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_infra_duo_application_access": {
+			"type": "splunk.table",
+			"title": "Duo Application Access: Who, Where, and When",
+			"dataSources": {
+				"primary": "ds_infra_duo_application_access"
+			},
+			"options": {
+				"backgroundColor": "#ffffff",
+				"count": 25,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
 		}
 	},
 	"dataSources": {
@@ -372,6 +411,39 @@
 				"query": "| stats dc(eval(if(contained=\"true\",bssid,null()))) as Contained, dc(eval(if(contained!=\"true\",bssid,null()))) as Uncontained, dc(bssid) as total_rogues by ssid\n| sort - total_rogues\n| head 20\n| rename ssid as \"SSID\"\n| table SSID Contained Uncontained"
 			},
 			"type": "ds.chain"
+		},
+		"ds_infra_secure_endpoint_incidents": {
+			"name": "Secure Networking - Secure Endpoint Incident and Malware Activity",
+			"options": {
+				"query": "`index_security` sourcetype=\"cisco:se\"\n| spath\n| eval incident_value=coalesce(incident_id,incidentId,id,event_id,\"Unknown\"), event_value=coalesce(event_type,eventType,type,category,\"Unknown\"), threat_value=coalesce(threat_name,threatName,malware_name,malwareName,file_name,filename,'observable.value',\"Unknown\"), endpoint_value=coalesce(hostname,'computer.hostname','connector.hostname','device.name',device_name,\"Unknown\"), user_value=coalesce(user,user_name,username,identity,\"Unknown\"), severity_value=upper(coalesce(severity,threat_severity,risk,\"UNKNOWN\")), disposition_value=coalesce(disposition,action,status,verdict,\"Unknown\")\n| where match(event_value,\"(?i)incident|malware|threat|detection|compromise\") OR match(threat_value,\"(?i)malware|trojan|ransom|virus|worm|exploit\") OR match(_raw,\"(?i)incident|malware|threat detected|compromise\")\n| stats count as Events, dc(incident_value) as Incidents, dc(endpoint_value) as Endpoints, dc(user_value) as Users, latest(_time) as last_seen by severity_value, disposition_value, threat_value\n| eval \"Last Seen\"=strftime(last_seen,\"%Y-%m-%d %H:%M:%S\")\n| rename severity_value as Severity, disposition_value as Disposition, threat_value as Threat\n| table Severity, Disposition, Threat, Events, Incidents, Endpoints, Users, \"Last Seen\"\n| sort - Incidents - Events",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_infra_duo_blocked_posture": {
+			"name": "Secure Networking - Duo Blocked Posture and Identity Events",
+			"options": {
+				"query": "`index_duo` (sourcetype=\"cisco:duo:authentication\" OR sourcetype=\"cisco:duo:authentication_v2\")\n| eval result_value=lower(coalesce(result,\"unknown\"))\n| where match(result_value,\"failure|deny|fraud|blocked\")\n| eval event_type=\"Identity decision\", reason=coalesce(reason,result,\"Unknown\"), identity=coalesce('user.name',username,user,email,\"Unknown\"), endpoint=coalesce('access_device.hostname',device,host,\"Unknown\"), application=coalesce('application.name',application,integration,\"Unknown\"), location=coalesce('access_device.location.city','access_device.location.country',location,\"Unknown\")\n| fields _time, event_type, reason, identity, endpoint, application, location\n| append [ search `index_duo` sourcetype=\"cisco:duo:endpoint\" | stats latest(_time) as _time latest(disk_encryption_status) as encryption latest(firewall_status) as firewall latest(password_status) as password latest(trusted_endpoint_status) as trusted latest(hostname) as hostname latest(username) as username latest(os_family) as os_family by epkey | eval failed_controls=mvappend(if(NOT match(encryption,\"(?i)^(encrypted|enabled|true|on)$\"),\"Disk encryption\",null()),if(NOT match(firewall,\"(?i)^(enabled|true|on)$\"),\"Host firewall\",null()),if(NOT match(password,\"(?i)^(set|enabled|true|on)$\"),\"Password\",null()),if(NOT match(trusted,\"(?i)^(trusted|enabled|true|on)$\"),\"Trusted endpoint\",null())) | mvexpand failed_controls | where isnotnull(failed_controls) | eval event_type=\"Endpoint posture\", reason=failed_controls, identity=coalesce(username,\"Unknown\"), endpoint=coalesce(hostname,epkey,\"Unknown\"), application=\"Duo Device Health\", location=coalesce(os_family,\"Unknown\") | fields _time, event_type, reason, identity, endpoint, application, location ]\n| eval \"Last Seen\"=strftime(_time,\"%Y-%m-%d %H:%M:%S\")\n| rename event_type as \"Event Type\", reason as Reason, identity as Identity, endpoint as Endpoint, application as Application, location as Location\n| table \"Last Seen\", \"Event Type\", Reason, Identity, Endpoint, Application, Location\n| sort - \"Last Seen\"\n| head 100",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_infra_duo_application_access": {
+			"name": "Secure Networking - Duo Application Access Detail",
+			"options": {
+				"query": "`index_duo` (sourcetype=\"cisco:duo:authentication\" OR sourcetype=\"cisco:duo:authentication_v2\")\n| eval application_value=coalesce('application.name',application,integration,\"Unknown\"), identity_value=coalesce('user.name',username,user,email,\"Unknown\"), city_value=coalesce('access_device.location.city',city,\"Unknown\"), country_value=coalesce('access_device.location.country',country,\"Unknown\"), ip_value=coalesce('access_device.ip',src_ip,src,\"Unknown\"), device_value=coalesce('access_device.hostname',device,host,\"Unknown\"), factor_value=coalesce(factor,\"Unknown\"), outcome_value=coalesce(result,\"Unknown\")\n| eval \"Access Time\"=strftime(_time,\"%Y-%m-%d %H:%M:%S\"), Location=city_value.\", \".country_value\n| rename application_value as Application, identity_value as Identity, ip_value as \"Source IP\", device_value as Device, factor_value as Factor, outcome_value as Outcome\n| table \"Access Time\", Application, Identity, Outcome, Factor, Location, \"Source IP\", Device\n| sort - \"Access Time\"\n| head 100",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
 		}
 	},
 	"layout": {
@@ -383,7 +455,7 @@
 				"options": {
 					"backgroundColor": "#f5f7fb",
 					"display": "auto-scale",
-					"height": 1490,
+					"height": 2310,
 					"width": 1440
 				},
 				"structure": [
@@ -513,6 +585,36 @@
 							"x": 730,
 							"y": 1080,
 							"w": 690,
+							"h": 390
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_infra_secure_endpoint_incidents",
+						"position": {
+							"x": 20,
+							"y": 1490,
+							"w": 690,
+							"h": 390
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_infra_duo_blocked_posture",
+						"position": {
+							"x": 730,
+							"y": 1490,
+							"w": 690,
+							"h": 390
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_infra_duo_application_access",
+						"position": {
+							"x": 20,
+							"y": 1900,
+							"w": 1400,
 							"h": 390
 						},
 						"type": "block"

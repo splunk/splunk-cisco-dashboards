@@ -1,4 +1,4 @@
-<dashboard version="2" theme="light">
+<dashboard version="2" theme="dark">
     <label>Scalable Network Segmentation</label>
     <description>Secure Networking drill-down dashboard for Scalable Network Segmentation.</description>
     <definition><![CDATA[
@@ -219,6 +219,42 @@
 				"fontSize": "small",
 				"showInternalFields": false
 			}
+		},
+		"viz_seg_router_feature_trend": {
+			"type": "splunk.area",
+			"title": "Router Segmentation Feature Event Trend",
+			"dataSources": {
+				"primary": "ds_seg_router_feature_trend"
+			},
+			"options": {
+				"backgroundColor": "#ffffff",
+				"legendDisplay": "right",
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"seriesColors": [
+					"#0d9488",
+					"#2563eb",
+					"#f59e0b",
+					"#dc2626",
+					"#7c3aed"
+				],
+				"lineWidth": 2,
+				"nullValueDisplay": "gaps"
+			}
+		},
+		"viz_seg_router_feature_evidence": {
+			"type": "splunk.table",
+			"title": "Router VRF, VLAN, VXLAN, VPN, and SGT Evidence",
+			"dataSources": {
+				"primary": "ds_seg_router_feature_evidence"
+			},
+			"options": {
+				"backgroundColor": "#ffffff",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
 		}
 	},
 	"dataSources": {
@@ -320,6 +356,28 @@
 			},
 			"type": "ds.search"
 		},
+		"ds_seg_router_feature_trend": {
+			"name": "Secure Networking - Router Segmentation Feature Event Trend",
+			"options": {
+				"query": "`index_network` sourcetype=\"cisco:ios\"\n| eval feature=case(match(_raw,\"(?i)(^|[^A-Z0-9_])(vxlan|vni|nve)([^A-Z0-9_]|$)\"),\"VXLAN / VNI\",match(_raw,\"(?i)(^|[^A-Z0-9_])(dot1q|802\\\\.1q|encapsulation[ ]+dot1q|vlan)([^A-Z0-9_]|$)\"),\"VLAN / 802.1Q\",match(_raw,\"(?i)(^|[^A-Z0-9_])(vrf|ip[ ]+vrf)([^A-Z0-9_]|$)\"),\"VRF\",match(_raw,\"(?i)(^|[^A-Z0-9_])(trustsec|cts|sgt|security[ -]?group[ -]?tag)([^A-Z0-9_]|$)\"),\"SGT / TrustSec\",match(_raw,\"(?i)(^|[^A-Z0-9_])(ipsec|crypto[ ]+map|ikev2|dmvpn|flexvpn|vpn)([^A-Z0-9_]|$)\"),\"VPN\",1==1,null())\n| where isnotnull(feature)\n| timechart span=1h count by feature",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
+		"ds_seg_router_feature_evidence": {
+			"name": "Secure Networking - Router Segmentation Feature Evidence",
+			"options": {
+				"query": "`index_network` sourcetype=\"cisco:ios\"\n| eval feature=case(match(_raw,\"(?i)(^|[^A-Z0-9_])(vxlan|vni|nve)([^A-Z0-9_]|$)\"),\"VXLAN / VNI\",match(_raw,\"(?i)(^|[^A-Z0-9_])(dot1q|802\\\\.1q|encapsulation[ ]+dot1q|vlan)([^A-Z0-9_]|$)\"),\"VLAN / 802.1Q\",match(_raw,\"(?i)(^|[^A-Z0-9_])(vrf|ip[ ]+vrf)([^A-Z0-9_]|$)\"),\"VRF\",match(_raw,\"(?i)(^|[^A-Z0-9_])(trustsec|cts|sgt|security[ -]?group[ -]?tag)([^A-Z0-9_]|$)\"),\"SGT / TrustSec\",match(_raw,\"(?i)(^|[^A-Z0-9_])(ipsec|crypto[ ]+map|ikev2|dmvpn|flexvpn|vpn)([^A-Z0-9_]|$)\"),\"VPN\",1==1,null())\n| where isnotnull(feature)\n| eval device=coalesce(host,hostname,dvc,\"Unknown\")\n| stats count as Events, latest(_time) as last_seen, values(eval(substr(_raw,1,180))) as samples by device, feature\n| eval \"Last Seen\"=strftime(last_seen,\"%Y-%m-%d %H:%M:%S\"), \"Sample Messages\"=mvjoin(mvindex(samples,0,2),\" | \")\n| rename device as Device, feature as \"Segmentation Feature\"\n| table Device, \"Segmentation Feature\", Events, \"Last Seen\", \"Sample Messages\"\n| sort Device, \"Segmentation Feature\"",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
 		"ds_base_seg_sgt_blocks": {
 			"name": "Secure Networking base - SGT FMC blocks",
 			"options": {
@@ -349,7 +407,7 @@
 				"options": {
 					"backgroundColor": "#f5f7fb",
 					"display": "auto-scale",
-					"height": 1490,
+					"height": 1900,
 					"width": 1440
 				},
 				"structure": [
@@ -478,6 +536,26 @@
 						"position": {
 							"x": 730,
 							"y": 1080,
+							"w": 690,
+							"h": 390
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_seg_router_feature_trend",
+						"position": {
+							"x": 20,
+							"y": 1490,
+							"w": 690,
+							"h": 390
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_seg_router_feature_evidence",
+						"position": {
+							"x": 730,
+							"y": 1490,
 							"w": 690,
 							"h": 390
 						},
