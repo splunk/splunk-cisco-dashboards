@@ -1,4 +1,17 @@
 <?xml version="1.0"?>
-<view template="splunk-cisco-dashboards:/templates/dashboardbuilder.html" type="html">
+<dashboard
+    version="1.1"
+    hideEdit="true"
+    hideExport="true"
+    hideTitle="true"
+    script="dashboardbuilder_bootstrap.js"
+>
     <label>Dashboard Manager</label>
-</view>
+    <row>
+        <panel>
+            <html>
+                <div id="scan-root"></div>
+            </html>
+        </panel>
+    </row>
+</dashboard>

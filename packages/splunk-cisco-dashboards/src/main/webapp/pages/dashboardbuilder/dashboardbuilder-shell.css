@@ -1,0 +1,40 @@
+/*
+ * Dashboard Manager runs inside a Simple XML view so Splunk 10.4 can own
+ * the application chrome and native icon navigation. Remove only the
+ * otherwise-empty Simple XML panel framing around the React mount point.
+ */
+#scan-root {
+    min-height: calc(100vh - 64px);
+    width: 100%;
+}
+
+.dashboard-body:has(#scan-root) {
+    padding: 0 !important;
+}
+
+.dashboard:has(#scan-root) > .dashboard-header,
+.dashboard:has(#scan-root) > .dashboard-messages {
+    display: none !important;
+    height: 0 !important;
+    min-height: 0 !important;
+}
+
+.dashboard-layout-row-column:has(#scan-root),
+.dashboard-element:has(#scan-root),
+.panel-element-row:has(#scan-root),
+.dashboard-row:has(#scan-root),
+.dashboard-cell:has(#scan-root),
+.dashboard-panel:has(#scan-root) {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.dashboard-panel:has(#scan-root) {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+
+.dashboard-panel:has(#scan-root) .panel-body {
+    padding: 0 !important;
+}

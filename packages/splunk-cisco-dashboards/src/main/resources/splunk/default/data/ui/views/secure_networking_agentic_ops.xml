@@ -576,7 +576,7 @@
 	},
 	"applicationProperties": {
 		"collapseNavigation": false,
-		"hideEdit": true,
+		"hideEdit": false,
 		"hideExport": false
 	}
 }

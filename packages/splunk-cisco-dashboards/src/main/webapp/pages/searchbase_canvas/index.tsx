@@ -110,6 +110,10 @@ import {
     plainTextFromHtml,
     type SearchbaseRecord,
 } from '@/common/services/searchbaseCatalogue';
+import {
+    buildAutoAdvancePlan,
+    settleAutoAdvanceTile,
+} from './autoAdvance';
 import { recordMatchesCatalogueQuery } from './catalogueSearch';
 
 const APP_NAME = 'splunk-cisco-dashboards';
@@ -148,6 +152,7 @@ const DEFAULT_TILE_VIZ = '__default_tile_viz__';
 const DEFAULT_OVERLAY_FIELD = '__default_overlay_field__';
 const NO_OVERLAY_FIELD = '__no_overlay_field__';
 const SPL_PREVIEW_FONT_SCALE = 1.18;
+const AUTO_ADVANCE_PAGE_PAUSE_MS = 450;
 
 const clampNumber = (value: number, min: number, max: number): number =>
     Math.min(max, Math.max(min, value));
@@ -207,6 +212,16 @@ interface ObservedNoDataEntry {
     reason: NoDataReason;
     rangeLabel: string;
     observedAt: string;
+}
+
+interface AutoAdvanceRunState {
+    sessionId: number;
+    pages: string[][];
+    pageIndex: number;
+    pendingTileIds: string[];
+    completedSearches: number;
+    totalSearches: number;
+    canvasSignature: string;
 }
 
 type NoDataReportSortKey =
@@ -936,6 +951,7 @@ interface SearchbaseCanvasTileProps {
         cacheKey: string,
         result: TableDataResult
     ) => void;
+    onSearchSettled: (tileId: string, refreshToken: number) => void;
 }
 
 const MissingSearchbaseTile: React.FC<{
@@ -996,6 +1012,7 @@ interface SearchbaseTileBodyProps {
         cacheKey: string,
         result: TableDataResult
     ) => void;
+    onSearchSettled: (tileId: string, refreshToken: number) => void;
 }
 
 const noDataCopy = (
@@ -1209,6 +1226,7 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
     onOverlayFieldsChange,
     onNoDataObservation,
     onMetricResultCacheChange,
+    onSearchSettled,
 }) => {
     // `viz_options.deltaField` (new in Build 1224) names the SPL
     // column carrying the delta value the radial / gauge tiles render
@@ -1310,9 +1328,16 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
             ? metricResultCache.result
             : undefined;
     const handleMetricResultChange = useCallback(
-        (cacheKey: string, result: MetricResult) =>
-            onMetricResultCacheChange(tile.id, cacheKey, result),
-        [onMetricResultCacheChange, tile.id]
+        (cacheKey: string, result: MetricResult) => {
+            onMetricResultCacheChange(tile.id, cacheKey, result);
+            onSearchSettled(tile.id, refreshToken);
+        },
+        [
+            onMetricResultCacheChange,
+            onSearchSettled,
+            refreshToken,
+            tile.id,
+        ]
     );
 
     const metric = useMetric(metricConfig, range, refreshToken, {
@@ -1477,6 +1502,7 @@ const SearchbaseTableTileBody: React.FC<
     presentationMode = false,
     onNoDataObservation,
     onTableDataCacheChange,
+    onSearchSettled,
 }) => {
     const tableConfig = useMemo(
         () => ({
@@ -1513,9 +1539,16 @@ const SearchbaseTableTileBody: React.FC<
     const cachedTableData =
         tableDataCache?.key === tableCacheKey ? tableDataCache.result : undefined;
     const handleTableDataChange = useCallback(
-        (cacheKey: string, result: TableDataResult) =>
-            onTableDataCacheChange(tile.id, cacheKey, result),
-        [onTableDataCacheChange, tile.id]
+        (cacheKey: string, result: TableDataResult) => {
+            onTableDataCacheChange(tile.id, cacheKey, result);
+            onSearchSettled(tile.id, refreshToken);
+        },
+        [
+            onSearchSettled,
+            onTableDataCacheChange,
+            refreshToken,
+            tile.id,
+        ]
     );
 
     const table = useTableData(tableConfig, range, refreshToken, {
@@ -1633,6 +1666,7 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
     onNoDataObservation,
     onMetricResultCacheChange,
     onTableDataCacheChange,
+    onSearchSettled,
     onStop,
     onRefresh,
     presentationMode = false,
@@ -1700,6 +1734,7 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                         }
                         onMetricResultCacheChange={onMetricResultCacheChange}
                         onTableDataCacheChange={onTableDataCacheChange}
+                        onSearchSettled={onSearchSettled}
                     />
                 ) : isBarBreakdownViz(viz) ? (
                     <SearchbaseTableTileBody
@@ -1725,6 +1760,7 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                         }
                         onMetricResultCacheChange={onMetricResultCacheChange}
                         onTableDataCacheChange={onTableDataCacheChange}
+                        onSearchSettled={onSearchSettled}
                     />
                 ) : isPieViz(viz) ? (
                     <SearchbaseTableTileBody
@@ -1750,6 +1786,7 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                         }
                         onMetricResultCacheChange={onMetricResultCacheChange}
                         onTableDataCacheChange={onTableDataCacheChange}
+                        onSearchSettled={onSearchSettled}
                     />
                 ) : (
                     <SearchbaseMetricTileBody
@@ -1775,6 +1812,7 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                         }
                         onMetricResultCacheChange={onMetricResultCacheChange}
                         onTableDataCacheChange={onTableDataCacheChange}
+                        onSearchSettled={onSearchSettled}
                     />
                 )}
             </div>
@@ -4056,9 +4094,19 @@ const SearchbaseCanvasPage: React.FC = () => {
     const [runningTileIds, setRunningTileIds] = useState<Set<string>>(
         () => new Set()
     );
+    const [autoAdvanceRun, setAutoAdvanceRun] =
+        useState<AutoAdvanceRunState | null>(null);
     const userStoppedRef = useRef(false);
     const runningTileIdsRef = useRef(runningTileIds);
     runningTileIdsRef.current = runningTileIds;
+    const tileRefreshCountsRef = useRef(tileRefreshCounts);
+    tileRefreshCountsRef.current = tileRefreshCounts;
+    const refreshTokenRef = useRef(refreshToken);
+    refreshTokenRef.current = refreshToken;
+    const autoAdvanceRunRef = useRef(autoAdvanceRun);
+    autoAdvanceRunRef.current = autoAdvanceRun;
+    const autoAdvanceExpectedTokensRef = useRef<Map<string, number>>(new Map());
+    const autoAdvanceSessionIdRef = useRef(0);
     const runnableVisibleTilesRef = useRef<CanvasTile[]>([]);
     const runVisibleTilesRef = useRef<() => void>(() => undefined);
     const [observedNoDataByTile, setObservedNoDataByTile] = useState<
@@ -4684,14 +4732,208 @@ const SearchbaseCanvasPage: React.FC = () => {
         });
     }, []);
 
-    const stopTile = useCallback((tileId: string) => {
-        setRunningTileIds((current) => {
-            if (!current.has(tileId)) return current;
-            const next = new Set(current);
-            next.delete(tileId);
-            return next;
-        });
+    const cancelAutoAdvance = useCallback((message?: string) => {
+        if (!autoAdvanceRunRef.current) return;
+        autoAdvanceExpectedTokensRef.current.clear();
+        autoAdvanceRunRef.current = null;
+        setAutoAdvanceRun(null);
+        if (message) setSaveStatus(message);
     }, []);
+
+    const stopTile = useCallback(
+        (tileId: string) => {
+            cancelAutoAdvance(
+                'Auto advance stopped because a running tile was stopped.'
+            );
+            setRunningTileIds((current) => {
+                if (!current.has(tileId)) return current;
+                const next = new Set(current);
+                next.delete(tileId);
+                return next;
+            });
+        },
+        [cancelAutoAdvance]
+    );
+
+    const beginAutoAdvancePage = useCallback(
+        (run: AutoAdvanceRunState, nextPageIndex: number) => {
+            const pageTileIds = run.pages[nextPageIndex] ?? [];
+            const nextRefreshCounts = { ...tileRefreshCountsRef.current };
+            const expectedTokens = new Map<string, number>();
+
+            for (const tileId of pageTileIds) {
+                const nextCount = (nextRefreshCounts[tileId] ?? 0) + 1;
+                nextRefreshCounts[tileId] = nextCount;
+                expectedTokens.set(
+                    tileId,
+                    refreshTokenRef.current + nextCount
+                );
+            }
+
+            const nextRun: AutoAdvanceRunState = {
+                ...run,
+                pageIndex: nextPageIndex,
+                pendingTileIds: pageTileIds,
+            };
+            autoAdvanceExpectedTokensRef.current = expectedTokens;
+            autoAdvanceRunRef.current = nextRun;
+            tileRefreshCountsRef.current = nextRefreshCounts;
+            setAutoAdvanceRun(nextRun);
+            setTileRefreshCounts(nextRefreshCounts);
+            setPageIndex(nextPageIndex);
+            clearObservedNoData(pageTileIds);
+            clearTileResultCache(pageTileIds);
+            userStoppedRef.current = false;
+            setRunningTileIds((current) => {
+                const next = new Set(current);
+                for (const tileId of pageTileIds) next.add(tileId);
+                return next;
+            });
+            setSaveStatus(
+                `Auto advance is running page ${nextPageIndex + 1} of ${
+                    run.pages.length
+                } (${pageTileIds.length.toLocaleString()} searches).`
+            );
+            canvasDebug('[canvas/auto-advance] page-start', {
+                sessionId: run.sessionId,
+                page: nextPageIndex + 1,
+                pageCount: run.pages.length,
+                tileIds: pageTileIds,
+            });
+        },
+        [clearObservedNoData, clearTileResultCache]
+    );
+
+    const handleSearchSettled = useCallback(
+        (tileId: string, settledRefreshToken: number) => {
+            const expectedRefreshToken =
+                autoAdvanceExpectedTokensRef.current.get(tileId);
+            if (expectedRefreshToken !== settledRefreshToken) return;
+
+            const current = autoAdvanceRunRef.current;
+            if (!current || !current.pendingTileIds.includes(tileId)) return;
+
+            autoAdvanceExpectedTokensRef.current.delete(tileId);
+            const pendingTileIds = settleAutoAdvanceTile(
+                current.pendingTileIds,
+                tileId
+            );
+            const next: AutoAdvanceRunState = {
+                ...current,
+                pendingTileIds,
+                completedSearches: current.completedSearches + 1,
+            };
+            autoAdvanceRunRef.current = next;
+            setAutoAdvanceRun(next);
+            canvasDebug('[canvas/auto-advance] tile-settled', {
+                sessionId: current.sessionId,
+                page: current.pageIndex + 1,
+                tileId,
+                pendingCount: pendingTileIds.length,
+            });
+        },
+        []
+    );
+
+    const startAutoAdvance = useCallback(() => {
+        const runnableTileIds = new Set(
+            tiles
+                .filter((tile) => entryByName.has(tile.searchName))
+                .map((tile) => tile.id)
+        );
+        const plan = buildAutoAdvancePlan(
+            tiles.map((tile) => tile.id),
+            runnableTileIds,
+            pageSize
+        );
+
+        if (loadingCatalogue || plan.totalSearches === 0) {
+            setSaveStatus(
+                loadingCatalogue
+                    ? 'Wait for the search catalogue to finish loading.'
+                    : 'There are no runnable searches on this canvas.'
+            );
+            return;
+        }
+
+        autoAdvanceSessionIdRef.current += 1;
+        const run: AutoAdvanceRunState = {
+            sessionId: autoAdvanceSessionIdRef.current,
+            pages: plan.pages,
+            pageIndex: 0,
+            pendingTileIds: [],
+            completedSearches: 0,
+            totalSearches: plan.totalSearches,
+            canvasSignature: currentCanvasSignature,
+        };
+
+        setTileSearchQuery('');
+        setTileResultFilter('all');
+        setBrowserOpen(false);
+        setReplaceTileId(null);
+        setPresentationMode(false);
+        setMoreMenuOpen(false);
+        beginAutoAdvancePage(run, 0);
+    }, [
+        beginAutoAdvancePage,
+        currentCanvasSignature,
+        entryByName,
+        loadingCatalogue,
+        pageSize,
+        tiles,
+    ]);
+
+    useEffect(() => {
+        if (!autoAdvanceRun || autoAdvanceRun.pendingTileIds.length > 0) {
+            return undefined;
+        }
+
+        const timeoutId = window.setTimeout(() => {
+            const current = autoAdvanceRunRef.current;
+            if (
+                !current ||
+                current.sessionId !== autoAdvanceRun.sessionId ||
+                current.pageIndex !== autoAdvanceRun.pageIndex ||
+                current.pendingTileIds.length > 0
+            ) {
+                return;
+            }
+
+            const nextPageIndex = current.pageIndex + 1;
+            if (nextPageIndex < current.pages.length) {
+                beginAutoAdvancePage(current, nextPageIndex);
+                return;
+            }
+
+            autoAdvanceExpectedTokensRef.current.clear();
+            autoAdvanceRunRef.current = null;
+            setAutoAdvanceRun(null);
+            setSaveStatus(
+                `Auto advance finished all ${
+                    current.pages.length
+                } pages and ${current.totalSearches.toLocaleString()} searches.`
+            );
+            canvasDebug('[canvas/auto-advance] complete', {
+                sessionId: current.sessionId,
+                pageCount: current.pages.length,
+                searchCount: current.totalSearches,
+            });
+        }, AUTO_ADVANCE_PAGE_PAUSE_MS);
+
+        return () => window.clearTimeout(timeoutId);
+    }, [autoAdvanceRun, beginAutoAdvancePage]);
+
+    useEffect(() => {
+        const current = autoAdvanceRunRef.current;
+        if (
+            current &&
+            current.canvasSignature !== currentCanvasSignature
+        ) {
+            cancelAutoAdvance(
+                'Auto advance stopped because the canvas configuration changed.'
+            );
+        }
+    }, [cancelAutoAdvance, currentCanvasSignature]);
 
     const runVisibleTiles = useCallback(() => {
         userStoppedRef.current = false;
@@ -4791,10 +5033,11 @@ const SearchbaseCanvasPage: React.FC = () => {
             runningCount: stoppedCount,
             runningIds: Array.from(runningTileIdsRef.current),
         });
+        cancelAutoAdvance('Auto advance stopped.');
         userStoppedRef.current = true;
         canvasDebug('[canvas/stop] userStopped-set', { userStopped: true });
         setRunningTileIds(new Set());
-    }, []);
+    }, [cancelAutoAdvance]);
 
     const refreshRunningTiles = useCallback(() => {
         userStoppedRef.current = false;
@@ -4942,6 +5185,20 @@ const SearchbaseCanvasPage: React.FC = () => {
             : 'Light theme';
     const hasTileResultFilter = tileResultFilter !== 'all';
     const hasTileFilters = hasTileSearch || hasTileResultFilter;
+    const autoAdvanceActive = autoAdvanceRun !== null;
+    const autoAdvanceProgressLabel = autoAdvanceRun
+        ? `${autoAdvanceRun.pageIndex + 1}/${autoAdvanceRun.pages.length}`
+        : 'Off';
+    const autoAdvanceTitle = autoAdvanceRun
+        ? `Stop auto advance. Page ${autoAdvanceRun.pageIndex + 1} of ${
+              autoAdvanceRun.pages.length
+          } has ${autoAdvanceRun.pendingTileIds.length} searches remaining.`
+        : 'Run every canvas page in order, waiting for each page to finish before advancing';
+    const autoAdvanceStatusText = autoAdvanceRun
+        ? `Auto advance: page ${autoAdvanceRun.pageIndex + 1} of ${
+              autoAdvanceRun.pages.length
+          }, ${autoAdvanceRun.pendingTileIds.length.toLocaleString()} searches remaining on this page, ${autoAdvanceRun.completedSearches.toLocaleString()} of ${autoAdvanceRun.totalSearches.toLocaleString()} finished overall.`
+        : '';
     const visibleTileSummary =
         filteredTiles.length === 0
             ? '0 shown'
@@ -4987,6 +5244,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                 onNoDataObservation={updateNoDataObservation}
                 onMetricResultCacheChange={updateMetricResultCache}
                 onTableDataCacheChange={updateTableDataCache}
+                onSearchSettled={handleSearchSettled}
             />
         );
 
@@ -5086,7 +5344,9 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 ? catalogueError
                                 : loadingCatalogue
                                 ? 'Loading catalogue'
-                                : saveStatus || (canvasDirty ? 'Unsaved changes' : '')}
+                                : autoAdvanceStatusText ||
+                                  saveStatus ||
+                                  (canvasDirty ? 'Unsaved changes' : '')}
                         </span>
                         <div className="flex flex-wrap items-center justify-end gap-2">
                             <button
@@ -5105,14 +5365,17 @@ const SearchbaseCanvasPage: React.FC = () => {
                                     setReplaceTileId(null);
                                     setBrowserOpen(true);
                                 }}
-                                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-md bg-sky-600 px-4 text-sm font-black text-white transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-300"
+                                disabled={autoAdvanceActive}
+                                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-md bg-sky-600 px-4 text-sm font-black text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 focus:ring-sky-300"
                             >
                                 <Plus className="h-4 w-4" />
                                 Add
                             </button>
                             <button
                                 type="button"
-                                disabled={idleVisibleTileCount === 0}
+                                disabled={
+                                    autoAdvanceActive || idleVisibleTileCount === 0
+                                }
                                 onClick={() => {
                                     canvasDebug('[canvas/run-visible] click', {
                                         idleVisibleTileCount,
@@ -5128,7 +5391,47 @@ const SearchbaseCanvasPage: React.FC = () => {
                             </button>
                             <button
                                 type="button"
-                                disabled={runningTileIds.size === 0}
+                                role="switch"
+                                aria-checked={autoAdvanceActive}
+                                disabled={
+                                    loadingCatalogue || tiles.length === 0
+                                }
+                                onClick={() => {
+                                    if (autoAdvanceActive) {
+                                        cancelAutoAdvance(
+                                            'Auto advance stopped. Searches already started on this page will continue.'
+                                        );
+                                    } else {
+                                        startAutoAdvance();
+                                    }
+                                }}
+                                title={autoAdvanceTitle}
+                                className={cn(
+                                    'inline-flex h-10 items-center gap-2 rounded-md border px-3 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 focus:ring-sky-300',
+                                    autoAdvanceActive
+                                        ? 'border-sky-300 bg-sky-600 text-white hover:bg-sky-700 dark:border-sky-700 dark:bg-sky-700 dark:hover:bg-sky-600'
+                                        : 'border-slate-300 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-sky-700 dark:hover:bg-sky-950 dark:hover:text-sky-200'
+                                )}
+                            >
+                                <ChevronRight className="h-4 w-4" />
+                                Auto advance
+                                <span
+                                    className={cn(
+                                        'rounded-full px-1.5 py-0.5 text-[10px] leading-none',
+                                        autoAdvanceActive
+                                            ? 'bg-white/20 text-white'
+                                            : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300'
+                                    )}
+                                >
+                                    {autoAdvanceProgressLabel}
+                                </span>
+                            </button>
+                            <button
+                                type="button"
+                                disabled={
+                                    runningTileIds.size === 0 &&
+                                    !autoAdvanceActive
+                                }
                                 onClick={stopAllTiles}
                                 title="Stop all running tiles"
                                 className="inline-flex h-10 items-center gap-1.5 rounded-md border border-rose-200 bg-rose-50 px-3 text-sm font-black text-rose-700 transition hover:border-rose-300 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 focus:ring-rose-300 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-200 dark:hover:bg-rose-900"
@@ -5139,7 +5442,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                             <button
                                 type="button"
                                 onClick={enterPresentationMode}
-                                disabled={tiles.length === 0}
+                                disabled={tiles.length === 0 || autoAdvanceActive}
                                 title="Present this canvas"
                                 className="inline-flex h-10 items-center gap-1.5 rounded-md bg-slate-950 px-3 text-sm font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-white"
                             >
@@ -5149,7 +5452,10 @@ const SearchbaseCanvasPage: React.FC = () => {
                             <button
                                 type="button"
                                 onClick={refreshRunningTiles}
-                                disabled={runnableVisibleTiles.length === 0}
+                                disabled={
+                                    autoAdvanceActive ||
+                                    runnableVisibleTiles.length === 0
+                                }
                                 title="Refresh visible tiles"
                                 aria-label="Refresh visible tiles"
                                 className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus:ring-slate-700"
@@ -5169,10 +5475,11 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 <button
                                     type="button"
                                     onClick={() => setMoreMenuOpen((open) => !open)}
+                                    disabled={autoAdvanceActive}
                                     aria-expanded={moreMenuOpen}
                                     title="More canvas actions"
                                     aria-label="More canvas actions"
-                                    className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus:ring-slate-700"
+                                    className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus:ring-slate-700"
                                 >
                                     <MoreVertical className="h-4 w-4" />
                                 </button>
@@ -5235,7 +5542,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                     const name = event.target.value;
                                     if (name) void loadCanvasByName(name);
                                 }}
-                                disabled={savingCanvas}
+                                disabled={savingCanvas || autoAdvanceActive}
                                 className="h-9 w-[250px] shrink-0 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-950"
                             >
                                 <option value="">Load saved canvas...</option>
@@ -5248,8 +5555,9 @@ const SearchbaseCanvasPage: React.FC = () => {
                             <select
                                 value={rangeLabel}
                                 onChange={(event) => setRangeLabel(event.target.value)}
+                                disabled={autoAdvanceActive}
                                 aria-label="Time range"
-                                className="h-9 w-[150px] rounded-md border border-slate-300 bg-white px-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-950"
+                                className="h-9 w-[150px] rounded-md border border-slate-300 bg-white px-2 text-sm font-semibold text-slate-900 outline-none transition disabled:cursor-not-allowed disabled:opacity-50 focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-950"
                             >
                                 {TIME_RANGE_OPTIONS.map((option) => (
                                     <option key={option.label} value={option.label}>
@@ -5262,8 +5570,9 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 onChange={(event) =>
                                     setPageSize(Number(event.target.value) as PageSize)
                                 }
+                                disabled={autoAdvanceActive}
                                 aria-label="Tiles per page"
-                                className="h-9 w-[130px] rounded-md border border-slate-300 bg-white px-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-950"
+                                className="h-9 w-[130px] rounded-md border border-slate-300 bg-white px-2 text-sm font-semibold text-slate-900 outline-none transition disabled:cursor-not-allowed disabled:opacity-50 focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-950"
                             >
                                 {PAGE_SIZE_OPTIONS.map((option) => (
                                     <option key={option} value={option}>
@@ -5277,7 +5586,9 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 ? catalogueError
                                 : loadingCatalogue
                                 ? 'Loading catalogue...'
-                                : saveStatus || (canvasDirty ? 'Unsaved changes' : 'Ready')}
+                                : autoAdvanceStatusText ||
+                                  saveStatus ||
+                                  (canvasDirty ? 'Unsaved changes' : 'Ready')}
                         </div>
                     </div>
                 </header>
@@ -5291,7 +5602,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 value={tileSearchQuery}
                                 onChange={(event) => setTileSearchQuery(event.target.value)}
                                 placeholder="Search tiles by name or query..."
-                                disabled={tiles.length === 0}
+                                disabled={tiles.length === 0 || autoAdvanceActive}
                                 className="h-11 w-full rounded-md border border-slate-300 bg-white pl-10 pr-10 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-sky-400 focus:ring-2 focus:ring-sky-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-sky-500 dark:focus:ring-sky-950 dark:disabled:bg-slate-900"
                                 aria-label="Search tiles by name or query"
                             />
@@ -5329,10 +5640,11 @@ const SearchbaseCanvasPage: React.FC = () => {
                                         key={option.value}
                                         type="button"
                                         onClick={() => setTileResultFilter(option.value)}
+                                        disabled={autoAdvanceActive}
                                         title={option.title}
                                         aria-pressed={selected}
                                         className={cn(
-                                            'inline-flex min-w-0 items-center gap-1.5 rounded px-2.5 text-xs font-black transition focus:outline-none focus:ring-2 focus:ring-sky-300 sm:px-3',
+                                            'inline-flex min-w-0 items-center gap-1.5 rounded px-2.5 text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-55 focus:outline-none focus:ring-2 focus:ring-sky-300 sm:px-3',
                                             selected
                                                 ? 'bg-slate-900 text-white shadow-sm dark:bg-slate-100 dark:text-slate-950'
                                                 : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-50'
@@ -5357,7 +5669,9 @@ const SearchbaseCanvasPage: React.FC = () => {
                         <div className="flex min-w-0 flex-wrap items-center gap-2">
                         <button
                             type="button"
-                            disabled={clampedPageIndex === 0}
+                            disabled={
+                                autoAdvanceActive || clampedPageIndex === 0
+                            }
                             onClick={() =>
                                 setPageIndex((current) => Math.max(0, current - 1))
                             }
@@ -5372,7 +5686,10 @@ const SearchbaseCanvasPage: React.FC = () => {
                         </div>
                         <button
                             type="button"
-                            disabled={clampedPageIndex >= totalPages - 1}
+                            disabled={
+                                autoAdvanceActive ||
+                                clampedPageIndex >= totalPages - 1
+                            }
                             onClick={() =>
                                 setPageIndex((current) =>
                                     Math.min(totalPages - 1, current + 1)
@@ -5392,7 +5709,8 @@ const SearchbaseCanvasPage: React.FC = () => {
                             <button
                                 type="button"
                                 onClick={clearCanvas}
-                                className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 text-xs font-black text-slate-500 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300 dark:hover:border-rose-800 dark:hover:bg-rose-950 dark:hover:text-rose-300"
+                                disabled={autoAdvanceActive}
+                                className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 text-xs font-black text-slate-500 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-45 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300 dark:hover:border-rose-800 dark:hover:bg-rose-950 dark:hover:text-rose-300"
                             >
                                 <Trash2 className="h-3.5 w-3.5" />
                                 Clear

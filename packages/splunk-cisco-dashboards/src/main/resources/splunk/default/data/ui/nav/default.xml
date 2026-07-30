@@ -1,79 +1,88 @@
-<nav color="#049fd9">
-    <!-- Core dashboards: keep top-level journey simple -->
-    <view name="secure_networking_overview" default="true" label="Secure Networking Posture"/>
+<nav color="#049fd9" label="Splunk for Secure Networking">
+    <view
+        name="secure_networking_overview"
+        default="true"
+        label="Home"
+        icon="house"
+    />
 
-    <collection label="Zero Trust Access">
-        <view name="secure_networking_zta" label="Overview"/>
+    <!--
+        The five Secure Networking pillars are collections so each can grow
+        from one dashboard into a complete journey without changing the
+        primary navigation structure.
+    -->
+    <collection label="Zero Trust Access" icon="shieldkeyhole">
+        <a href="dashboardbuilder#/secure_networking_zta">Overview</a>
     </collection>
 
-    <collection label="Secure Infrastructure">
-        <view name="secure_networking_secure_infrastructure" label="Overview"/>
+    <collection label="Secure Infrastructure" icon="layerstriple">
+        <view
+            name="secure_networking_secure_infrastructure"
+            label="Overview"
+        />
     </collection>
 
-    <collection label="Scalable Network Segmentation">
-        <view name="secure_networking_scalable_network_segmentation" label="Overview"/>
+    <collection label="Scalable Network Segmentation" icon="nodetopology">
+        <view
+            name="secure_networking_scalable_network_segmentation"
+            label="Overview"
+        />
     </collection>
 
-    <collection label="Hybrid Mesh Firewalling">
-        <view name="secure_networking_hybrid_mesh_firewalling" label="Overview"/>
+    <collection label="Hybrid Mesh Firewalling" icon="forwarderuniversal">
+        <view
+            name="secure_networking_hybrid_mesh_firewalling"
+            label="Overview"
+        />
     </collection>
 
-    <collection label="Agentic Ops">
-        <view name="secure_networking_agentic_ops" label="Overview"/>
+    <collection label="Agentic Ops" icon="pulse">
+        <view name="secure_networking_agentic_ops" label="Overview" />
     </collection>
 
-
-    <collection label="Other">
- <collection label="Core Dashboards">
-        <view name="overview" label="Executive Briefing"/>
-        <view name="secure_networking_overview" label="Secure Networking"/>
-        <a href="it_health_v1">IT Health</a>
-        <a href="security_v1">Security</a>
-        <a href="building_v1">Building Intelligence</a>
+    <collection label="Dashboards" icon="chartcolumnpanel">
+        <a href="dashboardbuilder">Dashboard Manager</a>
+        <divider />
+        <view name="dashboards" label="Native Dashboards" />
+        <view name="reports" label="Reports" />
     </collection>
 
-    <!-- Operational monitoring and readiness -->
-    <collection label="Operations">
-        <a href="netops_readiness_v1">NetOps Readiness</a>
-        <a href="asset_inventory_v1">Asset Inventory</a>
+    <collection label="Other" icon="layout">
+        <collection label="Core Dashboards">
+            <view name="overview" label="Executive Briefing" />
+            <a href="it_health_v1">IT Health</a>
+            <a href="security_v1">Security</a>
+            <a href="building_v1">Building Intelligence</a>
+        </collection>
+
+        <collection label="Operations">
+            <a href="netops_readiness_v1">NetOps Readiness</a>
+            <a href="asset_inventory_v1">Asset Inventory</a>
+        </collection>
+
+        <collection label="Workplace &amp; Collaboration">
+            <view name="spaces_intelligence_v1" label="Spaces Intelligence" />
+            <view name="workplace_spog_v1" label="Workplace SPOG" />
+        </collection>
+
+        <collection label="Event Ops">
+            <a href="statewide_exercise_v1">Network Activation Report</a>
+        </collection>
+
+        <collection label="Concepts (Beta)">
+            <a href="searchbase_canvas">Searchbase Canvas</a>
+            <a href="network_diagram">Network Diagram</a>
+            <a href="topology_canvas_v1">Topology Canvas</a>
+            <a href="statewide_exercise_v1_studio_modern">Statewide Exercise</a>
+            <a href="health_monitoring">Health Monitoring</a>
+            <a href="secure_operations_glass">Secure Operations Glass</a>
+        </collection>
+
+        <collection label="Admin &amp; Tools">
+            <a href="user_guide">User Guide</a>
+            <a href="macro_index_tuning">Macro Index Tuning</a>
+        </collection>
     </collection>
 
-    <!-- Workplace and collaboration-focused dashboards -->
-    <collection label="Workplace &amp; Collaboration">
-        <a href="building_v1">Building Intelligence</a>
-        <view name="spaces_intelligence_v1"/>
-        <view name="workplace_spog_v1"/>
-        <!-- <a href="m365_activity_monitoring">M365 Activity Monitoring</a> -->
-    </collection>
-
-    <!-- Event Operations dashboards -->
-    <collection label="Event Ops">
-        <a href="statewide_exercise_v1">Network Activation Report</a>
-    </collection>
-
-    <!-- Concepts only: experimental or test dashboards -->
-    <collection label="Concepts (Beta)">
-        <!-- <a href="home_launchpad_v1">Executive Launchpad</a> -->
-        <a href="searchbase_canvas">Searchbase Canvas Beta</a>
-        <a href="network_diagram">Network Diagram Beta</a>
-        <a href="topology_canvas_v1">Topology Canvas Beta</a>
-        <a href="statewide_exercise_v1_studio_modern">Statewide Exercise Beta</a>
-        <a href="health_monitoring">Health Monitoring Beta</a>
-        <a href="secure_operations_glass">Secure Operations Glass Beta</a>
-    </collection>
-
-    <!-- Admin utilities, dashboard tooling, and built-in Splunk views -->
-    <collection label="Admin &amp; Tools">
-        <a href="user_guide">User Guide</a>
-        <a href="macro_index_tuning">Macro Index Tuning</a>
-        <!-- <a href="template">Customer Template</a> -->
-        <divider/>
-        <view name="reports"/>
-        <view name="dashboards"/>
-        <a href="search" target="_blank" rel="noopener">Search</a>
-    </collection>
-    <a href="dashboardbuilder">Dashboard Manager</a>
-    </collection>
-
-   
+    <a href="search" icon="magnifier">Search</a>
 </nav>

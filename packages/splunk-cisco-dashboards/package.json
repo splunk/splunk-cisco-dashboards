@@ -14,6 +14,7 @@
         "test:app-version": "node test/appVersion.test.cjs",
         "test:overview-bootstrap": "node test/overviewBootstrap.test.cjs",
         "test:catalogue-search": "node test/catalogueSearch.test.cjs",
+        "test:auto-advance": "node test/autoAdvance.test.cjs",
         "test:overview-profiles": "node test/overviewProfiles.test.cjs",
         "typecheck": "tsc --noEmit",
         "verify:production-assets": "node bin/verify_production_assets.js",

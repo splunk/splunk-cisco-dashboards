@@ -117,7 +117,7 @@ const SECURE_NETWORKING_SECTIONS: readonly OverviewSectionMeta[] = [
         id: 'zta',
         title: 'Zero Trust Access',
         linkText: 'Open Zero Trust Access',
-        href: 'secure_networking_zta',
+        href: 'dashboardbuilder#/secure_networking_zta',
         icon: 'shield-check',
         iconSrc: `${SECURE_NETWORKING_IMAGE_ROOT}/zero-trust-access.svg`,
     },
