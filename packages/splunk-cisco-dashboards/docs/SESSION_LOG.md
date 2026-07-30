@@ -9857,7 +9857,7 @@ that customers had no UI-level way to change the header chrome
 without backend access — title came from the `[customer_name]`
 macro (operator edits `local/macros.conf`) and the logo lived as
 `customer_logo.png` in the Splunk app static directory. The
-subtitle "Splunk Executive Insights" was hardcoded in JSX
+subtitle "Splunk App for Secure Networking" was hardcoded in JSX
 and not editable at all. Build 84 ships a header pencil → modal
 that lets any user override all three.
 
@@ -9893,8 +9893,8 @@ encode an upload to a `data:` URI in one promise.
 * Imported `useBrandingOverride` and the `Edit3 / Upload / X`
   lucide icons.
 * Added two new module constants:
-  * `DEFAULT_HEADER_SUBTITLE = 'Splunk Executive Insights'`
-    (replaces the hardcoded "Splunk Executive Insights"
+  * `DEFAULT_HEADER_SUBTITLE = 'Splunk App for Secure Networking'`
+    (replaces the hardcoded "Splunk App for Secure Networking"
     string per the 2026-05-13 review).
   * `DEFAULT_HEADER_TITLE_FALLBACK = 'Operations Command Center'`
     (extracted from the inline JSX so the editor's placeholder
@@ -9921,7 +9921,7 @@ three controls:
 1. Title input — placeholder shows the current macro value, so
    leaving it blank means "use the macro".
 2. Subtitle input — placeholder shows the new default
-   "Splunk Executive Insights".
+   "Splunk App for Secure Networking".
 3. Logo block — small preview swatch + "Upload logo" button
    wired to a hidden `<input type="file">` accepting
    `image/png,image/svg+xml,image/jpeg,image/webp,image/gif`.
@@ -9937,8 +9937,8 @@ inline error without closing the modal.
 #### Subtitle default flip
 
 The hardcoded subtitle text changed from
-`"Splunk Executive Insights"` to
-`"Splunk Executive Insights"`. Per Alan's response to the
+`"Splunk App for Secure Networking"` to
+`"Splunk App for Secure Networking"`. Per Alan's response to the
 question prompt, this is the new fresh-deployment default;
 operators who want the previous wording set it via the editor.
 
@@ -10045,8 +10045,8 @@ a header pencil affordance + inline editor:
 
 - Title: localStorage override layer on top of the existing
   `[customer_name]` macro. Default falls back to the macro.
-- Subtitle: hardcoded `"Splunk Executive Insights"` becomes
-  `"Splunk Executive Insights"` as the new default fallback,
+- Subtitle: hardcoded `"Splunk App for Secure Networking"` becomes
+  `"Splunk App for Secure Networking"` as the new default fallback,
   overridable via the same editor.
 - Logo: file-upload encoded to base64 data URI (~200KB cap),
   stored in localStorage, falls back to
