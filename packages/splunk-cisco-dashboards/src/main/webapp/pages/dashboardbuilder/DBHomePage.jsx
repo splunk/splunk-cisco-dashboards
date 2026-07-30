@@ -47,6 +47,7 @@ import createSEIIconRegistry from "../../common/udf/IconProviders/createSEIIconR
 import Paginator from "@splunk/react-ui/Paginator";
 import Table from "@splunk/react-ui/Table";
 import WaitSpinner from "@splunk/react-ui/WaitSpinner";
+import useSplunkTheme from "@splunk/themes/useSplunkTheme";
 
 import FileCharts from "@splunk/react-icons/FileCharts";
 import QuestionCircle from "@splunk/react-icons/QuestionCircle";
@@ -216,6 +217,29 @@ const buildDashboardStudioUrl = (dashboardId, mode = "view") =>
   )}`;
 
 export default function DBHomePage() {
+  const splunkTheme = useSplunkTheme();
+  const managerColorScheme =
+    splunkTheme.colorScheme === "dark" ? "dark" : "light";
+  const dashboardManagerThemeStyle = {
+    "--dashboard-manager-background-page": splunkTheme.backgroundColorPage,
+    "--dashboard-manager-background-section":
+      splunkTheme.backgroundColorSection,
+    "--dashboard-manager-background-popup": splunkTheme.backgroundColorPopup,
+    "--dashboard-manager-background-sidebar":
+      splunkTheme.backgroundColorSidebar,
+    "--dashboard-manager-content-active": splunkTheme.contentColorActive,
+    "--dashboard-manager-content-default": splunkTheme.contentColorDefault,
+    "--dashboard-manager-content-inverted": splunkTheme.contentColorInverted,
+    "--dashboard-manager-content-muted": splunkTheme.contentColorMuted,
+    "--dashboard-manager-border": splunkTheme.borderColor,
+    "--dashboard-manager-border-strong": splunkTheme.borderColorStrong,
+    "--dashboard-manager-border-weak": splunkTheme.borderColorWeak,
+    "--dashboard-manager-accent": splunkTheme.interactiveColorPrimary,
+    "--dashboard-manager-overlay-hover":
+      splunkTheme.interactiveColorOverlayHover,
+    "--dashboard-manager-overlay-selected":
+      splunkTheme.interactiveColorOverlaySelected,
+  };
   const iconRegistry = useMemo(() => createSEIIconRegistry(), []);
   const [dashboards, setDashboards] = useState([]);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -993,7 +1017,11 @@ export default function DBHomePage() {
           </DashboardContextProvider>
         )}
       </ManagerPreviewModal>
-      <ColumnLayout id="collection_container">
+      <ColumnLayout
+        id="collection_container"
+        className={`dashboard-manager-page dashboard-manager-page-${managerColorScheme}`}
+        style={dashboardManagerThemeStyle}
+      >
         <ColumnLayout.Row className="fix-margin">
           <ColumnLayout.Column span={12}>
             <div id="hdr_block">

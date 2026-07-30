@@ -1842,7 +1842,7 @@
     lodash "^4.18.1"
     prop-types "^15.6.2"
 
-"@splunk/react-page@^8.2.1":
+"@splunk/react-page@^8.3.1":
   version "8.3.1"
   resolved "https://registry.yarnpkg.com/@splunk/react-page/-/react-page-8.3.1.tgz#22f5686547d9e75e533e72665fefe065bb5b2cbc"
   integrity sha512-zVxxJQmNX0tdmd4V4zeQyAupvSulhpA2Y342Wo51A0XzNUZ3VJ1kddWxCCLvG3hLxDjgT0HGT6O0E1+YAhlLag==
@@ -7440,14 +7440,15 @@ react-resize-detector@^12.3.0:
   dependencies:
     es-toolkit "^1.39.6"
 
-react-router-dom@^7.0.0:
-  version "7.0.0"
-  resolved "https://registry.yarnpkg.com/react-router-dom/-/react-router-dom-7.0.0.tgz#91a7f4858d914573a331937be2635419aa0933d1"
-  integrity sha512-2QAxXpwgQuh423C64oZiV2cCKPCNUgZxcvZaS8O0PAHPZ/z8kTq7YbGD4KTNZm6Yj66d+HAfGkWPp8MCpdtD+Q==
+react-router-dom@^6.30.4:
+  version "6.30.4"
+  resolved "https://registry.yarnpkg.com/react-router-dom/-/react-router-dom-6.30.4.tgz#f7167bf3da6c7d9132130ea985dd06def25e84d5"
+  integrity sha512-q4HvNl+mmDdkS0g+MqiBZNteQJCuimWoOyHMy4T/RQLAn9Z29+E91QXRaxOujeMl2HTzRSS0KFPd7lxX3PjV0Q==
   dependencies:
-    react-router "7.0.0"
+    "@remix-run/router" "1.23.3"
+    react-router "6.30.4"
 
-react-router@7.0.0, react-router@^6.30.4:
+react-router@6.30.4, react-router@^6.30.4:
   version "6.30.4"
   resolved "https://registry.yarnpkg.com/react-router/-/react-router-6.30.4.tgz#638f35176527bd243d96d81d35d33b757bad46c2"
   integrity sha512-SVUsDe+DybHM/WmYKIVYhZh1o5Dcuf16yM6WjG02Q9XVFMZIJyHYhwrr6bFBXZkVP6z69kNkMyBCujt8FaFLJA==

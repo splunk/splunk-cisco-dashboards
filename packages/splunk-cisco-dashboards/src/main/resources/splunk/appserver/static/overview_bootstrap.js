@@ -227,12 +227,11 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
      * do not leave browsers running a stale bundle.
      */
     var scdAssetVersion = Date.now();
-    require([
+    var scdOverviewScript = document.createElement('script');
+    scdOverviewScript.src =
         '/static/app/splunk-cisco-dashboards/pages/overview.js?v=' +
-            scdAssetVersion,
-    ], function () {
-        // The React bundle self-initializes on load.
-    });
+        scdAssetVersion;
+    document.body.appendChild(scdOverviewScript);
 }
 
 if (typeof module !== 'undefined' && module.exports) {

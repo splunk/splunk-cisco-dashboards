@@ -1,7 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { SplunkThemeProvider } from '@splunk/themes';
-import layout from '@splunk/react-page';
+import layout from '@splunk/react-page/18';
 import { getUserTheme } from '@splunk/splunk-utils/themes';
 import CopyrightMark from './components/CopyrightMark';
 
@@ -46,26 +46,42 @@ export default function mountPage(PageComponent) {
 }
 
 export function renderAsPage(pageElement, options = {}) {
-    const { hideAppBar = false } = options;
+    const {
+        hideAppBar = false,
+        navLayout = 'auto',
+        pageTitle,
+        ...layoutOptions
+    } = options;
 
     getUserTheme()
         .then((theme) => {
+            const colorScheme = theme === 'dark' ? 'dark' : 'light';
+
             layout(
-                <SplunkThemeProvider family="prisma" colorScheme="light" density="comfortable">
+                <SplunkThemeProvider
+                    family="prisma"
+                    colorScheme={colorScheme}
+                    density="comfortable"
+                >
                     <>
                         {pageElement}
                         <CopyrightMark />
                     </>
                 </SplunkThemeProvider>,
                 {
+                    ...layoutOptions,
                     hideAppBar,
+                    navLayout,
+                    pageTitle,
                     theme,
+                    themeDensity: 'comfortable',
+                    themeFamily: 'prisma',
                 }
             );
         })
         .catch((e) => {
             const errorEl = document.createElement('span');
-            errorEl.innerHTML = e;
+            errorEl.textContent = e instanceof Error ? e.message : String(e);
             document.body.appendChild(errorEl);
         });
 }

@@ -5,11 +5,11 @@
         <meta http-equiv="x-ua-compatible" content="ie=edge" />
         <title>Cisco Dashboard Builder</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link
+            rel="stylesheet"
+            href="${make_url('/static/app/splunk-cisco-dashboards/application.css')}"
+        />
         <style>
-            body {
-                background: #fcfcfc;
-            }
-
             div[data-test='DashboardLayoutContainer'] {
                 height: calc(100%);
                 padding: 0 !important;
@@ -25,6 +25,13 @@
             __splunkd_partials__ = ${json_decode(splunkd)};
         </script>
 
-        <script src="${make_url('/static/app/splunk-cisco-dashboards/pages/dashboardbuilder.js')}"></script>
+        <script>
+            const dashboardBuilderBundle = document.createElement('script');
+            dashboardBuilderBundle.src =
+                "${make_url('/static/app/splunk-cisco-dashboards/pages/dashboardbuilder.js')}" +
+                '?v=' +
+                Date.now();
+            document.body.appendChild(dashboardBuilderBundle);
+        </script>
     </body>
 </html>

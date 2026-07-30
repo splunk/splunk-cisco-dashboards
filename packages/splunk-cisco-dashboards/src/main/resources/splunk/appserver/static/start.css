@@ -1,0 +1,216 @@
+:root {
+    --scd-cyan: #00a9ce;
+    --scd-ink: #102a43;
+    --scd-green: #2e844a;
+    --scd-paper: #f4f8fa;
+    --scd-line: #d7e2e8;
+}
+
+body {
+    background: var(--scd-paper);
+}
+
+.dashboard-body,
+.dashboard-row,
+.dashboard-cell,
+.dashboard-panel,
+.panel-element-row,
+.html,
+.panel-body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+}
+
+.scd-setup {
+    min-height: calc(100vh - 96px);
+    display: grid;
+    place-items: center;
+    padding: 48px 24px;
+    box-sizing: border-box;
+    color: var(--scd-ink);
+    font-family: "Splunk Platform Sans", "Helvetica Neue", sans-serif;
+    background-color: var(--scd-paper);
+    background-image: linear-gradient(rgba(16, 42, 67, 0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(16, 42, 67, 0.045) 1px, transparent 1px);
+    background-size: 32px 32px;
+}
+
+.scd-setup__shell {
+    width: min(1040px, 100%);
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(340px, 0.9fr);
+    overflow: hidden;
+    border: 1px solid var(--scd-line);
+    border-radius: 6px;
+    background: #fff;
+    box-shadow: 0 20px 50px rgba(16, 42, 67, 0.14);
+    animation: scd-setup-enter 420ms ease-out both;
+}
+
+.scd-setup__intro,
+.scd-setup__details {
+    padding: clamp(36px, 6vw, 72px);
+}
+
+.scd-setup__intro {
+    min-height: 460px;
+    box-sizing: border-box;
+    color: #fff;
+    background: var(--scd-ink);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.scd-setup__mark {
+    width: 54px;
+    height: 54px;
+    display: grid;
+    place-items: center;
+    margin-bottom: 36px;
+    border: 2px solid var(--scd-cyan);
+    color: var(--scd-cyan);
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.scd-setup__eyebrow,
+.scd-setup__step {
+    margin: 0 0 16px;
+    color: var(--scd-cyan);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0;
+}
+
+.scd-setup__title {
+    max-width: 540px;
+    margin: 0;
+    font-size: clamp(38px, 5vw, 62px);
+    line-height: 1.02;
+    letter-spacing: 0;
+}
+
+.scd-setup__summary {
+    max-width: 520px;
+    margin: 28px 0 0;
+    color: #cbd9e2;
+    font-size: 19px;
+    line-height: 1.6;
+}
+
+.scd-setup__details {
+    align-self: center;
+}
+
+.scd-setup__details h2 {
+    margin: 0 0 18px;
+    font-size: 28px;
+    line-height: 1.2;
+}
+
+.scd-setup__details > p:not(.scd-setup__step):not(.scd-setup__note) {
+    color: #526b7a;
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+.scd-setup__checklist {
+    display: grid;
+    gap: 14px;
+    margin: 28px 0 34px;
+    padding: 0;
+    list-style: none;
+}
+
+.scd-setup__checklist li {
+    display: grid;
+    grid-template-columns: 24px 1fr;
+    align-items: start;
+    gap: 10px;
+    line-height: 1.45;
+}
+
+.scd-setup__checklist span {
+    color: var(--scd-green);
+    font-weight: 800;
+}
+
+.scd-setup__button {
+    min-height: 44px;
+    padding: 0 22px;
+    border: 1px solid #007a99;
+    border-radius: 4px;
+    background: #007a99;
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.scd-setup__button:hover:not(:disabled) {
+    background: #00677f;
+}
+
+.scd-setup__button:focus-visible {
+    outline: 3px solid rgba(0, 169, 206, 0.35);
+    outline-offset: 3px;
+}
+
+.scd-setup__button:disabled {
+    cursor: wait;
+    opacity: 0.65;
+}
+
+.scd-setup__note {
+    margin: 18px 0 0;
+    color: #6b7f8d;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.scd-setup__alert,
+.scd-setup__loading {
+    max-width: 680px;
+    padding: 18px 20px;
+    border-left: 4px solid #d03b3b;
+    background: #fff;
+    color: #8a1f1f;
+    box-shadow: 0 8px 24px rgba(16, 42, 67, 0.1);
+}
+
+@keyframes scd-setup-enter {
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 760px) {
+    .scd-setup {
+        padding: 20px 12px;
+    }
+
+    .scd-setup__shell {
+        grid-template-columns: 1fr;
+    }
+
+    .scd-setup__intro {
+        min-height: 330px;
+    }
+
+    .scd-setup__title {
+        font-size: 40px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .scd-setup__shell {
+        animation: none;
+    }
+}

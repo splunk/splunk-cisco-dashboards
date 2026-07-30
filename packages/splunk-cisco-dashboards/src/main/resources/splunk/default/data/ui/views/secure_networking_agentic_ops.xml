@@ -1,4 +1,4 @@
-<dashboard version="2" theme="dark">
+<dashboard version="2" theme="dark" stylesheet="application.css">
     <label>Agentic Ops</label>
     <description>Secure Networking drill-down dashboard for Agentic Ops.</description>
     <definition><![CDATA[
@@ -16,24 +16,6 @@
 		}
 	},
 	"defaults": {
-		"dataSources": {
-			"ds.search": {
-				"options": {
-					"queryParameters": {
-						"earliest": "$time_tok.earliest$",
-						"latest": "$time_tok.latest$"
-					}
-				}
-			},
-			"ds.spl2": {
-				"options": {
-					"queryParameters": {
-						"earliest": "$time_tok.earliest$",
-						"latest": "$time_tok.latest$"
-					}
-				}
-			}
-		},
 		"visualizations": {
 			"global": {
 				"showLastUpdated": true,
@@ -315,102 +297,112 @@
 		"ds_agentic_ai_defense": {
 			"name": "Security - GenAI Protection - Cisco AI Defense Block Rate",
 			"options": {
-				"query": "`index_security` sourcetype=\"cisco:ai:defense\"\n| stats count(eval(event_action=\"Block\")) as blocked count as total\n| eval block_pct=if(total>0, round(100*blocked/total,1), 0)\n| fields block_pct blocked total",
+				"ref": "security_ai_defense_block_rate_kpi",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
 				}
 			},
-			"type": "ds.search"
+			"type": "ds.searchbase"
 		},
 		"ds_agentic_te_feed_health": {
-			"name": "Feed Monitor - ThousandEyes - Stream Staleness (Signal Rail KPI)",
+			"name": "Feed Monitor - ThousandEyes - Stream Staleness - Signal Rail KPI",
 			"options": {
-				"query": "| makeresults\n| eval count_24h=0, last_ts=0\n| append [| tstats count as count_24h latest(_time) as last_ts WHERE `index_thousandeyes` AND sourcetype=\"cisco:thousandeyes:metric\"]\n| stats sum(count_24h) as count_24h max(last_ts) as last_ts\n| eval age_minutes=if(last_ts>0, round((now()-last_ts)/60, 0), 9999)\n| eval readiness=case(count_24h=0 OR last_ts=0,\"NOT ONBOARDED - configure ThousandEyes streaming TA\", age_minutes<=30,\"Active - last event \".tostring(age_minutes).\" min ago\", age_minutes<=90,\"WARNING - stale \".tostring(age_minutes).\" min - verify HEC endpoint and OAuth token\", 1==1,\"CRITICAL - STALE \".tostring(age_minutes).\" min - check OAuth2 token expiry in TE portal\")\n| eval last_seen=if(last_ts>0, strftime(last_ts,\"%Y-%m-%d %H:%M:%S\"), \"Never\")\n| fields count_24h age_minutes readiness last_seen",
+				"ref": "feed_monitor_thousandeyes_stream_staleness",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
 				}
 			},
-			"type": "ds.search"
-		},
-		"ds_agentic_feed_matrix": {
-			"name": "Feed Monitor - ALL Feeds - Consolidated Health Matrix",
-			"options": {
-				"query": "| tstats count as count_24h latest(_time) as last_ts WHERE (`index_catalyst` OR `index_cybervision` OR `index_dc` OR `index_dhcp` OR `index_duo` OR `index_f5` OR `index_firewall` OR `index_identity` OR `index_meraki` OR `index_network` OR `index_nvm` OR `index_sdwan` OR `index_security` OR `index_spaces` OR `index_thousandeyes` OR `index_ucs` OR `index_windows` OR `index_zeek`) AND (sourcetype=\"cisco:thousandeyes:metric\" OR sourcetype=\"cisco:ftd\" OR sourcetype=\"cisco:ftd:syslog\" OR sourcetype=\"cisco:ftd:adv:conn\" OR sourcetype=\"cisco:ftd:connection\" OR sourcetype=\"cisco:sfw:estreamer\" OR sourcetype=\"cisco:dnac:devicehealth\" OR sourcetype=\"cisco:catalyst:devicehealth\" OR sourcetype=\"cisco:sdwan:tunnelhealth\" OR sourcetype=\"cisco:sdwan:linkhealth\" OR sourcetype=\"cisco:ise:syslog\" OR sourcetype=\"cisco:spaces:firehose\" OR sourcetype=\"cisco:ios\" OR sourcetype=\"cisco:duo:authentication\" OR sourcetype=\"cisco:duo:authentication_v2\" OR sourcetype=\"meraki:devicelosslatency\" OR sourcetype=\"zeek:conn\" OR sourcetype=\"cisco:dc:aci:health\" OR sourcetype=\"cisco:dc:nd:anomalies\") BY sourcetype\n| eval feed=case(sourcetype=\"cisco:thousandeyes:metric\",\"ThousandEyes Stream\", sourcetype=\"cisco:ftd\" OR sourcetype=\"cisco:ftd:syslog\",\"FTD Firewall Syslog\", sourcetype=\"cisco:ftd:adv:conn\" OR sourcetype=\"cisco:ftd:connection\",\"FTD Advanced Conn JSON\", sourcetype=\"cisco:sfw:estreamer\",\"FMC eStreamer IPS\", sourcetype=\"cisco:dnac:devicehealth\" OR sourcetype=\"cisco:catalyst:devicehealth\",\"Catalyst Center API\", sourcetype=\"cisco:sdwan:tunnelhealth\" OR sourcetype=\"cisco:sdwan:linkhealth\",\"SD-WAN vManage\", sourcetype=\"cisco:ise:syslog\",\"ISE RADIUS Syslog\", sourcetype=\"cisco:spaces:firehose\",\"Cisco Spaces Firehose\", sourcetype=\"cisco:ios\",\"IOS/IOS-XE Syslog\", sourcetype=\"cisco:duo:authentication\" OR sourcetype=\"cisco:duo:authentication_v2\",\"Duo Admin API\", sourcetype=\"meraki:devicelosslatency\",\"Meraki Dashboard API\", sourcetype=\"zeek:conn\",\"Zeek NDR\", sourcetype=\"cisco:dc:aci:health\" OR sourcetype=\"cisco:dc:nd:anomalies\",\"ACI / Nexus Dashboard\", 1==1, sourcetype)\n| eval stale_warn=case(match(feed,\"ThousandEyes\"),30, match(feed,\"FTD\"),30, match(feed,\"eStreamer\"),60, match(feed,\"Catalyst\"),60, match(feed,\"SD-WAN\"),60, match(feed,\"ISE\"),30, match(feed,\"Spaces\"),90, match(feed,\"IOS\"),120, match(feed,\"Duo\"),120, match(feed,\"Meraki\"),60, match(feed,\"Zeek\"),30, match(feed,\"ACI\"),60, 1==1,60)\n| eval stale_crit=stale_warn*3\n| eval age_minutes=round((now()-last_ts)/60, 0)\n| eval status=case(age_minutes<=stale_warn,\"Active\", age_minutes<=stale_crit,\"WARNING\", 1==1,\"CRITICAL\")\n| stats sum(count_24h) as count_24h max(last_ts) as last_ts min(age_minutes) as age_minutes first(status) as status by feed\n| eval last_seen=strftime(last_ts,\"%Y-%m-%d %H:%M:%S\")\n| eval sort_order=case(status=\"CRITICAL\",1, status=\"WARNING\",2, 1==1,3)\n| sort sort_order feed\n| rename feed as \"Feed\" count_24h as \"Events (24h)\" age_minutes as \"Age (min)\" last_seen as \"Last Event\" status as \"Status\"\n| fields \"Feed\" \"Events (24h)\" \"Age (min)\" \"Last Event\" \"Status\"",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_base_agentic_te": {
-			"name": "Secure Networking base - ThousandEyes metrics",
-			"options": {
-				"query": "`index_thousandeyes` sourcetype=\"cisco:thousandeyes:metric\"\n| eval test_name=coalesce('thousandeyes.test.name',test_name,\"Unknown\"), agent=coalesce('thousandeyes.source.agent.location',agent_location,\"Unknown\")",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_agentic_test_health": {
-			"name": "Secure Networking chain - ThousandEyes test health",
-			"options": {
-				"extend": "ds_base_agentic_te",
-				"query": "| eval degraded=case(metric_name=\"network.loss\" AND value>5,1, metric_name=\"http.server.request.availability\" AND value<95,1, 1==1,0)\n| stats dc(test_name) as total_tests, dc(eval(if(degraded=1,test_name,null()))) as degraded_tests\n| eval healthy_tests=total_tests-degraded_tests\n| eval label=\"ThousandEyes Test Health\"\n| fields label healthy_tests degraded_tests"
-			},
-			"type": "ds.chain"
+			"type": "ds.searchbase"
 		},
 		"ds_agentic_latency": {
 			"name": "Secure Networking chain - ThousandEyes average latency",
 			"options": {
-				"extend": "ds_base_agentic_te",
-				"query": "| search metric_name=\"network.latency\"\n| stats avg(value) as avg_latency_ms, max(value) as max_latency_ms, perc95(value) as p95_latency_ms, dc(test_name) as test_count\n| eval avg_latency_ms=round(avg_latency_ms,2), max_latency_ms=round(max_latency_ms,2), p95_latency_ms=round(p95_latency_ms,2)\n| eval label=\"Avg Network Latency (ms)\"\n| fields label avg_latency_ms max_latency_ms p95_latency_ms test_count"
+				"ref": "secure_networking_thousandeyes_avg_latency",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
 			},
-			"type": "ds.chain"
+			"type": "ds.searchbase"
 		},
 		"ds_agentic_loss": {
 			"name": "Secure Networking chain - ThousandEyes packet loss",
 			"options": {
-				"extend": "ds_base_agentic_te",
-				"query": "| search metric_name=\"network.loss\"\n| stats avg(value) as avg_loss_pct, max(value) as max_loss_pct, dc(test_name) as test_count\n| eval avg_loss_pct=round(avg_loss_pct,2), max_loss_pct=round(max_loss_pct,2)\n| eval label=\"Avg Packet Loss %\"\n| fields label avg_loss_pct max_loss_pct test_count"
+				"ref": "secure_networking_thousandeyes_avg_loss_pct",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
 			},
-			"type": "ds.chain"
-		},
-		"ds_agentic_web_errors": {
-			"name": "Secure Networking chain - ThousandEyes web errors",
-			"options": {
-				"extend": "ds_base_agentic_te",
-				"query": "| search metric_name=\"web.transaction.errors.count\"\n| stats sum(value) as total_errors, dc(test_name) as affected_tests\n| eval label=\"Web Transaction Errors\"\n| fields label total_errors affected_tests"
-			},
-			"type": "ds.chain"
+			"type": "ds.searchbase"
 		},
 		"ds_agentic_loss_trend": {
 			"name": "Secure Networking chain - ThousandEyes loss trend",
 			"options": {
-				"extend": "ds_base_agentic_te",
-				"query": "| search metric_name=\"network.loss\"\n| timechart span=1h avg(value) as avg_loss_pct, max(value) as max_loss_pct"
+				"ref": "secure_networking_thousandeyes_network_loss_trend",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
 			},
-			"type": "ds.chain"
+			"type": "ds.searchbase"
 		},
 		"ds_agentic_bgp_changes": {
 			"name": "Secure Networking chain - ThousandEyes BGP path changes",
 			"options": {
-				"extend": "ds_base_agentic_te",
-				"query": "| search metric_name=\"bgp.path.changes\"\n| timechart span=1h sum(value) as path_changes by test_name"
+				"ref": "secure_networking_thousandeyes_bgp_path_changes_trend",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
 			},
-			"type": "ds.chain"
+			"type": "ds.searchbase"
+		},
+		"ds_agentic_test_health": {
+			"name": "Secure Networking chain - ThousandEyes test health",
+			"options": {
+				"ref": "secure_networking_thousandeyes_test_success_vs_failed",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
 		},
 		"ds_agentic_http_availability": {
 			"name": "Secure Networking chain - ThousandEyes HTTP availability",
 			"options": {
-				"extend": "ds_base_agentic_te",
-				"query": "| search metric_name=\"http.server.request.availability\"\n| stats avg(value) as avg_availability, min(value) as min_availability by test_name\n| eval avg_availability=round(avg_availability,2), min_availability=round(min_availability,2)\n| sort avg_availability\n| head 15\n| rename test_name as \"Test Name\", avg_availability as \"Avg Availability %\", min_availability as \"Min Availability %\"\n| table \"Test Name\", \"Avg Availability %\", \"Min Availability %\""
+				"ref": "secure_networking_thousandeyes_http_availability_by_test",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
 			},
-			"type": "ds.chain"
+			"type": "ds.searchbase"
+		},
+		"ds_agentic_web_errors": {
+			"name": "Secure Networking chain - ThousandEyes web errors",
+			"options": {
+				"ref": "secure_networking_thousandeyes_web_transaction_errors",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_agentic_feed_matrix": {
+			"name": "Feed Monitor - ALL Feeds - Consolidated Health Matrix",
+			"options": {
+				"ref": "feed_monitor_all_feeds_health_matrix",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
 		}
 	},
 	"layout": {

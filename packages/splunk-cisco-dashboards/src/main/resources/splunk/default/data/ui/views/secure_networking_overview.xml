@@ -1,12 +1,8 @@
 <?xml version="1.0"?>
-<dashboard version="1.1" hideEdit="true" hideExport="true" hideTitle="true"
-           script="overview_bootstrap.js">
+<view
+    template="splunk-cisco-dashboards:/templates/overview.html"
+    type="html"
+    isDashboard="False"
+>
     <label>Splunk for Secure Networking</label>
-    <row>
-        <panel>
-            <html>
-                <div id="scan-root"></div>
-            </html>
-        </panel>
-    </row>
-</dashboard>
+</view>

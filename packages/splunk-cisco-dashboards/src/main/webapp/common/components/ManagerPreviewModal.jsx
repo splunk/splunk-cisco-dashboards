@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import Cross from '@splunk/react-icons/Cross';
+import useSplunkTheme from '@splunk/themes/useSplunkTheme';
 
 const DEFAULT_WIDTH = 1100;
 const DEFAULT_HEIGHT = 720;
@@ -16,6 +17,8 @@ export default function ManagerPreviewModal({
     initialWidth = DEFAULT_WIDTH,
     initialHeight = DEFAULT_HEIGHT,
 }) {
+    const splunkTheme = useSplunkTheme();
+    const colorScheme = splunkTheme.colorScheme === 'dark' ? 'dark' : 'light';
     const modalRef = useRef(null);
     const dragStartRef = useRef({ mouseX: 0, mouseY: 0, posX: 0, posY: 0 });
 
@@ -125,6 +128,14 @@ export default function ManagerPreviewModal({
         maxHeight: '90vh',
         opacity: isActive ? 0.9 : 1,
         transition: isActive ? 'none' : 'opacity 0.16s ease',
+        '--dashboard-manager-background-section': splunkTheme.backgroundColorSection,
+        '--dashboard-manager-background-popup': splunkTheme.backgroundColorPopup,
+        '--dashboard-manager-content-active': splunkTheme.contentColorActive,
+        '--dashboard-manager-content-default': splunkTheme.contentColorDefault,
+        '--dashboard-manager-content-muted': splunkTheme.contentColorMuted,
+        '--dashboard-manager-border': splunkTheme.borderColor,
+        '--dashboard-manager-border-weak': splunkTheme.borderColorWeak,
+        '--dashboard-manager-overlay-hover': splunkTheme.interactiveColorOverlayHover,
     };
 
     return ReactDOM.createPortal(
@@ -132,7 +143,7 @@ export default function ManagerPreviewModal({
             <div className="manager-preview-modal-overlay" onClick={onRequestClose} />
             <div
                 ref={modalRef}
-                className={`manager-preview-modal-shell ${
+                className={`manager-preview-modal-shell manager-preview-modal-shell-${colorScheme} ${
                     isActive ? 'manager-preview-modal-shell-active' : ''
                 }`}
                 style={modalStyle}

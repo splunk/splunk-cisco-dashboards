@@ -16,28 +16,32 @@
     </collection>
 
     <collection label="Secure Infrastructure" icon="layerstriple">
-        <view
+        <a href="dashboardbuilder#/secure_networking_secure_infrastructure">Overview</a>
+        <!-- <view
             name="secure_networking_secure_infrastructure"
             label="Overview"
-        />
+        /> -->
     </collection>
 
     <collection label="Scalable Network Segmentation" icon="nodetopology">
-        <view
+        <a href="dashboardbuilder#/secure_networking_scalable_network_segmentation">Overview</a>
+        <!-- <view
             name="secure_networking_scalable_network_segmentation"
             label="Overview"
-        />
+        /> -->
     </collection>
 
     <collection label="Hybrid Mesh Firewalling" icon="forwarderuniversal">
-        <view
+        <a href="dashboardbuilder#/secure_networking_hybrid_mesh_firewalling">Overview</a>
+        <!-- <view
             name="secure_networking_hybrid_mesh_firewalling"
             label="Overview"
-        />
+        /> -->
     </collection>
 
     <collection label="Agentic Ops" icon="pulse">
-        <view name="secure_networking_agentic_ops" label="Overview" />
+        <a href="dashboardbuilder#/secure_networking_agentic_ops">Overview</a>
+        <!-- <view name="secure_networking_agentic_ops" label="Overview" /> -->
     </collection>
 
     <collection label="Dashboards" icon="chartcolumnpanel">

@@ -11,11 +11,10 @@ import {
 import '../../common/shims/requirejs-emotion-shim';
 import VizKpi from '../../common/components/templatewizard/viz-kpi/VizKpi';
 import VizOther from '../../common/components/templatewizard/viz-other/VizOther';
-import mountPage from '../../common/render';
+import { renderAsPage } from '../../common/render';
 import { actionMenus } from '../../common/udf/presets';
 import DBHomePage from './DBHomePage';
 import DashboardStudioEditor, { initialDefinition } from './DashboardStudioEditor';
-import './dashboardbuilder-shell.css';
 import SearchBaseDataSource from './SearchBaseDataSource';
 import SpaceManagerViz from './SpaceManager/SpaceManagerViz';
 import SimpleTimePicker from './custominput/SimpleTimePicker';
@@ -61,4 +60,6 @@ function DashboardStudioEditorPage() {
     );
 }
 
-mountPage(CustomDSEditorPage);
+renderAsPage(<CustomDSEditorPage />, {
+    pageTitle: 'Cisco Dashboard Builder',
+});

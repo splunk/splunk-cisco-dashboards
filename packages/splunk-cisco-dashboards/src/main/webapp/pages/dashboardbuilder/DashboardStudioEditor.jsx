@@ -77,6 +77,7 @@ import ButtonGroup from '@splunk/react-ui/ButtonGroup';
 import styled from 'styled-components';
 import { variables } from '@splunk/themes';
 import SplunkThemeProvider from '@splunk/themes/SplunkThemeProvider';
+import useSplunkTheme from '@splunk/themes/useSplunkTheme';
 import { isVersionLower, getServerInfo } from '../../common/lib/splunk';
 import Paintbrush from '@splunk/react-icons/Paintbrush';
 import BackgroundButton from './BackgroundButton';
@@ -702,6 +703,20 @@ const DashboardStudioEditor = ({
     //hasCloneSharingPermission,
 }) => {
     const navigate = useNavigate();
+    const splunkTheme = useSplunkTheme();
+    const dashboardBuilderColorScheme =
+        splunkTheme.colorScheme === 'dark' ? 'dark' : 'light';
+    const dashboardBuilderThemeStyle = {
+        '--dashboard-builder-background-page': splunkTheme.backgroundColorPage,
+        '--dashboard-builder-background-section': splunkTheme.backgroundColorSection,
+        '--dashboard-builder-content-active': splunkTheme.contentColorActive,
+        '--dashboard-builder-content-default': splunkTheme.contentColorDefault,
+        '--dashboard-builder-content-muted': splunkTheme.contentColorMuted,
+        '--dashboard-builder-border': splunkTheme.borderColor,
+        '--dashboard-builder-border-weak': splunkTheme.borderColorWeak,
+        '--dashboard-builder-overlay-hover': splunkTheme.interactiveColorOverlayHover,
+        '--dashboard-builder-overlay-selected': splunkTheme.interactiveColorOverlaySelected,
+    };
 
     const [isCodeEditable, setIsCodeEditable] = useState(false);
 
@@ -1763,15 +1778,19 @@ const DashboardStudioEditor = ({
                 <div
                     className={
                         serverInfo?.isSplunkCloud
-                            ? 'dashboardbuilderview'
+                            ? `dashboardbuilderview dashboardbuilderview-${dashboardBuilderColorScheme}`
                             : isVersionLower(versionLabel, '9.4.0')
-                              ? 'dashboardbuilderview hidetabs'
-                              : 'dashboardbuilderview'
+                              ? `dashboardbuilderview dashboardbuilderview-${dashboardBuilderColorScheme} hidetabs`
+                              : `dashboardbuilderview dashboardbuilderview-${dashboardBuilderColorScheme}`
                     }
-                    style={{ minHeight: '100%' }}
+                    style={{ minHeight: '100%', ...dashboardBuilderThemeStyle }}
                     id="collection_container"
                 >
-                    <SplunkThemeProvider family="prisma" density="comfortable" colorScheme="light">
+                    <SplunkThemeProvider
+                        family="prisma"
+                        density="comfortable"
+                        colorScheme={dashboardBuilderColorScheme}
+                    >
                         <DashboardContextProvider
                             key="DashboardStudioEditorContext"
                             iconRegistry={iconRegistry}
