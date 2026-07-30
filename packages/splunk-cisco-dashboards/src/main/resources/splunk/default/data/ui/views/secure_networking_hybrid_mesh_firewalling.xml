@@ -45,8 +45,8 @@
 		"viz_header_bg": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "#ffffff",
-				"strokeColor": "rgba(15,23,42,0.06)"
+				"fillColor": "#0f172a",
+				"strokeColor": "rgba(148,163,184,0.22)"
 			}
 		},
 		"viz_header_icon": {
@@ -64,7 +64,7 @@
 			"showProgressBar": false,
 			"options": {
 				"backgroundColor": "transparent",
-				"fontColor": "#111827",
+				"fontColor": "#e2e8f0",
 				"markdown": "# Hybrid Mesh Firewalling\nFirewall enforcement, SSE controls, FMC policy activity, and data-loss findings across the hybrid mesh."
 			}
 		},
@@ -75,7 +75,7 @@
 				"primary": "ds_hmf_fw_blocked"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('blocked') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -91,7 +91,7 @@
 				"primary": "ds_hmf_ftd_feed"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('age_minutes') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -125,7 +125,7 @@
 				"primary": "ds_hmf_fmc_count"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('firewall_count') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -141,7 +141,7 @@
 				"primary": "ds_hmf_sse_total"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('total_events') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -157,7 +157,7 @@
 				"primary": "ds_hmf_unified_blocks"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
@@ -179,7 +179,7 @@
 				"primary": "ds_hmf_fmc_activity"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
@@ -202,7 +202,7 @@
 				"primary": "ds_hmf_dns_categories"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
@@ -221,7 +221,7 @@
 				"primary": "ds_hmf_enforcement_coverage"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
@@ -234,7 +234,7 @@
 				"primary": "ds_hmf_fmc_top_rules"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
@@ -252,7 +252,7 @@
 				"primary": "ds_hmf_dlp_findings"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
@@ -391,7 +391,7 @@
 		"layoutDefinitions": {
 			"layout_overview": {
 				"options": {
-					"backgroundColor": "#f5f7fb",
+					"backgroundColor": "#020617",
 					"display": "auto-scale",
 					"height": 1490,
 					"width": 1440

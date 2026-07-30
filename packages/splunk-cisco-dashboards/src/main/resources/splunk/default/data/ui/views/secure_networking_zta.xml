@@ -45,8 +45,8 @@
 		"viz_header_bg": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "#ffffff",
-				"strokeColor": "rgba(15,23,42,0.06)"
+				"fillColor": "#0f172a",
+				"strokeColor": "rgba(148,163,184,0.22)"
 			}
 		},
 		"viz_header_icon": {
@@ -64,7 +64,7 @@
 			"showProgressBar": false,
 			"options": {
 				"backgroundColor": "transparent",
-				"fontColor": "#111827",
+				"fontColor": "#e2e8f0",
 				"markdown": "# Zero Trust Access\nIdentity enforcement, policy outcomes, ZTNA sessions, and authentication friction."
 			}
 		},
@@ -75,7 +75,7 @@
 				"primary": "ds_zta_auth_events"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('auth_events') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -91,7 +91,7 @@
 				"primary": "ds_zta_failed_auth"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('failed_auth') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -107,7 +107,7 @@
 				"primary": "ds_zta_failed_pct"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('failed_pct') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -141,7 +141,7 @@
 				"primary": "ds_zta_feed_health"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('age_minutes') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -175,7 +175,7 @@
 				"primary": "ds_zta_auth_outcome_trend"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
@@ -197,7 +197,7 @@
 				"primary": "ds_zta_radius_latency"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
@@ -219,7 +219,7 @@
 				"primary": "ds_zta_ztna_status"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
@@ -242,7 +242,7 @@
 				"primary": "ds_zta_auth_by_device"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
@@ -255,7 +255,7 @@
 				"primary": "ds_zta_failure_reasons"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "off",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
@@ -272,7 +272,7 @@
 				"primary": "ds_zta_user_cross_source"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
@@ -285,7 +285,7 @@
 				"primary": "ds_zta_ravpn_connection_rate"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
@@ -307,7 +307,7 @@
 				"primary": "ds_zta_ravpn_posture_alerts"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
@@ -448,7 +448,7 @@
 		"layoutDefinitions": {
 			"layout_overview": {
 				"options": {
-					"backgroundColor": "#f5f7fb",
+					"backgroundColor": "#020617",
 					"display": "auto-scale",
 					"height": 1900,
 					"width": 1440

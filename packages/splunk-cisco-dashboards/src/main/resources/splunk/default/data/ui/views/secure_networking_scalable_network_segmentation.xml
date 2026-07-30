@@ -45,8 +45,8 @@
 		"viz_header_bg": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "#ffffff",
-				"strokeColor": "rgba(15,23,42,0.06)"
+				"fillColor": "#0f172a",
+				"strokeColor": "rgba(148,163,184,0.22)"
 			}
 		},
 		"viz_header_icon": {
@@ -64,7 +64,7 @@
 			"showProgressBar": false,
 			"options": {
 				"backgroundColor": "transparent",
-				"fontColor": "#111827",
+				"fontColor": "#e2e8f0",
 				"markdown": "# Scalable Network Segmentation\nSGT adoption, endpoint coverage, TrustSec readiness, and OT/IoT segmentation visibility."
 			}
 		},
@@ -75,7 +75,7 @@
 				"primary": "ds_seg_total_assignments"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('total_assignments') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -91,7 +91,7 @@
 				"primary": "ds_seg_unique_sgts"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('unique_sgts') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -107,7 +107,7 @@
 				"primary": "ds_seg_sgt_blocks_total"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('sgt_enforced_blocks') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -123,7 +123,7 @@
 				"primary": "ds_seg_ip_sgt_bindings"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "right",
 				"seriesColors": [
 					"#0ea5e9",
@@ -141,7 +141,7 @@
 				"primary": "ds_seg_status_rollup"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
@@ -154,7 +154,7 @@
 				"primary": "ds_seg_sgt_distribution"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
@@ -167,7 +167,7 @@
 				"primary": "ds_seg_policy_hits"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "off",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
@@ -184,7 +184,7 @@
 				"primary": "ds_seg_trustsec_readiness"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "off",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
@@ -201,7 +201,7 @@
 				"primary": "ds_seg_excessive_mac"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
@@ -214,7 +214,7 @@
 				"primary": "ds_seg_ot_iot"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
@@ -227,7 +227,7 @@
 				"primary": "ds_seg_router_feature_trend"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
@@ -250,7 +250,7 @@
 				"primary": "ds_seg_router_feature_evidence"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
@@ -405,7 +405,7 @@
 		"layoutDefinitions": {
 			"layout_overview": {
 				"options": {
-					"backgroundColor": "#f5f7fb",
+					"backgroundColor": "#020617",
 					"display": "auto-scale",
 					"height": 1900,
 					"width": 1440

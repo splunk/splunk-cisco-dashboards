@@ -45,8 +45,8 @@
 		"viz_header_bg": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "#ffffff",
-				"strokeColor": "rgba(15,23,42,0.06)"
+				"fillColor": "#0f172a",
+				"strokeColor": "rgba(148,163,184,0.22)"
 			}
 		},
 		"viz_header_icon": {
@@ -64,7 +64,7 @@
 			"showProgressBar": false,
 			"options": {
 				"backgroundColor": "transparent",
-				"fontColor": "#111827",
+				"fontColor": "#e2e8f0",
 				"markdown": "# Secure Infrastructure\nDevice posture, advisory exposure, SD-WAN health, and wireless infrastructure risk."
 			}
 		},
@@ -75,7 +75,7 @@
 				"primary": "ds_infra_sdwan_edge_count"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('sdwan_site_count') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -91,7 +91,7 @@
 				"primary": "ds_infra_dc_anomalies"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('anomaly_count') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -107,7 +107,7 @@
 				"primary": "ds_infra_dc_advisories"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('advisory_count') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -123,7 +123,7 @@
 				"primary": "ds_infra_rogue_ap_count"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('rogue_ap_count') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -139,7 +139,7 @@
 				"primary": "ds_infra_dc_trend"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
@@ -160,7 +160,7 @@
 				"primary": "ds_infra_sdwan_apps_health"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
@@ -180,7 +180,7 @@
 				"primary": "ds_infra_status_rollup"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
@@ -193,7 +193,7 @@
 				"primary": "ds_infra_psirt_exposure"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
@@ -206,7 +206,7 @@
 				"primary": "ds_infra_software_versions"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "off",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
@@ -223,7 +223,7 @@
 				"primary": "ds_infra_rogue_containment"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
@@ -242,7 +242,7 @@
 				"primary": "ds_infra_secure_endpoint_incidents"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
@@ -255,7 +255,7 @@
 				"primary": "ds_infra_duo_blocked_posture"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
@@ -268,7 +268,7 @@
 				"primary": "ds_infra_duo_application_access"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"count": 25,
 				"fontSize": "small",
 				"showInternalFields": false
@@ -453,7 +453,7 @@
 		"layoutDefinitions": {
 			"layout_overview": {
 				"options": {
-					"backgroundColor": "#f5f7fb",
+					"backgroundColor": "#020617",
 					"display": "auto-scale",
 					"height": 2310,
 					"width": 1440

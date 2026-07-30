@@ -45,8 +45,8 @@
 		"viz_header_bg": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "#ffffff",
-				"strokeColor": "rgba(15,23,42,0.06)"
+				"fillColor": "#0f172a",
+				"strokeColor": "rgba(148,163,184,0.22)"
 			}
 		},
 		"viz_header_icon": {
@@ -64,7 +64,7 @@
 			"showProgressBar": false,
 			"options": {
 				"backgroundColor": "transparent",
-				"fontColor": "#111827",
+				"fontColor": "#e2e8f0",
 				"markdown": "# Agentic Ops\nTelemetry readiness, synthetic-path health, routing instability, and AI Defense signals."
 			}
 		},
@@ -75,7 +75,7 @@
 				"primary": "ds_agentic_ai_defense"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('block_pct') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -109,7 +109,7 @@
 				"primary": "ds_agentic_te_feed_health"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('age_minutes') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -143,7 +143,7 @@
 				"primary": "ds_agentic_latency"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('avg_latency_ms') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -177,7 +177,7 @@
 				"primary": "ds_agentic_loss"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('avg_loss_pct') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -211,7 +211,7 @@
 				"primary": "ds_agentic_loss_trend"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
@@ -231,7 +231,7 @@
 				"primary": "ds_agentic_bgp_changes"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
@@ -252,7 +252,7 @@
 				"primary": "ds_agentic_test_health"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
@@ -270,7 +270,7 @@
 				"primary": "ds_agentic_http_availability"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
@@ -288,7 +288,7 @@
 				"primary": "ds_agentic_web_errors"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('total_errors') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -304,7 +304,7 @@
 				"primary": "ds_agentic_feed_matrix"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f172a",
 				"count": 25,
 				"fontSize": "small",
 				"showInternalFields": false
@@ -420,7 +420,7 @@
 		"layoutDefinitions": {
 			"layout_overview": {
 				"options": {
-					"backgroundColor": "#f5f7fb",
+					"backgroundColor": "#020617",
 					"display": "auto-scale",
 					"height": 1490,
 					"width": 1440
