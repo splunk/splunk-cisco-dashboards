@@ -219,7 +219,7 @@ const APP_CATALOG_SEARCH_NAME = "Splunk for Secure Networking";
 // text per-user via the header pencil → Edit branding panel
 // (`scd_overview_branding`); this constant only defines the
 // out-of-the-box value for fresh deployments.
-const DEFAULT_HEADER_SUBTITLE = "Splunk Executive Insights";
+const DEFAULT_HEADER_SUBTITLE = "Splunk App for Secure Networking";
 const DEFAULT_HEADER_TITLE_FALLBACK = "Your Organization Name";
 const DEFAULT_LOGO_DATA_URI =
   "data:image/svg+xml;utf8," +
@@ -3043,8 +3043,7 @@ const OverviewPage: React.FC = () => {
           installedVersion: content.version,
         });
         const build =
-          typeof content.build === "string" ||
-          typeof content.build === "number"
+          typeof content.build === "string" || typeof content.build === "number"
             ? String(content.build).trim()
             : "";
         if (version) {
@@ -3362,9 +3361,7 @@ const OverviewPage: React.FC = () => {
     > = {};
     for (const section of overviewProfile.sections) {
       const Icon = SECTION_ICON_COMPONENTS[section.icon];
-      const fallbackIcon = (
-        <Icon className="h-5 w-5" strokeWidth={2.2} />
-      );
+      const fallbackIcon = <Icon className="h-5 w-5" strokeWidth={2.2} />;
       const iconMaskStyle: React.CSSProperties | undefined = section.iconSrc
         ? {
             WebkitMaskImage: `url("${section.iconSrc}")`,
@@ -4326,10 +4323,7 @@ const OverviewPage: React.FC = () => {
                 className="relative m-0 inline-flex h-7 max-w-[180px] cursor-pointer items-center gap-1 rounded-md px-1.5 text-slate-600 transition-colors hover:bg-slate-50 hover:text-sky-700 focus-within:ring-2 focus-within:ring-sky-500 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-sky-200"
                 title={`Switch Overview profile. Current: ${overviewProfile.label}`}
               >
-                <Layers3
-                  className="h-4 w-4 flex-shrink-0"
-                  aria-hidden="true"
-                />
+                <Layers3 className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
                 <span className="hidden truncate text-[11px] font-bold leading-none xl:block">
                   {overviewProfile.label}
                 </span>
@@ -7287,7 +7281,7 @@ interface BrandingEditorModalProps {
    * matching the precedence rules in the live header. */
   titlePlaceholder: string;
   /** Placeholder text for the subtitle input. Always the
-   * out-of-the-box default ("Splunk Executive Insights"). */
+   * out-of-the-box default ("Splunk App for Secure Networking"). */
   subtitlePlaceholder: string;
   /** Image src to display in the "current logo" preview when no
    * override logo is set. Lets the user see what they're replacing. */
