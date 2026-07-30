@@ -2951,7 +2951,15 @@ const TILE_LAYER_PRESETS: TileLayerPreset[] = [
     },
 ];
 
-const DEFAULT_TILE_LAYER_PRESET_ID: TileLayerPreset['id'] = 'terrain';
+const DEFAULT_LIGHT_TILE_LAYER_PRESET_ID: TileLayerPreset['id'] = 'terrain';
+const DEFAULT_DARK_TILE_LAYER_PRESET_ID: TileLayerPreset['id'] = 'street';
+
+const defaultTileLayerPresetId = (
+    isDark: boolean
+): TileLayerPreset['id'] =>
+    isDark
+        ? DEFAULT_DARK_TILE_LAYER_PRESET_ID
+        : DEFAULT_LIGHT_TILE_LAYER_PRESET_ID;
 
 const escapeHtml = (value: string): string =>
     value.replace(/[&<>"']/g, (ch) => {
@@ -4788,8 +4796,9 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     const [roleLegendMode, setRoleLegendMode] =
         useState<TopologyRoleLegendMode>(readStoredRoleLegendMode);
     const [tilePresetId, setTilePresetId] = useState<TileLayerPreset['id']>(
-        DEFAULT_TILE_LAYER_PRESET_ID
+        () => defaultTileLayerPresetId(isDark)
     );
+    const previousTileThemeRef = useRef(isDark);
     const [catalogueByName, setCatalogueByName] = useState<Record<
         string,
         SearchbaseRecord
@@ -4822,6 +4831,12 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         Record<string, SiteEnrichment>
     >({});
     const pauseUntilRef = useRef<number>(0);
+
+    useEffect(() => {
+        if (previousTileThemeRef.current === isDark) return;
+        previousTileThemeRef.current = isDark;
+        setTilePresetId(defaultTileLayerPresetId(isDark));
+    }, [isDark]);
 
     // Animation level (controls marker entrance, link hover, packet streams).
     const {
@@ -5707,7 +5722,9 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
 
     const tilePreset =
         TILE_LAYER_PRESETS.find((preset) => preset.id === tilePresetId) ??
-        TILE_LAYER_PRESETS.find((preset) => preset.id === DEFAULT_TILE_LAYER_PRESET_ID) ??
+        TILE_LAYER_PRESETS.find(
+            (preset) => preset.id === defaultTileLayerPresetId(isDark)
+        ) ??
         TILE_LAYER_PRESETS[0];
     const tileUrl = isDark ? tilePreset.dark : tilePreset.light;
     const effectiveMapBounds = boundsForTopologySites(
