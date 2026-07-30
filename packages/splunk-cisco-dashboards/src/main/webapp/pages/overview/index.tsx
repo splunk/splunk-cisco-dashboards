@@ -2137,7 +2137,6 @@ const OverviewPage: React.FC = () => {
   const [splunkUsername, setSplunkUsername] = useState<string>("");
   const [appVersionLabel, setAppVersionLabel] =
     useState<string>(APP_VERSION_LABEL);
-  const [appUpdateVersion, setAppUpdateVersion] = useState<string>("");
   const appCatalogUrl = createURL("/manager/launcher/appsremote", {
     order: "relevance",
     query: APP_CATALOG_SEARCH_NAME,
@@ -3016,11 +3015,10 @@ const OverviewPage: React.FC = () => {
   // ------------------------------ Installed app identity fetch ------------------------------
   // The package step stamps the release build into the installed app.conf
   // after webpack has compiled the bundle. Prefer that live value so the
-  // operator sees the version/build Splunk is actually running. Splunk's own
-  // Splunkbase poll writes a pending release to `update.version`; when present,
-  // the header exposes the same Manage Apps upgrade link used by the Catalyst TA.
-  // Retain the compile-time label as a resilient fallback when the endpoint is
-  // unavailable.
+  // operator sees the version/build Splunk is actually running. Retain the
+  // compile-time label as a resilient fallback when the endpoint is unavailable.
+  // The shared overview_bootstrap.js owns the update badge so both XML shells
+  // get the same update check and direct app-installer link.
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
     let cancelled = false;
@@ -3041,9 +3039,8 @@ const OverviewPage: React.FC = () => {
       .then((json) => {
         if (cancelled) return;
         const content = json.entry?.[0]?.content ?? {};
-        const { version, updateVersion } = resolveAppVersions({
+        const { version } = resolveAppVersions({
           installedVersion: content.version,
-          updateVersion: content["update.version"],
         });
         const build =
           typeof content.build === "string" ||
@@ -3053,7 +3050,6 @@ const OverviewPage: React.FC = () => {
         if (version) {
           setAppVersionLabel(`v${version}${build ? ` · Build ${build}` : ""}`);
         }
-        setAppUpdateVersion(updateVersion);
       })
       .catch(() => {
         // Keep the compile-time label when app metadata is unavailable.
@@ -4148,6 +4144,11 @@ const OverviewPage: React.FC = () => {
 
         <div className="flex items-center gap-2.5 flex-shrink-0">
           <HealthBadge statuses={statusList} />
+          <span
+            data-scd-app-update-host
+            className="inline-flex flex-shrink-0 items-center"
+            aria-live="polite"
+          />
           <label className="m-0 flex h-8 items-center gap-1.5">
             <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest hidden lg:inline">
               Range
@@ -4368,18 +4369,6 @@ const OverviewPage: React.FC = () => {
                 >
                   {appVersionLabel}
                 </a>
-                {appUpdateVersion && (
-                  <a
-                    href={appCatalogUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center rounded-full border border-amber-500 bg-amber-500 px-1.5 py-px text-[9px] font-semibold text-white no-underline transition-colors hover:border-amber-600 hover:bg-amber-600"
-                    title={`A newer version, v${appUpdateVersion}, is available — open Manage Apps to upgrade`}
-                    aria-label={`Update available: v${appUpdateVersion}. Open Manage Apps to upgrade`}
-                  >
-                    ⬆ v{appUpdateVersion}
-                  </a>
-                )}
               </div>
             </div>
             {splunkUsername && (

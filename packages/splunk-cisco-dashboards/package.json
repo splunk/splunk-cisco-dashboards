@@ -12,6 +12,7 @@
         "unlink:app": "node bin/build.js unlink",
         "start": "node bin/build.js watch",
         "test:app-version": "node test/appVersion.test.cjs",
+        "test:overview-bootstrap": "node test/overviewBootstrap.test.cjs",
         "test:catalogue-search": "node test/catalogueSearch.test.cjs",
         "test:overview-profiles": "node test/overviewProfiles.test.cjs",
         "typecheck": "tsc --noEmit",
