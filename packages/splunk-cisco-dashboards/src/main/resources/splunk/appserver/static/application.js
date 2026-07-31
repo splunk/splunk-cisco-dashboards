@@ -4,11 +4,12 @@
  */
 (function scdSetupGate() {
   const app = "splunk-cisco-dashboards";
-  const setupView = "start";
+  const setupViews = new Set(["start", "macro_index_tuning"]);
   const parts = window.location.pathname.split("/").filter(Boolean);
   const appIndex = parts.indexOf(app);
   const currentView = appIndex >= 0 ? parts[appIndex + 1] || "" : "";
-  if (appIndex < 0 || currentView === setupView) {
+  if (appIndex < 0 || setupViews.has(currentView)) {
+    window.scdSetupGatePromise = Promise.resolve(true);
     return;
   }
 
@@ -16,11 +17,11 @@
     /^\/([a-z]{2}-[A-Z]{2})(?:\/|$)/,
   );
   const locale = `/${localeMatch ? localeMatch[1] : "en-US"}`;
-  const endpoint = `${locale}/splunkd/__raw/servicesNS/-/${encodeURIComponent(
+  const endpoint = `${locale}/splunkd/__raw/servicesNS/nobody/${encodeURIComponent(
     app,
   )}/configs/conf-setup/install?output_mode=json`;
 
-  fetch(endpoint, {
+  window.scdSetupGatePromise = fetch(endpoint, {
     credentials: "include",
     headers: {
       Accept: "application/json",
@@ -40,11 +41,13 @@
         value === "1" || value === 1 || value === true || value === "true";
       if (!configured) {
         window.location.replace(
-          `${locale}/app/${encodeURIComponent(app)}/${setupView}`,
+          `${locale}/app/${encodeURIComponent(app)}/start`,
         );
       }
+      return configured;
     })
     .catch(() => {
       // Fail open on an unavailable configuration endpoint to avoid a loop.
+      return true;
     });
 })();

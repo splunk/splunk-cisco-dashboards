@@ -13,10 +13,18 @@
     -->
     <collection label="Zero Trust Access" icon="shieldkeyhole">
         <a href="dashboardbuilder#/secure_networking_zta">Overview</a>
+        <divider />
+        <a href="dashboardbuilder#/secure_networking_zta_authentication_policy_enforcement">Authentication and Policy Enforcement</a>
+        <a href="dashboardbuilder#/secure_networking_zta_policy_management">Policy Management</a>
+        <a href="dashboardbuilder#/secure_networking_zta_user_activity_monitoring">User Activity Monitoring</a>
+        <a href="dashboardbuilder#/secure_networking_zta_detection_response">Detection &amp; Response</a>
+        <a href="dashboardbuilder#/secure_networking_zta_ravpn_sessions_and_posture">Remote Access VPN (RaVPN) Sessions and Posture</a>
     </collection>
 
     <collection label="Secure Infrastructure" icon="layerstriple">
         <a href="dashboardbuilder#/secure_networking_secure_infrastructure">Overview</a>
+        <divider />
+        <a href="dashboardbuilder#/secure_networking_secure_infrastructure_status">Secure Infrastructure Status</a>
         <!-- <view
             name="secure_networking_secure_infrastructure"
             label="Overview"
@@ -25,6 +33,8 @@
 
     <collection label="Scalable Network Segmentation" icon="nodetopology">
         <a href="dashboardbuilder#/secure_networking_scalable_network_segmentation">Overview</a>
+        <divider />
+        <a href="dashboardbuilder#/secure_networking_segmentation_overview">Segmentation Overview</a>
         <!-- <view
             name="secure_networking_scalable_network_segmentation"
             label="Overview"
@@ -33,6 +43,10 @@
 
     <collection label="Hybrid Mesh Firewalling" icon="forwarderuniversal">
         <a href="dashboardbuilder#/secure_networking_hybrid_mesh_firewalling">Overview</a>
+        <divider />
+        <a href="dashboardbuilder#/secure_networking_hmf_sdwan_network_health_monitoring">SD-WAN and Network Health Monitoring</a>
+        <a href="dashboardbuilder#/secure_networking_hmf_threat_detection_enforcement">Threat Detection and Enforcement</a>
+        <a href="dashboardbuilder#/secure_networking_hmf_dlp_cloud_native_security">DLP and Cloud Native Security</a>
         <!-- <view
             name="secure_networking_hybrid_mesh_firewalling"
             label="Overview"
@@ -41,6 +55,8 @@
 
     <collection label="Agentic Ops" icon="pulse">
         <a href="dashboardbuilder#/secure_networking_agentic_ops">Overview</a>
+        <divider />
+        <a href="dashboardbuilder#/secure_networking_agentic_ops_executive_overview">Executive Overview</a>
         <!-- <view name="secure_networking_agentic_ops" label="Overview" /> -->
     </collection>
 

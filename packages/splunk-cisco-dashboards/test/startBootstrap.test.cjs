@@ -9,9 +9,19 @@ const bootstrapPath = path.resolve(
   __dirname,
   "../src/main/resources/splunk/appserver/static/start_bootstrap.js",
 );
-const { csrfToken, endpoint, homeUrl, isConfigured, localePrefix } = require(
-  bootstrapPath,
-);
+const {
+  appsEndpoint,
+  compareVersions,
+  csrfToken,
+  discoveryEndpoint,
+  endpoint,
+  homeUrl,
+  isConfigured,
+  localePrefix,
+  parseExportRows,
+  resolvePrerequisites,
+  tuningUrl,
+} = require(bootstrapPath);
 
 assert.equal(
   endpoint("/en-US/app/splunk-cisco-dashboards/start"),
@@ -24,6 +34,18 @@ assert.equal(
 assert.equal(
   homeUrl("/de-DE/app/splunk-cisco-dashboards/start"),
   "/de-DE/app/splunk-cisco-dashboards/secure_networking_overview",
+);
+assert.equal(
+  tuningUrl("/de-DE/app/splunk-cisco-dashboards/start"),
+  "/de-DE/app/splunk-cisco-dashboards/macro_index_tuning?setup=1",
+);
+assert.equal(
+  appsEndpoint("/en-US/app/splunk-cisco-dashboards/start"),
+  "/en-US/splunkd/__raw/services/apps/local?count=0&output_mode=json",
+);
+assert.equal(
+  discoveryEndpoint("/en-US/app/splunk-cisco-dashboards/start"),
+  "/en-US/splunkd/__raw/servicesNS/nobody/splunk-cisco-dashboards/search/jobs/export",
 );
 assert.equal(localePrefix("/manager/apps/local"), "/en-US");
 
@@ -42,6 +64,127 @@ assert.equal(
 assert.equal(isConfigured({ entry: [] }), false);
 assert.equal(isConfigured(null), false);
 
+assert.equal(compareVersions("2.1.0", "2.0.9"), 1);
+assert.equal(compareVersions("2.0", "2.0.0"), 0);
+assert.equal(compareVersions("2.0.0-rc.1", "2.0.0"), -1);
+assert.equal(compareVersions("unknown", "2.0.0"), null);
+
+const exportRows = parseExportRows(
+  [
+    JSON.stringify({
+      result: {
+        index: "netops",
+        sourcetype: "cisco:dnac:devicehealth",
+        count: "1,250",
+        latest: "1753800000",
+      },
+    }),
+    JSON.stringify({
+      result: {
+        index: "security",
+        sourcetype: "cisco:ftd",
+        count: "42",
+        latest: "1753900000",
+      },
+    }),
+  ].join("\n"),
+);
+assert.deepEqual(exportRows, [
+  {
+    index: "netops",
+    sourcetype: "cisco:dnac:devicehealth",
+    count: 1250,
+    latest: 1753800000,
+  },
+  {
+    index: "security",
+    sourcetype: "cisco:ftd",
+    count: 42,
+    latest: 1753900000,
+  },
+]);
+
+const prerequisites = resolvePrerequisites(
+  [
+    {
+      index: "netops",
+      sourcetype: "cisco:dnac:devicehealth",
+      count: 10,
+      latest: 0,
+    },
+    {
+      index: "identity",
+      sourcetype: "cisco:ise:syslog",
+      count: 5,
+      latest: 0,
+    },
+  ],
+  [
+    {
+      name: "Splunk_SA_CIM",
+      content: { version: "5.3.0", "update.version": "5.4.0" },
+    },
+    {
+      name: "cisco-catalyst-app",
+      content: { version: "1.4.0", disabled: false },
+    },
+  ],
+);
+assert.equal(
+  prerequisites.find((item) => item.id === "cim").status,
+  "update",
+);
+assert.equal(
+  prerequisites.find((item) => item.id === "catalyst").status,
+  "installed",
+);
+assert.equal(
+  prerequisites.some((item) => item.id === "syslog"),
+  false,
+);
+assert.equal(
+  prerequisites.some((item) => item.id === "unmapped"),
+  false,
+);
+
+const securityCloudPrerequisites = resolvePrerequisites(
+  [
+    {
+      index: "identity",
+      sourcetype: "cisco:duo:user",
+      count: 5,
+      latest: 0,
+    },
+    {
+      index: "firewall",
+      sourcetype: "cisco:sfw:estreamer",
+      count: 8,
+      latest: 0,
+    },
+  ],
+  [
+    {
+      name: "CiscoSecurityCloud",
+      content: { version: "4.0.1", disabled: false },
+    },
+  ],
+);
+const securityCloud = securityCloudPrerequisites.find(
+  (item) => item.id === "security-cloud",
+);
+assert.equal(securityCloud.status, "installed");
+assert.equal(securityCloud.splunkbase, "https://splunkbase.splunk.com/app/7404");
+assert.deepEqual(securityCloud.sourcetypes, [
+  "cisco:duo:user",
+  "cisco:sfw:estreamer",
+]);
+assert.equal(
+  securityCloudPrerequisites.some((item) =>
+    ["duo", "estreamer", "syslog", "unmapped"].includes(item.id),
+  ),
+  false,
+);
+
 global.window = { $C: { FORM_KEY: "runtime-token" } };
 global.document = { cookie: "" };
 assert.equal(csrfToken(), "runtime-token");
@@ -56,6 +199,28 @@ const applicationPath = path.resolve(
   "../src/main/resources/splunk/appserver/static/application.js",
 );
 const applicationSource = fs.readFileSync(applicationPath, "utf8");
+const overviewTemplateSource = fs.readFileSync(
+  path.resolve(
+    __dirname,
+    "../src/main/resources/splunk/appserver/templates/overview.html",
+  ),
+  "utf8",
+);
+const dashboardBuilderTemplateSource = fs.readFileSync(
+  path.resolve(
+    __dirname,
+    "../src/main/resources/splunk/appserver/templates/dashboardbuilder.html",
+  ),
+  "utf8",
+);
+
+for (const templateSource of [
+  overviewTemplateSource,
+  dashboardBuilderTemplateSource,
+]) {
+  assert.match(templateSource, /application\.js/);
+  assert.match(templateSource, /scdSetupGatePromise/);
+}
 
 async function runSetupGate(pathname, payload, responseOk = true) {
   const redirects = [];
@@ -79,7 +244,11 @@ async function runSetupGate(pathname, payload, responseOk = true) {
 
   vm.runInNewContext(applicationSource, context);
   await new Promise((resolve) => setImmediate(resolve));
-  return { redirects, requests };
+  return {
+    gateResult: await context.window.scdSetupGatePromise,
+    redirects,
+    requests,
+  };
 }
 
 (async () => {
@@ -91,12 +260,18 @@ async function runSetupGate(pathname, payload, responseOk = true) {
     "/en-US/app/splunk-cisco-dashboards/start",
   ]);
   assert.equal(unconfigured.requests.length, 1);
+  assert.equal(
+    unconfigured.requests[0],
+    "/en-US/splunkd/__raw/servicesNS/nobody/splunk-cisco-dashboards/configs/conf-setup/install?output_mode=json",
+  );
+  assert.equal(unconfigured.gateResult, false);
 
   const configured = await runSetupGate(
     "/en-US/app/splunk-cisco-dashboards/secure_networking_overview",
     { entry: [{ content: { is_configured: "1" } }] },
   );
   assert.deepEqual(configured.redirects, []);
+  assert.equal(configured.gateResult, true);
 
   const setupView = await runSetupGate(
     "/en-US/app/splunk-cisco-dashboards/start",
@@ -104,12 +279,19 @@ async function runSetupGate(pathname, payload, responseOk = true) {
   );
   assert.equal(setupView.requests.length, 0);
 
+  const tuningView = await runSetupGate(
+    "/en-US/app/splunk-cisco-dashboards/macro_index_tuning",
+    { entry: [{ content: { is_configured: "0" } }] },
+  );
+  assert.equal(tuningView.requests.length, 0);
+
   const failedRead = await runSetupGate(
     "/en-US/app/splunk-cisco-dashboards/secure_networking_overview",
     null,
     false,
   );
   assert.deepEqual(failedRead.redirects, []);
+  assert.equal(failedRead.gateResult, true);
 
   console.log("✓ setup bootstrap tests passed");
 })().catch((error) => {

@@ -4067,7 +4067,7 @@ const OverviewPage: React.FC = () => {
       ref={exportRef}
       style={dashboardShellStyle}
       className={cn(
-        "scd-overview-page flex flex-col font-sans overflow-hidden",
+        "scd-overview-page flex w-full min-w-0 max-w-full flex-col overflow-hidden font-sans",
         compactDensity && "scd-overview-compact",
         "bg-slate-50 text-slate-900",
         "dark:bg-slate-950 dark:text-slate-100",

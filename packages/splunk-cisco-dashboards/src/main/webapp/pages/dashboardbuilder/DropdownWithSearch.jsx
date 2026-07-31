@@ -14,6 +14,7 @@ import TableList from '@splunk/react-icons/TableList';
 import ChartSingleValueRadial from '@splunk/react-icons/ChartSingleValueRadial';
 import ChartColumn from '@splunk/react-icons/ChartColumn';
 import Modal from '@splunk/react-ui/Modal';
+import useSplunkTheme from '@splunk/themes/useSplunkTheme';
 import { plainTextFromHtml } from '../../common/services/searchbaseCatalogue';
 
 const ALL_APPS = '__all_apps__';
@@ -89,6 +90,33 @@ export default function DropdownWithSearch({
     onSelect,
     searches,
 }) {
+    const splunkTheme = useSplunkTheme();
+    const colorScheme = splunkTheme.colorScheme === 'dark' ? 'dark' : 'light';
+    const dropdownThemeStyle = {
+        '--dashboard-builder-background-page': splunkTheme.backgroundColorPage,
+        '--dashboard-builder-background-section': splunkTheme.backgroundColorSection,
+        '--dashboard-builder-background-popup': splunkTheme.backgroundColorPopup,
+        '--dashboard-builder-content-active': splunkTheme.contentColorActive,
+        '--dashboard-builder-content-default': splunkTheme.contentColorDefault,
+        '--dashboard-builder-content-inverted': splunkTheme.contentColorInverted,
+        '--dashboard-builder-content-muted': splunkTheme.contentColorMuted,
+        '--dashboard-builder-border': splunkTheme.borderColor,
+        '--dashboard-builder-border-strong': splunkTheme.borderColorStrong,
+        '--dashboard-builder-border-weak': splunkTheme.borderColorWeak,
+        '--dashboard-builder-accent': splunkTheme.interactiveColorPrimary,
+        '--dashboard-builder-overlay-hover': splunkTheme.interactiveColorOverlayHover,
+        '--dashboard-builder-overlay-selected': splunkTheme.interactiveColorOverlaySelected,
+        '--dashboard-builder-modal-background': splunkTheme.backgroundColorPopup,
+        '--dashboard-builder-modal-background-section': splunkTheme.backgroundColorSection,
+        '--dashboard-builder-modal-content-active': splunkTheme.contentColorActive,
+        '--dashboard-builder-modal-content-default': splunkTheme.contentColorDefault,
+        '--dashboard-builder-modal-content-muted': splunkTheme.contentColorMuted,
+        '--dashboard-builder-modal-border': splunkTheme.borderColor,
+        '--dashboard-builder-modal-border-strong': splunkTheme.borderColorStrong,
+        '--dashboard-builder-modal-border-weak': splunkTheme.borderColorWeak,
+        '--dashboard-builder-modal-overlay-hover': splunkTheme.interactiveColorOverlayHover,
+        '--dashboard-builder-modal-overlay-selected': splunkTheme.interactiveColorOverlaySelected,
+    };
     const dropdownRef = useRef(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedApp, setSelectedApp] = useState(DEFAULT_APP_SCOPE);
@@ -275,7 +303,11 @@ export default function DropdownWithSearch({
 
     return (
         <>
-            <Modal open={confirmationOpen}>
+            <Modal
+                open={confirmationOpen}
+                className={`dashboard-builder-themed-modal dashboard-builder-themed-modal-${colorScheme}`}
+                style={dropdownThemeStyle}
+            >
                 <Modal.Header title="Large KPI Selection - Confirmation Required" />
                 <Modal.Body>
                     <div>
@@ -325,17 +357,18 @@ export default function DropdownWithSearch({
 
                 {isOpen && (
                     <div
-                        className="dropdown-menu dropdown-kpi-menu"
+                        className={`dropdown-menu dropdown-kpi-menu dropdown-kpi-menu-${colorScheme}`}
                         style={
                             menuPosition
                                 ? {
+                                      ...dropdownThemeStyle,
                                       left: menuPosition.left,
                                       marginLeft: 0,
                                       position: 'fixed',
                                       top: menuPosition.top,
                                       width: menuPosition.width,
                                   }
-                                : undefined
+                                : dropdownThemeStyle
                         }
                     >
                         <div className="dropdown-kpi-filter-shell">

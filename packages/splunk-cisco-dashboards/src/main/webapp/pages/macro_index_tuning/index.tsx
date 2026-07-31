@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import {
   AlertTriangle,
+  ArrowLeft,
   Check,
   ChevronDown,
   ChevronRight,
@@ -32,6 +33,8 @@ import { splunkSearchAppUrl } from "@/common/lib/splunkSearchUrl";
 import timeParser from "../dashboardbuilder/custominput/timeparser";
 
 const APP_NAME = "splunk-cisco-dashboards";
+const APP_HOME_VIEW = "secure_networking_overview";
+const APP_SETUP_VIEW = "start";
 const CIM_APP_NAME = "Splunk_SA_CIM";
 const CISCO_SECURITY_APP_NAME = "CiscoSecurityCloud";
 const THOUSAND_EYES_APP_NAME = "ta_cisco_thousandeyes";
@@ -42,6 +45,8 @@ const DEFAULT_SUMMARIESONLY_DEFINITION =
   "summariesonly=false allow_old_summaries=false fillnull_value=null";
 const DEFAULT_SUMMARIESONLY_DESCRIPTION =
   "Controls whether data-model searches use only accelerated summaries or may fall back to raw events. Keep summariesonly=false until all required data models are fully accelerated.";
+const SUMMARIESONLY_ACCELERATION_ERROR =
+  "summariesonly=true requires acceleration for Cisco Catalyst, Cisco Security, and Cisco ThousandEyes.";
 const DEFAULT_INDEX_IN_DEFINITION = "index IN (*)";
 const DEFAULT_INDEX_OR_DEFINITION = "(index=*)";
 const SCD_INDEX_MACRO_OR_PLACEHOLDER = "__SCD_INDEX_MACRO_OR__";
@@ -135,6 +140,12 @@ type ScanState = "idle" | "loading" | "ready" | "error";
 type SaveState = "idle" | "saving" | "saved" | "error";
 type CopyState = "idle" | "copied" | "selected" | "error";
 type DefinitionFormat = "indexIn" | "indexOr";
+type DataModelAccelerationState =
+  | "checking"
+  | "enabled"
+  | "disabled"
+  | "missing"
+  | "error";
 
 interface SearchTimeRange {
   earliest: string;
@@ -260,6 +271,58 @@ interface MacroDetails {
   definition: string;
   description: string;
 }
+
+interface DataModelRequirement {
+  key: string;
+  label: string;
+  app: string;
+  model: string;
+  priority: "required" | "recommended";
+}
+
+interface DataModelAcceleration extends DataModelRequirement {
+  state: DataModelAccelerationState;
+  earliestTime: string;
+  message: string;
+}
+
+const DATA_MODEL_REQUIREMENTS: readonly DataModelRequirement[] = [
+  {
+    key: "catalyst",
+    label: "Cisco Catalyst",
+    app: "cisco-catalyst-app",
+    model: "Cisco_Catalyst_App",
+    priority: "required",
+  },
+  {
+    key: "security",
+    label: "Cisco Security",
+    app: CISCO_SECURITY_APP_NAME,
+    model: "Cisco_Security",
+    priority: "required",
+  },
+  {
+    key: "thousandeyes",
+    label: "Cisco ThousandEyes",
+    app: THOUSAND_EYES_APP_NAME,
+    model: "Cisco_ThousandEyes",
+    priority: "required",
+  },
+  {
+    key: "authentication",
+    label: "Authentication",
+    app: CIM_APP_NAME,
+    model: "Authentication",
+    priority: "recommended",
+  },
+  {
+    key: "network-traffic",
+    label: "Network Traffic",
+    app: CIM_APP_NAME,
+    model: "Network_Traffic",
+    priority: "recommended",
+  },
+] as const;
 
 const DEFAULT_FAST_TIME_RANGE: SearchTimeRange = {
   earliest: "-7d@d",
@@ -393,6 +456,35 @@ const splunkManagerUrl = (managerPage: string): string =>
 
 const splunkAppManagerUrl = (app: string, managerPage: string): string =>
   `/${getSplunkLocale()}/manager/${encodeURIComponent(app)}/${managerPage}`;
+
+const splunkAppViewUrl = (view: string): string =>
+  `/${getSplunkLocale()}/app/${encodeURIComponent(APP_NAME)}/${view}`;
+
+const initialSetupConfigUrl = (): string =>
+  `/${getSplunkLocale()}/splunkd/__raw/servicesNS/nobody/${encodeURIComponent(
+    APP_NAME,
+  )}/configs/conf-setup/install?output_mode=json`;
+
+const dataModelConfigUrl = ({
+  app,
+  model,
+}: Pick<DataModelRequirement, "app" | "model">): string =>
+  `/${getSplunkLocale()}/splunkd/__raw/servicesNS/nobody/${encodeURIComponent(
+    app,
+  )}/configs/conf-datamodels/${encodeURIComponent(model)}?output_mode=json`;
+
+const isInitialSetupMode = (): boolean =>
+  typeof window !== "undefined" &&
+  new URLSearchParams(window.location.search).get("setup") === "1";
+
+const isTrueConfigValue = (value: unknown): boolean =>
+  value === true ||
+  value === 1 ||
+  value === "1" ||
+  normalizeText(value).trim().toLowerCase() === "true";
+
+const usesSummariesOnly = (definition: string): boolean =>
+  /\bsummariesonly\s*=\s*(?:true|1)\b/i.test(definition);
 
 const cleanIndexToken = (value: string): string =>
   value
@@ -670,6 +762,94 @@ const saveMacroDefinition = async (
         `Save failed with HTTP ${response.status}.`,
     );
   }
+};
+
+const completeInitialSetup = async (): Promise<void> => {
+  const response = await fetch(initialSetupConfigUrl(), {
+    ...getDefaultFetchInit(),
+    method: "POST",
+    body: new URLSearchParams({ is_configured: "1" }).toString(),
+  });
+
+  let payload: unknown = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      extractSplunkError(payload) ||
+        `Setup could not be completed (HTTP ${response.status}).`,
+    );
+  }
+};
+
+const loadDataModelAcceleration = async (
+  requirement: DataModelRequirement,
+): Promise<DataModelAcceleration> => {
+  const response = await fetch(dataModelConfigUrl(requirement), {
+    ...getDefaultFetchInit(),
+    method: "GET",
+  });
+
+  let payload: unknown = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok) {
+    return {
+      ...requirement,
+      state: response.status === 404 ? "missing" : "error",
+      earliestTime: "",
+      message:
+        extractSplunkError(payload) ||
+        (response.status === 404
+          ? "Data model was not found"
+          : `Acceleration check failed (HTTP ${response.status})`),
+    };
+  }
+
+  const entries = (
+    payload as {
+      entry?: Array<{
+        content?: {
+          acceleration?: unknown;
+          "acceleration.earliest_time"?: unknown;
+          disabled?: unknown;
+        };
+      }>;
+    } | null
+  )?.entry;
+  const content = entries?.[0]?.content;
+
+  if (!content) {
+    return {
+      ...requirement,
+      state: "missing",
+      earliestTime: "",
+      message: "Data model was not found",
+    };
+  }
+
+  const disabled = isTrueConfigValue(content.disabled);
+  const enabled = isTrueConfigValue(content.acceleration) && !disabled;
+  return {
+    ...requirement,
+    state: enabled ? "enabled" : "disabled",
+    earliestTime: normalizeText(
+      content["acceleration.earliest_time"],
+    ).trim(),
+    message: disabled
+      ? "Data model is disabled"
+      : enabled
+        ? "Acceleration enabled"
+        : "Acceleration is not enabled",
+  };
 };
 
 const loadMacroDetails = async (
@@ -1000,6 +1180,7 @@ function useTimeRangeParser(): {
 }
 
 export default function MacroIndexTuningPage(): JSX.Element {
+  const setupMode = isInitialSetupMode();
   const [rows, setRows] = useState<EditableMacroRow[]>([]);
   const [cimRows, setCimRows] = useState<EditableMacroRow[]>([]);
   const [scanState, setScanState] = useState<ScanState>("idle");
@@ -1027,6 +1208,17 @@ export default function MacroIndexTuningPage(): JSX.Element {
     DEFAULT_SUMMARIESONLY_DESCRIPTION,
   );
   const [adhocStatus, setAdhocStatus] = useState<SaveStatus>({ state: "idle" });
+  const [dataModelReadiness, setDataModelReadiness] = useState<
+    DataModelAcceleration[]
+  >(() =>
+    DATA_MODEL_REQUIREMENTS.map((requirement) => ({
+      ...requirement,
+      state: "checking",
+      earliestTime: "",
+      message: "Checking acceleration",
+    })),
+  );
+  const [setupStatus, setSetupStatus] = useState<SaveStatus>({ state: "idle" });
   const abortRef = useRef<AbortController | null>(null);
   const cimAbortRef = useRef<AbortController | null>(null);
   const searchSplRef = useRef<string>("");
@@ -1094,6 +1286,28 @@ export default function MacroIndexTuningPage(): JSX.Element {
       row.targetApp === THOUSAND_EYES_APP_NAME,
   );
   const rowsToSave = tunableRows.filter((row) => row.draftDefinition.trim());
+  const setupRowsToSave = rows.filter(
+    (row) =>
+      row.targetApp === APP_NAME &&
+      row.macro.startsWith("index_") &&
+      row.events > 0 &&
+      row.draftDefinition.trim(),
+  );
+  const summariesOnlyEnabled = usesSummariesOnly(adhocDefinition);
+  const requiredDataModels = dataModelReadiness.filter(
+    (item) => item.priority === "required",
+  );
+  const allRequiredDataModelsAccelerated =
+    requiredDataModels.length ===
+      DATA_MODEL_REQUIREMENTS.filter(
+        (requirement) => requirement.priority === "required",
+      ).length &&
+    requiredDataModels.every((item) => item.state === "enabled");
+  const accelerationCheckInProgress = dataModelReadiness.some(
+    (item) => item.state === "checking",
+  );
+  const summariesOnlyBlocked =
+    summariesOnlyEnabled && !allRequiredDataModelsAccelerated;
   const filterTerms = useMemo(
     () => filterText.trim().toLowerCase().split(/\s+/).filter(Boolean),
     [filterText],
@@ -1320,6 +1534,37 @@ export default function MacroIndexTuningPage(): JSX.Element {
     void loadAdhocMacro();
   }, [loadAdhocMacro]);
 
+  const checkDataModelAcceleration = useCallback(async () => {
+    setDataModelReadiness(
+      DATA_MODEL_REQUIREMENTS.map((requirement) => ({
+        ...requirement,
+        state: "checking",
+        earliestTime: "",
+        message: "Checking acceleration",
+      })),
+    );
+
+    const readiness = await Promise.all(
+      DATA_MODEL_REQUIREMENTS.map(async (requirement) => {
+        try {
+          return await loadDataModelAcceleration(requirement);
+        } catch (err) {
+          return {
+            ...requirement,
+            state: "error" as const,
+            earliestTime: "",
+            message: err instanceof Error ? err.message : String(err),
+          };
+        }
+      }),
+    );
+    setDataModelReadiness(readiness);
+  }, []);
+
+  useEffect(() => {
+    void checkDataModelAcceleration();
+  }, [checkDataModelAcceleration]);
+
   const updateDraftDefinition = useCallback(
     (rowKey: string, definition: string) => {
       const updateRows = (current: EditableMacroRow[]) =>
@@ -1379,9 +1624,104 @@ export default function MacroIndexTuningPage(): JSX.Element {
     }
   }, [rowsToSave, saveOne]);
 
+  const finishInitialSetup = useCallback(async () => {
+    if (scanState !== "ready") return;
+    if (summariesOnlyBlocked) {
+      setSetupStatus({
+        state: "error",
+        message: SUMMARIESONLY_ACCELERATION_ERROR,
+      });
+      return;
+    }
+    setSetupStatus({
+      state: "saving",
+      message: "Saving detected index macros",
+    });
+
+    try {
+      setSetupStatus({
+        state: "saving",
+        message: "Saving acceleration mode",
+      });
+      await saveMacroDefinition(
+        ADHOC_MACRO_NAME,
+        adhocDefinition.trim(),
+        adhocDescription,
+        APP_NAME,
+      );
+      setAdhocStatus({ state: "saved", message: "Saved" });
+
+      setSetupStatus({
+        state: "saving",
+        message: "Saving detected index macros",
+      });
+      for (const row of setupRowsToSave) {
+        const rowKey = macroStatusKey(row);
+        setSaveStatuses((current) => ({
+          ...current,
+          [rowKey]: { state: "saving" },
+        }));
+        try {
+          // Save sequentially so Splunk configuration writes remain ordered.
+          // eslint-disable-next-line no-await-in-loop
+          await saveMacroDefinition(
+            row.macro,
+            row.draftDefinition.trim(),
+            row.description,
+            APP_NAME,
+          );
+          setSaveStatuses((current) => ({
+            ...current,
+            [rowKey]: { state: "saved", message: "Saved" },
+          }));
+        } catch (saveError) {
+          setSaveStatuses((current) => ({
+            ...current,
+            [rowKey]: {
+              state: "error",
+              message:
+                saveError instanceof Error
+                  ? saveError.message
+                  : String(saveError),
+            },
+          }));
+          throw saveError;
+        }
+      }
+
+      setSetupStatus({
+        state: "saving",
+        message: "Unlocking the app",
+      });
+      await completeInitialSetup();
+      window.location.assign(splunkAppViewUrl(APP_HOME_VIEW));
+    } catch (setupError) {
+      setSetupStatus({
+        state: "error",
+        message:
+          setupError instanceof Error
+            ? setupError.message
+            : String(setupError),
+      });
+    }
+  }, [
+    adhocDefinition,
+    adhocDescription,
+    scanState,
+    setupRowsToSave,
+    summariesOnlyBlocked,
+  ]);
+
   const saveAdhocMacro = useCallback(async () => {
     const definition = adhocDefinition.trim();
     if (!definition) return;
+    if (summariesOnlyBlocked) {
+      setAdhocStatus({
+        state: "error",
+        message: SUMMARIESONLY_ACCELERATION_ERROR,
+      });
+      return;
+    }
     setAdhocStatus({ state: "saving" });
     try {
       await saveMacroDefinition(
@@ -1397,7 +1737,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
         message: err instanceof Error ? err.message : String(err),
       });
     }
-  }, [adhocDefinition, adhocDescription]);
+  }, [adhocDefinition, adhocDescription, summariesOnlyBlocked]);
 
   const toggleRowGroup = useCallback((targetApp: string) => {
     setCollapsedRowGroups((current) => ({
@@ -1523,7 +1863,107 @@ export default function MacroIndexTuningPage(): JSX.Element {
     });
 
   return (
-    <main className="min-h-screen bg-[#f4f6f8] px-6 py-5 text-slate-800">
+    <main
+      className={`min-h-screen bg-[#f4f6f8] px-6 py-5 text-slate-800 ${
+        setupMode ? "pb-28" : ""
+      }`}
+    >
+      {setupMode && (
+        <section className="mb-4 border border-sky-300 bg-sky-50">
+          <div className="px-5 py-4">
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wide text-sky-800">
+                Initial setup · Step 3 of 3
+              </div>
+              <h1 className="mt-1 text-lg font-bold text-slate-900">
+                Tune the indexes discovered for your Cisco data
+              </h1>
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-700">
+                The fast scan runs automatically. Review the proposed{" "}
+                <code className="rounded bg-white px-1 py-0.5 font-mono text-xs">
+                  index_*
+                </code>{" "}
+                definitions, edit them if needed, then finish setup. Finishing
+                saves detected SCD index macros and unlocks the landing page;
+                optional CIM and external-app macros can be tuned later.
+              </p>
+              {setupStatus.state === "error" && setupStatus.message && (
+                <div
+                  role="alert"
+                  className="mt-3 flex items-start gap-2 border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+                >
+                  <AlertTriangle className="mt-0.5 shrink-0" size={16} />
+                  <span>{setupStatus.message}</span>
+                </div>
+              )}
+            </div>
+          </div>
+          <ol className="grid grid-cols-3 border-t border-sky-200 text-xs font-bold text-slate-600">
+            <li className="flex min-h-10 items-center gap-2 border-r border-sky-200 bg-emerald-50 px-4 text-emerald-800">
+              <Check size={14} /> Discover data
+            </li>
+            <li className="flex min-h-10 items-center gap-2 border-r border-sky-200 bg-emerald-50 px-4 text-emerald-800">
+              <Check size={14} /> Validate add-ons
+            </li>
+            <li className="flex min-h-10 items-center gap-2 bg-sky-100 px-4 text-sky-900">
+              <span className="grid h-5 w-5 place-items-center rounded-full bg-sky-700 text-[10px] text-white">
+                3
+              </span>
+              Tune indexes
+            </li>
+          </ol>
+        </section>
+      )}
+      {setupMode && (
+        <section
+          aria-label="Initial setup actions"
+          className="fixed bottom-0 left-0 right-0 z-[80] flex flex-wrap items-center justify-between gap-3 border-t border-slate-300 bg-white px-6 py-3 shadow-[0_-8px_24px_rgba(15,23,42,0.16)] md:left-[72px]"
+        >
+          <div>
+            <div className="text-xs font-bold uppercase tracking-wide text-sky-800">
+              Step 3 of 3 · Tune indexes
+            </div>
+            <div className="mt-0.5 text-sm text-slate-600">
+              {summariesOnlyBlocked
+                ? "Enable acceleration for the required Cisco data models before finishing."
+                : scanState !== "ready"
+                  ? "Waiting for the automatic index scan to finish."
+                  : `${setupRowsToSave.length} detected index macro${
+                      setupRowsToSave.length === 1 ? "" : "s"
+                    } will be saved when setup finishes.`}
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <a
+              href={splunkAppViewUrl(APP_SETUP_VIEW)}
+              className={`${lightButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
+            >
+              <ArrowLeft size={16} />
+              Back
+            </a>
+            <button
+              type="button"
+              onClick={finishInitialSetup}
+              disabled={
+                scanState !== "ready" ||
+                setupStatus.state === "saving" ||
+                isSavingAll ||
+                summariesOnlyBlocked
+              }
+              className={`${lightButtonBase} border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700`}
+            >
+              {setupStatus.state === "saving" ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Check size={16} />
+              )}
+              {setupStatus.state === "saving"
+                ? setupStatus.message || "Finishing setup"
+                : "Finish setup"}
+            </button>
+          </div>
+        </section>
+      )}
       <section className="mb-4 border-b border-slate-200 pb-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -1616,24 +2056,34 @@ export default function MacroIndexTuningPage(): JSX.Element {
               Ad hoc macro
             </h2>
             <p className="mt-1 text-sm text-slate-600">
-              Update{" "}
+              Choose whether data-model searches may use raw events.{" "}
               <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">
-                {ADHOC_MACRO_NAME}
+                summariesonly=true
               </code>{" "}
-              before saving generated index macros.
+              reads accelerated summaries only and requires acceleration on all
+              three Cisco data models listed below.
             </p>
           </div>
           <button
             type="button"
-            onClick={loadAdhocMacro}
-            disabled={adhocStatus.state === "saving"}
+            onClick={() => {
+              void loadAdhocMacro();
+              void checkDataModelAcceleration();
+            }}
+            disabled={
+              adhocStatus.state === "saving" || accelerationCheckInProgress
+            }
             className={`${lightButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
           >
             <RefreshCw
               size={16}
-              className={adhocStatus.state === "saving" ? "animate-spin" : ""}
+              className={
+                adhocStatus.state === "saving" || accelerationCheckInProgress
+                  ? "animate-spin"
+                  : ""
+              }
             />
-            Reload
+            Refresh
           </button>
         </div>
         <div className="grid gap-3 px-4 py-4 lg:grid-cols-[180px_minmax(0,1fr)_auto] lg:items-start">
@@ -1651,6 +2101,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
           </div>
           <div>
             <input
+              aria-label={`${ADHOC_MACRO_NAME} definition`}
               value={adhocDefinition}
               onChange={(event) => {
                 setAdhocDefinition(event.target.value);
@@ -1672,7 +2123,11 @@ export default function MacroIndexTuningPage(): JSX.Element {
           <button
             type="button"
             onClick={saveAdhocMacro}
-            disabled={adhocStatus.state === "saving" || !adhocDefinition.trim()}
+            disabled={
+              adhocStatus.state === "saving" ||
+              !adhocDefinition.trim() ||
+              summariesOnlyBlocked
+            }
             className={`${lightButtonBase} border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700`}
           >
             {adhocStatus.state === "saving" ? (
@@ -1682,6 +2137,164 @@ export default function MacroIndexTuningPage(): JSX.Element {
             )}
             Save
           </button>
+        </div>
+        <div className="border-t border-slate-200 bg-slate-50 px-4 py-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="m-0 text-sm font-bold text-slate-900">
+                Data model acceleration readiness
+              </h3>
+              <p className="mt-1 max-w-4xl text-xs leading-5 text-slate-600">
+                Cisco Catalyst, Cisco Security, and Cisco ThousandEyes are
+                required for{" "}
+                <code className="rounded bg-white px-1 py-0.5 font-mono">
+                  summariesonly=true
+                </code>
+                . Authentication and Network Traffic acceleration are strongly
+                recommended.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={checkDataModelAcceleration}
+              disabled={accelerationCheckInProgress}
+              className={`${compactButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
+            >
+              <RefreshCw
+                size={14}
+                className={
+                  accelerationCheckInProgress ? "animate-spin" : ""
+                }
+              />
+              Check again
+            </button>
+          </div>
+
+          <div
+            className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-5"
+            role="list"
+            aria-label="Data model acceleration requirements"
+          >
+            {dataModelReadiness.map((item) => {
+              const enabled = item.state === "enabled";
+              const checking = item.state === "checking";
+              const required = item.priority === "required";
+              return (
+                <div
+                  key={item.key}
+                  role="listitem"
+                  className={`border bg-white px-3 py-3 ${
+                    enabled
+                      ? "border-emerald-200"
+                      : checking
+                        ? "border-slate-200"
+                        : required
+                          ? "border-red-200"
+                          : "border-amber-200"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="font-semibold text-slate-900">
+                      {item.label}
+                    </div>
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                        required
+                          ? "bg-sky-100 text-sky-800"
+                          : "bg-amber-100 text-amber-800"
+                      }`}
+                    >
+                      {required ? "Required" : "Strongly recommended"}
+                    </span>
+                  </div>
+                  <code className="mt-2 block break-all font-mono text-[11px] text-slate-500">
+                    {item.model}
+                  </code>
+                  <div
+                    className={`mt-3 flex items-start gap-2 text-xs font-semibold ${
+                      enabled
+                        ? "text-emerald-700"
+                        : checking
+                          ? "text-slate-600"
+                          : required
+                            ? "text-red-700"
+                            : "text-amber-800"
+                    }`}
+                  >
+                    {checking ? (
+                      <Loader2
+                        className="mt-0.5 shrink-0 animate-spin"
+                        size={14}
+                      />
+                    ) : enabled ? (
+                      <Check className="mt-0.5 shrink-0" size={14} />
+                    ) : (
+                      <AlertTriangle
+                        className="mt-0.5 shrink-0"
+                        size={14}
+                      />
+                    )}
+                    <span>{item.message}</span>
+                  </div>
+                  {enabled && item.earliestTime && (
+                    <div className="mt-1 text-[11px] text-slate-500">
+                      Acceleration range: {item.earliestTime}
+                    </div>
+                  )}
+                  <a
+                    href={splunkAppManagerUrl(
+                      item.app,
+                      "data_model_manager",
+                    )}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-sky-700 hover:text-sky-900"
+                  >
+                    Open data models
+                    <ExternalLink size={12} />
+                  </a>
+                </div>
+              );
+            })}
+          </div>
+
+          {summariesOnlyEnabled && accelerationCheckInProgress ? (
+            <div
+              role="status"
+              className="mt-3 flex items-start gap-2 border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-800"
+            >
+              <Loader2 className="mt-0.5 shrink-0 animate-spin" size={16} />
+              Checking the required data-model acceleration settings.
+            </div>
+          ) : summariesOnlyBlocked ? (
+            <div
+              role="alert"
+              className="mt-3 flex items-start gap-2 border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+            >
+              <AlertTriangle className="mt-0.5 shrink-0" size={16} />
+              <span>
+                <code className="font-mono">summariesonly=true</code> cannot
+                be saved yet. Enable acceleration for all three required Cisco
+                data models, then check again.
+              </span>
+            </div>
+          ) : summariesOnlyEnabled ? (
+            <div
+              role="status"
+              className="mt-3 flex items-start gap-2 border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800"
+            >
+              <Check className="mt-0.5 shrink-0" size={16} />
+              All required Cisco data models have acceleration enabled.
+            </div>
+          ) : (
+            <div className="mt-3 flex items-start gap-2 border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+              <Info className="mt-0.5 shrink-0 text-sky-700" size={16} />
+              <span>
+                <code className="font-mono">summariesonly=false</code> may
+                fall back to raw events while acceleration is being prepared.
+              </span>
+            </div>
+          )}
         </div>
       </section>
 

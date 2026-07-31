@@ -1,0 +1,608 @@
+<dashboard version="2" theme="dark" stylesheet="application.css">
+    <label>User Activity Monitoring</label>
+    <description>Zero Trust Access drill-down dashboard for User Activity Monitoring.</description>
+    <definition><![CDATA[
+{
+	"title": "User Activity Monitoring",
+	"description": "Zero Trust Access drill-down dashboard for User Activity Monitoring.",
+	"inputs": {
+		"input_time_range": {
+			"options": {
+				"defaultValue": "-24h@h,now",
+				"token": "time_tok"
+			},
+			"title": "Time Range",
+			"type": "input.timerange"
+		}
+	},
+	"defaults": {
+		"visualizations": {
+			"global": {
+				"showLastUpdated": true,
+				"showProgressBar": true
+			}
+		}
+	},
+	"visualizations": {
+		"viz_header_bg": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#0f172a",
+				"strokeColor": "rgba(148,163,184,0.22)"
+			}
+		},
+		"viz_header_icon": {
+			"type": "splunk.image",
+			"title": "Zero Trust Access",
+			"options": {
+				"preserveAspectRatio": true,
+				"src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/zero-trust-access.svg"
+			}
+		},
+		"viz_header": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#e2e8f0",
+				"markdown": "# User Activity Monitoring\nZero Trust Access • Searchbase-backed operational views."
+			}
+		},
+		"viz_secure_networking_zta_user_activity_cross_source": {
+			"type": "splunk.table",
+			"title": "ZTA User Activity Cross-Source Correlation",
+			"dataSources": {
+				"primary": "ds_secure_networking_zta_user_activity_cross_source"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_secure_networking_zta_ztna_blocked_access_reasons": {
+			"type": "splunk.table",
+			"title": "ZTA ZTNA Blocked Access Reasons",
+			"dataSources": {
+				"primary": "ds_secure_networking_zta_ztna_blocked_access_reasons"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_secure_networking_zta_ztna_device_category_outcomes": {
+			"type": "splunk.column",
+			"title": "ZTA ZTNA Access Outcomes by Device Category",
+			"dataSources": {
+				"primary": "ds_secure_networking_zta_ztna_device_category_outcomes"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"legendDisplay": "bottom",
+				"seriesColors": [
+					"#16A34A",
+					"#DC2626",
+					"#64748B"
+				],
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"stackMode": "stacked"
+			}
+		},
+		"viz_secure_networking_zta_ztna_connection_status_trend": {
+			"type": "splunk.area",
+			"title": "ZTA ZTNA Connection Status Trend",
+			"dataSources": {
+				"primary": "ds_secure_networking_zta_ztna_connection_status_trend"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"legendDisplay": "bottom",
+				"seriesColors": [
+					"#0EA5E9",
+					"#16A34A",
+					"#F59E0B",
+					"#DC2626"
+				],
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"lineWidth": 2,
+				"nullValueDisplay": "gaps",
+				"dataValuesDisplay": "minmax"
+			}
+		},
+		"viz_secure_networking_zta_ztna_app_access_summary": {
+			"type": "splunk.table",
+			"title": "ZTA ZTNA Application Access Summary",
+			"dataSources": {
+				"primary": "ds_secure_networking_zta_ztna_app_access_summary"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_network_nvm_endpoint_os_inventory": {
+			"type": "splunk.table",
+			"title": "Cisco NVM Endpoint OS Inventory",
+			"dataSources": {
+				"primary": "ds_network_nvm_endpoint_os_inventory"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_network_nvm_top_processes_by_flow_volume": {
+			"type": "splunk.bar",
+			"title": "Cisco NVM Top Processes by Flow Volume",
+			"dataSources": {
+				"primary": "ds_network_nvm_top_processes_by_flow_volume"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"legendDisplay": "bottom",
+				"seriesColors": [
+					"#0284C7",
+					"#0D9488",
+					"#F59E0B",
+					"#DC2626"
+				],
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"stackMode": "unstacked"
+			}
+		},
+		"viz_network_nvm_top_destination_hosts": {
+			"type": "splunk.bar",
+			"title": "Cisco NVM Top Destination Hosts",
+			"dataSources": {
+				"primary": "ds_network_nvm_top_destination_hosts"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"legendDisplay": "bottom",
+				"seriesColors": [
+					"#0284C7",
+					"#0D9488",
+					"#F59E0B",
+					"#DC2626"
+				],
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"stackMode": "unstacked"
+			}
+		},
+		"viz_network_nvm_top_users_by_egress": {
+			"type": "splunk.bar",
+			"title": "Cisco NVM Top Users by Egress Volume",
+			"dataSources": {
+				"primary": "ds_network_nvm_top_users_by_egress"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"legendDisplay": "bottom",
+				"seriesColors": [
+					"#0284C7",
+					"#0D9488",
+					"#F59E0B",
+					"#DC2626"
+				],
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"stackMode": "unstacked"
+			}
+		},
+		"viz_secure_networking_zta_duo_auth_outcomes_by_application": {
+			"type": "splunk.table",
+			"title": "ZTA Duo Authentication Outcomes by Application",
+			"dataSources": {
+				"primary": "ds_secure_networking_zta_duo_auth_outcomes_by_application"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_secure_networking_infra_secure_endpoint_incidents": {
+			"type": "splunk.table",
+			"title": "Secure Endpoint Incident and Malware Activity",
+			"dataSources": {
+				"primary": "ds_secure_networking_infra_secure_endpoint_incidents"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_secure_networking_infra_duo_blocked_posture_identity": {
+			"type": "splunk.table",
+			"title": "Duo Blocked Posture and Identity Events",
+			"dataSources": {
+				"primary": "ds_secure_networking_infra_duo_blocked_posture_identity"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_secure_networking_infra_duo_application_access": {
+			"type": "splunk.table",
+			"title": "Duo Application Access Detail",
+			"dataSources": {
+				"primary": "ds_secure_networking_infra_duo_application_access"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		}
+	},
+	"dataSources": {
+		"ds_secure_networking_zta_user_activity_cross_source": {
+			"name": "Secure Networking - ZTA User Activity Cross-Source Correlation",
+			"options": {
+				"ref": "secure_networking_zta_user_activity_cross_source",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_zta_ztna_blocked_access_reasons": {
+			"name": "Secure Networking - ZTA ZTNA Blocked Access Reasons",
+			"options": {
+				"ref": "secure_networking_zta_ztna_blocked_access_reasons",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_zta_ztna_device_category_outcomes": {
+			"name": "Secure Networking - ZTA ZTNA Access Outcomes by Device Category",
+			"options": {
+				"ref": "secure_networking_zta_ztna_device_category_outcomes",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_zta_ztna_connection_status_trend": {
+			"name": "Secure Networking - ZTA ZTNA Connection Status Trend",
+			"options": {
+				"ref": "secure_networking_zta_ztna_connection_status_trend",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_zta_ztna_app_access_summary": {
+			"name": "Secure Networking - ZTA ZTNA Application Access Summary",
+			"options": {
+				"ref": "secure_networking_zta_ztna_app_access_summary",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_network_nvm_endpoint_os_inventory": {
+			"name": "Network - Endpoint Telemetry - Cisco NVM Endpoint OS Inventory",
+			"options": {
+				"ref": "network_nvm_endpoint_os_inventory",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_network_nvm_top_processes_by_flow_volume": {
+			"name": "Network - Endpoint Telemetry - Cisco NVM Top Processes by Flow Volume",
+			"options": {
+				"ref": "network_nvm_top_processes_by_flow_volume",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_network_nvm_top_destination_hosts": {
+			"name": "Network - Endpoint Telemetry - Cisco NVM Top Destination Hosts",
+			"options": {
+				"ref": "network_nvm_top_destination_hosts",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_network_nvm_top_users_by_egress": {
+			"name": "Network - Endpoint Telemetry - Cisco NVM Top Users by Egress Volume",
+			"options": {
+				"ref": "network_nvm_top_users_by_egress",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_zta_duo_auth_outcomes_by_application": {
+			"name": "Secure Networking - ZTA Duo Authentication Outcomes by Application",
+			"options": {
+				"ref": "secure_networking_zta_duo_auth_outcomes_by_application",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_infra_secure_endpoint_incidents": {
+			"name": "Secure Networking - Secure Endpoint Incident and Malware Activity",
+			"options": {
+				"ref": "secure_networking_infra_secure_endpoint_incidents",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_infra_duo_blocked_posture_identity": {
+			"name": "Secure Networking - Duo Blocked Posture and Identity Events",
+			"options": {
+				"ref": "secure_networking_infra_duo_blocked_posture_identity",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_infra_duo_application_access": {
+			"name": "Secure Networking - Duo Application Access Detail",
+			"options": {
+				"ref": "secure_networking_infra_duo_application_access",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		}
+	},
+	"layout": {
+		"globalInputs": [
+			"input_time_range"
+		],
+		"layoutDefinitions": {
+			"layout_overview": {
+				"options": {
+					"backgroundColor": "#020617",
+					"display": "auto-scale",
+					"height": 2790,
+					"width": 1440
+				},
+				"structure": [
+					{
+						"item": "viz_header_bg",
+						"position": {
+							"x": 20,
+							"y": 0,
+							"w": 1400,
+							"h": 90
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_header_icon",
+						"position": {
+							"x": 36,
+							"y": 9,
+							"w": 72,
+							"h": 72
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_header",
+						"position": {
+							"x": 120,
+							"y": 0,
+							"w": 1300,
+							"h": 90
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_zta_user_activity_cross_source",
+						"position": {
+							"x": 20,
+							"y": 110,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_zta_ztna_blocked_access_reasons",
+						"position": {
+							"x": 730,
+							"y": 110,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_zta_ztna_device_category_outcomes",
+						"position": {
+							"x": 20,
+							"y": 490,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_zta_ztna_connection_status_trend",
+						"position": {
+							"x": 730,
+							"y": 490,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_zta_ztna_app_access_summary",
+						"position": {
+							"x": 20,
+							"y": 870,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_network_nvm_endpoint_os_inventory",
+						"position": {
+							"x": 730,
+							"y": 870,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_network_nvm_top_processes_by_flow_volume",
+						"position": {
+							"x": 20,
+							"y": 1250,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_network_nvm_top_destination_hosts",
+						"position": {
+							"x": 730,
+							"y": 1250,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_network_nvm_top_users_by_egress",
+						"position": {
+							"x": 20,
+							"y": 1630,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_zta_duo_auth_outcomes_by_application",
+						"position": {
+							"x": 730,
+							"y": 1630,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_infra_secure_endpoint_incidents",
+						"position": {
+							"x": 20,
+							"y": 2010,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_infra_duo_blocked_posture_identity",
+						"position": {
+							"x": 730,
+							"y": 2010,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_infra_duo_application_access",
+						"position": {
+							"x": 20,
+							"y": 2390,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					}
+				],
+				"type": "absolute"
+			}
+		},
+		"options": {
+			"showTitleAndDescription": false,
+			"submitButton": false,
+			"submitOnDashboardLoad": true
+		},
+		"tabs": {
+			"items": [
+				{
+					"label": "overview",
+					"layoutId": "layout_overview"
+				}
+			]
+		}
+	},
+	"applicationProperties": {
+		"collapseNavigation": false,
+		"hideEdit": false,
+		"hideExport": false
+	}
+}
+    ]]></definition>
+</dashboard>
+

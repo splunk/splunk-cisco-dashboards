@@ -26,12 +26,30 @@
         </script>
 
         <script>
-            const dashboardBuilderBundle = document.createElement('script');
-            dashboardBuilderBundle.src =
-                "${make_url('/static/app/splunk-cisco-dashboards/pages/dashboardbuilder.js')}" +
+            function loadDashboardBuilderBundle() {
+                const dashboardBuilderBundle =
+                    document.createElement('script');
+                dashboardBuilderBundle.src =
+                    "${make_url('/static/app/splunk-cisco-dashboards/pages/dashboardbuilder.js')}" +
+                    '?v=' +
+                    Date.now();
+                document.body.appendChild(dashboardBuilderBundle);
+            }
+
+            const setupGate = document.createElement('script');
+            setupGate.src =
+                "${make_url('/static/app/splunk-cisco-dashboards/application.js')}" +
                 '?v=' +
                 Date.now();
-            document.body.appendChild(dashboardBuilderBundle);
+            setupGate.onload = function () {
+                Promise.resolve(window.scdSetupGatePromise).then(function (canLoadApp) {
+                    if (canLoadApp !== false) {
+                        loadDashboardBuilderBundle();
+                    }
+                });
+            };
+            setupGate.onerror = loadDashboardBuilderBundle;
+            document.body.appendChild(setupGate);
         </script>
     </body>
 </html>

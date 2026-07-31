@@ -20,12 +20,29 @@
         </script>
 
         <script>
-            const overviewBootstrap = document.createElement('script');
-            overviewBootstrap.src =
-                "${make_url('/static/app/splunk-cisco-dashboards/overview_bootstrap.js')}" +
+            function loadOverviewBootstrap() {
+                const overviewBootstrap = document.createElement('script');
+                overviewBootstrap.src =
+                    "${make_url('/static/app/splunk-cisco-dashboards/overview_bootstrap.js')}" +
+                    '?v=' +
+                    Date.now();
+                document.body.appendChild(overviewBootstrap);
+            }
+
+            const setupGate = document.createElement('script');
+            setupGate.src =
+                "${make_url('/static/app/splunk-cisco-dashboards/application.js')}" +
                 '?v=' +
                 Date.now();
-            document.body.appendChild(overviewBootstrap);
+            setupGate.onload = function () {
+                Promise.resolve(window.scdSetupGatePromise).then(function (canLoadApp) {
+                    if (canLoadApp !== false) {
+                        loadOverviewBootstrap();
+                    }
+                });
+            };
+            setupGate.onerror = loadOverviewBootstrap;
+            document.body.appendChild(setupGate);
         </script>
     </body>
 </html>

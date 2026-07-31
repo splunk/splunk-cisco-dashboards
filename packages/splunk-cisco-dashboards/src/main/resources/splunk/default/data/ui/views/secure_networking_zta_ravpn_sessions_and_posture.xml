@@ -1,0 +1,261 @@
+<dashboard version="2" theme="dark" stylesheet="application.css">
+    <label>Remote Access VPN (RaVPN) Sessions and Posture</label>
+    <description>Zero Trust Access drill-down dashboard for Remote Access VPN (RaVPN) Sessions and Posture.</description>
+    <definition><![CDATA[
+{
+	"title": "Remote Access VPN (RaVPN) Sessions and Posture",
+	"description": "Zero Trust Access drill-down dashboard for Remote Access VPN (RaVPN) Sessions and Posture.",
+	"inputs": {
+		"input_time_range": {
+			"options": {
+				"defaultValue": "-24h@h,now",
+				"token": "time_tok"
+			},
+			"title": "Time Range",
+			"type": "input.timerange"
+		}
+	},
+	"defaults": {
+		"visualizations": {
+			"global": {
+				"showLastUpdated": true,
+				"showProgressBar": true
+			}
+		}
+	},
+	"visualizations": {
+		"viz_header_bg": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#0f172a",
+				"strokeColor": "rgba(148,163,184,0.22)"
+			}
+		},
+		"viz_header_icon": {
+			"type": "splunk.image",
+			"title": "Zero Trust Access",
+			"options": {
+				"preserveAspectRatio": true,
+				"src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/zero-trust-access.svg"
+			}
+		},
+		"viz_header": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#e2e8f0",
+				"markdown": "# Remote Access VPN (RaVPN) Sessions and Posture\nZero Trust Access • Searchbase-backed operational views."
+			}
+		},
+		"viz_secure_networking_zta_ravpn_sessions_by_profile": {
+			"type": "splunk.table",
+			"title": "ZTA RaVPN Sessions by Profile",
+			"dataSources": {
+				"primary": "ds_secure_networking_zta_ravpn_sessions_by_profile"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_secure_networking_zta_ravpn_connection_rate": {
+			"type": "splunk.table",
+			"title": "ZTA RaVPN Connection Rate and Clients",
+			"dataSources": {
+				"primary": "ds_secure_networking_zta_ravpn_connection_rate"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_secure_networking_zta_ravpn_failure_reasons": {
+			"type": "splunk.table",
+			"title": "ZTA RaVPN Failure Reasons",
+			"dataSources": {
+				"primary": "ds_secure_networking_zta_ravpn_failure_reasons"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_secure_networking_zta_ravpn_posture_alerts": {
+			"type": "splunk.table",
+			"title": "ZTA RaVPN Posture Alerts and Logs",
+			"dataSources": {
+				"primary": "ds_secure_networking_zta_ravpn_posture_alerts"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		}
+	},
+	"dataSources": {
+		"ds_secure_networking_zta_ravpn_sessions_by_profile": {
+			"name": "Secure Networking - ZTA RaVPN Sessions by Profile",
+			"options": {
+				"ref": "secure_networking_zta_ravpn_sessions_by_profile",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_zta_ravpn_connection_rate": {
+			"name": "Secure Networking - ZTA RaVPN Connection Rate and Clients",
+			"options": {
+				"ref": "secure_networking_zta_ravpn_connection_rate",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_zta_ravpn_failure_reasons": {
+			"name": "Secure Networking - ZTA RaVPN Failure Reasons",
+			"options": {
+				"ref": "secure_networking_zta_ravpn_failure_reasons",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_zta_ravpn_posture_alerts": {
+			"name": "Secure Networking - ZTA RaVPN Posture Alerts and Logs",
+			"options": {
+				"ref": "secure_networking_zta_ravpn_posture_alerts",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		}
+	},
+	"layout": {
+		"globalInputs": [
+			"input_time_range"
+		],
+		"layoutDefinitions": {
+			"layout_overview": {
+				"options": {
+					"backgroundColor": "#020617",
+					"display": "auto-scale",
+					"height": 890,
+					"width": 1440
+				},
+				"structure": [
+					{
+						"item": "viz_header_bg",
+						"position": {
+							"x": 20,
+							"y": 0,
+							"w": 1400,
+							"h": 90
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_header_icon",
+						"position": {
+							"x": 36,
+							"y": 9,
+							"w": 72,
+							"h": 72
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_header",
+						"position": {
+							"x": 120,
+							"y": 0,
+							"w": 1300,
+							"h": 90
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_zta_ravpn_sessions_by_profile",
+						"position": {
+							"x": 20,
+							"y": 110,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_zta_ravpn_connection_rate",
+						"position": {
+							"x": 730,
+							"y": 110,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_zta_ravpn_failure_reasons",
+						"position": {
+							"x": 20,
+							"y": 490,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_zta_ravpn_posture_alerts",
+						"position": {
+							"x": 730,
+							"y": 490,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					}
+				],
+				"type": "absolute"
+			}
+		},
+		"options": {
+			"showTitleAndDescription": false,
+			"submitButton": false,
+			"submitOnDashboardLoad": true
+		},
+		"tabs": {
+			"items": [
+				{
+					"label": "overview",
+					"layoutId": "layout_overview"
+				}
+			]
+		}
+	},
+	"applicationProperties": {
+		"collapseNavigation": false,
+		"hideEdit": false,
+		"hideExport": false
+	}
+}
+    ]]></definition>
+</dashboard>
+

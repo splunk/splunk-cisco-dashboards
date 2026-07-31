@@ -1,0 +1,522 @@
+<dashboard version="2" theme="dark" stylesheet="application.css">
+    <label>Executive Overview</label>
+    <description>Agentic Ops drill-down dashboard for Executive Overview.</description>
+    <definition><![CDATA[
+{
+	"title": "Executive Overview",
+	"description": "Agentic Ops drill-down dashboard for Executive Overview.",
+	"inputs": {
+		"input_time_range": {
+			"options": {
+				"defaultValue": "-24h@h,now",
+				"token": "time_tok"
+			},
+			"title": "Time Range",
+			"type": "input.timerange"
+		}
+	},
+	"defaults": {
+		"visualizations": {
+			"global": {
+				"showLastUpdated": true,
+				"showProgressBar": true
+			}
+		}
+	},
+	"visualizations": {
+		"viz_header_bg": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#0f172a",
+				"strokeColor": "rgba(148,163,184,0.22)"
+			}
+		},
+		"viz_header_icon": {
+			"type": "splunk.image",
+			"title": "Agentic Ops",
+			"options": {
+				"preserveAspectRatio": true,
+				"src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/agentic-ops.svg"
+			}
+		},
+		"viz_header": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#e2e8f0",
+				"markdown": "# Executive Overview\nAgentic Ops • Searchbase-backed operational views."
+			}
+		},
+		"viz_overview_ap_health": {
+			"type": "splunk.singlevalue",
+			"title": "AP Health",
+			"dataSources": {
+				"primary": "ds_overview_ap_health"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"majorFontSize": 36,
+				"shouldAbbreviateMajorValue": true,
+				"sparklineDisplay": "off",
+				"trendDisplay": "off",
+				"majorColor": "#10b981",
+				"majorValue": "> primary | seriesByName('pct') | lastPoint()",
+				"unit": "%"
+			}
+		},
+		"viz_secure_networking_meraki_ap_count": {
+			"type": "splunk.singlevalue",
+			"title": "Meraki Access Point Count",
+			"dataSources": {
+				"primary": "ds_secure_networking_meraki_ap_count"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"majorFontSize": 36,
+				"shouldAbbreviateMajorValue": true,
+				"sparklineDisplay": "off",
+				"trendDisplay": "off",
+				"majorColor": "#2563EB",
+				"majorValue": "> primary | seriesByName('ap_count') | lastPoint()"
+			}
+		},
+		"viz_secure_networking_dc_health_signals_trend": {
+			"type": "splunk.area",
+			"title": "DC Health Signals Trend",
+			"dataSources": {
+				"primary": "ds_secure_networking_dc_health_signals_trend"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"legendDisplay": "bottom",
+				"seriesColors": [
+					"#2563EB",
+					"#16A34A",
+					"#F59E0B",
+					"#DC2626"
+				],
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"lineWidth": 2,
+				"nullValueDisplay": "gaps",
+				"dataValuesDisplay": "minmax"
+			}
+		},
+		"viz_feed_monitor_all_feeds_health_matrix": {
+			"type": "splunk.table",
+			"title": "ALL Feeds - Consolidated Health Matrix",
+			"dataSources": {
+				"primary": "ds_feed_monitor_all_feeds_health_matrix"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_overview_topology_overview": {
+			"type": "splunk.table",
+			"title": "Topology Overview",
+			"dataSources": {
+				"primary": "ds_overview_topology_overview"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_overview_link_auburndale_tallahassee_health": {
+			"type": "splunk.table",
+			"title": "Link Site 1 to Site 2 Health",
+			"dataSources": {
+				"primary": "ds_overview_link_auburndale_tallahassee_health"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_overview_link_state_drilldown": {
+			"type": "splunk.table",
+			"title": "Link State Drilldown",
+			"dataSources": {
+				"primary": "ds_overview_link_state_drilldown"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_executive_dashboard_ds_device_health_current_drilldown": {
+			"type": "splunk.table",
+			"title": "Current Device Health Drilldown",
+			"dataSources": {
+				"primary": "ds_executive_dashboard_ds_device_health_current_drilldown"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_executive_dashboard_ds_device_health_trend_compare": {
+			"type": "splunk.singlevalue",
+			"title": "Device Health Trend Comparison",
+			"dataSources": {
+				"primary": "ds_executive_dashboard_ds_device_health_trend_compare"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"majorFontSize": 36,
+				"shouldAbbreviateMajorValue": true,
+				"sparklineDisplay": "off",
+				"trendDisplay": "off",
+				"majorColor": "#3B82F6",
+				"majorValue": "> primary | seriesByName('current') | lastPoint()"
+			}
+		},
+		"viz_executive_summary_healthy_device_count": {
+			"type": "splunk.singlevalue",
+			"title": "Healthy Device Count",
+			"dataSources": {
+				"primary": "ds_executive_summary_healthy_device_count"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"majorFontSize": 36,
+				"shouldAbbreviateMajorValue": true,
+				"sparklineDisplay": "off",
+				"trendDisplay": "off",
+				"majorColor": "#3B82F6",
+				"majorValue": "> primary | seriesByName('healthy_count') | lastPoint()"
+			}
+		},
+		"viz_executive_dashboard_data_source_status": {
+			"type": "splunk.table",
+			"title": "Data Source Status",
+			"dataSources": {
+				"primary": "ds_executive_dashboard_data_source_status"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		}
+	},
+	"dataSources": {
+		"ds_overview_ap_health": {
+			"name": "Overview - AP Health",
+			"options": {
+				"ref": "overview_ap_health",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_meraki_ap_count": {
+			"name": "Secure Networking - Meraki Access Point Count",
+			"options": {
+				"ref": "secure_networking_meraki_ap_count",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_dc_health_signals_trend": {
+			"name": "Secure Networking - DC Health Signals Trend",
+			"options": {
+				"ref": "secure_networking_dc_health_signals_trend",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_feed_monitor_all_feeds_health_matrix": {
+			"name": "Feed Monitor - ALL Feeds - Consolidated Health Matrix",
+			"options": {
+				"ref": "feed_monitor_all_feeds_health_matrix",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_overview_topology_overview": {
+			"name": "Overview - Topology Overview",
+			"options": {
+				"ref": "overview_topology_overview",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_overview_link_auburndale_tallahassee_health": {
+			"name": "Overview - Link Site 1 to Site 2 Health",
+			"options": {
+				"ref": "overview_link_auburndale_tallahassee_health",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_overview_link_state_drilldown": {
+			"name": "Overview - Link State Drilldown",
+			"options": {
+				"ref": "overview_link_state_drilldown",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_executive_dashboard_ds_device_health_current_drilldown": {
+			"name": "Executive - Current Device Health Drilldown",
+			"options": {
+				"ref": "executive_dashboard_ds_device_health_current_drilldown",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_executive_dashboard_ds_device_health_trend_compare": {
+			"name": "Executive - Device Health Trend Comparison",
+			"options": {
+				"ref": "executive_dashboard_ds_device_health_trend_compare",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_executive_summary_healthy_device_count": {
+			"name": "Executive Summary - Healthy Device Count",
+			"options": {
+				"ref": "executive_summary_healthy_device_count",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_executive_dashboard_data_source_status": {
+			"name": "Executive - Data Source Status",
+			"options": {
+				"ref": "executive_dashboard_data_source_status",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		}
+	},
+	"layout": {
+		"globalInputs": [
+			"input_time_range"
+		],
+		"layoutDefinitions": {
+			"layout_overview": {
+				"options": {
+					"backgroundColor": "#020617",
+					"display": "auto-scale",
+					"height": 2410,
+					"width": 1440
+				},
+				"structure": [
+					{
+						"item": "viz_header_bg",
+						"position": {
+							"x": 20,
+							"y": 0,
+							"w": 1400,
+							"h": 90
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_header_icon",
+						"position": {
+							"x": 36,
+							"y": 9,
+							"w": 72,
+							"h": 72
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_header",
+						"position": {
+							"x": 120,
+							"y": 0,
+							"w": 1300,
+							"h": 90
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_overview_ap_health",
+						"position": {
+							"x": 20,
+							"y": 110,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_meraki_ap_count",
+						"position": {
+							"x": 730,
+							"y": 110,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_dc_health_signals_trend",
+						"position": {
+							"x": 20,
+							"y": 490,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_feed_monitor_all_feeds_health_matrix",
+						"position": {
+							"x": 730,
+							"y": 490,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_overview_topology_overview",
+						"position": {
+							"x": 20,
+							"y": 870,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_overview_link_auburndale_tallahassee_health",
+						"position": {
+							"x": 730,
+							"y": 870,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_overview_link_state_drilldown",
+						"position": {
+							"x": 20,
+							"y": 1250,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_executive_dashboard_ds_device_health_current_drilldown",
+						"position": {
+							"x": 730,
+							"y": 1250,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_executive_dashboard_ds_device_health_trend_compare",
+						"position": {
+							"x": 20,
+							"y": 1630,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_executive_summary_healthy_device_count",
+						"position": {
+							"x": 730,
+							"y": 1630,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_executive_dashboard_data_source_status",
+						"position": {
+							"x": 20,
+							"y": 2010,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					}
+				],
+				"type": "absolute"
+			}
+		},
+		"options": {
+			"showTitleAndDescription": false,
+			"submitButton": false,
+			"submitOnDashboardLoad": true
+		},
+		"tabs": {
+			"items": [
+				{
+					"label": "overview",
+					"layoutId": "layout_overview"
+				}
+			]
+		}
+	},
+	"applicationProperties": {
+		"collapseNavigation": false,
+		"hideEdit": false,
+		"hideExport": false
+	}
+}
+    ]]></definition>
+</dashboard>
+

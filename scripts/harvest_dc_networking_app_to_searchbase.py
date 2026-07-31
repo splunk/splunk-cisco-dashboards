@@ -31,8 +31,9 @@ DEFAULT_SEARCHBASE = REPO / (
 DEFAULT_MANIFEST = REPO / "docs/dc_networking_app_harvest_manifest.json"
 FORMAT_SCRIPT = REPO / "scripts/format_searchbase_conf.py"
 SOURCE_APP = "cisco_dc_networking_app_for_splunk"
-TOKEN = re.compile(r"\$([A-Za-z_][A-Za-z0-9_.:-]*)\$")
+TOKEN = re.compile(r"\$([A-Za-z_][^$\n]*)\$")
 DM = re.compile(r"(?:from\s+)?datamodel\s*=\s*([A-Za-z0-9_.:-]+)", re.I)
+VISUALIZATIONS = {"chart", "event", "map", "single", "table", "viz"}
 
 
 @dataclass(frozen=True)
@@ -42,6 +43,7 @@ class DashboardSearch:
     panel_title: str
     search: str
     datamodels: tuple[str, ...]
+    visualization: str
 
 
 def load_formatter():
@@ -95,31 +97,24 @@ def detokenize(search: str, defaults: dict[str, str]) -> str:
     for token, value in sorted(defaults.items(), key=lambda item: -len(item[0])):
         out = out.replace(f"${token}$", value)
 
-    stages = re.split(r"\s+\|\s+", out)
-    cleaned: list[str] = []
-    for index, stage in enumerate(stages):
-        if not TOKEN.search(stage):
-            cleaned.append(stage.strip())
-            continue
-        if index > 0:
-            continue
-        stage = re.sub(
-            r"\s+[A-Za-z0-9_.:-]+\s+IN\s+\$[A-Za-z_][A-Za-z0-9_.:-]*\$",
-            "",
-            stage,
-            flags=re.I,
-        )
-        stage = re.sub(
-            r'\s+[A-Za-z0-9_.:-]+\s*=\s*["\']?\$[A-Za-z_][A-Za-z0-9_.:-]*\$["\']?',
-            "",
-            stage,
-        )
-        stage = TOKEN.sub("", stage)
-        stage = re.sub(r"\bwhere\s*$", "", stage, flags=re.I).strip()
-        if stage:
-            cleaned.append(stage)
-
-    result = " | ".join(part for part in cleaned if part)
+    out = re.sub(
+        r'([A-Za-z0-9_.{}:-]+)\s*=\s*["\']?\$[A-Za-z_][^$\n]*\$["\']?',
+        r'\1="*"',
+        out,
+    )
+    out = re.sub(
+        r"([A-Za-z0-9_.{}:-]+)\s+IN\s+\$[A-Za-z_][^$\n]*\$",
+        r'\1="*"',
+        out,
+        flags=re.I,
+    )
+    out = TOKEN.sub("", out)
+    out = re.sub(r"\b(?:AND|OR)\s*(?=\||$)", "", out, flags=re.I)
+    out = re.sub(r"(?<=\s)(?:AND|OR)\s+(?=(?:AND|OR)\b)", "", out, flags=re.I)
+    result = re.sub(r"^\s*\|\s*(?=`)", "", out)
+    result = re.sub(
+        r"`\s*([A-Za-z_][A-Za-z0-9_.:-]*)\s*`", r"`\1`", result
+    )
     result = re.sub(r"\s+", " ", result).strip()
     result = re.sub(r"\|\s*search\s*(?=\||$)", "", result, flags=re.I).strip()
     result = re.sub(r"\s+", " ", result)
@@ -168,7 +163,42 @@ def nearest_title(ancestors: list[ET.Element], dashboard_label: str) -> str:
         title = ancestor.find("title")
         if title is not None and title.text and title.text.strip():
             return title.text.strip()
+        heading = ancestor.find("html/h1")
+        if heading is not None and heading.text and heading.text.strip():
+            return heading.text.strip().replace("Virual", "Virtual")
     return dashboard_label
+
+
+def clean_title(title: str, dashboard_label: str) -> str:
+    cleaned = TOKEN.sub("", title)
+    cleaned = re.sub(r'["\[\]]', "", cleaned)
+    cleaned = re.sub(r"\s+([:;,])", r"\1", cleaned)
+    cleaned = re.sub(r"(?:\s*[-:]\s*)+$", "", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" -:")
+    return cleaned or dashboard_label
+
+
+def source_visualization(ancestors: list[ET.Element], search: str) -> str:
+    for ancestor in reversed(ancestors):
+        if ancestor.tag not in VISUALIZATIONS:
+            continue
+        if ancestor.tag == "single":
+            return "splunk.singlevalue"
+        if ancestor.tag in {"event", "map", "table", "viz"}:
+            return f"splunk.{ancestor.tag}"
+        chart_type = ""
+        for option in ancestor.findall("option"):
+            if option.attrib.get("name") == "charting.chart" and option.text:
+                chart_type = option.text.strip().lower()
+                break
+        return {
+            "area": "splunk.area",
+            "bar": "splunk.bar",
+            "column": "splunk.column",
+            "line": "splunk.line",
+            "pie": "splunk.pie",
+        }.get(chart_type, infer_viz(search))
+    return infer_viz(search)
 
 
 def extract_dashboard(
@@ -221,6 +251,12 @@ def extract_dashboard(
 
     def walk(element: ET.Element, ancestors: list[ET.Element]) -> None:
         if element.tag == "search":
+            visual_ancestors = [
+                ancestor for ancestor in ancestors if ancestor.tag in VISUALIZATIONS
+            ]
+            if not visual_ancestors:
+                skipped.append("non_visualization_search")
+                return
             raw = resolve(element)
             search = detokenize(raw, defaults)
             if not search or len(search) < 12 or TOKEN.search(search):
@@ -233,9 +269,12 @@ def extract_dashboard(
                     DashboardSearch(
                         dashboard=path.stem,
                         dashboard_label=label,
-                        panel_title=nearest_title(ancestors, label),
+                        panel_title=clean_title(
+                            nearest_title(ancestors, label), label
+                        ),
                         search=search,
                         datamodels=datamodels,
+                        visualization=source_visualization(ancestors, search),
                     )
                 )
         for child in element:
@@ -254,6 +293,41 @@ def infer_viz(search: str) -> str:
     if re.search(r"\bstats\s+(?:dc\([^)]*\)|count)(?:\s+as\s+[^|]+)?$", lowered):
         return "splunk.singlevalue"
     return "splunk.table"
+
+
+def technology_tags(entry: DashboardSearch) -> list[str]:
+    evidence = f"{entry.dashboard} {entry.dashboard_label} {entry.search}".lower()
+    tags = ["Cisco", "Cisco DC Networking", "Data Center Networking"]
+    if "aci" in evidence or "apic" in evidence or "cisco_dcn_" in evidence:
+        tags.append("Cisco ACI")
+    if "nexus9k" in evidence or "n9k" in evidence:
+        tags.append("Cisco Nexus 9000")
+    if any(term in evidence for term in ("advis", "anomal", "nd_host")):
+        tags.append("Cisco Nexus Dashboard")
+    if "vmware" in evidence or "virtual machine" in evidence:
+        tags.append("VMware")
+    if "syslog" in evidence:
+        tags.append("Syslog")
+    if any(term in evidence for term in ("auth", "aaa", "login")):
+        tags.append("Authentication")
+    if any(term in evidence for term in ("fault", "advis", "anomal")):
+        tags.append("Operations")
+    if entry.datamodels:
+        tags.extend(["Data Model", "TStats"])
+    return list(dict.fromkeys(tags))
+
+
+def solution_for(entry: DashboardSearch) -> str:
+    title = entry.panel_title.lower()
+    if any(term in title for term in ("fault", "advis", "anomal")):
+        return "Review severity, affected resources, and recurrence before assigning or escalating the condition."
+    if any(term in title for term in ("auth", "login", "user", "audit")):
+        return "Review unexpected identities, failures, source systems, and timing against approved administrative activity."
+    if any(term in title for term in ("health", "error", "drop", "congestion")):
+        return "Investigate degraded or high-volume entities and correlate them with recent faults and configuration changes."
+    if any(term in title for term in ("cpu", "memory", "storage", "utilization")):
+        return "Use sustained peaks to identify capacity pressure and validate the affected controller, node, or interface."
+    return "Use the result to identify affected data-center entities and correlate changes with related operational events."
 
 
 def stanza_id(entry: DashboardSearch, existing: set[str]) -> str:
@@ -278,11 +352,19 @@ def stanza_fields(entry: DashboardSearch) -> dict[str, str]:
         if dm_text
         else ""
     )
-    tags = ["Cisco DC Networking", "DC Networking App Harvest"]
-    if entry.datamodels:
-        tags.extend(["Data Model", "TStats"])
+    title = clean_title(entry.panel_title, entry.dashboard_label)
+    context_title = (
+        title
+        if title.casefold() == entry.dashboard_label.casefold()
+        else f"{entry.dashboard_label} - {title}"
+    )
+    source_type = (
+        f"the <code>{html.escape(dm_text)}</code> data model"
+        if dm_text
+        else "the source app's macros and indexed fields"
+    )
     return {
-        "search_name": f"DC Networking - {entry.panel_title}",
+        "search_name": f"DC Networking - {context_title}",
         "search_author": "akhamis",
         "updated_author": "akhamis",
         "version": "1.0.0",
@@ -290,13 +372,13 @@ def stanza_fields(entry: DashboardSearch) -> dict[str, str]:
         "date_updated": "2026-07-30 00:00:00",
         "category": "Network",
         "sub_category": "Data Center Networking",
-        "tags": ",".join(tags),
+        "tags": ",".join(technology_tags(entry)),
         "dispatch_context": SOURCE_APP,
         "dispatch_context_force": "1",
-        "default_viz": infer_viz(entry.search),
-        "description": f"<p>{panel} from the Cisco DC Networking dashboard <code>{dashboard}</code>.</p>",
-        "explanation": f"<p>Harvested from <code>{entry.dashboard}.xml</code>.{dm_prose}</p>",
-        "solution": "<p>Use this search to monitor Cisco ACI, Nexus, and Nexus Dashboard data-center operations.</p>",
+        "default_viz": entry.visualization,
+        "description": f"<p>Reports {panel.lower()} from the Cisco DC Networking <code>{dashboard}</code> dashboard.</p>",
+        "explanation": f"<p>Runs the dashboard panel SPL against {source_type}.{dm_prose} Dashboard-only filters are neutralized so the search runs independently.</p>",
+        "solution": f"<p>{html.escape(solution_for(entry))}</p>",
         "related_info": (
             f"<ul><li><b>Provenance</b><br><code>{SOURCE_APP}</code> / "
             f"<code>{entry.dashboard}.xml</code>.</li></ul>"
@@ -310,6 +392,7 @@ def main() -> int:
     parser.add_argument("--app-root", type=Path, default=DEFAULT_APP)
     parser.add_argument("--searchbase", type=Path, default=DEFAULT_SEARCHBASE)
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
+    parser.add_argument("--replace-existing-harvest", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
@@ -322,7 +405,24 @@ def main() -> int:
 
     formatter = load_formatter()
     original = args.searchbase.read_text(encoding="utf-8")
-    stanzas = formatter.parse_stanzas(original)
+    retained = original
+    replaced_stanzas = 0
+    if args.replace_existing_harvest:
+        harvest_start = re.search(r"(?m)^\[dc_networking_harvest_", original)
+        if harvest_start:
+            suffix_stanzas = formatter.parse_stanzas(original[harvest_start.start() :])
+            if not suffix_stanzas or any(
+                not name.startswith("dc_networking_harvest_")
+                for name, _ in suffix_stanzas
+            ):
+                parser.error(
+                    "refusing replacement because non-harvest stanzas follow "
+                    "the first dc_networking_harvest_ stanza"
+                )
+            replaced_stanzas = len(suffix_stanzas)
+            retained = original[: harvest_start.start()].rstrip() + "\n"
+
+    stanzas = formatter.parse_stanzas(retained)
     existing_names = {name for name, _ in stanzas}
     existing_spl = {
         persisted_canonical_spl(fields.get("search", ""), formatter)
@@ -370,18 +470,22 @@ def main() -> int:
         "data_model_candidates": sum(bool(entry.datamodels) for entry in candidates),
         "data_models": sorted({dm for entry in candidates for dm in entry.datamodels}),
         "parse_errors": parse_errors,
+        "replaced_stanzas": replaced_stanzas,
         "added_stanzas": added,
     }
 
     print(json.dumps({key: value for key, value in manifest.items() if key != "dashboards"}, indent=2))
-    if args.dry_run or not added:
+    if args.dry_run or (not added and not replaced_stanzas):
         return 0
 
     new_blocks = [
         formatter.format_stanza(name, fields)[0]
         for name, fields in stanzas[-len(added) :]
     ]
-    updated = original.rstrip() + "\n\n" + "\n\n".join(new_blocks) + "\n"
+    updated = retained.rstrip()
+    if new_blocks:
+        updated += "\n\n" + "\n\n".join(new_blocks)
+    updated += "\n"
     args.searchbase.write_text(updated, encoding="utf-8")
     args.manifest.parent.mkdir(parents=True, exist_ok=True)
     args.manifest.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")

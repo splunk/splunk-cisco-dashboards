@@ -1,0 +1,265 @@
+<dashboard version="2" theme="dark" stylesheet="application.css">
+    <label>Segmentation Overview</label>
+    <description>Scalable Network Segmentation drill-down dashboard for Segmentation Overview.</description>
+    <definition><![CDATA[
+{
+	"title": "Segmentation Overview",
+	"description": "Scalable Network Segmentation drill-down dashboard for Segmentation Overview.",
+	"inputs": {
+		"input_time_range": {
+			"options": {
+				"defaultValue": "-24h@h,now",
+				"token": "time_tok"
+			},
+			"title": "Time Range",
+			"type": "input.timerange"
+		}
+	},
+	"defaults": {
+		"visualizations": {
+			"global": {
+				"showLastUpdated": true,
+				"showProgressBar": true
+			}
+		}
+	},
+	"visualizations": {
+		"viz_header_bg": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#0f172a",
+				"strokeColor": "rgba(148,163,184,0.22)"
+			}
+		},
+		"viz_header_icon": {
+			"type": "splunk.image",
+			"title": "Scalable Network Segmentation",
+			"options": {
+				"preserveAspectRatio": true,
+				"src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/segmentation.svg"
+			}
+		},
+		"viz_header": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#e2e8f0",
+				"markdown": "# Segmentation Overview\nScalable Network Segmentation • Searchbase-backed operational views."
+			}
+		},
+		"viz_secure_networking_sgt_by_site": {
+			"type": "splunk.table",
+			"title": "SGT by Site",
+			"dataSources": {
+				"primary": "ds_secure_networking_sgt_by_site"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_secure_networking_ip_sgt_bindings_by_group": {
+			"type": "splunk.pie",
+			"title": "IP-SGT Bindings by Security Group",
+			"dataSources": {
+				"primary": "ds_secure_networking_ip_sgt_bindings_by_group"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"legendDisplay": "right",
+				"seriesColors": [
+					"#0D9488",
+					"#2563EB",
+					"#F59E0B",
+					"#DC2626"
+				]
+			}
+		},
+		"viz_secure_networking_sgt_distribution_by_site_device": {
+			"type": "splunk.table",
+			"title": "SGT Distribution by Site and Device",
+			"dataSources": {
+				"primary": "ds_secure_networking_sgt_distribution_by_site_device"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_secure_networking_sgt_binding_inventory": {
+			"type": "splunk.table",
+			"title": "SGT Binding Inventory",
+			"dataSources": {
+				"primary": "ds_secure_networking_sgt_binding_inventory"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		}
+	},
+	"dataSources": {
+		"ds_secure_networking_sgt_by_site": {
+			"name": "Secure Networking - SGT by Site",
+			"options": {
+				"ref": "secure_networking_sgt_by_site",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_ip_sgt_bindings_by_group": {
+			"name": "Secure Networking - IP-SGT Bindings by Security Group",
+			"options": {
+				"ref": "secure_networking_ip_sgt_bindings_by_group",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_sgt_distribution_by_site_device": {
+			"name": "Secure Networking - SGT Distribution by Site and Device",
+			"options": {
+				"ref": "secure_networking_sgt_distribution_by_site_device",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_sgt_binding_inventory": {
+			"name": "Secure Networking - SGT Binding Inventory",
+			"options": {
+				"ref": "secure_networking_sgt_binding_inventory",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		}
+	},
+	"layout": {
+		"globalInputs": [
+			"input_time_range"
+		],
+		"layoutDefinitions": {
+			"layout_overview": {
+				"options": {
+					"backgroundColor": "#020617",
+					"display": "auto-scale",
+					"height": 890,
+					"width": 1440
+				},
+				"structure": [
+					{
+						"item": "viz_header_bg",
+						"position": {
+							"x": 20,
+							"y": 0,
+							"w": 1400,
+							"h": 90
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_header_icon",
+						"position": {
+							"x": 36,
+							"y": 9,
+							"w": 72,
+							"h": 72
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_header",
+						"position": {
+							"x": 120,
+							"y": 0,
+							"w": 1300,
+							"h": 90
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_sgt_by_site",
+						"position": {
+							"x": 20,
+							"y": 110,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_ip_sgt_bindings_by_group",
+						"position": {
+							"x": 730,
+							"y": 110,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_sgt_distribution_by_site_device",
+						"position": {
+							"x": 20,
+							"y": 490,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_sgt_binding_inventory",
+						"position": {
+							"x": 730,
+							"y": 490,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					}
+				],
+				"type": "absolute"
+			}
+		},
+		"options": {
+			"showTitleAndDescription": false,
+			"submitButton": false,
+			"submitOnDashboardLoad": true
+		},
+		"tabs": {
+			"items": [
+				{
+					"label": "overview",
+					"layoutId": "layout_overview"
+				}
+			]
+		}
+	},
+	"applicationProperties": {
+		"collapseNavigation": false,
+		"hideEdit": false,
+		"hideExport": false
+	}
+}
+    ]]></definition>
+</dashboard>
+

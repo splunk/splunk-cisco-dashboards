@@ -709,13 +709,30 @@ const DashboardStudioEditor = ({
     const dashboardBuilderThemeStyle = {
         '--dashboard-builder-background-page': splunkTheme.backgroundColorPage,
         '--dashboard-builder-background-section': splunkTheme.backgroundColorSection,
+        '--dashboard-builder-background-popup': splunkTheme.backgroundColorPopup,
+        '--dashboard-builder-background-sidebar': splunkTheme.backgroundColorSidebar,
         '--dashboard-builder-content-active': splunkTheme.contentColorActive,
         '--dashboard-builder-content-default': splunkTheme.contentColorDefault,
+        '--dashboard-builder-content-inverted': splunkTheme.contentColorInverted,
         '--dashboard-builder-content-muted': splunkTheme.contentColorMuted,
         '--dashboard-builder-border': splunkTheme.borderColor,
+        '--dashboard-builder-border-strong': splunkTheme.borderColorStrong,
         '--dashboard-builder-border-weak': splunkTheme.borderColorWeak,
+        '--dashboard-builder-accent': splunkTheme.interactiveColorPrimary,
         '--dashboard-builder-overlay-hover': splunkTheme.interactiveColorOverlayHover,
         '--dashboard-builder-overlay-selected': splunkTheme.interactiveColorOverlaySelected,
+    };
+    const dashboardBuilderModalThemeStyle = {
+        '--dashboard-builder-modal-background': splunkTheme.backgroundColorPopup,
+        '--dashboard-builder-modal-background-section': splunkTheme.backgroundColorSection,
+        '--dashboard-builder-modal-content-active': splunkTheme.contentColorActive,
+        '--dashboard-builder-modal-content-default': splunkTheme.contentColorDefault,
+        '--dashboard-builder-modal-content-muted': splunkTheme.contentColorMuted,
+        '--dashboard-builder-modal-border': splunkTheme.borderColor,
+        '--dashboard-builder-modal-border-strong': splunkTheme.borderColorStrong,
+        '--dashboard-builder-modal-border-weak': splunkTheme.borderColorWeak,
+        '--dashboard-builder-modal-overlay-hover': splunkTheme.interactiveColorOverlayHover,
+        '--dashboard-builder-modal-overlay-selected': splunkTheme.interactiveColorOverlaySelected,
     };
 
     const [isCodeEditable, setIsCodeEditable] = useState(false);
@@ -1570,7 +1587,11 @@ const DashboardStudioEditor = ({
     return (
         <>
             <ToastMessages />
-            <Modal open={openConvertModal} style={{ width: '600px' }}>
+            <Modal
+                open={openConvertModal}
+                className={`dashboard-builder-themed-modal dashboard-builder-themed-modal-${dashboardBuilderColorScheme}`}
+                style={{ width: '600px', ...dashboardBuilderModalThemeStyle }}
+            >
                 <Modal.Header title="Convert dashboard definition" icon={<Cog width="30px" />} />
                 <Modal.Body>
                     This dashboard contains custom data sources that work{' '}
@@ -1599,7 +1620,8 @@ const DashboardStudioEditor = ({
             </Modal>
             <Modal
                 open={openBackToManagerModal}
-                style={{ width: '460px' }}
+                className={`dashboard-builder-themed-modal dashboard-builder-themed-modal-${dashboardBuilderColorScheme}`}
+                style={{ width: '460px', ...dashboardBuilderModalThemeStyle }}
                 onRequestClose={() => setOpenBackToManagerModal(false)}
             >
                 <Modal.Header title="Back to Dashboard Manager?" />
@@ -1623,7 +1645,8 @@ const DashboardStudioEditor = ({
             </Modal>
             <Modal
                 open={openDashboardModal}
-                style={{ width: '700px' }}
+                className={`dashboard-builder-themed-modal dashboard-builder-themed-modal-${dashboardBuilderColorScheme}`}
+                style={{ width: '700px', ...dashboardBuilderModalThemeStyle }}
                 onRequestClose={goBackOrClose}
             >
                 <Modal.Header
@@ -1634,6 +1657,7 @@ const DashboardStudioEditor = ({
 
                 <Modal.Body style={{ padding: 0 }}>
                     <TabLayout
+                        className="dashboard-builder-tablayout"
                         defaultActivePanelId="create"
                         onChange={(e, { activePanelId: panelId }) => {
                             setActiveModeId(panelId);

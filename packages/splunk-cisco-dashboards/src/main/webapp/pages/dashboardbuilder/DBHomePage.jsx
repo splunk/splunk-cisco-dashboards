@@ -240,6 +240,23 @@ export default function DBHomePage() {
     "--dashboard-manager-overlay-selected":
       splunkTheme.interactiveColorOverlaySelected,
   };
+  const dashboardBuilderModalThemeStyle = {
+    "--dashboard-builder-modal-background": splunkTheme.backgroundColorPopup,
+    "--dashboard-builder-modal-background-section":
+      splunkTheme.backgroundColorSection,
+    "--dashboard-builder-modal-content-active":
+      splunkTheme.contentColorActive,
+    "--dashboard-builder-modal-content-default":
+      splunkTheme.contentColorDefault,
+    "--dashboard-builder-modal-content-muted": splunkTheme.contentColorMuted,
+    "--dashboard-builder-modal-border": splunkTheme.borderColor,
+    "--dashboard-builder-modal-border-strong": splunkTheme.borderColorStrong,
+    "--dashboard-builder-modal-border-weak": splunkTheme.borderColorWeak,
+    "--dashboard-builder-modal-overlay-hover":
+      splunkTheme.interactiveColorOverlayHover,
+    "--dashboard-builder-modal-overlay-selected":
+      splunkTheme.interactiveColorOverlaySelected,
+  };
   const iconRegistry = useMemo(() => createSEIIconRegistry(), []);
   const [dashboards, setDashboards] = useState([]);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -707,7 +724,8 @@ export default function DBHomePage() {
       <ToastMessages></ToastMessages>
       <Modal
         open={openCreateDashboard}
-        className="dashboard-builder-create-modal"
+        className={`dashboard-builder-create-modal dashboard-builder-themed-modal dashboard-builder-themed-modal-${managerColorScheme}`}
+        style={dashboardBuilderModalThemeStyle}
         onRequestClose={handleCloseCreateDashboard}
       >
         <Modal.Header
@@ -844,7 +862,12 @@ export default function DBHomePage() {
       </Modal>
       <Modal
         open={openDeleteDashboard}
-        style={{ width: "500px", zIndex: 99999 }}
+        className={`dashboard-builder-themed-modal dashboard-builder-themed-modal-${managerColorScheme}`}
+        style={{
+          width: "500px",
+          zIndex: 99999,
+          ...dashboardBuilderModalThemeStyle,
+        }}
         onRequestClose={handleCloseDeleteDashboard}
       >
         <Modal.Header
@@ -877,7 +900,8 @@ export default function DBHomePage() {
 
       <Modal
         open={openDashboardMetadataEditor}
-        className="dashboard-builder-metadata-modal"
+        className={`dashboard-builder-metadata-modal dashboard-builder-themed-modal dashboard-builder-themed-modal-${managerColorScheme}`}
+        style={dashboardBuilderModalThemeStyle}
         onRequestClose={handleCloseDashboardMetadataEditor}
       >
         <Modal.Header

@@ -22,12 +22,47 @@
 }
 
 #scan-root {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     color: rgb(15 23 42); /* slate-900 */
     font-family:
         ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
         'Helvetica Neue', Arial, sans-serif;
+}
+
+/*
+ * Splunk 10's modern navigation renders the page body inside nested flex
+ * containers. A max-content descendant (the overview Signal Rail marquee)
+ * can otherwise become the flex item's automatic minimum width and make the
+ * whole document several viewports wide. Reset that automatic minimum only
+ * for ancestors of the overview mount, then contain the page at its available
+ * content width. The Signal Rail still animates inside its clipped viewport.
+ */
+html:has(#scan-root .scd-overview-page),
+body:has(#scan-root .scd-overview-page) {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+body:has(#scan-root .scd-overview-page) *:has(#scan-root .scd-overview-page),
+#scan-root .scd-overview-page,
+#scan-root .scd-signal-rail-ticker {
+    min-width: 0;
+}
+
+#scan-root .scd-overview-page,
+#scan-root .scd-signal-rail-ticker {
+    width: 100%;
+    max-width: 100%;
+}
+
+#scan-root .scd-signal-rail-ticker {
+    overflow: hidden;
+    contain: inline-size;
 }
 
 /*

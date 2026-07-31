@@ -1,0 +1,450 @@
+<dashboard version="2" theme="dark" stylesheet="application.css">
+    <label>Secure Infrastructure Status</label>
+    <description>Secure Infrastructure drill-down dashboard for Secure Infrastructure Status.</description>
+    <definition><![CDATA[
+{
+	"title": "Secure Infrastructure Status",
+	"description": "Secure Infrastructure drill-down dashboard for Secure Infrastructure Status.",
+	"inputs": {
+		"input_time_range": {
+			"options": {
+				"defaultValue": "-24h@h,now",
+				"token": "time_tok"
+			},
+			"title": "Time Range",
+			"type": "input.timerange"
+		}
+	},
+	"defaults": {
+		"visualizations": {
+			"global": {
+				"showLastUpdated": true,
+				"showProgressBar": true
+			}
+		}
+	},
+	"visualizations": {
+		"viz_header_bg": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#0f172a",
+				"strokeColor": "rgba(148,163,184,0.22)"
+			}
+		},
+		"viz_header_icon": {
+			"type": "splunk.image",
+			"title": "Secure Infrastructure",
+			"options": {
+				"preserveAspectRatio": true,
+				"src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/secure-infrastructure.svg"
+			}
+		},
+		"viz_header": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#e2e8f0",
+				"markdown": "# Secure Infrastructure Status\nSecure Infrastructure • Searchbase-backed operational views."
+			}
+		},
+		"viz_secure_networking_meraki_rogue_ap_count": {
+			"type": "splunk.singlevalue",
+			"title": "Meraki Rogue AP Count",
+			"dataSources": {
+				"primary": "ds_secure_networking_meraki_rogue_ap_count"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"majorFontSize": 36,
+				"shouldAbbreviateMajorValue": true,
+				"sparklineDisplay": "off",
+				"trendDisplay": "off",
+				"majorColor": "#2563EB",
+				"majorValue": "> primary | seriesByName('rogue_ap_count') | lastPoint()"
+			}
+		},
+		"viz_secure_networking_meraki_rogue_ap_containment": {
+			"type": "splunk.table",
+			"title": "Meraki Rogue AP Containment Status",
+			"dataSources": {
+				"primary": "ds_secure_networking_meraki_rogue_ap_containment"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_secure_networking_meraki_ssid_encryption_breakdown": {
+			"type": "splunk.table",
+			"title": "Meraki SSID Encryption Breakdown",
+			"dataSources": {
+				"primary": "ds_secure_networking_meraki_ssid_encryption_breakdown"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_secure_networking_meraki_ap_count": {
+			"type": "splunk.singlevalue",
+			"title": "Meraki Access Point Count",
+			"dataSources": {
+				"primary": "ds_secure_networking_meraki_ap_count"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"majorFontSize": 36,
+				"shouldAbbreviateMajorValue": true,
+				"sparklineDisplay": "off",
+				"trendDisplay": "off",
+				"majorColor": "#2563EB",
+				"majorValue": "> primary | seriesByName('ap_count') | lastPoint()"
+			}
+		},
+		"viz_secure_networking_meraki_unencrypted_ssid_count": {
+			"type": "splunk.singlevalue",
+			"title": "Meraki Unencrypted SSID Count",
+			"dataSources": {
+				"primary": "ds_secure_networking_meraki_unencrypted_ssid_count"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"majorFontSize": 36,
+				"shouldAbbreviateMajorValue": true,
+				"sparklineDisplay": "off",
+				"trendDisplay": "off",
+				"majorColor": "#2563EB",
+				"majorValue": "> primary | seriesByName('unencrypted_ssid_count') | lastPoint()"
+			}
+		},
+		"viz_secure_networking_meraki_wireless_client_count": {
+			"type": "splunk.singlevalue",
+			"title": "Meraki Wireless Client Count",
+			"dataSources": {
+				"primary": "ds_secure_networking_meraki_wireless_client_count"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"majorFontSize": 36,
+				"shouldAbbreviateMajorValue": true,
+				"sparklineDisplay": "off",
+				"trendDisplay": "off",
+				"majorColor": "#2563EB",
+				"majorValue": "> primary | seriesByName('wireless_client_count') | lastPoint()"
+			}
+		},
+		"viz_secure_networking_infra_fmc_firewall_count": {
+			"type": "splunk.singlevalue",
+			"title": "Infrastructure FMC Managed Firewall Count",
+			"dataSources": {
+				"primary": "ds_secure_networking_infra_fmc_firewall_count"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"majorFontSize": 36,
+				"shouldAbbreviateMajorValue": true,
+				"sparklineDisplay": "off",
+				"trendDisplay": "off",
+				"majorColor": "#DC2626",
+				"majorValue": "> primary | seriesByName('firewall_count') | lastPoint()"
+			}
+		},
+		"viz_feed_monitor_ftd_firewall_staleness": {
+			"type": "splunk.singlevalue",
+			"title": "FTD Firewall - Stream Staleness (Signal Rail KPI)",
+			"dataSources": {
+				"primary": "ds_feed_monitor_ftd_firewall_staleness"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"majorFontSize": 36,
+				"shouldAbbreviateMajorValue": true,
+				"sparklineDisplay": "off",
+				"trendDisplay": "off",
+				"majorColor": "#0ea5e9",
+				"majorValue": "> primary | seriesByName('age_minutes') | lastPoint()",
+				"unit": "min"
+			}
+		},
+		"viz_executive_dashboard_data_source_status": {
+			"type": "splunk.table",
+			"title": "Data Source Status",
+			"dataSources": {
+				"primary": "ds_executive_dashboard_data_source_status"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		}
+	},
+	"dataSources": {
+		"ds_secure_networking_meraki_rogue_ap_count": {
+			"name": "Secure Networking - Meraki Rogue AP Count",
+			"options": {
+				"ref": "secure_networking_meraki_rogue_ap_count",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_meraki_rogue_ap_containment": {
+			"name": "Secure Networking - Meraki Rogue AP Containment Status",
+			"options": {
+				"ref": "secure_networking_meraki_rogue_ap_containment",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_meraki_ssid_encryption_breakdown": {
+			"name": "Secure Networking - Meraki SSID Encryption Breakdown",
+			"options": {
+				"ref": "secure_networking_meraki_ssid_encryption_breakdown",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_meraki_ap_count": {
+			"name": "Secure Networking - Meraki Access Point Count",
+			"options": {
+				"ref": "secure_networking_meraki_ap_count",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_meraki_unencrypted_ssid_count": {
+			"name": "Secure Networking - Meraki Unencrypted SSID Count",
+			"options": {
+				"ref": "secure_networking_meraki_unencrypted_ssid_count",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_meraki_wireless_client_count": {
+			"name": "Secure Networking - Meraki Wireless Client Count",
+			"options": {
+				"ref": "secure_networking_meraki_wireless_client_count",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_infra_fmc_firewall_count": {
+			"name": "Secure Networking - Infrastructure FMC Managed Firewall Count",
+			"options": {
+				"ref": "secure_networking_infra_fmc_firewall_count",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_feed_monitor_ftd_firewall_staleness": {
+			"name": "Feed Monitor - FTD Firewall - Stream Staleness (Signal Rail KPI)",
+			"options": {
+				"ref": "feed_monitor_ftd_firewall_staleness",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_executive_dashboard_data_source_status": {
+			"name": "Executive - Data Source Status",
+			"options": {
+				"ref": "executive_dashboard_data_source_status",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		}
+	},
+	"layout": {
+		"globalInputs": [
+			"input_time_range"
+		],
+		"layoutDefinitions": {
+			"layout_overview": {
+				"options": {
+					"backgroundColor": "#020617",
+					"display": "auto-scale",
+					"height": 2030,
+					"width": 1440
+				},
+				"structure": [
+					{
+						"item": "viz_header_bg",
+						"position": {
+							"x": 20,
+							"y": 0,
+							"w": 1400,
+							"h": 90
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_header_icon",
+						"position": {
+							"x": 36,
+							"y": 9,
+							"w": 72,
+							"h": 72
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_header",
+						"position": {
+							"x": 120,
+							"y": 0,
+							"w": 1300,
+							"h": 90
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_meraki_rogue_ap_count",
+						"position": {
+							"x": 20,
+							"y": 110,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_meraki_rogue_ap_containment",
+						"position": {
+							"x": 730,
+							"y": 110,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_meraki_ssid_encryption_breakdown",
+						"position": {
+							"x": 20,
+							"y": 490,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_meraki_ap_count",
+						"position": {
+							"x": 730,
+							"y": 490,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_meraki_unencrypted_ssid_count",
+						"position": {
+							"x": 20,
+							"y": 870,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_meraki_wireless_client_count",
+						"position": {
+							"x": 730,
+							"y": 870,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_infra_fmc_firewall_count",
+						"position": {
+							"x": 20,
+							"y": 1250,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_feed_monitor_ftd_firewall_staleness",
+						"position": {
+							"x": 730,
+							"y": 1250,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_executive_dashboard_data_source_status",
+						"position": {
+							"x": 20,
+							"y": 1630,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					}
+				],
+				"type": "absolute"
+			}
+		},
+		"options": {
+			"showTitleAndDescription": false,
+			"submitButton": false,
+			"submitOnDashboardLoad": true
+		},
+		"tabs": {
+			"items": [
+				{
+					"label": "overview",
+					"layoutId": "layout_overview"
+				}
+			]
+		}
+	},
+	"applicationProperties": {
+		"collapseNavigation": false,
+		"hideEdit": false,
+		"hideExport": false
+	}
+}
+    ]]></definition>
+</dashboard>
+

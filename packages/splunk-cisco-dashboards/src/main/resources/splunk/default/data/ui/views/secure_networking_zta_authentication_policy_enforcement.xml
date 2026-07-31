@@ -1,0 +1,374 @@
+<dashboard version="2" theme="dark" stylesheet="application.css">
+    <label>Authentication and Policy Enforcement</label>
+    <description>Zero Trust Access drill-down dashboard for Authentication and Policy Enforcement.</description>
+    <definition><![CDATA[
+{
+	"title": "Authentication and Policy Enforcement",
+	"description": "Zero Trust Access drill-down dashboard for Authentication and Policy Enforcement.",
+	"inputs": {
+		"input_time_range": {
+			"options": {
+				"defaultValue": "-24h@h,now",
+				"token": "time_tok"
+			},
+			"title": "Time Range",
+			"type": "input.timerange"
+		}
+	},
+	"defaults": {
+		"visualizations": {
+			"global": {
+				"showLastUpdated": true,
+				"showProgressBar": true
+			}
+		}
+	},
+	"visualizations": {
+		"viz_header_bg": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#0f172a",
+				"strokeColor": "rgba(148,163,184,0.22)"
+			}
+		},
+		"viz_header_icon": {
+			"type": "splunk.image",
+			"title": "Zero Trust Access",
+			"options": {
+				"preserveAspectRatio": true,
+				"src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/zero-trust-access.svg"
+			}
+		},
+		"viz_header": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#e2e8f0",
+				"markdown": "# Authentication and Policy Enforcement\nZero Trust Access • Searchbase-backed operational views."
+			}
+		},
+		"viz_secure_networking_zta_ise_auth_by_device_fail_rate": {
+			"type": "splunk.table",
+			"title": "ZTA ISE Auth Failure Rate by Network Device",
+			"dataSources": {
+				"primary": "ds_secure_networking_zta_ise_auth_by_device_fail_rate"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_secure_networking_ise_policy_hits_by_device": {
+			"type": "splunk.table",
+			"title": "ISE Policy Hits by Network Device",
+			"dataSources": {
+				"primary": "ds_secure_networking_ise_policy_hits_by_device"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_secure_networking_infra_ise_device_count": {
+			"type": "splunk.singlevalue",
+			"title": "Infrastructure ISE Network Device Count",
+			"dataSources": {
+				"primary": "ds_secure_networking_infra_ise_device_count"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"majorFontSize": 36,
+				"shouldAbbreviateMajorValue": true,
+				"sparklineDisplay": "off",
+				"trendDisplay": "off",
+				"majorColor": "#0EA5E9",
+				"majorValue": "> primary | seriesByName('ise_device_count') | lastPoint()"
+			}
+		},
+		"viz_secure_networking_ise_policy_family_overview": {
+			"type": "splunk.table",
+			"title": "ISE Policy Family Overview",
+			"dataSources": {
+				"primary": "ds_secure_networking_ise_policy_family_overview"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_secure_networking_zta_radius_node_health_by_site": {
+			"type": "splunk.table",
+			"title": "ZTA RADIUS Node Health by Site",
+			"dataSources": {
+				"primary": "ds_secure_networking_zta_radius_node_health_by_site"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_security_resilience_ise_radius_latency": {
+			"type": "splunk.line",
+			"title": "ISE RADIUS Request Latency",
+			"dataSources": {
+				"primary": "ds_security_resilience_ise_radius_latency"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"legendDisplay": "bottom",
+				"seriesColors": [
+					"#3B82F6",
+					"#10B981",
+					"#F59E0B",
+					"#EF4444"
+				],
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"lineWidth": 2
+			}
+		},
+		"viz_secure_networking_zta_duo_admin_activity_by_outcome": {
+			"type": "splunk.table",
+			"title": "ZTA Duo Admin Activity by Outcome",
+			"dataSources": {
+				"primary": "ds_secure_networking_zta_duo_admin_activity_by_outcome"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		}
+	},
+	"dataSources": {
+		"ds_secure_networking_zta_ise_auth_by_device_fail_rate": {
+			"name": "Secure Networking - ZTA ISE Auth Failure Rate by Network Device",
+			"options": {
+				"ref": "secure_networking_zta_ise_auth_by_device_fail_rate",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_ise_policy_hits_by_device": {
+			"name": "Secure Networking - ISE Policy Hits by Network Device",
+			"options": {
+				"ref": "secure_networking_ise_policy_hits_by_device",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_infra_ise_device_count": {
+			"name": "Secure Networking - Infrastructure ISE Network Device Count",
+			"options": {
+				"ref": "secure_networking_infra_ise_device_count",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_ise_policy_family_overview": {
+			"name": "Secure Networking - ISE Policy Family Overview",
+			"options": {
+				"ref": "secure_networking_ise_policy_family_overview",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_zta_radius_node_health_by_site": {
+			"name": "Secure Networking - ZTA RADIUS Node Health by Site",
+			"options": {
+				"ref": "secure_networking_zta_radius_node_health_by_site",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_security_resilience_ise_radius_latency": {
+			"name": "Security Resilience - ISE RADIUS Request Latency",
+			"options": {
+				"ref": "security_resilience_ise_radius_latency",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_zta_duo_admin_activity_by_outcome": {
+			"name": "Secure Networking - ZTA Duo Admin Activity by Outcome",
+			"options": {
+				"ref": "secure_networking_zta_duo_admin_activity_by_outcome",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		}
+	},
+	"layout": {
+		"globalInputs": [
+			"input_time_range"
+		],
+		"layoutDefinitions": {
+			"layout_overview": {
+				"options": {
+					"backgroundColor": "#020617",
+					"display": "auto-scale",
+					"height": 1650,
+					"width": 1440
+				},
+				"structure": [
+					{
+						"item": "viz_header_bg",
+						"position": {
+							"x": 20,
+							"y": 0,
+							"w": 1400,
+							"h": 90
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_header_icon",
+						"position": {
+							"x": 36,
+							"y": 9,
+							"w": 72,
+							"h": 72
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_header",
+						"position": {
+							"x": 120,
+							"y": 0,
+							"w": 1300,
+							"h": 90
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_zta_ise_auth_by_device_fail_rate",
+						"position": {
+							"x": 20,
+							"y": 110,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_ise_policy_hits_by_device",
+						"position": {
+							"x": 730,
+							"y": 110,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_infra_ise_device_count",
+						"position": {
+							"x": 20,
+							"y": 490,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_ise_policy_family_overview",
+						"position": {
+							"x": 730,
+							"y": 490,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_zta_radius_node_health_by_site",
+						"position": {
+							"x": 20,
+							"y": 870,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_security_resilience_ise_radius_latency",
+						"position": {
+							"x": 730,
+							"y": 870,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_zta_duo_admin_activity_by_outcome",
+						"position": {
+							"x": 20,
+							"y": 1250,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					}
+				],
+				"type": "absolute"
+			}
+		},
+		"options": {
+			"showTitleAndDescription": false,
+			"submitButton": false,
+			"submitOnDashboardLoad": true
+		},
+		"tabs": {
+			"items": [
+				{
+					"label": "overview",
+					"layoutId": "layout_overview"
+				}
+			]
+		}
+	},
+	"applicationProperties": {
+		"collapseNavigation": false,
+		"hideEdit": false,
+		"hideExport": false
+	}
+}
+    ]]></definition>
+</dashboard>
+

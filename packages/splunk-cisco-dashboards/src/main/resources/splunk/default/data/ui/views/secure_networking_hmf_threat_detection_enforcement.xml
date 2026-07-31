@@ -1,0 +1,450 @@
+<dashboard version="2" theme="dark" stylesheet="application.css">
+    <label>Threat Detection and Enforcement</label>
+    <description>Hybrid Mesh Firewalling drill-down dashboard for Threat Detection and Enforcement.</description>
+    <definition><![CDATA[
+{
+	"title": "Threat Detection and Enforcement",
+	"description": "Hybrid Mesh Firewalling drill-down dashboard for Threat Detection and Enforcement.",
+	"inputs": {
+		"input_time_range": {
+			"options": {
+				"defaultValue": "-24h@h,now",
+				"token": "time_tok"
+			},
+			"title": "Time Range",
+			"type": "input.timerange"
+		}
+	},
+	"defaults": {
+		"visualizations": {
+			"global": {
+				"showLastUpdated": true,
+				"showProgressBar": true
+			}
+		}
+	},
+	"visualizations": {
+		"viz_header_bg": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#0f172a",
+				"strokeColor": "rgba(148,163,184,0.22)"
+			}
+		},
+		"viz_header_icon": {
+			"type": "splunk.image",
+			"title": "Hybrid Mesh Firewalling",
+			"options": {
+				"preserveAspectRatio": true,
+				"src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/hybrid-mesh-firewalling.svg"
+			}
+		},
+		"viz_header": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#e2e8f0",
+				"markdown": "# Threat Detection and Enforcement\nHybrid Mesh Firewalling • Searchbase-backed operational views."
+			}
+		},
+		"viz_network_intelligence_blocked_vs_allowed": {
+			"type": "splunk.column",
+			"title": "Blocked vs Allowed",
+			"dataSources": {
+				"primary": "ds_network_intelligence_blocked_vs_allowed"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"legendDisplay": "bottom",
+				"seriesColors": [
+					"#049FD9"
+				],
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"stackMode": "unstacked"
+			}
+		},
+		"viz_security_resilience_cloud_fw_blocked": {
+			"type": "splunk.singlevalue",
+			"title": "Cloud Firewall Blocked Connections",
+			"dataSources": {
+				"primary": "ds_security_resilience_cloud_fw_blocked"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"majorFontSize": 36,
+				"shouldAbbreviateMajorValue": true,
+				"sparklineDisplay": "off",
+				"trendDisplay": "off",
+				"majorColor": "#dc2626",
+				"majorValue": "> primary | seriesByName('count') | lastPoint()"
+			}
+		},
+		"viz_security_multicloud_defense_gateway_health_table": {
+			"type": "splunk.table",
+			"title": "Multicloud Defense Gateway Health",
+			"dataSources": {
+				"primary": "ds_security_multicloud_defense_gateway_health_table"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_security_multicloud_defense_waf_findings": {
+			"type": "splunk.table",
+			"title": "Multicloud Defense Recent WAF Findings",
+			"dataSources": {
+				"primary": "ds_security_multicloud_defense_waf_findings"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_security_multicloud_defense_action_breakdown_kpi": {
+			"type": "splunk.singlevalue",
+			"title": "Multicloud Defense Deny Rate",
+			"dataSources": {
+				"primary": "ds_security_multicloud_defense_action_breakdown_kpi"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"majorFontSize": 36,
+				"shouldAbbreviateMajorValue": true,
+				"sparklineDisplay": "off",
+				"trendDisplay": "off",
+				"majorColor": "#DC2626",
+				"majorValue": "> primary | seriesByName('deny_pct') | lastPoint()"
+			}
+		},
+		"viz_security_isovalent_alerts_by_severity": {
+			"type": "splunk.bar",
+			"title": "Cisco Isovalent Alerts by Severity",
+			"dataSources": {
+				"primary": "ds_security_isovalent_alerts_by_severity"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"legendDisplay": "bottom",
+				"seriesColors": [
+					"#DC2626",
+					"#F59E0B",
+					"#2563EB",
+					"#16A34A"
+				],
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"stackMode": "unstacked"
+			}
+		},
+		"viz_security_isovalent_top_alert_rules": {
+			"type": "splunk.table",
+			"title": "Cisco Isovalent Top Detection Rules",
+			"dataSources": {
+				"primary": "ds_security_isovalent_top_alert_rules"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_xdr_incident_status_severity_pressure": {
+			"type": "splunk.table",
+			"title": "XDR - Incident - Status and Severity Pressure Matrix",
+			"dataSources": {
+				"primary": "ds_xdr_incident_status_severity_pressure"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_xdr_incident_global_risk_leaderboard": {
+			"type": "splunk.table",
+			"title": "XDR - Incident - Global Risk and Event Pressure Leaderboard",
+			"dataSources": {
+				"primary": "ds_xdr_incident_global_risk_leaderboard"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		}
+	},
+	"dataSources": {
+		"ds_network_intelligence_blocked_vs_allowed": {
+			"name": "Network Intelligence - Blocked vs Allowed",
+			"options": {
+				"ref": "network_intelligence_blocked_vs_allowed",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_security_resilience_cloud_fw_blocked": {
+			"name": "Security Resilience - Cloud Firewall Blocked Connections",
+			"options": {
+				"ref": "security_resilience_cloud_fw_blocked",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_security_multicloud_defense_gateway_health_table": {
+			"name": "Security - Cloud Security - Multicloud Defense Gateway Health",
+			"options": {
+				"ref": "security_multicloud_defense_gateway_health_table",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_security_multicloud_defense_waf_findings": {
+			"name": "Security - Cloud Security - Multicloud Defense Recent WAF Findings",
+			"options": {
+				"ref": "security_multicloud_defense_waf_findings",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_security_multicloud_defense_action_breakdown_kpi": {
+			"name": "Security - Cloud Security - Multicloud Defense Deny Rate",
+			"options": {
+				"ref": "security_multicloud_defense_action_breakdown_kpi",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_security_isovalent_alerts_by_severity": {
+			"name": "Security - eBPF Observability - Cisco Isovalent Alerts by Severity",
+			"options": {
+				"ref": "security_isovalent_alerts_by_severity",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_security_isovalent_top_alert_rules": {
+			"name": "Security - eBPF Observability - Cisco Isovalent Top Detection Rules",
+			"options": {
+				"ref": "security_isovalent_top_alert_rules",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_xdr_incident_status_severity_pressure": {
+			"name": "XDR - Incident - Status and Severity Pressure Matrix",
+			"options": {
+				"ref": "xdr_incident_status_severity_pressure",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_xdr_incident_global_risk_leaderboard": {
+			"name": "XDR - Incident - Global Risk and Event Pressure Leaderboard",
+			"options": {
+				"ref": "xdr_incident_global_risk_leaderboard",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		}
+	},
+	"layout": {
+		"globalInputs": [
+			"input_time_range"
+		],
+		"layoutDefinitions": {
+			"layout_overview": {
+				"options": {
+					"backgroundColor": "#020617",
+					"display": "auto-scale",
+					"height": 2030,
+					"width": 1440
+				},
+				"structure": [
+					{
+						"item": "viz_header_bg",
+						"position": {
+							"x": 20,
+							"y": 0,
+							"w": 1400,
+							"h": 90
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_header_icon",
+						"position": {
+							"x": 36,
+							"y": 9,
+							"w": 72,
+							"h": 72
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_header",
+						"position": {
+							"x": 120,
+							"y": 0,
+							"w": 1300,
+							"h": 90
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_network_intelligence_blocked_vs_allowed",
+						"position": {
+							"x": 20,
+							"y": 110,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_security_resilience_cloud_fw_blocked",
+						"position": {
+							"x": 730,
+							"y": 110,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_security_multicloud_defense_gateway_health_table",
+						"position": {
+							"x": 20,
+							"y": 490,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_security_multicloud_defense_waf_findings",
+						"position": {
+							"x": 730,
+							"y": 490,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_security_multicloud_defense_action_breakdown_kpi",
+						"position": {
+							"x": 20,
+							"y": 870,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_security_isovalent_alerts_by_severity",
+						"position": {
+							"x": 730,
+							"y": 870,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_security_isovalent_top_alert_rules",
+						"position": {
+							"x": 20,
+							"y": 1250,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_xdr_incident_status_severity_pressure",
+						"position": {
+							"x": 730,
+							"y": 1250,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_xdr_incident_global_risk_leaderboard",
+						"position": {
+							"x": 20,
+							"y": 1630,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					}
+				],
+				"type": "absolute"
+			}
+		},
+		"options": {
+			"showTitleAndDescription": false,
+			"submitButton": false,
+			"submitOnDashboardLoad": true
+		},
+		"tabs": {
+			"items": [
+				{
+					"label": "overview",
+					"layoutId": "layout_overview"
+				}
+			]
+		}
+	},
+	"applicationProperties": {
+		"collapseNavigation": false,
+		"hideEdit": false,
+		"hideExport": false
+	}
+}
+    ]]></definition>
+</dashboard>
+

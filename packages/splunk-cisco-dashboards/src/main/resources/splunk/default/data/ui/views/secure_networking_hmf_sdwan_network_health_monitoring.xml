@@ -1,0 +1,360 @@
+<dashboard version="2" theme="dark" stylesheet="application.css">
+    <label>SD-WAN and Network Health Monitoring</label>
+    <description>Hybrid Mesh Firewalling drill-down dashboard for SD-WAN and Network Health Monitoring.</description>
+    <definition><![CDATA[
+{
+	"title": "SD-WAN and Network Health Monitoring",
+	"description": "Hybrid Mesh Firewalling drill-down dashboard for SD-WAN and Network Health Monitoring.",
+	"inputs": {
+		"input_time_range": {
+			"options": {
+				"defaultValue": "-24h@h,now",
+				"token": "time_tok"
+			},
+			"title": "Time Range",
+			"type": "input.timerange"
+		}
+	},
+	"defaults": {
+		"visualizations": {
+			"global": {
+				"showLastUpdated": true,
+				"showProgressBar": true
+			}
+		}
+	},
+	"visualizations": {
+		"viz_header_bg": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#0f172a",
+				"strokeColor": "rgba(148,163,184,0.22)"
+			}
+		},
+		"viz_header_icon": {
+			"type": "splunk.image",
+			"title": "Hybrid Mesh Firewalling",
+			"options": {
+				"preserveAspectRatio": true,
+				"src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/hybrid-mesh-firewalling.svg"
+			}
+		},
+		"viz_header": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#e2e8f0",
+				"markdown": "# SD-WAN and Network Health Monitoring\nHybrid Mesh Firewalling • Searchbase-backed operational views."
+			}
+		},
+		"viz_monitoring_sdwan_circuit_state_summary": {
+			"type": "splunk.pie",
+			"title": "Circuit State Up vs Down",
+			"dataSources": {
+				"primary": "ds_monitoring_sdwan_circuit_state_summary"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"legendDisplay": "right",
+				"seriesColors": [
+					"#2563EB",
+					"#16A34A",
+					"#F59E0B",
+					"#DC2626"
+				]
+			}
+		},
+		"viz_monitoring_sdwan_site_health_map": {
+			"type": "splunk.map",
+			"title": "Site Health Map",
+			"dataSources": {
+				"primary": "ds_monitoring_sdwan_site_health_map"
+			},
+			"options": {
+				"layers": [
+					{
+						"type": "marker",
+						"latitude": "> primary | seriesByName('lat')",
+						"longitude": "> primary | seriesByName('lon')",
+						"markerColor": "#0ea5e9",
+						"additionalTooltipFields": [
+							"site_id",
+							"site_name",
+							"site_health",
+							"healthScore"
+						]
+					}
+				],
+				"showScale": false,
+				"showZoomControls": true,
+				"zoom": 3
+			}
+		},
+		"viz_monitoring_sdwan_site_health_table": {
+			"type": "splunk.table",
+			"title": "Site Health Table",
+			"dataSources": {
+				"primary": "ds_monitoring_sdwan_site_health_table"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_monitoring_sdwan_site_state_summary": {
+			"type": "splunk.pie",
+			"title": "Site State Up vs Down",
+			"dataSources": {
+				"primary": "ds_monitoring_sdwan_site_state_summary"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"legendDisplay": "right",
+				"seriesColors": [
+					"#2563EB",
+					"#16A34A",
+					"#F59E0B",
+					"#DC2626"
+				]
+			}
+		},
+		"viz_secure_networking_sdwan_tunnel_health_log": {
+			"type": "splunk.table",
+			"title": "SD-WAN Tunnel Health Status Log",
+			"dataSources": {
+				"primary": "ds_secure_networking_sdwan_tunnel_health_log"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_monitoring_sdwan_tunnel_health_poor_trend": {
+			"type": "splunk.line",
+			"title": "Poor Tunnels by Latency Trend",
+			"dataSources": {
+				"primary": "ds_monitoring_sdwan_tunnel_health_poor_trend"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"legendDisplay": "bottom",
+				"seriesColors": [
+					"#2563EB",
+					"#16A34A",
+					"#F59E0B",
+					"#DC2626"
+				],
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"lineWidth": 2,
+				"nullValueDisplay": "gaps",
+				"dataValuesDisplay": "minmax"
+			}
+		}
+	},
+	"dataSources": {
+		"ds_monitoring_sdwan_circuit_state_summary": {
+			"name": "Monitoring - SD-WAN - Circuit State Up vs Down",
+			"options": {
+				"ref": "monitoring_sdwan_circuit_state_summary",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_monitoring_sdwan_site_health_map": {
+			"name": "Monitoring - SD-WAN - Site Health Map",
+			"options": {
+				"ref": "monitoring_sdwan_site_health_map",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_monitoring_sdwan_site_health_table": {
+			"name": "Monitoring - SD-WAN - Site Health Table",
+			"options": {
+				"ref": "monitoring_sdwan_site_health_table",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_monitoring_sdwan_site_state_summary": {
+			"name": "Monitoring - SD-WAN - Site State Up vs Down",
+			"options": {
+				"ref": "monitoring_sdwan_site_state_summary",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_sdwan_tunnel_health_log": {
+			"name": "Secure Networking - SD-WAN Tunnel Health Status Log",
+			"options": {
+				"ref": "secure_networking_sdwan_tunnel_health_log",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_monitoring_sdwan_tunnel_health_poor_trend": {
+			"name": "Monitoring - SD-WAN - Poor Tunnels by Latency Trend",
+			"options": {
+				"ref": "monitoring_sdwan_tunnel_health_poor_trend",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		}
+	},
+	"layout": {
+		"globalInputs": [
+			"input_time_range"
+		],
+		"layoutDefinitions": {
+			"layout_overview": {
+				"options": {
+					"backgroundColor": "#020617",
+					"display": "auto-scale",
+					"height": 1270,
+					"width": 1440
+				},
+				"structure": [
+					{
+						"item": "viz_header_bg",
+						"position": {
+							"x": 20,
+							"y": 0,
+							"w": 1400,
+							"h": 90
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_header_icon",
+						"position": {
+							"x": 36,
+							"y": 9,
+							"w": 72,
+							"h": 72
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_header",
+						"position": {
+							"x": 120,
+							"y": 0,
+							"w": 1300,
+							"h": 90
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_monitoring_sdwan_circuit_state_summary",
+						"position": {
+							"x": 20,
+							"y": 110,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_monitoring_sdwan_site_health_map",
+						"position": {
+							"x": 730,
+							"y": 110,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_monitoring_sdwan_site_health_table",
+						"position": {
+							"x": 20,
+							"y": 490,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_monitoring_sdwan_site_state_summary",
+						"position": {
+							"x": 730,
+							"y": 490,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_sdwan_tunnel_health_log",
+						"position": {
+							"x": 20,
+							"y": 870,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_monitoring_sdwan_tunnel_health_poor_trend",
+						"position": {
+							"x": 730,
+							"y": 870,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					}
+				],
+				"type": "absolute"
+			}
+		},
+		"options": {
+			"showTitleAndDescription": false,
+			"submitButton": false,
+			"submitOnDashboardLoad": true
+		},
+		"tabs": {
+			"items": [
+				{
+					"label": "overview",
+					"layoutId": "layout_overview"
+				}
+			]
+		}
+	},
+	"applicationProperties": {
+		"collapseNavigation": false,
+		"hideEdit": false,
+		"hideExport": false
+	}
+}
+    ]]></definition>
+</dashboard>
+

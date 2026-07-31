@@ -1,0 +1,295 @@
+<dashboard version="2" theme="dark" stylesheet="application.css">
+    <label>Detection &amp; Response</label>
+    <description>Zero Trust Access drill-down dashboard for Detection &amp; Response.</description>
+    <definition><![CDATA[
+{
+	"title": "Detection & Response",
+	"description": "Zero Trust Access drill-down dashboard for Detection & Response.",
+	"inputs": {
+		"input_time_range": {
+			"options": {
+				"defaultValue": "-24h@h,now",
+				"token": "time_tok"
+			},
+			"title": "Time Range",
+			"type": "input.timerange"
+		}
+	},
+	"defaults": {
+		"visualizations": {
+			"global": {
+				"showLastUpdated": true,
+				"showProgressBar": true
+			}
+		}
+	},
+	"visualizations": {
+		"viz_header_bg": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#0f172a",
+				"strokeColor": "rgba(148,163,184,0.22)"
+			}
+		},
+		"viz_header_icon": {
+			"type": "splunk.image",
+			"title": "Zero Trust Access",
+			"options": {
+				"preserveAspectRatio": true,
+				"src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/zero-trust-access.svg"
+			}
+		},
+		"viz_header": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#e2e8f0",
+				"markdown": "# Detection & Response\nZero Trust Access • Searchbase-backed operational views."
+			}
+		},
+		"viz_xdr_incident_status_severity_pressure": {
+			"type": "splunk.table",
+			"title": "XDR - Incident - Status and Severity Pressure Matrix",
+			"dataSources": {
+				"primary": "ds_xdr_incident_status_severity_pressure"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_xdr_incident_global_risk_leaderboard": {
+			"type": "splunk.table",
+			"title": "XDR - Incident - Global Risk and Event Pressure Leaderboard",
+			"dataSources": {
+				"primary": "ds_xdr_incident_global_risk_leaderboard"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_xdr_aa_forensic_network_internal_service_pressure": {
+			"type": "splunk.table",
+			"title": "XDR - Attack Analyzer - Forensic Network Service Pressure",
+			"dataSources": {
+				"primary": "ds_xdr_aa_forensic_network_internal_service_pressure"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_xdr_aa_forensic_network_external_egress_watch": {
+			"type": "splunk.table",
+			"title": "XDR - Attack Analyzer - Forensic Network External Egress Watch",
+			"dataSources": {
+				"primary": "ds_xdr_aa_forensic_network_external_egress_watch"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		},
+		"viz_xdr_aa_forensic_files_network_source_hotspots": {
+			"type": "splunk.table",
+			"title": "XDR - Attack Analyzer - Forensic Files Network Source Hotspots",
+			"dataSources": {
+				"primary": "ds_xdr_aa_forensic_files_network_source_hotspots"
+			},
+			"options": {
+				"backgroundColor": "#0f172a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			}
+		}
+	},
+	"dataSources": {
+		"ds_xdr_incident_status_severity_pressure": {
+			"name": "XDR - Incident - Status and Severity Pressure Matrix",
+			"options": {
+				"ref": "xdr_incident_status_severity_pressure",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_xdr_incident_global_risk_leaderboard": {
+			"name": "XDR - Incident - Global Risk and Event Pressure Leaderboard",
+			"options": {
+				"ref": "xdr_incident_global_risk_leaderboard",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_xdr_aa_forensic_network_internal_service_pressure": {
+			"name": "XDR - Attack Analyzer - Forensic Network Service Pressure",
+			"options": {
+				"ref": "xdr_aa_forensic_network_internal_service_pressure",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_xdr_aa_forensic_network_external_egress_watch": {
+			"name": "XDR - Attack Analyzer - Forensic Network External Egress Watch",
+			"options": {
+				"ref": "xdr_aa_forensic_network_external_egress_watch",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_xdr_aa_forensic_files_network_source_hotspots": {
+			"name": "XDR - Attack Analyzer - Forensic Files Network Source Hotspots",
+			"options": {
+				"ref": "xdr_aa_forensic_files_network_source_hotspots",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		}
+	},
+	"layout": {
+		"globalInputs": [
+			"input_time_range"
+		],
+		"layoutDefinitions": {
+			"layout_overview": {
+				"options": {
+					"backgroundColor": "#020617",
+					"display": "auto-scale",
+					"height": 1270,
+					"width": 1440
+				},
+				"structure": [
+					{
+						"item": "viz_header_bg",
+						"position": {
+							"x": 20,
+							"y": 0,
+							"w": 1400,
+							"h": 90
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_header_icon",
+						"position": {
+							"x": 36,
+							"y": 9,
+							"w": 72,
+							"h": 72
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_header",
+						"position": {
+							"x": 120,
+							"y": 0,
+							"w": 1300,
+							"h": 90
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_xdr_incident_status_severity_pressure",
+						"position": {
+							"x": 20,
+							"y": 110,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_xdr_incident_global_risk_leaderboard",
+						"position": {
+							"x": 730,
+							"y": 110,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_xdr_aa_forensic_network_internal_service_pressure",
+						"position": {
+							"x": 20,
+							"y": 490,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_xdr_aa_forensic_network_external_egress_watch",
+						"position": {
+							"x": 730,
+							"y": 490,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_xdr_aa_forensic_files_network_source_hotspots",
+						"position": {
+							"x": 20,
+							"y": 870,
+							"w": 690,
+							"h": 360
+						},
+						"type": "block"
+					}
+				],
+				"type": "absolute"
+			}
+		},
+		"options": {
+			"showTitleAndDescription": false,
+			"submitButton": false,
+			"submitOnDashboardLoad": true
+		},
+		"tabs": {
+			"items": [
+				{
+					"label": "overview",
+					"layoutId": "layout_overview"
+				}
+			]
+		}
+	},
+	"applicationProperties": {
+		"collapseNavigation": false,
+		"hideEdit": false,
+		"hideExport": false
+	}
+}
+    ]]></definition>
+</dashboard>
+

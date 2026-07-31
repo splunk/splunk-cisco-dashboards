@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <dashboard version="1.1" theme="light" hideEdit="true" hideExport="true" hideTitle="true"
-           script="start_bootstrap.js" stylesheet="start.css">
+           script="start_loader.js" stylesheet="start.css">
     <label>Setup</label>
     <row>
         <panel>
