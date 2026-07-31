@@ -38,7 +38,7 @@ packages/splunk-cisco-dashboards/src/main/webapp/common/components/topology/edge
 packages/splunk-cisco-dashboards/src/main/webapp/common/hooks/useMetric.ts
 packages/splunk-cisco-dashboards/src/main/webapp/common/hooks/usePersistedSectionTileCounts.ts
 packages/splunk-cisco-dashboards/src/main/webapp/common/types.ts
-packages/splunk-cisco-dashboards/src/main/webapp/pages/overview/index.tsx
+packages/splunk-cisco-dashboards/src/main/webapp/pages/executive_insights/index.tsx
 ```
 
 ## Key Decisions
@@ -78,7 +78,7 @@ App-specific `viz_options` metadata currently includes:
 
 ### Overview factory tiles
 
-`packages/splunk-cisco-dashboards/src/main/webapp/pages/overview/index.tsx`
+`packages/splunk-cisco-dashboards/src/main/webapp/pages/executive_insights/index.tsx`
 
 The old hardcoded `METRIC_CONFIG` fallback catalogue was removed. This matters: the user noticed labels like `label: 'Critical sites available'` still existed in the React file and correctly called out that this violated the central-source rule.
 
@@ -200,4 +200,4 @@ SPLUNK_HOME=/opt/10 ./build.sh --fast --install
 2. Confirm Open in Search works for tiles with no returned data.
 3. Confirm map footer cards render from `searchbase.conf` metadata.
 4. Confirm searches with `dispatch_context = cisco-catalyst-app` execute in that app context.
-5. Confirm no factory Overview labels remain duplicated in `pages/overview/index.tsx`.
+5. Confirm no factory Overview labels remain duplicated in `pages/executive_insights/index.tsx`.

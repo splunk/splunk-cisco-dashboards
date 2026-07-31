@@ -79,14 +79,20 @@ assert.deepEqual(
     ],
   ],
 );
-assert.equal(getOverviewProfileViewName("executive"), "overview");
+assert.equal(
+  getOverviewProfileViewName("executive"),
+  "executive_briefing_profile",
+);
 assert.equal(
   getOverviewProfileViewName("secure_networking"),
-  "secure_networking_overview",
+  "secure_networking_profile",
 );
-assert.equal(getOverviewProfileForViewName("overview").id, "executive");
 assert.equal(
-  getOverviewProfileForViewName("secure_networking_overview").id,
+  getOverviewProfileForViewName("executive_briefing_profile").id,
+  "executive",
+);
+assert.equal(
+  getOverviewProfileForViewName("secure_networking_profile").id,
   "secure_networking",
 );
 assert.equal(
@@ -99,7 +105,7 @@ try {
   global.window = {
     location: {
       pathname:
-        "/en-US/app/splunk-cisco-dashboards/secure_networking_overview",
+        "/en-US/app/splunk-cisco-dashboards/secure_networking_profile",
       search: "?overview_profile=executive",
     },
   };

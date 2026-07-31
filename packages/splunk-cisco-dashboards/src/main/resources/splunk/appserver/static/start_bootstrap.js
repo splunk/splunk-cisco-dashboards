@@ -9,7 +9,7 @@
  * and is responsible for setting setup.conf is_configured=1.
  */
 const SCD_SETUP_APP = "splunk-cisco-dashboards";
-const SCD_SETUP_HOME_VIEW = "secure_networking_overview";
+const SCD_SETUP_HOME_VIEW = "secure_networking_profile";
 const SCD_SETUP_TUNING_VIEW = "macro_index_tuning";
 const SCD_SETUP_DISCOVERY_SEARCH = [
   '| tstats count max(_time) AS latest WHERE index=* sourcetype="cisco:*" BY index sourcetype',

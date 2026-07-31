@@ -1,6 +1,6 @@
 <nav color="#049fd9" label="Splunk for Secure Networking">
     <view
-        name="secure_networking_overview"
+        name="secure_networking_profile"
         default="true"
         label="Home"
         icon="house"
@@ -69,7 +69,7 @@
 
     <collection label="Other" icon="layout">
         <collection label="Core Dashboards">
-            <view name="overview" label="Executive Briefing" />
+            <view name="executive_briefing_profile" label="Executive Briefing" />
             <a href="it_health_v1">IT Health</a>
             <a href="security_v1">Security</a>
             <a href="building_v1">Building Intelligence</a>

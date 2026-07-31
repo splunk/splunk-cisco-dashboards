@@ -202,7 +202,7 @@ An adversarial buildability audit (3 independent reviewers over the build) retur
 
 ## Overview profile integration (`secure_networking` profile)
 
-The shared Overview engine (`common/config/overviewProfiles.ts`) has the `secure_networking` profile fully registered — view `secure_networking_overview`, 5 pillar sections, `autoDiscovery` keyed on the `secure_networking_` prefix + `Secure Networking` tag + sub_category→section mapping. Explicit `viz_options.overview` entries (with `profile: "secure_networking"`) give real tile control (valueField, thresholds, color) beyond what auto-discovery infers. Full detail in `SN_EVENT_SCOPING.md` §"Overview dashboard engine".
+The shared Overview engine (`common/config/overviewProfiles.ts`) has the `secure_networking` profile fully registered — view `secure_networking_profile`, 5 pillar sections, `autoDiscovery` keyed on the `secure_networking_` prefix + `Secure Networking` tag + sub_category→section mapping. Explicit `viz_options.overview` entries (with `profile: "secure_networking"`) give real tile control (valueField, thresholds, color) beyond what auto-discovery infers. Full detail in `SN_EVENT_SCOPING.md` §"Overview dashboard engine".
 
 **`overview_factory_tiles.conf` — 5 SN sections wired (tileIds in display order):**
 | Section stanza | tileIds | visible_count |

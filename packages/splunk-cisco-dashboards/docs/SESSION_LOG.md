@@ -34,7 +34,7 @@ the Overview time range through their configured token parameters.
 | File | Net effect |
 |---|---|
 | `src/main/webapp/common/components/florida/IncidentTicker.tsx` | Uses an empty default fallback and returns `null` when there are no incident rows. |
-| `src/main/webapp/pages/overview/index.tsx` | Adds incident-feed and app-local priority-drilldown config constants, hides the ticker until configured, persists the selected priority target, renders the dashboard picker, and passes the current time range to compatible target dashboards. |
+| `src/main/webapp/pages/executive_insights/index.tsx` | Adds incident-feed and app-local priority-drilldown config constants, hides the ticker until configured, persists the selected priority target, renders the dashboard picker, and passes the current time range to compatible target dashboards. |
 | `docs/SESSION_LOG.md` | This entry. |
 
 ### Verification
@@ -110,7 +110,7 @@ more MacBook-width resize states.
 
 | File | Net effect |
 |---|---|
-| `src/main/webapp/pages/overview/index.tsx` | Added `useAvailableDashboardHeight`, compact-density wiring, measured shell height, compact sparkline marker behavior, and stable class/data hooks for the custom split breakpoint. |
+| `src/main/webapp/pages/executive_insights/index.tsx` | Added `useAvailableDashboardHeight`, compact-density wiring, measured shell height, compact sparkline marker behavior, and stable class/data hooks for the custom split breakpoint. |
 | `src/main/webapp/common/styles/tailwind.css` | Removes Simple XML wrapper padding for `#scan-root`; keeps Overview's right-side split active from 1120px upward. |
 | `docs/SESSION_LOG.md` | This entry. |
 
@@ -490,7 +490,7 @@ had no way to pick a horizontal-bar layout per tile.
   * `usePersistedMetricOverrides.ts` — added `'bar'` to
     `VALID_VIZ_OVERRIDES` and the `MetricOverride.vizOverride` type
     union so the picker can persist the new choice.
-  * `pages/overview/index.tsx` — widened
+  * `pages/executive_insights/index.tsx` — widened
     `MetricCardLeafProps.vizOverride` to include `'bar'`.
   * `KpiPickerPanel.tsx` — CHART STYLE radio group is now six-wide
     (`grid-cols-6`); added a Bar button that pulls the
@@ -568,7 +568,7 @@ overview after the Build 1173 stabilisation:
     to `MetricOverride`, with allow-list sanitisation
     (`area | line | column | singlevalue`) so a stale localStorage
     payload can't smuggle in an unrecognised viz name.
-  * `pages/overview/index.tsx` — `MetricCardLeaf` now resolves
+  * `pages/executive_insights/index.tsx` — `MetricCardLeaf` now resolves
     viz as `vizOverride ?? sparklineVizTypeFromSplunkViz(sbRecord.defaultViz)`,
     keeping conf-default behaviour when the override is unset and
     pinning the chart style across binding swaps when set.
@@ -597,7 +597,7 @@ overview after the Build 1173 stabilisation:
     `[data-export-hide]`, reveals its sibling
     `[data-export-placeholder]`, and pauses CSS keyframe animations
     on the entire subtree.
-  * `pages/overview/index.tsx` — wrapped the live
+  * `pages/executive_insights/index.tsx` — wrapped the live
     `CustomerTopologyMap` in a `data-export-hide` container with
     a `data-export-placeholder` sibling that shows the
     `TopologySiteTable` summary plus the caption *"Map rendered
@@ -2817,7 +2817,7 @@ matches what an operator would manually screenshot for a slide.
   mirroring the animations context. Default `true`, `Provider`
   re-export, `useIpAddressVisibility` hook.
 - `common/lib/splunkSearchUrl.ts` — extracted from
-  `pages/overview/index.tsx`. Exports `splunkSearchAppUrl`,
+  `pages/executive_insights/index.tsx`. Exports `splunkSearchAppUrl`,
   `openSplunkSearch`, `quoteHostForSpl`, `buildMetadataHostSpl`,
   and `DEFAULT_DRILLDOWN_RANGE` (`-24h@h … now`, matching the
   host-visibility window).
@@ -7525,7 +7525,7 @@ perspective:
   ~22px section header + ~4px gap + ~36px tile headline +
   ~72px chart floor + ~16px tile chrome ≈ 180px
 
-- **`pages/overview/index.tsx`.** The mirrored `min-h-[220px]`
+- **`pages/executive_insights/index.tsx`.** The mirrored `min-h-[220px]`
   on the section's `className` prop (which had to re-assert the
   floor because `tailwind-merge` lets the prop class win over
   the component's internal class) was lowered to
@@ -7858,7 +7858,7 @@ He bundled four other items into the same patch:
 
 Alan asked how thresholds are controlled — they're "really cool but
 appear hard-coded". Confirmed: each of the ~28 metric tiles has a
-TypeScript `MetricThresholds` literal in `pages/overview/index.tsx`,
+TypeScript `MetricThresholds` literal in `pages/executive_insights/index.tsx`,
 and the persisted `MetricOverride` shape carried only
 `savedSearch / label / valueField / description`. So thresholds were
 locked to whatever shipped, and worse: when the picker swapped
@@ -7926,7 +7926,7 @@ Storage version stays `v: 1` — the new fields are additive and the
 sanitizer drops anything malformed, so a user with a v1 store from
 before this build reads cleanly into the new shape.
 
-#### 2. `pages/overview/index.tsx`
+#### 2. `pages/executive_insights/index.tsx`
 
 - Imported `MetricThresholds` from `useMetric`.
 - New helper `mergeThresholds(base, override)` — reads each override
@@ -8033,7 +8033,7 @@ before this build reads cleanly into the new shape.
 - `packages/splunk-cisco-dashboards/src/main/webapp/common/hooks/usePersistedMetricOverrides.ts`
   — extended `MetricOverride`, added `isFiniteThresholdNumber` helper,
   extended `sanitizeOverride`, updated module-level header docs.
-- `packages/splunk-cisco-dashboards/src/main/webapp/pages/overview/index.tsx`
+- `packages/splunk-cisco-dashboards/src/main/webapp/pages/executive_insights/index.tsx`
   — imported `MetricThresholds`, added `mergeThresholds`, wired
   `applyOverride` to merge thresholds, extended `openPicker` signature,
   updated three call-sites.
@@ -8247,7 +8247,7 @@ Audited this repo's chart pipeline directly:
   *"min-h-[220px] is the lower bound at which a row of tiles
   still renders the headline + chart at a legible size … below
   that the sparkline canvas degenerates to a wavy pixel line."*
-- `pages/overview/index.tsx` line 2614: passed
+- `pages/executive_insights/index.tsx` line 2614: passed
   `className="flex-1 min-h-0"` into the section.
 
 Root cause: `cn()` in `common/lib/utils.ts` is `twMerge(clsx(…))`,
@@ -8273,7 +8273,7 @@ floor making it through `cn()` to the rendered DOM.
 
 #### What changed
 
-`pages/overview/index.tsx` — replaced the section override:
+`pages/executive_insights/index.tsx` — replaced the section override:
 
 - Before: `className="flex-1 min-h-0"`
 - After:  `className="flex-1 min-h-[220px]"`
@@ -8368,7 +8368,7 @@ under `devDependencies`. No more duplicate keys.
 
 - `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf`
   — `build = 94` → `build = 95`.
-- `packages/splunk-cisco-dashboards/src/main/webapp/pages/overview/index.tsx`
+- `packages/splunk-cisco-dashboards/src/main/webapp/pages/executive_insights/index.tsx`
   — section override className `flex-1 min-h-0` → `flex-1
   min-h-[220px]`, plus a 25-line comment block documenting the
   tailwind-merge aliasing trap.
@@ -8876,7 +8876,7 @@ Files scrubbed (with replacement counts):
 
 - `searchbase.conf` (51) — picker-visible description / explanation /
   related_info text plus internal comments.
-- `pages/overview/index.tsx` (4) — comment block plus the user-visible
+- `pages/executive_insights/index.tsx` (4) — comment block plus the user-visible
   "Sites < 90%" tile description.
 - `macros.conf` (2) — comment header.
 - `CustomerTopologyMap.tsx` (3) — comment block.
@@ -8910,7 +8910,7 @@ that needed hand-tightening:
   - "the data path is proven on the customer" → "the data path is proven against live customer data"
   - "If the table is empty on customer" → "If the table is empty on the customer stack"
   - "more reliably populated on the customer" → "more reliably populated on the customer stack"
-- `pages/overview/index.tsx`:
+- `pages/executive_insights/index.tsx`:
   - "Per the Overview review with the customer with Alan on 2026-05-11"
     → "Per the Overview review with the customer (Alan, 2026-05-11)"
   - "ranking is barely informative for an customer-style 2-site footprint"
@@ -9008,7 +9008,7 @@ unchanged.
 The `default/` package was still shipping with `[customer_name] = "Florida
 Division of Emergency Management"` baked into `macros.conf`, plus a
 secondary hardcoded fallback (`Operations Command Center`) in
-`pages/overview/index.tsx`, and the customer name embedded in the admin guide
+`pages/executive_insights/index.tsx`, and the customer name embedded in the admin guide
 markdown. Any fresh install on a non-customer stack therefore booted up
 labelled with the demo customer's name — bad first impression and required
 operators to know which file to edit before showing the dashboard.
@@ -9032,7 +9032,7 @@ discoverability does not depend on title-bar copy.
   pencil. Kept "Acme Corporation" and "Florida Division of Emergency
   Management" as commented examples so operators can see the shape.
 
-#### 2. Hardcoded React fallback (`pages/overview/index.tsx`)
+#### 2. Hardcoded React fallback (`pages/executive_insights/index.tsx`)
 
 - `DEFAULT_HEADER_TITLE_FALLBACK = 'Operations Command Center'` →
   `'Your Organization Name'`. Aligns the macro-load-failed safety net with
@@ -9059,7 +9059,7 @@ discoverability does not depend on title-bar copy.
 
 - `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/macros.conf`
   — `[customer_name]` default + Tier-0 comments.
-- `packages/splunk-cisco-dashboards/src/main/webapp/pages/overview/index.tsx`
+- `packages/splunk-cisco-dashboards/src/main/webapp/pages/executive_insights/index.tsx`
   — `DEFAULT_HEADER_TITLE_FALLBACK` constant.
 - `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/data/ui/views/admin_guide_v1.xml`
   — Dashboard Overview markdown.
@@ -9572,7 +9572,7 @@ This build addresses #2.
 
 ### What changed (Build 86)
 
-#### `pages/overview/index.tsx` — header branding cluster
+#### `pages/executive_insights/index.tsx` — header branding cluster
 
 Wrapped the logo + title/subtitle + pencil cluster in a named
 hover group (`group/branding`) and added opacity classes to the
@@ -9623,7 +9623,7 @@ are unchanged.
 
 ### Files touched
 
-* `packages/splunk-cisco-dashboards/src/main/webapp/pages/overview/index.tsx`
+* `packages/splunk-cisco-dashboards/src/main/webapp/pages/executive_insights/index.tsx`
 * `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf`
 * `packages/splunk-cisco-dashboards/docs/SESSION_LOG.md`
 
@@ -9888,7 +9888,7 @@ Sanitisation rules baked into the hook:
 wraps `FileReader` so the editor's file-input change handler can
 encode an upload to a `data:` URI in one promise.
 
-#### `pages/overview/index.tsx` — header rewiring
+#### `pages/executive_insights/index.tsx` — header rewiring
 
 * Imported `useBrandingOverride` and the `Edit3 / Upload / X`
   lucide icons.
@@ -9913,7 +9913,7 @@ encode an upload to a `data:` URI in one promise.
 
 #### New component: `BrandingEditorModal`
 
-Defined inline in `pages/overview/index.tsx` alongside
+Defined inline in `pages/executive_insights/index.tsx` alongside
 `MapPositionToggle`. Centered modal with backdrop blur,
 keyboard-friendly (Esc to close, backdrop click to close), and
 three controls:
@@ -9990,7 +9990,7 @@ as Build 84.
 
 ### What changed (Build 83)
 
-`pages/overview/index.tsx`:
+`pages/executive_insights/index.tsx`:
 
 1. **`MAP_POS_DEFAULT`**: `'below'` → `'right'`. Topology map
    becomes the executive's anchor visual on the right side at boot.
@@ -11991,7 +11991,7 @@ broken.
 
 ### Section defaults
 
-`usePersistedSectionTileCounts` parameters in `pages/overview/index.tsx`:
+`usePersistedSectionTileCounts` parameters in `pages/executive_insights/index.tsx`:
 
 - `minCount: 3` (unchanged)
 - `maxCount: 6` (unchanged — already cap from the IT Health 6th tile)
@@ -12116,7 +12116,7 @@ icon → KPI picker.
 ### Verification
 
 - `yarn run tsc --noEmit` clean after each step.
-- Lint clean on both `pages/overview/index.tsx` and
+- Lint clean on both `pages/executive_insights/index.tsx` and
   `common/components/florida/CustomerTopologyMap.tsx`.
 - `app.conf` build bumped to `66`.
 
@@ -12230,7 +12230,7 @@ either to drift independently).
 - `packages/splunk-cisco-dashboards/src/main/webapp/common/components/florida/InfoTooltip.tsx`
 - `packages/splunk-cisco-dashboards/src/main/webapp/common/components/florida/MetricItem.tsx`
 - `packages/splunk-cisco-dashboards/src/main/webapp/common/components/florida/TableTile.tsx`
-- `packages/splunk-cisco-dashboards/src/main/webapp/pages/overview/index.tsx`
+- `packages/splunk-cisco-dashboards/src/main/webapp/pages/executive_insights/index.tsx`
 
 **The deriver** (`useMetric.ts`):
 
@@ -12411,7 +12411,7 @@ commits the same evening:
 
 ### Commit B — vertical drag-to-resize for `below` / `above` modes
 
-**File:** `packages/splunk-cisco-dashboards/src/main/webapp/pages/overview/index.tsx`
+**File:** `packages/splunk-cisco-dashboards/src/main/webapp/pages/executive_insights/index.tsx`
 
 **Behaviour:** same splitter component renders in every mode, but
 the orientation, drag axis, and aria semantics swap based on
@@ -14194,7 +14194,7 @@ Three coordinated changes:
    block matching the rest of the catalogue, plus the SPL extracted
    verbatim from the topology overview's `append` blocks.
 
-2. **`KPI_CONFIG` in `pages/overview/index.tsx`** drops the inline
+2. **`KPI_CONFIG` in `pages/executive_insights/index.tsx`** drops the inline
    `spl` field and uses `savedSearch` pointing at the new stanzas:
 
    ```ts
@@ -14233,7 +14233,7 @@ Three coordinated changes:
   `[overview_operational_lead]` between the topology overview and the
   per-site health stanzas, with full descriptions and `Cisco`+
   `Overview`+`KPI`+`Site_Leaderboard` tags so the picker surfaces them.
-- `packages/splunk-cisco-dashboards/src/main/webapp/pages/overview/index.tsx`
+- `packages/splunk-cisco-dashboards/src/main/webapp/pages/executive_insights/index.tsx`
   — `KPI_CONFIG` now uses `savedSearch` (was inline `spl`); extended
   `buildEffectiveKpiCfg` no-override branch to resolve through
   `searchbaseByName`; tightened binding-footnote precedence.
@@ -14801,7 +14801,7 @@ dashboard header still says "Network Topology".
 
 **Root cause.** "Network Topology" and "Site connectivity and path
 health" were hardcoded as JSX literals in
-`pages/overview/index.tsx`. The editor's Name / Subtitle inputs were
+`pages/executive_insights/index.tsx`. The editor's Name / Subtitle inputs were
 correctly writing to the topology's `.name` / `.subtitle`, but
 nothing outside the editor read those fields.
 
@@ -14835,7 +14835,7 @@ fix obviously the right move.
     `lastAppliedViewRef`-driven `setView` so editor center/zoom edits
     actually move the map.
   - Exported `usePersistedTopology`.
-- `packages/splunk-cisco-dashboards/src/main/webapp/pages/overview/index.tsx`
+- `packages/splunk-cisco-dashboards/src/main/webapp/pages/executive_insights/index.tsx`
   - Replaced hardcoded "Network Topology" / "Site connectivity and
     path health" with values read from the persisted topology.
 - `packages/splunk-cisco-dashboards/docs/packet-animation-demo.html`
@@ -16392,7 +16392,7 @@ be on record alongside the May-8 narrative. Compressed summary by area:
   `overview` dashboards. Pre-emptive answers for archive impacts on
   `nav/default.xml`, default vs local conf placement, and index macro
   aliases (`scd_index_*` aliases alongside canonical `fdem_index_*`).
-- React `pages/overview/index.tsx` left in place; new Studio
+- React `pages/executive_insights/index.tsx` left in place; new Studio
   `executive_overview.xml` will ship alongside, decision to make one
   primary `/overview` deferred to Gate 6.
 

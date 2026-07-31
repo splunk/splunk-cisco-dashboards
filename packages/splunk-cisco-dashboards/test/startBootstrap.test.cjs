@@ -33,7 +33,7 @@ assert.equal(
 );
 assert.equal(
   homeUrl("/de-DE/app/splunk-cisco-dashboards/start"),
-  "/de-DE/app/splunk-cisco-dashboards/secure_networking_overview",
+  "/de-DE/app/splunk-cisco-dashboards/secure_networking_profile",
 );
 assert.equal(
   tuningUrl("/de-DE/app/splunk-cisco-dashboards/start"),
@@ -199,10 +199,18 @@ const applicationPath = path.resolve(
   "../src/main/resources/splunk/appserver/static/application.js",
 );
 const applicationSource = fs.readFileSync(applicationPath, "utf8");
-const overviewTemplateSource = fs.readFileSync(
+const legacyOverviewTemplatePath = path.resolve(
+  __dirname,
+  "../src/main/resources/splunk/appserver/templates/overview.html",
+);
+const viewsRoot = path.resolve(
+  __dirname,
+  "../src/main/resources/splunk/default/data/ui/views",
+);
+const navSource = fs.readFileSync(
   path.resolve(
     __dirname,
-    "../src/main/resources/splunk/appserver/templates/overview.html",
+    "../src/main/resources/splunk/default/data/ui/nav/default.xml",
   ),
   "utf8",
 );
@@ -214,13 +222,35 @@ const dashboardBuilderTemplateSource = fs.readFileSync(
   "utf8",
 );
 
-for (const templateSource of [
-  overviewTemplateSource,
-  dashboardBuilderTemplateSource,
+// Executive Insights deliberately uses Simple XML rather than a custom Mako
+// template. Splunk Web can reload these profile views on first install;
+// appserver/templates otherwise remains cached until a web restart.
+assert.equal(fs.existsSync(legacyOverviewTemplatePath), false);
+assert.equal(fs.existsSync(path.join(viewsRoot, "overview.xml")), false);
+assert.equal(
+  fs.existsSync(path.join(viewsRoot, "secure_networking_overview.xml")),
+  false,
+);
+for (const viewName of [
+  "executive_briefing_profile",
+  "secure_networking_profile",
 ]) {
-  assert.match(templateSource, /application\.js/);
-  assert.match(templateSource, /scdSetupGatePromise/);
+  const viewSource = fs.readFileSync(
+    path.join(viewsRoot, `${viewName}.xml`),
+    "utf8",
+  );
+  assert.match(viewSource, /<dashboard\b/);
+  assert.match(viewSource, /script="executive_insights_bootstrap\.js"/);
+  assert.match(viewSource, /id="scan-root"/);
+  assert.doesNotMatch(viewSource, /\btemplate=/);
 }
+assert.match(navSource, /name="secure_networking_profile"\s+default="true"/);
+assert.match(navSource, /name="executive_briefing_profile"/);
+assert.doesNotMatch(navSource, /name="secure_networking_overview"/);
+assert.doesNotMatch(navSource, /name="overview"/);
+
+assert.match(dashboardBuilderTemplateSource, /application\.js/);
+assert.match(dashboardBuilderTemplateSource, /scdSetupGatePromise/);
 
 async function runSetupGate(pathname, payload, responseOk = true) {
   const redirects = [];
@@ -267,7 +297,7 @@ async function runSetupGate(pathname, payload, responseOk = true) {
   assert.equal(unconfigured.gateResult, false);
 
   const configured = await runSetupGate(
-    "/en-US/app/splunk-cisco-dashboards/secure_networking_overview",
+    "/en-US/app/splunk-cisco-dashboards/secure_networking_profile",
     { entry: [{ content: { is_configured: "1" } }] },
   );
   assert.deepEqual(configured.redirects, []);
@@ -286,7 +316,7 @@ async function runSetupGate(pathname, payload, responseOk = true) {
   assert.equal(tuningView.requests.length, 0);
 
   const failedRead = await runSetupGate(
-    "/en-US/app/splunk-cisco-dashboards/secure_networking_overview",
+    "/en-US/app/splunk-cisco-dashboards/secure_networking_profile",
     null,
     false,
   );

@@ -87,7 +87,10 @@ const workspaceRoot = path.resolve(__dirname, '..', '..');
 
 const commonConfig = webpackMerge(baseConfig, {
     entry: {
-        overview: path.join(webappRoot, 'pages/overview/render.tsx'),
+        executive_insights: path.join(
+            webappRoot,
+            'pages/executive_insights/render.tsx'
+        ),
         health_monitoring: path.join(
             webappRoot,
             'pages/health_monitoring/render.tsx'

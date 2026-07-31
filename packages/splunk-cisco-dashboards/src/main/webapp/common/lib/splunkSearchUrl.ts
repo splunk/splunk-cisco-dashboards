@@ -1,7 +1,7 @@
 /**
  * Splunk Search drilldown URL builder — Build 115.13 extraction.
  *
- * The same helper has lived inline in `pages/overview/index.tsx`
+ * The same helper has lived inline in `pages/executive_insights/index.tsx`
  * since the dashboard launched (`splunkSearchAppUrl`). The diagram
  * canvas needs an identical builder so "Open in Search" affordances
  * dispatch inside the same Splunk app namespace as the metric tiles.

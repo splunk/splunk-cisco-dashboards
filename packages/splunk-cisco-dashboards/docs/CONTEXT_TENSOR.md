@@ -139,4 +139,4 @@ The Gate 1 deliverable is the empty registry that Gate 3a populates with the pil
 }
 ```
 
-Note `executive_overview` (not `overview`) — the React Overview lives at `pages/overview/index.tsx` and is **not** in the SCD framework's audit scope.
+Note `executive_overview` (not `overview`) — the React Overview lives at `pages/executive_insights/index.tsx` and is **not** in the SCD framework's audit scope.

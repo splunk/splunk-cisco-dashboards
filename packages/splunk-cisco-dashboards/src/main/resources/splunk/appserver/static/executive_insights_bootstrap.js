@@ -1,13 +1,15 @@
 /**
- * Shared bootstrap for the Overview React bundle and its shell chrome.
+ * Shared Simple XML bootstrap for the Executive Insights React experience.
  *
- * Both overview.xml (Executive Briefing) and
- * secure_networking_overview.xml (Secure Networking) load this file, so
- * shell-level behavior belongs here rather than in either profile.
+ * Both executive_briefing_profile.xml and secure_networking_profile.xml load
+ * this file and provide the same #scan-root mount for their selected profile.
+ * Keeping this outside appserver/templates makes a first install immediately
+ * usable without requiring Splunk Web to restart its Mako template loader.
  */
-var SCD_OVERVIEW_APP_NAME = 'splunk-cisco-dashboards';
-var SCD_OVERVIEW_UPDATE_HOST_SELECTOR = '[data-scd-app-update-host]';
-var SCD_OVERVIEW_VERSION_PATTERN =
+var SCD_EXECUTIVE_INSIGHTS_APP_NAME = 'splunk-cisco-dashboards';
+var SCD_EXECUTIVE_INSIGHTS_UPDATE_HOST_SELECTOR =
+    '[data-scd-app-update-host]';
+var SCD_EXECUTIVE_INSIGHTS_VERSION_PATTERN =
     /^v?(\d+(?:\.\d+)*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
 
 function scdNormalizeAppVersion(value) {
@@ -16,7 +18,7 @@ function scdNormalizeAppVersion(value) {
 
 function scdParseAppVersion(value) {
     var normalized = scdNormalizeAppVersion(value);
-    var match = normalized.match(SCD_OVERVIEW_VERSION_PATTERN);
+    var match = normalized.match(SCD_EXECUTIVE_INSIGHTS_VERSION_PATTERN);
     if (!match) return null;
 
     return {
@@ -101,10 +103,12 @@ function scdLocalePrefix(pathname) {
 }
 
 function scdInstallUpdateBadgeStyles() {
-    if (document.getElementById('scd-overview-update-badge-styles')) return;
+    if (document.getElementById('scd-executive-insights-update-badge-styles')) {
+        return;
+    }
 
     var style = document.createElement('style');
-    style.id = 'scd-overview-update-badge-styles';
+    style.id = 'scd-executive-insights-update-badge-styles';
     style.textContent =
         '.scd-shell-update-badge{' +
         'display:inline-flex!important;align-items:center!important;' +
@@ -131,7 +135,9 @@ function scdInstallUpdateBadgeStyles() {
 }
 
 function scdRenderUpdateBadge(appVersions) {
-    var host = document.querySelector(SCD_OVERVIEW_UPDATE_HOST_SELECTOR);
+    var host = document.querySelector(
+        SCD_EXECUTIVE_INSIGHTS_UPDATE_HOST_SELECTOR
+    );
     if (!host) return false;
 
     var existing = host.querySelector('.scd-shell-update-badge');
@@ -156,7 +162,7 @@ function scdRenderUpdateBadge(appVersions) {
     badge.href =
         locale +
         '/manager/appinstall/' +
-        encodeURIComponent(SCD_OVERVIEW_APP_NAME);
+        encodeURIComponent(SCD_EXECUTIVE_INSIGHTS_APP_NAME);
     badge.target = '_blank';
     badge.rel = 'noopener noreferrer';
     badge.title = title;
@@ -191,7 +197,7 @@ function scdLoadUpdateBadge() {
     var endpoint =
         locale +
         '/splunkd/__raw/services/apps/local/' +
-        encodeURIComponent(SCD_OVERVIEW_APP_NAME) +
+        encodeURIComponent(SCD_EXECUTIVE_INSIGHTS_APP_NAME) +
         '?output_mode=json';
 
     fetch(endpoint, {
@@ -217,9 +223,10 @@ function scdLoadUpdateBadge() {
         });
 }
 
-if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-    scdInstallUpdateBadgeStyles();
-    scdLoadUpdateBadge();
+function scdLoadExecutiveInsightsBundle() {
+    if (document.querySelector('script[data-scd-executive-insights-bundle]')) {
+        return;
+    }
 
     /*
      * Splunk serves app static assets with long-lived cache headers. Keep
@@ -227,11 +234,32 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
      * do not leave browsers running a stale bundle.
      */
     var scdAssetVersion = Date.now();
-    var scdOverviewScript = document.createElement('script');
-    scdOverviewScript.src =
-        '/static/app/splunk-cisco-dashboards/pages/overview.js?v=' +
+    var scdExecutiveInsightsScript = document.createElement('script');
+    scdExecutiveInsightsScript.setAttribute(
+        'data-scd-executive-insights-bundle',
+        'true'
+    );
+    scdExecutiveInsightsScript.src =
+        '/static/app/splunk-cisco-dashboards/pages/executive_insights.js?v=' +
         scdAssetVersion;
-    document.body.appendChild(scdOverviewScript);
+    document.body.appendChild(scdExecutiveInsightsScript);
+}
+
+function scdLoadExecutiveInsightsWhenConfigured() {
+    // Simple XML loads application.js before its view script, so the normal
+    // path waits for the app-wide first-run gate. Fail open if a nonstandard
+    // shell omitted the gate, matching application.js's endpoint-failure
+    // behavior and avoiding a blank dashboard.
+    var setupGate = window.scdSetupGatePromise;
+    Promise.resolve(setupGate).then(function (canLoadApp) {
+        if (canLoadApp !== false) scdLoadExecutiveInsightsBundle();
+    });
+}
+
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+    scdInstallUpdateBadgeStyles();
+    scdLoadUpdateBadge();
+    scdLoadExecutiveInsightsWhenConfigured();
 }
 
 if (typeof module !== 'undefined' && module.exports) {

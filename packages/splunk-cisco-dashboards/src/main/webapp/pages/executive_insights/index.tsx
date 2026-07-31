@@ -1,5 +1,5 @@
 /**
- * Splunk Cisco Dashboards — Overview Page
+ * Splunk Cisco Dashboards — Executive Insights
  *
  * Executive landing page adapted for Splunk and pumped full of
  * dashboards-tooling niceties:
@@ -2074,7 +2074,7 @@ const ScalarGaugeCardLeaf: React.FC<ScalarGaugeCardLeafProps> = ({
 // Page
 // =============================================================================
 
-const OverviewPage: React.FC = () => {
+const ExecutiveInsightsPage: React.FC = () => {
   // ------------------------------ Theme ------------------------------
   const { theme, resolvedTheme, cycle: cycleTheme } = useTheme();
   const availableDashboardHeight = useAvailableDashboardHeight();
@@ -3017,8 +3017,8 @@ const OverviewPage: React.FC = () => {
   // after webpack has compiled the bundle. Prefer that live value so the
   // operator sees the version/build Splunk is actually running. Retain the
   // compile-time label as a resilient fallback when the endpoint is unavailable.
-  // The shared overview_bootstrap.js owns the update badge so both XML shells
-  // get the same update check and direct app-installer link.
+  // The shared executive_insights_bootstrap.js owns the update badge so both
+  // profile shells get the same update check and direct app-installer link.
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
     let cancelled = false;
@@ -7749,4 +7749,4 @@ const KpiCard: React.FC<KpiCardProps> = ({
   </div>
 );
 
-export default OverviewPage;
+export default ExecutiveInsightsPage;

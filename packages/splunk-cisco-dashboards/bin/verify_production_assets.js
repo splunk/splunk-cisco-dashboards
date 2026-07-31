@@ -17,7 +17,7 @@ const APACHE_LICENSE_SHA256 =
     'cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30';
 
 const ENTRY_NAMES = [
-    'overview',
+    'executive_insights',
     'health_monitoring',
     'topology_canvas_v1',
     'network_diagram',

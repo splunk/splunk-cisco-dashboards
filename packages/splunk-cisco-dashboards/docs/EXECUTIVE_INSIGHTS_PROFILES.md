@@ -1,6 +1,6 @@
-# Overview Profiles
+# Executive Insights Profiles
 
-The Overview dashboard is a shared React engine that can render multiple
+Executive Insights is a shared React experience that can render multiple
 solution-specific experiences without cloning the page.
 
 ## Profiles
@@ -28,10 +28,11 @@ branding, drilldowns, and Signal Rail settings do not bleed across profiles.
 
 `secure_networking` is activated by the Splunk view:
 
-`default/data/ui/views/secure_networking_overview.xml`
+`default/data/ui/views/secure_networking_profile.xml`
 
-That view loads the same `overview_bootstrap.js` bundle as `overview.xml`; the
-React page chooses the profile from the current view name.
+That view and `executive_briefing_profile.xml` both load
+`executive_insights_bootstrap.js`; the React page chooses the profile from the
+current view name.
 
 The Secure Networking profile has five sections:
 
@@ -73,7 +74,7 @@ curation work appear in the profile before every stanza has hand-authored
 ## Factory Defaults
 
 The existing packaged stanzas in `overview_factory_tiles.conf` still apply to
-the default Executive Overview profile.
+the Executive Briefing profile.
 
 When an admin saves Secure Networking defaults from the picker, runtime writes
 use profile-prefixed stanzas such as:

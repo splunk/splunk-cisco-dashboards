@@ -1,8 +1,0 @@
-<?xml version="1.0"?>
-<view
-    template="splunk-cisco-dashboards:/templates/overview.html"
-    type="html"
-    isDashboard="False"
->
-    <label>Splunk for Secure Networking</label>
-</view>

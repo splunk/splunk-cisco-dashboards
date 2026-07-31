@@ -1,7 +1,7 @@
 /**
  * Bootstrap loader for the Network Topology Canvas v1 React bundle.
  *
- * Mirrors `overview_bootstrap.js`: Simple XML loads this via the
+ * Mirrors `executive_insights_bootstrap.js`: Simple XML loads this via the
  * `<dashboard script="...">` attribute. We require() the webpack
  * bundle which mounts itself into `#scan-root` inside the panel.
  *

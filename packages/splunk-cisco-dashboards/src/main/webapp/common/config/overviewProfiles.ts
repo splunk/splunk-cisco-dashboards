@@ -158,7 +158,7 @@ export const OVERVIEW_PROFILES: Record<OverviewProfileId, OverviewProfile> = {
   executive: {
     id: DEFAULT_OVERVIEW_PROFILE_ID,
     label: "Executive Briefing",
-    viewNames: ["overview"],
+    viewNames: ["executive_briefing_profile"],
     sections: EXECUTIVE_SECTIONS,
     defaultVisibleSections: ["it_health", "security", "building"],
     maxVisibleSections: 4,
@@ -169,7 +169,7 @@ export const OVERVIEW_PROFILES: Record<OverviewProfileId, OverviewProfile> = {
   secure_networking: {
     id: SECURE_NETWORKING_PROFILE_ID,
     label: "Secure Networking",
-    viewNames: ["secure_networking_overview"],
+    viewNames: ["secure_networking_profile"],
     headerTitle: "Splunk for Secure Networking",
     headerSubtitle: "Secure Networking Executive Insights",
     hideDefaultLogo: true,
