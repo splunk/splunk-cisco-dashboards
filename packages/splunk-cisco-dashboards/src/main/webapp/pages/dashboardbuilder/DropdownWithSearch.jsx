@@ -246,16 +246,11 @@ export default function DropdownWithSearch({
         return true;
     });
 
-    const availableTags = sortedUnique(
-        facetFilteredSearches.flatMap((search) => search.tags || []),
-    );
-
-    const filteredSearches = facetFilteredSearches.filter((search) => {
-        if (selectedTags.some((tag) => !(search.tags || []).includes(tag))) return false;
-
-        const query = searchTerm.trim().toLowerCase();
-        if (!query) return true;
-
+    const query = searchTerm.trim().toLowerCase();
+    const queryFilteredSearches = facetFilteredSearches.filter((search) => {
+        if (!query) {
+            return true;
+        }
         const haystack = [
             search.searchName,
             search.id,
@@ -274,6 +269,18 @@ export default function DropdownWithSearch({
 
         return haystack.includes(query);
     });
+
+    // Tags are an AND facet. Build their choices from the searches that match
+    // every filter already applied, including the currently selected tags.
+    // This prevents the picker from offering a next tag that would reduce the
+    // result set to zero, while removing a tag immediately broadens the list.
+    const filteredSearches = queryFilteredSearches.filter(
+        (search) => !selectedTags.some((tag) => !(search.tags || []).includes(tag)),
+    );
+
+    const availableTags = sortedUnique(
+        filteredSearches.flatMap((search) => search.tags || []),
+    );
 
     const sortedSearches = [...filteredSearches].sort((left, right) =>
         left.searchName.localeCompare(right.searchName, undefined, { sensitivity: 'base' }),
@@ -432,9 +439,10 @@ export default function DropdownWithSearch({
                                                 <input
                                                     type="checkbox"
                                                     checked={includeHiddenSearches}
-                                                    onChange={(e) =>
-                                                        setIncludeHiddenSearches(e.target.checked)
-                                                    }
+                                                    onChange={(e) => {
+                                                        setIncludeHiddenSearches(e.target.checked);
+                                                        setSelectedTags([]);
+                                                    }}
                                                 />
                                                 <span>Show hidden searches</span>
                                             </label>
@@ -442,9 +450,12 @@ export default function DropdownWithSearch({
                                                 <input
                                                     type="checkbox"
                                                     checked={includeDrilldownSearches}
-                                                    onChange={(e) =>
-                                                        setIncludeDrilldownSearches(e.target.checked)
-                                                    }
+                                                    onChange={(e) => {
+                                                        setIncludeDrilldownSearches(
+                                                            e.target.checked,
+                                                        );
+                                                        setSelectedTags([]);
+                                                    }}
                                                 />
                                                 <span>Show drill-down searches</span>
                                             </label>
@@ -452,9 +463,10 @@ export default function DropdownWithSearch({
                                                 <input
                                                     type="checkbox"
                                                     checked={includeTableSearches}
-                                                    onChange={(e) =>
-                                                        setIncludeTableSearches(e.target.checked)
-                                                    }
+                                                    onChange={(e) => {
+                                                        setIncludeTableSearches(e.target.checked);
+                                                        setSelectedTags([]);
+                                                    }}
                                                 />
                                                 <span>Show table searches</span>
                                             </label>

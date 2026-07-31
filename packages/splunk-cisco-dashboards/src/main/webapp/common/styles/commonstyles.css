@@ -4391,6 +4391,23 @@ code {
 .dashboardbuilderview#collection_container {
     background: var(--dashboard-builder-background-page, #f9f9f9);
     color: var(--dashboard-builder-content-default, #4d4d4d);
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+/*
+ * @splunk/react-page renders the app content as a flex item with the browser
+ * default min-width:auto. Dashboard Studio's absolute canvas contributes its
+ * configured pixel width to that item's intrinsic size, which can make the
+ * entire document wider than the viewport. Keep that canvas width contained
+ * inside the editor workspace so the toolbar and app chrome stay in view.
+ */
+body > div[role='main'] > div:has(> #collection_container.dashboardbuilderview) {
+    min-width: 0;
+    width: 0;
+    overflow-x: hidden;
 }
 .dashboardbuilderview-light,
 .dashboard-manager-page-light,

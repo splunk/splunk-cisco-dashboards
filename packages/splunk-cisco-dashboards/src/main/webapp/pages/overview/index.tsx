@@ -2419,10 +2419,10 @@ const OverviewPage: React.FC = () => {
   //
   // Bounds come from the active overview profile, with per-section
   // defaults from overview_factory_tiles.conf. Secure Networking ships
-  // with nine visible factory KPIs per section; operators can save a
-  // different shared default from the
-  // picker footer, and individual users can still dial the visible count
-  // up/down with the section pill.
+  // with three visible factory KPIs per section and an ordered catalogue of
+  // nine; operators can save a different shared default from the picker
+  // footer, and individual users can still dial the visible count up/down
+  // with the section pill.
   // Returning users keep whatever count they had configured because
   // the per-section preference is keyed off localStorage.
   //

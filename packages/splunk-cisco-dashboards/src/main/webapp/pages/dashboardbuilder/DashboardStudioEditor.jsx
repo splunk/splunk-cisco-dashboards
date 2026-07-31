@@ -86,6 +86,8 @@ import useDashboardStore from '../../common/state/dashboardStore';
 import createSEIIconRegistry from '../../common/udf/IconProviders/createSEIIconRegistry';
 import { resolveSearchbaseDefinitionForNativeStudio } from './searchbaseDefinitionUtils';
 
+const ENABLE_EXPERIMENTAL_SPACE_MANAGER = false;
+
 const StyledCardContent = styled.div`
     height: 160px;
     background: #ffffff;
@@ -1166,7 +1168,9 @@ const DashboardStudioEditor = ({
                     />
                     <BackgroundButton key="backgroundButton" iconColor="#26afac" />
                     <InsightKpiButton key="insightKpi" />
-                    <SpaceManagerButton key="spaceManager" />
+                    {ENABLE_EXPERIMENTAL_SPACE_MANAGER && (
+                        <SpaceManagerButton key="spaceManager" />
+                    )}
                 </ItemGroup>,
                 <ItemGroup key="sideToolbar" align="right" borders={false}>
                     <ModeSwitch key="modeSwitch" />
@@ -1199,7 +1203,9 @@ const DashboardStudioEditor = ({
                     />
                     <BackgroundButton key="backgroundButton" iconColor="#26afac" />
                     <InsightKpiButton key="insightKpi" />
-                    <SpaceManagerButton key="spaceManager" />
+                    {ENABLE_EXPERIMENTAL_SPACE_MANAGER && (
+                        <SpaceManagerButton key="spaceManager" />
+                    )}
                 </ItemGroup>,
                 <ItemGroup key="sideToolbar" align="right" borders={false}>
                     <Button
