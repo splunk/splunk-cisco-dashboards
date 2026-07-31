@@ -23,6 +23,14 @@ const dashboardUrl = (dashboardId = '') =>
         INSIGHTS_APP_ID,
     )}/data/ui/views${dashboardId ? `/${encodeURIComponent(dashboardId)}` : ''}`;
 
+export const normalizeDashboardTheme = (theme, fallback) => {
+    if (theme === 'dark' || theme === 'light') {
+        return theme;
+    }
+
+    return fallback === 'dark' || fallback === 'light' ? fallback : undefined;
+};
+
 export async function getDashboards() {
     return requestJson(`${dashboardUrl()}?${jsonCountParams.toString()}`, {
         method: 'GET',
@@ -49,8 +57,10 @@ export async function addDash(
     dashLabel = undefined,
     dashDescription = '',
     dashTag = '',
+    dashTheme = 'light',
 ) {
-    const definition = `<dashboard version="2" theme="light">
+    const dashboardTheme = normalizeDashboardTheme(dashTheme, 'light');
+    const definition = `<dashboard version="2" theme="${dashboardTheme}">
    <label>${escapeXml(dashLabel || dashName)}</label>
    <description>${escapeXml(dashDescription)}</description>
    <definition><![CDATA[${jsonDefinition}]]></definition>
@@ -98,6 +108,7 @@ export async function updateDashMetadata(
     dashLabel,
     dashDescription = '',
     dashTag = '',
+    dashTheme = 'light',
 ) {
     const updatedDefinition = {
         ...dashboardDefinition,
@@ -112,6 +123,7 @@ export async function updateDashMetadata(
         dashLabel,
         dashDescription,
         dashTag,
+        dashTheme,
     );
 }
 

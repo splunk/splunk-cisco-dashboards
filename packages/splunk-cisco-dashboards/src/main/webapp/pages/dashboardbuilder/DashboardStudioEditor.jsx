@@ -56,7 +56,11 @@ import {
 import Cog from '@splunk/react-icons/Cog';
 
 import Card from '@splunk/react-ui/Card';
-import { getDashboards, syncDashboardManagerNavigation } from '../../common/lib/splunk';
+import {
+    getDashboards,
+    normalizeDashboardTheme,
+    syncDashboardManagerNavigation,
+} from '../../common/lib/splunk';
 import { defaultFetchInit } from '@splunk/splunk-utils/fetch';
 import { INSIGHTS_APP_ID } from '../../common/lib/constants';
 import { getDashboard } from '../../common/lib/splunk';
@@ -143,6 +147,7 @@ const toDashboardRecord = (dashboard) => {
             label: dashboard.label,
             description: dashboard.description,
             tag: dashboard.tag,
+            theme: normalizeDashboardTheme(dashboard.theme),
         };
     }
 
@@ -160,6 +165,7 @@ const toDashboardRecord = (dashboard) => {
         label: dashboard.label,
         description: dashboard.description,
         tag: dashboard.tag,
+        theme: normalizeDashboardTheme(dashboard.theme),
     };
 };
 
@@ -250,8 +256,18 @@ export const initialDefinition = {
     title: '',
 };
 
-async function updateDash(dashName, jsonDefinition, app, owner, description, label, tag = '') {
-    let definition = `<dashboard version="2" theme="light">
+async function updateDash(
+    dashName,
+    jsonDefinition,
+    app,
+    owner,
+    description,
+    label,
+    tag = '',
+    theme = 'light',
+) {
+    const dashboardTheme = normalizeDashboardTheme(theme, 'light');
+    let definition = `<dashboard version="2" theme="${dashboardTheme}">
     <label>${escapeXml(label)}</label>
     <description>${escapeXml(description)}</description>
     <tag>${escapeXml(tag)}</tag>
@@ -769,6 +785,10 @@ const DashboardStudioEditor = ({
     const [currentDashboard, setCurrentDashboard] = useState(() =>
         toDashboardRecord(initialDashboard),
     );
+    const dashboardColorScheme = normalizeDashboardTheme(
+        currentDashboard?.theme,
+        dashboardBuilderColorScheme,
+    );
     const [dashID, setDashID] = useState(openID);
     const [dashMode, setDashMode] = useState(readOnly ? 'view' : openID ? 'edit' : 'view');
     const [serverInfo, setServerInfo] = useState();
@@ -798,7 +818,10 @@ const DashboardStudioEditor = ({
                         .filter((c) => c.content.isDashboard && c.content.version == '2')
                         .map((r) => {
                             const { XMLParser } = require('fast-xml-parser');
-                            const parser = new XMLParser();
+                            const parser = new XMLParser({
+                                ignoreAttributes: false,
+                                attributeNamePrefix: '',
+                            });
                             try {
                                 let jObj = parser.parse(r.content['eai:data']);
                                 const normalizedDefinition = jObj.dashboard.definition.replace(/\n/g, '');
@@ -816,6 +839,7 @@ const DashboardStudioEditor = ({
                                     title: r.name,
                                     label: r.content['label'],
                                     tag: jObj.dashboard.tag || r.content['tag'] || '',
+                                    theme: normalizeDashboardTheme(jObj.dashboard.theme),
                                     template: data.template ? data.template : false,
                                 };
                             } catch (error) {
@@ -860,7 +884,10 @@ const DashboardStudioEditor = ({
             getDashboard(dashID).then((response) => {
                 if (response.status >= 200 && response.status <= 299) {
                     const { XMLParser } = require('fast-xml-parser');
-                    const parser = new XMLParser();
+                    const parser = new XMLParser({
+                        ignoreAttributes: false,
+                        attributeNamePrefix: '',
+                    });
                     let jObj = parser.parse(response.entry[0].content['eai:data']);
 
                     try {
@@ -887,6 +914,7 @@ const DashboardStudioEditor = ({
                             label: response.entry[0].content['label'],
                             description: response.entry[0].content['description'],
                             tag: jObj.dashboard.tag || response.entry[0].content['tag'] || '',
+                            theme: normalizeDashboardTheme(jObj.dashboard.theme),
                         });
                     } catch (e) {
                         console.error(e);
@@ -943,6 +971,7 @@ const DashboardStudioEditor = ({
                 dashboardDescription,
                 dashboardLabel,
                 currentDashboard.tag,
+                dashboardColorScheme,
             );
 
             if (response.status >= 200 && response.status <= 299) {
@@ -978,7 +1007,13 @@ const DashboardStudioEditor = ({
                 type: TOAST_TYPES.ERROR,
             });
         });
-    }, [currentDashboard, dashID, editedDefinition, onDashboardSaved]);
+    }, [
+        currentDashboard,
+        dashboardColorScheme,
+        dashID,
+        editedDefinition,
+        onDashboardSaved,
+    ]);
 
     const handleModeChange = useCallback(
         (newMode) => {
@@ -1819,7 +1854,7 @@ const DashboardStudioEditor = ({
                     <SplunkThemeProvider
                         family="prisma"
                         density="comfortable"
-                        colorScheme={dashboardBuilderColorScheme}
+                        colorScheme={dashboardColorScheme}
                     >
                         <DashboardContextProvider
                             key="DashboardStudioEditorContext"

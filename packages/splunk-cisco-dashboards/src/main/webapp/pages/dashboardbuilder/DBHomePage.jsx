@@ -14,6 +14,7 @@ import {
   getDashboards,
   deleteDashboard,
   updateDashMetadata,
+  normalizeDashboardTheme,
   syncDashboardManagerNavigation,
 } from "../../common/lib/splunk";
 import { DashboardContextProvider } from "@splunk/dashboard-context";
@@ -448,7 +449,10 @@ export default function DBHomePage() {
     getDashboards().then((response) => {
       if (response.status >= 200 && response.status <= 299) {
         const { XMLParser } = require("fast-xml-parser");
-        const parser = new XMLParser();
+        const parser = new XMLParser({
+          ignoreAttributes: false,
+          attributeNamePrefix: "",
+        });
 
         const insightDash = response.entry
           .filter((c) => c.content.isDashboard && c.content.version == "2")
@@ -488,6 +492,7 @@ export default function DBHomePage() {
                 title: r.name,
                 label: r.content["label"],
                 description,
+                theme: normalizeDashboardTheme(jObj.dashboard.theme),
                 isFavorite,
                 searchText: buildDashboardSearchText({
                   title: r.name,
@@ -630,6 +635,8 @@ export default function DBHomePage() {
       dashboardMetadataTarget.definition,
       dashboardMetadataTitle.trim(),
       dashboardMetadataDescription.trim(),
+      "",
+      dashboardMetadataTarget.theme,
     ).then((response) => {
       if (response.status >= 200 && response.status <= 299) {
         makeCreateToast(Toaster)({
