@@ -43,6 +43,8 @@ const TUNING_SEARCH_NAME = "Admin - Macro Index Tuning";
 const ADHOC_MACRO_NAME = "scd_summariesonly";
 const DEFAULT_SUMMARIESONLY_DEFINITION =
   "summariesonly=false allow_old_summaries=false fillnull_value=null";
+const ACCELERATED_SUMMARIESONLY_DEFINITION =
+  "summariesonly=true allow_old_summaries=true fillnull_value=null";
 const DEFAULT_SUMMARIESONLY_DESCRIPTION =
   "Controls whether data-model searches use only accelerated summaries or may fall back to raw events. Keep summariesonly=false until all required data models are fully accelerated.";
 const SUMMARIESONLY_ACCELERATION_ERROR =
@@ -1345,6 +1347,24 @@ export default function MacroIndexTuningPage(): JSX.Element {
   const isSavingAll = Object.values(saveStatuses).some(
     (status) => status.state === "saving",
   );
+  const setupIndexValueCount = setupRowsToSave.reduce(
+    (sum, row) => sum + extractIndexTokens(row.draftDefinition).length,
+    0,
+  );
+  const unknownSourcetypeGroups = rows.filter(
+    (row) => row.macro === "unknown",
+  ).length;
+  const acceleratedRequiredModels = requiredDataModels.filter(
+    (item) => item.state === "enabled",
+  ).length;
+  const selectSetupPerformanceMode = (acceleratedOnly: boolean) => {
+    setAdhocDefinition(
+      acceleratedOnly
+        ? ACCELERATED_SUMMARIESONLY_DEFINITION
+        : DEFAULT_SUMMARIESONLY_DEFINITION,
+    );
+    setAdhocStatus({ state: "idle" });
+  };
   const resolvedSearchSpl = useMemo(
     () =>
       searchSpl ? injectIndexMacroOrClause(searchSpl, scdIndexMacroNames) : "",
@@ -1861,6 +1881,481 @@ export default function MacroIndexTuningPage(): JSX.Element {
         </React.Fragment>
       );
     });
+
+  if (setupMode) {
+    const setupRowGroups = groupRowsByTargetApp(setupRowsToSave);
+    const setupScanReady = scanState === "ready";
+    const setupMacroCountLabel =
+      setupRowsToSave.length === 1 ? "index macro is" : "index macros are";
+    const setupMacroNoun =
+      setupRowsToSave.length === 1 ? "index macro" : "index macros";
+    const setupMetrics = [
+      {
+        value: setupRowsToSave.length,
+        label: "Macros",
+        colorClass: "text-sky-700",
+      },
+      {
+        value: setupIndexValueCount,
+        label: "Indexes",
+        colorClass: "text-emerald-700",
+      },
+      {
+        value: unknownSourcetypeGroups,
+        label: "Unmapped",
+        colorClass:
+          unknownSourcetypeGroups > 0
+            ? "text-amber-700"
+            : "text-emerald-700",
+      },
+    ];
+    let scanEyebrow = "Automatic scan complete";
+    let scanHeading = `${setupRowsToSave.length} ${setupMacroCountLabel} ready to save`;
+    if (isLoading) {
+      scanEyebrow = "Automatic scan in progress";
+      scanHeading = "Finding Cisco index macros…";
+    } else if (error) {
+      scanEyebrow = "Automatic scan needs attention";
+      scanHeading = "The index scan could not complete";
+    }
+    let performanceStatusClass = "bg-slate-100 text-slate-600";
+    let performanceStatusMessage =
+      "Balanced mode is ready with no extra action.";
+    if (summariesOnlyEnabled && accelerationCheckInProgress) {
+      performanceStatusClass = "bg-sky-50 text-sky-800";
+      performanceStatusMessage =
+        "Checking required data-model acceleration…";
+    } else if (summariesOnlyBlocked) {
+      performanceStatusClass = "bg-red-50 text-red-800";
+      performanceStatusMessage = `${acceleratedRequiredModels} of ${requiredDataModels.length} required data models are accelerated.`;
+    } else if (summariesOnlyEnabled) {
+      performanceStatusClass = "bg-emerald-50 text-emerald-800";
+      performanceStatusMessage =
+        "All required Cisco data models are accelerated.";
+    }
+    let setupActionMessage = `${setupRowsToSave.length} detected ${setupMacroNoun} and the selected performance mode will be saved.`;
+    if (summariesOnlyBlocked) {
+      setupActionMessage =
+        "Choose Balanced or accelerate all three required Cisco data models.";
+    } else if (!setupScanReady) {
+      setupActionMessage = "Waiting for the automatic index scan to finish.";
+    }
+
+    return (
+      <main className="min-h-screen bg-[#f4f8fa] pb-28 text-slate-800">
+        <section className="bg-[#102a43] text-white">
+          <div className="mx-auto grid max-w-[1180px] gap-6 px-7 py-5 md:grid-cols-[minmax(0,1fr)_400px] md:items-center">
+            <div className="min-w-0">
+              <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-cyan-300">
+                Splunk Cisco Dashboards · Setup · Step 3 of 3
+              </div>
+              <h1 className="mt-1 text-2xl font-bold leading-tight text-white">
+                Finish setup with the detected index macros
+              </h1>
+              <p className="mt-1.5 max-w-3xl text-sm text-slate-300">
+                Review exceptions, choose a search-performance mode, then save
+                and unlock the dashboards.
+              </p>
+            </div>
+            <ol className="grid grid-cols-3 overflow-hidden rounded-md bg-white/10 text-[11px] font-bold">
+              <li className="flex min-h-10 items-center gap-2 bg-emerald-900 px-3 text-emerald-50">
+                <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-600 text-[10px]">
+                  <Check size={12} />
+                </span>
+                Check data
+              </li>
+              <li className="flex min-h-10 items-center gap-2 bg-emerald-900 px-3 text-emerald-50">
+                <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-600 text-[10px]">
+                  <Check size={12} />
+                </span>
+                Packages
+              </li>
+              <li className="flex min-h-10 items-center gap-2 bg-sky-800 px-3 text-white">
+                <span className="grid h-5 w-5 place-items-center rounded-full bg-cyan-500 text-[10px]">
+                  3
+                </span>
+                Tune indexes
+              </li>
+            </ol>
+          </div>
+        </section>
+
+        <div className="mx-auto max-w-[1180px] px-6 py-5">
+          <section
+            aria-live="polite"
+            className={`mb-4 grid gap-4 rounded-lg border px-5 py-3.5 md:grid-cols-[minmax(0,1fr)_auto] md:items-center ${
+              error
+                ? "border-red-200 bg-red-50"
+                : "border-emerald-200 bg-emerald-50"
+            }`}
+          >
+            <div>
+              <div
+                className={`text-[10px] font-bold uppercase tracking-wide ${
+                  error ? "text-red-700" : "text-emerald-700"
+                }`}
+              >
+                {scanEyebrow}
+              </div>
+              <h2 className="mt-0.5 text-lg font-bold text-slate-900">
+                {scanHeading}
+              </h2>
+              <p className="mt-0.5 text-xs text-slate-600">
+                {error ||
+                  "Only review definitions when an index looks unexpected."}
+              </p>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {setupMetrics.map(({ value, label, colorClass }) => (
+                <div
+                  key={label}
+                  className="min-w-[72px] rounded-md bg-white px-3 py-2 text-center"
+                >
+                  <div className={`text-lg font-bold ${colorClass}`}>
+                    {formatNumber(value)}
+                  </div>
+                  <div className="text-[9px] font-bold uppercase tracking-wide text-slate-500">
+                    {label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_330px]">
+            <section className="rounded-lg border border-slate-200 bg-white p-5">
+              <div className="text-[10px] font-bold uppercase tracking-wide text-sky-700">
+                Index macro plan
+              </div>
+              <h2 className="mt-1 text-lg font-bold text-slate-900">
+                Review only what needs attention
+              </h2>
+              <p className="mt-1 text-xs text-slate-600">
+                Detected definitions are saved together when setup finishes.
+              </p>
+
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <div className="flex min-h-9 items-center gap-2 rounded-md bg-slate-100 px-3 text-xs text-slate-600">
+                  <span className="font-semibold">Range</span>
+                  <TimeRangeDropdown
+                    earliest={timeRange.earliest}
+                    latest={timeRange.latest}
+                    onChange={handleFastTimeRangeChange}
+                    realTimeDisabled
+                    presets={TIME_PRESETS}
+                    onRequestParseEarliest={
+                      fastTimeParser.handleRequestParseEarliest
+                    }
+                    onRequestParseLatest={
+                      fastTimeParser.handleRequestParseLatest
+                    }
+                    parseEarliest={fastTimeParser.parseEarliest}
+                    parseLatest={fastTimeParser.parseLatest}
+                    labelMaxChars={26}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={runScan}
+                  disabled={isLoading}
+                  className={`${compactButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
+                >
+                  {isLoading ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <RefreshCw size={14} />
+                  )}
+                  {isLoading ? "Scanning" : "Run scan again"}
+                </button>
+              </div>
+
+              {setupScanReady && (
+                <div
+                  className={`mt-4 flex items-start gap-3 rounded-md border px-3 py-3 ${
+                    hasUnknown
+                      ? "border-amber-200 bg-amber-50"
+                      : "border-emerald-200 bg-emerald-50"
+                  }`}
+                >
+                  {hasUnknown ? (
+                    <AlertTriangle
+                      className="mt-0.5 shrink-0 text-amber-700"
+                      size={18}
+                    />
+                  ) : (
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-emerald-600 text-white">
+                      <Check size={14} />
+                    </span>
+                  )}
+                  <div>
+                    <div className="text-sm font-bold text-slate-900">
+                      {hasUnknown
+                        ? `${unknownSourcetypeGroups} unmapped sourcetype group${
+                            unknownSourcetypeGroups === 1 ? "" : "s"
+                          } need review`
+                        : "No unmapped sourcetypes found"}
+                    </div>
+                    <div className="mt-0.5 text-xs text-slate-600">
+                      {hasUnknown
+                        ? "Open the definitions below and map unexpected data before finishing."
+                        : "All detected Cisco data maps to a known index macro."}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <details className="group mt-4 overflow-hidden rounded-md border border-slate-200 bg-slate-50">
+                <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 px-4 text-sm font-bold text-slate-800 hover:bg-slate-100 [&::-webkit-details-marker]:hidden">
+                  <span>
+                    Review all {setupRowsToSave.length} proposed definitions
+                  </span>
+                  <ChevronDown
+                    size={16}
+                    className="ml-auto transition-transform group-open:rotate-180"
+                  />
+                </summary>
+                <div className="border-t border-slate-200 bg-white">
+                  {setupRowsToSave.length ? (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full border-collapse text-left text-sm">
+                        <thead>
+                          <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                            <th className="w-[190px] px-4 py-3 font-bold">
+                              Macro
+                            </th>
+                            <th className="min-w-[330px] px-4 py-3 font-bold">
+                              Definition
+                            </th>
+                            <th className="min-w-[220px] px-4 py-3 font-bold">
+                              Indexes
+                            </th>
+                            <th className="min-w-[260px] px-4 py-3 font-bold">
+                              Sourcetypes
+                            </th>
+                            <th className="w-[110px] px-4 py-3 text-right font-bold">
+                              Events
+                            </th>
+                            <th className="w-[130px] px-4 py-3 text-right font-bold">
+                              Action
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>{renderTableRows(setupRowGroups)}</tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="px-4 py-8 text-center text-sm text-slate-500">
+                      No detected index macro definitions are ready yet.
+                    </div>
+                  )}
+                </div>
+              </details>
+
+              <p className="mt-3 text-xs text-slate-500">
+                CIM and external-app macro tuning are optional and can be run
+                after setup.
+              </p>
+            </section>
+
+            <aside className="grid gap-4">
+              <section className="rounded-lg border border-slate-200 bg-white p-5">
+                <div className="text-[10px] font-bold uppercase tracking-wide text-sky-700">
+                  Search performance
+                </div>
+                <h2 className="mt-1 text-lg font-bold text-slate-900">
+                  Choose how searches run
+                </h2>
+                <p className="mt-1 text-xs text-slate-600">
+                  You can change this later from Macro Index Tuning.
+                </p>
+
+                <div className="mt-4 grid gap-3">
+                  <label
+                    htmlFor="setup-performance-balanced"
+                    className="flex cursor-pointer items-start gap-3 rounded-md border border-slate-200 p-3 hover:border-sky-300"
+                  >
+                    <input
+                      id="setup-performance-balanced"
+                      type="radio"
+                      name="setup-search-performance"
+                      checked={!summariesOnlyEnabled}
+                      onChange={() => selectSetupPerformanceMode(false)}
+                      className="mt-0.5 h-4 w-4 accent-sky-700"
+                    />
+                    <span>
+                      <span className="block text-sm font-bold text-slate-900">
+                        Balanced (recommended)
+                      </span>
+                      <span className="mt-0.5 block text-xs leading-5 text-slate-600">
+                        Use acceleration when available and fall back to raw
+                        events.
+                      </span>
+                    </span>
+                  </label>
+                  <label
+                    htmlFor="setup-performance-accelerated"
+                    className="flex cursor-pointer items-start gap-3 rounded-md border border-slate-200 p-3 hover:border-sky-300"
+                  >
+                    <input
+                      id="setup-performance-accelerated"
+                      type="radio"
+                      name="setup-search-performance"
+                      checked={summariesOnlyEnabled}
+                      onChange={() => selectSetupPerformanceMode(true)}
+                      className="mt-0.5 h-4 w-4 accent-sky-700"
+                    />
+                    <span>
+                      <span className="block text-sm font-bold text-slate-900">
+                        Accelerated summaries only
+                      </span>
+                      <span className="mt-0.5 block text-xs leading-5 text-slate-600">
+                        Fastest, but requires all three Cisco data models to be
+                        accelerated.
+                      </span>
+                    </span>
+                  </label>
+                </div>
+
+                <div
+                  className={`mt-3 rounded-md px-3 py-2 text-xs ${performanceStatusClass}`}
+                >
+                  {performanceStatusMessage}
+                </div>
+
+                {summariesOnlyEnabled && (
+                  <details className="group mt-3 rounded-md border border-slate-200">
+                    <summary className="flex cursor-pointer list-none items-center px-3 py-2 text-xs font-bold text-slate-700 [&::-webkit-details-marker]:hidden">
+                      Review data-model readiness
+                      <ChevronDown
+                        size={14}
+                        className="ml-auto transition-transform group-open:rotate-180"
+                      />
+                    </summary>
+                    <div
+                      className="grid gap-2 border-t border-slate-200 p-3"
+                      role="list"
+                    >
+                      {requiredDataModels.map((item) => (
+                        <div
+                          key={item.key}
+                          role="listitem"
+                          className="flex items-start gap-2 text-xs"
+                        >
+                          {item.state === "enabled" ? (
+                            <Check
+                              size={14}
+                              className="mt-0.5 shrink-0 text-emerald-700"
+                            />
+                          ) : (
+                            <AlertTriangle
+                              size={14}
+                              className="mt-0.5 shrink-0 text-red-700"
+                            />
+                          )}
+                          <span>
+                            <span className="font-bold text-slate-900">
+                              {item.label}
+                            </span>
+                            <span className="block text-slate-500">
+                              {item.message}
+                            </span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                )}
+              </section>
+
+              <details className="group overflow-hidden rounded-lg border border-slate-200 bg-white">
+                <summary className="flex min-h-14 cursor-pointer list-none items-center px-4 text-sm font-bold text-slate-800 hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+                  <span>
+                    <span className="block text-[10px] uppercase tracking-wide text-slate-500">
+                      Optional
+                    </span>
+                    Advanced tuning
+                  </span>
+                  <ChevronDown
+                    size={16}
+                    className="ml-auto transition-transform group-open:rotate-180"
+                  />
+                </summary>
+                <div className="grid gap-2 border-t border-slate-200 p-4 text-xs text-slate-600">
+                  <p>
+                    Run CIM discovery, tune external-app macros, inspect raw
+                    SPL, or use per-macro diagnostics after setup.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <a
+                      href={splunkAppViewUrl("macro_index_tuning")}
+                      className={`${compactButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
+                    >
+                      Open full tuner
+                    </a>
+                    <a
+                      href={openSearchUrl || undefined}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-disabled={!openSearchUrl}
+                      className={`${compactButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700 ${
+                        openSearchUrl ? "" : "pointer-events-none opacity-55"
+                      }`}
+                    >
+                      <ExternalLink size={14} />
+                      Open in Search
+                    </a>
+                  </div>
+                </div>
+              </details>
+            </aside>
+          </div>
+        </div>
+
+        <section
+          aria-label="Initial setup actions"
+          className="fixed bottom-0 left-0 right-0 z-[80] flex flex-wrap items-center justify-between gap-3 border-t border-slate-300 bg-white/95 px-6 py-3 shadow-[0_-8px_24px_rgba(15,23,42,0.14)] backdrop-blur md:left-[72px]"
+        >
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-wide text-sky-800">
+              Step 3 of 3 · {setupScanReady ? "Ready to finish" : "Scanning"}
+            </div>
+            <div className="mt-0.5 text-xs text-slate-600">
+              {setupActionMessage}
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <a
+              href={splunkAppViewUrl(APP_SETUP_VIEW)}
+              className={`${lightButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
+            >
+              <ArrowLeft size={16} />
+              Back
+            </a>
+            <button
+              type="button"
+              onClick={finishInitialSetup}
+              disabled={
+                !setupScanReady ||
+                setupStatus.state === "saving" ||
+                isSavingAll ||
+                summariesOnlyBlocked
+              }
+              className={`${lightButtonBase} border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700`}
+            >
+              {setupStatus.state === "saving" ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Check size={16} />
+              )}
+              {setupStatus.state === "saving"
+                ? setupStatus.message || "Finishing setup"
+                : "Save and finish setup"}
+            </button>
+          </div>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main

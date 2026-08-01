@@ -236,6 +236,18 @@ const dashboardBuilderTemplateSource = fs.readFileSync(
   ),
   "utf8",
 );
+const macroTuningSource = fs.readFileSync(
+  path.resolve(
+    __dirname,
+    "../src/main/webapp/pages/macro_index_tuning/index.tsx",
+  ),
+  "utf8",
+);
+assert.match(macroTuningSource, /Review only what needs attention/);
+assert.match(macroTuningSource, /Balanced \(recommended\)/);
+assert.match(macroTuningSource, /Review all .* proposed definitions/);
+assert.match(macroTuningSource, /Advanced tuning/);
+assert.match(macroTuningSource, /Save and finish setup/);
 
 // Executive Insights deliberately uses Simple XML rather than a custom Mako
 // template. Splunk Web can reload these profile views on first install;
