@@ -19,10 +19,10 @@ import { createFetchInit } from '@splunk/splunk-utils/fetch';
 
 import type { CustomerTopology } from '@/common/types';
 import {
-    ALL_OVERVIEW_SECTION_IDS,
-    OVERVIEW_PROFILES,
+    ALL_WORKSPACE_SECTION_IDS,
+    WORKSPACE_SOURCES,
     type SectionId,
-} from '@/common/config/overviewProfiles';
+} from '@/common/config/insightsWorkspaces';
 
 import { getSearchAppContext } from './splunkSearchService';
 
@@ -33,7 +33,7 @@ const PAYLOAD_VERSION = 1;
 const MAX_PAYLOAD_BYTES = 128 * 1024;
 const DEV_STORAGE_KEY = 'splunk-cisco-dashboards.customerTopologyConfig.v1';
 
-export const CUSTOMER_TOPOLOGY_SECTION_IDS = ALL_OVERVIEW_SECTION_IDS;
+export const CUSTOMER_TOPOLOGY_SECTION_IDS = ALL_WORKSPACE_SECTION_IDS;
 
 export type CustomerTopologySectionId =
     SectionId;
@@ -45,7 +45,7 @@ export type CustomerTopologySectionTitles = Record<
 
 export const DEFAULT_CUSTOMER_TOPOLOGY_SECTION_TITLES: CustomerTopologySectionTitles = {
     ...Object.fromEntries(
-        Object.values(OVERVIEW_PROFILES).flatMap((profile) =>
+        Object.values(WORKSPACE_SOURCES).flatMap((profile) =>
             profile.sections.map((section) => [section.id, section.title])
         )
     ),

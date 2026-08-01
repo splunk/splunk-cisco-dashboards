@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    DEFAULT_OVERVIEW_PROFILE_ID,
-    profileStorageKey,
-    type OverviewProfileId,
-} from '@/common/config/overviewProfiles';
+    EXECUTIVE_WORKSPACE_SOURCE_ID,
+    workspaceStorageKey,
+    type WorkspaceId,
+} from '@/common/config/insightsWorkspaces';
 
 export type SignalTickerSpeed = number;
 export type SignalTickerRows = 1 | 2;
@@ -308,8 +308,8 @@ const migrateSignalTickerConfig = (
     return changed ? { ...config, items } : config;
 };
 
-const storageKeyForProfile = (profileId?: OverviewProfileId): string =>
-    profileStorageKey(STORAGE_KEY, profileId ?? DEFAULT_OVERVIEW_PROFILE_ID);
+const storageKeyForWorkspace = (workspaceId?: WorkspaceId): string =>
+    workspaceStorageKey(STORAGE_KEY, workspaceId ?? EXECUTIVE_WORKSPACE_SOURCE_ID);
 
 const readFromStorage = (storageKey: string): SignalTickerConfig => {
     if (typeof window === 'undefined' || !window.localStorage) {
@@ -350,9 +350,9 @@ export interface UsePersistedSignalTickerResult {
 
 export const usePersistedSignalTicker =
     (
-        profileId: OverviewProfileId = DEFAULT_OVERVIEW_PROFILE_ID
+        workspaceId: WorkspaceId = EXECUTIVE_WORKSPACE_SOURCE_ID
     ): UsePersistedSignalTickerResult => {
-        const storageKey = storageKeyForProfile(profileId);
+        const storageKey = storageKeyForWorkspace(workspaceId);
         const [config, setConfigState] = useState<SignalTickerConfig>(() =>
             readFromStorage(storageKey)
         );

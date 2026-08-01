@@ -340,13 +340,12 @@ export interface KpiPickerPanelProps {
      */
     onResetAllCustomizations?: () => void;
     /**
-     * Optional shared-default save handler. Overview uses this to
-     * write the current section tile order/counts to an app-level
-     * config file so the same factory layout applies to every user
-     * who has not chosen a local override.
+     * Optional workspace-layout publish handler. Insights uses this to
+     * write the current section tile order/counts to the active workspace's
+     * app-level layout stanzas.
      */
-    onSaveFactoryDefaults?: () => void | Promise<void>;
-    factoryDefaultsStatus?: 'idle' | 'saving' | 'saved' | 'error';
+    onPublishWorkspaceLayout?: () => void | Promise<void>;
+    workspaceLayoutStatus?: 'idle' | 'saving' | 'saved' | 'error';
     /**
      * True when the current Splunk user holds `admin_all_objects`
      * (see `useCanManageFactoryTileConfig`). Thresholds, Data Mapping,
@@ -785,8 +784,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     drilldownBindings,
     onTestInSearch,
     onResetAllCustomizations,
-    onSaveFactoryDefaults,
-    factoryDefaultsStatus = 'idle',
+    onPublishWorkspaceLayout,
+    workspaceLayoutStatus = 'idle',
     onApplyDisplayToSection,
     canManageFactoryConfig = false,
     onSaveFactoryTileConfig,
@@ -2070,21 +2069,21 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                 '  • Section heights and the signal rail selection\n' +
                 '  • Your saved map position and visibility\n' +
                 '  • The map ↔ tiles splitter position\n\n' +
-                'Shared factory defaults, tile configuration, map topology, header branding, and your light/dark theme preference will be kept.\n\n' +
+                'Published workspace layouts, tile configuration, map topology, header branding, and your light/dark theme preference will be kept.\n\n' +
                 'This action cannot be undone.'
         );
         if (!ok) return;
         onResetAllCustomizations();
     };
 
-    const handleSaveFactoryDefaults = () => {
-        if (!onSaveFactoryDefaults) return;
+    const handlePublishWorkspaceLayout = () => {
+        if (!onPublishWorkspaceLayout) return;
         const ok = window.confirm(
-            'Save the current Overview tile order and visible tile counts as the shared factory default?\n\n' +
-                'This updates the app-level defaults for all users. Users with their own local tile layout keep it until they use Factory reset.'
+            'Publish the current tile order and visible tile counts for this workspace?\n\n' +
+                'This updates the shared workspace layout for all users. Personal tile choices remain until a user resets the workspace.'
         );
         if (!ok) return;
-        void onSaveFactoryDefaults();
+        void onPublishWorkspaceLayout();
     };
 
     const handleClearFacets = () => {
@@ -4314,7 +4313,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 </button>
                             </>
                         )}
-                        {onSaveFactoryDefaults && (
+                        {onPublishWorkspaceLayout && (
                             <>
                                 <span
                                     aria-hidden="true"
@@ -4322,26 +4321,26 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 />
                                 <button
                                     type="button"
-                                    onClick={handleSaveFactoryDefaults}
-                                    disabled={factoryDefaultsStatus === 'saving'}
-                                    title="Save current tile order and counts as the shared Overview factory default"
+                                    onClick={handlePublishWorkspaceLayout}
+                                    disabled={workspaceLayoutStatus === 'saving'}
+                                    title="Publish current tile order and counts as the shared workspace layout"
                                     className={cn(
                                         'inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider flex-shrink-0',
-                                        factoryDefaultsStatus === 'error'
+                                        workspaceLayoutStatus === 'error'
                                             ? 'text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300'
-                                            : factoryDefaultsStatus === 'saved'
+                                            : workspaceLayoutStatus === 'saved'
                                               ? 'text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300'
                                               : 'text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300',
-                                        factoryDefaultsStatus === 'saving' &&
+                                        workspaceLayoutStatus === 'saving' &&
                                             'opacity-60 cursor-wait'
                                     )}
                                 >
                                     <Settings2 className="w-3 h-3" />
-                                    {factoryDefaultsStatus === 'saving'
-                                        ? 'Saving defaults'
-                                        : factoryDefaultsStatus === 'saved'
-                                          ? 'Defaults saved'
-                                          : 'Save defaults'}
+                                    {workspaceLayoutStatus === 'saving'
+                                        ? 'Publishing layout'
+                                        : workspaceLayoutStatus === 'saved'
+                                          ? 'Layout published'
+                                          : 'Publish workspace layout'}
                                 </button>
                             </>
                         )}

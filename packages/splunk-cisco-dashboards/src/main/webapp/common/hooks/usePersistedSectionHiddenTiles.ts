@@ -2,7 +2,7 @@
  * usePersistedSectionHiddenTiles — per-user hidden Overview tiles.
  *
  * This is intentionally local profile state. Factory tiles remain
- * authored in searchbase.conf / overview_factory_tiles.conf; hiding a
+ * authored in searchbase.conf / insights_workspaces.conf; hiding a
  * tile removes it from the user's visible section without mutating the
  * shared dashboard defaults.
  */
@@ -11,10 +11,10 @@ import { useCallback, useEffect, useState } from 'react';
 import type { SectionId } from '@/common/hooks/useMetric';
 import { ALL_SECTION_IDS } from '@/common/hooks/usePersistedSectionLayout';
 import {
-    DEFAULT_OVERVIEW_PROFILE_ID,
-    profileStorageKey,
-    type OverviewProfileId,
-} from '@/common/config/overviewProfiles';
+    EXECUTIVE_WORKSPACE_SOURCE_ID,
+    workspaceStorageKey,
+    type WorkspaceId,
+} from '@/common/config/insightsWorkspaces';
 
 const STORAGE_KEY = 'splunk-cisco-dashboards.sectionHiddenTiles.v1';
 const STORAGE_VERSION = 1;
@@ -23,7 +23,7 @@ const TILE_ID_PATTERN = /^[a-z0-9_]{1,64}$/;
 export type SectionHiddenTileMap = Partial<Record<SectionId, string[]>>;
 
 export interface SectionHiddenTilesOptions {
-    profileId?: OverviewProfileId;
+    workspaceId?: WorkspaceId;
     availableSections?: readonly SectionId[];
 }
 
@@ -32,8 +32,8 @@ interface PersistedShape {
     hidden: SectionHiddenTileMap;
 }
 
-const storageKeyForProfile = (profileId?: OverviewProfileId): string =>
-    profileStorageKey(STORAGE_KEY, profileId ?? DEFAULT_OVERVIEW_PROFILE_ID);
+const storageKeyForWorkspace = (workspaceId?: WorkspaceId): string =>
+    workspaceStorageKey(STORAGE_KEY, workspaceId ?? EXECUTIVE_WORKSPACE_SOURCE_ID);
 
 const isSectionId = (
     raw: unknown,
@@ -104,7 +104,7 @@ export interface UsePersistedSectionHiddenTilesResult {
 export const usePersistedSectionHiddenTiles = (
     options: SectionHiddenTilesOptions = {}
 ): UsePersistedSectionHiddenTilesResult => {
-    const storageKey = storageKeyForProfile(options.profileId);
+    const storageKey = storageKeyForWorkspace(options.workspaceId);
     const availableSections = options.availableSections ?? ALL_SECTION_IDS;
     const optionsSignature = JSON.stringify({ storageKey, availableSections });
     const [hidden, setHidden] = useState<SectionHiddenTileMap>(() =>

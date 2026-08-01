@@ -7,7 +7,7 @@ export = none
 access = read : [ * ], write : [ admin, power, sc_admin ]
 export = system
 
-[overview_factory_tiles]
+[insights_workspaces]
 access = read : [ * ], write : [ admin, power, sc_admin ]
 export = system
 

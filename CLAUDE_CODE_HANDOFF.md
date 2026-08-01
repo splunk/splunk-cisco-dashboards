@@ -44,7 +44,7 @@ packages/splunk-cisco-dashboards/src/main/webapp/pages/executive_insights/index.
 ## Key Decisions
 
 1. `searchbase.conf` is authoritative for Overview factory tile metadata.
-2. `overview_factory_tiles.conf` should only control shared factory order and visible counts. It should not carry search binding metadata.
+2. `insights_workspaces.conf` defines workspace metadata plus shared tile order and visible counts. Search binding metadata remains in `searchbase.conf`.
 3. Overview factory tiles should run literal SPL from `searchbase.conf` with the stanza's `dispatch_context`.
 4. The Overview factory path should not fall back to `| savedsearch "..."` for searchbase-only stanzas.
 5. New `viz_options` keys added to `searchbase.conf` are app-specific JSON metadata, not native Dashboard Studio options.
@@ -119,7 +119,7 @@ node - <<'NODE'
 const fs=require('fs');
 const readConf=(path)=>{const text=fs.readFileSync(path,'utf8'); const stanzas={}; let cur=null; for(const raw of text.split(/\r?\n/)){const line=raw.trim(); const m=line.match(/^\[([^\]]+)\]$/); if(m){cur=m[1]; stanzas[cur]={}; continue;} if(!cur||!line||line.startsWith('#')) continue; const i=raw.indexOf('='); if(i>=0) stanzas[cur][raw.slice(0,i).trim()]=raw.slice(i+1).trim();} return stanzas;};
 const searchbase=readConf('packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf');
-const factory=readConf('packages/splunk-cisco-dashboards/src/main/resources/splunk/default/overview_factory_tiles.conf');
+const factory=readConf('packages/splunk-cisco-dashboards/src/main/resources/splunk/default/insights_workspaces.conf');
 const overview=[]; const mapFooter=[]; const bad=[];
 for (const [id, stanza] of Object.entries(searchbase)) {
   if (!stanza.viz_options) continue;
@@ -173,8 +173,8 @@ Expected result at commit `7850478`:
 - There are still generic saved-search helpers elsewhere in the app, including dashboard builder, searchbase canvas, and generic metric hooks. Those were intentionally not removed because they support real saved searches and legacy flows outside the Overview factory path.
 - The user specifically objected to Overview factory/default tiles being hardcoded or savedsearch-command driven. Keep that path searchbase-centered.
 - The custom `viz_options.overview`, `mapFooter`, `topologyMap`, and `topologySite` keys are not Dashboard Studio native. They are SCD React metadata.
-- If you add new factory Overview tiles, add the metadata to `searchbase.conf` and the tile ID/order to `overview_factory_tiles.conf`.
-- If a default tile is missing from the page, check both `viz_options.overview` and `overview_factory_tiles.conf`.
+- If you add new Insights tiles, add the search metadata to `searchbase.conf` and the tile ID/order to the matching `layout.<workspace>.<section>` stanza in `insights_workspaces.conf`.
+- If a default tile is missing from the page, check both `viz_options.overview` and `insights_workspaces.conf`.
 
 ## User Preferences / Standing Direction
 

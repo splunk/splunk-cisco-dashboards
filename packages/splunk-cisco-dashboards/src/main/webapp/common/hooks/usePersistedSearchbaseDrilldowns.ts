@@ -9,10 +9,10 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
-    DEFAULT_OVERVIEW_PROFILE_ID,
-    profileStorageKey,
-    type OverviewProfileId,
-} from '@/common/config/overviewProfiles';
+    EXECUTIVE_WORKSPACE_SOURCE_ID,
+    workspaceStorageKey,
+    type WorkspaceId,
+} from '@/common/config/insightsWorkspaces';
 
 const STORAGE_KEY = 'splunk-cisco-dashboards.searchbaseDrilldowns.v1';
 const STORAGE_VERSION = 1;
@@ -30,8 +30,8 @@ const isValidSearchName = (value: unknown): value is string =>
     value.trim().length <= 256 &&
     !/[\x00-\x1F\x7F]/.test(value);
 
-const storageKeyForProfile = (profileId?: OverviewProfileId): string =>
-    profileStorageKey(STORAGE_KEY, profileId ?? DEFAULT_OVERVIEW_PROFILE_ID);
+const storageKeyForWorkspace = (workspaceId?: WorkspaceId): string =>
+    workspaceStorageKey(STORAGE_KEY, workspaceId ?? EXECUTIVE_WORKSPACE_SOURCE_ID);
 
 const readFromStorage = (storageKey: string): SearchbaseDrilldownMap => {
     if (typeof window === 'undefined' || !window.localStorage) return {};
@@ -69,9 +69,9 @@ const writeToStorage = (
 };
 
 export const usePersistedSearchbaseDrilldowns = (
-    profileId: OverviewProfileId = DEFAULT_OVERVIEW_PROFILE_ID
+    workspaceId: WorkspaceId = EXECUTIVE_WORKSPACE_SOURCE_ID
 ) => {
-    const storageKey = storageKeyForProfile(profileId);
+    const storageKey = storageKeyForWorkspace(workspaceId);
     const [drilldowns, setDrilldowns] =
         useState<SearchbaseDrilldownMap>(() => readFromStorage(storageKey));
 

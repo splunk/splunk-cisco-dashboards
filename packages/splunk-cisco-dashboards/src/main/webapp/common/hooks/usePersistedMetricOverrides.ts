@@ -44,10 +44,10 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
-    DEFAULT_OVERVIEW_PROFILE_ID,
-    profileStorageKey,
-    type OverviewProfileId,
-} from '@/common/config/overviewProfiles';
+    EXECUTIVE_WORKSPACE_SOURCE_ID,
+    workspaceStorageKey,
+    type WorkspaceId,
+} from '@/common/config/insightsWorkspaces';
 
 const STORAGE_KEY = 'splunk-cisco-dashboards.metricOverrides.v1';
 const STORAGE_VERSION = 2;
@@ -145,8 +145,8 @@ const sanitizeOverride = (raw: unknown): MetricOverride | null => {
     return out;
 };
 
-const storageKeyForProfile = (profileId?: OverviewProfileId): string =>
-    profileStorageKey(STORAGE_KEY, profileId ?? DEFAULT_OVERVIEW_PROFILE_ID);
+const storageKeyForWorkspace = (workspaceId?: WorkspaceId): string =>
+    workspaceStorageKey(STORAGE_KEY, workspaceId ?? EXECUTIVE_WORKSPACE_SOURCE_ID);
 
 const readFromStorage = (storageKey: string): MetricOverrideMap => {
     if (typeof window === 'undefined' || !window.localStorage) return {};
@@ -188,9 +188,9 @@ export interface UsePersistedMetricOverridesResult {
 }
 
 export const usePersistedMetricOverrides = (
-    profileId: OverviewProfileId = DEFAULT_OVERVIEW_PROFILE_ID
+    workspaceId: WorkspaceId = EXECUTIVE_WORKSPACE_SOURCE_ID
 ): UsePersistedMetricOverridesResult => {
-    const storageKey = storageKeyForProfile(profileId);
+    const storageKey = storageKeyForWorkspace(workspaceId);
     const [overrides, setOverrides] = useState<MetricOverrideMap>(() =>
         readFromStorage(storageKey)
     );

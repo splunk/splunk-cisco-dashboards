@@ -1,5 +1,5 @@
 /**
- * Splunk Cisco Dashboards — Executive Insights
+ * Splunk Cisco Dashboards — Insights Workspace
  *
  * Executive landing page adapted for Splunk and pumped full of
  * dashboards-tooling niceties:
@@ -155,17 +155,16 @@ import { usePersistedSectionTileOrder } from "@/common/hooks/usePersistedSection
 import { usePersistedSectionHeights } from "@/common/hooks/usePersistedSectionHeights";
 import { usePersistedSignalTicker } from "@/common/hooks/usePersistedSignalTicker";
 import {
-  DEFAULT_OVERVIEW_PROFILE_ID,
-  OVERVIEW_PROFILE_IDS,
-  getOverviewProfile,
-  getOverviewProfileFromLocation,
-  getOverviewProfileViewName,
-  isOverviewProfileId,
-  sectionIdsForProfile,
-  type OverviewProfile,
-  type OverviewProfileId,
-  type OverviewSectionIcon,
-} from "@/common/config/overviewProfiles";
+  EXECUTIVE_WORKSPACE_SOURCE_ID,
+  PACKAGED_WORKSPACE_FALLBACKS,
+  getWorkspaceFromLocation,
+  isWorkspaceSourceId,
+  sectionIdsForWorkspace,
+  type InsightsWorkspace,
+  type WorkspaceId,
+  type WorkspaceSourceId,
+  type WorkspaceSectionIcon,
+} from "@/common/config/insightsWorkspaces";
 import {
   useBrandingOverride,
   readImageAsDataUri,
@@ -176,6 +175,7 @@ import {
 import { resolveAppVersions } from "@/common/lib/appVersion";
 import { APP_VERSION_LABEL } from "@/common/lib/buildInfo";
 import { SortableMetricCard } from "@/common/components/florida/SortableMetricCard";
+import { WorkspaceManager } from "@/common/components/florida/WorkspaceManager";
 import {
   DndContext,
   PointerSensor,
@@ -199,12 +199,14 @@ import {
   type SearchbaseRecord,
 } from "@/common/services/searchbaseCatalogue";
 import {
-  loadOverviewFactoryTiles,
-  saveOverviewFactoryTiles,
-  type OverviewFactoryTilesConfig,
-} from "@/common/services/overviewFactoryTilesService";
+  loadInsightsWorkspaces,
+  saveWorkspaceLayout,
+  type InsightsWorkspaceBundle,
+  type WorkspaceLayoutConfig,
+} from "@/common/services/insightsWorkspaceService";
 import { saveFactoryTileConfig } from "@/common/services/searchbaseTileConfigService";
 import { useCanManageFactoryTileConfig } from "@/common/hooks/useCanManageFactoryTileConfig";
+import { useCanManageInsightsWorkspaces } from "@/common/hooks/useCanManageInsightsWorkspaces";
 import { cn } from "@/common/lib/utils";
 
 // =============================================================================
@@ -454,22 +456,24 @@ const plainTextFromHtml = (raw: string | undefined): string | undefined => {
   return text || undefined;
 };
 
-const parseOverviewProfile = (raw: unknown): OverviewProfile["id"] => {
-  if (typeof raw !== "string") return DEFAULT_OVERVIEW_PROFILE_ID;
+const parseWorkspaceSource = (raw: unknown): WorkspaceSourceId => {
+  if (typeof raw !== "string") return EXECUTIVE_WORKSPACE_SOURCE_ID;
   const trimmed = raw.trim();
   if (!trimmed || trimmed === "overview" || trimmed === "default") {
-    return DEFAULT_OVERVIEW_PROFILE_ID;
+    return EXECUTIVE_WORKSPACE_SOURCE_ID;
   }
-  return isOverviewProfileId(trimmed) ? trimmed : DEFAULT_OVERVIEW_PROFILE_ID;
+  return isWorkspaceSourceId(trimmed)
+    ? trimmed
+    : EXECUTIVE_WORKSPACE_SOURCE_ID;
 };
 
 const parseOverviewSection = (
   raw: unknown,
-  profile: OverviewProfile,
+  profile: InsightsWorkspace,
 ): SectionId | undefined => {
   if (typeof raw !== "string") return undefined;
   const candidate = raw.trim() as SectionId;
-  return sectionIdsForProfile(profile).includes(candidate)
+  return sectionIdsForWorkspace(profile).includes(candidate)
     ? candidate
     : undefined;
 };
@@ -541,7 +545,7 @@ const slugifyOverviewId = (raw: string): string =>
 
 const discoverProfileDefinitionFromRecord = (
   record: SearchbaseRecord,
-  profile: OverviewProfile,
+  profile: InsightsWorkspace,
 ): Record<string, unknown> | null => {
   const auto = profile.autoDiscovery;
   if (!auto) return null;
@@ -561,7 +565,7 @@ const discoverProfileDefinitionFromRecord = (
     : undefined;
   if (!section) return null;
   return {
-    profile: profile.id,
+    workspace: profile.sourceWorkspace,
     tileId: slugifyOverviewId(record.id),
     section,
     label: record.searchName.replace(/^Secure Networking\s*-\s*/i, ""),
@@ -578,7 +582,7 @@ interface OverviewMetricBuildOptions {
 const buildOverviewMetricFromDefinition = (
   record: SearchbaseRecord,
   definition: Record<string, unknown>,
-  profile: OverviewProfile,
+  profile: InsightsWorkspace,
   options: OverviewMetricBuildOptions = {},
 ): MetricConfig | null => {
   const id = options.tileId ?? readOverviewString(definition, "tileId", 128);
@@ -626,7 +630,7 @@ const buildOverviewMetricFromDefinition = (
 
 const buildOverviewMetricConfig = (
   records: SearchbaseRecord[] | null,
-  profile: OverviewProfile,
+  profile: InsightsWorkspace,
 ): MetricConfig[] => {
   if (records === null) return [];
 
@@ -635,7 +639,9 @@ const buildOverviewMetricConfig = (
   for (const record of records) {
     if (!record.searchName || !record.search) continue;
     const definitions = overviewDefinitionsFromRecord(record).filter(
-      (definition) => parseOverviewProfile(definition.profile) === profile.id,
+      (definition) =>
+        parseWorkspaceSource(definition.workspace ?? definition.profile) ===
+        profile.sourceWorkspace,
     );
     const autoDefinition =
       definitions.length === 0
@@ -682,7 +688,7 @@ const overviewAdditionTileId = (
 const buildAddedOverviewMetricConfig = (
   records: SearchbaseRecord[] | null,
   additions: SectionTileAdditionMap,
-  profile: OverviewProfile,
+  profile: InsightsWorkspace,
   existingMetrics: MetricConfig[],
 ): MetricConfig[] => {
   if (records === null) return [];
@@ -696,7 +702,7 @@ const buildAddedOverviewMetricConfig = (
   );
   const out: MetricConfig[] = [];
 
-  for (const section of sectionIdsForProfile(profile)) {
+  for (const section of sectionIdsForWorkspace(profile)) {
     const searchbaseIds = additions[section] ?? [];
     for (const searchbaseId of searchbaseIds) {
       if (existingSearchesBySection.has(`${section}:${searchbaseId}`)) continue;
@@ -706,7 +712,9 @@ const buildAddedOverviewMetricConfig = (
       if (existingIds.has(tileId)) continue;
 
       const definitions = overviewDefinitionsFromRecord(record).filter(
-        (definition) => parseOverviewProfile(definition.profile) === profile.id,
+        (definition) =>
+          parseWorkspaceSource(definition.workspace ?? definition.profile) ===
+          profile.sourceWorkspace,
       );
       const autoDefinition =
         definitions.length === 0
@@ -791,7 +799,7 @@ const buildOverviewMapFooterConfig = (
 // Section icon rendering
 // =============================================================================
 
-const SECTION_ICON_COMPONENTS: Record<OverviewSectionIcon, LucideIcon> = {
+const SECTION_ICON_COMPONENTS: Record<WorkspaceSectionIcon, LucideIcon> = {
   activity: Activity,
   shield: Shield,
   building: Building2,
@@ -2074,7 +2082,19 @@ const ScalarGaugeCardLeaf: React.FC<ScalarGaugeCardLeafProps> = ({
 // Page
 // =============================================================================
 
-const ExecutiveInsightsPage: React.FC = () => {
+interface InsightsWorkspaceRuntimeProps {
+  workspace: InsightsWorkspace;
+  workspaces: readonly InsightsWorkspace[];
+  initialLayout: WorkspaceLayoutConfig;
+  layouts: Record<WorkspaceId, WorkspaceLayoutConfig>;
+}
+
+const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
+  workspace: insightsWorkspace,
+  workspaces,
+  initialLayout,
+  layouts,
+}) => {
   // ------------------------------ Theme ------------------------------
   const { theme, resolvedTheme, cycle: cycleTheme } = useTheme();
   const availableDashboardHeight = useAvailableDashboardHeight();
@@ -2090,24 +2110,25 @@ const ExecutiveInsightsPage: React.FC = () => {
     }),
     [availableDashboardHeight],
   );
-  const overviewProfile = useMemo(() => getOverviewProfileFromLocation(), []);
-  const profileSectionIds = useMemo(
-    () => sectionIdsForProfile(overviewProfile),
-    [overviewProfile],
+  const workspaceSectionIds = useMemo(
+    () => sectionIdsForWorkspace(insightsWorkspace),
+    [insightsWorkspace],
   );
-  const handleOverviewProfileChange = useCallback(
-    (nextProfileId: OverviewProfileId) => {
+  const handleInsightsWorkspaceChange = useCallback(
+    (nextWorkspaceId: WorkspaceId) => {
       if (
-        nextProfileId === overviewProfile.id ||
+        nextWorkspaceId === insightsWorkspace.id ||
         typeof window === "undefined"
       ) {
         return;
       }
+      const params = new URLSearchParams();
+      params.set("workspace", nextWorkspaceId);
       window.location.assign(
-        splunkViewAppUrl(getOverviewProfileViewName(nextProfileId)),
+        `${splunkViewAppUrl("insights_workspace")}?${params.toString()}`,
       );
     },
-    [overviewProfile.id],
+    [insightsWorkspace.id],
   );
 
   // ------------------------------ Branding ------------------------------
@@ -2119,10 +2140,10 @@ const ExecutiveInsightsPage: React.FC = () => {
   //   2. `customerName` (per-deployment, Splunk macro) — the
   //      `[customer_name]` macro value fetched at mount. Operator-
   //      controlled via `local/macros.conf`.
-  //   3. Profile/hardcoded fallbacks (`DEFAULT_HEADER_TITLE_FALLBACK`,
-  //      `DEFAULT_HEADER_SUBTITLE`, `overviewProfile.defaultLogoSrc`,
+  //   3. Workspace/hardcoded fallbacks (`DEFAULT_HEADER_TITLE_FALLBACK`,
+  //      `DEFAULT_HEADER_SUBTITLE`, `insightsWorkspace.defaultLogoSrc`,
   //      `DEFAULT_LOGO_DATA_URI`) — what every fresh install ships
-  //      with. Profiles may provide their own packaged logo, hide the
+  //      with. Workspaces may provide their own packaged logo, hide the
   //      default logo entirely, or use the neutral network mark.
   //
   // `effectiveTitle` / `effectiveSubtitle` / `effectiveLogoSrc`
@@ -2130,9 +2151,9 @@ const ExecutiveInsightsPage: React.FC = () => {
   // JSX actually renders.
   const [customerName, setCustomerName] = useState<string>("");
   const [logoSrc, setLogoSrc] = useState<string>(
-    overviewProfile.hideDefaultLogo
+    insightsWorkspace.hideDefaultLogo
       ? ""
-      : overviewProfile.defaultLogoSrc || DEFAULT_LOGO_DATA_URI,
+      : insightsWorkspace.defaultLogoSrc || DEFAULT_LOGO_DATA_URI,
   );
   const [splunkUsername, setSplunkUsername] = useState<string>("");
   const [appVersionLabel, setAppVersionLabel] =
@@ -2146,7 +2167,7 @@ const ExecutiveInsightsPage: React.FC = () => {
     override: brandingOverride,
     setOverride: setBrandingOverride,
     resetAll: resetBrandingOverride,
-  } = useBrandingOverride(overviewProfile.id);
+  } = useBrandingOverride(insightsWorkspace.id);
   const [isBrandingEditorOpen, setBrandingEditorOpen] =
     useState<boolean>(false);
   const [isSectionTitlesEditorOpen, setSectionTitlesEditorOpen] =
@@ -2154,15 +2175,15 @@ const ExecutiveInsightsPage: React.FC = () => {
 
   const effectiveTitle =
     brandingOverride.title ||
-    overviewProfile.headerTitle ||
+    insightsWorkspace.headerTitle ||
     customerName ||
     DEFAULT_HEADER_TITLE_FALLBACK;
   const effectiveSubtitle =
     brandingOverride.subtitle ||
-    overviewProfile.headerSubtitle ||
+    insightsWorkspace.headerSubtitle ||
     DEFAULT_HEADER_SUBTITLE;
   // Logo precedence: explicit override (data URI from upload) →
-  // current `logoSrc` (the profile-specific packaged default, an
+  // current `logoSrc` (the workspace-specific packaged default, an
   // intentionally empty value, or the neutral built-in mark).
   // Header branding is intentionally independent from tile/layout
   // factory reset.
@@ -2223,10 +2244,10 @@ const ExecutiveInsightsPage: React.FC = () => {
     setSections: setVisibleSections,
     resetAll: resetAllSectionLayout,
   } = usePersistedSectionLayout({
-    profileId: overviewProfile.id,
-    availableSections: profileSectionIds,
-    defaultSections: overviewProfile.defaultVisibleSections,
-    maxSections: overviewProfile.maxVisibleSections,
+    workspaceId: insightsWorkspace.id,
+    availableSections: workspaceSectionIds,
+    defaultSections: insightsWorkspace.defaultVisibleSections,
+    maxSections: insightsWorkspace.maxVisibleSections,
   });
 
   // ------------------------------ Searchbase metadata ------------------------------
@@ -2294,7 +2315,7 @@ const ExecutiveInsightsPage: React.FC = () => {
     removeTile: removeSectionTile,
     resetAll: resetAllSectionTileAdditions,
   } = usePersistedSectionTileAdditions({
-    profileId: overviewProfile.id,
+    workspaceId: insightsWorkspace.id,
     availableSections,
   });
   const {
@@ -2303,25 +2324,25 @@ const ExecutiveInsightsPage: React.FC = () => {
     showTile: showSectionTile,
     resetAll: resetAllSectionHiddenTiles,
   } = usePersistedSectionHiddenTiles({
-    profileId: overviewProfile.id,
+    workspaceId: insightsWorkspace.id,
     availableSections,
   });
 
   const baseMetricConfig = useMemo(
-    () => buildOverviewMetricConfig(searchbaseRecords, overviewProfile),
-    [overviewProfile, searchbaseRecords],
+    () => buildOverviewMetricConfig(searchbaseRecords, insightsWorkspace),
+    [insightsWorkspace, searchbaseRecords],
   );
   const addedMetricConfig = useMemo(
     () =>
       buildAddedOverviewMetricConfig(
         searchbaseRecords,
         sectionTileAdditions,
-        overviewProfile,
+        insightsWorkspace,
         baseMetricConfig,
       ),
     [
       baseMetricConfig,
-      overviewProfile,
+      insightsWorkspace,
       searchbaseRecords,
       sectionTileAdditions,
     ],
@@ -2342,52 +2363,32 @@ const ExecutiveInsightsPage: React.FC = () => {
     [searchbaseRecords],
   );
 
-  // ------------------------------ Shared factory tile layout ------------------------------
+  // ------------------------------ Shared workspace tile layout ------------------------------
   //
   // The searchbase overview metadata is the full tile catalogue. This
   // app-level config controls only the shared factory order and visible
   // count for each section; it never carries search bindings.
-  const [overviewFactoryTiles, setOverviewFactoryTiles] =
-    useState<OverviewFactoryTilesConfig>({});
-  const [factoryDefaultsStatus, setFactoryDefaultsStatus] = useState<
+  const [workspaceLayout, setWorkspaceLayout] =
+    useState<WorkspaceLayoutConfig>(initialLayout);
+  const [workspaceLayoutStatus, setWorkspaceLayoutStatus] = useState<
     "idle" | "saving" | "saved" | "error"
   >("idle");
-
-  useEffect(() => {
-    let cancelled = false;
-    loadOverviewFactoryTiles(overviewProfile.id)
-      .then((config) => {
-        if (cancelled) return;
-        setOverviewFactoryTiles(config);
-      })
-      .catch((error) => {
-        if (cancelled) return;
-        // Keep Overview usable even if the optional shared
-        // defaults config is unavailable; searchbase overview
-        // metadata still controls the tile roster.
-        console.warn("[overview] factory tile defaults unavailable", error);
-        setOverviewFactoryTiles({});
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [overviewProfile.id]);
 
   const factoryTileCountDefaults = useMemo(() => {
     const out: Partial<Record<SectionId, number>> = {};
     for (const section of availableSections) {
-      const count = overviewFactoryTiles[section]?.visibleCount;
+      const count = workspaceLayout[section]?.visibleCount;
       if (typeof count === "number" && Number.isFinite(count)) {
         out[section] = count;
       }
     }
     return out;
-  }, [availableSections, overviewFactoryTiles]);
+  }, [availableSections, workspaceLayout]);
 
   const getFactoryTileOrder = useCallback(
     (section: SectionId, sectionMetrics: MetricConfig[]): string[] => {
       const canonicalIds = sectionMetrics.map((metric) => metric.id);
-      const configuredIds = overviewFactoryTiles[section]?.tiles ?? [];
+      const configuredIds = workspaceLayout[section]?.tiles ?? [];
       if (configuredIds.length === 0) return canonicalIds;
 
       const canonicalSet = new Set(canonicalIds);
@@ -2404,7 +2405,7 @@ const ExecutiveInsightsPage: React.FC = () => {
       }
       return ordered;
     },
-    [overviewFactoryTiles],
+    [workspaceLayout],
   );
 
   // ------------------------------ Section tile-count preference ------------------------------
@@ -2417,8 +2418,8 @@ const ExecutiveInsightsPage: React.FC = () => {
   // who customises tile #5, dials down to 3, then back up to 5,
   // gets their customisation back unchanged.
   //
-  // Bounds come from the active overview profile, with per-section
-  // defaults from overview_factory_tiles.conf. Secure Networking ships
+  // Bounds come from the active workspace, with per-section defaults
+  // from insights_workspaces.conf. Secure Networking ships
   // with three visible factory KPIs per section and an ordered catalogue of
   // nine; operators can save a different shared default from the picker
   // footer, and individual users can still dial the visible count up/down
@@ -2435,11 +2436,11 @@ const ExecutiveInsightsPage: React.FC = () => {
     setCount: setSectionTileCount,
     resetAll: resetAllSectionTileCounts,
   } = usePersistedSectionTileCounts({
-    minCount: overviewProfile.minTileCount,
-    maxCount: overviewProfile.maxTileCount,
+    minCount: insightsWorkspace.minTileCount,
+    maxCount: insightsWorkspace.maxTileCount,
     defaultCount: factoryTileCountDefaults,
-    fallbackDefault: overviewProfile.fallbackTileCount,
-    profileId: overviewProfile.id,
+    fallbackDefault: insightsWorkspace.fallbackTileCount,
+    workspaceId: insightsWorkspace.id,
     availableSections,
   });
 
@@ -2459,7 +2460,7 @@ const ExecutiveInsightsPage: React.FC = () => {
     minLevel: 1,
     maxLevel: 5,
     defaultLevel: 1,
-    profileId: overviewProfile.id,
+    workspaceId: insightsWorkspace.id,
     availableSections,
   });
 
@@ -2480,7 +2481,7 @@ const ExecutiveInsightsPage: React.FC = () => {
     setOrder: setSectionTileOrder,
     resetAll: resetAllSectionTileOrder,
   } = usePersistedSectionTileOrder({
-    profileId: overviewProfile.id,
+    workspaceId: insightsWorkspace.id,
     availableSections,
   });
 
@@ -2618,7 +2619,7 @@ const ExecutiveInsightsPage: React.FC = () => {
     setConfig: setSignalTickerConfig,
     resetAll: resetSignalTickerConfig,
     itemCount: signalTickerItemCount,
-  } = usePersistedSignalTicker(overviewProfile.id);
+  } = usePersistedSignalTicker(insightsWorkspace.id);
   const [signalTickerEditorOpen, setSignalTickerEditorOpen] = useState(false);
   const searchbaseCatalogue = useMemo(() => {
     if (!visibleSearchbaseCatalogue) return [];
@@ -3018,7 +3019,7 @@ const ExecutiveInsightsPage: React.FC = () => {
   // operator sees the version/build Splunk is actually running. Retain the
   // compile-time label as a resilient fallback when the endpoint is unavailable.
   // The shared executive_insights_bootstrap.js owns the update badge so both
-  // profile shells get the same update check and direct app-installer link.
+  // workspace shells get the same update check and direct app-installer link.
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
     let cancelled = false;
@@ -3125,7 +3126,7 @@ const ExecutiveInsightsPage: React.FC = () => {
     clearOverride,
     resetAll: resetAllOverrides,
     overrideCount,
-  } = usePersistedMetricOverrides(overviewProfile.id);
+  } = usePersistedMetricOverrides(insightsWorkspace.id);
   const signalTickerMetricDefaults = useMemo(() => {
     const toDefault = (cfg: MetricConfig): SignalTickerMetricDefaults => ({
       label: cfg.label,
@@ -3153,7 +3154,7 @@ const ExecutiveInsightsPage: React.FC = () => {
   const {
     drilldowns: searchbaseDrilldowns,
     resetAll: resetAllSearchbaseDrilldowns,
-  } = usePersistedSearchbaseDrilldowns(overviewProfile.id);
+  } = usePersistedSearchbaseDrilldowns(insightsWorkspace.id);
   const [pickerContext, setPickerContext] = useState<KpiPickerContext | null>(
     null,
   );
@@ -3359,7 +3360,7 @@ const ExecutiveInsightsPage: React.FC = () => {
         }
       >
     > = {};
-    for (const section of overviewProfile.sections) {
+    for (const section of insightsWorkspace.sections) {
       const Icon = SECTION_ICON_COMPONENTS[section.icon];
       const fallbackIcon = <Icon className="h-5 w-5" strokeWidth={2.2} />;
       const iconMaskStyle: React.CSSProperties | undefined = section.iconSrc
@@ -3408,7 +3409,7 @@ const ExecutiveInsightsPage: React.FC = () => {
         icon: React.ReactNode;
       }
     >;
-  }, [overviewProfile, sectionTitles]);
+  }, [insightsWorkspace, sectionTitles]);
 
   const addTilePickerState = useMemo(() => {
     if (!addTileSection) return null;
@@ -3556,6 +3557,9 @@ const ExecutiveInsightsPage: React.FC = () => {
   // searchbase.conf writes to `admin_all_objects`. See
   // `useCanManageFactoryTileConfig` and `searchbaseTileConfigService`.
   const { canManage: canManageFactoryConfig } = useCanManageFactoryTileConfig();
+  const { canManage: canManageWorkspaceConfig } =
+    useCanManageInsightsWorkspaces();
+  const [workspaceManagerOpen, setWorkspaceManagerOpen] = useState(false);
   const [factoryTileConfigStatus, setFactoryTileConfigStatus] = useState<
     "idle" | "saving" | "saved" | "error"
   >("idle");
@@ -3588,10 +3592,10 @@ const ExecutiveInsightsPage: React.FC = () => {
       try {
         await saveFactoryTileConfig({
           tileId: patch.tileId,
-          profileId: overviewProfile.id,
+          workspaceId: insightsWorkspace.sourceWorkspace,
           section:
             pickerContext?.sectionId ??
-            overviewProfile.defaultVisibleSections[0] ??
+            insightsWorkspace.defaultVisibleSections[0] ??
             "custom",
           fromStanzaId,
           thresholds: patch.thresholds,
@@ -3618,7 +3622,7 @@ const ExecutiveInsightsPage: React.FC = () => {
         }
       }
     },
-    [overviewProfile.id, pickerContext, searchbaseByName],
+    [insightsWorkspace, pickerContext, searchbaseByName],
   );
 
   // Drilldown edits now go through `handleSaveFactoryTileConfig`
@@ -3780,8 +3784,8 @@ const ExecutiveInsightsPage: React.FC = () => {
     setMapVisible,
   ]);
 
-  const handleSaveOverviewFactoryDefaults = useCallback(async () => {
-    const next: OverviewFactoryTilesConfig = {};
+  const handlePublishWorkspaceLayout = useCallback(async () => {
+    const next: WorkspaceLayoutConfig = {};
     for (const section of availableSections) {
       // Shared factory defaults must stay tied to searchbase-owned
       // Overview definitions. Local additions are intentionally
@@ -3803,24 +3807,24 @@ const ExecutiveInsightsPage: React.FC = () => {
       };
     }
 
-    setFactoryDefaultsStatus("saving");
+    setWorkspaceLayoutStatus("saving");
     try {
-      await saveOverviewFactoryTiles(next, overviewProfile.id);
-      setOverviewFactoryTiles(next);
-      setFactoryDefaultsStatus("saved");
+      await saveWorkspaceLayout(insightsWorkspace, next);
+      setWorkspaceLayout(next);
+      setWorkspaceLayoutStatus("saved");
       if (typeof window !== "undefined") {
-        window.setTimeout(() => setFactoryDefaultsStatus("idle"), 2400);
+        window.setTimeout(() => setWorkspaceLayoutStatus("idle"), 2400);
       }
     } catch (error) {
-      console.error("[overview] failed to save factory tile defaults", error);
-      setFactoryDefaultsStatus("error");
+      console.error("[insights] failed to publish workspace layout", error);
+      setWorkspaceLayoutStatus("error");
       if (typeof window !== "undefined") {
         window.alert(
           error instanceof Error
             ? error.message
-            : "Could not save Overview factory defaults.",
+            : "Could not publish this workspace layout.",
         );
-        window.setTimeout(() => setFactoryDefaultsStatus("idle"), 4000);
+        window.setTimeout(() => setWorkspaceLayoutStatus("idle"), 4000);
       }
     }
   }, [
@@ -3830,7 +3834,7 @@ const ExecutiveInsightsPage: React.FC = () => {
     getSectionTileOrder,
     sectionTileBounds.maxCount,
     sectionTileCounts,
-    overviewProfile.id,
+    insightsWorkspace.id,
   ]);
 
   // ------------------------------ Map footer ------------------------------
@@ -4321,32 +4325,28 @@ const ExecutiveInsightsPage: React.FC = () => {
             <div className="flex flex-col items-end">
               <label
                 className="relative m-0 inline-flex h-7 max-w-[180px] cursor-pointer items-center gap-1 rounded-md px-1.5 text-slate-600 transition-colors hover:bg-slate-50 hover:text-sky-700 focus-within:ring-2 focus-within:ring-sky-500 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-sky-200"
-                title={`Switch Overview profile. Current: ${overviewProfile.label}`}
+                title={`Switch workspace. Current: ${insightsWorkspace.label}`}
               >
                 <Layers3 className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
                 <span className="hidden truncate text-[11px] font-bold leading-none xl:block">
-                  {overviewProfile.label}
+                  {insightsWorkspace.label}
                 </span>
                 <ChevronDown
                   className="hidden h-3 w-3 flex-shrink-0 xl:block"
                   aria-hidden="true"
                 />
                 <select
-                  value={overviewProfile.id}
+                  value={insightsWorkspace.id}
                   onChange={(event) => {
-                    const nextProfileId = event.target.value;
-                    if (isOverviewProfileId(nextProfileId)) {
-                      handleOverviewProfileChange(nextProfileId);
-                    }
+                    handleInsightsWorkspaceChange(event.target.value);
                   }}
-                  aria-label="Overview profile"
+                  aria-label="Workspace"
                   className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                 >
-                  {OVERVIEW_PROFILE_IDS.map((profileId) => {
-                    const profile = getOverviewProfile(profileId);
+                  {workspaces.map((workspace) => {
                     return (
-                      <option key={profile.id} value={profile.id}>
-                        {profile.label}
+                      <option key={workspace.id} value={workspace.id}>
+                        {workspace.label}
                       </option>
                     );
                   })}
@@ -4365,6 +4365,17 @@ const ExecutiveInsightsPage: React.FC = () => {
                 </a>
               </div>
             </div>
+              {canManageWorkspaceConfig && (
+                <button
+                  type="button"
+                  onClick={() => setWorkspaceManagerOpen(true)}
+                  title="Create, duplicate, or manage workspaces"
+                  aria-label="Manage workspaces"
+                  className={iconBtnClass}
+                >
+                  <Settings2 className="h-4 w-4" />
+                </button>
+              )}
             {splunkUsername && (
               <div
                 className="w-8 h-8 rounded-full bg-sky-100 dark:bg-sky-900/40 border border-sky-200 dark:border-sky-800 flex items-center justify-center text-sky-600 dark:text-sky-300"
@@ -5005,7 +5016,7 @@ const ExecutiveInsightsPage: React.FC = () => {
       </main>
 
       <footer className="flex-shrink-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-1 text-center text-[8.5px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] leading-none">
-        Splunk Field Solutions - Executive Insights
+        Splunk Field Solutions · Insights Workspace
       </footer>
 
       <HelpOverlay
@@ -5014,10 +5025,32 @@ const ExecutiveInsightsPage: React.FC = () => {
         shortcuts={helpShortcutRows}
       />
 
+      <WorkspaceManager
+        open={workspaceManagerOpen}
+        currentWorkspace={insightsWorkspace}
+        workspaces={workspaces}
+        layouts={layouts}
+        onClose={() => setWorkspaceManagerOpen(false)}
+        onWorkspaceSaved={(workspaceId) => {
+          if (workspaceId === insightsWorkspace.id) {
+            window.location.reload();
+            return;
+          }
+          handleInsightsWorkspaceChange(workspaceId);
+        }}
+        onWorkspaceDeleted={(workspaceId) => {
+          if (workspaceId === insightsWorkspace.id) {
+            handleInsightsWorkspaceChange("secure_networking");
+            return;
+          }
+          window.location.reload();
+        }}
+      />
+
       {addTilePickerState && (
         <OverviewAddTilePanel
           open={addTileSection !== null}
-          profile={overviewProfile}
+          profile={insightsWorkspace}
           section={addTilePickerState.section}
           sectionTitle={addTilePickerState.sectionTitle}
           records={searchbaseRecords ?? []}
@@ -5072,8 +5105,10 @@ const ExecutiveInsightsPage: React.FC = () => {
           }
         }}
         onResetAllCustomizations={handleResetAllCustomizations}
-        onSaveFactoryDefaults={handleSaveOverviewFactoryDefaults}
-        factoryDefaultsStatus={factoryDefaultsStatus}
+        onPublishWorkspaceLayout={
+          canManageWorkspaceConfig ? handlePublishWorkspaceLayout : undefined
+        }
+        workspaceLayoutStatus={workspaceLayoutStatus}
         canManageFactoryConfig={canManageFactoryConfig}
         onSaveFactoryTileConfig={handleSaveFactoryTileConfig}
         factoryTileConfigStatus={factoryTileConfigStatus}
@@ -5113,12 +5148,12 @@ const ExecutiveInsightsPage: React.FC = () => {
         onClose={() => setBrandingEditorOpen(false)}
         override={brandingOverride}
         titlePlaceholder={
-          overviewProfile.headerTitle ||
+          insightsWorkspace.headerTitle ||
           customerName ||
           DEFAULT_HEADER_TITLE_FALLBACK
         }
         subtitlePlaceholder={
-          overviewProfile.headerSubtitle || DEFAULT_HEADER_SUBTITLE
+          insightsWorkspace.headerSubtitle || DEFAULT_HEADER_SUBTITLE
         }
         logoFallbackSrc={logoSrc}
         onSave={(next) => setBrandingOverride(next)}
@@ -5177,7 +5212,7 @@ const recordHasTag = (record: SearchbaseRecord, tagName: string): boolean =>
 
 const recordMatchesProfileScope = (
   record: SearchbaseRecord,
-  profile: OverviewProfile,
+  profile: InsightsWorkspace,
 ): boolean => {
   if (!record.search?.trim()) return false;
   const requiredTag = profile.autoDiscovery?.requiredTag;
@@ -5186,12 +5221,13 @@ const recordMatchesProfileScope = (
 
 const recordMatchesProfileSection = (
   record: SearchbaseRecord,
-  profile: OverviewProfile,
+  profile: InsightsWorkspace,
   section: SectionId,
 ): boolean => {
   const explicitOverviewMatch = overviewDefinitionsFromRecord(record).some(
     (definition) =>
-      parseOverviewProfile(definition.profile) === profile.id &&
+      parseWorkspaceSource(definition.workspace ?? definition.profile) ===
+        profile.sourceWorkspace &&
       parseOverviewSection(definition.section, profile) === section,
   );
   if (explicitOverviewMatch) return true;
@@ -5447,7 +5483,7 @@ const OverviewAddTileAppMultiSelect: React.FC<
 
 interface OverviewAddTilePanelProps {
   open: boolean;
-  profile: OverviewProfile;
+  profile: InsightsWorkspace;
   section: SectionId;
   sectionTitle: string;
   records: SearchbaseRecord[];
@@ -7749,4 +7785,50 @@ const KpiCard: React.FC<KpiCardProps> = ({
   </div>
 );
 
-export default ExecutiveInsightsPage;
+const InsightsWorkspacePage: React.FC = () => {
+  const [bundle, setBundle] = useState<InsightsWorkspaceBundle | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadInsightsWorkspaces()
+      .then((loaded) => {
+        if (!cancelled) setBundle(loaded);
+      })
+      .catch((error) => {
+        console.warn(
+          "[insights] workspace config unavailable; using packaged fallbacks",
+          error,
+        );
+        if (!cancelled) {
+          setBundle({
+            workspaces: [...PACKAGED_WORKSPACE_FALLBACKS],
+            layouts: {},
+          });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!bundle) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm font-semibold text-slate-600 dark:bg-slate-950 dark:text-slate-300">
+        Loading Insights workspaces…
+      </div>
+    );
+  }
+
+  const workspace = getWorkspaceFromLocation(bundle.workspaces);
+  return (
+    <InsightsWorkspaceRuntime
+      key={workspace.id}
+      workspace={workspace}
+      workspaces={bundle.workspaces}
+      initialLayout={bundle.layouts[workspace.id] ?? {}}
+      layouts={bundle.layouts}
+    />
+  );
+};
+
+export default InsightsWorkspacePage;
