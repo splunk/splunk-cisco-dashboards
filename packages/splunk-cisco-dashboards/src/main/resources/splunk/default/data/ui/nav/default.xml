@@ -99,6 +99,7 @@
         </collection>
 
         <collection label="Admin &amp; Tools">
+            <view name="start" label="Setup" />
             <a href="user_guide">User Guide</a>
             <a href="macro_index_tuning">Macro Index Tuning</a>
         </collection>

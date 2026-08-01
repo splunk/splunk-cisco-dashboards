@@ -233,6 +233,7 @@ assert.equal(
 );
 for (const viewName of [
   "executive_briefing_profile",
+  "insights_workspace",
   "secure_networking_profile",
 ]) {
   const viewSource = fs.readFileSync(
@@ -240,12 +241,16 @@ for (const viewName of [
     "utf8",
   );
   assert.match(viewSource, /<dashboard\b/);
-  assert.match(viewSource, /script="executive_insights_bootstrap\.js"/);
+  assert.match(
+    viewSource,
+    /script="application\.js,executive_insights_bootstrap\.js"/,
+  );
   assert.match(viewSource, /id="scan-root"/);
   assert.doesNotMatch(viewSource, /\btemplate=/);
 }
 assert.match(navSource, /name="secure_networking_profile"\s+default="true"/);
 assert.match(navSource, /name="executive_briefing_profile"/);
+assert.match(navSource, /<view name="start" label="Setup" \/>/);
 assert.doesNotMatch(navSource, /name="secure_networking_overview"/);
 assert.doesNotMatch(navSource, /name="overview"/);
 
