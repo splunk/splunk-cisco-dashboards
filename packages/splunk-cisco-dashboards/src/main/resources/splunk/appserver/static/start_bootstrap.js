@@ -18,94 +18,114 @@ const SCD_SETUP_DISCOVERY_SEARCH = [
 
 const SCD_SETUP_DEPENDENCIES = [
   {
-    id: "cim",
-    name: "Splunk Common Information Model",
-    appIds: ["Splunk_SA_CIM"],
+    id: "dc-networking",
+    name: "Cisco DC Networking App for Splunk",
+    appIds: ["cisco_dc_networking_app_for_splunk"],
     always: true,
     importance: "required",
+    splunkbase:
+      "https://splunkbase.splunk.com/apps/#/search/Cisco%20DC%20Networking/",
     purpose:
-      "Required for normalized authentication and network traffic fields used by the dashboards.",
+      "Provides the data-center networking searches and dashboards used by Searchbase.",
+  },
+  {
+    id: "catalyst-app",
+    name: "Cisco Enterprise Networking for Splunk Platform",
+    appIds: ["cisco-catalyst-app"],
+    always: true,
+    importance: "required",
+    splunkbase: "https://splunkbase.splunk.com/app/7539",
+    purpose: "Provides Cisco Catalyst search content and data models.",
+  },
+  {
+    id: "security-cloud",
+    name: "Cisco Security Cloud",
+    appIds: ["CiscoSecurityCloud"],
+    always: true,
+    importance: "required",
+    splunkbase: "https://splunkbase.splunk.com/app/7404",
+    purpose: "Provides the supported Cisco security integrations and searches.",
+  },
+  {
+    id: "searchbase",
+    name: "Searchbase App for Splunk",
+    appIds: ["searchbase"],
+    always: true,
+    importance: "required",
+    splunkbase:
+      "https://splunkbase.splunk.com/apps/#/search/Searchbase%20App%20for%20Splunk/",
+    purpose: "Supplies the shared search layer used by this app.",
   },
   {
     id: "ai-toolkit",
     name: "Splunk AI Toolkit",
     appIds: ["Splunk_ML_Toolkit", "Splunk AI Toolkit"],
     always: true,
-    importance: "recommended",
-    splunkbase: "https://splunkbase.splunk.com/app/2890",
-    purpose:
-      "Required by forecasting and anomaly-detection panels that use fit and apply.",
-  },
-  {
-    id: "catalyst",
-    name: "Cisco Enterprise Networking for Splunk Platform",
-    appIds: ["cisco-catalyst-app", "TA_cisco_catalyst"],
-    pattern: /^cisco:(?:dnac|catalyst:center):/i,
     importance: "required",
-    splunkbase: "https://splunkbase.splunk.com/app/7539",
-    purpose:
-      "Provides Cisco Catalyst data mappings and the Cisco_Catalyst_App data model.",
+    splunkbase: "https://splunkbase.splunk.com/app/2890",
+    purpose: "Runs forecasting and anomaly-detection searches.",
   },
   {
-    id: "asa",
-    name: "Splunk Add-on for Cisco ASA",
-    appIds: ["Splunk_TA_cisco-asa"],
-    pattern: /^cisco:(?:asa|ftd)(?::|$)/i,
+    id: "scientific-python",
+    name: "Python for Scientific Computing",
+    appIds: [],
+    appIdPrefix: "Splunk_SA_Scientific_Python_",
+    displayId: "Splunk_SA_Scientific_Python_<os>",
+    always: true,
     importance: "required",
     splunkbase:
-      "https://splunkbase.splunk.com/apps/#/search/Splunk%20Add-on%20for%20Cisco%20ASA/",
-    purpose: "Parses and normalizes ASA and FTD syslog.",
-  },
-  {
-    id: "security-cloud",
-    name: "Cisco Security Cloud",
-    appIds: ["CiscoSecurityCloud"],
-    pattern:
-      /^cisco:(?:duo|sfw|estreamer|sourcefire|firepower|nvm|sna|xdr|cloud_security|umbrella|secure:workload|ai:defense|etd|cvi|cii|sca)(?::|$)/i,
-    importance: "required",
-    splunkbase: "https://splunkbase.splunk.com/app/7404",
+      "https://splunkbase.splunk.com/apps/#/search/Python%20for%20Scientific%20Computing/",
     purpose:
-      "The supported package for Cisco Duo, Secure Firewall eStreamer, and other Cisco security integrations.",
+      "Provides the OS-specific Python runtime required by Splunk AI Toolkit.",
   },
   {
-    id: "thousandeyes",
-    name: "Cisco ThousandEyes App for Splunk",
-    appIds: ["ta_cisco_thousandeyes"],
-    pattern: /^cisco:thousandeyes(?::|$)/i,
+    id: "meraki-ta",
+    name: "Cisco Meraki Add-on for Splunk",
+    appIds: ["Splunk_TA_cisco_meraki"],
+    always: true,
     importance: "required",
-    splunkbase: "https://splunkbase.splunk.com/app/7719",
-    purpose:
-      "Provides ThousandEyes data models and the macros used by tstats-backed panels.",
+    splunkbase:
+      "https://splunkbase.splunk.com/apps/#/search/Cisco%20Meraki%20Add-on/",
+    purpose: "Collects and normalizes Cisco Meraki data.",
   },
   {
-    id: "spaces",
-    name: "Cisco Spaces Firehose Add-on",
-    appIds: ["TA_cisco_spaces", "Cisco_Spaces", "cisco-spaces-firehose"],
-    pattern: /^cisco:spaces(?::|$)/i,
+    id: "windows-ta",
+    name: "Splunk Add-on for Microsoft Windows",
+    appIds: ["Splunk_TA_windows"],
+    always: true,
+    importance: "required",
+    splunkbase:
+      "https://splunkbase.splunk.com/apps/#/search/Splunk%20Add-on%20for%20Microsoft%20Windows/",
+    purpose: "Provides Windows host data used by cross-domain Searchbase content.",
+  },
+  {
+    id: "catalyst-ta",
+    name: "Cisco Catalyst Add-on for Splunk",
+    appIds: ["TA_cisco_catalyst"],
+    always: true,
+    importance: "required",
+    splunkbase:
+      "https://splunkbase.splunk.com/apps/#/search/Cisco%20Catalyst%20Add-on/",
+    purpose: "Collects and normalizes Cisco Catalyst data.",
+  },
+  {
+    id: "spaces-ta",
+    name: "Cisco Spaces Add-on for Splunk",
+    appIds: ["ta_cisco_spaces"],
+    always: true,
     importance: "required",
     splunkbase:
       "https://splunkbase.splunk.com/apps/#/search/Cisco%20Spaces/",
     purpose: "Collects and parses Cisco Spaces Firehose events.",
   },
   {
-    id: "intersight",
-    name: "Cisco Intersight integration",
-    appIds: ["Splunk_TA_cisco_intersight", "TA_cisco_intersight"],
-    pattern: /^cisco:intersight(?::|$)/i,
+    id: "thousandeyes-ta",
+    name: "Cisco ThousandEyes App for Splunk",
+    appIds: ["ta_cisco_thousandeyes"],
+    always: true,
     importance: "required",
-    splunkbase:
-      "https://splunkbase.splunk.com/apps/#/search/Cisco%20Intersight/",
-    purpose: "Collects Cisco Intersight inventory and advisory events.",
-  },
-  {
-    id: "sdwan",
-    name: "Cisco SD-WAN integration",
-    appIds: ["cisco-catalyst-app", "TA_cisco_sdwan", "Cisco_SD_WAN"],
-    pattern: /^cisco:sdwan(?::|$)/i,
-    importance: "required",
-    splunkbase:
-      "https://splunkbase.splunk.com/apps/#/search/Cisco%20SD-WAN/",
-    purpose: "Provides Cisco SD-WAN collection and field mappings.",
+    splunkbase: "https://splunkbase.splunk.com/app/7719",
+    purpose: "Provides ThousandEyes data models and macros.",
   },
 ];
 
@@ -150,6 +170,10 @@ function scdSetupTuningUrl(pathname) {
 
 function scdSetupManageAppsUrl(pathname) {
   return `${scdSetupLocalePrefix(pathname)}/manager/system/apps/local`;
+}
+
+function scdSetupAppUrl(pathname, appId) {
+  return `${scdSetupLocalePrefix(pathname)}/app/${encodeURIComponent(appId)}`;
 }
 
 function scdSetupIsConfigured(payload) {
@@ -348,9 +372,17 @@ function scdSetupResolvePrerequisites(rows, appEntries) {
     );
     return matches.length > 0;
   }).map((dependency) => {
-    const installed = dependency.appIds
-      .map((appId) => installedById.get(appId.toLowerCase()))
-      .find(Boolean);
+    const installed =
+      dependency.appIds
+        .map((appId) => installedById.get(appId.toLowerCase()))
+        .find(Boolean) ||
+      (dependency.appIdPrefix
+        ? (appEntries || []).find((entry) =>
+            String(entry.name || "")
+              .toLowerCase()
+              .startsWith(dependency.appIdPrefix.toLowerCase()),
+          )
+        : null);
     const content = (installed && installed.content) || {};
     const installedVersion = scdSetupNormalizeVersion(content.version);
     const updateVersion = scdSetupNormalizeVersion(
@@ -367,7 +399,7 @@ function scdSetupResolvePrerequisites(rows, appEntries) {
       content.disabled === "1" ||
       content.disabled === "true";
     let status = "missing";
-    if (!dependency.appIds.length) {
+    if (!dependency.appIds.length && !dependency.appIdPrefix) {
       status = "verify";
     } else if (installed && disabled) {
       status = "disabled";
@@ -443,8 +475,8 @@ function scdSetupStatusLabel(prerequisite) {
 function scdSetupRenderStepper(parent, activeStep) {
   const steps = scdSetupElement("ol", "scd-setup__steps");
   [
-    ["1", "Discover data"],
-    ["2", "Validate add-ons"],
+    ["1", "Check data"],
+    ["2", "Review packages"],
     ["3", "Tune indexes"],
   ].forEach(([number, label], index) => {
     let stateClass = "";
@@ -554,28 +586,26 @@ function scdSetupRenderPrerequisites(parent, prerequisites, appsError) {
     const content = scdSetupElement("div", "scd-setup__requirement-copy");
     const heading = scdSetupElement("div", "scd-setup__requirement-heading");
     heading.appendChild(scdSetupElement("strong", "", prerequisite.name));
-    if (prerequisite.importance === "recommended") {
-      heading.appendChild(scdSetupElement("span", "", "Recommended"));
-    }
     content.appendChild(heading);
-    content.appendChild(scdSetupElement("p", "", prerequisite.purpose));
-    if (prerequisite.sourcetypes && prerequisite.sourcetypes.length) {
-      content.appendChild(
-        scdSetupElement(
-          "code",
-          "",
-          prerequisite.sourcetypes.slice(0, 5).join(", "),
-        ),
-      );
-    }
+    content.appendChild(
+      scdSetupElement(
+        "code",
+        "",
+        prerequisite.displayId || prerequisite.appIds[0] || prerequisite.id,
+      ),
+    );
+    row.title = prerequisite.purpose;
+    row.dataset.appId =
+      prerequisite.displayId || prerequisite.appIds[0] || prerequisite.id;
     row.appendChild(content);
     row.appendChild(status);
     if (prerequisite.splunkbase) {
       const link = scdSetupLink(
         "scd-setup__external",
-        prerequisite.status === "update" ? "Open update page" : "View package",
+        prerequisite.status === "update" ? "Update" : "Package",
         prerequisite.splunkbase,
       );
+      link.setAttribute("aria-label", `View ${prerequisite.name} on Splunkbase`);
       link.target = "_blank";
       link.rel = "noopener noreferrer";
       row.appendChild(link);
@@ -595,25 +625,140 @@ function scdSetupRenderResults(root, dataRows, appEntries, errors) {
   const totalEvents = dataRows.reduce((sum, row) => sum + row.count, 0);
   const prerequisites = scdSetupResolvePrerequisites(dataRows, appEntries);
   const needsAttention = prerequisites.filter((item) =>
-    ["missing", "disabled", "update"].includes(item.status),
+    ["missing", "disabled", "update", "verify"].includes(item.status),
   ).length;
-
-  const discoverySection = scdSetupElement("section", "scd-setup__section");
-  const discoveryHeader = scdSetupElement("div", "scd-setup__section-heading");
-  const headingCopy = scdSetupElement("div");
-  headingCopy.appendChild(
-    scdSetupElement("p", "scd-setup__eyebrow", "STEP 1 · DISCOVER CISCO DATA"),
+  const readyCount = prerequisites.length - needsAttention;
+  const navigatorInstalled = (appEntries || []).some(
+    (entry) =>
+      String(entry.name || "").toLowerCase() ===
+      "splunk-cisco-app-navigator",
   );
-  headingCopy.appendChild(scdSetupElement("h2", "", "What is already here?"));
-  headingCopy.appendChild(
+
+  const workspace = scdSetupElement("div", "scd-setup__workspace");
+  const main = scdSetupElement("main", "scd-setup__main");
+  const aside = scdSetupElement("aside", "scd-setup__aside");
+
+  const readinessSection = scdSetupElement(
+    "section",
+    "scd-setup__section scd-setup__readiness",
+  );
+  const readinessCopy = scdSetupElement("div");
+  readinessCopy.appendChild(
+    scdSetupElement("p", "scd-setup__eyebrow", "SEARCHBASE READINESS"),
+  );
+  readinessCopy.appendChild(
+    scdSetupElement("h2", "", `${readyCount} of ${prerequisites.length} packages ready`),
+  );
+  readinessCopy.appendChild(
+    scdSetupElement(
+      "p",
+      "scd-setup__section-intro",
+      "These are the high-priority apps and add-ons used by searchbase.conf.",
+    ),
+  );
+  readinessSection.appendChild(readinessCopy);
+  const readinessMetrics = scdSetupElement("div", "scd-setup__metrics");
+  [
+    [scdSetupFormatNumber(prerequisites.length), "Priority"],
+    [scdSetupFormatNumber(readyCount), "Ready"],
+    [scdSetupFormatNumber(needsAttention), "Attention"],
+  ].forEach(([value, label]) => {
+    const metric = scdSetupElement("div", "scd-setup__metric");
+    metric.appendChild(scdSetupElement("strong", "", value));
+    metric.appendChild(scdSetupElement("span", "", label));
+    readinessMetrics.appendChild(metric);
+  });
+  readinessSection.appendChild(readinessMetrics);
+  main.appendChild(readinessSection);
+
+  const appsSection = scdSetupElement("section", "scd-setup__section");
+  const appsHeader = scdSetupElement("div", "scd-setup__section-heading");
+  const appsHeadingCopy = scdSetupElement("div");
+  appsHeadingCopy.appendChild(
+    scdSetupElement("p", "scd-setup__eyebrow", "PRIORITY APPS & ADD-ONS"),
+  );
+  appsHeadingCopy.appendChild(
+    scdSetupElement("h2", "", "Package checklist"),
+  );
+  appsHeadingCopy.appendChild(
+    scdSetupElement(
+      "p",
+      "scd-setup__section-intro",
+      "Technical IDs stay visible so administrators can match deployment packages exactly.",
+    ),
+  );
+  appsHeader.appendChild(appsHeadingCopy);
+  const appsLink = scdSetupLink(
+    "scd-setup__secondary-link",
+    "Manage Apps",
+    scdSetupManageAppsUrl(window.location.pathname),
+  );
+  appsLink.target = "_blank";
+  appsLink.rel = "noopener noreferrer";
+  appsHeader.appendChild(appsLink);
+  appsSection.appendChild(appsHeader);
+  scdSetupRenderPrerequisites(appsSection, prerequisites, errors.apps);
+  main.appendChild(appsSection);
+
+  const navigatorSection = scdSetupElement(
+    "section",
+    "scd-setup__scan",
+  );
+  navigatorSection.appendChild(
+    scdSetupElement("p", "scd-setup__eyebrow", "COMPANION APP"),
+  );
+  navigatorSection.appendChild(
+    scdSetupElement("h2", "", "Splunk Cisco App Navigator"),
+  );
+  navigatorSection.appendChild(
     scdSetupElement(
       "p",
       "",
-      "The scan checks searchable cisco:* sourcetypes from the last 30 days. It does not read event payloads.",
+      "Your front door to 50+ Cisco integrations, with package selection, data-flow, platform, and tier guidance.",
     ),
   );
-  discoveryHeader.appendChild(headingCopy);
-  discoverySection.appendChild(discoveryHeader);
+  const navigatorLinks = scdSetupElement("div", "scd-setup__scan-links");
+  if (navigatorInstalled) {
+    navigatorLinks.appendChild(
+      scdSetupLink(
+        "scd-setup__button is-scan",
+        "Open App Navigator",
+        scdSetupAppUrl(window.location.pathname, "splunk-cisco-app-navigator"),
+      ),
+    );
+  }
+  const navigatorLink = scdSetupLink(
+    "scd-setup__external is-inverse",
+    "View on Splunkbase",
+    "https://splunkbase.splunk.com/app/8566",
+  );
+  navigatorLink.target = "_blank";
+  navigatorLink.rel = "noopener noreferrer";
+  navigatorLinks.appendChild(navigatorLink);
+  navigatorSection.appendChild(navigatorLinks);
+  aside.appendChild(navigatorSection);
+
+  const discoverySection = scdSetupElement(
+    "details",
+    "scd-setup__disclosure",
+  );
+  const discoverySummary = scdSetupElement("summary", "");
+  const discoverySummaryCopy = scdSetupElement("span");
+  discoverySummaryCopy.appendChild(
+    scdSetupElement("strong", "", "Discovered Cisco data"),
+  );
+  discoverySummaryCopy.appendChild(
+    scdSetupElement(
+      "small",
+      "",
+      errors.data
+        ? "Scan unavailable"
+        : `${scdSetupFormatNumber(uniqueSourcetypes.size)} sourcetypes · ${scdSetupFormatNumber(uniqueIndexes.size)} indexes · ${scdSetupFormatNumber(totalEvents)} events`,
+    ),
+  );
+  discoverySummary.appendChild(discoverySummaryCopy);
+  discoverySection.appendChild(discoverySummary);
+  const discoveryBody = scdSetupElement("div", "scd-setup__discovery-body");
 
   if (errors.data) {
     const warning = scdSetupElement(
@@ -622,48 +767,23 @@ function scdSetupRenderResults(root, dataRows, appEntries, errors) {
       "Cisco data discovery could not run. Verify this user can search the target indexes, then rescan. You may still continue to macro tuning.",
     );
     warning.setAttribute("role", "status");
-    discoverySection.appendChild(warning);
+    discoveryBody.appendChild(warning);
   } else {
-    const metrics = scdSetupElement("div", "scd-setup__metrics");
-    [
-      [scdSetupFormatNumber(uniqueSourcetypes.size), "Cisco sourcetypes"],
-      [scdSetupFormatNumber(uniqueIndexes.size), "Indexes"],
-      [scdSetupFormatNumber(totalEvents), "Events in range"],
-    ].forEach(([value, label]) => {
-      const metric = scdSetupElement("div", "scd-setup__metric");
-      metric.appendChild(scdSetupElement("strong", "", value));
-      metric.appendChild(scdSetupElement("span", "", label));
-      metrics.appendChild(metric);
-    });
-    discoverySection.appendChild(metrics);
-    scdSetupRenderSourceTable(discoverySection, dataRows);
+    discoveryBody.appendChild(
+      scdSetupElement(
+        "p",
+        "scd-setup__caption",
+        "The 30-day scan reads metadata only; event payloads are not inspected.",
+      ),
+    );
+    scdSetupRenderSourceTable(discoveryBody, dataRows);
   }
-  content.appendChild(discoverySection);
+  discoverySection.appendChild(discoveryBody);
+  aside.appendChild(discoverySection);
 
-  const appsSection = scdSetupElement("section", "scd-setup__section");
-  appsSection.appendChild(
-    scdSetupElement("p", "scd-setup__eyebrow", "STEP 2 · VALIDATE ADD-ONS"),
-  );
-  appsSection.appendChild(
-    scdSetupElement("h2", "", "Search-head and collector readiness"),
-  );
-  appsSection.appendChild(
-    scdSetupElement(
-      "p",
-      "scd-setup__section-intro",
-      "Installed versions and Splunk-known updates are checked on this search head. Only integrations with a concrete supported package are listed here; all detected cisco:* data remains visible in the discovery inventory above.",
-    ),
-  );
-  scdSetupRenderPrerequisites(appsSection, prerequisites, errors.apps);
-  const appsLink = scdSetupLink(
-    "scd-setup__secondary-link",
-    "Open Manage Apps",
-    scdSetupManageAppsUrl(window.location.pathname),
-  );
-  appsLink.target = "_blank";
-  appsLink.rel = "noopener noreferrer";
-  appsSection.appendChild(appsLink);
-  content.appendChild(appsSection);
+  workspace.appendChild(main);
+  workspace.appendChild(aside);
+  content.appendChild(workspace);
 
   const actions = root.querySelector(".scd-setup__actions");
   actions.textContent = "";
@@ -684,8 +804,8 @@ function scdSetupRenderResults(root, dataRows, appEntries, errors) {
     "p",
     "scd-setup__action-note",
     needsAttention
-      ? `${needsAttention} item${needsAttention === 1 ? "" : "s"} need attention. Setup can continue while you verify collector placement.`
-      : "Discovery is complete. The next step will save index macros before unlocking the app.",
+      ? `${needsAttention} package${needsAttention === 1 ? "" : "s"} need attention. You can continue while an administrator verifies deployment.`
+      : "All priority packages are ready. Next, save the index macros that power the dashboards.",
   );
   actions.appendChild(summary);
 }
@@ -728,23 +848,24 @@ function scdSetupRender(root) {
   const shell = scdSetupElement("section", "scd-setup__shell");
   const header = scdSetupElement("header", "scd-setup__header");
   const brand = scdSetupElement("div", "scd-setup__brand");
-  const mark = scdSetupElement("div", "scd-setup__mark", "SN");
-  mark.setAttribute("aria-hidden", "true");
   const brandCopy = scdSetupElement("div");
   brandCopy.appendChild(
-    scdSetupElement("p", "scd-setup__eyebrow", "INITIAL SETUP"),
+    scdSetupElement(
+      "p",
+      "scd-setup__eyebrow",
+      "SPLUNK CISCO DASHBOARDS · SETUP",
+    ),
   );
   brandCopy.appendChild(
-    scdSetupElement("h1", "", "Connect the app to your Cisco data"),
+    scdSetupElement("h1", "", "Get ready to explore your Cisco environment"),
   );
   brandCopy.appendChild(
     scdSetupElement(
       "p",
       "",
-      "Discover what is already indexed, validate the supporting apps, then tune index macros. Nothing is changed until the final step.",
+      "Confirm the packages used by Searchbase, review discovered data, then tune index macros.",
     ),
   );
-  brand.appendChild(mark);
   brand.appendChild(brandCopy);
   header.appendChild(brand);
   scdSetupRenderStepper(header, 1);

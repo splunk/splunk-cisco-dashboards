@@ -121,30 +121,49 @@ const prerequisites = resolvePrerequisites(
   ],
   [
     {
-      name: "Splunk_SA_CIM",
-      content: { version: "5.3.0", "update.version": "5.4.0" },
+      name: "cisco_dc_networking_app_for_splunk",
+      content: { version: "1.2.2", "update.version": "1.3.0" },
     },
     {
       name: "cisco-catalyst-app",
-      content: { version: "1.4.0", disabled: false },
+      content: { version: "3.2.10", disabled: false },
+    },
+    {
+      name: "Splunk_SA_Scientific_Python_darwin_arm64",
+      content: { version: "4.3.4", disabled: false },
     },
   ],
 );
+assert.deepEqual(
+  prerequisites.map((item) => item.id),
+  [
+    "dc-networking",
+    "catalyst-app",
+    "security-cloud",
+    "searchbase",
+    "ai-toolkit",
+    "scientific-python",
+    "meraki-ta",
+    "windows-ta",
+    "catalyst-ta",
+    "spaces-ta",
+    "thousandeyes-ta",
+  ],
+);
+assert.equal(prerequisites.length, 11);
+assert.equal(prerequisites[0].status, "update");
+assert.equal(prerequisites[1].status, "installed");
+const scientificPython = prerequisites.find(
+  (item) => item.id === "scientific-python",
+);
+assert.equal(scientificPython.status, "installed");
 assert.equal(
-  prerequisites.find((item) => item.id === "cim").status,
-  "update",
+  scientificPython.installedId,
+  "Splunk_SA_Scientific_Python_darwin_arm64",
 );
 assert.equal(
-  prerequisites.find((item) => item.id === "catalyst").status,
-  "installed",
-);
-assert.equal(
-  prerequisites.some((item) => item.id === "syslog"),
-  false,
-);
-assert.equal(
-  prerequisites.some((item) => item.id === "unmapped"),
-  false,
+  scientificPython.displayId,
+  "Splunk_SA_Scientific_Python_<os>",
 );
 
 const securityCloudPrerequisites = resolvePrerequisites(
@@ -174,16 +193,7 @@ const securityCloud = securityCloudPrerequisites.find(
 );
 assert.equal(securityCloud.status, "installed");
 assert.equal(securityCloud.splunkbase, "https://splunkbase.splunk.com/app/7404");
-assert.deepEqual(securityCloud.sourcetypes, [
-  "cisco:duo:user",
-  "cisco:sfw:estreamer",
-]);
-assert.equal(
-  securityCloudPrerequisites.some((item) =>
-    ["duo", "estreamer", "syslog", "unmapped"].includes(item.id),
-  ),
-  false,
-);
+assert.deepEqual(securityCloud.sourcetypes, []);
 
 global.window = { $C: { FORM_KEY: "runtime-token" } };
 global.document = { cookie: "" };
@@ -199,6 +209,11 @@ const applicationPath = path.resolve(
   "../src/main/resources/splunk/appserver/static/application.js",
 );
 const applicationSource = fs.readFileSync(applicationPath, "utf8");
+const bootstrapSource = fs.readFileSync(bootstrapPath, "utf8");
+assert.match(bootstrapSource, /Splunk Cisco App Navigator/);
+assert.match(bootstrapSource, /https:\/\/splunkbase\.splunk\.com\/app\/8566/);
+assert.match(bootstrapSource, /scd-setup__disclosure/);
+assert.match(bootstrapSource, /Splunk_SA_Scientific_Python_<os>/);
 const legacyOverviewTemplatePath = path.resolve(
   __dirname,
   "../src/main/resources/splunk/appserver/templates/overview.html",
