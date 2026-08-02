@@ -167,7 +167,8 @@ search = index=dc | eval changed=if(lc!="*", 1, 0)
         self.assertIn("where nodename=Clients by client", curated)
         self.assertIn("[search index=devices (edge=true) | table host]", curated)
         self.assertIn('eval changed=if(lc!="*", 1, 0)', curated)
-        self.assertEqual(report["changed_stanzas"], 2)
+        self.assertEqual(report["changed_stanzas"], 3)
+        self.assertEqual(report["changed_searches"], 2)
         self.assertEqual(report["removed_match_all_predicates"], 3)
 
     def test_repairs_unterminated_multiline_search(self) -> None:
@@ -188,6 +189,54 @@ search = sourcetype="snow:incident"
         self.assertIn("| stats count by severity\\\n", curated)
         self.assertEqual(report["formatting_repairs"], 1)
         self.assertEqual(report["removed_match_all_predicates"], 0)
+
+    def test_removes_only_redundant_timechart_projection(self) -> None:
+        conf = (
+            "[redundant]\n"
+            "search = index=main\\\n"
+            '| timechart avg(score) as "Health Score"\\\n'
+            '| fields _time "Health Score"\n\n'
+            "[meaningful]\n"
+            "search = index=main\\\n"
+            "| timechart avg(score) as score\\\n"
+            "| predict score as predicted\\\n"
+            "| fields _time score predicted\n"
+        )
+
+        curated, report = curate_catalog_text(conf)
+
+        self.assertNotIn('| fields _time "Health Score"', curated)
+        self.assertIn("| fields _time score predicted", curated)
+        self.assertEqual(report["removed_redundant_timechart_projections"], 1)
+        self.assertEqual(report["projection_stanza_ids"], ["redundant"])
+
+    def test_normalizes_harvested_search_ownership(self) -> None:
+        conf = """[dc]
+dispatch_context = cisco_dc_networking_app_for_splunk
+search = `cisco_dc_aci_index` sourcetype=cisco:dc:aci:class\
+| append [search `cisco_dc_n9k_index` sourcetype=cisco:dc:nexus9k]\
+| append [search `cisco_dc_nd_index` sourcetype=cisco:dc:nd:syslog]\
+| append [tstats `summariesonly` count from datamodel=Cisco_DCN_Fault]\
+| append [`apic_details`]
+"""
+
+        curated, report = curate_catalog_text(conf)
+
+        self.assertIn("dispatch_context = splunk-cisco-dashboards", curated)
+        self.assertEqual(curated.count("`index_dc`"), 3)
+        self.assertIn("`scd_summariesonly`", curated)
+        self.assertIn("`apic_details`", curated)
+        self.assertNotIn("`cisco_dc_aci_index`", curated)
+        self.assertEqual(report["normalized_dispatch_contexts"], 1)
+        self.assertEqual(
+            report["normalized_macro_references"],
+            {
+                "cisco_dc_aci_index->index_dc": 1,
+                "cisco_dc_n9k_index->index_dc": 1,
+                "cisco_dc_nd_index->index_dc": 1,
+                "summariesonly->scd_summariesonly": 1,
+            },
+        )
 
     def test_uses_html_heading_for_untitled_visualization(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

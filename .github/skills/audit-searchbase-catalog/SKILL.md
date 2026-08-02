@@ -1,6 +1,6 @@
 ---
 name: audit-searchbase-catalog
-description: 'Production-audit and curate Searchbase catalogs and harvested Splunk dashboard searches. Use to remediate low-value, base, post-process, KPI, or dashboard-plumbing searches and escalate only unresolved keep/merge/delete decisions; assess bare keyword or free-text filters with a verified field-first preference; remove dashboard tokens and match-all residue; consolidate duplicate or similar SPL; preserve data models; improve metadata; and validate searches safely in Splunk.'
+description: 'Production-audit and curate Searchbase catalogs and harvested Splunk dashboard searches. Use to remediate low-value, base, post-process, KPI, or dashboard-plumbing searches and escalate only unresolved keep/merge/delete decisions; assess bare keyword or free-text filters with a verified field-first preference; remove dashboard tokens, match-all residue, and redundant projections; adapt searches to local macros and dispatch ownership; consolidate duplicate or similar SPL; preserve data models; improve metadata; and validate searches safely in Splunk.'
 argument-hint: '[searchbase.conf path or dispatch context]'
 ---
 
@@ -48,6 +48,24 @@ For Simple XML base/post-process chains, resolve and assess the complete child s
 
 Before deleting or omitting any **MERGE** or **REVIEW DELETE** candidate, verify dashboard, drilldown, saved-search, Searchbase, and post-process references. Treat an explicit user example described as junk, low value, unwanted, or something to find and fix as authorization to remove that example and other clear, unreferenced instances of the same reviewed defect class when richer coverage exists. Execute those clear remediations and report them; do not stop after updating this skill. For ambiguous candidates, referenced searches, merges requiring new semantics, or unique source/data-model coverage, present a decision ledger containing: stanza ID, source dashboard/panel, concise SPL shape, dependency/reference status, value assessment, richer retained replacement when applicable, and recommendation. Ask the user to choose **keep**, **merge**, or **delete** only for those unresolved decisions. The default for an unresolved candidate is **keep unchanged**.
 
+## Output Projection Review
+
+Do not preserve a terminal `fields` or `table` merely because it appeared in a dashboard. Remove a terminal projection only when it is provably a no-op: the immediately preceding transforming command has a complete, deterministic output schema and the projection exactly repeats that schema without changing order or names. One safe example is a non-split `timechart` with explicit aliases followed by `fields _time` plus exactly those aliases.
+
+Preserve the projection when it narrows wildcard or split-series output, removes temporary fields, establishes a deliberate column order, supports a downstream command, or follows any command that may add or retain fields, including `predict`, anomaly commands, `addtotals`, `join`, `append`, `appendcols`, or a subsearch. Do not blanket-remove terminal `fields` or `table`; uncertain cases remain unchanged and enter **REWRITE REVIEW**.
+
+## Macro And Dispatch Ownership
+
+Apply this policy to every search harvested or added to `searchbase.conf`, regardless of source app:
+
+1. Inventory the source search's index macros, acceleration macros, structural macros, eventtypes, lookups, data models, and custom commands.
+2. Prefer an equivalent macro already defined in this app's `default/macros.conf`. In this repository, use domain macros such as `index_catalyst` and `index_dc`, and use `scd_summariesonly` for `tstats` acceleration behavior.
+3. Preserve all source constraints when adapting a macro. If no local index macro covers a real data domain, add one with a precise sourcetype-domain description instead of retaining a foreign index macro or hardcoding an index.
+4. Set `dispatch_context = splunk-cisco-dashboards` by default. A source dashboard's app context is provenance, not evidence that dispatch must remain there.
+5. Retain a foreign dispatch context only after verifying a required dependency is app-local and not exported to this app. Record the exact blocking macro, eventtype, lookup, data model, command, or permission in the audit report.
+6. Verify visibility with app metadata or `btool`, then execute representative bounded searches from `splunk-cisco-dashboards`. Do not infer visibility from the source app name alone.
+7. Keep exported source structural objects when no local equivalent exists; global visibility means they do not require foreign dispatch. Never copy a large source macro into this app solely to change dispatch context.
+
 ## Safety Rules
 
 - Scope the first pass by an explicit stanza prefix, dispatch context, source app, or file.
@@ -67,17 +85,19 @@ Before deleting or omitting any **MERGE** or **REVIEW DELETE** candidate, verify
 5. Review bare keyword and phrase filters using the field-first procedure. Rewrite only when structured-field equivalence is supported by extraction and bounded runtime evidence; otherwise send the candidate to the user decision ledger unchanged.
 6. Remove unresolved dashboard tokens and exact match-all predicates such as `field=*`, `field="*"`, `field='*'`, or token-derived `field IN $token$`.
 7. Remove now-empty `search`/`where` stages and dangling Boolean operators while retaining neighboring static predicates.
-8. Whenever the `search` string changes for any reason, review that stanza's `description`, `explanation`, `solution`, and `related_info`. Update each field when needed so it accurately describes the final SPL, output fields, operational meaning, recommended response, provenance, and related searches. Record that the review occurred even when no prose change is required.
-9. Preserve meaningful patterns such as `node="*leaf*"`, `dn="*/sys/health"`, and intentional source wildcards.
-10. Canonicalize SPL with the repository formatter and remove exact duplicates. Before deletion, verify references and select the clearest, most reusable metadata.
-11. Serialize searches through the repository stanza formatter. In `searchbase.conf`, every physical line of a multiline `search` except the final line must end with a continuation backslash (`\\`) flush against the final SPL character. Never write logical `format_search()` output directly into the file; use the stanza/search-field serializer that emits continuations.
-12. Generate near-duplicate candidates with normalized TF-IDF cosine similarity, a length penalty, and a minimum shared-term threshold. Searchbase's reference formula is:
+8. Review terminal projections and remove only the provable no-op cases defined above.
+9. Normalize macros and dispatch context using the ownership policy above.
+10. Whenever the `search` string changes for any reason, review that stanza's `description`, `explanation`, `solution`, and `related_info`. Update each field when needed so it accurately describes the final SPL, output fields, operational meaning, recommended response, provenance, and related searches. Record that the review occurred even when no prose change is required.
+11. Preserve meaningful patterns such as `node="*leaf*"`, `dn="*/sys/health"`, and intentional source wildcards.
+12. Canonicalize SPL with the repository formatter and remove exact duplicates. Before deletion, verify references and select the clearest, most reusable metadata.
+13. Serialize searches through the repository stanza formatter. In `searchbase.conf`, every physical line of a multiline `search` except the final line must end with a continuation backslash (`\`) flush against the final SPL character. Never write logical `format_search()` output directly into the file; use the stanza/search-field serializer that emits continuations.
+14. Generate near-duplicate candidates with normalized TF-IDF cosine similarity, a length penalty, and a minimum shared-term threshold. Searchbase's reference formula is:
 
    $$s(a,b)=\cos(a,b)\left(\frac{\min(|a|,|b|)}{\max(|a|,|b|)}\right)^{0.5}$$
 
-13. Review every candidate semantically. Keep both searches when they differ by source/sourcetype, success/failure, severity, direction, aggregation, grouping, output fields, visualization, drilldown role, or operational intent. Similarity scores nominate candidates; they never authorize deletion.
-14. Improve generic or dashboard-bound names and prose. Metadata must describe the independent search's actual output and remediation use.
-15. Regenerate provenance/manifest metrics, distinguishing source dashboard searches from retained curated catalog searches.
+15. Review every candidate semantically. Keep both searches when they differ by source/sourcetype, success/failure, severity, direction, aggregation, grouping, output fields, visualization, drilldown role, or operational intent. Similarity scores nominate candidates; they never authorize deletion.
+16. Improve generic or dashboard-bound names and prose. Metadata must describe the independent search's actual output and remediation use.
+17. Regenerate provenance/manifest metrics, distinguishing source dashboard searches from retained curated catalog searches.
 
 ## Validation Gates
 
@@ -85,6 +105,9 @@ Before deleting or omitting any **MERGE** or **REVIEW DELETE** candidate, verify
 - Scoped catalog has zero unresolved dashboard tokens.
 - Scoped catalog has zero exact bare-star predicates.
 - Scoped catalog has zero exact canonical-SPL duplicate groups.
+- No terminal projection provably repeats the complete output of its immediately preceding transform; all retained ambiguous projections remain unchanged or have a review record.
+- Harvested searches use local index and acceleration macros wherever equivalent abstractions exist.
+- Dispatch context defaults to `splunk-cisco-dashboards`; every retained foreign context has a recorded non-exported dependency and bounded validation evidence.
 - Every bare keyword or phrase filter has a recorded field-first review: verified structured rewrite, documented raw-term justification, or unresolved **REWRITE REVIEW** decision.
 - Every harvested search has an independent-value classification. Every omission, merge, or deletion has verified reference status and either direct user authorization, inclusion in an explicitly authorized clear defect class, or a recorded decision for an unresolved candidate.
 - Raw base searches are retained only when independently valuable; resolved child searches preserve any unique source, sourcetype, macro, and data-model coverage.
