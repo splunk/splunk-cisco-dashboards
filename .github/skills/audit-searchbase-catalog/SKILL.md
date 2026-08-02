@@ -1,6 +1,6 @@
 ---
 name: audit-searchbase-catalog
-description: 'Production-audit, optimize, and curate Searchbase catalogs and harvested Splunk dashboard searches. Use to replace eventtype-only bases with local index and sourcetype constraints; remove table-star, redundant commands around stats, and premature transforming commands; filter rows and fields early; remediate low-value dashboard plumbing; assess free-text filters; adapt searches to local macros and dispatch ownership; consolidate duplicates; preserve data models; improve metadata; and validate searches safely in Splunk.'
+description: 'Production-audit, optimize, and curate Searchbase catalogs and harvested Splunk dashboard searches. Use to replace eventtype-only bases with local index and sourcetype constraints; remove table-star, all sorting from stats/tstats searches, redundant commands around stats, and premature transforming commands; filter rows and fields early; remediate low-value dashboard plumbing; assess free-text filters; adapt searches to local macros and dispatch ownership; consolidate duplicates; preserve data models; improve metadata; and validate searches safely in Splunk.'
 argument-hint: '[searchbase.conf path or dispatch context]'
 ---
 
@@ -53,8 +53,8 @@ Treat an explicit user example described as junk, low value, unwanted, or someth
 Apply this projection decision order:
 
 1. If the projection is exact `table *`, remove it. If early column reduction is useful, replace it with streaming `fields` containing only fields required downstream.
-2. When `stats` is the final transforming command, remove trailing terminal `fields` and use the `stats` schema as the final output. Assess any trailing `sort` through the sort evidence gate below; do not remove a positive-limit sort that enforces top-N cardinality.
-3. Remove every `table` or `fields` command that appears before a later `stats` command in the same pipeline. Assess `sort` independently through the sort evidence gate because a positive limit or downstream order-sensitive command can affect results.
+2. When `stats` is used, remove every `sort` from the complete search, including bounded and nested sorts. Remove trailing terminal `fields` and use the `stats` schema as the final output.
+3. Remove every `table` or `fields` command that appears before a later `stats` command in the same pipeline. No `sort` may coexist with `stats` or `tstats` anywhere in the search.
 4. For transforms other than `stats`, remove a terminal projection only when every output field of the immediately preceding transform is a literal, explicitly named alias, with no wildcard, split-by field, dynamic field name, subsearch, or command that can add fields, and the projection repeats exactly those fields in the same order. One safe example is a non-split `timechart` with explicit aliases followed by `fields _time` plus exactly those aliases.
 5. Preserve other projections when they narrow wildcard or split-series output, remove temporary fields, establish column order, support a downstream command, or follow `predict`, an anomaly command, `addtotals`, `join`, `append`, `appendcols`, or a subsearch.
 6. If none of these outcomes is proven, leave the projection unchanged and record **REWRITE REVIEW**.
@@ -85,7 +85,7 @@ Optimize every harvested or reviewed search as production SPL, not as a literal 
 
 1. Filter rows before calculations: move independent `search`/`where` predicates ahead of `eval`, `lookup`, `rex`, `foreach`, aggregation, and enrichment. Keep predicates after the command that creates the field they require.
 2. Reduce columns early with `fields required_field ...` and optionally `fields - _raw` only when the pipeline has no later `stats` command. Remove `fields` before `stats` and let the transform enforce the smaller schema. Never remove `_raw` before a later extraction or command needs it.
-3. Keep non-streaming and transforming commands such as `stats`, `chart`, `timechart`, `top`, `append`, and explicit `table` as late as semantics allow. Remove `table` before a later `stats`; assess every `sort` through the sort evidence gate. Once processing centralizes on the search head, later filters cannot recover indexer parallelism.
+3. Keep non-streaming and transforming commands such as `stats`, `chart`, `timechart`, `top`, `append`, and explicit `table` as late as semantics allow. Remove `table` before a later `stats`, and remove all sorting from any search that uses `stats` or `tstats`. Once processing centralizes on the search head, later filters cannot recover indexer parallelism.
 4. Review `join`, `append`, `appendcols`, `transaction`, and subsearches for extra indexer trips, truncation limits, and timeout risk. Prefer a single OR base plus conditional `stats` when it is semantically equivalent; never rewrite correlation mechanically when cardinality or event pairing would change.
 5. Use `tstats` only for indexed fields, metrics, or valid data-model datasets. Every `tstats ... FROM datamodel=...` search must use this app's acceleration macro (`scd_summariesonly` or a reviewed per-data-model variant), never a hardcoded `summariesonly=true` or `summariesonly=false`. Shipped macros default to `summariesonly=false allow_old_summaries=false` so unaccelerated deployments remain correct. Flag one shared toggle spanning unrelated data models when customers may need independent acceleration settings; do not apply an acceleration macro to index-metadata `tstats` searches that have no data model.
 6. Combine adjacent compatible calculations, avoid repeated sorting and aggregation, and limit result cardinality only when doing so preserves the operational answer.
@@ -93,11 +93,12 @@ Optimize every harvested or reviewed search as production SPL, not as a literal 
 
 ### Sort Evidence Gate
 
-1. Inventory every executable `sort` in top-level and nested pipelines. Classify each occurrence as **REMOVE COSMETIC**, **RETAIN TOP-N**, or **RETAIN ORDER DEPENDENCY**; totals must reconcile to the complete inventory.
-2. Remove unbounded `sort`, `sort 0`, and `sort limit=0` when no later command depends on row order. Terminal display ordering, ordering before `rename`, `table`, `fields`, `eval`, or another order-insensitive command, and a `sort`/`reverse` pair used only for presentation are **REMOVE COSMETIC**.
-3. Retain a positive-limit form such as `sort 10 - count` when it defines top-N or row-cap cardinality. Verify that the ranking field and direction match the search name, metadata, visualization, and consumer contract; otherwise record **REWRITE REVIEW** rather than silently removing the limit.
-4. Retain sorting that directly feeds order-sensitive logic such as `streamstats`, `delta`, `autoregress`, `transaction`, `head`, or `tail`. Record the dependent command and selection rule. A nested sort must be reviewed within its own subsearch pipeline.
-5. Do not treat position relative to `stats` as sufficient evidence. An unbounded cosmetic sort remains removable after `stats`, while a bounded top-N sort remains meaningful because deleting it changes row count and operational meaning.
+1. Inventory every executable `sort` in top-level and nested pipelines. Totals must reconcile to the complete inventory.
+2. If a search contains executable `stats` or `tstats` anywhere, remove every executable `sort` from that search. This rule has no exception for positive limits, top-N names, metadata promises, visualization ordering, or nested subsearch dependencies.
+3. Apply the same rule across subsearch boundaries: a nested `sort` is forbidden when the complete search contains `stats` or `tstats`, including `sort` before `streamstats`, `head`, `tail`, or another order-sensitive command.
+4. For searches with no `stats` or `tstats`, remove unbounded `sort`, `sort 0`, and `sort limit=0` when no later command depends on row order. Terminal display ordering and a `sort`/`reverse` pair used only for presentation are **REMOVE COSMETIC**.
+5. A retained `sort` is valid only when the complete search contains no `stats` or `tstats` and the sort has a documented row-order or positive-limit requirement.
+6. Remove or rewrite `description`, `explanation`, `solution`, and `related_info` text that describes or recommends sorting for a search containing `stats` or `tstats`; metadata must match the no-sort SPL contract.
 
 ### Entity Reduction Without Dedup
 
@@ -105,7 +106,7 @@ Optimize every harvested or reviewed search as production SPL, not as a literal 
 2. Define the intended entity grain and selection rule explicitly, then reduce with `stats` or accelerated `tstats`. Use `latest(field)` with `latest(_time)` for current state, `earliest(field)` for first observation, `values(field)` when all distinct values are meaningful, or an explicit aggregate such as `max`, `min`, `sum`, or `dc` for ranked and counted results.
 3. When several fields must come from the same winning event, use an explicit ordering key and a selection pattern that preserves row association; do not combine independent `latest(field)` values when they could originate from different events. If association cannot be proven, leave the search unchanged and record **REWRITE REVIEW**.
 4. Replace `sort ... | dedup entity` only after identifying whether the original intended latest, earliest, highest, lowest, or arbitrary selection. Never translate an arbitrary `dedup` mechanically into `stats values(*)` or `stats latest(*)`.
-5. Remove every `table` or `fields` stage before entity reduction. Let `stats` define the final fields and remove trailing terminal `fields`; assess all sorts through the sort evidence gate.
+5. Remove every `table` or `fields` stage before entity reduction. Let `stats` define the final fields, remove trailing terminal `fields`, and remove every `sort` from the complete search.
 
 ### Fillnull Evidence Gate
 
@@ -124,7 +125,7 @@ Optimize every harvested or reviewed search as production SPL, not as a literal 
 
 1. Review every `head`, `tail`, and unranked result limit. A `head` or `tail` before the first aggregation in its pipeline truncates the population being measured and silently produces incomplete counts, breakdowns, or trends; classify this as a correctness defect unless the bounded sample is the explicitly documented question. After an unordered transform such as `stats` or `tstats`, a bare limit instead retains an arbitrary result subset and is a deterministic-ranking defect.
 2. Define the intended result grain and ranking field before limiting rows. For entity-detail searches, first collapse repeated observations to one row per stable entity using accelerated `tstats latest(...) BY entity` where supported, or `stats latest(...) BY entity` when post-search aggregation is required.
-3. Preserve a numeric ranking field such as `latest(_time) AS last_seen` and derive any fallback recency before aggregation. Use `top` or `rare` when it expresses the same ranked result; otherwise retain a positive bounded form such as `sort 10 - ranking_field` because it enforces deterministic top-N cardinality. Remove only unbounded cosmetic sorting.
+3. Preserve a numeric ranking field such as `latest(_time) AS last_seen` and derive any fallback recency before aggregation. Use `top` or `rare` when it expresses the same ranked result. Never append or retain `sort` in a search that uses `stats` or `tstats`, including bounded `sort N` forms.
 4. Do not replace raw-event detail with entity-level aggregation unless the operational question calls for one row per entity. When every event is independently meaningful, sort the events deterministically and retain the bounded result limit.
 5. Push cardinality reduction into `tstats` or the earliest semantically valid transform. A final limit controls returned rows but does not reduce upstream scanning, grouping, or search-head work.
 
@@ -207,15 +208,16 @@ When the user explicitly states that the prompt or skill has been updated, run t
 - Scoped catalog has zero exact bare-star predicates.
 - Scoped catalog has zero exact canonical-SPL duplicate groups.
 - No raw-event search starts with `eventtype=`; each verified eventtype base is expressed with an app-owned index macro, explicit sourcetype, and preserved meaningful predicates.
-- No search contains `table *`, and no `table` or `fields` command appears before a later `stats` command.
+- No search contains `table *`, and no `table` or `fields` command appears before a later `stats` command. No search containing `stats` or `tstats` contains `sort` anywhere.
 - Every raw-event search has the narrowest verified index, sourcetype/source/host, field, and time constraints available without changing its operational meaning.
 - Independent filters run before calculations and non-streaming commands as far as field dependencies allow; retained early transforms and expensive correlation commands have documented justification.
-- Every retained `head`, `tail`, or result limit has a documented deterministic ordering or a verified order-independent purpose; top-N searches use `top`, `rare`, or a positive bounded `sort N` when semantically appropriate, with unresolved ranking cases recorded as **REWRITE REVIEW**.
+- Every retained `head`, `tail`, or result limit has a documented deterministic ordering or a verified order-independent purpose. Top-N searches that use `stats` or `tstats` must not use `sort N`; use a non-sort design or record **REWRITE REVIEW** when no compliant equivalent is proven.
 - No `head` or `tail` truncates the population before a downstream aggregation unless bounded sampling is the explicit documented behavior.
 - No executable search or nested subsearch contains `dedup`; every entity reduction states its grain and selection aggregate explicitly.
 - Every retained `fillnull` is field-targeted, precedes a grouping that requires an explicit null category, and has metadata documenting that dependency; all other null handling uses targeted `coalesce` or rendering fallback.
 - Repetitive field-, component-, or object-type variants have one reviewed representative unless a verified reference or distinct operational contract requires retention.
-- No terminal `fields` follows a final `stats` command. Every retained sort is either a positive-limit top-N/row-cap operation or has a documented downstream order dependency; all unbounded cosmetic sorts and presentation-only `sort`/`reverse` pairs are absent.
+- No terminal `fields` follows a final `stats` command. Every retained sort belongs to a search with no executable `stats` or `tstats` and has a documented downstream order or positive-limit requirement; all other sorts are absent.
+- Metadata for searches containing `stats` or `tstats` contains no stale sorting claim, recommendation, or command example.
 - Every literal sourcetype has installed-app, `btool`, official-documentation, generator, or observed-event evidence; unsupported literals remain in **REWRITE REVIEW** rather than being guessed.
 - Every data-model `tstats` uses a reviewed acceleration macro and no search hardcodes `summariesonly=true`; unrelated data models have independently tunable macros when customer acceleration states can differ.
 - Harvested searches use local index and acceleration macros wherever equivalent abstractions exist.

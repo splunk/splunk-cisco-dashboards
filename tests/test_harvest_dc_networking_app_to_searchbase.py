@@ -20,7 +20,7 @@ from scripts.validate_searchbase_export import validate_stanza
 
 
 class HarvestDcNetworkingTest(unittest.TestCase):
-    def test_lints_only_limits_before_aggregation(self) -> None:
+    def test_lints_limits_before_aggregation_and_sort_after_stats(self) -> None:
         conf = """[bad]
 search = index=main | head 100 | stats count by host
 
@@ -32,7 +32,7 @@ search = index=main | stats count by host | sort 0 - count | head 10
 
         self.assertEqual(
             [(item.stanza, item.rule_id.split()[0]) for item in violations],
-            [("bad", "R007")],
+            [("bad", "R007"), ("good", "R011")],
         )
 
     def test_lints_duplicate_keys_without_misreading_search_continuations(self) -> None:

@@ -56,6 +56,14 @@ R010  cosmetic-unbounded-sort
     row-order dependency. Positive limits are retained because they enforce
     top-N or row-cap semantics.
 
+R011  sort-with-stats-or-tstats
+    A search containing executable ``stats`` or ``tstats`` must contain no
+    executable ``sort``, including bounded and nested subsearch sorts.
+
+R012  sort-language-with-stats-or-tstats
+    Metadata for a search containing ``stats`` or ``tstats`` must not describe
+    or recommend sorting that the SPL policy forbids.
+
 Adding a rule
 -------------
 Append an entry to ``_RULES`` with a scan function that takes the SPL
@@ -312,6 +320,8 @@ def _rule_r009_terminal_post_stats_projection(
 
 
 def _rule_r010_cosmetic_unbounded_sort(search: str) -> Iterator[tuple[str, str]]:
+    if re.search(r"(?:^|\|)\s*(?:stats|tstats)\b", search, re.I):
+        return
     commands = _split_spl_commands(search)
     names = [command.split(maxsplit=1)[0].lower() for command in commands]
     order_sensitive = {"streamstats", "delta", "autoregress", "transaction", "head", "tail", "dedup"}
@@ -321,6 +331,13 @@ def _rule_r010_cosmetic_unbounded_sort(search: str) -> Iterator[tuple[str, str]]
         if any(name in order_sensitive for name in names[index + 1 :]):
             continue
         yield command, "remove cosmetic unbounded sorting or replace it with a justified positive top-N limit"
+
+
+def _rule_r011_sort_with_stats_or_tstats(search: str) -> Iterator[tuple[str, str]]:
+    if not re.search(r"(?:^|\|)\s*(?:stats|tstats)\b", search, re.I):
+        return
+    for match in re.finditer(r"\|\s*sort\b[^|\]\n]*", search, re.I):
+        yield match.group(0), "remove sort because this search uses stats or tstats"
 
 
 _RULES: list[tuple[str, str, Callable[[str], Iterator[tuple[str, str]]]]] = [
@@ -364,6 +381,11 @@ _RULES: list[tuple[str, str, Callable[[str], Iterator[tuple[str, str]]]]] = [
         "cosmetic-unbounded-sort",
         _rule_r010_cosmetic_unbounded_sort,
     ),
+    (
+        "R011",
+        "sort-with-stats-or-tstats",
+        _rule_r011_sort_with_stats_or_tstats,
+    ),
 ]
 
 
@@ -393,6 +415,19 @@ def lint_text(text: str) -> list[Violation]:
             continue
         out.extend(lint_search(search, sid))
         for key, value in fields.items():
+            if (
+                key in {"description", "explanation", "solution", "related_info"}
+                and re.search(r"(?:^|\|)\s*(?:stats|tstats)\b", search, re.I)
+                and re.search(r"\bsort(?:ed|ing)?\b", value, re.I)
+            ):
+                out.append(
+                    Violation(
+                        stanza=sid,
+                        rule_id="R012 sort-language-with-stats-or-tstats",
+                        snippet=f"{key} = {value[:120]}",
+                        detail="remove stale sort language from aggregate-search metadata",
+                    )
+                )
             if key != "search" and _EDIT_INSTRUCTION_RE.search(value):
                 out.append(
                     Violation(

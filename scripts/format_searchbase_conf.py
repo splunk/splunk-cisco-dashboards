@@ -311,6 +311,138 @@ def _is_bounded_sort(stage: str) -> bool:
     return bool(re.match(r"^\s*sort\s+(?:limit\s*=\s*)?[1-9]\d*\b", stage, re.I))
 
 
+def _pipe_command_at(text: str, pipe_index: int) -> str:
+    match = re.match(r"\s*([A-Za-z][\w-]*)\b", text[pipe_index + 1 :])
+    return match.group(1).lower() if match else ""
+
+
+def _contains_aggregate_command(text: str) -> bool:
+    if _stage_command(text) in {"stats", "tstats"}:
+        return True
+    quote: str | None = None
+    escaped = False
+    for idx, char in enumerate(text):
+        if escaped:
+            escaped = False
+        elif char == "\\":
+            escaped = True
+        elif quote:
+            if char == quote:
+                quote = None
+        elif char in {"'", '"', "`"}:
+            quote = char
+        elif char == "|" and _pipe_command_at(text, idx) in {"stats", "tstats"}:
+            return True
+    return False
+
+
+def remove_sorts_from_aggregate_search(text: str) -> str:
+    """Remove every executable sort when stats or tstats occurs anywhere."""
+    if not _contains_aggregate_command(text):
+        return text
+
+    out: list[str] = []
+    last = 0
+    idx = 0
+    quote: str | None = None
+    escaped = False
+    bracket_depth = 0
+    paren_depth = 0
+    while idx < len(text):
+        char = text[idx]
+        if escaped:
+            escaped = False
+            idx += 1
+            continue
+        if char == "\\":
+            escaped = True
+            idx += 1
+            continue
+        if quote:
+            if char == quote:
+                quote = None
+            idx += 1
+            continue
+        if char in {"'", '"', "`"}:
+            quote = char
+            idx += 1
+            continue
+        if char == "[":
+            bracket_depth += 1
+        elif char == "]":
+            bracket_depth = max(0, bracket_depth - 1)
+        elif char == "(":
+            paren_depth += 1
+        elif char == ")":
+            paren_depth = max(0, paren_depth - 1)
+        elif char == "|" and _pipe_command_at(text, idx) == "sort":
+            out.append(text[last:idx])
+            cursor = idx + 1
+            local_quote: str | None = None
+            local_escaped = False
+            local_bracket_depth = bracket_depth
+            local_paren_depth = paren_depth
+            while cursor < len(text):
+                current = text[cursor]
+                if local_escaped:
+                    local_escaped = False
+                elif current == "\\":
+                    local_escaped = True
+                elif local_quote:
+                    if current == local_quote:
+                        local_quote = None
+                elif current in {"'", '"', "`"}:
+                    local_quote = current
+                elif current == "[":
+                    local_bracket_depth += 1
+                elif current == "]":
+                    if local_bracket_depth == bracket_depth:
+                        break
+                    local_bracket_depth = max(0, local_bracket_depth - 1)
+                elif current == "(":
+                    local_paren_depth += 1
+                elif current == ")":
+                    local_paren_depth = max(0, local_paren_depth - 1)
+                elif (
+                    current == "|"
+                    and local_bracket_depth == bracket_depth
+                    and local_paren_depth == paren_depth
+                ):
+                    break
+                cursor += 1
+            idx = cursor
+            last = cursor
+            continue
+        idx += 1
+    out.append(text[last:])
+    return "".join(out)
+
+
+def sanitize_aggregate_sort_metadata(value: str) -> str:
+    """Remove stale sort-command language from aggregate-search prose."""
+    value = re.sub(
+        r"<code>\s*sort\b[^<]*</code>",
+        "<code>result ranking</code>",
+        value,
+        flags=re.I,
+    )
+    replacements = (
+        (r"\bsorted\s+descending\b", "ranked by descending value"),
+        (r"\bsorted\s+ascending\b", "ranked by ascending value"),
+        (r"\bsorted\s+by\b", "prioritized by"),
+        (r"\bsorting\s+by\b", "prioritizing"),
+        (r"\bsort\s+by\b", "prioritize"),
+        (r"\bsort\s+command\b", "ranking step"),
+        (r"\bsort\s+syntax\b", "ranking convention"),
+        (r"\bsorting\b", "ranking"),
+        (r"\bsorted\b", "ranked"),
+        (r"\bsort\b", "ranking"),
+    )
+    for pattern, replacement in replacements:
+        value = re.sub(pattern, replacement, value, flags=re.I)
+    return value
+
+
 def remove_redundant_stats_stages(stages: list[str]) -> list[str]:
     """Remove top-level table/fields stages made redundant by stats."""
     commands = [_stage_command(stage) for stage in stages]
@@ -375,7 +507,7 @@ def format_search(
     if not raw_lines:
         return original, False
 
-    glued = "\n".join(raw_lines)
+    glued = remove_sorts_from_aggregate_search("\n".join(raw_lines))
     spans = _scan_top_level_pipes(glued)
     if not spans:
         return original, False
@@ -548,6 +680,7 @@ def metadata_needs_reorder(fields: dict[str, str]) -> bool:
 
 def format_stanza(stanza_id: str, fields: dict[str, str]) -> tuple[str, bool, bool]:
     search_changed = False
+    prose_changed = False
 
     if "search" in fields:
         new_search, search_changed = format_search(
@@ -555,6 +688,16 @@ def format_stanza(stanza_id: str, fields: dict[str, str]) -> tuple[str, bool, bo
             preserve_unbounded_sort=stanza_id in UNBOUNDED_SORT_CONTRACT_STANZAS,
         )
         fields = {**fields, "search": new_search}
+        if _contains_aggregate_command(new_search):
+            updated_fields = dict(fields)
+            for key in PROSE_FIELDS:
+                if key not in fields:
+                    continue
+                updated = sanitize_aggregate_sort_metadata(fields[key])
+                if updated != fields[key]:
+                    prose_changed = True
+                    updated_fields[key] = updated
+            fields = updated_fields
 
     known_keys, extras = _field_order_lists(fields)
     if extras:
@@ -570,7 +713,7 @@ def format_stanza(stanza_id: str, fields: dict[str, str]) -> tuple[str, bool, bo
 
     old_keys = list(fields.keys())
     target_keys = [k for k in full_order if k in fields]
-    meta_changed = old_keys != target_keys
+    meta_changed = old_keys != target_keys or prose_changed
 
     lines = [f"[{stanza_id}]"]
     for key in full_order:
