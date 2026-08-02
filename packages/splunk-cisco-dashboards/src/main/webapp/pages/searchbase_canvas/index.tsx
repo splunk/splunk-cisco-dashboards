@@ -114,6 +114,7 @@ import {
 } from '@/common/services/searchbaseCanvasPersistenceService';
 import {
     getSearchbaseCatalogue,
+    getSplunkAppLabels,
     plainTextFromHtml,
     type SearchbaseRecord,
 } from '@/common/services/searchbaseCatalogue';
@@ -126,6 +127,27 @@ import { recordMatchesCatalogueQuery } from './catalogueSearch';
 const APP_NAME = 'splunk-cisco-dashboards';
 const STORAGE_KEY = 'scd_searchbase_canvas_v1';
 const MAX_BATCH_RUNS = 10;
+
+// REST returns the installed app's configured label when present. These keep
+// the catalogue readable for installed add-ons whose app.conf omits one.
+const CATALOGUE_APP_LABEL_FALLBACKS: Readonly<Record<string, string>> = {
+    'cisco-catalyst-app': 'Cisco Enterprise Networking for Splunk Platform',
+    'cisco_dc_networking_app_for_splunk': 'Cisco DC Networking App for Splunk',
+    CiscoSecurityCloud: 'Cisco Security Cloud',
+    Splunk_TA_Cisco_Intersight: 'Cisco Intersight Add-on for Splunk',
+    'Splunk_TA_cisco-esa': 'Splunk Add-on for Cisco ESA',
+    Splunk_TA_cisco_meraki: 'Cisco Meraki Add-on for Splunk',
+    'Splunk_TA_cisco-wsa': 'Splunk Add-on for Cisco WSA',
+    'TA-cisco-cloud-security-addon': 'Cisco Secure Access Add-on for Splunk',
+    TA_cisco_catalyst: 'Cisco Catalyst Add-on for Splunk',
+    ta_cisco_spaces: 'Cisco Spaces Add-on for Splunk',
+    ta_cisco_thousandeyes: 'Cisco ThousandEyes App for Splunk',
+};
+
+const catalogueAppLabel = (
+    app: string,
+    labelsByApp: ReadonlyMap<string, string>
+): string => labelsByApp.get(app) ?? CATALOGUE_APP_LABEL_FALLBACKS[app] ?? app;
 
 const isCanvasDebug = (): boolean => {
     if (typeof window === 'undefined') return false;
@@ -3034,6 +3056,7 @@ interface SearchableAppMultiSelectProps {
     selectedApps: ReadonlySet<string>;
     options: string[];
     countsByApp: Map<string, number>;
+    labelsByApp: ReadonlyMap<string, string>;
     ariaLabel: string;
     onChange: (selection: Set<string>) => void;
 }
@@ -3042,6 +3065,7 @@ const SearchableAppMultiSelect: React.FC<SearchableAppMultiSelectProps> = ({
     selectedApps,
     options,
     countsByApp,
+    labelsByApp,
     ariaLabel,
     onChange,
 }) => {
@@ -3056,8 +3080,15 @@ const SearchableAppMultiSelect: React.FC<SearchableAppMultiSelectProps> = ({
         for (const selectedApp of selectedApps) {
             values.add(selectedApp);
         }
-        return Array.from(values).sort((left, right) => left.localeCompare(right));
-    }, [options, selectedApps]);
+        return Array.from(values).sort((left, right) =>
+            (labelsByApp.get(left) ?? left).localeCompare(labelsByApp.get(right) ?? right)
+        );
+    }, [labelsByApp, options, selectedApps]);
+
+    const appLabel = useCallback(
+        (app: string): string => catalogueAppLabel(app, labelsByApp),
+        [labelsByApp]
+    );
 
     const totalCount = useMemo(
         () =>
@@ -3073,17 +3104,18 @@ const SearchableAppMultiSelect: React.FC<SearchableAppMultiSelectProps> = ({
         const selected = Array.from(selectedApps).sort((left, right) =>
             left.localeCompare(right)
         );
-        if (selected.length === 1) return selected[0];
+        if (selected.length === 1) return appLabel(selected[0]);
         return `${selected.length} apps selected`;
-    }, [selectedApps, totalCount]);
+    }, [appLabel, selectedApps, totalCount]);
 
     const filteredApps = useMemo(() => {
         const normalized = search.trim().toLowerCase();
         if (!normalized) return selectableApps;
         return selectableApps.filter((option) =>
-            option.toLowerCase().includes(normalized)
+            option.toLowerCase().includes(normalized) ||
+            appLabel(option).toLowerCase().includes(normalized)
         );
-    }, [search, selectableApps]);
+    }, [appLabel, search, selectableApps]);
 
     const allAppsMatches = useMemo(() => {
         const normalized = search.trim().toLowerCase();
@@ -3224,6 +3256,7 @@ const SearchableAppMultiSelect: React.FC<SearchableAppMultiSelectProps> = ({
                                         role="option"
                                         aria-selected={selected}
                                         onClick={() => toggleApp(option)}
+                                        title={`Folder name: ${option}`}
                                         className={cn(
                                             'flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm transition-colors',
                                             selected
@@ -3232,7 +3265,7 @@ const SearchableAppMultiSelect: React.FC<SearchableAppMultiSelectProps> = ({
                                         )}
                                     >
                                         <span className="min-w-0 flex-1 truncate">
-                                            {option}
+                                            {appLabel(option)}
                                         </span>
                                         <span className="text-xs font-bold text-slate-400">
                                             {countsByApp.get(option) ?? 0}
@@ -3378,6 +3411,24 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
         }
         return counts;
     }, [browserRecords]);
+
+    const [appLabelsById, setAppLabelsById] = useState<Map<string, string>>(
+        () => new Map()
+    );
+
+    useEffect(() => {
+        let cancelled = false;
+        getSplunkAppLabels(new Set(appOptions))
+            .then((labels) => {
+                if (!cancelled) setAppLabelsById(labels);
+            })
+            .catch(() => {
+                if (!cancelled) setAppLabelsById(new Map());
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [appOptions]);
 
     useEffect(() => {
         setSelectedApps((current) => {
@@ -3568,9 +3619,9 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
     const activeFilterChips = useMemo(() => {
         const chips: Array<{ id: string; label: string }> = [];
         if (!isDefaultAppSelection(selectedApps, defaultAppSelection)) {
-            const selectedAppLabels = Array.from(selectedApps).sort((left, right) =>
-                left.localeCompare(right)
-            );
+            const selectedAppLabels = Array.from(selectedApps)
+                .map((app) => catalogueAppLabel(app, appLabelsById))
+                .sort((left, right) => left.localeCompare(right));
             const label =
                 selectedAppLabels.length === 0
                     ? 'All apps'
@@ -3755,6 +3806,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                 selectedApps={selectedApps}
                                 options={appOptions}
                                 countsByApp={appCountsByName}
+                                labelsByApp={appLabelsById}
                                 ariaLabel="Filter searches by app"
                                 onChange={(nextSelection) => {
                                     setSelectedApps(nextSelection);

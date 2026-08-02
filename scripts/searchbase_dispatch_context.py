@@ -2,15 +2,17 @@
 """Assign Searchbase catalogue provenance without forcing search execution.
 
 ``dispatch_context`` is used by the catalogue UI as the source-app facet.
-Harvested entries therefore retain the app they came from, while
-``dispatch_context_force = 0`` keeps execution in the app that owns the
-searchbase.conf stanza. Locally authored entries remain explicitly forced to
+Harvested entries and entries with an unambiguous App Navigator sourcetype
+owner retain that source-app classification, while ``dispatch_context_force =
+0`` keeps execution in the app that owns the searchbase.conf stanza.
+Cross-source and locally authored entries remain explicitly forced to
 ``splunk-cisco-dashboards``.
 """
 
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import json
 import re
 from collections import Counter
@@ -26,6 +28,9 @@ LOCAL_APP = "splunk-cisco-dashboards"
 DC_NETWORKING_APP = "cisco_dc_networking_app_for_splunk"
 THOUSANDEYES_APP = "ta_cisco_thousandeyes"
 CATALYST_APP = "cisco-catalyst-app"
+MERAKI_APP = "Splunk_TA_cisco_meraki"
+SPACES_APP = "ta_cisco_spaces"
+SOURCETYPE_CATALOG = Path(__file__).with_name("searchbase_sourcetype_catalog.json")
 
 # These Catalyst-derived searches use raw events rather than the
 # Cisco_Catalyst_App data-model root, so the SPL alone cannot identify their
@@ -45,6 +50,51 @@ CATALYST_RAW_SOURCE_STANZAS = frozenset(
 )
 
 HEADER = re.compile(r"(?m)^\[([a-z0-9_]+)\]\n")
+SOURCETYPE_EQUALS = re.compile(r'(?i)\bsourcetype\s*=\s*"?([A-Za-z0-9:_*.-]+)"?')
+SOURCETYPE_IN = re.compile(r"(?is)\bsourcetype\s+IN\s*\(([^)]*)\)")
+
+
+def load_sourcetype_owners() -> dict[str, frozenset[str]]:
+    """Load the App Navigator-derived TA ownership catalog."""
+    payload = json.loads(SOURCETYPE_CATALOG.read_text(encoding="utf-8"))
+    return {
+        pattern: frozenset(owners)
+        for pattern, owners in payload["owners"].items()
+    }
+
+
+SOURCETYPE_OWNERS = load_sourcetype_owners()
+
+
+def search_sourcetypes(search: str) -> set[str]:
+    """Extract explicit sourcetype values from a Searchbase SPL definition."""
+    values = set(SOURCETYPE_EQUALS.findall(search))
+    for values_clause in SOURCETYPE_IN.findall(search):
+        values.update(re.findall(r'"([^"\s,]+)"|\b([A-Za-z0-9:_*.-]+)\b', values_clause))
+    return {
+        value if isinstance(value, str) else next(part for part in value if part)
+        for value in values
+    }
+
+
+def sourcetype_owners(search: str) -> set[str]:
+    """Return one owning app only when the SPL is unambiguously classified."""
+    owners: set[str] = set()
+    for sourcetype in search_sourcetypes(search):
+        normalized = sourcetype.lower()
+        # products.conf lists individual Meraki and Spaces sourcetypes. SPL
+        # commonly uses their family wildcard, so preserve ownership for
+        # those searches as well instead of treating the wildcard as unknown.
+        if normalized.startswith("meraki:"):
+            owners.add(MERAKI_APP)
+        if normalized.startswith("cisco:spaces:firehose"):
+            owners.add(SPACES_APP)
+        if "*" in sourcetype:
+            continue
+        for pattern, apps in SOURCETYPE_OWNERS.items():
+            if fnmatch.fnmatchcase(sourcetype, pattern):
+                owners.update(apps)
+    return owners
 
 
 def expected_dispatch_settings(
@@ -59,7 +109,10 @@ def expected_dispatch_settings(
 
     if stanza_name.startswith("dc_networking_"):
         return DC_NETWORKING_APP, "0"
-    if "harvested from <code>ta_cisco_thousandeyes</code>" in prose:
+    if (
+        "harvested from <code>ta_cisco_thousandeyes</code>" in prose
+        or re.search(r"(?i)\bdatamodel\s*=\s*Cisco_ThousandEyes\b", search)
+    ):
         return THOUSANDEYES_APP, "0"
     if (
         "Cisco_Catalyst_App" in search
@@ -67,6 +120,9 @@ def expected_dispatch_settings(
         or "harvested from <code>cisco-catalyst-app</code>" in prose
     ):
         return CATALYST_APP, "0"
+    owners = sourcetype_owners(search)
+    if len(owners) == 1:
+        return owners.pop(), "0"
     return LOCAL_APP, "1"
 
 

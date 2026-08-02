@@ -172,6 +172,15 @@ interface SearchbaseResponse {
     entry?: SearchbaseEntry[];
 }
 
+interface SplunkAppEntry {
+    name?: string;
+    content?: { label?: string };
+}
+
+interface SplunkAppsResponse {
+    entry?: SplunkAppEntry[];
+}
+
 const APP_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_\-.]{0,127}$/;
 
 const sanitizeAppName = (raw: string | undefined): string | undefined => {
@@ -217,6 +226,30 @@ const getCsrfToken = (): string | null => {
     if (typeof document === 'undefined') return null;
     const match = document.cookie.match(/(?:^|;\s*)splunkweb_csrf_token_\w+=([^;]+)/);
     return match ? decodeURIComponent(match[1]) : null;
+};
+
+/** Resolve installed-app display labels while retaining folder names as IDs. */
+export const getSplunkAppLabels = async (
+    appIds: ReadonlySet<string>
+): Promise<Map<string, string>> => {
+    if (!isInSplunkRuntime() || appIds.size === 0) return new Map();
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    const csrf = getCsrfToken();
+    if (csrf) headers['X-Splunk-Form-Key'] = csrf;
+    const params = new URLSearchParams({ output_mode: 'json', count: '0' });
+    const response = await fetch(
+        `/en-US/splunkd/__raw/services/apps/local?${params.toString()}`,
+        { method: 'GET', credentials: 'include', headers }
+    );
+    if (!response.ok) return new Map();
+    const payload = (await response.json()) as SplunkAppsResponse;
+    const labels = new Map<string, string>();
+    for (const entry of payload.entry ?? []) {
+        const name = sanitizeAppName(entry.name);
+        const label = entry.content?.label?.trim();
+        if (name && appIds.has(name) && label) labels.set(name, label);
+    }
+    return labels;
 };
 
 const splitTags = (raw: string | undefined): string[] => {
