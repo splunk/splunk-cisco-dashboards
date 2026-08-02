@@ -238,6 +238,47 @@ search = `cisco_dc_aci_index` sourcetype=cisco:dc:aci:class\
             },
         )
 
+    def test_optimizes_eventtype_base_and_removes_only_table_star(self) -> None:
+        conf = (
+            "[optimized]\n"
+            "explanation = <p>Runs the dashboard panel SPL against the source app's macros and indexed fields. Dashboard-only filters are neutralized.</p>\n"
+            'search = eventtype="cisco_dc_nd_mso" mso_api_endpoint=siteHealth\\\n'
+            "| table *\\\n"
+            '| join id [search eventtype="cisco_dc_aci_health" component=fabricNode | fields id]\\\n'
+            "| dedup mso_site_id\\\n"
+            "| table mso_site_id health_score\n\n"
+            "[unverified]\n"
+            "search = eventtype=custom_event severity=critical\\\n"
+            "| stats count\n\n"
+            "[downstream]\n"
+            "search = index=main\\\n"
+            "| search eventtype=cisco_dc_nd_mso\\\n"
+            "| stats count\n"
+        )
+
+        curated, report = curate_catalog_text(conf)
+
+        self.assertIn(
+            'search = `index_dc` sourcetype="cisco:dc:nd:mso" mso_api_endpoint=siteHealth',
+            curated,
+        )
+        self.assertNotIn("| table *", curated)
+        self.assertIn(
+            '[search `index_dc` sourcetype="cisco:dc:aci:health" component=fabricNode',
+            curated,
+        )
+        self.assertIn("| table mso_site_id health_score", curated)
+        self.assertIn("Runs curated SPL from this app with app-owned index scoping", curated)
+        self.assertNotIn("source app's macros and indexed fields", curated)
+        self.assertIn("search = eventtype=custom_event severity=critical", curated)
+        self.assertIn("| search eventtype=cisco_dc_nd_mso", curated)
+        self.assertEqual(report["removed_table_star_commands"], 1)
+        self.assertEqual(report["updated_ownership_explanations"], 1)
+        self.assertEqual(
+            report["normalized_eventtype_bases"],
+            {"cisco_dc_aci_health": 1, "cisco_dc_nd_mso": 1},
+        )
+
     def test_uses_html_heading_for_untitled_visualization(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             dashboard_path = Path(temp_dir) / "vmware.xml"

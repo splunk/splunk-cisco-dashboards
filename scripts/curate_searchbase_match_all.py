@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Remove exact match-all predicates from every Searchbase search stanza."""
+"""Normalize ownership and remove proven no-ops from Searchbase searches."""
 
 from __future__ import annotations
 
@@ -44,6 +44,19 @@ LOCAL_MACROS = {
     "cisco_dc_nd_index": "index_dc",
     "summariesonly": "scd_summariesonly",
 }
+EVENTTYPE_BASE_SEARCHES = {
+    "cisco_dc_aci_class": '`index_dc` sourcetype="cisco:dc:aci:class"',
+    "cisco_dc_aci_health": '`index_dc` sourcetype="cisco:dc:aci:health"',
+    "cisco_dc_aci_stats": '`index_dc` sourcetype="cisco:dc:aci:stats"',
+    "cisco_dc_nd_mso": '`index_dc` sourcetype="cisco:dc:nd:mso"',
+}
+STALE_OWNERSHIP_EXPLANATION = (
+    "Runs the dashboard panel SPL against the source app's macros and indexed fields."
+)
+LOCAL_OWNERSHIP_EXPLANATION = (
+    "Runs curated SPL from this app with app-owned index scoping and only the "
+    "required exported source knowledge objects."
+)
 
 
 def normalize_macro_ownership(search: str) -> tuple[str, dict[str, int]]:
@@ -57,6 +70,37 @@ def normalize_macro_ownership(search: str) -> tuple[str, dict[str, int]]:
         normalized = normalized.replace(f"`{foreign}`", f"`{local}`")
         replacements[f"{foreign}->{local}"] = count
     return normalized, replacements
+
+
+def normalize_eventtype_base(search: str) -> tuple[str, dict[str, int]]:
+    """Replace verified top-level and subsearch eventtype bases with local scope."""
+    normalized = search
+    replacements: dict[str, int] = {}
+    for eventtype, base_search in EVENTTYPE_BASE_SEARCHES.items():
+        pattern = (
+            rf'(^\s*|\[\s*search\s+)eventtype\s*=\s*'
+            rf'(?P<quote>"?){re.escape(eventtype)}(?P=quote)(?=\s|\])'
+        )
+        normalized, count = re.subn(
+            pattern,
+            lambda match: match.group(1) + base_search,
+            normalized,
+            flags=re.I,
+        )
+        if count:
+            replacements[eventtype] = count
+    return normalized, replacements
+
+
+def remove_table_star(search: str) -> tuple[str, int]:
+    """Remove exact table-star stages, which retain every field but centralize work."""
+    logical = search.replace("\\\n", "\n")
+    lines = [line.strip() for line in logical.splitlines() if line.strip()]
+    retained = [
+        line for line in lines if not re.fullmatch(r"\|\s*table\s+\*", line, re.I)
+    ]
+    removed = len(lines) - len(retained)
+    return ("\n".join(retained), removed) if removed else (search, 0)
 
 
 def remove_redundant_timechart_projection(search: str) -> tuple[str, bool]:
@@ -98,6 +142,9 @@ def curate_text(text: str) -> tuple[str, dict[str, object]]:
     cleaned_searches: dict[str, str] = {}
     removed_predicates: dict[str, list[str]] = {}
     removed_projections: list[str] = []
+    removed_table_star_stanzas: dict[str, int] = {}
+    normalized_eventtypes: dict[str, int] = {}
+    updated_explanations: list[str] = []
     normalized_dispatch_contexts: list[str] = []
     normalized_macros: dict[str, int] = {}
     unterminated_stanzas = {
@@ -107,9 +154,15 @@ def curate_text(text: str) -> tuple[str, dict[str, object]]:
         search = fields.get("search")
         if search is None:
             continue
+        if STALE_OWNERSHIP_EXPLANATION in fields.get("explanation", ""):
+            updated_explanations.append(name)
         normalized_search, macro_replacements = normalize_macro_ownership(search)
         for replacement, count in macro_replacements.items():
             normalized_macros[replacement] = normalized_macros.get(replacement, 0) + count
+        normalized_search, eventtype_replacements = normalize_eventtype_base(normalized_search)
+        for eventtype, count in eventtype_replacements.items():
+            normalized_eventtypes[eventtype] = normalized_eventtypes.get(eventtype, 0) + count
+        normalized_search, removed_table_stars = remove_table_star(normalized_search)
         predicates = match_all_predicates(normalized_search)
         without_projection, projection_removed = remove_redundant_timechart_projection(
             normalized_search
@@ -122,6 +175,8 @@ def curate_text(text: str) -> tuple[str, dict[str, object]]:
             and name not in unterminated_stanzas
             and not projection_removed
             and not macro_replacements
+            and not eventtype_replacements
+            and not removed_table_stars
         ):
             continue
         cleaned = (
@@ -138,6 +193,8 @@ def curate_text(text: str) -> tuple[str, dict[str, object]]:
         removed_predicates[name] = predicates
         if projection_removed:
             removed_projections.append(name)
+        if removed_table_stars:
+            removed_table_star_stanzas[name] = removed_table_stars
 
     matches = list(HEADER.finditer(text))
     if not matches:
@@ -154,6 +211,12 @@ def curate_text(text: str) -> tuple[str, dict[str, object]]:
                 block,
                 count=1,
             )
+        if name in updated_explanations:
+            block = block.replace(
+                STALE_OWNERSHIP_EXPLANATION,
+                LOCAL_OWNERSHIP_EXPLANATION,
+                1,
+            )
         if name not in cleaned_searches:
             output.append(block)
             continue
@@ -167,7 +230,7 @@ def curate_text(text: str) -> tuple[str, dict[str, object]]:
     if failures := find_unterminated_search_lines(curated):
         raise ValueError(f"cleanup left unterminated search lines: {failures[:3]}")
     changed_stanza_ids = sorted(
-        set(cleaned_searches).union(normalized_dispatch_contexts)
+        set(cleaned_searches).union(normalized_dispatch_contexts, updated_explanations)
     )
     report: dict[str, object] = {
         "input_stanzas": len(stanzas),
@@ -177,6 +240,10 @@ def curate_text(text: str) -> tuple[str, dict[str, object]]:
         "removed_match_all_predicates": sum(map(len, removed_predicates.values())),
         "removed_redundant_timechart_projections": len(removed_projections),
         "projection_stanza_ids": sorted(removed_projections),
+        "removed_table_star_commands": sum(removed_table_star_stanzas.values()),
+        "table_star_stanza_ids": sorted(removed_table_star_stanzas),
+        "normalized_eventtype_bases": dict(sorted(normalized_eventtypes.items())),
+        "updated_ownership_explanations": len(updated_explanations),
         "normalized_dispatch_contexts": len(normalized_dispatch_contexts),
         "normalized_macro_references": dict(sorted(normalized_macros.items())),
         "changed_stanza_ids": changed_stanza_ids,
