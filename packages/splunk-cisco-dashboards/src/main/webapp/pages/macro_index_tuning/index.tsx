@@ -105,14 +105,27 @@ const THOUSAND_EYES_MODEL_MACRO_NAMES = [
   "trace_index",
   "alert_index",
 ] as const;
+const CATALYST_APP_INDEX_MACRO_NAMES = [
+  "cisco_catalyst_app_index",
+  "cisco_catalyst_sdwan_index",
+] as const;
+const DATA_CENTER_NETWORKING_INDEX_MACRO_NAMES = [
+  "cisco_dc_aci_index",
+  "cisco_dc_nd_index",
+  "cisco_dc_n9k_index",
+] as const;
 const TARGET_APP_ORDER = [
   APP_NAME,
+  CATALYST_APP_NAME,
+  DATA_CENTER_NETWORKING_APP_NAME,
   CISCO_SECURITY_APP_NAME,
   THOUSAND_EYES_APP_NAME,
   CIM_APP_NAME,
 ] as const;
 const TARGET_APP_LABELS: Record<string, string> = {
   [APP_NAME]: "SCD",
+  [CATALYST_APP_NAME]: "Cisco Catalyst",
+  [DATA_CENTER_NETWORKING_APP_NAME]: "Cisco Data Center Networking",
   [CIM_APP_NAME]: "CIM",
   [CISCO_SECURITY_APP_NAME]: "Cisco Security",
   [THOUSAND_EYES_APP_NAME]: "ThousandEyes",
@@ -149,6 +162,16 @@ const EXTERNAL_MACRO_DESCRIPTIONS: Record<string, string> = {
     "Routes ThousandEyes trace searches to indexes containing detailed test trace records.",
   alert_index:
     "Routes ThousandEyes alert searches to indexes containing active and historical alert events.",
+  cisco_catalyst_app_index:
+    "Routes Cisco Catalyst dashboard searches to indexes containing Catalyst Center, ISE, SD-WAN, CyberVision, Meraki, IOS, ThousandEyes, and related network events.",
+  cisco_catalyst_sdwan_index:
+    "Routes Cisco Catalyst SD-WAN dashboard searches to indexes containing Cisco SD-WAN events.",
+  cisco_dc_aci_index:
+    "Routes Cisco Data Center Networking ACI searches to indexes containing ACI events.",
+  cisco_dc_nd_index:
+    "Routes Cisco Data Center Networking Nexus Dashboard searches to indexes containing Nexus Dashboard and MSO events.",
+  cisco_dc_n9k_index:
+    "Routes Cisco Data Center Networking Nexus 9000 searches to indexes containing Nexus 9000 events.",
 };
 
 type ScanState = "idle" | "loading" | "ready" | "error";
@@ -184,7 +207,13 @@ interface TunableMacroConfig {
   targetApp: string;
   definitionFormat: DefinitionFormat;
   definitionSuffix?: string;
-  family: "scd" | "cim" | "ciscoSecurity" | "thousandEyes";
+  family:
+    | "scd"
+    | "cim"
+    | "catalyst"
+    | "dataCenterNetworking"
+    | "ciscoSecurity"
+    | "thousandEyes";
 }
 
 const CIM_MACRO_CONFIGS: TunableMacroConfig[] = CIM_MACRO_NAMES.map(
@@ -210,6 +239,20 @@ const THOUSAND_EYES_MODEL_MACRO_CONFIGS: TunableMacroConfig[] =
     definitionFormat: "indexOr",
     family: "thousandEyes",
   }));
+const CATALYST_APP_INDEX_MACRO_CONFIGS: TunableMacroConfig[] =
+  CATALYST_APP_INDEX_MACRO_NAMES.map((macro) => ({
+    macro,
+    targetApp: CATALYST_APP_NAME,
+    definitionFormat: "indexIn",
+    family: "catalyst",
+  }));
+const DATA_CENTER_NETWORKING_INDEX_MACRO_CONFIGS: TunableMacroConfig[] =
+  DATA_CENTER_NETWORKING_INDEX_MACRO_NAMES.map((macro) => ({
+    macro,
+    targetApp: DATA_CENTER_NETWORKING_APP_NAME,
+    definitionFormat: "indexIn",
+    family: "dataCenterNetworking",
+  }));
 
 const buildScdIndexMacroConfigs = (
   macroNames: readonly string[],
@@ -225,6 +268,8 @@ const buildTuningMacroCatalog = (scdIndexMacroNames: readonly string[]) => {
   const indexMacroConfigs = buildScdIndexMacroConfigs(scdIndexMacroNames);
   const fastTuningMacroConfigs: TunableMacroConfig[] = [
     ...indexMacroConfigs,
+    ...CATALYST_APP_INDEX_MACRO_CONFIGS,
+    ...DATA_CENTER_NETWORKING_INDEX_MACRO_CONFIGS,
     ...CISCO_SECURITY_MODEL_MACRO_CONFIGS,
     ...THOUSAND_EYES_MODEL_MACRO_CONFIGS,
   ];
@@ -1340,18 +1385,27 @@ export default function MacroIndexTuningPage(): JSX.Element {
     indexMacroNameSet.has(row.macro),
   );
   const modelMacroRows = tunableRows.filter(
-    (row) =>
-      row.targetApp === CISCO_SECURITY_APP_NAME ||
-      row.targetApp === THOUSAND_EYES_APP_NAME,
+    (row) => row.targetApp !== APP_NAME && row.targetApp !== CIM_APP_NAME,
   );
   const rowsToSave = tunableRows.filter((row) => row.draftDefinition.trim());
-  const setupRowsToSave = rows.filter(
+  const setupScdRowsToSave = rows.filter(
     (row) =>
       row.targetApp === APP_NAME &&
       row.macro.startsWith("index_") &&
       row.events > 0 &&
       row.draftDefinition.trim(),
   );
+  const setupExternalRowsToSave = rows.filter(
+    (row) =>
+      row.targetApp !== APP_NAME &&
+      row.targetApp !== CIM_APP_NAME &&
+      row.events > 0 &&
+      row.draftDefinition.trim(),
+  );
+  const setupRowsToSave = [
+    ...setupScdRowsToSave,
+    ...setupExternalRowsToSave,
+  ];
   const summariesOnlyEnabled = usesSummariesOnly(adhocDefinition);
   const requiredDataModels = dataModelReadiness.filter(
     (item) => item.priority === "required",
@@ -1799,7 +1853,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
             row.macro,
             row.draftDefinition.trim(),
             row.description,
-            APP_NAME,
+            row.targetApp,
           );
           setSaveStatuses((current) => ({
             ...current,
@@ -1994,7 +2048,10 @@ export default function MacroIndexTuningPage(): JSX.Element {
     });
 
   if (setupMode) {
-    const setupRowGroups = groupRowsByTargetApp(setupRowsToSave);
+    const setupScdRowGroups = groupRowsByTargetApp(setupScdRowsToSave);
+    const setupExternalRowGroups = groupRowsByTargetApp(
+      setupExternalRowsToSave,
+    );
     const setupScanReady = scanState === "ready";
     const setupMacroCountLabel =
       setupRowsToSave.length === 1 ? "index macro is" : "index macros are";
@@ -2227,7 +2284,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
               <details className="group mt-4 overflow-hidden rounded-md border border-slate-200 bg-slate-50">
                 <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 px-4 text-sm font-bold text-slate-800 hover:bg-slate-100 [&::-webkit-details-marker]:hidden">
                   <span>
-                    Review all {setupRowsToSave.length} proposed definitions
+                    Review {setupScdRowsToSave.length} dashboard macro
+                    {setupScdRowsToSave.length === 1 ? "" : "s"}
                   </span>
                   <ChevronDown
                     size={16}
@@ -2235,7 +2293,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   />
                 </summary>
                 <div className="border-t border-slate-200 bg-white">
-                  {setupRowsToSave.length ? (
+                  {setupScdRowsToSave.length ? (
                     <div className="overflow-x-auto">
                       <table className="min-w-full border-collapse text-left text-sm">
                         <thead>
@@ -2260,7 +2318,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                             </th>
                           </tr>
                         </thead>
-                        <tbody>{renderTableRows(setupRowGroups)}</tbody>
+                        <tbody>{renderTableRows(setupScdRowGroups)}</tbody>
                       </table>
                     </div>
                   ) : (
@@ -2271,9 +2329,81 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 </div>
               </details>
 
+              <section
+                aria-labelledby="setup-external-app-macros-heading"
+                className="mt-5 overflow-hidden rounded-lg border border-sky-200 bg-sky-50/50"
+              >
+                <div className="px-4 py-4">
+                  <div className="text-[10px] font-bold uppercase tracking-wide text-sky-700">
+                    Installed Cisco apps
+                  </div>
+                  <h3
+                    id="setup-external-app-macros-heading"
+                    className="mt-1 text-base font-bold text-slate-900"
+                  >
+                    Tune app-owned index macros
+                  </h3>
+                  <p className="mt-1 text-xs text-slate-600">
+                    Save detected indexes directly to each app&apos;s
+                    local/macros.conf so its dashboards are ready when you open
+                    them.
+                  </p>
+                </div>
+
+                <details className="group border-t border-sky-200 bg-white">
+                  <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 px-4 text-sm font-bold text-slate-800 hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+                    <span>
+                      Review {setupExternalRowsToSave.length} app macro
+                      {setupExternalRowsToSave.length === 1 ? "" : "s"}
+                    </span>
+                    <ChevronDown
+                      size={16}
+                      className="ml-auto transition-transform group-open:rotate-180"
+                    />
+                  </summary>
+                  <div className="border-t border-slate-200">
+                    {setupExternalRowsToSave.length ? (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full border-collapse text-left text-sm">
+                          <thead>
+                            <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                              <th className="w-[190px] px-4 py-3 font-bold">
+                                Macro
+                              </th>
+                              <th className="min-w-[330px] px-4 py-3 font-bold">
+                                Definition
+                              </th>
+                              <th className="min-w-[220px] px-4 py-3 font-bold">
+                                Indexes
+                              </th>
+                              <th className="min-w-[260px] px-4 py-3 font-bold">
+                                Sourcetypes
+                              </th>
+                              <th className="w-[110px] px-4 py-3 text-right font-bold">
+                                Events
+                              </th>
+                              <th className="w-[130px] px-4 py-3 text-right font-bold">
+                                Action
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {renderTableRows(setupExternalRowGroups)}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="px-4 py-6 text-center text-sm text-slate-500">
+                        No installed Cisco app macros have matching data in this
+                        range yet.
+                      </div>
+                    )}
+                  </div>
+                </details>
+              </section>
+
               <p className="mt-3 text-xs text-slate-500">
-                CIM and external-app macro tuning are optional and can be run
-                after setup.
+                CIM macro tuning remains optional and can be run after setup.
               </p>
             </section>
 

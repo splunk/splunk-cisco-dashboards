@@ -263,9 +263,18 @@ const macroTuningSource = fs.readFileSync(
   ),
   "utf8",
 );
+const searchbaseSource = fs.readFileSync(
+  path.resolve(
+    __dirname,
+    "../src/main/resources/splunk/default/searchbase.conf",
+  ),
+  "utf8",
+);
 assert.match(macroTuningSource, /Review only what needs attention/);
 assert.match(macroTuningSource, /Balanced \(recommended\)/);
-assert.match(macroTuningSource, /Review all .* proposed definitions/);
+assert.match(macroTuningSource, /Tune app-owned index macros/);
+assert.match(macroTuningSource, /setupExternalRowsToSave/);
+assert.match(macroTuningSource, /row\.targetApp/);
 assert.match(macroTuningSource, /Advanced tuning/);
 assert.match(macroTuningSource, /Save and finish setup/);
 assert.match(macroTuningSource, /DATA_MODEL_ACCELERATION_SEARCH/);
@@ -283,6 +292,16 @@ for (const recommendedDataModelApp of [
   "cisco_dc_networking_app_for_splunk",
 ]) {
   assert.match(macroTuningSource, new RegExp(recommendedDataModelApp));
+}
+for (const appOwnedIndexMacro of [
+  "cisco_catalyst_app_index",
+  "cisco_catalyst_sdwan_index",
+  "cisco_dc_aci_index",
+  "cisco_dc_nd_index",
+  "cisco_dc_n9k_index",
+]) {
+  assert.match(macroTuningSource, new RegExp(appOwnedIndexMacro));
+  assert.match(searchbaseSource, new RegExp(appOwnedIndexMacro));
 }
 
 // Executive Insights deliberately uses Simple XML rather than a custom Mako
