@@ -182,6 +182,14 @@ function scdSetupIsConfigured(payload) {
   return value === "1" || value === 1 || value === true || value === "true";
 }
 
+function scdSetupIsOnDemand(search) {
+  return new URLSearchParams(String(search || "")).get("setup") === "1";
+}
+
+function scdSetupShouldRender(payload, search) {
+  return scdSetupIsOnDemand(search) || !scdSetupIsConfigured(payload);
+}
+
 function scdSetupCsrfToken() {
   const runtime = window.$C || {};
   const bootstrapToken =
@@ -884,7 +892,7 @@ function scdSetupStart() {
 
   scdSetupRequest("GET")
     .then((payload) => {
-      if (scdSetupIsConfigured(payload)) {
+      if (!scdSetupShouldRender(payload, window.location.search)) {
         window.location.replace(scdSetupHomeUrl(window.location.pathname));
         return;
       }
@@ -912,9 +920,11 @@ if (typeof module !== "undefined" && module.exports) {
     endpoint: scdSetupEndpoint,
     homeUrl: scdSetupHomeUrl,
     isConfigured: scdSetupIsConfigured,
+    isOnDemand: scdSetupIsOnDemand,
     localePrefix: scdSetupLocalePrefix,
     parseExportRows: scdSetupParseExportRows,
     resolvePrerequisites: scdSetupResolvePrerequisites,
+    shouldRender: scdSetupShouldRender,
     tuningUrl: scdSetupTuningUrl,
   };
 }

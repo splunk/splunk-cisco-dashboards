@@ -17,9 +17,11 @@ const {
   endpoint,
   homeUrl,
   isConfigured,
+  isOnDemand,
   localePrefix,
   parseExportRows,
   resolvePrerequisites,
+  shouldRender,
   tuningUrl,
 } = require(bootstrapPath);
 
@@ -63,6 +65,24 @@ assert.equal(
 );
 assert.equal(isConfigured({ entry: [] }), false);
 assert.equal(isConfigured(null), false);
+
+assert.equal(isOnDemand("?setup=1"), true);
+assert.equal(isOnDemand("?setup=1&source=nav"), true);
+assert.equal(isOnDemand("?setup=0"), false);
+assert.equal(isOnDemand(""), false);
+
+assert.equal(
+  shouldRender({ entry: [{ content: { is_configured: "1" } }] }, "?setup=1"),
+  true,
+);
+assert.equal(
+  shouldRender({ entry: [{ content: { is_configured: "1" } }] }, ""),
+  false,
+);
+assert.equal(
+  shouldRender({ entry: [{ content: { is_configured: "0" } }] }, ""),
+  true,
+);
 
 assert.equal(compareVersions("2.1.0", "2.0.9"), 1);
 assert.equal(compareVersions("2.0", "2.0.0"), 0);
@@ -251,6 +271,8 @@ assert.match(macroTuningSource, /Save and finish setup/);
 assert.match(macroTuningSource, /DATA_MODEL_ACCELERATION_SEARCH/);
 assert.match(macroTuningSource, /Accelerate recommended data models/);
 assert.match(macroTuningSource, /Recommended data model acceleration status/);
+assert.match(macroTuningSource, /openAccelerationSearchUrl/);
+assert.match(macroTuningSource, /Open acceleration check in Search/);
 assert.match(macroTuningSource, /appSearch: app/);
 assert.match(macroTuningSource, /nameFilter: model/);
 for (const recommendedDataModelApp of [
@@ -291,7 +313,7 @@ for (const viewName of [
 }
 assert.match(navSource, /name="secure_networking_profile"\s+default="true"/);
 assert.match(navSource, /name="executive_briefing_profile"/);
-assert.match(navSource, /<view name="start" label="Setup" \/>/);
+assert.match(navSource, /<a href="start\?setup=1">Setup<\/a>/);
 assert.doesNotMatch(navSource, /name="secure_networking_overview"/);
 assert.doesNotMatch(navSource, /name="overview"/);
 
