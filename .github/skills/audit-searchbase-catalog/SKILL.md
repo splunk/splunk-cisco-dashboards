@@ -1,6 +1,6 @@
 ---
 name: audit-searchbase-catalog
-description: 'Production-audit and curate Searchbase catalogs and harvested Splunk dashboard searches. Use to review low-value, base, post-process, KPI, or dashboard-plumbing searches with explicit keep/merge/delete approval; remove dashboard tokens and match-all residue; consolidate duplicate or similar SPL; preserve data models; improve metadata; and validate searches safely in Splunk.'
+description: 'Production-audit and curate Searchbase catalogs and harvested Splunk dashboard searches. Use to review low-value, base, post-process, KPI, or dashboard-plumbing searches with explicit keep/merge/delete approval; assess bare keyword or free-text filters with a verified field-first preference; remove dashboard tokens and match-all residue; consolidate duplicate or similar SPL; preserve data models; improve metadata; and validate searches safely in Splunk.'
 argument-hint: '[searchbase.conf path or dispatch context]'
 ---
 
@@ -29,6 +29,21 @@ Low-value signals include:
 - Inventory totals that provide no health, change, ownership, location, or drilldown context and duplicate a richer inventory search.
 - A search whose useful source macro or data model is already preserved by a higher-fidelity retained search.
 
+## Field-First Filter Review
+
+Treat bare terms and quoted phrases such as `"DeviceConnector"`, `"deviceConnected"`, or `"failed"` as fidelity-review candidates, not automatic defects. Prefer structured field predicates when they express the same intent and are supported by evidence.
+
+For each free-text discriminator:
+
+1. State the intended event class or condition.
+2. Inspect deployed `props.conf`/`transforms.conf`, source-app SPL, `fieldsummary`, and bounded representative events for a stable extracted field.
+3. Prefer an exact field predicate, `IN (...)`, or `where isnotnull(field)` when the field's extraction and coverage are verified. Do not reintroduce `field=*`.
+4. Compare bounded counts and representative field coverage between the original and proposed filters before rewriting.
+5. Retain the raw term when message text is the only reliable discriminator, when the source format has no stable field, or when the extraction itself depends on that literal. Document that evidence in `explanation` or `related_info`.
+6. If data is unavailable or equivalence cannot be proven, do not invent a field filter. Keep the original search unchanged and add it to the user decision ledger with a **REWRITE REVIEW** recommendation.
+
+The presence of output fields does not by itself prove that they can replace a raw discriminator. Verify whether the field identifies the event class, merely describes matching events, or is populated only because a raw-term-dependent transform matched. Assess filter fidelity separately from catalog value: a technically valid keyword search can still be **MERGE** or **REVIEW DELETE** when it is only one of many shallow dashboard panel variants.
+
 For Simple XML base/post-process chains, resolve and assess the complete child searches. Record the parent lineage, but do not retain the raw base parent as a standalone catalog item unless it independently satisfies **KEEP**. Never discard unique data-model, macro, source, or sourcetype coverage merely because the originating panel is low value; preserve that coverage in a reviewed **KEEP** or **MERGE** replacement.
 
 Before deleting or omitting any **MERGE** or **REVIEW DELETE** candidate, verify dashboard, drilldown, saved-search, Searchbase, and post-process references. Then present the user a decision ledger containing: stanza ID, source dashboard/panel, concise SPL shape, dependency/reference status, value assessment, richer retained replacement when applicable, and recommendation. Explicitly ask the user to choose **keep**, **merge**, or **delete** for each candidate or clearly identified batch. The default while awaiting a decision is **keep unchanged**. Never infer deletion approval from a general request to harvest, deduplicate, clean, or curate searches.
@@ -49,19 +64,20 @@ Before deleting or omitting any **MERGE** or **REVIEW DELETE** candidate, verify
 2. Inventory the scoped stanzas: IDs, names, SPL, metadata, data models, macros, source types, visualization roles, and drilldown references.
 3. Apply the independent catalog value gate. Produce the decision ledger and obtain explicit user decisions before deleting, omitting, or merging candidates.
 4. Locate the owning harvester or generator. Fix recurring defects there before rewriting generated output.
-5. Remove unresolved dashboard tokens and exact match-all predicates such as `field=*`, `field="*"`, `field='*'`, or token-derived `field IN $token$`.
-6. Remove now-empty `search`/`where` stages and dangling Boolean operators while retaining neighboring static predicates.
-7. Whenever the `search` string changes for any reason, review that stanza's `description`, `explanation`, `solution`, and `related_info`. Update each field when needed so it accurately describes the final SPL, output fields, operational meaning, recommended response, provenance, and related searches. Record that the review occurred even when no prose change is required.
-8. Preserve meaningful patterns such as `node="*leaf*"`, `dn="*/sys/health"`, and intentional source wildcards.
-9. Canonicalize SPL with the repository formatter and remove exact duplicates. Before deletion, verify references and select the clearest, most reusable metadata.
-10. Serialize searches through the repository stanza formatter. In `searchbase.conf`, every physical line of a multiline `search` except the final line must end with a continuation backslash (`\\`) flush against the final SPL character. Never write logical `format_search()` output directly into the file; use the stanza/search-field serializer that emits continuations.
-11. Generate near-duplicate candidates with normalized TF-IDF cosine similarity, a length penalty, and a minimum shared-term threshold. Searchbase's reference formula is:
+5. Review bare keyword and phrase filters using the field-first procedure. Rewrite only when structured-field equivalence is supported by extraction and bounded runtime evidence; otherwise send the candidate to the user decision ledger unchanged.
+6. Remove unresolved dashboard tokens and exact match-all predicates such as `field=*`, `field="*"`, `field='*'`, or token-derived `field IN $token$`.
+7. Remove now-empty `search`/`where` stages and dangling Boolean operators while retaining neighboring static predicates.
+8. Whenever the `search` string changes for any reason, review that stanza's `description`, `explanation`, `solution`, and `related_info`. Update each field when needed so it accurately describes the final SPL, output fields, operational meaning, recommended response, provenance, and related searches. Record that the review occurred even when no prose change is required.
+9. Preserve meaningful patterns such as `node="*leaf*"`, `dn="*/sys/health"`, and intentional source wildcards.
+10. Canonicalize SPL with the repository formatter and remove exact duplicates. Before deletion, verify references and select the clearest, most reusable metadata.
+11. Serialize searches through the repository stanza formatter. In `searchbase.conf`, every physical line of a multiline `search` except the final line must end with a continuation backslash (`\\`) flush against the final SPL character. Never write logical `format_search()` output directly into the file; use the stanza/search-field serializer that emits continuations.
+12. Generate near-duplicate candidates with normalized TF-IDF cosine similarity, a length penalty, and a minimum shared-term threshold. Searchbase's reference formula is:
 
    $$s(a,b)=\cos(a,b)\left(\frac{\min(|a|,|b|)}{\max(|a|,|b|)}\right)^{0.5}$$
 
-12. Review every candidate semantically. Keep both searches when they differ by source/sourcetype, success/failure, severity, direction, aggregation, grouping, output fields, visualization, drilldown role, or operational intent. Similarity scores nominate candidates; they never authorize deletion.
-13. Improve generic or dashboard-bound names and prose. Metadata must describe the independent search's actual output and remediation use.
-14. Regenerate provenance/manifest metrics, distinguishing source dashboard searches from retained curated catalog searches.
+13. Review every candidate semantically. Keep both searches when they differ by source/sourcetype, success/failure, severity, direction, aggregation, grouping, output fields, visualization, drilldown role, or operational intent. Similarity scores nominate candidates; they never authorize deletion.
+14. Improve generic or dashboard-bound names and prose. Metadata must describe the independent search's actual output and remediation use.
+15. Regenerate provenance/manifest metrics, distinguishing source dashboard searches from retained curated catalog searches.
 
 ## Validation Gates
 
@@ -69,6 +85,7 @@ Before deleting or omitting any **MERGE** or **REVIEW DELETE** candidate, verify
 - Scoped catalog has zero unresolved dashboard tokens.
 - Scoped catalog has zero exact bare-star predicates.
 - Scoped catalog has zero exact canonical-SPL duplicate groups.
+- Every bare keyword or phrase filter has a recorded field-first review: verified structured rewrite, documented raw-term justification, or unresolved **REWRITE REVIEW** decision.
 - Every harvested search has an independent-value classification. Every omission, merge, or deletion has a recorded explicit user decision and verified reference status.
 - Raw base searches are retained only when independently valuable; resolved child searches preserve any unique source, sourcetype, macro, and data-model coverage.
 - All source data models remain represented unless a reviewed duplicate was removed.
@@ -81,4 +98,4 @@ Before deleting or omitting any **MERGE** or **REVIEW DELETE** candidate, verify
 
 ## Reporting
 
-Report the scoped count before and after, independent-value classification totals, the user-approved keep/merge/delete ledger, exact duplicates removed, near-duplicate decisions, wildcard residue, data-model count/models, live-validation outcomes, and any unrelated pre-existing failures. Include how many changed searches had their four prose fields reviewed and which stanzas required prose updates. Explain why high-scoring searches were retained when their operational intent differs.
+Report the scoped count before and after, independent-value classification totals, field-first filter review totals and unresolved rewrite candidates, the user-approved keep/merge/delete ledger, exact duplicates removed, near-duplicate decisions, wildcard residue, data-model count/models, live-validation outcomes, and any unrelated pre-existing failures. Include how many changed searches had their four prose fields reviewed and which stanzas required prose updates. Explain why high-scoring searches were retained when their operational intent differs.
