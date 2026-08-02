@@ -25,15 +25,16 @@ Produce a high-fidelity customer-facing catalog, not a literal dashboard export.
 3. Locate the owning harvester or generator. Fix recurring defects there before rewriting generated output.
 4. Remove unresolved dashboard tokens and exact match-all predicates such as `field=*`, `field="*"`, `field='*'`, or token-derived `field IN $token$`.
 5. Remove now-empty `search`/`where` stages and dangling Boolean operators while retaining neighboring static predicates.
-6. Preserve meaningful patterns such as `node="*leaf*"`, `dn="*/sys/health"`, and intentional source wildcards.
-7. Canonicalize SPL with the repository formatter and remove exact duplicates. Before deletion, verify references and select the clearest, most reusable metadata.
-8. Generate near-duplicate candidates with normalized TF-IDF cosine similarity, a length penalty, and a minimum shared-term threshold. Searchbase's reference formula is:
+6. Whenever the `search` string changes for any reason, review that stanza's `description`, `explanation`, `solution`, and `related_info`. Update each field when needed so it accurately describes the final SPL, output fields, operational meaning, recommended response, provenance, and related searches. Record that the review occurred even when no prose change is required.
+7. Preserve meaningful patterns such as `node="*leaf*"`, `dn="*/sys/health"`, and intentional source wildcards.
+8. Canonicalize SPL with the repository formatter and remove exact duplicates. Before deletion, verify references and select the clearest, most reusable metadata.
+9. Generate near-duplicate candidates with normalized TF-IDF cosine similarity, a length penalty, and a minimum shared-term threshold. Searchbase's reference formula is:
 
    $$s(a,b)=\cos(a,b)\left(\frac{\min(|a|,|b|)}{\max(|a|,|b|)}\right)^{0.5}$$
 
-9. Review every candidate semantically. Keep both searches when they differ by source/sourcetype, success/failure, severity, direction, aggregation, grouping, output fields, visualization, drilldown role, or operational intent. Similarity scores nominate candidates; they never authorize deletion.
-10. Improve generic or dashboard-bound names and prose. Metadata must describe the independent search's actual output and remediation use.
-11. Regenerate provenance/manifest metrics, distinguishing source dashboard searches from retained curated catalog searches.
+10. Review every candidate semantically. Keep both searches when they differ by source/sourcetype, success/failure, severity, direction, aggregation, grouping, output fields, visualization, drilldown role, or operational intent. Similarity scores nominate candidates; they never authorize deletion.
+11. Improve generic or dashboard-bound names and prose. Metadata must describe the independent search's actual output and remediation use.
+12. Regenerate provenance/manifest metrics, distinguishing source dashboard searches from retained curated catalog searches.
 
 ## Validation Gates
 
@@ -42,6 +43,7 @@ Produce a high-fidelity customer-facing catalog, not a literal dashboard export.
 - Scoped catalog has zero exact bare-star predicates.
 - Scoped catalog has zero exact canonical-SPL duplicate groups.
 - All source data models remain represented unless a reviewed duplicate was removed.
+- Every changed `search` has a documented review of `description`, `explanation`, `solution`, and `related_info`; all four fields remain accurate for the final SPL, even when the review requires no text changes.
 - Formatter check and `git diff --check` pass.
 - Diagnostics for changed scripts and catalog files are clean.
 - Representative searches across macros, eventtypes, data models, syslog, lookups, subsearches, and joins execute read-only without SPL errors.
@@ -49,4 +51,4 @@ Produce a high-fidelity customer-facing catalog, not a literal dashboard export.
 
 ## Reporting
 
-Report the scoped count before and after, exact duplicates removed, near-duplicate decisions, wildcard residue, data-model count/models, live-validation outcomes, and any unrelated pre-existing failures. Explain why high-scoring searches were retained when their operational intent differs.
+Report the scoped count before and after, exact duplicates removed, near-duplicate decisions, wildcard residue, data-model count/models, live-validation outcomes, and any unrelated pre-existing failures. Include how many changed searches had their four prose fields reviewed and which stanzas required prose updates. Explain why high-scoring searches were retained when their operational intent differs.
