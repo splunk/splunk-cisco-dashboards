@@ -78,6 +78,14 @@ Optimize every harvested or reviewed search as production SPL, not as a literal 
 6. Combine adjacent compatible calculations, avoid repeated sorting/deduplication, and limit result cardinality only when doing so preserves the operational answer.
 7. Use Job Inspector or equivalent telemetry for material rewrites when representative data exists. Compare scan count, event count, bucket elimination, result count/schema, runtime, remote search, and search-head versus indexer work. Parser success alone is not performance evidence.
 
+### Deterministic Top-N Results
+
+1. Review every `head`, `tail`, and unranked result limit. A bare `head N` does not select the newest, largest, or most important results; after an unordered transforming command such as `stats` or `tstats`, it usually retains an arbitrary subset.
+2. Define the intended result grain and ranking field before limiting rows. For entity-detail searches, first collapse repeated observations to one row per stable entity using accelerated `tstats latest(...) BY entity` where supported, or `stats latest(...) BY entity` when post-search aggregation is required.
+3. Preserve a numeric ranking field such as `latest(_time) AS last_seen`, derive any fallback recency before projection, and use bounded `sort N - ranking_field` for deterministic top-N output. Prefer bounded `sort N` over `sort ... | head N`; remove the separate `head` when both express the same limit.
+4. Do not replace raw-event detail with entity-level aggregation unless the operational question calls for one row per entity. When every event is independently meaningful, sort the events deterministically and retain the bounded result limit.
+5. Push cardinality reduction into `tstats` or the earliest semantically valid transform. A final limit controls returned rows but does not reduce upstream scanning, grouping, or search-head work.
+
 Treat these as evidence-driven optimization constraints, not permission to alter results. Compare bounded original and rewritten searches; preserve output fields, grouping, time semantics, null handling, and cardinality unless the catalog review explicitly intends a behavioral change.
 
 ## Macro And Dispatch Ownership
@@ -136,6 +144,7 @@ Apply this policy to every search harvested or added to `searchbase.conf`, regar
 - No search contains `table *`. Every nonterminal explicit `table` has been safely replaced/moved or has a documented **REWRITE REVIEW** record.
 - Every raw-event search has the narrowest verified index, sourcetype/source/host, field, and time constraints available without changing its operational meaning.
 - Independent filters run before calculations and non-streaming commands as far as field dependencies allow; retained early transforms and expensive correlation commands have documented justification.
+- Every retained `head`, `tail`, or result limit has a documented deterministic ordering or a verified order-independent purpose; top-N searches reduce to the intended grain before using a bounded `sort N` where semantically equivalent.
 - No terminal projection provably repeats the complete output of its immediately preceding transform; all retained ambiguous projections remain unchanged or have a review record.
 - Harvested searches use local index and acceleration macros wherever equivalent abstractions exist.
 - Dispatch context defaults to `splunk-cisco-dashboards`; every retained foreign context has a recorded non-exported dependency and bounded validation evidence.
