@@ -8,8 +8,11 @@ from scripts.harvest_dc_networking_app_to_searchbase import (
     TOKEN,
     detokenize,
     extract_dashboard,
+    has_match_all_predicate,
+    remove_match_all_predicates,
     stanza_fields,
 )
+from scripts.curate_dc_networking_searchbase import curate_text
 
 
 class HarvestDcNetworkingTest(unittest.TestCase):
@@ -24,7 +27,7 @@ class HarvestDcNetworkingTest(unittest.TestCase):
         self.assertEqual(
             result,
             '`authentication_details` | search trig="login,session" '
-            'AND user="*" | stats count',
+            '| stats count',
         )
         self.assertIsNone(TOKEN.search(result))
 
@@ -60,7 +63,7 @@ class HarvestDcNetworkingTest(unittest.TestCase):
 
             self.assertEqual(len(entries), 1)
             self.assertEqual(entries[0].panel_title, "Failure by User")
-            self.assertEqual(entries[0].search, 'index=dc | search user="*" | stats count')
+            self.assertEqual(entries[0].search, "index=dc | stats count")
             self.assertEqual(skipped.count("non_visualization_search"), 2)
             fields = stanza_fields(entries[0])
             self.assertNotIn("$", fields["search_name"])
@@ -68,6 +71,61 @@ class HarvestDcNetworkingTest(unittest.TestCase):
                 fields["search_name"],
                 "DC Networking - Authentication - Failure by User",
             )
+
+    def test_removes_only_exact_match_all_predicates(self) -> None:
+        search = (
+            'index=dc severity="*" node="*leaf*" dn="*/health" '
+            '| search Pod="*" Process="*" state="down" '
+            '| stats count by node'
+        )
+
+        self.assertEqual(
+            remove_match_all_predicates(search),
+            'index=dc node="*leaf*" dn="*/health" '
+            '| search state="down" | stats count by node',
+        )
+
+    def test_preserves_eval_and_cleans_nested_predicate_stages(self) -> None:
+        search = (
+            'eventtype=dc | eval state=if(lc!="*", "changed", "same") '
+            '| join host [search index=dc | search host="*" | table host] '
+            '| tstats count from datamodel=Example where Example.host="*" by Example.site'
+        )
+
+        self.assertEqual(
+            remove_match_all_predicates(search),
+            'eventtype=dc | eval state=if(lc!="*", "changed", "same") '
+            '| join host [search index=dc | table host] '
+            '| tstats count from datamodel=Example by Example.site',
+        )
+        self.assertTrue(has_match_all_predicate(search))
+        expression = 'eval state=if(lc!="*", 1, 0)'
+        self.assertEqual(remove_match_all_predicates(expression), expression)
+        self.assertFalse(has_match_all_predicate(expression))
+
+    def test_curates_only_dc_context_and_refuses_unreviewed_duplicates(self) -> None:
+        conf = """[other]
+dispatch_context = another_app
+search = index=main keep="*"
+
+[dc_one]
+dispatch_context = cisco_dc_networking_app_for_splunk
+search = index=dc severity="*" node="*leaf*" | stats count
+"""
+
+        curated, report = curate_text(conf)
+
+        self.assertIn('search = index=main keep="*"', curated)
+        self.assertIn('search = index=dc node="*leaf*"', curated)
+        self.assertEqual(report["retained_stanzas"], 1)
+
+        duplicate_conf = conf + """
+[dc_two]
+dispatch_context = cisco_dc_networking_app_for_splunk
+search = index=dc node="*leaf*" | stats count
+"""
+        with self.assertRaisesRegex(ValueError, "unreviewed exact duplicate group"):
+            curate_text(duplicate_conf)
 
     def test_uses_html_heading_for_untitled_visualization(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

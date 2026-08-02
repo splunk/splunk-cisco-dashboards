@@ -34,6 +34,21 @@ SOURCE_APP = "cisco_dc_networking_app_for_splunk"
 TOKEN = re.compile(r"\$([A-Za-z_][^$\n]*)\$")
 DM = re.compile(r"(?:from\s+)?datamodel\s*=\s*([A-Za-z0-9_.:-]+)", re.I)
 VISUALIZATIONS = {"chart", "event", "map", "single", "table", "viz"}
+FIELD = r"(?:'[A-Za-z_][A-Za-z0-9_.{}:-]*'|[A-Za-z_][A-Za-z0-9_.{}:-]*)"
+MATCH_ALL = re.compile(
+    rf"(?<![A-Za-z0-9_.{{}}:-])(?:NOT\s+)?{FIELD}\s*(?:=|!=)\s*(?:\"\*\"|'\*'|\*)(?![^\s|)\]])",
+    re.I,
+)
+EXPRESSION_COMMANDS = {
+    "eval",
+    "fieldformat",
+    "rex",
+    "regex",
+    "replace",
+    "stats",
+    "eventstats",
+    "streamstats",
+}
 
 
 @dataclass(frozen=True)
@@ -75,6 +90,151 @@ def combine_search(base: str, postprocess: str) -> str:
     return f"{base} | {postprocess}"
 
 
+def remove_match_all_predicates(search: str) -> str:
+    """Remove dashboard match-all filters without weakening real conditions."""
+    def clean_clause(clause: str) -> str:
+        out = clause
+        previous = None
+        while out != previous:
+            previous = out
+            out = re.sub(
+                rf"\s+(?:AND|OR)\s+{MATCH_ALL.pattern}", "", out, flags=re.I
+            )
+            out = re.sub(
+                rf"{MATCH_ALL.pattern}\s+(?:AND|OR)\s+", "", out, flags=re.I
+            )
+            out = MATCH_ALL.sub("", out)
+            out = re.sub(r"\(\s*\)", "", out)
+            out = re.sub(r"\s+", " ", out).strip()
+        return re.sub(r"^(?:AND|OR)\s+|\s+(?:AND|OR)$", "", out, flags=re.I)
+
+    def clean_subsearches(value: str) -> str:
+        output: list[str] = []
+        index = 0
+        while index < len(value):
+            if value[index] in "\"'`":
+                quote = value[index]
+                end = index + 1
+                while end < len(value):
+                    if value[end] == "\\" and end + 1 < len(value):
+                        end += 2
+                    elif value[end] == quote:
+                        end += 1
+                        break
+                    else:
+                        end += 1
+                output.append(value[index:end])
+                index = end
+                continue
+            if value[index] != "[":
+                output.append(value[index])
+                index += 1
+                continue
+            depth = 1
+            end = index + 1
+            quote = None
+            while end < len(value) and depth:
+                char = value[end]
+                if quote:
+                    if char == "\\" and end + 1 < len(value):
+                        end += 2
+                        continue
+                    if char == quote:
+                        quote = None
+                elif char in "\"'`":
+                    quote = char
+                elif char == "[":
+                    depth += 1
+                elif char == "]":
+                    depth -= 1
+                end += 1
+            if depth:
+                output.append(value[index:])
+                break
+            inner = remove_match_all_predicates(value[index + 1 : end - 1])
+            output.append(f"[{inner}]")
+            index = end
+        return "".join(output)
+
+    out = clean_subsearches(search)
+    stages: list[str] = []
+    start = 0
+    depth = 0
+    quote = None
+    index = 0
+    while index < len(out):
+        char = out[index]
+        if quote:
+            if char == "\\" and index + 1 < len(out):
+                index += 2
+                continue
+            if char == quote:
+                quote = None
+        elif char in "\"'`":
+            quote = char
+        elif char == "[":
+            depth += 1
+        elif char == "]":
+            depth = max(0, depth - 1)
+        elif char == "|" and depth == 0:
+            if out[start:index].strip():
+                stages.append(out[start:index].strip())
+            start = index + 1
+        index += 1
+    if out[start:].strip():
+        stages.append(out[start:].strip())
+
+    cleaned: list[str] = []
+    for stage in stages:
+        command = re.match(r"^(search|where)\b\s*(.*)$", stage, flags=re.I)
+        if command:
+            name, body = command.groups()
+            if name.lower() == "where" and re.search(
+                r"\b(?:if|case|like|match)\s*\(", body, flags=re.I
+            ):
+                cleaned.append(stage)
+                continue
+            body = clean_clause(body)
+            if body:
+                cleaned.append(f"{name} {body}")
+            continue
+
+        if re.match(r"^tstats\b", stage, flags=re.I):
+            where = re.search(
+                r"\bwhere\b(?P<body>.*?)(?=\s+\b(?:by|groupby)\b|$)",
+                stage,
+                flags=re.I,
+            )
+            if where:
+                body = clean_clause(where.group("body"))
+                replacement = f"where {body}" if body else ""
+                stage = stage[: where.start()] + replacement + stage[where.end() :]
+                stage = re.sub(r"\s+", " ", stage).strip()
+        elif (
+            not cleaned
+            and (
+                (command := re.match(r"([A-Za-z]+)", stage)) is None
+                or command.group(1).lower() not in EXPRESSION_COMMANDS
+            )
+        ):
+            stage = clean_clause(stage)
+        if stage:
+            cleaned.append(stage)
+    return " | ".join(cleaned)
+
+
+def has_match_all_predicate(search: str) -> bool:
+    """Return whether a removable match-all predicate remains in SPL."""
+    for match in MATCH_ALL.finditer(search):
+        prefix = search[: match.start()]
+        boundary = max(prefix.rfind("|"), prefix.rfind("["))
+        stage_prefix = prefix[boundary + 1 :].lstrip()
+        command = re.match(r"([A-Za-z]+)", stage_prefix)
+        if command is None or command.group(1).lower() not in EXPRESSION_COMMANDS:
+            return True
+    return False
+
+
 def token_defaults(root: ET.Element) -> dict[str, str]:
     defaults: dict[str, str] = {}
     for element in root.iter():
@@ -95,16 +255,17 @@ def token_defaults(root: ET.Element) -> dict[str, str]:
 def detokenize(search: str, defaults: dict[str, str]) -> str:
     out = search.strip()
     for token, value in sorted(defaults.items(), key=lambda item: -len(item[0])):
-        out = out.replace(f"${token}$", value)
+        if value.strip().strip("\"'") != "*":
+            out = out.replace(f"${token}$", value)
 
     out = re.sub(
         r'([A-Za-z0-9_.{}:-]+)\s*=\s*["\']?\$[A-Za-z_][^$\n]*\$["\']?',
-        r'\1="*"',
+        "",
         out,
     )
     out = re.sub(
         r"([A-Za-z0-9_.{}:-]+)\s+IN\s+\$[A-Za-z_][^$\n]*\$",
-        r'\1="*"',
+        "",
         out,
         flags=re.I,
     )
@@ -118,7 +279,7 @@ def detokenize(search: str, defaults: dict[str, str]) -> str:
     result = re.sub(r"\s+", " ", result).strip()
     result = re.sub(r"\|\s*search\s*(?=\||$)", "", result, flags=re.I).strip()
     result = re.sub(r"\s+", " ", result)
-    return result
+    return remove_match_all_predicates(result)
 
 
 def parse_savedsearches(path: Path) -> dict[str, str]:
