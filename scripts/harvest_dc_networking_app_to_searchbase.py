@@ -36,7 +36,7 @@ DM = re.compile(r"(?:from\s+)?datamodel\s*=\s*([A-Za-z0-9_.:-]+)", re.I)
 VISUALIZATIONS = {"chart", "event", "map", "single", "table", "viz"}
 FIELD = r"(?:'[A-Za-z_][A-Za-z0-9_.{}:-]*'|[A-Za-z_][A-Za-z0-9_.{}:-]*)"
 MATCH_ALL = re.compile(
-    rf"(?<![A-Za-z0-9_.{{}}:-])(?:NOT\s+)?{FIELD}\s*(?:=|!=)\s*(?:\"\*\"|'\*'|\*)(?![^\s|)\]])",
+    rf"(?<![A-Za-z0-9_.{{}}:-])(?:NOT\s+)?{FIELD}\s*(?:=|!=)\s*(?:\"\*\"|'\*'|\*)(?=$|[\s|)\],])",
     re.I,
 )
 EXPRESSION_COMMANDS = {
@@ -223,16 +223,23 @@ def remove_match_all_predicates(search: str) -> str:
     return " | ".join(cleaned)
 
 
-def has_match_all_predicate(search: str) -> bool:
-    """Return whether a removable match-all predicate remains in SPL."""
+def match_all_predicates(search: str) -> list[str]:
+    """Return removable match-all predicates outside expression commands."""
+    search = search.replace("\\\n", " ")
+    predicates: list[str] = []
     for match in MATCH_ALL.finditer(search):
         prefix = search[: match.start()]
         boundary = max(prefix.rfind("|"), prefix.rfind("["))
         stage_prefix = prefix[boundary + 1 :].lstrip()
         command = re.match(r"([A-Za-z]+)", stage_prefix)
         if command is None or command.group(1).lower() not in EXPRESSION_COMMANDS:
-            return True
-    return False
+            predicates.append(match.group(0))
+    return predicates
+
+
+def has_match_all_predicate(search: str) -> bool:
+    """Return whether a removable match-all predicate remains in SPL."""
+    return bool(match_all_predicates(search))
 
 
 def token_defaults(root: ET.Element) -> dict[str, str]:

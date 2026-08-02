@@ -13,6 +13,7 @@ from scripts.harvest_dc_networking_app_to_searchbase import (
     stanza_fields,
 )
 from scripts.curate_dc_networking_searchbase import curate_text
+from scripts.curate_searchbase_match_all import curate_text as curate_catalog_text
 
 
 class HarvestDcNetworkingTest(unittest.TestCase):
@@ -84,6 +85,7 @@ class HarvestDcNetworkingTest(unittest.TestCase):
             'index=dc node="*leaf*" dn="*/health" '
             '| search state="down" | stats count by node',
         )
+        self.assertTrue(has_match_all_predicate('index=dc severity=*\\\n| stats count'))
 
     def test_preserves_eval_and_cleans_nested_predicate_stages(self) -> None:
         search = (
@@ -126,6 +128,29 @@ search = index=dc node="*leaf*" | stats count
 """
         with self.assertRaisesRegex(ValueError, "unreviewed exact duplicate group"):
             curate_text(duplicate_conf)
+
+    def test_curates_match_all_predicates_across_catalog(self) -> None:
+        conf = """# header
+[catalyst]
+dispatch_context = splunk-cisco-dashboards
+search = | tstats count from datamodel=Cisco_Catalyst_App where nodename=Clients client_count=* by client
+
+[nested]
+dispatch_context = splunk-cisco-dashboards
+search = index=main [ search index=devices (Site=* OR Location=* OR edge=true) | table host ]
+
+[expression]
+dispatch_context = cisco_dc_networking_app_for_splunk
+search = index=dc | eval changed=if(lc!="*", 1, 0)
+"""
+
+        curated, report = curate_catalog_text(conf)
+
+        self.assertIn("where nodename=Clients by client", curated)
+        self.assertIn("[search index=devices (edge=true) | table host]", curated)
+        self.assertIn('eval changed=if(lc!="*", 1, 0)', curated)
+        self.assertEqual(report["changed_stanzas"], 2)
+        self.assertEqual(report["removed_match_all_predicates"], 3)
 
     def test_uses_html_heading_for_untitled_visualization(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
