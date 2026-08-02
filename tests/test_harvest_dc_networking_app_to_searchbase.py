@@ -14,6 +14,7 @@ from scripts.harvest_dc_networking_app_to_searchbase import (
 )
 from scripts.curate_dc_networking_searchbase import curate_text
 from scripts.curate_searchbase_match_all import curate_text as curate_catalog_text
+from scripts.format_searchbase_conf import find_unterminated_search_lines
 
 
 class HarvestDcNetworkingTest(unittest.TestCase):
@@ -151,6 +152,25 @@ search = index=dc | eval changed=if(lc!="*", 1, 0)
         self.assertIn('eval changed=if(lc!="*", 1, 0)', curated)
         self.assertEqual(report["changed_stanzas"], 2)
         self.assertEqual(report["removed_match_all_predicates"], 3)
+
+    def test_repairs_unterminated_multiline_search(self) -> None:
+        conf = """[incident_summary]
+description = <p>Incident summary.</p>
+explanation = <p>Counts incidents.</p>
+solution = <p>Review open incidents.</p>
+related_info = <p>ServiceNow incidents.</p>
+search = sourcetype="snow:incident"
+| stats count by severity
+| sort - count
+"""
+
+        curated, report = curate_catalog_text(conf)
+
+        self.assertEqual(find_unterminated_search_lines(curated), [])
+        self.assertIn('search = sourcetype="snow:incident"\\\n', curated)
+        self.assertIn("| stats count by severity\\\n", curated)
+        self.assertEqual(report["formatting_repairs"], 1)
+        self.assertEqual(report["removed_match_all_predicates"], 0)
 
     def test_uses_html_heading_for_untitled_visualization(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

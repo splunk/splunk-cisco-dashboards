@@ -584,8 +584,17 @@ def main() -> int:
             preview = content if len(content) <= 72 else content[:69] + "..."
             print(f"  line {lineno} [{sid}]: {preview}")
 
+    unterminated = find_unterminated_search_lines(text)
+    if unterminated:
+        print(f"Unterminated multiline search lines: {len(unterminated)}")
+        for lineno, sid, content in unterminated[:20]:
+            preview = content if len(content) <= 72 else content[:69] + "..."
+            print(f"  line {lineno} [{sid}]: {preview}")
+        if len(unterminated) > 20:
+            print(f"  ... and {len(unterminated) - 20} more")
+
     if args.check:
-        return 1 if leaked else 0
+        return 1 if leaked or unterminated else 0
 
     args.source.write_text(out_text, encoding="utf-8")
     return 0
