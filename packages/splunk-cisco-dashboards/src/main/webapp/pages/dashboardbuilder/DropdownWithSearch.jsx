@@ -218,10 +218,10 @@ export default function DropdownWithSearch({
         return true;
     });
 
-    const apps = sortedUnique(visibilityFilteredSearches.map((search) => search.dispatchContext));
+    const apps = sortedUnique(visibilityFilteredSearches.map((search) => search.catalogueApp));
 
     const appScopedSearches = visibilityFilteredSearches.filter(
-        (search) => selectedApp === ALL_APPS || search.dispatchContext === selectedApp,
+        (search) => selectedApp === ALL_APPS || search.catalogueApp === selectedApp,
     );
 
     const categories = sortedUnique(appScopedSearches.map((search) => search.category));
@@ -256,7 +256,7 @@ export default function DropdownWithSearch({
             search.id,
             search.category,
             search.subCategory,
-            search.dispatchContext,
+            search.catalogueApp,
             plainTextFromHtml(search.description || ''),
             plainTextFromHtml(search.explanation || ''),
             search.search,
@@ -596,7 +596,7 @@ export default function DropdownWithSearch({
                                         value={search.id}
                                         category={search.category}
                                         subCategory={search.subCategory}
-                                        app={search.dispatchContext}
+                                        app={search.catalogueApp}
                                         tags={search.tags || []}
                                         icon={getVizIcon(search.defaultViz)}
                                         updateSelection={updateSelection}

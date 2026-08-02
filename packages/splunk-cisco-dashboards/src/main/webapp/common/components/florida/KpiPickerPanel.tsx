@@ -84,10 +84,11 @@ const ALL_SUB_CATEGORIES = '__all_sub__';
 // app matches it. Users can select multiple app namespaces or clear the
 // selection to browse all apps.
 //
-// The UI stores a normalised `dispatchContext` sourced from the stanza's
+// The UI stores a normalised `catalogueApp` sourced from the stanza's
 // `dispatch_context` value; the UI labels it "App" because that's what
 // operators recognise. If a stanza omits `dispatch_context`, the
-// catalogue falls back to the owning ACL app.
+// catalogue falls back to the owning ACL app. Execution separately honors
+// `dispatch_context_force`.
 //
 // Most stanzas shipped in this app's `default/searchbase.conf` dispatch
 // in `splunk-cisco-dashboards`, while dependency data-model searches can
@@ -116,7 +117,7 @@ const isDefaultAppSelection = (selection: ReadonlySet<string>): boolean =>
 const entryMatchesAppSelection = (
     entry: SearchbaseRecord,
     selection: ReadonlySet<string>
-): boolean => selection.size === 0 || selection.has(entry.dispatchContext);
+): boolean => selection.size === 0 || selection.has(entry.catalogueApp);
 
 const MAX_FIELD_LENGTH = 64;
 const FIELD_NAME_PATTERN = /^[A-Za-z_][\w.]{0,63}$/;
@@ -1346,7 +1347,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     const apps = useMemo(() => {
         const set = new Set<string>();
         for (const e of catalogue) {
-            if (e.dispatchContext) set.add(e.dispatchContext);
+            if (e.catalogueApp) set.add(e.catalogueApp);
         }
         return Array.from(set).sort((a, b) =>
             a.localeCompare(b, undefined, { sensitivity: 'base' })
@@ -1356,8 +1357,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     const appCountByName = useMemo(() => {
         const map = new Map<string, number>();
         for (const entry of catalogue) {
-            if (entry.dispatchContext) {
-                map.set(entry.dispatchContext, (map.get(entry.dispatchContext) ?? 0) + 1);
+            if (entry.catalogueApp) {
+                map.set(entry.catalogueApp, (map.get(entry.catalogueApp) ?? 0) + 1);
             }
         }
         return map;
@@ -1376,7 +1377,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     const drilldownApps = useMemo(() => {
         const set = new Set<string>();
         for (const entry of drilldownBaseEntries) {
-            if (entry.dispatchContext) set.add(entry.dispatchContext);
+            if (entry.catalogueApp) set.add(entry.catalogueApp);
         }
         return Array.from(set).sort((a, b) =>
             a.localeCompare(b, undefined, { sensitivity: 'base' })
@@ -1386,8 +1387,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     const drilldownAppCountByName = useMemo(() => {
         const map = new Map<string, number>();
         for (const entry of drilldownBaseEntries) {
-            if (entry.dispatchContext) {
-                map.set(entry.dispatchContext, (map.get(entry.dispatchContext) ?? 0) + 1);
+            if (entry.catalogueApp) {
+                map.set(entry.catalogueApp, (map.get(entry.catalogueApp) ?? 0) + 1);
             }
         }
         return map;

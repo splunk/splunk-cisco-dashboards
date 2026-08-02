@@ -15,6 +15,7 @@
         "test:executive-insights-bootstrap": "node test/executiveInsightsBootstrap.test.cjs",
         "test:start-bootstrap": "node test/startBootstrap.test.cjs",
         "test:catalogue-search": "node test/catalogueSearch.test.cjs",
+        "test:searchbase-dispatch": "node test/searchbaseDispatch.test.cjs",
         "test:dashboard-builder-layout": "node test/dashboardBuilderLayout.test.cjs",
         "test:dashboard-theme": "node test/dashboardTheme.test.cjs",
         "test:auto-advance": "node test/autoAdvance.test.cjs",

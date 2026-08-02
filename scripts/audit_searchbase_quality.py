@@ -18,6 +18,11 @@ from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+try:
+    from scripts.searchbase_dispatch_context import expected_dispatch_settings
+except ModuleNotFoundError:
+    from searchbase_dispatch_context import expected_dispatch_settings
+
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CONF_DIR = REPO_ROOT / "packages/splunk-cisco-dashboards/src/main/resources/splunk/default"
@@ -83,7 +88,6 @@ _MACRO_RE = re.compile(r"`([A-Za-z_][\w-]*)(?:\([^`]*\))?`")
 _SAVEDSEARCH_RE = re.compile(r"\|\s*savedsearch\s+\"([^\"]+)\"", re.I)
 _CISCO_TAG = "Cisco"
 _INVALID_FMC_SYSLOG = "cisco:" + "fmc:syslog"
-_REQUIRED_DISPATCH_CONTEXT = "splunk-cisco-dashboards"
 _SUPPORTED_DEFAULT_VIZ = {
     "splunk.area",
     "splunk.bar",
@@ -520,21 +524,24 @@ def audit_stanza(
     include_style: bool = False,
 ) -> list[Finding]:
     findings: list[Finding] = []
+    expected_context, expected_force = expected_dispatch_settings(
+        stanza.name, stanza.fields
+    )
     dispatch_context = stanza.fields.get("dispatch_context", "").strip()
-    if dispatch_context != _REQUIRED_DISPATCH_CONTEXT:
+    if dispatch_context != expected_context:
         add_finding(
             findings,
             stanza,
             "invalid_dispatch_context",
-            f"Every search must set dispatch_context = {_REQUIRED_DISPATCH_CONTEXT}.",
+            f"Expected dispatch_context = {expected_context} for this search's provenance.",
             "error",
         )
-    if stanza.fields.get("dispatch_context_force", "").strip() != "1":
+    if stanza.fields.get("dispatch_context_force", "").strip() != expected_force:
         add_finding(
             findings,
             stanza,
             "invalid_dispatch_context_force",
-            "Every search must set dispatch_context_force = 1.",
+            f"Expected dispatch_context_force = {expected_force} for this dispatch classification.",
             "error",
         )
     spl = stanza.search.strip()

@@ -83,6 +83,10 @@ const normalizeDispatchContext = (content = {}) => {
     return APP_NAME_PATTERN.test(dispatchContext) ? dispatchContext : undefined;
 };
 
+const isDispatchContextForced = (content = {}) =>
+    typeof content.dispatch_context_force === 'string' &&
+    /^(1|true|yes)$/i.test(content.dispatch_context_force.trim());
+
 const previewFetchPredicate = (searchState) => {
     if (get(searchState, ['content', 'isRealTimeSearch'], false)) {
         return true;
@@ -230,7 +234,7 @@ class SearchBaseSearch extends DataSource {
                 };
 
                 const dispatchContext = normalizeDispatchContext(data.entry[0].content);
-                if (dispatchContext) {
+                if (dispatchContext && isDispatchContextForced(data.entry[0].content)) {
                     this.context.app = dispatchContext;
                 }
 

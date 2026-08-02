@@ -542,7 +542,7 @@ def stanza_fields(entry: DashboardSearch) -> dict[str, str]:
         "sub_category": "Data Center Networking",
         "tags": ",".join(technology_tags(entry)),
         "dispatch_context": SOURCE_APP,
-        "dispatch_context_force": "1",
+        "dispatch_context_force": "0",
         "default_viz": entry.visualization,
         "description": f"<p>Reports {panel.lower()} from the Cisco DC Networking <code>{dashboard}</code> dashboard.</p>",
         "explanation": f"<p>Runs the dashboard panel SPL against {source_type}.{dm_prose} Dashboard-only filters are neutralized so the search runs independently.</p>",

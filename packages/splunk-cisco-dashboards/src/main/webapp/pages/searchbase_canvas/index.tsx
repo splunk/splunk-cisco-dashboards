@@ -2811,14 +2811,14 @@ const vizFilterLabel = (value: string): string =>
 const recordOwnerApp = (record: SearchbaseRecord): string =>
     record.ownerApp || APP_NAME;
 
-const recordDispatchContext = (record: SearchbaseRecord): string =>
-    record.dispatchContext || recordOwnerApp(record);
+const recordCatalogueApp = (record: SearchbaseRecord): string =>
+    record.catalogueApp || recordOwnerApp(record);
 
 const makeOwnerAppSelection = (records: SearchbaseRecord[]): Set<string> => {
     const selection = new Set<string>();
     for (const record of records) {
         if (recordOwnerApp(record) === APP_NAME) {
-            selection.add(recordDispatchContext(record));
+            selection.add(recordCatalogueApp(record));
         }
     }
     return selection.size > 0 ? selection : makeDefaultAppSelection();
@@ -2827,7 +2827,7 @@ const makeOwnerAppSelection = (records: SearchbaseRecord[]): Set<string> => {
 const recordMatchesAppSelection = (
     record: SearchbaseRecord,
     selection: ReadonlySet<string>
-): boolean => selection.size === 0 || selection.has(recordDispatchContext(record));
+): boolean => selection.size === 0 || selection.has(recordCatalogueApp(record));
 
 const normalizeSearchIdentity = (value: unknown): string =>
     String(value ?? '').trim().toLowerCase();
@@ -3364,7 +3364,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
 
     const appOptions = useMemo(
         () =>
-            Array.from(new Set(browserRecords.map(recordDispatchContext))).sort(
+            Array.from(new Set(browserRecords.map(recordCatalogueApp))).sort(
                 (left, right) => left.localeCompare(right)
             ),
         [browserRecords]
@@ -3373,7 +3373,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
     const appCountsByName = useMemo(() => {
         const counts = new Map<string, number>();
         for (const record of browserRecords) {
-            const value = recordDispatchContext(record);
+            const value = recordCatalogueApp(record);
             counts.set(value, (counts.get(value) ?? 0) + 1);
         }
         return counts;
@@ -4022,7 +4022,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                                 {[
                                                     record.category,
                                                     record.subCategory,
-                                                    recordDispatchContext(record),
+                                                    recordCatalogueApp(record),
                                                 ]
                                                     .filter(Boolean)
                                                     .join(' / ')}

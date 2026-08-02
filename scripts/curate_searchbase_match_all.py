@@ -36,8 +36,6 @@ except ModuleNotFoundError:
 
 
 HEADER = re.compile(r"(?m)^\[([a-z0-9_]+)\]\n")
-LOCAL_DISPATCH_CONTEXT = "splunk-cisco-dashboards"
-EXPORTED_DISPATCH_CONTEXTS = {"cisco_dc_networking_app_for_splunk"}
 LOCAL_MACROS = {
     "cisco_dc_aci_index": "index_dc",
     "cisco_dc_n9k_index": "index_dc",
@@ -145,7 +143,6 @@ def curate_text(text: str) -> tuple[str, dict[str, object]]:
     removed_table_star_stanzas: dict[str, int] = {}
     normalized_eventtypes: dict[str, int] = {}
     updated_explanations: list[str] = []
-    normalized_dispatch_contexts: list[str] = []
     normalized_macros: dict[str, int] = {}
     unterminated_stanzas = {
         stanza_id for _, stanza_id, _ in find_unterminated_search_lines(text)
@@ -167,9 +164,6 @@ def curate_text(text: str) -> tuple[str, dict[str, object]]:
         without_projection, projection_removed = remove_redundant_timechart_projection(
             normalized_search
         )
-        context_normalized = fields.get("dispatch_context") in EXPORTED_DISPATCH_CONTEXTS
-        if context_normalized:
-            normalized_dispatch_contexts.append(name)
         if (
             not predicates
             and name not in unterminated_stanzas
@@ -204,13 +198,6 @@ def curate_text(text: str) -> tuple[str, dict[str, object]]:
         name = match.group(1)
         end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
         block = text[match.start() : end]
-        if name in normalized_dispatch_contexts:
-            block = re.sub(
-                r"(?m)^dispatch_context = \S+$",
-                f"dispatch_context = {LOCAL_DISPATCH_CONTEXT}",
-                block,
-                count=1,
-            )
         if name in updated_explanations:
             block = block.replace(
                 STALE_OWNERSHIP_EXPLANATION,
@@ -230,7 +217,7 @@ def curate_text(text: str) -> tuple[str, dict[str, object]]:
     if failures := find_unterminated_search_lines(curated):
         raise ValueError(f"cleanup left unterminated search lines: {failures[:3]}")
     changed_stanza_ids = sorted(
-        set(cleaned_searches).union(normalized_dispatch_contexts, updated_explanations)
+        set(cleaned_searches).union(updated_explanations)
     )
     report: dict[str, object] = {
         "input_stanzas": len(stanzas),
@@ -244,7 +231,6 @@ def curate_text(text: str) -> tuple[str, dict[str, object]]:
         "table_star_stanza_ids": sorted(removed_table_star_stanzas),
         "normalized_eventtype_bases": dict(sorted(normalized_eventtypes.items())),
         "updated_ownership_explanations": len(updated_explanations),
-        "normalized_dispatch_contexts": len(normalized_dispatch_contexts),
         "normalized_macro_references": dict(sorted(normalized_macros.items())),
         "changed_stanza_ids": changed_stanza_ids,
     }

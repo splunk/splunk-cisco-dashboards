@@ -5205,7 +5205,7 @@ const isDefaultAddTileAppSelection = (
 const recordMatchesAddTileAppSelection = (
   record: SearchbaseRecord,
   selection: ReadonlySet<string>,
-): boolean => selection.size === 0 || selection.has(record.dispatchContext);
+): boolean => selection.size === 0 || selection.has(record.catalogueApp);
 
 const recordHasTag = (record: SearchbaseRecord, tagName: string): boolean =>
   record.tags.some((tag) => tag.toLowerCase() === tagName.toLowerCase());
@@ -5667,7 +5667,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
   const apps = useMemo(() => {
     const set = new Set<string>();
     for (const record of appFacetRecords) {
-      if (record.dispatchContext) set.add(record.dispatchContext);
+      if (record.catalogueApp) set.add(record.catalogueApp);
     }
     return Array.from(set).sort((a, b) =>
       a.localeCompare(b, undefined, { sensitivity: "base" }),
@@ -5677,10 +5677,10 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
   const appCountByName = useMemo(() => {
     const map = new Map<string, number>();
     for (const record of appFacetRecords) {
-      if (record.dispatchContext) {
+      if (record.catalogueApp) {
         map.set(
-          record.dispatchContext,
-          (map.get(record.dispatchContext) ?? 0) + 1,
+          record.catalogueApp,
+          (map.get(record.catalogueApp) ?? 0) + 1,
         );
       }
     }

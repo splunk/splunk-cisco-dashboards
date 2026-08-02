@@ -684,7 +684,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
     const apps = useMemo(() => {
         const set = new Set<string>();
         for (const entry of catalogue) {
-            if (entry.dispatchContext) set.add(entry.dispatchContext);
+            if (entry.catalogueApp) set.add(entry.catalogueApp);
         }
         return Array.from(set).sort((a, b) =>
             a.localeCompare(b, undefined, { sensitivity: 'base' })
@@ -695,7 +695,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
         for (const entry of catalogue) {
             if (
                 selectedApp !== ALL_APPS &&
-                entry.dispatchContext !== selectedApp
+                entry.catalogueApp !== selectedApp
             ) {
                 continue;
             }
@@ -711,7 +711,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
         for (const entry of catalogue) {
             if (
                 selectedApp !== ALL_APPS &&
-                entry.dispatchContext !== selectedApp
+                entry.catalogueApp !== selectedApp
             ) {
                 continue;
             }
@@ -727,7 +727,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
         return catalogue.filter((entry) => {
             if (
                 selectedApp !== ALL_APPS &&
-                entry.dispatchContext !== selectedApp
+                entry.catalogueApp !== selectedApp
             ) {
                 return false;
             }

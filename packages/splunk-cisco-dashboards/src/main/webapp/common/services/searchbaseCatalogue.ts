@@ -32,6 +32,7 @@
  */
 
 import { getSearchAppContext } from './splunkSearchService';
+import { resolveSearchbaseAppContexts } from './searchbaseDispatch';
 
 export interface SearchbaseCatalogueOptions {
     /**
@@ -61,7 +62,11 @@ export interface SearchbaseRecord {
     tags: string[];
     /** Splunk app namespace that owns/stores this stanza. */
     ownerApp: string;
-    /** Splunk app namespace this stanza must dispatch in. */
+    /** Source-app classification from the stanza's `dispatch_context`. */
+    catalogueApp: string;
+    /** Whether `dispatch_context` is forced for execution. */
+    dispatchContextForce: boolean;
+    /** Effective Splunk app namespace used to execute this stanza. */
     dispatchContext: string;
     /** True when the stanza is marked `search_hidden = 1` in searchbase.conf. */
     searchHidden?: boolean;
@@ -118,6 +123,7 @@ interface SearchbaseEntry {
         sub_category?: string;
         tags?: string;
         dispatch_context?: string;
+        dispatch_context_force?: string;
         description?: string;
         explanation?: string;
         solution?: string;
@@ -319,21 +325,25 @@ const fetchSearchbase = async (
         if (scopedAppName && aclApp && aclApp !== scopedAppName) continue;
         const searchName = typeof content.search_name === 'string' ? content.search_name.trim() : '';
         if (searchName.length === 0) continue; // Without a join key we can't enrich anything.
+        const ownerApp = sanitizeAppName(aclApp) || appName;
+        const dispatchContextForce = isTruthyConfValue(
+            content.dispatch_context_force
+        );
+        const appContexts = resolveSearchbaseAppContexts(
+            ownerApp,
+            sanitizeAppName(content.dispatch_context),
+            dispatchContextForce
+        );
         out.push({
             id: typeof e.name === 'string' ? e.name : '',
             searchName,
             category: typeof content.category === 'string' ? content.category : '',
             subCategory: typeof content.sub_category === 'string' ? content.sub_category : '',
             tags: splitTags(content.tags),
-            ownerApp: sanitizeAppName(aclApp) || appName,
-            // Runtime dispatch must honor the stanza's requested app
-            // namespace. Some searches live in this app's
-            // searchbase.conf but rely on macros/data models owned by
-            // Cisco add-on apps, so `dispatch_context` is the actual
-            // search execution context; `acl.app` is only where the
-            // stanza is stored.
-            dispatchContext:
-                sanitizeAppName(content.dispatch_context) || aclApp || appName,
+            // `dispatch_context` is useful catalogue provenance. When
+            // force=0, keep that source app available to the App facet while
+            // executing in the stanza-owning app namespace.
+            ...appContexts,
             searchHidden: isTruthyConfValue(content.search_hidden),
             description: typeof content.description === 'string' ? content.description : '',
             explanation: typeof content.explanation === 'string' ? content.explanation : '',
