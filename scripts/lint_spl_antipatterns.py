@@ -43,6 +43,14 @@ R007  pre-aggregation-limit
     ``head`` or ``tail`` before a later aggregation truncates the measured
     population and produces incomplete metrics.
 
+R008  pre-stats-projection-or-sort
+    ``table``, ``fields``, and ``sort`` before a later ``stats`` are redundant;
+    let ``stats`` perform the field reduction and aggregation.
+
+R009  terminal-post-stats-projection-or-sort
+    Remove a trailing suffix made only of ``fields`` and ``sort`` after the
+    final ``stats`` command.
+
 Adding a rule
 -------------
 Append an entry to ``_RULES`` with a scan function that takes the SPL
@@ -207,6 +215,8 @@ def _split_spl_commands(search: str) -> list[str]:
     current: list[str] = []
     quote: str | None = None
     escaped = False
+    bracket_depth = 0
+    paren_depth = 0
     for char in search:
         if escaped:
             current.append(char)
@@ -221,7 +231,19 @@ def _split_spl_commands(search: str) -> list[str]:
         elif char in {"'", '"'}:
             current.append(char)
             quote = char
-        elif char == "|":
+        elif char == "[":
+            current.append(char)
+            bracket_depth += 1
+        elif char == "]":
+            current.append(char)
+            bracket_depth = max(0, bracket_depth - 1)
+        elif char == "(":
+            current.append(char)
+            paren_depth += 1
+        elif char == ")":
+            current.append(char)
+            paren_depth = max(0, paren_depth - 1)
+        elif char == "|" and bracket_depth == 0 and paren_depth == 0:
             command = "".join(current).strip()
             if command:
                 commands.append(command)
@@ -246,6 +268,32 @@ def _rule_r007_pre_aggregation_limit(search: str) -> Iterator[tuple[str, str]]:
     for index, name in enumerate(names[:first_aggregation]):
         if name in {"head", "tail"}:
             yield commands[index], "remove the limit or move deterministic ranking after aggregation"
+
+
+def _rule_r008_pre_stats_projection_or_sort(search: str) -> Iterator[tuple[str, str]]:
+    commands = _split_spl_commands(search)
+    names = [command.split(maxsplit=1)[0].lower() for command in commands]
+    stats_indexes = [index for index, name in enumerate(names) if name == "stats"]
+    for index, name in enumerate(names):
+        if name in {"table", "fields", "sort"} and any(
+            stats_index > index for stats_index in stats_indexes
+        ):
+            yield commands[index], "remove this stage and let the later stats command reduce fields"
+
+
+def _rule_r009_terminal_post_stats_projection_or_sort(
+    search: str,
+) -> Iterator[tuple[str, str]]:
+    commands = _split_spl_commands(search)
+    names = [command.split(maxsplit=1)[0].lower() for command in commands]
+    stats_indexes = [index for index, name in enumerate(names) if name == "stats"]
+    if not stats_indexes:
+        return
+    suffix_start = stats_indexes[-1] + 1
+    suffix = names[suffix_start:]
+    if suffix and all(name in {"fields", "sort"} for name in suffix):
+        for command in commands[suffix_start:]:
+            yield command, "remove the terminal fields/sort suffix after final stats"
 
 
 _RULES: list[tuple[str, str, Callable[[str], Iterator[tuple[str, str]]]]] = [
@@ -273,6 +321,16 @@ _RULES: list[tuple[str, str, Callable[[str], Iterator[tuple[str, str]]]]] = [
         "R007",
         "pre-aggregation-limit",
         _rule_r007_pre_aggregation_limit,
+    ),
+    (
+        "R008",
+        "pre-stats-projection-or-sort",
+        _rule_r008_pre_stats_projection_or_sort,
+    ),
+    (
+        "R009",
+        "terminal-post-stats-projection-or-sort",
+        _rule_r009_terminal_post_stats_projection_or_sort,
     ),
 ]
 

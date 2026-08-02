@@ -259,7 +259,8 @@ search = sourcetype="snow:incident"
 
         self.assertEqual(find_unterminated_search_lines(curated), [])
         self.assertIn('search = sourcetype="snow:incident"\\\n', curated)
-        self.assertIn("| stats count by severity\\\n", curated)
+        self.assertIn("| stats count by severity\n", curated)
+        self.assertNotIn("| sort - count", curated)
         self.assertEqual(report["formatting_repairs"], 1)
         self.assertEqual(report["removed_match_all_predicates"], 0)
 

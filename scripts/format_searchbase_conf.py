@@ -285,6 +285,41 @@ def _normalize_for_compare(s: str) -> str:
     ).strip()
 
 
+def _stage_command(stage: str) -> str:
+    match = re.match(r"^\s*([A-Za-z][\w-]*)\b", stage)
+    return match.group(1).lower() if match else ""
+
+
+def remove_redundant_stats_stages(stages: list[str]) -> list[str]:
+    """Remove top-level table/fields/sort stages made redundant by stats."""
+    commands = [_stage_command(stage) for stage in stages]
+    stats_indexes = [idx for idx, command in enumerate(commands) if command == "stats"]
+    if not stats_indexes:
+        return stages
+
+    last_stats = stats_indexes[-1]
+    removable_before = {"table", "fields", "sort"}
+    kept = [
+        stage
+        for idx, stage in enumerate(stages)
+        if not (
+            commands[idx] in removable_before
+            and any(stats_idx > idx for stats_idx in stats_indexes)
+        )
+    ]
+
+    removed_before_last_stats = sum(
+        1
+        for idx in range(last_stats)
+        if commands[idx] in removable_before
+    )
+    adjusted_last_stats = last_stats - removed_before_last_stats
+    suffix_commands = [_stage_command(stage) for stage in kept[adjusted_last_stats + 1 :]]
+    if suffix_commands and all(command in {"fields", "sort"} for command in suffix_commands):
+        return kept[: adjusted_last_stats + 1]
+    return kept
+
+
 def format_search(search: str) -> tuple[str, bool]:
     """Reformat a search field per the rules. Returns (new_search, changed)."""
     original = search
@@ -300,9 +335,10 @@ def format_search(search: str) -> tuple[str, bool]:
     spans = _scan_top_level_pipes(glued)
     if not spans:
         return original, False
+    stage_texts = remove_redundant_stats_stages([stage for _s, _e, stage in spans])
 
     out_lines: list[str] = []
-    for idx, (_s, _e, stage_text) in enumerate(spans):
+    for idx, stage_text in enumerate(stage_texts):
         is_first = idx == 0
         if _stage_has_top_level_subsearch(stage_text):
             stage_lines = [
