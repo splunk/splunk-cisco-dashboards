@@ -43,13 +43,18 @@ R007  pre-aggregation-limit
     ``head`` or ``tail`` before a later aggregation truncates the measured
     population and produces incomplete metrics.
 
-R008  pre-stats-projection-or-sort
-    ``table``, ``fields``, and ``sort`` before a later ``stats`` are redundant;
-    let ``stats`` perform the field reduction and aggregation.
+R008  pre-stats-projection
+    ``table`` and ``fields`` before a later ``stats`` are redundant; let
+    ``stats`` perform the field reduction and aggregation.
 
-R009  terminal-post-stats-projection-or-sort
-    Remove a trailing suffix made only of ``fields`` and ``sort`` after the
-    final ``stats`` command.
+R009  terminal-post-stats-projection
+    Remove terminal ``fields`` from a suffix made only of ``fields`` and
+    ``sort`` after the final ``stats`` command.
+
+R010  cosmetic-unbounded-sort
+    Remove unbounded and ``sort 0`` stages unless a later command has a verified
+    row-order dependency. Positive limits are retained because they enforce
+    top-N or row-cap semantics.
 
 Adding a rule
 -------------
@@ -75,6 +80,11 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable, Iterator
+
+try:
+    from scripts.format_searchbase_conf import UNBOUNDED_SORT_CONTRACT_STANZAS
+except ModuleNotFoundError:
+    from format_searchbase_conf import UNBOUNDED_SORT_CONTRACT_STANZAS
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_PATH = REPO_ROOT / (
@@ -270,18 +280,22 @@ def _rule_r007_pre_aggregation_limit(search: str) -> Iterator[tuple[str, str]]:
             yield commands[index], "remove the limit or move deterministic ranking after aggregation"
 
 
-def _rule_r008_pre_stats_projection_or_sort(search: str) -> Iterator[tuple[str, str]]:
+def _is_bounded_sort(command: str) -> bool:
+    return bool(re.match(r"^sort\s+(?:limit\s*=\s*)?[1-9]\d*\b", command, re.I))
+
+
+def _rule_r008_pre_stats_projection(search: str) -> Iterator[tuple[str, str]]:
     commands = _split_spl_commands(search)
     names = [command.split(maxsplit=1)[0].lower() for command in commands]
     stats_indexes = [index for index, name in enumerate(names) if name == "stats"]
     for index, name in enumerate(names):
-        if name in {"table", "fields", "sort"} and any(
+        if name in {"table", "fields"} and any(
             stats_index > index for stats_index in stats_indexes
         ):
             yield commands[index], "remove this stage and let the later stats command reduce fields"
 
 
-def _rule_r009_terminal_post_stats_projection_or_sort(
+def _rule_r009_terminal_post_stats_projection(
     search: str,
 ) -> Iterator[tuple[str, str]]:
     commands = _split_spl_commands(search)
@@ -292,8 +306,21 @@ def _rule_r009_terminal_post_stats_projection_or_sort(
     suffix_start = stats_indexes[-1] + 1
     suffix = names[suffix_start:]
     if suffix and all(name in {"fields", "sort"} for name in suffix):
-        for command in commands[suffix_start:]:
-            yield command, "remove the terminal fields/sort suffix after final stats"
+        for command, name in zip(commands[suffix_start:], suffix):
+            if name == "fields":
+                yield command, "remove terminal fields and use the final stats schema"
+
+
+def _rule_r010_cosmetic_unbounded_sort(search: str) -> Iterator[tuple[str, str]]:
+    commands = _split_spl_commands(search)
+    names = [command.split(maxsplit=1)[0].lower() for command in commands]
+    order_sensitive = {"streamstats", "delta", "autoregress", "transaction", "head", "tail", "dedup"}
+    for index, (command, name) in enumerate(zip(commands, names)):
+        if name != "sort" or _is_bounded_sort(command):
+            continue
+        if any(name in order_sensitive for name in names[index + 1 :]):
+            continue
+        yield command, "remove cosmetic unbounded sorting or replace it with a justified positive top-N limit"
 
 
 _RULES: list[tuple[str, str, Callable[[str], Iterator[tuple[str, str]]]]] = [
@@ -324,13 +351,18 @@ _RULES: list[tuple[str, str, Callable[[str], Iterator[tuple[str, str]]]]] = [
     ),
     (
         "R008",
-        "pre-stats-projection-or-sort",
-        _rule_r008_pre_stats_projection_or_sort,
+        "pre-stats-projection",
+        _rule_r008_pre_stats_projection,
     ),
     (
         "R009",
-        "terminal-post-stats-projection-or-sort",
-        _rule_r009_terminal_post_stats_projection_or_sort,
+        "terminal-post-stats-projection",
+        _rule_r009_terminal_post_stats_projection,
+    ),
+    (
+        "R010",
+        "cosmetic-unbounded-sort",
+        _rule_r010_cosmetic_unbounded_sort,
     ),
 ]
 
@@ -338,6 +370,8 @@ _RULES: list[tuple[str, str, Callable[[str], Iterator[tuple[str, str]]]]] = [
 def lint_search(search: str, stanza: str = "<search>") -> list[Violation]:
     out: list[Violation] = []
     for rule_id, rule_name, fn in _RULES:
+        if rule_id == "R010" and stanza in UNBOUNDED_SORT_CONTRACT_STANZAS:
+            continue
         for snippet, detail in fn(search):
             out.append(
                 Violation(

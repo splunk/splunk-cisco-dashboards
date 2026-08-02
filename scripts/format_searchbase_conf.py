@@ -63,6 +63,23 @@ REQUIRED_FOR_GAP_REPORT = (
     "related_info",
 )
 
+UNBOUNDED_SORT_CONTRACT_STANZAS = frozenset(
+    {
+        "building_resilience_webex_devices",
+        "client_summary_client_health_by_location",
+        "dashboard_workplace_spog_v1_issues",
+        "dashboard_workplace_spog_v1_persite",
+        "it_critical_systems_compliance_report",
+        "it_critical_systems_stp_reconvergence",
+        "it_critical_systems_top_issue_devices",
+        "it_health_thousandeyes_alerts_summary",
+        "secure_networking_sdwan_site_health_breakdown",
+        "secure_networking_sdwan_tunnel_health_log",
+        "spaces_room_utilization_league_table",
+        "spaces_space_idle_cost_ranking",
+    }
+)
+
 
 def parse_stanzas(text: str) -> list[tuple[str, dict[str, str]]]:
     stanzas: list[tuple[str, dict[str, str]]] = []
@@ -290,37 +307,64 @@ def _stage_command(stage: str) -> str:
     return match.group(1).lower() if match else ""
 
 
+def _is_bounded_sort(stage: str) -> bool:
+    return bool(re.match(r"^\s*sort\s+(?:limit\s*=\s*)?[1-9]\d*\b", stage, re.I))
+
+
 def remove_redundant_stats_stages(stages: list[str]) -> list[str]:
-    """Remove top-level table/fields/sort stages made redundant by stats."""
+    """Remove top-level table/fields stages made redundant by stats."""
     commands = [_stage_command(stage) for stage in stages]
     stats_indexes = [idx for idx, command in enumerate(commands) if command == "stats"]
     if not stats_indexes:
         return stages
 
-    last_stats = stats_indexes[-1]
-    removable_before = {"table", "fields", "sort"}
     kept = [
         stage
         for idx, stage in enumerate(stages)
         if not (
-            commands[idx] in removable_before
+            commands[idx] in {"table", "fields"}
             and any(stats_idx > idx for stats_idx in stats_indexes)
         )
     ]
 
-    removed_before_last_stats = sum(
-        1
-        for idx in range(last_stats)
-        if commands[idx] in removable_before
+    kept_commands = [_stage_command(stage) for stage in kept]
+    adjusted_last_stats = max(
+        idx for idx, command in enumerate(kept_commands) if command == "stats"
     )
-    adjusted_last_stats = last_stats - removed_before_last_stats
-    suffix_commands = [_stage_command(stage) for stage in kept[adjusted_last_stats + 1 :]]
+    suffix_commands = kept_commands[adjusted_last_stats + 1 :]
     if suffix_commands and all(command in {"fields", "sort"} for command in suffix_commands):
-        return kept[: adjusted_last_stats + 1]
+        return [
+            stage
+            for idx, stage in enumerate(kept)
+            if not (idx > adjusted_last_stats and kept_commands[idx] == "fields")
+        ]
     return kept
 
 
-def format_search(search: str) -> tuple[str, bool]:
+def remove_cosmetic_sort_stages(
+    stages: list[str], *, preserve_unbounded_sort: bool = False
+) -> list[str]:
+    """Remove unbounded top-level sorts that do not feed order-sensitive logic."""
+    if preserve_unbounded_sort:
+        return stages
+    commands = [_stage_command(stage) for stage in stages]
+    order_sensitive = {"streamstats", "delta", "autoregress", "transaction", "head", "tail", "dedup"}
+    remove_indexes: set[int] = set()
+    for idx, (stage, command) in enumerate(zip(stages, commands)):
+        if command != "sort" or _is_bounded_sort(stage):
+            continue
+        downstream = commands[idx + 1 :]
+        if any(command in order_sensitive for command in downstream):
+            continue
+        remove_indexes.add(idx)
+        if idx + 1 < len(commands) and commands[idx + 1] == "reverse":
+            remove_indexes.add(idx + 1)
+    return [stage for idx, stage in enumerate(stages) if idx not in remove_indexes]
+
+
+def format_search(
+    search: str, *, preserve_unbounded_sort: bool = False
+) -> tuple[str, bool]:
     """Reformat a search field per the rules. Returns (new_search, changed)."""
     original = search
     text = search.replace("\t", " ")
@@ -336,6 +380,9 @@ def format_search(search: str) -> tuple[str, bool]:
     if not spans:
         return original, False
     stage_texts = remove_redundant_stats_stages([stage for _s, _e, stage in spans])
+    stage_texts = remove_cosmetic_sort_stages(
+        stage_texts, preserve_unbounded_sort=preserve_unbounded_sort
+    )
 
     out_lines: list[str] = []
     for idx, stage_text in enumerate(stage_texts):
@@ -503,7 +550,10 @@ def format_stanza(stanza_id: str, fields: dict[str, str]) -> tuple[str, bool, bo
     search_changed = False
 
     if "search" in fields:
-        new_search, search_changed = format_search(fields["search"])
+        new_search, search_changed = format_search(
+            fields["search"],
+            preserve_unbounded_sort=stanza_id in UNBOUNDED_SORT_CONTRACT_STANZAS,
+        )
         fields = {**fields, "search": new_search}
 
     known_keys, extras = _field_order_lists(fields)
