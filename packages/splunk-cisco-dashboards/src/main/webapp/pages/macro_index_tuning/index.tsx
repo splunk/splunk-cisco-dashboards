@@ -21,6 +21,7 @@ import {
   Search,
 } from "lucide-react";
 import { getDefaultFetchInit } from "@splunk/splunk-utils/fetch";
+import { versionLabel } from "@splunk/splunk-utils/config";
 import TimeRangeDropdown from "@splunk/react-time-range/Dropdown";
 
 import {
@@ -52,6 +53,9 @@ const DEFAULT_SUMMARIESONLY_DESCRIPTION =
   "Controls whether data-model searches use only accelerated summaries or may fall back to raw events. Keep summariesonly=false until all required data models are fully accelerated.";
 const SUMMARIESONLY_ACCELERATION_ERROR =
   "summariesonly=true requires acceleration for Cisco Catalyst, Cisco Security, and Cisco ThousandEyes.";
+const SPLUNK_DOCS_VERSION =
+  versionLabel.match(/^(\d+\.\d+)/)?.[1] || "10.4";
+const DATA_MODEL_ACCELERATION_DOCS_URL = `https://help.splunk.com/en/splunk-enterprise/manage-knowledge-objects/knowledge-management-manual/${SPLUNK_DOCS_VERSION}/use-data-summaries-to-accelerate-searches/accelerate-data-models`;
 const DATA_MODEL_ACCELERATION_SEARCH = `
 | rest splunk_server=local timeout=600 /servicesNS/-/-/data/models
 | rename eai:acl.* AS *, eai:data AS data
@@ -2507,16 +2511,28 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   faster. Setup can finish in Balanced mode while you complete
                   these recommendations.
                 </p>
-                <a
-                  href={openAccelerationSearchUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Open acceleration check in Search"
-                  className="mt-2 inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 text-xs font-bold text-sky-700 hover:border-sky-400 hover:text-sky-900"
-                >
-                  <ExternalLink size={12} />
-                  Open in Search
-                </a>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <a
+                    href={openAccelerationSearchUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Open acceleration check in Search"
+                    className="inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 text-xs font-bold text-sky-700 hover:border-sky-400 hover:text-sky-900"
+                  >
+                    <ExternalLink size={12} />
+                    Open in Search
+                  </a>
+                  <a
+                    href={DATA_MODEL_ACCELERATION_DOCS_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Open Splunk ${SPLUNK_DOCS_VERSION} data model acceleration documentation`}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 text-xs font-bold text-sky-700 hover:border-sky-400 hover:text-sky-900"
+                  >
+                    <ExternalLink size={12} />
+                    Splunk acceleration guide
+                  </a>
+                </div>
 
                 <div
                   className={`mt-3 rounded-md px-3 py-2 text-xs font-semibold ${

@@ -282,6 +282,13 @@ assert.match(macroTuningSource, /Accelerate recommended data models/);
 assert.match(macroTuningSource, /Recommended data model acceleration status/);
 assert.match(macroTuningSource, /openAccelerationSearchUrl/);
 assert.match(macroTuningSource, /Open acceleration check in Search/);
+assert.match(macroTuningSource, /DATA_MODEL_ACCELERATION_DOCS_URL/);
+assert.match(macroTuningSource, /SPLUNK_DOCS_VERSION/);
+assert.match(macroTuningSource, /Splunk acceleration guide/);
+assert.match(
+  macroTuningSource,
+  /use-data-summaries-to-accelerate-searches\/accelerate-data-models/,
+);
 assert.match(macroTuningSource, /appSearch: app/);
 assert.match(macroTuningSource, /nameFilter: model/);
 for (const recommendedDataModelApp of [
