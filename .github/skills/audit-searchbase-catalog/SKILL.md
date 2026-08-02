@@ -46,7 +46,7 @@ The presence of output fields does not by itself prove that they can replace a r
 
 For Simple XML base/post-process chains, resolve and assess the complete child searches. Record the parent lineage, but do not retain the raw base parent as a standalone catalog item unless it independently satisfies **KEEP**. Never discard unique data-model, macro, source, or sourcetype coverage merely because the originating panel is low value; preserve that coverage in a reviewed **KEEP** or **MERGE** replacement.
 
-Before deleting or omitting any **MERGE** or **REVIEW DELETE** candidate, verify dashboard, drilldown, saved-search, Searchbase, and post-process references. Treat an explicit user example described as junk, low value, unwanted, or something to find and fix as authorization to remove only occurrences that are both clearly in the same defect class and verified unreferenced, with richer retained coverage identified. Execute those proven remediations and report them; do not stop after updating this skill. Any occurrence whose class membership, reference status, replacement coverage, semantics, or unique source/data-model value is uncertain is unresolved and must remain unchanged. Present unresolved candidates in a decision ledger containing: stanza ID, source dashboard/panel, concise SPL shape, dependency/reference status, value assessment, richer retained replacement when applicable, and recommendation. Ask the user to choose **keep**, **merge**, or **delete** only for those unresolved decisions.
+Before deleting or omitting any **MERGE** or **REVIEW DELETE** candidate, verify dashboard, drilldown, saved-search, Searchbase, and post-process references. Treat an explicit user example described as junk, low value, unwanted, or something to find and fix as authorization to remove only occurrences matching all of the following: (a) the same SPL command or pattern identified in the user example, (b) independently classified as **REVIEW DELETE** or **MERGE** by the catalog value gate, (c) verified unreferenced by dashboard/drilldown/saved-search scan, and (d) richer retained coverage is identified by stanza ID. Execute those proven remediations and report them; do not stop after updating this skill. Any occurrence whose class membership, reference status, replacement coverage, semantics, or unique source/data-model value is uncertain is unresolved and must remain unchanged. Present unresolved candidates in a decision ledger containing: stanza ID, source dashboard/panel, concise SPL shape, dependency/reference status, value assessment, richer retained replacement when applicable, and recommendation. Ask the user to choose **keep**, **merge**, or **delete** only for those unresolved decisions.
 
 ## Output Projection Review
 
@@ -153,6 +153,8 @@ Apply this policy to every search harvested or added to `searchbase.conf`, regar
 
 ## Audit Procedure
 
+When multiple rules apply to a single stanza, apply them in this order: (1) safety rules, (2) independent value gate, (3) reference verification, (4) performance optimization, (5) projection review, (6) metadata review. Record conflicts between rules as **REWRITE REVIEW**.
+
 ### Example-Driven Scope Expansion
 
 Treat a user-provided stanza, SPL fragment, or anti-pattern as an example of the requested defect class unless the user explicitly limits the scope to that occurrence. Before editing the example:
@@ -164,7 +166,7 @@ Treat a user-provided stanza, SPL fragment, or anti-pattern as an example of the
 
 Whenever this skill is updated, immediately run the revised skill against the complete canonical `searchbase.conf`. Re-evaluate all existing stanzas against every changed or newly added standard, apply authorized clear fixes, and report residual violations or decision-ledger items. A skill update is incomplete until the full-catalog rerun and its validation gates finish.
 
-1. Parse the catalog with the repository formatter/parser. Do not use ad hoc line splitting for multiline SPL.
+1. Parse the catalog with the repository formatter/parser. Do not use ad hoc line splitting for multiline SPL. If a stanza has an empty or absent `search` field, classify it as **REVIEW DELETE**, record it in the decision ledger with stanza ID and a note that no SPL is present, and do not apply optimization or projection rules to it.
 2. Run continuation-aware duplicate-key detection, then inventory the scoped stanzas: IDs, names, SPL, metadata, data models, macros, verified sourcetypes, visualization roles, consumer contracts, and drilldown references.
 3. Apply the independent catalog value gate. Immediately remediate explicitly authorized and clear instances; produce a decision ledger only for unresolved candidates before deleting, omitting, or merging them.
 4. Locate the owning harvester or generator. Fix recurring defects there before rewriting generated output.
