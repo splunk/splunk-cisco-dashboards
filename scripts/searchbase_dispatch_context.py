@@ -111,7 +111,7 @@ def expected_dispatch_settings(
         return DC_NETWORKING_APP, "0"
     if (
         "harvested from <code>ta_cisco_thousandeyes</code>" in prose
-        or re.search(r"(?i)\bdatamodel\s*=\s*Cisco_ThousandEyes\b", search)
+        or re.search(r'(?i)\bdatamodel\s*=\s*"?Cisco_ThousandEyes"?\b', search)
     ):
         return THOUSANDEYES_APP, "0"
     if (
