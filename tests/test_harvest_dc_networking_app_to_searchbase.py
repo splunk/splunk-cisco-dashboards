@@ -130,6 +130,23 @@ search = index=dc node="*leaf*" | stats count
         with self.assertRaisesRegex(ValueError, "unreviewed exact duplicate group"):
             curate_text(duplicate_conf)
 
+    def test_removes_reviewed_low_value_search_and_preserves_richer_coverage(self) -> None:
+        conf = """[dc_networking_multi_pod_apics]
+dispatch_context = cisco_dc_networking_app_for_splunk
+search = `apic_details` | fields - apic_host
+
+[dc_networking_home_apics]
+dispatch_context = cisco_dc_networking_app_for_splunk
+search = `apic_details` | table Name health operSt apic_host
+"""
+
+        curated, report = curate_text(conf)
+
+        self.assertNotIn("[dc_networking_multi_pod_apics]", curated)
+        self.assertIn("[dc_networking_home_apics]", curated)
+        self.assertEqual(report["removed_low_value"], 1)
+        self.assertEqual(report["removed_exact_duplicates"], 0)
+
     def test_curates_match_all_predicates_across_catalog(self) -> None:
         conf = """# header
 [catalyst]

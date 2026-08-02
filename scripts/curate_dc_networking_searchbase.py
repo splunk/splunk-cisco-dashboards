@@ -114,6 +114,85 @@ SURVIVOR_METADATA = {
     },
 }
 
+REVIEWED_LOW_VALUE = {
+    "dc_networking_aci_syslog_configuration_events_by_device_ip_name_over_time",
+    "dc_networking_aci_syslog_configuration_events_by_severity_over_time",
+    "dc_networking_aci_syslog_configuration_events_by_user_over_time",
+    "dc_networking_aci_syslog_missing_warning_events_by_device_ip_name_over_time",
+    "dc_networking_aci_syslog_missing_warning_events_by_severity_over_time",
+    "dc_networking_auditing_device_logins",
+    "dc_networking_auditing_unique_devices",
+    "dc_networking_auditing_users",
+    "dc_networking_authentication_local_users",
+    "dc_networking_authentication_remote_users",
+    "dc_networking_authentication_users",
+    "dc_networking_critical_faults_time_chart_critical_fault_30_day_period",
+    "dc_networking_events_events_by_cause_over_time",
+    "dc_networking_events_events_by_severity_over_time",
+    "dc_networking_events_events_by_user_over_time",
+    "dc_networking_home_critical_faults",
+    "dc_networking_home_leafs",
+    "dc_networking_home_spines",
+    "dc_networking_home_tenants",
+    "dc_networking_home_top_mnemonics_by_time",
+    "dc_networking_multi_pod_apics",
+    "dc_networking_n9k_syslog_bfd_events_by_device_ip_name_over_time",
+    "dc_networking_n9k_syslog_bfd_events_by_severity_over_time",
+    "dc_networking_n9k_syslog_configuration_events_by_device_ip_name_over_time",
+    "dc_networking_n9k_syslog_configuration_events_by_severity_over_time",
+    "dc_networking_n9k_syslog_ethernet_related_events_by_device_ip_name_over_time",
+    "dc_networking_n9k_syslog_ethernet_related_events_by_severity_over_time",
+    "dc_networking_n9k_syslog_ospf_events_by_device_ip_name_over_time",
+    "dc_networking_n9k_syslog_ospf_events_by_severity_over_time",
+    "dc_networking_n9k_syslog_pim_events_by_device_ip_name_over_time",
+    "dc_networking_n9k_syslog_pim_events_by_severity_over_time",
+    "dc_networking_n9k_syslog_system_events_by_device_ip_name_over_time",
+    "dc_networking_n9k_syslog_system_events_by_severity_over_time",
+    "dc_networking_nd_syslog_dns_server_events_by_device_ip_name_over_time",
+    "dc_networking_nd_syslog_dns_server_events_by_dns_ip_over_time",
+    "dc_networking_nd_syslog_device_connected_events_by_device_syslog_ip_name_over_time",
+    "dc_networking_nd_syslog_device_connected_events_by_ip_of_connected_device_over_time",
+    "dc_networking_nd_syslog_device_connected_events_by_leadership_over_time",
+    "dc_networking_nd_syslog_device_connected_events_by_user_over_time",
+    "dc_networking_nd_syslog_device_disconnected_events_by_device_syslog_ip_name_over_time",
+    "dc_networking_nd_syslog_device_disconnected_events_by_ip_of_disconnected_device_over_time",
+    "dc_networking_nd_syslog_device_disconnected_events_by_leadership_over_time",
+    "dc_networking_nd_syslog_device_disconnected_events_by_user_over_time",
+    "dc_networking_nd_syslog_ethernet_related_events_by_device_ip_name_over_time",
+    "dc_networking_nd_syslog_ethernet_related_events_by_severity_over_time",
+    "dc_networking_nd_syslog_guestshell_related_events_by_device_ip_name_over_time",
+    "dc_networking_nd_syslog_guestshell_related_events_by_severity_over_time",
+    "dc_networking_nd_syslog_login_attempts_by_user_over_time",
+    "dc_networking_nd_syslog_login_attempts_from_ip_over_time",
+    "dc_networking_nd_syslog_login_events_by_device_ip_name_over_time",
+    "dc_networking_nd_syslog_system_events_by_device_ip_name_over_time",
+    "dc_networking_nd_syslog_system_events_by_severity_over_time",
+    "dc_networking_orchestrator_overview_policy_count",
+    "dc_networking_orchestrator_overview_sites_count",
+    "dc_networking_orchestrator_overview_tenant_count",
+    "dc_networking_orchestrator_overview_user_count",
+    "dc_networking_orchestrator_syslog_accounting_events_by_device_ip_name_over_time",
+    "dc_networking_orchestrator_syslog_accounting_events_by_severity_over_time",
+    "dc_networking_orchestrator_syslog_configuration_events_by_device_ip_name_over_time",
+    "dc_networking_orchestrator_syslog_configuration_events_by_severity_over_time",
+    "dc_networking_orchestrator_syslog_ethernet_related_events_by_device_ip_name_over_time",
+    "dc_networking_orchestrator_syslog_ethernet_related_events_by_severity_over_time",
+    "dc_networking_orchestrator_syslog_guestshell_related_events_by_device_ip_name_over_time",
+    "dc_networking_orchestrator_syslog_guestshell_related_events_by_severity_over_time",
+    "dc_networking_orchestrator_syslog_missing_warning_events_by_device_ip_name_over_time",
+    "dc_networking_orchestrator_syslog_missing_warning_events_by_severity_over_time",
+    "dc_networking_orchestrator_syslog_module_related_events_by_device_ip_name_over_time",
+    "dc_networking_orchestrator_syslog_module_related_events_by_severity_over_time",
+    "dc_networking_orchestrator_syslog_system_events_by_device_ip_name_over_time",
+    "dc_networking_orchestrator_syslog_system_events_by_severity_over_time",
+    "dc_networking_orchestrator_syslog_vdc_state_change_events_by_device_ip_name_over_time",
+    "dc_networking_orchestrator_syslog_vdc_state_change_events_by_severity_over_time",
+    "dc_networking_system_faults_acknowledged_faults",
+    "dc_networking_system_faults_faults_by_severity_over_time",
+    "dc_networking_system_faults_total_faults",
+    "dc_networking_system_faults_unacknowledged_faults",
+}
+
 
 def curate_text(text: str) -> tuple[str, dict[str, object]]:
     stanzas = parse_stanzas(text)
@@ -126,6 +205,7 @@ def curate_text(text: str) -> tuple[str, dict[str, object]]:
         for name, fields in stanzas
         if fields.get("dispatch_context") == SOURCE_APP
     }
+    reviewed_low_value = set(target) & REVIEWED_LOW_VALUE
     groups: dict[str, list[str]] = defaultdict(list)
     cleaned_searches: dict[str, str] = {}
     for name, fields in target.items():
@@ -136,7 +216,7 @@ def curate_text(text: str) -> tuple[str, dict[str, object]]:
         cleaned_searches[name] = formatted
         groups[canonical_spl(formatted)].append(name)
 
-    dropped: set[str] = set()
+    exact_duplicates: set[str] = set()
     for names in groups.values():
         if len(names) == 1:
             continue
@@ -144,7 +224,8 @@ def curate_text(text: str) -> tuple[str, dict[str, object]]:
         preferred = PREFERRED_GROUPS.get(group)
         if preferred is None:
             raise ValueError(f"unreviewed exact duplicate group: {sorted(group)}")
-        dropped.update(group - {preferred})
+        exact_duplicates.update(group - {preferred})
+    dropped = reviewed_low_value | exact_duplicates
 
     updated_fields: dict[str, dict[str, str]] = {}
     for name, fields in target.items():
@@ -178,8 +259,11 @@ def curate_text(text: str) -> tuple[str, dict[str, object]]:
         "context": SOURCE_APP,
         "input_stanzas": len(target),
         "retained_stanzas": len(retained),
-        "removed_exact_duplicates": len(dropped),
+        "removed_exact_duplicates": len(exact_duplicates),
+        "removed_exact_duplicate_stanza_ids": sorted(exact_duplicates),
         "removed_stanza_ids": sorted(dropped),
+        "removed_low_value": len(reviewed_low_value),
+        "removed_low_value_stanza_ids": sorted(reviewed_low_value),
         "match_all_predicates_remaining": sum(
             has_match_all_predicate(fields["search"]) for fields in retained
         ),
@@ -194,21 +278,30 @@ def refresh_manifest(
 ) -> None:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     previous_curation = manifest.get("catalog_curation")
-    catalog_curation = report
-    if (
-        isinstance(previous_curation, dict)
-        and previous_curation.get("removed_exact_duplicates", 0)
-        > report.get("removed_exact_duplicates", 0)
-    ):
-        catalog_curation = {
-            **previous_curation,
-            "match_all_predicates_remaining": report[
-                "match_all_predicates_remaining"
-            ],
-            "data_model_searches": report["data_model_searches"],
-            "data_models": report["data_models"],
-            "last_run": report,
-        }
+    previous = previous_curation if isinstance(previous_curation, dict) else {}
+    previous_exact = set(previous.get("removed_exact_duplicate_stanza_ids", []))
+    if not previous_exact and previous.get("removed_exact_duplicates"):
+        previous_exact = set(previous.get("removed_stanza_ids", []))
+    exact_ids = previous_exact | set(report["removed_exact_duplicate_stanza_ids"])
+    low_value_ids = (
+        set(previous.get("removed_low_value_stanza_ids", []))
+        | set(report["removed_low_value_stanza_ids"])
+        | REVIEWED_LOW_VALUE
+    )
+    catalog_curation = {
+        "context": SOURCE_APP,
+        "input_stanzas": max(previous.get("input_stanzas", 0), report["input_stanzas"]),
+        "retained_stanzas": report["retained_stanzas"],
+        "removed_exact_duplicates": len(exact_ids),
+        "removed_exact_duplicate_stanza_ids": sorted(exact_ids),
+        "removed_low_value": len(low_value_ids),
+        "removed_low_value_stanza_ids": sorted(low_value_ids),
+        "removed_stanza_ids": sorted(exact_ids | low_value_ids),
+        "match_all_predicates_remaining": report["match_all_predicates_remaining"],
+        "data_model_searches": report["data_model_searches"],
+        "data_models": report["data_models"],
+        "last_run": report,
+    }
     savedsearches: dict[str, str] = {}
     for layer in ("default", "local"):
         savedsearches.update(parse_savedsearches(app_root / layer / "savedsearches.conf"))

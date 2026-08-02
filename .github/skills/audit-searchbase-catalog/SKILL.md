@@ -1,6 +1,6 @@
 ---
 name: audit-searchbase-catalog
-description: 'Production-audit and curate Searchbase catalogs and harvested Splunk dashboard searches. Use to review low-value, base, post-process, KPI, or dashboard-plumbing searches with explicit keep/merge/delete approval; assess bare keyword or free-text filters with a verified field-first preference; remove dashboard tokens and match-all residue; consolidate duplicate or similar SPL; preserve data models; improve metadata; and validate searches safely in Splunk.'
+description: 'Production-audit and curate Searchbase catalogs and harvested Splunk dashboard searches. Use to remediate low-value, base, post-process, KPI, or dashboard-plumbing searches and escalate only unresolved keep/merge/delete decisions; assess bare keyword or free-text filters with a verified field-first preference; remove dashboard tokens and match-all residue; consolidate duplicate or similar SPL; preserve data models; improve metadata; and validate searches safely in Splunk.'
 argument-hint: '[searchbase.conf path or dispatch context]'
 ---
 
@@ -46,7 +46,7 @@ The presence of output fields does not by itself prove that they can replace a r
 
 For Simple XML base/post-process chains, resolve and assess the complete child searches. Record the parent lineage, but do not retain the raw base parent as a standalone catalog item unless it independently satisfies **KEEP**. Never discard unique data-model, macro, source, or sourcetype coverage merely because the originating panel is low value; preserve that coverage in a reviewed **KEEP** or **MERGE** replacement.
 
-Before deleting or omitting any **MERGE** or **REVIEW DELETE** candidate, verify dashboard, drilldown, saved-search, Searchbase, and post-process references. Then present the user a decision ledger containing: stanza ID, source dashboard/panel, concise SPL shape, dependency/reference status, value assessment, richer retained replacement when applicable, and recommendation. Explicitly ask the user to choose **keep**, **merge**, or **delete** for each candidate or clearly identified batch. The default while awaiting a decision is **keep unchanged**. Never infer deletion approval from a general request to harvest, deduplicate, clean, or curate searches.
+Before deleting or omitting any **MERGE** or **REVIEW DELETE** candidate, verify dashboard, drilldown, saved-search, Searchbase, and post-process references. Treat an explicit user example described as junk, low value, unwanted, or something to find and fix as authorization to remove that example and other clear, unreferenced instances of the same reviewed defect class when richer coverage exists. Execute those clear remediations and report them; do not stop after updating this skill. For ambiguous candidates, referenced searches, merges requiring new semantics, or unique source/data-model coverage, present a decision ledger containing: stanza ID, source dashboard/panel, concise SPL shape, dependency/reference status, value assessment, richer retained replacement when applicable, and recommendation. Ask the user to choose **keep**, **merge**, or **delete** only for those unresolved decisions. The default for an unresolved candidate is **keep unchanged**.
 
 ## Safety Rules
 
@@ -62,7 +62,7 @@ Before deleting or omitting any **MERGE** or **REVIEW DELETE** candidate, verify
 
 1. Parse the catalog with the repository formatter/parser. Do not use ad hoc line splitting for multiline SPL.
 2. Inventory the scoped stanzas: IDs, names, SPL, metadata, data models, macros, source types, visualization roles, and drilldown references.
-3. Apply the independent catalog value gate. Produce the decision ledger and obtain explicit user decisions before deleting, omitting, or merging candidates.
+3. Apply the independent catalog value gate. Immediately remediate explicitly authorized and clear instances; produce a decision ledger only for unresolved candidates before deleting, omitting, or merging them.
 4. Locate the owning harvester or generator. Fix recurring defects there before rewriting generated output.
 5. Review bare keyword and phrase filters using the field-first procedure. Rewrite only when structured-field equivalence is supported by extraction and bounded runtime evidence; otherwise send the candidate to the user decision ledger unchanged.
 6. Remove unresolved dashboard tokens and exact match-all predicates such as `field=*`, `field="*"`, `field='*'`, or token-derived `field IN $token$`.
@@ -86,7 +86,7 @@ Before deleting or omitting any **MERGE** or **REVIEW DELETE** candidate, verify
 - Scoped catalog has zero exact bare-star predicates.
 - Scoped catalog has zero exact canonical-SPL duplicate groups.
 - Every bare keyword or phrase filter has a recorded field-first review: verified structured rewrite, documented raw-term justification, or unresolved **REWRITE REVIEW** decision.
-- Every harvested search has an independent-value classification. Every omission, merge, or deletion has a recorded explicit user decision and verified reference status.
+- Every harvested search has an independent-value classification. Every omission, merge, or deletion has verified reference status and either direct user authorization, inclusion in an explicitly authorized clear defect class, or a recorded decision for an unresolved candidate.
 - Raw base searches are retained only when independently valuable; resolved child searches preserve any unique source, sourcetype, macro, and data-model coverage.
 - All source data models remain represented unless a reviewed duplicate was removed.
 - Every changed `search` has a documented review of `description`, `explanation`, `solution`, and `related_info`; all four fields remain accurate for the final SPL, even when the review requires no text changes.
@@ -98,4 +98,4 @@ Before deleting or omitting any **MERGE** or **REVIEW DELETE** candidate, verify
 
 ## Reporting
 
-Report the scoped count before and after, independent-value classification totals, field-first filter review totals and unresolved rewrite candidates, the user-approved keep/merge/delete ledger, exact duplicates removed, near-duplicate decisions, wildcard residue, data-model count/models, live-validation outcomes, and any unrelated pre-existing failures. Include how many changed searches had their four prose fields reviewed and which stanzas required prose updates. Explain why high-scoring searches were retained when their operational intent differs.
+Report the scoped count before and after, independent-value classification totals, field-first filter review totals and unresolved rewrite candidates, authorization and decision records for removals or merges, exact duplicates removed, near-duplicate decisions, wildcard residue, data-model count/models, live-validation outcomes, and any unrelated pre-existing failures. Include how many changed searches had their four prose fields reviewed and which stanzas required prose updates. Explain why high-scoring searches were retained when their operational intent differs.
