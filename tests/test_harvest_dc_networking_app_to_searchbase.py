@@ -15,9 +15,82 @@ from scripts.harvest_dc_networking_app_to_searchbase import (
 from scripts.curate_dc_networking_searchbase import curate_text
 from scripts.curate_searchbase_match_all import curate_text as curate_catalog_text
 from scripts.format_searchbase_conf import find_unterminated_search_lines
+from scripts.lint_spl_antipatterns import lint_text
+from scripts.validate_searchbase_export import validate_stanza
 
 
 class HarvestDcNetworkingTest(unittest.TestCase):
+    def test_lints_only_limits_before_aggregation(self) -> None:
+        conf = """[bad]
+search = index=main | head 100 | stats count by host
+
+[good]
+search = index=main | stats count by host | sort 0 - count | head 10
+"""
+
+        violations = lint_text(conf)
+
+        self.assertEqual(
+            [(item.stanza, item.rule_id.split()[0]) for item in violations],
+            [("bad", "R007")],
+        )
+
+    def test_lints_duplicate_keys_without_misreading_search_continuations(self) -> None:
+        conf = """[duplicate]
+description = First
+description = Second
+search = index=main\
+earliest=-24h\
+| stats count
+
+[instruction]
+description = Remove both bullets and replace with something useful.
+search = index=main | stats count
+"""
+
+        violations = lint_text(conf)
+
+        self.assertEqual(
+            [(item.stanza, item.rule_id.split()[0]) for item in violations],
+            [("instruction", "R006"), ("duplicate", "R005")],
+        )
+
+    def test_export_validation_rejects_forbidden_entity_reducers(self) -> None:
+        result = validate_stanza(
+            "bad_export",
+            {
+                "search": "index=main | dedup serial | stats latest(*) as * by serial",
+                "search_name": "Bad Export",
+            },
+        )
+
+        details = [failure.detail for failure in result.failures]
+        self.assertTrue(any(detail.startswith("R002") for detail in details))
+        self.assertTrue(any(detail.startswith("R004") for detail in details))
+
+    def test_lints_dedup_and_unjustified_fillnull_in_nested_searches(self) -> None:
+        conf = """[bad]
+search = index=main [ search index=inventory | dedup serial ]\
+| fillnull value=0 count\
+| table serial count
+
+[allowed]
+search = index=main\
+| fillnull reason value="Unknown"\
+| stats count by reason
+
+[wildcard]
+search = index=main\
+| stats latest(*) as * by serial
+"""
+
+        violations = lint_text(conf)
+
+        self.assertEqual(
+            [(item.stanza, item.rule_id.split()[0]) for item in violations],
+            [("bad", "R002"), ("bad", "R003"), ("wildcard", "R004")],
+        )
+
     def test_detokenize_preserves_static_filters_and_normalizes_macro(self) -> None:
         search = (
             "| ` authentication_details` | search trig=\"login,session\" "

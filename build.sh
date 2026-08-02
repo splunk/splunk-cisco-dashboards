@@ -431,6 +431,9 @@ if [[ "$no_build" -eq 0 ]]; then
         err "ERROR: VERSION file is empty: ${VERSION_FILE}"
         exit 1
     fi
+
+    hdr "Validating canonical Searchbase SPL..."
+    run_quietly python3 "${ROOT_DIR}/scripts/lint_spl_antipatterns.py"
 fi
 
 if [[ "$no_build" -eq 1 ]]; then

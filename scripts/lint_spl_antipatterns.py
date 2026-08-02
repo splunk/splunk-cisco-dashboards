@@ -20,6 +20,29 @@ R001  quoted-dotted-field-in-stats
     Good  : ``| stats latest(a.b.c) as x by mac``
     Better: ``| eval x = 'a.b.c' | stats latest(x) by mac``
 
+R002  dedup-command
+    ``dedup`` hides the entity selection rule and can silently retain an
+    arbitrary event. Reduce to an explicit grain with ``stats`` or ``tstats``.
+
+R003  unjustified-fillnull
+    ``fillnull`` is allowed only for named fields that must survive as explicit
+    categories in a later stats/chart/timechart ``BY`` or split clause.
+
+R004  wildcard-aggregation
+    Wildcard reducers hide the output contract and can combine values from
+    different events. Name every aggregated field explicitly.
+
+R005  duplicate-stanza-key
+    Duplicate keys have last-value-wins behavior and hide dead or incorrect
+    metadata. Detection must respect multiline continuation lines.
+
+R006  literal-edit-instruction
+    Metadata must contain the intended value, never an unapplied edit note.
+
+R007  pre-aggregation-limit
+    ``head`` or ``tail`` before a later aggregation truncates the measured
+    population and produces incomplete metrics.
+
 Adding a rule
 -------------
 Append an entry to ``_RULES`` with a scan function that takes the SPL
@@ -73,6 +96,42 @@ _R001_RE = re.compile(
     re.IGNORECASE,
 )
 
+_DEDUP_RE = re.compile(r"\|\s*dedup\b", re.IGNORECASE)
+_FILLNULL_RE = re.compile(
+    r"\|\s*fillnull\b(?P<args>[^|\]\n]*)",
+    re.IGNORECASE,
+)
+_VALUE_ARG_RE = re.compile(r"\bvalue\s*=\s*(?:\"[^\"]*\"|'[^']*'|\S+)", re.IGNORECASE)
+_FIELD_TOKEN_RE = re.compile(r'"[^"]+"|\b[A-Za-z_][\w.{}-]*\b')
+_GROUPING_STAGE_RE = re.compile(
+    r"\|\s*(?:stats|chart|timechart|eventstats|streamstats|geostats|sichart|sitimechart|sistats)\b[^|\]]*\bby\b(?P<fields>[^|\]]+)",
+    re.IGNORECASE,
+)
+_WILDCARD_AGG_RE = re.compile(
+    r"\b(?:latest|earliest|first|last|values|list)\s*\(\s*\*\s*\)",
+    re.IGNORECASE,
+)
+_EDIT_INSTRUCTION_RE = re.compile(
+    r"(?:^\s*(?:TODO|FIXME)\b|^\s*Remove\s+(?:both|this)\b|"
+    r"^\s*Replace\s+with\s+something\b|\(\s*remove\b[^)]*\bno\s+target\s+exists\b)",
+    re.IGNORECASE,
+)
+_CONF_KEY_RE = re.compile(r"^([A-Za-z_][\w.-]*)\s*=")
+_STANZA_RE = re.compile(r"^\[([^\]]+)\]\s*$")
+_AGGREGATION_COMMANDS = {
+    "chart",
+    "eventstats",
+    "geostats",
+    "mstats",
+    "sichart",
+    "sistats",
+    "sitimechart",
+    "stats",
+    "streamstats",
+    "timechart",
+    "tstats",
+}
+
 
 @dataclass
 class Violation:
@@ -112,13 +171,125 @@ def _rule_r001_quoted_dotted_in_stats(search: str) -> Iterator[tuple[str, str]]:
             yield m.group(0), m.group(1)
 
 
+def _rule_r002_dedup(search: str) -> Iterator[tuple[str, str]]:
+    for match in _DEDUP_RE.finditer(search):
+        yield match.group(0), "replace with an explicit stats/tstats entity grain"
+
+
+def _normalized_field_tokens(text: str) -> set[str]:
+    return {token.strip('"').lower() for token in _FIELD_TOKEN_RE.findall(text)}
+
+
+def _rule_r003_unjustified_fillnull(search: str) -> Iterator[tuple[str, str]]:
+    for match in _FILLNULL_RE.finditer(search):
+        args = _VALUE_ARG_RE.sub("", match.group("args"))
+        fields = _normalized_field_tokens(args)
+        fields -= {"fillnull", "value"}
+        if not fields:
+            yield match.group(0), "fillnull must name fields required by a later grouping"
+            continue
+
+        downstream = search[match.end() :]
+        grouped_fields: set[str] = set()
+        for grouping in _GROUPING_STAGE_RE.finditer(downstream):
+            grouped_fields.update(_normalized_field_tokens(grouping.group("fields")))
+        if not fields & grouped_fields:
+            yield match.group(0), "named fields are not used by a later BY/split grouping"
+
+
+def _rule_r004_wildcard_aggregation(search: str) -> Iterator[tuple[str, str]]:
+    for match in _WILDCARD_AGG_RE.finditer(search):
+        yield match.group(0), "name each aggregated field and its entity grain explicitly"
+
+
+def _split_spl_commands(search: str) -> list[str]:
+    commands: list[str] = []
+    current: list[str] = []
+    quote: str | None = None
+    escaped = False
+    for char in search:
+        if escaped:
+            current.append(char)
+            escaped = False
+        elif char == "\\":
+            current.append(char)
+            escaped = True
+        elif quote:
+            current.append(char)
+            if char == quote:
+                quote = None
+        elif char in {"'", '"'}:
+            current.append(char)
+            quote = char
+        elif char == "|":
+            command = "".join(current).strip()
+            if command:
+                commands.append(command)
+            current = []
+        else:
+            current.append(char)
+    command = "".join(current).strip()
+    if command:
+        commands.append(command)
+    return commands
+
+
+def _rule_r007_pre_aggregation_limit(search: str) -> Iterator[tuple[str, str]]:
+    commands = _split_spl_commands(search)
+    names = [command.split(maxsplit=1)[0].lower() for command in commands]
+    first_aggregation = next(
+        (index for index, name in enumerate(names) if name in _AGGREGATION_COMMANDS),
+        None,
+    )
+    if first_aggregation is None:
+        return
+    for index, name in enumerate(names[:first_aggregation]):
+        if name in {"head", "tail"}:
+            yield commands[index], "remove the limit or move deterministic ranking after aggregation"
+
+
 _RULES: list[tuple[str, str, Callable[[str], Iterator[tuple[str, str]]]]] = [
     (
         "R001",
         "quoted-dotted-field-in-stats",
         _rule_r001_quoted_dotted_in_stats,
     ),
+    (
+        "R002",
+        "dedup-command",
+        _rule_r002_dedup,
+    ),
+    (
+        "R003",
+        "unjustified-fillnull",
+        _rule_r003_unjustified_fillnull,
+    ),
+    (
+        "R004",
+        "wildcard-aggregation",
+        _rule_r004_wildcard_aggregation,
+    ),
+    (
+        "R007",
+        "pre-aggregation-limit",
+        _rule_r007_pre_aggregation_limit,
+    ),
 ]
+
+
+def lint_search(search: str, stanza: str = "<search>") -> list[Violation]:
+    out: list[Violation] = []
+    for rule_id, rule_name, fn in _RULES:
+        for snippet, detail in fn(search):
+            out.append(
+                Violation(
+                    stanza=stanza,
+                    rule_id=f"{rule_id} {rule_name}",
+                    snippet=snippet,
+                    detail=detail,
+                )
+            )
+    return out
 
 
 def lint_text(text: str) -> list[Violation]:
@@ -128,16 +299,44 @@ def lint_text(text: str) -> list[Violation]:
         search = fields.get("search", "")
         if not search:
             continue
-        for rule_id, rule_name, fn in _RULES:
-            for snippet, detail in fn(search):
+        out.extend(lint_search(search, sid))
+        for key, value in fields.items():
+            if key != "search" and _EDIT_INSTRUCTION_RE.search(value):
                 out.append(
                     Violation(
                         stanza=sid,
-                        rule_id=f"{rule_id} {rule_name}",
-                        snippet=snippet,
-                        detail=detail,
+                        rule_id="R006 literal-edit-instruction",
+                        snippet=f"{key} = {value[:120]}",
+                        detail="replace the instruction with the intended metadata value",
                     )
                 )
+
+    stanza = "<preamble>"
+    seen: set[str] = set()
+    continued = False
+    for line in text.splitlines():
+        if continued:
+            continued = line.rstrip().endswith("\\")
+            continue
+        header = _STANZA_RE.match(line.strip())
+        if header:
+            stanza = header.group(1)
+            seen = set()
+            continue
+        key_match = _CONF_KEY_RE.match(line)
+        if key_match:
+            key = key_match.group(1)
+            if key in seen:
+                out.append(
+                    Violation(
+                        stanza=stanza,
+                        rule_id="R005 duplicate-stanza-key",
+                        snippet=line[:120],
+                        detail=f"verify and retain exactly one effective {key} value",
+                    )
+                )
+            seen.add(key)
+        continued = line.rstrip().endswith("\\")
     return out
 
 
@@ -180,12 +379,9 @@ def main(argv: Iterable[str] | None = None) -> int:
 
     if total:
         print(
-            "\nFix R001: drop the single quotes around the dotted field "
-            "inside the stats/chart/timechart aggregation, e.g.\n"
-            "  | stats latest('a.b.c') as x     ← wrong\n"
-            "  | stats latest(a.b.c) as x       ← right\n"
-            "Or eval the dotted field into a flat name first:\n"
-            "  | eval x = 'a.b.c' | stats latest(x) as x",
+            "\nFix the reported SPL anti-patterns before catalog release. "
+            "Use explicit stats/tstats entity grains instead of dedup, and "
+            "retain fillnull only for named downstream grouping fields.",
             file=sys.stderr,
         )
     return 0 if total == 0 else 1

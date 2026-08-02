@@ -11,6 +11,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build_searchbase_export import parse_stanzas, format_stanza
 from audit_searchbase_quality import split_spl_commands
+from lint_spl_antipatterns import lint_search
 
 # Export artifacts live outside the Splunk app's default/ tree so they are
 # never bundled into the shipped package; this validator reads/writes them in
@@ -184,6 +185,16 @@ def check_spl_syntax(spl: str) -> list[CheckFailure]:
                 "spl_syntax",
                 "Single-quoted dotted field in by clause.",
                 "Use bare field names in `by` clauses, e.g. `by connection.ssid`.",
+            )
+        )
+    for violation in lint_search(spl):
+        if violation.rule_id.startswith("R001"):
+            continue
+        failures.append(
+            CheckFailure(
+                "spl_syntax",
+                f"{violation.rule_id}: {violation.snippet}",
+                violation.detail,
             )
         )
     for part in split_spl_commands(normalize_spl(spl)):
@@ -384,8 +395,8 @@ def format_fail_stanza(stanza_id: str, fields: dict[str, str], failures: list[Ch
         f"# EXPORT VALIDATION FAILED: [{stanza_id}]",
     ]
     for i, f in enumerate(failures, 1):
-        comment_lines.append(f"# {i}. [{f.category}] {f.detail}")
-        comment_lines.append(f"#    Suggestion: {f.suggestion}")
+        comment_lines.append(f"# {i}. [{f.category}] {f.detail}".rstrip())
+        comment_lines.append(f"#    Suggestion: {f.suggestion}".rstrip())
     comment_lines.append("")
     body = format_stanza(stanza_id, fields)
     return "\n".join(comment_lines) + "\n" + body
