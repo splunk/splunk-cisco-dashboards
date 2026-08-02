@@ -99,6 +99,16 @@ const SCD_SETUP_DEPENDENCIES = [
     purpose: "Provides Windows host data used by cross-domain Searchbase content.",
   },
   {
+    id: "nix-ta",
+    name: "Splunk Add-on for Unix and Linux",
+    appIds: ["Splunk_TA_nix"],
+    always: true,
+    importance: "required",
+    splunkbase: "https://splunkbase.splunk.com/app/833",
+    purpose:
+      "Provides Unix and Linux host data used by cross-domain Searchbase content.",
+  },
+  {
     id: "catalyst-ta",
     name: "Cisco Catalyst Add-on for Splunk",
     appIds: ["TA_cisco_catalyst"],
@@ -170,6 +180,12 @@ function scdSetupTuningUrl(pathname) {
 
 function scdSetupManageAppsUrl(pathname) {
   return `${scdSetupLocalePrefix(pathname)}/manager/system/apps/local`;
+}
+
+function scdSetupAppInstallUrl(pathname, appId) {
+  return `${scdSetupLocalePrefix(pathname)}/manager/appinstall/${encodeURIComponent(
+    appId,
+  )}`;
 }
 
 function scdSetupAppUrl(pathname, appId) {
@@ -607,10 +623,27 @@ function scdSetupRenderPrerequisites(parent, prerequisites, appsError) {
       prerequisite.displayId || prerequisite.appIds[0] || prerequisite.id;
     row.appendChild(content);
     row.appendChild(status);
-    if (prerequisite.splunkbase) {
+    if (prerequisite.status === "update" && prerequisite.installedId) {
       const link = scdSetupLink(
         "scd-setup__external",
-        prerequisite.status === "update" ? "Update" : "Package",
+        "Update",
+        scdSetupAppInstallUrl(
+          window.location.pathname,
+          prerequisite.installedId,
+        ),
+      );
+      link.setAttribute(
+        "aria-label",
+        `Update ${prerequisite.name} in Manage Apps`,
+      );
+      link.title = `Open ${prerequisite.name} in Manage Apps`;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      row.appendChild(link);
+    } else if (prerequisite.splunkbase) {
+      const link = scdSetupLink(
+        "scd-setup__external",
+        "Package",
         prerequisite.splunkbase,
       );
       link.setAttribute("aria-label", `View ${prerequisite.name} on Splunkbase`);
@@ -913,6 +946,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
 
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
+    appInstallUrl: scdSetupAppInstallUrl,
     appsEndpoint: scdSetupAppsEndpoint,
     compareVersions: scdSetupCompareVersions,
     csrfToken: scdSetupCsrfToken,

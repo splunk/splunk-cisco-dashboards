@@ -10,6 +10,7 @@ const bootstrapPath = path.resolve(
   "../src/main/resources/splunk/appserver/static/start_bootstrap.js",
 );
 const {
+  appInstallUrl,
   appsEndpoint,
   compareVersions,
   csrfToken,
@@ -50,6 +51,20 @@ assert.equal(
   "/en-US/splunkd/__raw/servicesNS/nobody/splunk-cisco-dashboards/search/jobs/export",
 );
 assert.equal(localePrefix("/manager/apps/local"), "/en-US");
+assert.equal(
+  appInstallUrl(
+    "/en-US/app/splunk-cisco-dashboards/start",
+    "Splunk_ML_Toolkit",
+  ),
+  "/en-US/manager/appinstall/Splunk_ML_Toolkit",
+);
+assert.equal(
+  appInstallUrl(
+    "/fr-FR/app/splunk-cisco-dashboards/start",
+    "app id/with spaces",
+  ),
+  "/fr-FR/manager/appinstall/app%20id%2Fwith%20spaces",
+);
 
 assert.equal(
   isConfigured({ entry: [{ content: { is_configured: "1" } }] }),
@@ -152,6 +167,10 @@ const prerequisites = resolvePrerequisites(
       name: "Splunk_SA_Scientific_Python_darwin_arm64",
       content: { version: "4.3.4", disabled: false },
     },
+    {
+      name: "Splunk_TA_nix",
+      content: { version: "10.3.1", disabled: false },
+    },
   ],
 );
 assert.deepEqual(
@@ -165,14 +184,19 @@ assert.deepEqual(
     "scientific-python",
     "meraki-ta",
     "windows-ta",
+    "nix-ta",
     "catalyst-ta",
     "spaces-ta",
     "thousandeyes-ta",
   ],
 );
-assert.equal(prerequisites.length, 11);
+assert.equal(prerequisites.length, 12);
 assert.equal(prerequisites[0].status, "update");
 assert.equal(prerequisites[1].status, "installed");
+const nix = prerequisites.find((item) => item.id === "nix-ta");
+assert.equal(nix.status, "installed");
+assert.equal(nix.installedId, "Splunk_TA_nix");
+assert.equal(nix.splunkbase, "https://splunkbase.splunk.com/app/833");
 const scientificPython = prerequisites.find(
   (item) => item.id === "scientific-python",
 );
@@ -234,6 +258,7 @@ assert.match(bootstrapSource, /Splunk Cisco App Navigator/);
 assert.match(bootstrapSource, /https:\/\/splunkbase\.splunk\.com\/app\/8566/);
 assert.match(bootstrapSource, /scd-setup__disclosure/);
 assert.match(bootstrapSource, /Splunk_SA_Scientific_Python_<os>/);
+assert.match(bootstrapSource, /Update \$\{prerequisite\.name\} in Manage Apps/);
 const legacyOverviewTemplatePath = path.resolve(
   __dirname,
   "../src/main/resources/splunk/appserver/templates/overview.html",
