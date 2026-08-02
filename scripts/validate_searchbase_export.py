@@ -62,14 +62,6 @@ PII_HARDCODED = re.compile(
     re.I,
 )
 
-# SPL syntax anti-patterns (from splunk-spl-field-syntax.mdc)
-QUOTED_AGG = re.compile(
-    r"\b(?:first|last|avg|sum|count|min|max|dc|values|latest|earliest)"
-    r"\(\s*'[a-zA-Z_]\w*\.",
-    re.I,
-)
-QUOTED_BY = re.compile(r"\b(?:by|BY)\s+'[a-zA-Z_]\w*\.", re.I)
-
 SIDE_EFFECT = re.compile(
     r"\b(?:outputlookup|collect|sendemail|delete)\b", re.I
 )
@@ -170,26 +162,7 @@ def is_trivial(spl: str) -> tuple[bool, str]:
 
 def check_spl_syntax(spl: str) -> list[CheckFailure]:
     failures: list[CheckFailure] = []
-    if QUOTED_AGG.search(spl):
-        failures.append(
-            CheckFailure(
-                "spl_syntax",
-                "Single-quoted dotted field inside stats/timechart aggregate function.",
-                "Use bare dotted field names in aggregate args (Class A commands). "
-                "Single-quote only inside eval/where.",
-            )
-        )
-    if QUOTED_BY.search(spl):
-        failures.append(
-            CheckFailure(
-                "spl_syntax",
-                "Single-quoted dotted field in by clause.",
-                "Use bare field names in `by` clauses, e.g. `by connection.ssid`.",
-            )
-        )
     for violation in lint_search(spl):
-        if violation.rule_id.startswith("R001"):
-            continue
         failures.append(
             CheckFailure(
                 "spl_syntax",

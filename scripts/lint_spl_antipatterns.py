@@ -9,17 +9,6 @@ never sneak back in.
 
 Rules implemented
 -----------------
-R001  quoted-dotted-field-in-stats
-    Single-quoted dotted field names are correct inside ``eval`` and
-    ``where`` expressions (e.g. ``eval x = 'a.b.c'``), but inside a
-    ``stats``/``chart``/``timechart``-class aggregation function they
-    are treated as literal strings, not field references, so the
-    aggregation silently returns no data.
-
-    Bad   : ``| stats latest('a.b.c') as x by mac``
-    Good  : ``| stats latest(a.b.c) as x by mac``
-    Better: ``| eval x = 'a.b.c' | stats latest(x) by mac``
-
 R002  dedup-command
     ``dedup`` hides the entity selection rule and can silently retain an
     arbitrary event. Reduce to an explicit grain with ``stats`` or ``tstats``.
@@ -100,28 +89,6 @@ DEFAULT_PATH = REPO_ROOT / (
     "searchbase.conf"
 )
 
-# Splunk aggregation functions that take a field-name argument inside
-# stats/chart/timechart-class commands.
-_AGG_FNS = (
-    r"latest|earliest|values|first|last|count|dc|distinct_count|sum|avg|mean|"
-    r"min|max|median|mode|stdev|stdevp|var|varp|range|list|estdc|sparkline|"
-    r"rate|p\d+|perc\d+|exactperc\d+|upperperc\d+|"
-    r"per_day|per_hour|per_minute|per_second"
-)
-
-# Commands whose argument list parses raw field names (not eval expressions).
-_STATS_CMD_RE = re.compile(
-    r"\|\s*(?:stats|tstats|chart|timechart|eventstats|streamstats|geostats|"
-    r"mstats|sichart|sitimechart|sistats)\b",
-    re.IGNORECASE,
-)
-
-# Pattern: agg_function('dotted.field.path')
-_R001_RE = re.compile(
-    rf"\b(?:{_AGG_FNS})\s*\(\s*'([^']+\.[^']+)'\s*\)",
-    re.IGNORECASE,
-)
-
 _DEDUP_RE = re.compile(r"\|\s*dedup\b", re.IGNORECASE)
 _FILLNULL_RE = re.compile(
     r"\|\s*fillnull\b(?P<args>[^|\]\n]*)",
@@ -172,29 +139,6 @@ def _import_parser():
     from format_searchbase_conf import parse_stanzas  # type: ignore
 
     return parse_stanzas
-
-
-def _iter_stats_stages(search: str) -> Iterator[str]:
-    """Yield each substring that begins with a stats-class command and runs
-    until the next pipe (or end of search). Allows R001-style rules to scan
-    only inside the relevant stages without false positives from eval/where.
-    """
-    stage_starts = [m.start() for m in _STATS_CMD_RE.finditer(search)]
-    if not stage_starts:
-        return
-    pipe_positions = [m.start() for m in re.finditer(r"\|", search)]
-    pipe_positions.append(len(search))
-    for start in stage_starts:
-        # Skip the leading "|" that defined the stage so the next-pipe
-        # lookup finds the *following* pipe, not this one.
-        end = next((p for p in pipe_positions if p > start + 1), len(search))
-        yield search[start:end]
-
-
-def _rule_r001_quoted_dotted_in_stats(search: str) -> Iterator[tuple[str, str]]:
-    for stage in _iter_stats_stages(search):
-        for m in _R001_RE.finditer(stage):
-            yield m.group(0), m.group(1)
 
 
 def _rule_r002_dedup(search: str) -> Iterator[tuple[str, str]]:
@@ -341,11 +285,6 @@ def _rule_r011_sort_with_stats_or_tstats(search: str) -> Iterator[tuple[str, str
 
 
 _RULES: list[tuple[str, str, Callable[[str], Iterator[tuple[str, str]]]]] = [
-    (
-        "R001",
-        "quoted-dotted-field-in-stats",
-        _rule_r001_quoted_dotted_in_stats,
-    ),
     (
         "R002",
         "dedup-command",
