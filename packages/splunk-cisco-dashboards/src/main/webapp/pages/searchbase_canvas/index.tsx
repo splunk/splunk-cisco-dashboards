@@ -4306,29 +4306,6 @@ const SearchbaseCanvasPage: React.FC = () => {
         return map;
     }, [records]);
 
-    const tileAppOptions = useMemo(() => {
-        const apps = new Set<string>();
-        for (const tile of tiles) {
-            const record = entryByName.get(tile.searchName);
-            if (record) apps.add(recordCatalogueApp(record));
-        }
-        return Array.from(apps).sort((left, right) => left.localeCompare(right));
-    }, [entryByName, tiles]);
-
-    useEffect(() => {
-        let cancelled = false;
-        getSplunkAppLabels(new Set(tileAppOptions))
-            .then((labels) => {
-                if (!cancelled) setTileAppLabelsById(labels);
-            })
-            .catch(() => {
-                if (!cancelled) setTileAppLabelsById(new Map());
-            });
-        return () => {
-            cancelled = true;
-        };
-    }, [tileAppOptions]);
-
     const cachedResultForTile = useCallback(
         (tile: CanvasTile): CachedTileResult | undefined => {
             const record = entryByName.get(tile.searchName);
@@ -4383,6 +4360,53 @@ const SearchbaseCanvasPage: React.FC = () => {
             return tileSearchTerms.every((term) => searchableText.includes(term));
         });
     }, [entryByName, hasTileSearch, tileSearchTerms, tiles]);
+    // The app menu is derived from the other active filters, not from the
+    // chosen app itself. That keeps the menu useful for switching apps while
+    // making unavailable apps disappear when the result state changes.
+    const tileAppFilterBaseTiles = useMemo(() => {
+        if (tileResultFilter === 'all') return searchedTiles;
+        return searchedTiles.filter(
+            (tile) => resultStatusForTile(tile) === tileResultFilter
+        );
+    }, [resultStatusForTile, searchedTiles, tileResultFilter]);
+    const tileAppCounts = useMemo(() => {
+        const counts = new Map<string, number>();
+        for (const tile of tileAppFilterBaseTiles) {
+            const record = entryByName.get(tile.searchName);
+            if (!record) continue;
+            const app = recordCatalogueApp(record);
+            counts.set(app, (counts.get(app) ?? 0) + 1);
+        }
+        return counts;
+    }, [entryByName, tileAppFilterBaseTiles]);
+    const tileAppOptions = useMemo(
+        () =>
+            Array.from(tileAppCounts.entries()).sort(([left], [right]) =>
+                left.localeCompare(right)
+            ),
+        [tileAppCounts]
+    );
+
+    useEffect(() => {
+        let cancelled = false;
+        getSplunkAppLabels(new Set(tileAppCounts.keys()))
+            .then((labels) => {
+                if (!cancelled) setTileAppLabelsById(labels);
+            })
+            .catch(() => {
+                if (!cancelled) setTileAppLabelsById(new Map());
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [tileAppCounts]);
+
+    useEffect(() => {
+        if (tileAppFilter !== ALL && !tileAppCounts.has(tileAppFilter)) {
+            setTileAppFilter(ALL);
+        }
+    }, [tileAppCounts, tileAppFilter]);
+
     const appFilteredTiles = useMemo(() => {
         if (tileAppFilter === ALL) return searchedTiles;
         return searchedTiles.filter((tile) => {
@@ -5803,10 +5827,15 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 aria-label="Filter tiles by app"
                                 className="h-11 w-full appearance-none rounded-md border border-slate-300 bg-white px-3 pr-8 text-sm font-bold text-slate-700 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-sky-500 dark:focus:ring-sky-950 dark:disabled:bg-slate-900"
                             >
-                                <option value={ALL}>All apps ({tiles.length})</option>
-                                {tileAppOptions.map((app) => (
+                                <option
+                                    key={`all-${tileAppFilterBaseTiles.length}`}
+                                    value={ALL}
+                                >
+                                    All apps ({tileAppFilterBaseTiles.length})
+                                </option>
+                                {tileAppOptions.map(([app, count]) => (
                                     <option key={app} value={app} title={app}>
-                                        {catalogueAppLabel(app, tileAppLabelsById)}
+                                        {catalogueAppLabel(app, tileAppLabelsById)} ({count})
                                     </option>
                                 ))}
                             </select>
