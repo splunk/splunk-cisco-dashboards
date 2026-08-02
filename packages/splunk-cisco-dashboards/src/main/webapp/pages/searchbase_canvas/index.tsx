@@ -11,6 +11,7 @@ import {
     ChevronDown,
     ChevronLeft,
     ChevronRight,
+    CircleX,
     Copy,
     ExternalLink,
     Gauge,
@@ -98,6 +99,12 @@ import {
     runSearch,
 } from '@/common/services/splunkSearchService';
 import {
+    tileResultFilterIsVisible,
+    tileResultStatusForNoDataReason,
+    type TileResultFilter,
+    type TileResultStatus,
+} from './tileResultStatus';
+import {
     deleteSearchbaseCanvas,
     listSearchbaseCanvases,
     loadSearchbaseCanvas,
@@ -159,8 +166,6 @@ const clampNumber = (value: number, min: number, max: number): number =>
 
 type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
 type TileSpan = 1 | 2 | 4;
-type TileResultFilter = 'all' | 'needs_attention' | 'working';
-type TileResultStatus = 'needs_attention' | 'working' | 'unobserved';
 type CachedTileResult = MetricResult | TableDataResult;
 
 const TILE_RESULT_FILTER_OPTIONS: Array<{
@@ -176,7 +181,12 @@ const TILE_RESULT_FILTER_OPTIONS: Array<{
     {
         value: 'needs_attention',
         label: 'Needs attention',
-        title: 'Show searches that failed or returned no data',
+        title: 'Show searches that completed but returned no displayable data',
+    },
+    {
+        value: 'failed',
+        label: 'Failed',
+        title: 'Show searches that failed to complete',
     },
     {
         value: 'working',
@@ -518,7 +528,9 @@ const tileResultStatusFromResult = (
     result: CachedTileResult | undefined
 ): TileResultStatus => {
     if (!result || result.source !== 'live') return 'unobserved';
-    if (result.noDataReason) return 'needs_attention';
+    if (result.noDataReason) {
+        return tileResultStatusForNoDataReason(result.noDataReason);
+    }
     if ('totalRowCount' in result) {
         return result.totalRowCount > 0 ? 'working' : 'unobserved';
     }
@@ -4252,7 +4264,10 @@ const SearchbaseCanvasPage: React.FC = () => {
 
     const resultStatusForTile = useCallback(
         (tile: CanvasTile): TileResultStatus => {
-            if (observedNoDataByTile.has(tile.id)) return 'needs_attention';
+            const observation = observedNoDataByTile.get(tile.id);
+            if (observation) {
+                return tileResultStatusForNoDataReason(observation.reason);
+            }
             return tileResultStatusFromResult(cachedResultForTile(tile));
         },
         [cachedResultForTile, observedNoDataByTile]
@@ -4291,6 +4306,7 @@ const SearchbaseCanvasPage: React.FC = () => {
     const resultFilterCounts = useMemo(() => {
         const counts: Record<TileResultStatus, number> = {
             needs_attention: 0,
+            failed: 0,
             working: 0,
             unobserved: 0,
         };
@@ -4344,6 +4360,12 @@ const SearchbaseCanvasPage: React.FC = () => {
     useEffect(() => {
         setPageIndex(0);
     }, [tileResultFilter, tileSearchQuery]);
+
+    useEffect(() => {
+        if (tileResultFilter === 'failed' && resultFilterCounts.failed === 0) {
+            setTileResultFilter('all');
+        }
+    }, [resultFilterCounts.failed, tileResultFilter]);
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -5623,14 +5645,21 @@ const SearchbaseCanvasPage: React.FC = () => {
                             aria-label="Filter tiles by last observed search result"
                             className="inline-flex h-11 max-w-full overflow-hidden rounded-md border border-slate-300 bg-white p-1 dark:border-slate-700 dark:bg-slate-950"
                         >
-                            {TILE_RESULT_FILTER_OPTIONS.map((option) => {
+                            {TILE_RESULT_FILTER_OPTIONS.filter((option) =>
+                                tileResultFilterIsVisible(
+                                    option.value,
+                                    resultFilterCounts.failed
+                                )
+                            ).map((option) => {
                                 const selected = tileResultFilter === option.value;
                                 const count =
                                     option.value === 'all'
                                         ? searchedTiles.length
                                         : resultFilterCounts[option.value];
                                 const Icon =
-                                    option.value === 'needs_attention'
+                                    option.value === 'failed'
+                                        ? CircleX
+                                        : option.value === 'needs_attention'
                                         ? AlertCircle
                                         : option.value === 'working'
                                         ? Check
@@ -5646,7 +5675,11 @@ const SearchbaseCanvasPage: React.FC = () => {
                                         className={cn(
                                             'inline-flex min-w-0 items-center gap-1.5 rounded px-2.5 text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-55 focus:outline-none focus:ring-2 focus:ring-sky-300 sm:px-3',
                                             selected
-                                                ? 'bg-slate-900 text-white shadow-sm dark:bg-slate-100 dark:text-slate-950'
+                                                ? option.value === 'failed'
+                                                    ? 'bg-rose-700 text-white shadow-sm dark:bg-rose-600 dark:text-white'
+                                                    : 'bg-slate-900 text-white shadow-sm dark:bg-slate-100 dark:text-slate-950'
+                                                : option.value === 'failed'
+                                                ? 'text-rose-700 hover:bg-rose-50 hover:text-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/50 dark:hover:text-rose-200'
                                                 : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-50'
                                         )}
                                     >

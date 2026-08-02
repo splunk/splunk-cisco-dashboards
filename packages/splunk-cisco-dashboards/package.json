@@ -18,6 +18,7 @@
         "test:dashboard-builder-layout": "node test/dashboardBuilderLayout.test.cjs",
         "test:dashboard-theme": "node test/dashboardTheme.test.cjs",
         "test:auto-advance": "node test/autoAdvance.test.cjs",
+        "test:tile-result-status": "node test/tileResultStatus.test.cjs",
         "test:insights-workspaces": "node test/insightsWorkspaces.test.cjs",
         "typecheck": "tsc --noEmit",
         "verify:production-assets": "node bin/verify_production_assets.js",
