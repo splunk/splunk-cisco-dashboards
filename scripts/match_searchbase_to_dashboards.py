@@ -704,7 +704,12 @@ def main() -> int:
     unmatched_rows = [m for m in matches if m["notes"] == "unmatched"]
 
     with OUTPUT_PATH.open("w", newline="", encoding="utf-8") as fh:
-        writer = csv.DictWriter(fh, fieldnames=fieldnames, quoting=csv.QUOTE_MINIMAL)
+        writer = csv.DictWriter(
+            fh,
+            fieldnames=fieldnames,
+            quoting=csv.QUOTE_MINIMAL,
+            lineterminator="\n",
+        )
         writer.writeheader()
         writer.writerows(matched_rows)
 
@@ -713,6 +718,7 @@ def main() -> int:
             fh,
             fieldnames=["stanza_id", "search_name", "source_query_snippet", "notes"],
             quoting=csv.QUOTE_MINIMAL,
+            lineterminator="\n",
         )
         writer.writeheader()
         for row in unmatched_rows:

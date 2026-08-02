@@ -4,17 +4,17 @@ Generated on 2026-07-23 from `packages/splunk-cisco-dashboards/src/main/resource
 
 | Measure | Count |
 |---|---:|
-| Searches processed | 1346 |
+| Searches processed | 1345 |
 | SPL searches changed | 5 |
 | Metadata stanzas changed | 12 |
 | Data Model tstats searches | 376 |
 | Other tstats searches | 22 |
-| Raw searches retained for parity validation | 914 |
+| Raw searches retained for parity validation | 913 |
 | Non-event-source searches | 34 |
-| Secure Networking sub-categories preserved | 227 |
+| Secure Networking sub-categories preserved | 159 |
 | Origin tags removed or renamed | 0 |
-| Proposed tag additions, not applied | 168 |
-| Remaining static review notes | 1777 |
+| Proposed tag additions, not applied | 275 |
+| Remaining static review notes | 1367 |
 
 The complete per-search original/optimized SPL, metadata, rationale, classification review, tag proposals, and residual findings are in `docs/searchbase_review_report.json`.
 
@@ -24,7 +24,7 @@ Three SGACL Data Model searches now use the defined `scd_summariesonly` macro in
 
 ## Tag Proposals
 
-The report proposes adding the picker tag `Cisco` to 168 metric-producing timechart searches. These proposals require approval and were not applied. No tag spelling or casing variants were found.
+The report proposes adding the picker tag `Cisco` to 275 metric-producing timechart searches. These proposals require approval and were not applied. No tag spelling or casing variants were found.
 
 ## Validation Boundary
 

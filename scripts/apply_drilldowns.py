@@ -235,7 +235,7 @@ BEST_FIT = {
     # === Other mapped ===
     "asset_inventory_build_lookup": ("asset_inventory_ds_gap_analysis", "View inventory gap analysis"),
     "asset_inventory_firewall_gap": ("asset_inventory_ds_gap_analysis", "View inventory gap analysis"),
-    "network_activation_wired_health_kpi": ("network_activation_ds_wired_health", "View wired health detail"),
+    "catalyst_center_wired_health_kpi": ("statewide_client_wired_drilldown", "View wired health detail"),
     "network_activation_wireless_health_kpi": ("network_activation_ds_wireless_health", "View wireless health detail"),
 }
 
