@@ -1473,6 +1473,10 @@ export default function MacroIndexTuningPage(): JSX.Element {
     CIM_DISCOVERY_SEARCH,
     cimTimeRange,
   );
+  const openAccelerationSearchUrl = splunkSearchAppUrl(
+    DATA_MODEL_ACCELERATION_SEARCH,
+    { earliest: "0", latest: "now" },
+  );
   const macrosManagerUrl = splunkManagerUrl("data/macros");
   const externalMacroManagerLinks = TARGET_APP_ORDER.filter(
     (targetApp) => targetApp !== APP_NAME,
@@ -2373,6 +2377,16 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   faster. Setup can finish in Balanced mode while you complete
                   these recommendations.
                 </p>
+                <a
+                  href={openAccelerationSearchUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Open acceleration check in Search"
+                  className="mt-2 inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 text-xs font-bold text-sky-700 hover:border-sky-400 hover:text-sky-900"
+                >
+                  <ExternalLink size={12} />
+                  Open in Search
+                </a>
 
                 <div
                   className={`mt-3 rounded-md px-3 py-2 text-xs font-semibold ${
