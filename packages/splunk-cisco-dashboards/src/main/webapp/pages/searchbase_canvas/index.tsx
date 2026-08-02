@@ -4154,6 +4154,10 @@ const SearchbaseCanvasPage: React.FC = () => {
     const [tileSearchQuery, setTileSearchQuery] = useState('');
     const [tileResultFilter, setTileResultFilter] =
         useState<TileResultFilter>('all');
+    const [tileAppFilter, setTileAppFilter] = useState(ALL);
+    const [tileAppLabelsById, setTileAppLabelsById] = useState<Map<string, string>>(
+        () => new Map()
+    );
     const [presentationMode, setPresentationMode] = useState(false);
     const [runningTileIds, setRunningTileIds] = useState<Set<string>>(
         () => new Set()
@@ -4291,6 +4295,7 @@ const SearchbaseCanvasPage: React.FC = () => {
         setMetricResultCacheByTile(new Map());
         setTableDataCacheByTile(new Map());
         setTileResultFilter('all');
+        setTileAppFilter(ALL);
     }, [rangeLabel]);
 
     const entryByName = useMemo(() => {
@@ -4300,6 +4305,29 @@ const SearchbaseCanvasPage: React.FC = () => {
         }
         return map;
     }, [records]);
+
+    const tileAppOptions = useMemo(() => {
+        const apps = new Set<string>();
+        for (const tile of tiles) {
+            const record = entryByName.get(tile.searchName);
+            if (record) apps.add(recordCatalogueApp(record));
+        }
+        return Array.from(apps).sort((left, right) => left.localeCompare(right));
+    }, [entryByName, tiles]);
+
+    useEffect(() => {
+        let cancelled = false;
+        getSplunkAppLabels(new Set(tileAppOptions))
+            .then((labels) => {
+                if (!cancelled) setTileAppLabelsById(labels);
+            })
+            .catch(() => {
+                if (!cancelled) setTileAppLabelsById(new Map());
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [tileAppOptions]);
 
     const cachedResultForTile = useCallback(
         (tile: CanvasTile): CachedTileResult | undefined => {
@@ -4355,6 +4383,15 @@ const SearchbaseCanvasPage: React.FC = () => {
             return tileSearchTerms.every((term) => searchableText.includes(term));
         });
     }, [entryByName, hasTileSearch, tileSearchTerms, tiles]);
+    const appFilteredTiles = useMemo(() => {
+        if (tileAppFilter === ALL) return searchedTiles;
+        return searchedTiles.filter((tile) => {
+            const record = entryByName.get(tile.searchName);
+            return record
+                ? recordCatalogueApp(record) === tileAppFilter
+                : false;
+        });
+    }, [entryByName, searchedTiles, tileAppFilter]);
     const resultFilterCounts = useMemo(() => {
         const counts: Record<TileResultStatus, number> = {
             needs_attention: 0,
@@ -4362,17 +4399,17 @@ const SearchbaseCanvasPage: React.FC = () => {
             working: 0,
             unobserved: 0,
         };
-        for (const tile of searchedTiles) {
+        for (const tile of appFilteredTiles) {
             counts[resultStatusForTile(tile)] += 1;
         }
         return counts;
-    }, [resultStatusForTile, searchedTiles]);
+    }, [appFilteredTiles, resultStatusForTile]);
     const filteredTiles = useMemo(() => {
-        if (tileResultFilter === 'all') return searchedTiles;
-        return searchedTiles.filter(
+        if (tileResultFilter === 'all') return appFilteredTiles;
+        return appFilteredTiles.filter(
             (tile) => resultStatusForTile(tile) === tileResultFilter
         );
-    }, [resultStatusForTile, searchedTiles, tileResultFilter]);
+    }, [appFilteredTiles, resultStatusForTile, tileResultFilter]);
 
     const totalPages = Math.max(1, Math.ceil(filteredTiles.length / pageSize));
     const clampedPageIndex = Math.min(pageIndex, totalPages - 1);
@@ -4411,7 +4448,7 @@ const SearchbaseCanvasPage: React.FC = () => {
 
     useEffect(() => {
         setPageIndex(0);
-    }, [tileResultFilter, tileSearchQuery]);
+    }, [tileAppFilter, tileResultFilter, tileSearchQuery]);
 
     useEffect(() => {
         if (tileResultFilter === 'failed' && resultFilterCounts.failed === 0) {
@@ -4617,6 +4654,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                 setPageIndex(0);
                 setTileSearchQuery('');
                 setTileResultFilter('all');
+                setTileAppFilter(ALL);
                 setRunningTileIds(new Set());
                 setObservedNoDataByTile(new Map());
                 setOverlayFieldsByTile(new Map());
@@ -4943,6 +4981,7 @@ const SearchbaseCanvasPage: React.FC = () => {
 
         setTileSearchQuery('');
         setTileResultFilter('all');
+        setTileAppFilter(ALL);
         setBrowserOpen(false);
         setReplaceTileId(null);
         setPresentationMode(false);
@@ -5216,6 +5255,7 @@ const SearchbaseCanvasPage: React.FC = () => {
         setPageIndex(0);
         setTileSearchQuery('');
         setTileResultFilter('all');
+        setTileAppFilter(ALL);
         setBrowserOpen(true);
         setReplaceTileId(null);
         setActiveSavedCanvasName(null);
@@ -5242,6 +5282,7 @@ const SearchbaseCanvasPage: React.FC = () => {
         setPageIndex(0);
         setTileSearchQuery('');
         setTileResultFilter('all');
+        setTileAppFilter(ALL);
         setBrowserOpen(false);
         setReplaceTileId(null);
         setActiveSavedCanvasName(null);
@@ -5258,7 +5299,8 @@ const SearchbaseCanvasPage: React.FC = () => {
             ? 'Dark theme'
             : 'Light theme';
     const hasTileResultFilter = tileResultFilter !== 'all';
-    const hasTileFilters = hasTileSearch || hasTileResultFilter;
+    const hasTileAppFilter = tileAppFilter !== ALL;
+    const hasTileFilters = hasTileSearch || hasTileResultFilter || hasTileAppFilter;
     const autoAdvanceActive = autoAdvanceRun !== null;
     const autoAdvanceProgressLabel = autoAdvanceRun
         ? `${autoAdvanceRun.pageIndex + 1}/${autoAdvanceRun.pages.length}`
@@ -5706,7 +5748,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 const selected = tileResultFilter === option.value;
                                 const count =
                                     option.value === 'all'
-                                        ? searchedTiles.length
+                                        ? appFilteredTiles.length
                                         : resultFilterCounts[option.value];
                                 const Icon =
                                     option.value === 'failed'
@@ -5751,6 +5793,25 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 );
                             })}
                         </div>
+                        <label className="relative min-w-[180px]">
+                            <span className="sr-only">Filter tiles by app</span>
+                            <select
+                                value={tileAppFilter}
+                                onChange={(event) => setTileAppFilter(event.target.value)}
+                                disabled={tiles.length === 0 || autoAdvanceActive}
+                                title="Filter canvas tiles by their Searchbase source app"
+                                aria-label="Filter tiles by app"
+                                className="h-11 w-full appearance-none rounded-md border border-slate-300 bg-white px-3 pr-8 text-sm font-bold text-slate-700 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-sky-500 dark:focus:ring-sky-950 dark:disabled:bg-slate-900"
+                            >
+                                <option value={ALL}>All apps ({tiles.length})</option>
+                                {tileAppOptions.map((app) => (
+                                    <option key={app} value={app} title={app}>
+                                        {catalogueAppLabel(app, tileAppLabelsById)}
+                                    </option>
+                                ))}
+                            </select>
+                            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                        </label>
                         <div className="flex min-w-0 flex-wrap items-center gap-2">
                         <button
                             type="button"
@@ -5842,13 +5903,14 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 <p className="mt-2 text-sm font-medium leading-6 text-slate-500 dark:text-slate-400">
                                     {hasTileResultFilter
                                         ? 'Run searches from the All view, or switch result filters after results come back.'
-                                        : 'Try a different tile name, tag, category, or SPL fragment.'}
+                                        : 'Try a different app, tile name, tag, category, or SPL fragment.'}
                                 </p>
                                 <button
                                     type="button"
                                     onClick={() => {
                                         setTileSearchQuery('');
                                         setTileResultFilter('all');
+                                        setTileAppFilter(ALL);
                                     }}
                                     className="mt-5 inline-flex items-center gap-2 rounded-md bg-slate-900 px-4 py-2 text-sm font-black text-white transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-white"
                                 >
