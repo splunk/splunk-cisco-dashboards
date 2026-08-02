@@ -402,6 +402,43 @@ def emit_search_field(search: str) -> list[str]:
     return lines
 
 
+def find_unterminated_search_lines(text: str) -> list[tuple[int, str, str]]:
+    """Return non-final physical search lines missing a continuation backslash."""
+    failures: list[tuple[int, str, str]] = []
+    current: str | None = None
+    search_lines: list[tuple[int, str]] = []
+
+    def check_search() -> None:
+        if len(search_lines) < 2 or current is None:
+            return
+        for line_number, line in search_lines[:-1]:
+            if not line.rstrip().endswith("\\"):
+                failures.append((line_number, current, line))
+
+    for line_number, line in enumerate(text.splitlines(), 1):
+        match = re.match(r"^\[([a-z0-9_]+)\]$", line)
+        if match:
+            check_search()
+            current = match.group(1)
+            search_lines = []
+            continue
+        if current is None:
+            continue
+        if line.startswith("search = "):
+            check_search()
+            search_lines = [(line_number, line)]
+            continue
+        if search_lines:
+            if line.startswith("|") or line.startswith(" ") or line.endswith("\\"):
+                search_lines.append((line_number, line))
+                continue
+            check_search()
+            search_lines = []
+
+    check_search()
+    return failures
+
+
 def _field_order_lists(fields: dict[str, str]) -> tuple[list[str], list[str]]:
     """Return (known_pre_search_order, unknown_extras) for a stanza."""
     known: list[str] = list(FIELD_ORDER_BEFORE_VIZ)
