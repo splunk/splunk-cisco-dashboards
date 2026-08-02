@@ -30,6 +30,7 @@ THOUSANDEYES_APP = "ta_cisco_thousandeyes"
 CATALYST_APP = "cisco-catalyst-app"
 MERAKI_APP = "Splunk_TA_cisco_meraki"
 SPACES_APP = "ta_cisco_spaces"
+ATTACK_ANALYZER_APP = "Splunk_App_SAA"
 SOURCETYPE_CATALOG = Path(__file__).with_name("searchbase_sourcetype_catalog.json")
 
 # These Catalyst-derived searches use raw events rather than the
@@ -89,6 +90,8 @@ def sourcetype_owners(search: str) -> set[str]:
             owners.add(MERAKI_APP)
         if normalized.startswith("cisco:spaces:firehose"):
             owners.add(SPACES_APP)
+        if normalized.startswith("splunk:aa:"):
+            owners.add(ATTACK_ANALYZER_APP)
         if "*" in sourcetype:
             continue
         for pattern, apps in SOURCETYPE_OWNERS.items():
