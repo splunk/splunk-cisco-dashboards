@@ -38,6 +38,9 @@ const APP_SETUP_VIEW = "start";
 const CIM_APP_NAME = "Splunk_SA_CIM";
 const CISCO_SECURITY_APP_NAME = "CiscoSecurityCloud";
 const THOUSAND_EYES_APP_NAME = "ta_cisco_thousandeyes";
+const CATALYST_APP_NAME = "cisco-catalyst-app";
+const DATA_CENTER_NETWORKING_APP_NAME =
+  "cisco_dc_networking_app_for_splunk";
 const TUNING_SEARCHBASE_ID = "admin_macro_index_tuning";
 const TUNING_SEARCH_NAME = "Admin - Macro Index Tuning";
 const ADHOC_MACRO_NAME = "scd_summariesonly";
@@ -49,6 +52,16 @@ const DEFAULT_SUMMARIESONLY_DESCRIPTION =
   "Controls whether data-model searches use only accelerated summaries or may fall back to raw events. Keep summariesonly=false until all required data models are fully accelerated.";
 const SUMMARIESONLY_ACCELERATION_ERROR =
   "summariesonly=true requires acceleration for Cisco Catalyst, Cisco Security, and Cisco ThousandEyes.";
+const DATA_MODEL_ACCELERATION_SEARCH = `
+| rest splunk_server=local timeout=600 /servicesNS/-/-/data/models
+| rename eai:acl.* AS *, eai:data AS data
+| rename field.* AS *
+| rename acceleration.* AS *
+| stats last(disabled) AS disabled last(acceleration) AS acceleration last(allow_old_summaries) AS allow_old_summaries last(earliest_time) AS earliest_time by app title
+| search (app=Splunk_SA_CIM title IN (Authentication, Network_Traffic)) OR app IN (CiscoSecurityCloud, ta_cisco_thousandeyes, cisco-catalyst-app, cisco_dc_networking_app_for_splunk)
+| sort 0 app title
+| table app title acceleration allow_old_summaries earliest_time disabled
+`;
 const DEFAULT_INDEX_IN_DEFINITION = "index IN (*)";
 const DEFAULT_INDEX_OR_DEFINITION = "(index=*)";
 const SCD_INDEX_MACRO_OR_PLACEHOLDER = "__SCD_INDEX_MACRO_OR__";
@@ -285,14 +298,24 @@ interface DataModelRequirement {
 interface DataModelAcceleration extends DataModelRequirement {
   state: DataModelAccelerationState;
   earliestTime: string;
+  allowOldSummaries: boolean;
   message: string;
 }
 
-const DATA_MODEL_REQUIREMENTS: readonly DataModelRequirement[] = [
+interface DataModelGroup {
+  app: string;
+  label: string;
+  items: DataModelAcceleration[];
+  enabledCount: number;
+  attentionCount: number;
+  checkingCount: number;
+}
+
+const CORE_DATA_MODEL_REQUIREMENTS: readonly DataModelRequirement[] = [
   {
     key: "catalyst",
     label: "Cisco Catalyst",
-    app: "cisco-catalyst-app",
+    app: CATALYST_APP_NAME,
     model: "Cisco_Catalyst_App",
     priority: "required",
   },
@@ -325,6 +348,28 @@ const DATA_MODEL_REQUIREMENTS: readonly DataModelRequirement[] = [
     priority: "recommended",
   },
 ] as const;
+
+const DATA_MODEL_APP_LABELS: Readonly<Record<string, string>> = {
+  [CATALYST_APP_NAME]: "Cisco Catalyst",
+  [CISCO_SECURITY_APP_NAME]: "Cisco Security Cloud",
+  [THOUSAND_EYES_APP_NAME]: "Cisco ThousandEyes",
+  [DATA_CENTER_NETWORKING_APP_NAME]: "Cisco Data Center Networking",
+  [CIM_APP_NAME]: "Splunk Common Information Model",
+};
+
+const DATA_MODEL_APP_ORDER = [
+  CATALYST_APP_NAME,
+  CISCO_SECURITY_APP_NAME,
+  THOUSAND_EYES_APP_NAME,
+  DATA_CENTER_NETWORKING_APP_NAME,
+  CIM_APP_NAME,
+] as const;
+
+const REQUIRED_DATA_MODEL_KEYS = new Set(
+  CORE_DATA_MODEL_REQUIREMENTS.filter(
+    (requirement) => requirement.priority === "required",
+  ).map((requirement) => `${requirement.app}:${requirement.model}`),
+);
 
 const DEFAULT_FAST_TIME_RANGE: SearchTimeRange = {
   earliest: "-7d@d",
@@ -467,13 +512,15 @@ const initialSetupConfigUrl = (): string =>
     APP_NAME,
   )}/configs/conf-setup/install?output_mode=json`;
 
-const dataModelConfigUrl = ({
+const splunkDataModelManagerUrl = ({
   app,
   model,
 }: Pick<DataModelRequirement, "app" | "model">): string =>
-  `/${getSplunkLocale()}/splunkd/__raw/servicesNS/nobody/${encodeURIComponent(
-    app,
-  )}/configs/conf-datamodels/${encodeURIComponent(model)}?output_mode=json`;
+  `${splunkAppManagerUrl(app, "data_model_manager")}?${new URLSearchParams({
+    appSearch: app,
+    visible: "0",
+    nameFilter: model,
+  }).toString()}`;
 
 const isInitialSetupMode = (): boolean =>
   typeof window !== "undefined" &&
@@ -788,70 +835,79 @@ const completeInitialSetup = async (): Promise<void> => {
   }
 };
 
-const loadDataModelAcceleration = async (
-  requirement: DataModelRequirement,
-): Promise<DataModelAcceleration> => {
-  const response = await fetch(dataModelConfigUrl(requirement), {
-    ...getDefaultFetchInit(),
-    method: "GET",
-  });
+const dataModelRequirementId = ({
+  app,
+  model,
+}: Pick<DataModelRequirement, "app" | "model">): string => `${app}:${model}`;
 
-  let payload: unknown = null;
-  try {
-    payload = await response.json();
-  } catch {
-    payload = null;
-  }
+const CORE_DATA_MODEL_REQUIREMENTS_BY_ID = new Map(
+  CORE_DATA_MODEL_REQUIREMENTS.map((requirement) => [
+    dataModelRequirementId(requirement),
+    requirement,
+  ]),
+);
 
-  if (!response.ok) {
-    return {
-      ...requirement,
-      state: response.status === 404 ? "missing" : "error",
-      earliestTime: "",
-      message:
-        extractSplunkError(payload) ||
-        (response.status === 404
-          ? "Data model was not found"
-          : `Acceleration check failed (HTTP ${response.status})`),
-    };
-  }
+const dataModelLabel = (app: string, model: string): string =>
+  CORE_DATA_MODEL_REQUIREMENTS_BY_ID.get(`${app}:${model}`)?.label ||
+  model.replace(/_/g, " ").replace(/\bnexus\b/gi, "Nexus");
 
-  const entries = (
-    payload as {
-      entry?: Array<{
-        content?: {
-          acceleration?: unknown;
-          "acceleration.earliest_time"?: unknown;
-          disabled?: unknown;
-        };
-      }>;
-    } | null
-  )?.entry;
-  const content = entries?.[0]?.content;
+const parseDataModelAcceleration = (
+  row: Record<string, unknown>,
+): DataModelAcceleration | null => {
+  const app = normalizeText(row.app).trim();
+  const model = normalizeText(row.title).trim();
+  if (!app || !model) return null;
 
-  if (!content) {
-    return {
-      ...requirement,
-      state: "missing",
-      earliestTime: "",
-      message: "Data model was not found",
-    };
-  }
-
-  const disabled = isTrueConfigValue(content.disabled);
-  const enabled = isTrueConfigValue(content.acceleration) && !disabled;
+  const id = `${app}:${model}`;
+  const disabled = isTrueConfigValue(row.disabled);
+  const enabled = isTrueConfigValue(row.acceleration) && !disabled;
   return {
-    ...requirement,
+    key: id,
+    label: dataModelLabel(app, model),
+    app,
+    model,
+    priority: REQUIRED_DATA_MODEL_KEYS.has(id) ? "required" : "recommended",
     state: enabled ? "enabled" : "disabled",
-    earliestTime: normalizeText(
-      content["acceleration.earliest_time"],
-    ).trim(),
+    earliestTime: normalizeText(row.earliest_time).trim(),
+    allowOldSummaries: isTrueConfigValue(row.allow_old_summaries),
     message: disabled
       ? "Data model is disabled"
       : enabled
         ? "Acceleration enabled"
         : "Acceleration is not enabled",
   };
+};
+
+const buildDataModelAccelerationInventory = (
+  rows: Record<string, unknown>[],
+): DataModelAcceleration[] => {
+  const inventoryById = new Map<string, DataModelAcceleration>();
+  rows.forEach((row) => {
+    const item = parseDataModelAcceleration(row);
+    if (item) inventoryById.set(dataModelRequirementId(item), item);
+  });
+
+  CORE_DATA_MODEL_REQUIREMENTS.forEach((requirement) => {
+    const id = dataModelRequirementId(requirement);
+    if (inventoryById.has(id)) return;
+    inventoryById.set(id, {
+      ...requirement,
+      state: "missing",
+      earliestTime: "",
+      allowOldSummaries: false,
+      message: "Data model was not found",
+    });
+  });
+
+  const appRank = new Map<string, number>(
+    DATA_MODEL_APP_ORDER.map((app, index) => [app, index]),
+  );
+  return Array.from(inventoryById.values()).sort((left, right) => {
+    const appDifference =
+      (appRank.get(left.app) ?? DATA_MODEL_APP_ORDER.length) -
+      (appRank.get(right.app) ?? DATA_MODEL_APP_ORDER.length);
+    return appDifference || left.model.localeCompare(right.model);
+  });
 };
 
 const loadMacroDetails = async (
@@ -1213,10 +1269,11 @@ export default function MacroIndexTuningPage(): JSX.Element {
   const [dataModelReadiness, setDataModelReadiness] = useState<
     DataModelAcceleration[]
   >(() =>
-    DATA_MODEL_REQUIREMENTS.map((requirement) => ({
+    CORE_DATA_MODEL_REQUIREMENTS.map((requirement) => ({
       ...requirement,
       state: "checking",
       earliestTime: "",
+      allowOldSummaries: false,
       message: "Checking acceleration",
     })),
   );
@@ -1301,7 +1358,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
   );
   const allRequiredDataModelsAccelerated =
     requiredDataModels.length ===
-      DATA_MODEL_REQUIREMENTS.filter(
+      CORE_DATA_MODEL_REQUIREMENTS.filter(
         (requirement) => requirement.priority === "required",
       ).length &&
     requiredDataModels.every((item) => item.state === "enabled");
@@ -1357,6 +1414,45 @@ export default function MacroIndexTuningPage(): JSX.Element {
   const acceleratedRequiredModels = requiredDataModels.filter(
     (item) => item.state === "enabled",
   ).length;
+  const acceleratedDataModelCount = dataModelReadiness.filter(
+    (item) => item.state === "enabled",
+  ).length;
+  const dataModelsNeedingAttention = dataModelReadiness.filter(
+    (item) =>
+      item.state === "disabled" ||
+      item.state === "missing" ||
+      item.state === "error",
+  );
+  const dataModelGroups = useMemo<DataModelGroup[]>(() => {
+    const groupsByApp = new Map<string, DataModelAcceleration[]>();
+    dataModelReadiness.forEach((item) => {
+      const appItems = groupsByApp.get(item.app) || [];
+      appItems.push(item);
+      groupsByApp.set(item.app, appItems);
+    });
+
+    return DATA_MODEL_APP_ORDER.flatMap((app) => {
+      const items = groupsByApp.get(app);
+      if (!items?.length) return [];
+      return [
+        {
+          app,
+          label: DATA_MODEL_APP_LABELS[app] || app,
+          items,
+          enabledCount: items.filter((item) => item.state === "enabled")
+            .length,
+          attentionCount: items.filter(
+            (item) =>
+              item.state === "disabled" ||
+              item.state === "missing" ||
+              item.state === "error",
+          ).length,
+          checkingCount: items.filter((item) => item.state === "checking")
+            .length,
+        },
+      ];
+    });
+  }, [dataModelReadiness]);
   const selectSetupPerformanceMode = (acceleratedOnly: boolean) => {
     setAdhocDefinition(
       acceleratedOnly
@@ -1556,29 +1652,40 @@ export default function MacroIndexTuningPage(): JSX.Element {
 
   const checkDataModelAcceleration = useCallback(async () => {
     setDataModelReadiness(
-      DATA_MODEL_REQUIREMENTS.map((requirement) => ({
+      CORE_DATA_MODEL_REQUIREMENTS.map((requirement) => ({
         ...requirement,
         state: "checking",
         earliestTime: "",
+        allowOldSummaries: false,
         message: "Checking acceleration",
       })),
     );
 
-    const readiness = await Promise.all(
-      DATA_MODEL_REQUIREMENTS.map(async (requirement) => {
-        try {
-          return await loadDataModelAcceleration(requirement);
-        } catch (err) {
-          return {
-            ...requirement,
-            state: "error" as const,
-            earliestTime: "",
-            message: err instanceof Error ? err.message : String(err),
-          };
-        }
-      }),
-    );
-    setDataModelReadiness(readiness);
+    try {
+      const result = await runSearch({
+        spl: DATA_MODEL_ACCELERATION_SEARCH,
+        earliestTime: "0",
+        latestTime: "now",
+        count: 0,
+        tag: "data-model-acceleration-readiness",
+      });
+      setDataModelReadiness(
+        buildDataModelAccelerationInventory(
+          (result.results || []) as Record<string, unknown>[],
+        ),
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setDataModelReadiness(
+        CORE_DATA_MODEL_REQUIREMENTS.map((requirement) => ({
+          ...requirement,
+          state: "error" as const,
+          earliestTime: "",
+          allowOldSummaries: false,
+          message,
+        })),
+      );
+    }
   }, []);
 
   useEffect(() => {
@@ -2004,6 +2111,15 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 {error ||
                   "Only review definitions when an index looks unexpected."}
               </p>
+              <a
+                href="#setup-data-model-readiness"
+                className="mt-1.5 inline-flex items-center gap-1 text-xs font-bold text-sky-800 hover:text-sky-950"
+              >
+                {accelerationCheckInProgress
+                  ? "Checking recommended data-model acceleration…"
+                  : `${acceleratedDataModelCount} of ${dataModelReadiness.length} recommended data models accelerated`}
+                <ChevronRight size={13} />
+              </a>
             </div>
             <div className="grid grid-cols-3 gap-2">
               {setupMetrics.map(({ value, label, colorClass }) => (
@@ -2158,7 +2274,10 @@ export default function MacroIndexTuningPage(): JSX.Element {
             </section>
 
             <aside className="grid gap-4">
-              <section className="rounded-lg border border-slate-200 bg-white p-5">
+              <section
+                id="setup-data-model-readiness"
+                className="scroll-mt-4 rounded-lg border border-slate-200 bg-white p-5"
+              >
                 <div className="text-[10px] font-bold uppercase tracking-wide text-sky-700">
                   Search performance
                 </div>
@@ -2222,49 +2341,166 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   {performanceStatusMessage}
                 </div>
 
-                {summariesOnlyEnabled && (
-                  <details className="group mt-3 rounded-md border border-slate-200">
-                    <summary className="flex cursor-pointer list-none items-center px-3 py-2 text-xs font-bold text-slate-700 [&::-webkit-details-marker]:hidden">
-                      Review data-model readiness
-                      <ChevronDown
-                        size={14}
-                        className="ml-auto transition-transform group-open:rotate-180"
-                      />
-                    </summary>
-                    <div
-                      className="grid gap-2 border-t border-slate-200 p-3"
-                      role="list"
-                    >
-                      {requiredDataModels.map((item) => (
-                        <div
-                          key={item.key}
-                          role="listitem"
-                          className="flex items-start gap-2 text-xs"
-                        >
-                          {item.state === "enabled" ? (
-                            <Check
-                              size={14}
-                              className="mt-0.5 shrink-0 text-emerald-700"
-                            />
-                          ) : (
-                            <AlertTriangle
-                              size={14}
-                              className="mt-0.5 shrink-0 text-red-700"
-                            />
-                          )}
-                          <span>
-                            <span className="font-bold text-slate-900">
-                              {item.label}
-                            </span>
-                            <span className="block text-slate-500">
-                              {item.message}
-                            </span>
-                          </span>
-                        </div>
-                      ))}
+              </section>
+
+              <section className="rounded-lg border border-slate-200 bg-white p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wide text-sky-700">
+                      Performance readiness
                     </div>
-                  </details>
-                )}
+                    <h2 className="mt-1 text-lg font-bold text-slate-900">
+                      Accelerate recommended data models
+                    </h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={checkDataModelAcceleration}
+                    disabled={accelerationCheckInProgress}
+                    aria-label="Check data model acceleration again"
+                    className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-slate-300 bg-white text-slate-600 hover:border-sky-400 hover:text-sky-700 disabled:cursor-wait disabled:opacity-60"
+                  >
+                    <RefreshCw
+                      size={14}
+                      className={
+                        accelerationCheckInProgress ? "animate-spin" : ""
+                      }
+                    />
+                  </button>
+                </div>
+                <p className="mt-1 text-xs leading-5 text-slate-600">
+                  Acceleration makes the app&apos;s data-model searches return
+                  faster. Setup can finish in Balanced mode while you complete
+                  these recommendations.
+                </p>
+
+                <div
+                  className={`mt-3 rounded-md px-3 py-2 text-xs font-semibold ${
+                    accelerationCheckInProgress
+                      ? "bg-sky-50 text-sky-800"
+                      : dataModelsNeedingAttention.length
+                        ? "bg-amber-50 text-amber-900"
+                        : "bg-emerald-50 text-emerald-800"
+                  }`}
+                  role="status"
+                >
+                  {accelerationCheckInProgress
+                    ? "Checking recommended data models…"
+                    : dataModelsNeedingAttention.length
+                      ? `${acceleratedDataModelCount} of ${dataModelReadiness.length} accelerated · ${dataModelsNeedingAttention.length} need attention`
+                      : `All ${dataModelReadiness.length} recommended data models are accelerated.`}
+                </div>
+
+                <div
+                  className="mt-3 grid gap-2"
+                  aria-label="Recommended data model acceleration status"
+                >
+                  {dataModelGroups.map((group) => (
+                    <details
+                      key={`${group.app}:${group.enabledCount}:${group.attentionCount}:${group.checkingCount}`}
+                      open={group.attentionCount > 0}
+                      className="group overflow-hidden rounded-md border border-slate-200"
+                    >
+                      <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-xs [&::-webkit-details-marker]:hidden">
+                        {group.checkingCount ? (
+                          <Loader2
+                            size={14}
+                            className="shrink-0 animate-spin text-sky-700"
+                          />
+                        ) : group.attentionCount ? (
+                          <AlertTriangle
+                            size={14}
+                            className="shrink-0 text-amber-700"
+                          />
+                        ) : (
+                          <Check
+                            size={14}
+                            className="shrink-0 text-emerald-700"
+                          />
+                        )}
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-bold text-slate-900">
+                            {group.label}
+                          </span>
+                          <span className="block text-[11px] text-slate-500">
+                            {group.checkingCount
+                              ? "Checking acceleration"
+                              : `${group.enabledCount} of ${group.items.length} accelerated`}
+                          </span>
+                        </span>
+                        <ChevronDown
+                          size={14}
+                          className="shrink-0 text-slate-500 transition-transform group-open:rotate-180"
+                        />
+                      </summary>
+                      <div className="divide-y divide-slate-100 border-t border-slate-200 bg-slate-50">
+                        {group.items.map((item) => {
+                          const enabled = item.state === "enabled";
+                          const checking = item.state === "checking";
+                          return (
+                            <div
+                              key={item.key}
+                              className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 px-3 py-2.5 text-xs"
+                            >
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  {checking ? (
+                                    <Loader2
+                                      size={12}
+                                      className="shrink-0 animate-spin text-sky-700"
+                                    />
+                                  ) : enabled ? (
+                                    <Check
+                                      size={12}
+                                      className="shrink-0 text-emerald-700"
+                                    />
+                                  ) : (
+                                    <AlertTriangle
+                                      size={12}
+                                      className="shrink-0 text-amber-700"
+                                    />
+                                  )}
+                                  <span className="truncate font-bold text-slate-800">
+                                    {item.label}
+                                  </span>
+                                </div>
+                                <code className="mt-0.5 block truncate font-mono text-[10px] text-slate-500">
+                                  {item.model}
+                                </code>
+                                <div
+                                  className={`mt-0.5 text-[11px] ${
+                                    enabled
+                                      ? "text-emerald-700"
+                                      : checking
+                                        ? "text-slate-500"
+                                        : "text-amber-800"
+                                  }`}
+                                >
+                                  {item.message}
+                                  {enabled && item.earliestTime
+                                    ? ` · ${item.earliestTime}`
+                                    : ""}
+                                </div>
+                              </div>
+                              <a
+                                href={splunkDataModelManagerUrl(item)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label={`${
+                                  enabled ? "Open" : "Accelerate"
+                                } ${item.label} data model`}
+                                className="mt-0.5 inline-flex h-7 items-center gap-1 rounded border border-slate-300 bg-white px-2 font-bold text-sky-700 hover:border-sky-400 hover:text-sky-900"
+                              >
+                                {enabled ? "Open" : "Accelerate"}
+                                <ExternalLink size={11} />
+                              </a>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </details>
+                  ))}
+                </div>
               </section>
 
               <details className="group overflow-hidden rounded-lg border border-slate-200 bg-white">
@@ -2645,8 +2881,9 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 <code className="rounded bg-white px-1 py-0.5 font-mono">
                   summariesonly=true
                 </code>
-                . Authentication and Network Traffic acceleration are strongly
-                recommended.
+                . Authentication, Network Traffic, and every installed Cisco
+                Data Center Networking model are strongly recommended for
+                faster app searches.
               </p>
             </div>
             <button
@@ -2666,7 +2903,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
           </div>
 
           <div
-            className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-5"
+            className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3"
             role="list"
             aria-label="Data model acceleration requirements"
           >
@@ -2737,15 +2974,12 @@ export default function MacroIndexTuningPage(): JSX.Element {
                     </div>
                   )}
                   <a
-                    href={splunkAppManagerUrl(
-                      item.app,
-                      "data_model_manager",
-                    )}
+                    href={splunkDataModelManagerUrl(item)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-sky-700 hover:text-sky-900"
                   >
-                    Open data models
+                    {enabled ? "Open data model" : "Accelerate data model"}
                     <ExternalLink size={12} />
                   </a>
                 </div>

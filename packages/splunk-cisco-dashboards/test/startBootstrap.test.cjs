@@ -248,6 +248,20 @@ assert.match(macroTuningSource, /Balanced \(recommended\)/);
 assert.match(macroTuningSource, /Review all .* proposed definitions/);
 assert.match(macroTuningSource, /Advanced tuning/);
 assert.match(macroTuningSource, /Save and finish setup/);
+assert.match(macroTuningSource, /DATA_MODEL_ACCELERATION_SEARCH/);
+assert.match(macroTuningSource, /Accelerate recommended data models/);
+assert.match(macroTuningSource, /Recommended data model acceleration status/);
+assert.match(macroTuningSource, /appSearch: app/);
+assert.match(macroTuningSource, /nameFilter: model/);
+for (const recommendedDataModelApp of [
+  "Splunk_SA_CIM",
+  "CiscoSecurityCloud",
+  "ta_cisco_thousandeyes",
+  "cisco-catalyst-app",
+  "cisco_dc_networking_app_for_splunk",
+]) {
+  assert.match(macroTuningSource, new RegExp(recommendedDataModelApp));
+}
 
 // Executive Insights deliberately uses Simple XML rather than a custom Mako
 // template. Splunk Web can reload these profile views on first install;
