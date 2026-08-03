@@ -9,6 +9,9 @@ export const WORKSPACE_SOURCE_IDS = [
 
 export type WorkspaceSourceId = (typeof WORKSPACE_SOURCE_IDS)[number];
 export type WorkspaceId = string;
+export type WorkspaceThemePreference = 'light' | 'dark' | 'system';
+export type WorkspaceMapPosition = 'right' | 'below' | 'above';
+export type WorkspaceRegionalView = 'map' | 'table';
 
 export const ALL_WORKSPACE_SECTION_IDS = [
     'it_health',
@@ -81,6 +84,11 @@ export interface InsightsWorkspace {
     isBuiltIn: boolean;
     enabled: boolean;
     sortOrder: number;
+    /** Workspace-owned presentation defaults, applied on workspace switch. */
+    themePreference: WorkspaceThemePreference;
+    mapVisible: boolean;
+    mapPosition: WorkspaceMapPosition;
+    regionalView: WorkspaceRegionalView;
 }
 
 const SECURE_NETWORKING_IMAGE_ROOT =
@@ -231,6 +239,10 @@ export interface WorkspaceDefinitionInput {
     isBuiltIn?: boolean;
     enabled?: boolean;
     sortOrder?: number;
+    themePreference?: WorkspaceThemePreference;
+    mapVisible?: boolean;
+    mapPosition?: WorkspaceMapPosition;
+    regionalView?: WorkspaceRegionalView;
 }
 
 export const createInsightsWorkspace = (
@@ -282,6 +294,10 @@ export const createInsightsWorkspace = (
         isBuiltIn: Boolean(input.isBuiltIn),
         enabled: input.enabled ?? true,
         sortOrder: input.sortOrder ?? 100,
+        themePreference: input.themePreference ?? 'system',
+        mapVisible: input.mapVisible ?? true,
+        mapPosition: input.mapPosition ?? 'right',
+        regionalView: input.regionalView ?? 'map',
     };
 };
 

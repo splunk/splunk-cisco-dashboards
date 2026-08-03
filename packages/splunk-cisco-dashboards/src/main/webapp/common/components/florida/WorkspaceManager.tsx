@@ -7,7 +7,10 @@ import {
     type SectionId,
     type WorkspaceDefinitionInput,
     type WorkspaceId,
+    type WorkspaceMapPosition,
+    type WorkspaceRegionalView,
     type WorkspaceSourceId,
+    type WorkspaceThemePreference,
 } from '@/common/config/insightsWorkspaces';
 import {
     deleteInsightsWorkspace,
@@ -35,6 +38,10 @@ interface WorkspaceDraft {
     headerSubtitle: string;
     defaultTileCount: number;
     sortOrder: number;
+    themePreference: WorkspaceThemePreference;
+    mapVisible: boolean;
+    mapPosition: WorkspaceMapPosition;
+    regionalView: WorkspaceRegionalView;
     existingWorkspace?: InsightsWorkspace;
     layoutToCopy?: WorkspaceLayoutConfig;
 }
@@ -60,6 +67,10 @@ const draftFromWorkspace = (
     headerSubtitle: workspace.headerSubtitle ?? '',
     defaultTileCount: workspace.fallbackTileCount,
     sortOrder: workspace.sortOrder,
+    themePreference: workspace.themePreference,
+    mapVisible: workspace.mapVisible,
+    mapPosition: workspace.mapPosition,
+    regionalView: workspace.regionalView,
     existingWorkspace: workspace,
     layoutToCopy: layout,
 });
@@ -75,6 +86,10 @@ const emptyDraft = (sourceWorkspace: WorkspaceSourceId): WorkspaceDraft => {
         headerSubtitle: 'Purpose-built customer briefing workspace',
         defaultTileCount: source.fallbackTileCount,
         sortOrder: 100,
+        themePreference: 'system',
+        mapVisible: true,
+        mapPosition: 'right',
+        regionalView: 'map',
     };
 };
 
@@ -228,6 +243,10 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                 isBuiltIn: existing?.isBuiltIn ?? false,
                 enabled: true,
                 sortOrder: draft.sortOrder,
+                themePreference: draft.themePreference,
+                mapVisible: draft.mapVisible,
+                mapPosition: draft.mapPosition,
+                regionalView: draft.regionalView,
             };
             await saveInsightsWorkspace(input, draft.layoutToCopy);
             onWorkspaceSaved(draft.id);
@@ -420,6 +439,59 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                                     }
                                     className="mt-1 block h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-xs font-normal text-slate-900 outline-none focus:border-sky-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
                                 />
+                            </label>
+                            <label className="text-[11px] font-bold text-slate-700 dark:text-slate-200">
+                                Workspace theme
+                                <select
+                                    value={draft.themePreference}
+                                    onChange={(event) => setDraft((current) => ({
+                                        ...current,
+                                        themePreference: event.target.value as WorkspaceThemePreference,
+                                    }))}
+                                    className="mt-1 block h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-xs font-normal text-slate-900 outline-none focus:border-sky-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                                >
+                                    <option value="system">Follow system</option>
+                                    <option value="light">Light</option>
+                                    <option value="dark">Dark</option>
+                                </select>
+                            </label>
+                            <label className="text-[11px] font-bold text-slate-700 dark:text-slate-200">
+                                Map placement
+                                <select
+                                    value={draft.mapPosition}
+                                    onChange={(event) => setDraft((current) => ({
+                                        ...current,
+                                        mapPosition: event.target.value as WorkspaceMapPosition,
+                                    }))}
+                                    className="mt-1 block h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-xs font-normal text-slate-900 outline-none focus:border-sky-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                                >
+                                    <option value="right">Right of tiles</option>
+                                    <option value="below">Below tiles</option>
+                                    <option value="above">Above tiles</option>
+                                </select>
+                            </label>
+                            <label className="text-[11px] font-bold text-slate-700 dark:text-slate-200">
+                                Map presentation
+                                <select
+                                    value={draft.regionalView}
+                                    onChange={(event) => setDraft((current) => ({
+                                        ...current,
+                                        regionalView: event.target.value as WorkspaceRegionalView,
+                                    }))}
+                                    className="mt-1 block h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-xs font-normal text-slate-900 outline-none focus:border-sky-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                                >
+                                    <option value="map">Interactive map</option>
+                                    <option value="table">Site summary table</option>
+                                </select>
+                            </label>
+                            <label className="mt-5 flex items-center gap-2 text-[11px] font-bold text-slate-700 dark:text-slate-200">
+                                <input
+                                    type="checkbox"
+                                    checked={draft.mapVisible}
+                                    onChange={(event) => setDraft((current) => ({ ...current, mapVisible: event.target.checked }))}
+                                    className="h-4 w-4 accent-sky-600"
+                                />
+                                Show customer connectivity map
                             </label>
                             <label className="col-span-2 text-[11px] font-bold text-slate-700 dark:text-slate-200">
                                 Header title

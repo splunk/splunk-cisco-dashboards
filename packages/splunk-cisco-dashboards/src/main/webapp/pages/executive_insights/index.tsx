@@ -2096,7 +2096,10 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   layouts,
 }) => {
   // ------------------------------ Theme ------------------------------
-  const { theme, resolvedTheme, cycle: cycleTheme } = useTheme();
+  const { theme, resolvedTheme, setTheme, cycle: cycleTheme } = useTheme();
+  useEffect(() => {
+    setTheme(insightsWorkspace.themePreference);
+  }, [insightsWorkspace.id, insightsWorkspace.themePreference, setTheme]);
   const availableDashboardHeight = useAvailableDashboardHeight();
   const compactDensity =
     availableDashboardHeight !== null &&
@@ -2649,7 +2652,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   ]);
 
   // ------------------------------ Regional view (map | table) ------------------------------
-  const [regionalView, setRegionalView] = useState<RegionalView>("map");
+  const [regionalView, setRegionalView] = useState<RegionalView>(
+    insightsWorkspace.regionalView,
+  );
 
   // ------------------------------ Map position (right / below / above) ------------------------------
   // Where the topology map sits relative to the metric tiles. Default
@@ -2679,17 +2684,17 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   // Persisted in localStorage so the operator's preference survives
   // reloads, cleared by the factory reset alongside the splitter
   // position.
-  const MAP_POS_KEY = "scd_overview_map_pos";
+  const MAP_POS_KEY = `scd_overview_map_pos.${insightsWorkspace.id}`;
   const MAP_POS_DEFAULT: MapPosition = "right";
   const [mapPosition, setMapPosition] = useState<MapPosition>(() => {
-    if (typeof window === "undefined") return MAP_POS_DEFAULT;
+    if (typeof window === "undefined") return insightsWorkspace.mapPosition;
     try {
       const saved = window.localStorage.getItem(MAP_POS_KEY);
       return saved === "right" || saved === "below" || saved === "above"
         ? saved
-        : MAP_POS_DEFAULT;
+        : insightsWorkspace.mapPosition;
     } catch {
-      return MAP_POS_DEFAULT;
+      return insightsWorkspace.mapPosition;
     }
   });
   useEffect(() => {
@@ -2702,15 +2707,15 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       // persist it. Mirrors the split-percentage handling.
     }
   }, [mapPosition]);
-  const MAP_VISIBILITY_KEY = "scd_overview_map_visible";
+  const MAP_VISIBILITY_KEY = `scd_overview_map_visible.${insightsWorkspace.id}`;
   const MAP_VISIBLE_DEFAULT = true;
   const [mapVisible, setMapVisible] = useState<boolean>(() => {
-    if (typeof window === "undefined") return MAP_VISIBLE_DEFAULT;
+    if (typeof window === "undefined") return insightsWorkspace.mapVisible;
     try {
       const saved = window.localStorage.getItem(MAP_VISIBILITY_KEY);
-      return saved === null ? MAP_VISIBLE_DEFAULT : saved !== "false";
+      return saved === null ? insightsWorkspace.mapVisible : saved !== "false";
     } catch {
-      return MAP_VISIBLE_DEFAULT;
+      return insightsWorkspace.mapVisible;
     }
   });
   useEffect(() => {
@@ -2725,6 +2730,16 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   const toggleMapVisibility = useCallback(() => {
     setMapVisible((visible) => !visible);
   }, []);
+  useEffect(() => {
+    setRegionalView(insightsWorkspace.regionalView);
+    setMapPosition(insightsWorkspace.mapPosition);
+    setMapVisible(insightsWorkspace.mapVisible);
+  }, [
+    insightsWorkspace.id,
+    insightsWorkspace.mapPosition,
+    insightsWorkspace.mapVisible,
+    insightsWorkspace.regionalView,
+  ]);
   const activeMapPosition: MapPosition | "hidden" = mapVisible
     ? mapPosition
     : "hidden";
