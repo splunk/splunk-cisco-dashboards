@@ -77,14 +77,10 @@ import { VizIcon, resolveVizMapping } from './vizIcons';
 const ALL_CATEGORIES = '__all__';
 const ALL_SUB_CATEGORIES = '__all_sub__';
 
-// Default app scope for the picker. The catalogue REST endpoint pulls
-// from every app namespace (`/servicesNS/-/-/configs/conf-searchbase`),
-// so on a Splunk stack with multiple apps that ship their own
-// `searchbase.conf` the catalogue can grow beyond what this app vetted.
-// To keep the picker scoped to dashboard-pack searches by default, the
-// App facet starts at this value and only shows entries whose dispatch
-// app matches it. Users can select multiple app namespaces or clear the
-// selection to browse all apps.
+// The catalogue REST endpoint pulls from every app namespace
+// (`/servicesNS/-/-/configs/conf-searchbase`). The App facet starts at
+// All apps so operators can discover the complete catalogue immediately,
+// then optionally select one or more app namespaces to narrow it.
 //
 // The UI stores a normalised `catalogueApp` sourced from the stanza's
 // `dispatch_context` value; the UI labels it "App" because that's what
@@ -92,29 +88,10 @@ const ALL_SUB_CATEGORIES = '__all_sub__';
 // catalogue falls back to the owning ACL app. Execution separately honors
 // `dispatch_context_force`.
 //
-// Most stanzas shipped in this app's `default/searchbase.conf` dispatch
-// in `splunk-cisco-dashboards`, while dependency data-model searches can
-// dispatch in their owning apps (for example `cisco-catalyst-app`).
-// This default keeps the first browse focused on dashboard-pack searches.
-//
-// Build trail:
-//   - Build 87: dropped the `Cisco` noise tag from every stanza,
-//     which silently collapsed the picker to zero results because the
-//     picker used a hardcoded `tags.includes('Cisco')` gate.
-//   - Build 91: swapped the gate for a hardcoded
-//     `dispatch_context === 'splunk-cisco-dashboards'` check.
-//   - Build 92: promoted the constant to a real user-facing facet
-//     (Dispatch dropdown).
-//   - Build 93: renamed Dispatch → App for clarity, collapsed the
-//     facet block by default to give the result list more room.
-//   - Build 1204: changed App from a single-select dropdown to a
-//     multi-select control so app namespaces can be OR-combined.
-const DEFAULT_APP_SCOPE = 'splunk-cisco-dashboards';
-
-const makeDefaultAppSelection = (): Set<string> => new Set([DEFAULT_APP_SCOPE]);
+const makeDefaultAppSelection = (): Set<string> => new Set();
 
 const isDefaultAppSelection = (selection: ReadonlySet<string>): boolean =>
-    selection.size === 1 && selection.has(DEFAULT_APP_SCOPE);
+    selection.size === 0;
 
 const entryMatchesAppSelection = (
     entry: SearchbaseRecord,
@@ -570,11 +547,7 @@ const AppMultiSelect: React.FC<AppMultiSelectProps> = ({
     const containerRef = useRef<HTMLDivElement | null>(null);
     const isAllApps = selectedApps.size === 0;
     const appOptions = useMemo(() => {
-        const set = new Set(apps);
-        if (!set.has(DEFAULT_APP_SCOPE)) {
-            set.add(DEFAULT_APP_SCOPE);
-        }
-        return Array.from(set).sort((a, b) =>
+        return [...apps].sort((a, b) =>
             a.localeCompare(b, undefined, { sensitivity: 'base' })
         );
     }, [apps]);
@@ -1047,9 +1020,9 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     // Reset transient form state when the panel opens for a new tile.
     // Sub-category and tag selections start cleared every time so the
     // user always sees the full slice of the chosen category. The App
-    // facet resets to the dashboard-pack default so each new picker
-    // open is scoped to vetted searches by default. Filters block
-    // collapses so the user lands on a clean result list.
+    // facet resets to All apps so every new picker open starts with the
+    // complete catalogue. Filters block collapses so the user lands on a
+    // clean result list.
     useEffect(() => {
         if (!open || !context) return;
         setQuery('');
@@ -1378,8 +1351,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
 
     useEffect(() => {
         let cancelled = false;
-        const appIds = new Set([...apps, DEFAULT_APP_SCOPE]);
-        getSplunkAppLabels(appIds)
+        getSplunkAppLabels(apps)
             .then((labels) => {
                 if (!cancelled) setAppLabelsById(labels);
             })

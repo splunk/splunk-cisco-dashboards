@@ -7342,22 +7342,18 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
         return () => document.removeEventListener('keydown', onKeyDown, true);
     }, [open, onClose]);
 
-    // The editor's per-card pickers browse the full dashboard-pack
+    // The editor's per-card pickers browse the complete Searchbase
     // catalogue, identical to the in-popup `TopologySearchBrowser`.
     // Tag-narrowing (Topology_Site / Topology_Link) is a *sort
     // hint*, not a filter — those entries float to the top of the
-    // list, but every dashboard-pack stanza is reachable via search.
+    // list, but every installed app's stanza is reachable via search.
     // This matches the KpiPickerPanel browsing model so editing a
     // tile and editing a topology element feel like the same
     // operation.
     //
-    // Scope by owner app, not dispatch app. Some stanzas live in this
-    // app's searchbase.conf but intentionally run in another app context
-    // such as cisco-catalyst-app so macros/data models resolve correctly.
     const editorSearchOptions = useMemo(() => {
         if (!catalogueByName) return [] as SearchbaseRecord[];
         return Object.values(catalogueByName)
-            .filter((record) => record.ownerApp === 'splunk-cisco-dashboards')
             .sort((a, b) =>
                 a.searchName.localeCompare(b.searchName, undefined, {
                     sensitivity: 'base',

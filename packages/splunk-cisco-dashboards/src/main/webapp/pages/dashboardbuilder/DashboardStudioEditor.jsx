@@ -79,7 +79,8 @@ import DOMPurify from 'dompurify';
 import Link from '@splunk/react-ui/Link';
 import ButtonGroup from '@splunk/react-ui/ButtonGroup';
 import styled from 'styled-components';
-import { variables } from '@splunk/themes';
+import prismaDarkTheme from '@splunk/themes/prisma/dark';
+import prismaLightTheme from '@splunk/themes/prisma/light';
 import SplunkThemeProvider from '@splunk/themes/SplunkThemeProvider';
 import useSplunkTheme from '@splunk/themes/useSplunkTheme';
 import { isVersionLower, getServerInfo } from '../../common/lib/splunk';
@@ -534,7 +535,7 @@ const SearchbaseDataSourceEditor = (props) => {
     useEffect(() => {
         if (options.ref) {
             const getSearchDefinition = async () => {
-                const data = await getSearchBaseConfStanza(options.ref);
+                const data = await getSearchBaseConfStanza(options.ref, options.ownerApp);
                 setSearch(data.entry[0]);
             };
             getSearchDefinition();
@@ -724,34 +725,6 @@ const DashboardStudioEditor = ({
     const splunkTheme = useSplunkTheme();
     const dashboardBuilderColorScheme =
         splunkTheme.colorScheme === 'dark' ? 'dark' : 'light';
-    const dashboardBuilderThemeStyle = {
-        '--dashboard-builder-background-page': splunkTheme.backgroundColorPage,
-        '--dashboard-builder-background-section': splunkTheme.backgroundColorSection,
-        '--dashboard-builder-background-popup': splunkTheme.backgroundColorPopup,
-        '--dashboard-builder-background-sidebar': splunkTheme.backgroundColorSidebar,
-        '--dashboard-builder-content-active': splunkTheme.contentColorActive,
-        '--dashboard-builder-content-default': splunkTheme.contentColorDefault,
-        '--dashboard-builder-content-inverted': splunkTheme.contentColorInverted,
-        '--dashboard-builder-content-muted': splunkTheme.contentColorMuted,
-        '--dashboard-builder-border': splunkTheme.borderColor,
-        '--dashboard-builder-border-strong': splunkTheme.borderColorStrong,
-        '--dashboard-builder-border-weak': splunkTheme.borderColorWeak,
-        '--dashboard-builder-accent': splunkTheme.interactiveColorPrimary,
-        '--dashboard-builder-overlay-hover': splunkTheme.interactiveColorOverlayHover,
-        '--dashboard-builder-overlay-selected': splunkTheme.interactiveColorOverlaySelected,
-    };
-    const dashboardBuilderModalThemeStyle = {
-        '--dashboard-builder-modal-background': splunkTheme.backgroundColorPopup,
-        '--dashboard-builder-modal-background-section': splunkTheme.backgroundColorSection,
-        '--dashboard-builder-modal-content-active': splunkTheme.contentColorActive,
-        '--dashboard-builder-modal-content-default': splunkTheme.contentColorDefault,
-        '--dashboard-builder-modal-content-muted': splunkTheme.contentColorMuted,
-        '--dashboard-builder-modal-border': splunkTheme.borderColor,
-        '--dashboard-builder-modal-border-strong': splunkTheme.borderColorStrong,
-        '--dashboard-builder-modal-border-weak': splunkTheme.borderColorWeak,
-        '--dashboard-builder-modal-overlay-hover': splunkTheme.interactiveColorOverlayHover,
-        '--dashboard-builder-modal-overlay-selected': splunkTheme.interactiveColorOverlaySelected,
-    };
 
     const [isCodeEditable, setIsCodeEditable] = useState(false);
 
@@ -789,6 +762,36 @@ const DashboardStudioEditor = ({
         currentDashboard?.theme,
         dashboardBuilderColorScheme,
     );
+    const editorTheme =
+        dashboardColorScheme === 'dark' ? prismaDarkTheme : prismaLightTheme;
+    const dashboardBuilderThemeStyle = {
+        '--dashboard-builder-background-page': editorTheme.backgroundColorPage,
+        '--dashboard-builder-background-section': editorTheme.backgroundColorSection,
+        '--dashboard-builder-background-popup': editorTheme.backgroundColorPopup,
+        '--dashboard-builder-background-sidebar': editorTheme.backgroundColorSidebar,
+        '--dashboard-builder-content-active': editorTheme.contentColorActive,
+        '--dashboard-builder-content-default': editorTheme.contentColorDefault,
+        '--dashboard-builder-content-inverted': editorTheme.contentColorInverted,
+        '--dashboard-builder-content-muted': editorTheme.contentColorMuted,
+        '--dashboard-builder-border': editorTheme.borderColor,
+        '--dashboard-builder-border-strong': editorTheme.borderColorStrong,
+        '--dashboard-builder-border-weak': editorTheme.borderColorWeak,
+        '--dashboard-builder-accent': editorTheme.interactiveColorPrimary,
+        '--dashboard-builder-overlay-hover': editorTheme.interactiveColorOverlayHover,
+        '--dashboard-builder-overlay-selected': editorTheme.interactiveColorOverlaySelected,
+    };
+    const dashboardBuilderModalThemeStyle = {
+        '--dashboard-builder-modal-background': editorTheme.backgroundColorPopup,
+        '--dashboard-builder-modal-background-section': editorTheme.backgroundColorSection,
+        '--dashboard-builder-modal-content-active': editorTheme.contentColorActive,
+        '--dashboard-builder-modal-content-default': editorTheme.contentColorDefault,
+        '--dashboard-builder-modal-content-muted': editorTheme.contentColorMuted,
+        '--dashboard-builder-modal-border': editorTheme.borderColor,
+        '--dashboard-builder-modal-border-strong': editorTheme.borderColorStrong,
+        '--dashboard-builder-modal-border-weak': editorTheme.borderColorWeak,
+        '--dashboard-builder-modal-overlay-hover': editorTheme.interactiveColorOverlayHover,
+        '--dashboard-builder-modal-overlay-selected': editorTheme.interactiveColorOverlaySelected,
+    };
     const [dashID, setDashID] = useState(openID);
     const [dashMode, setDashMode] = useState(readOnly ? 'view' : openID ? 'edit' : 'view');
     const [serverInfo, setServerInfo] = useState();
@@ -1843,10 +1846,10 @@ const DashboardStudioEditor = ({
                 <div
                     className={
                         serverInfo?.isSplunkCloud
-                            ? `dashboardbuilderview dashboardbuilderview-${dashboardBuilderColorScheme}`
+                            ? `dashboardbuilderview dashboardbuilderview-${dashboardColorScheme}`
                             : isVersionLower(versionLabel, '9.4.0')
-                              ? `dashboardbuilderview dashboardbuilderview-${dashboardBuilderColorScheme} hidetabs`
-                              : `dashboardbuilderview dashboardbuilderview-${dashboardBuilderColorScheme}`
+                              ? `dashboardbuilderview dashboardbuilderview-${dashboardColorScheme} hidetabs`
+                              : `dashboardbuilderview dashboardbuilderview-${dashboardColorScheme}`
                     }
                     style={{ minHeight: '100%', ...dashboardBuilderThemeStyle }}
                     id="collection_container"

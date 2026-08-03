@@ -20,7 +20,6 @@ import { plainTextFromHtml } from '../../common/services/searchbaseCatalogue';
 const ALL_APPS = '__all_apps__';
 const ALL_CATEGORIES = '__all_categories__';
 const ALL_SUB_CATEGORIES = '__all_sub_categories__';
-const DEFAULT_APP_SCOPE = 'splunk-cisco-dashboards';
 const KPI_MENU_WIDTH = 620;
 const MENU_VIEWPORT_MARGIN = 12;
 const CONFIG_PANEL_MIN_WIDTH = 240;
@@ -119,7 +118,7 @@ export default function DropdownWithSearch({
     };
     const dropdownRef = useRef(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedApp, setSelectedApp] = useState(DEFAULT_APP_SCOPE);
+    const [selectedApp, setSelectedApp] = useState(ALL_APPS);
     const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES);
     const [selectedSubCategory, setSelectedSubCategory] = useState(ALL_SUB_CATEGORIES);
     const [selectedTags, setSelectedTags] = useState([]);
@@ -183,7 +182,7 @@ export default function DropdownWithSearch({
 
     const resetFilters = () => {
         setSearchTerm('');
-        setSelectedApp(DEFAULT_APP_SCOPE);
+        setSelectedApp(ALL_APPS);
         setSelectedCategory(ALL_CATEGORIES);
         setSelectedSubCategory(ALL_SUB_CATEGORIES);
         setSelectedTags([]);
@@ -289,7 +288,7 @@ export default function DropdownWithSearch({
     const selectedFilteredSearches = sortedSearches.map((search) => search.id);
     const hasActiveFilters =
         searchTerm.trim() ||
-        selectedApp !== DEFAULT_APP_SCOPE ||
+        selectedApp !== ALL_APPS ||
         selectedCategory !== ALL_CATEGORIES ||
         selectedSubCategory !== ALL_SUB_CATEGORIES ||
         selectedTags.length > 0 ||
@@ -299,7 +298,7 @@ export default function DropdownWithSearch({
 
     const activeFilterCount = [
         searchTerm.trim(),
-        selectedApp !== DEFAULT_APP_SCOPE,
+        selectedApp !== ALL_APPS,
         selectedCategory !== ALL_CATEGORIES,
         selectedSubCategory !== ALL_SUB_CATEGORIES,
         selectedTags.length > 0,
@@ -307,6 +306,22 @@ export default function DropdownWithSearch({
         includeDrilldownSearches,
         includeTableSearches,
     ].filter(Boolean).length;
+
+    const applySelection = () => {
+        resetFilters();
+        onSelect(selection);
+        setSelection([]);
+        setIsOpen(false);
+    };
+
+    const commitSelection = () => {
+        if (selection.length === 0) return;
+        if (selection.length < 20) {
+            applySelection();
+            return;
+        }
+        setConfirmationOpen(true);
+    };
 
     return (
         <>
@@ -345,10 +360,7 @@ export default function DropdownWithSearch({
                             style={{ maxWidth: 125 }}
                             onClick={() => {
                                 setConfirmationOpen(false);
-                                resetFilters();
-                                onSelect(selection);
-                                setSelection([]);
-                                setIsOpen(false);
+                                applySelection();
                             }}
                         />
                     </div>
@@ -421,12 +433,6 @@ export default function DropdownWithSearch({
                                             {apps.map((app) => (
                                                 <Select.Option key={app} label={app} value={app} />
                                             ))}
-                                            {!apps.includes(DEFAULT_APP_SCOPE) && (
-                                                <Select.Option
-                                                    label={DEFAULT_APP_SCOPE}
-                                                    value={DEFAULT_APP_SCOPE}
-                                                />
-                                            )}
                                         </Select>
                                     </label>
 
@@ -587,6 +593,31 @@ export default function DropdownWithSearch({
                             </div>
                         )}
 
+                        <div className="dropdown-kpi-selection-bar">
+                            <span className="dropdown-kpi-selection-count">
+                                {selection.length === 0
+                                    ? 'Select one or more KPIs to add'
+                                    : `${selection.length} KPI${
+                                          selection.length === 1 ? '' : 's'
+                                      } selected`}
+                            </span>
+                            <div className="dropdown-kpi-selection-actions">
+                                <Button
+                                    style={{ minWidth: 80 }}
+                                    label="Cancel"
+                                    appearance="default"
+                                    onClick={clearSelectionAndClose}
+                                />
+                                <Button
+                                    disabled={selection.length === 0}
+                                    style={{ minWidth: 112 }}
+                                    label="Add selected"
+                                    appearance="primary"
+                                    onClick={commitSelection}
+                                />
+                            </div>
+                        </div>
+
                         <div style={{ maxHeight: 500, overflowY: 'auto' }}>
                             <ul className="dropdown-list">
                                 {sortedSearches.map((search) => (
@@ -609,30 +640,6 @@ export default function DropdownWithSearch({
                                     </li>
                                 )}
                             </ul>
-                        </div>
-                        <div className="dropdown-kpi-footer">
-                            <Button
-                                style={{ minWidth: 80, marginRight: 10 }}
-                                label="Cancel"
-                                appearance="default"
-                                onClick={clearSelectionAndClose}
-                            />
-                            <Button
-                                disabled={selection.length === 0}
-                                style={{ minWidth: 80 }}
-                                label="Add"
-                                appearance="primary"
-                                onClick={() => {
-                                    if (selection.length < 20) {
-                                        resetFilters();
-                                        onSelect(selection);
-                                        setSelection([]);
-                                        setIsOpen(false);
-                                    } else {
-                                        setConfirmationOpen(true);
-                                    }
-                                }}
-                            />
                         </div>
                     </div>
                 )}

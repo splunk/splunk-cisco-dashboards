@@ -5213,15 +5213,14 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
 
 const ALL_ADD_TILE_CATEGORIES = "__all_add_tile_categories";
 const ALL_ADD_TILE_SUB_CATEGORIES = "__all_add_tile_sub_categories";
-const DEFAULT_ADD_TILE_APP_SCOPE = "splunk-cisco-dashboards";
 const ADD_TILE_TAG_CHIP_LIMIT = 24;
 
 const makeDefaultAddTileAppSelection = (): Set<string> =>
-  new Set([DEFAULT_ADD_TILE_APP_SCOPE]);
+  new Set();
 
 const isDefaultAddTileAppSelection = (
   selection: ReadonlySet<string>,
-): boolean => selection.size === 1 && selection.has(DEFAULT_ADD_TILE_APP_SCOPE);
+): boolean => selection.size === 0;
 
 const recordMatchesAddTileAppSelection = (
   record: SearchbaseRecord,
@@ -5322,11 +5321,7 @@ const OverviewAddTileAppMultiSelect: React.FC<
   const containerRef = useRef<HTMLDivElement | null>(null);
   const isAllApps = selectedApps.size === 0;
   const appOptions = useMemo(() => {
-    const set = new Set(apps);
-    if (!set.has(DEFAULT_ADD_TILE_APP_SCOPE)) {
-      set.add(DEFAULT_ADD_TILE_APP_SCOPE);
-    }
-    return Array.from(set).sort((a, b) =>
+    return [...apps].sort((a, b) =>
       a.localeCompare(b, undefined, { sensitivity: "base" }),
     );
   }, [apps]);

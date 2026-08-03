@@ -47,7 +47,6 @@ const MAX_SIGNAL_SPEED = 10;
 const ALL_CATEGORIES = '__all__';
 const ALL_SUB_CATEGORIES = '__all_sub__';
 const ALL_APPS = '__all_apps__';
-const DEFAULT_APP_SCOPE = 'splunk-cisco-dashboards';
 const TAG_CHIP_LIMIT = 24;
 
 const TILE_SIZE_CLASS: Record<SignalTickerDensity, string> = {
@@ -664,7 +663,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
     onClose,
 }) => {
     const [query, setQuery] = useState('');
-    const [selectedApp, setSelectedApp] = useState(DEFAULT_APP_SCOPE);
+    const [selectedApp, setSelectedApp] = useState(ALL_APPS);
     const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES);
     const [selectedSubCategory, setSelectedSubCategory] =
         useState(ALL_SUB_CATEGORIES);
@@ -790,7 +789,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
         return map;
     }, [allTagsWithCounts]);
     const activeFilterCount =
-        (selectedApp !== DEFAULT_APP_SCOPE ? 1 : 0) +
+        (selectedApp !== ALL_APPS ? 1 : 0) +
         (includeHiddenSearches ? 1 : 0) +
         (includeDrilldownSearches ? 1 : 0) +
         (includeTableSearches ? 1 : 0) +
@@ -868,7 +867,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
         });
     };
     const clearFilters = () => {
-        setSelectedApp(DEFAULT_APP_SCOPE);
+        setSelectedApp(ALL_APPS);
         onIncludeHiddenSearchesChange?.(false);
         onIncludeDrilldownSearchesChange?.(false);
         onIncludeTableSearchesChange?.(false);
@@ -1393,11 +1392,6 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                                     {app}
                                                 </option>
                                             ))}
-                                            {!apps.includes(DEFAULT_APP_SCOPE) && (
-                                                <option value={DEFAULT_APP_SCOPE}>
-                                                    {DEFAULT_APP_SCOPE}
-                                                </option>
-                                            )}
                                         </select>
                                     </label>
 

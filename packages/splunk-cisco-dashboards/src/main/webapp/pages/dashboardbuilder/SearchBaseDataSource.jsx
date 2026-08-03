@@ -196,11 +196,13 @@ class SearchBaseSearch extends DataSource {
             throw Error('ref search id required!');
         }
 
+        const { ownerApp, ...searchbaseOptions } = options;
+        this.ownerApp = ownerApp;
         this.context = getEnterpriseSearchContext(this.context);
         this.options = {
-            ...parseQueryParameters(this.options),
-            ref: this.options.ref,
-            check_risky_command: this.options.checkRiskyCommand,
+            ...parseQueryParameters(searchbaseOptions),
+            ref: searchbaseOptions.ref,
+            check_risky_command: searchbaseOptions.checkRiskyCommand,
             label: this.context.id,
         };
 
@@ -226,7 +228,7 @@ class SearchBaseSearch extends DataSource {
             }
 
             this.isPaused = false;
-            let data = await getSearchBaseConfStanza(this.options.ref);
+            let data = await getSearchBaseConfStanza(this.options.ref, this.ownerApp);
             if (data.status >= 200 && data.status < 300) {
                 this.options = {
                     ...this.options,

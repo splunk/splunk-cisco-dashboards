@@ -11,8 +11,8 @@ export const hasSearchbaseDataSources = (definition = {}) =>
         (dataSource) => dataSource?.type === SEARCHBASE_DATA_SOURCE_TYPE,
     );
 
-const getSearchbaseSearch = async (ref) => {
-    const data = await getSearchBaseConfStanza(ref);
+const getSearchbaseSearch = async (ref, ownerApp) => {
+    const data = await getSearchBaseConfStanza(ref, ownerApp);
     const search = data?.entry?.[0];
 
     if (!search?.content?.search) {
@@ -36,7 +36,7 @@ export const resolveSearchbaseDefinitionForNativeStudio = async (definition = {}
                     throw new Error(`Searchbase data source "${key}" is missing a ref.`);
                 }
 
-                const query = await getSearchbaseSearch(ref);
+                const query = await getSearchbaseSearch(ref, value?.options?.ownerApp);
                 const options = {
                     ...value.options,
                     query,

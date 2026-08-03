@@ -32,7 +32,9 @@ const generateRandomString = (length = 10) => {
 };
 
 const createDataSourceName = (search) => {
-    const rawName = search.id || search.searchName || generateRandomString();
+    const rawName = [search.ownerApp, search.id || search.searchName]
+        .filter(Boolean)
+        .join('_') || generateRandomString();
     const safeName = rawName.replace(/[^A-Za-z0-9_]/g, '_').replace(/^_+/, '');
     return `ds_${safeName || generateRandomString()}`;
 };
@@ -196,6 +198,7 @@ const InsightKpiButton = (props) => {
                         type: 'ds.searchbase',
                         options: {
                             ref: selectedKpi.id,
+                            ownerApp: selectedKpi.ownerApp,
                             queryParameters: GLOBAL_TIME_QUERY_PARAMETERS,
                         },
                         name: searchName,

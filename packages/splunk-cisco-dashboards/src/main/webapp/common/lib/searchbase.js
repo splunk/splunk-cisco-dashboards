@@ -5,6 +5,7 @@ const JSON_PARAMS = new URLSearchParams({
     output_mode: 'json',
     count: '0',
 });
+const APP_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/;
 
 const appSearchParams = new URLSearchParams({
     output_mode: 'json',
@@ -18,10 +19,14 @@ const withStatus = async (response) => {
     return data;
 };
 
-export async function getSearchBaseConfStanza(stanza) {
+export async function getSearchBaseConfStanza(stanza, ownerApp = INSIGHTS_APP_ID) {
+    const resolvedOwnerApp =
+        typeof ownerApp === 'string' && APP_NAME_PATTERN.test(ownerApp)
+            ? ownerApp
+            : INSIGHTS_APP_ID;
     const response = await fetch(
         `/en-US/splunkd/__raw/servicesNS/-/${encodeURIComponent(
-            INSIGHTS_APP_ID,
+            resolvedOwnerApp,
         )}/configs/conf-searchbase/${encodeURIComponent(stanza)}?${JSON_PARAMS.toString()}`,
         {
             ...getDefaultFetchInit(),

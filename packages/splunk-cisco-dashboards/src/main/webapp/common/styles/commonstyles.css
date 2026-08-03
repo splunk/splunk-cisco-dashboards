@@ -3052,12 +3052,26 @@ div.card-trend-footer [data-test='button'] {
     border-bottom: 1px solid var(--dashboard-builder-border-weak, #dcdcdc);
 }
 
-.dropdown-kpi-footer {
-    padding: 10px;
-    border-top: 1px solid var(--dashboard-builder-border-weak, #dcdcdc);
-    background: var(--dashboard-builder-background-popup, #ffffff);
+.dropdown-kpi-selection-bar {
     display: flex;
-    align-content: flex-end;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--dashboard-builder-border-weak, #dcdcdc);
+    background: var(--dashboard-builder-background-popup, #ffffff);
+}
+
+.dropdown-kpi-selection-count {
+    color: var(--dashboard-builder-content-muted, #5f6b7a);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.dropdown-kpi-selection-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .dropdown-list {
