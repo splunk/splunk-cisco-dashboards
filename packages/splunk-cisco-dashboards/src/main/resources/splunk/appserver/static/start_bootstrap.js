@@ -894,7 +894,7 @@ function scdSetupRender(root) {
     scdSetupElement(
       "p",
       "scd-setup__eyebrow",
-      "SPLUNK CISCO DASHBOARDS · SETUP",
+      "SPLUNK APP FOR SECURE NETWORKING · SETUP",
     ),
   );
   brandCopy.appendChild(
