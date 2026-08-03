@@ -768,6 +768,39 @@ const macroConfigUrl = (
   )}?output_mode=json`;
 };
 
+interface SplunkAppInventoryEntry {
+  name?: unknown;
+  content?: { disabled?: unknown };
+}
+
+const installedAppsUrl = (): string =>
+  `/${getSplunkLocale()}/splunkd/__raw/services/apps/local?count=0&output_mode=json`;
+
+const loadInstalledAppIds = async (): Promise<Set<string>> => {
+  const response = await fetch(installedAppsUrl(), {
+    ...getDefaultFetchInit(),
+    method: "GET",
+  });
+  let payload: { entry?: SplunkAppInventoryEntry[] } | null = null;
+  try {
+    payload = (await response.json()) as { entry?: SplunkAppInventoryEntry[] };
+  } catch {
+    payload = null;
+  }
+  if (!response.ok) {
+    throw new Error(`Could not list installed apps (HTTP ${response.status}).`);
+  }
+
+  const appIds = new Set<string>([APP_NAME]);
+  (payload?.entry || []).forEach((entry) => {
+    const appId = normalizeText(entry.name).trim();
+    if (appId && !isTrueConfigValue(entry.content?.disabled)) {
+      appIds.add(appId);
+    }
+  });
+  return appIds;
+};
+
 const scdMacrosCatalogUrl = (): string => {
   const app = encodeURIComponent(APP_NAME);
   return `/en-US/splunkd/__raw/servicesNS/nobody/${app}/configs/conf-macros?count=0&output_mode=json`;
@@ -1302,7 +1335,11 @@ export default function MacroIndexTuningPage(): JSX.Element {
   const [filterText, setFilterText] = useState("");
   const [collapsedRowGroups, setCollapsedRowGroups] = useState<
     Record<string, boolean>
-  >({});
+  >(() => Object.fromEntries(TARGET_APP_ORDER.map((app) => [app, true])));
+  const [installedAppIds, setInstalledAppIds] = useState<Set<string>>(
+    () => new Set([APP_NAME]),
+  );
+  const [appInventoryError, setAppInventoryError] = useState("");
   const [saveStatuses, setSaveStatuses] = useState<Record<string, SaveStatus>>(
     {},
   );
@@ -1347,18 +1384,48 @@ export default function MacroIndexTuningPage(): JSX.Element {
     macroConfigByName,
   } = tuningMacroCatalog;
 
+  const installedTargetApps = useMemo(
+    () =>
+      TARGET_APP_ORDER.filter((targetApp) => installedAppIds.has(targetApp)),
+    [installedAppIds],
+  );
+  const isTargetAppInstalled = useCallback(
+    (targetApp: string): boolean => installedAppIds.has(targetApp),
+    [installedAppIds],
+  );
+
+  useEffect(() => {
+    let disposed = false;
+    void loadInstalledAppIds()
+      .then((appIds) => {
+        if (disposed) return;
+        setInstalledAppIds(appIds);
+        setAppInventoryError("");
+      })
+      .catch(() => {
+        if (disposed) return;
+        setInstalledAppIds(new Set([APP_NAME]));
+        setAppInventoryError(
+          "Companion apps could not be verified, so their macro definitions are hidden.",
+        );
+      });
+    return () => {
+      disposed = true;
+    };
+  }, []);
+
   const generatedMacroStanzasByApp = useMemo<Record<string, string>>(
     () =>
       Object.fromEntries(
-        TARGET_APP_ORDER.map((targetApp) => [
+        installedTargetApps.map((targetApp) => [
           targetApp,
           buildMacroStanzas(allRows, targetApp, tunableMacroNameSet),
         ]),
       ),
-    [allRows, tunableMacroNameSet],
+    [allRows, installedTargetApps, tunableMacroNameSet],
   );
   const macroStanzas = useMemo(() => {
-    const sections = TARGET_APP_ORDER.flatMap((targetApp) => {
+    const sections = installedTargetApps.flatMap((targetApp) => {
       const parts = [
         targetApp === APP_NAME
           ? buildMacroStanza(
@@ -1374,22 +1441,36 @@ export default function MacroIndexTuningPage(): JSX.Element {
         : [];
     });
     return sections.join("\n\n");
-  }, [adhocDefinition, adhocDescription, generatedMacroStanzasByApp]);
+  }, [
+    adhocDefinition,
+    adhocDescription,
+    generatedMacroStanzasByApp,
+    installedTargetApps,
+  ]);
   const hasUnknown = rows.some((row) => row.macro === "unknown");
-  const fastTunableRows = rows.filter((row) =>
-    fastTuningMacroNameSet.has(row.macro),
+  const fastTunableRows = rows.filter(
+    (row) =>
+      fastTuningMacroNameSet.has(row.macro) &&
+      isTargetAppInstalled(row.targetApp),
   );
-  const cimMacroRows = cimRows.filter((row) =>
-    CIM_MACRO_NAME_SET.has(row.macro),
+  const cimMacroRows = cimRows.filter(
+    (row) =>
+      CIM_MACRO_NAME_SET.has(row.macro) &&
+      isTargetAppInstalled(row.targetApp),
   );
   const tunableRows = [...fastTunableRows, ...cimMacroRows];
   const indexMacroRows = tunableRows.filter((row) =>
     indexMacroNameSet.has(row.macro),
   );
   const modelMacroRows = tunableRows.filter(
-    (row) => row.targetApp !== APP_NAME && row.targetApp !== CIM_APP_NAME,
+    (row) =>
+      row.targetApp !== APP_NAME &&
+      row.targetApp !== CIM_APP_NAME &&
+      isTargetAppInstalled(row.targetApp),
   );
-  const rowsToSave = tunableRows.filter((row) => row.draftDefinition.trim());
+  const rowsToSave = tunableRows.filter(
+    (row) => isTargetAppInstalled(row.targetApp) && row.draftDefinition.trim(),
+  );
   const setupScdRowsToSave = rows.filter(
     (row) =>
       row.targetApp === APP_NAME &&
@@ -1401,6 +1482,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
     (row) =>
       row.targetApp !== APP_NAME &&
       row.targetApp !== CIM_APP_NAME &&
+      isTargetAppInstalled(row.targetApp) &&
       row.events > 0 &&
       row.draftDefinition.trim(),
   );
@@ -1429,17 +1511,28 @@ export default function MacroIndexTuningPage(): JSX.Element {
   );
   const dashboardMacroRows = rows.filter((row) => row.targetApp === APP_NAME);
   const externalAppMacroRows = rows.filter(
-    (row) => row.targetApp !== APP_NAME && row.targetApp !== CIM_APP_NAME,
+    (row) =>
+      row.targetApp !== APP_NAME &&
+      row.targetApp !== CIM_APP_NAME &&
+      isTargetAppInstalled(row.targetApp),
   );
   const filteredDashboardMacroRows = filteredRows.filter(
     (row) => row.targetApp === APP_NAME,
   );
   const filteredExternalAppMacroRows = filteredRows.filter(
-    (row) => row.targetApp !== APP_NAME && row.targetApp !== CIM_APP_NAME,
+    (row) =>
+      row.targetApp !== APP_NAME &&
+      row.targetApp !== CIM_APP_NAME &&
+      isTargetAppInstalled(row.targetApp),
   );
   const filteredCimRows = useMemo(
-    () => cimRows.filter((row) => rowMatchesFilter(row, filterTerms)),
-    [cimRows, filterTerms],
+    () =>
+      cimRows.filter(
+        (row) =>
+          isTargetAppInstalled(row.targetApp) &&
+          rowMatchesFilter(row, filterTerms),
+      ),
+    [cimRows, filterTerms, isTargetAppInstalled],
   );
   const filteredDashboardMacroGroups = useMemo(
     () => groupRowsByTargetApp(filteredDashboardMacroRows),
@@ -1465,7 +1558,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
     (sum, row) => sum + extractIndexTokens(row.draftDefinition).length,
     0,
   );
-  const externalAppMacroSummaries = TARGET_APP_ORDER.filter(
+  const externalAppMacroSummaries = installedTargetApps.filter(
     (targetApp) => targetApp !== APP_NAME && targetApp !== CIM_APP_NAME,
   ).map((targetApp) => {
     const appRows = modelMacroRows.filter((row) => row.targetApp === targetApp);
@@ -1559,7 +1652,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
     { earliest: "0", latest: "now" },
   );
   const macrosManagerUrl = splunkManagerUrl("data/macros");
-  const externalAppMacroManagerLinks = TARGET_APP_ORDER.filter(
+  const externalAppMacroManagerLinks = installedTargetApps.filter(
     (targetApp) => targetApp !== APP_NAME && targetApp !== CIM_APP_NAME,
   ).map((targetApp) => ({
     targetApp,
@@ -1618,6 +1711,9 @@ export default function MacroIndexTuningPage(): JSX.Element {
       const discoveredIndexMacroNames = await loadScdIndexMacroNames();
       setScdIndexMacroNames(discoveredIndexMacroNames);
       const catalog = buildTuningMacroCatalog(discoveredIndexMacroNames);
+      const availableMacroConfigs = catalog.fastTuningMacroConfigs.filter(
+        (config) => isTargetAppInstalled(config.targetApp),
+      );
       const spl = injectIndexMacroOrClause(rawSpl, discoveredIndexMacroNames);
       const result = await runSearch({
         spl,
@@ -1628,13 +1724,13 @@ export default function MacroIndexTuningPage(): JSX.Element {
         signal: controller.signal,
       });
       const currentDetails = await loadMacroDetailsByConfig(
-        catalog.fastTuningMacroConfigs,
+        availableMacroConfigs,
       );
       const parsed = ((result.results || []) as Record<string, unknown>[])
         .map((row) => parseSearchResult(row, catalog.macroConfigByName))
         .filter((row): row is MacroRow => Boolean(row));
       const expectedRows = buildExpectedEditableRows(
-        catalog.fastTuningMacroConfigs,
+        availableMacroConfigs,
         parsed,
         currentDetails,
       );
@@ -1656,7 +1752,12 @@ export default function MacroIndexTuningPage(): JSX.Element {
       setRows([]);
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [loadTuningSearch, timeRange.earliest, timeRange.latest]);
+  }, [
+    isTargetAppInstalled,
+    loadTuningSearch,
+    timeRange.earliest,
+    timeRange.latest,
+  ]);
 
   useEffect(() => {
     void runScan();
@@ -1666,13 +1767,19 @@ export default function MacroIndexTuningPage(): JSX.Element {
   }, [runScan]);
 
   const loadCimMacroRows = useCallback(async () => {
+    if (!isTargetAppInstalled(CIM_APP_NAME)) {
+      setCimRows([]);
+      setCimScanState("idle");
+      return;
+    }
     const currentDetails = await loadMacroDetailsByConfig(CIM_MACRO_CONFIGS);
     setCimRows(
       buildExpectedEditableRows(CIM_MACRO_CONFIGS, [], currentDetails),
     );
-  }, []);
+  }, [isTargetAppInstalled]);
 
   const runCimDiscovery = useCallback(async () => {
+    if (!isTargetAppInstalled(CIM_APP_NAME)) return;
     cimAbortRef.current?.abort();
     const controller = new AbortController();
     cimAbortRef.current = controller;
@@ -1702,7 +1809,12 @@ export default function MacroIndexTuningPage(): JSX.Element {
       setCimScanState("error");
       setCimError(err instanceof Error ? err.message : String(err));
     }
-  }, [cimTimeRange.earliest, cimTimeRange.latest, macroConfigByName]);
+  }, [
+    cimTimeRange.earliest,
+    cimTimeRange.latest,
+    isTargetAppInstalled,
+    macroConfigByName,
+  ]);
 
   useEffect(() => {
     void loadCimMacroRows();
@@ -1855,13 +1967,21 @@ export default function MacroIndexTuningPage(): JSX.Element {
         state: "saving",
         message: "Saving acceleration mode",
       });
-      await saveMacroDefinition(
-        ADHOC_MACRO_NAME,
-        adhocDefinition.trim(),
-        adhocDescription,
-        APP_NAME,
-      );
-      setAdhocStatus({ state: "saved", message: "Saved" });
+      try {
+        await saveMacroDefinition(
+          ADHOC_MACRO_NAME,
+          adhocDefinition.trim(),
+          adhocDescription,
+          APP_NAME,
+        );
+        setAdhocStatus({ state: "saved", message: "Saved" });
+      } catch (saveError) {
+        setAdhocStatus({
+          state: "error",
+          message:
+            saveError instanceof Error ? saveError.message : String(saveError),
+        });
+      }
 
       setSetupStatus({
         state: "saving",
@@ -1900,7 +2020,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   : String(saveError),
             },
           }));
-          throw saveError;
+          // Macro tuning is optional during setup. A failed write must not
+          // prevent the user from unlocking the dashboard and retrying later.
         }
       }
 
@@ -2979,9 +3100,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
               Tune app-owned index macros from this dashboard
             </h2>
             <p className="mt-1 max-w-3xl text-sm text-slate-600">
-              The same fast scan used during setup proposes definitions for each
-              supported Cisco app. Save them here so those apps are ready before
-              you open their dashboards.
+              The fast scan proposes definitions only for enabled companion apps
+              installed in this Splunk environment.
             </p>
           </div>
           <a
@@ -3084,6 +3204,11 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 </article>
               );
             })}
+          </div>
+        )}
+        {appInventoryError && (
+          <div className="border-t border-sky-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            {appInventoryError}
           </div>
         )}
       </section>
@@ -3627,10 +3752,11 @@ export default function MacroIndexTuningPage(): JSX.Element {
         )}
       </section>
 
-      <section className="mb-4 border border-slate-200 bg-white">
-        <div className="grid gap-3 border-b border-slate-200 px-4 py-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
-          <div className="min-w-0">
-            <button
+      {isTargetAppInstalled(CIM_APP_NAME) && (
+        <section className="mb-4 border border-slate-200 bg-white">
+          <div className="grid gap-3 border-b border-slate-200 px-4 py-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
+            <div className="min-w-0">
+              <button
               type="button"
               onClick={() => toggleRowGroup(CIM_APP_NAME)}
               aria-expanded={!isCimGroupCollapsed}
@@ -3761,15 +3887,14 @@ export default function MacroIndexTuningPage(): JSX.Element {
             )}
           </>
         )}
-      </section>
+        </section>
+      )}
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
-        <div className="border border-slate-200 bg-white">
-          <div className="border-b border-slate-200 px-4 py-3">
-            <h2 className="m-0 text-base font-bold text-slate-900">
-              macros.conf preview
-            </h2>
-          </div>
+        <details className="border border-slate-200 bg-white">
+          <summary className="cursor-pointer border-b border-slate-200 px-4 py-3 text-base font-bold text-slate-900">
+            macros.conf preview
+          </summary>
           <textarea
             ref={macroPreviewRef}
             readOnly
@@ -3779,7 +3904,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
             aria-label="macros.conf preview"
             className="m-0 h-[320px] w-full resize-y overflow-auto border-0 bg-white p-4 font-mono text-xs leading-relaxed text-slate-800 outline-none"
           />
-        </div>
+        </details>
 
         <div className="grid gap-4">
           <details className="border border-slate-200 bg-white">

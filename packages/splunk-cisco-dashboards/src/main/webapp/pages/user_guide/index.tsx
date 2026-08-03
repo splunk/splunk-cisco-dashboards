@@ -1552,8 +1552,9 @@ iseval = 0`}</CodeBlock>
                   Setup now brings package checks, index macro discovery, data
                   model acceleration readiness, targeted Data Models links, and
                   the readiness query&apos;s Open in Search path into one flow.
-                  Balanced mode remains available while recommended
-                  acceleration is completed.
+                  It writes companion-app macros only when that app is enabled
+                  and installed. Balanced mode remains available while
+                  recommended acceleration is completed.
                 </InfoCard>
                 <InfoCard title="Insights Workspaces">
                   Workspaces now own their layout and presentation choices,
