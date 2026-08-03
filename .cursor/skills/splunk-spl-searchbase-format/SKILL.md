@@ -5,7 +5,7 @@ description: Format and validate stanzas added to or modified in packages/splunk
 
 # searchbase.conf SPL & Metadata Format
 
-`searchbase.conf` is the central catalogue of dispatch-ready SPL for the Splunk Cisco Dashboards app. Every stanza in the file follows the same shape so it can be filtered in the UI, audited from a CSV export, and reviewed without surprises. This skill captures that shape so additions and edits stay consistent.
+`searchbase.conf` is the central catalogue of dispatch-ready SPL for the Splunk App for Secure Networking app. Every stanza in the file follows the same shape so it can be filtered in the UI, audited from a CSV export, and reviewed without surprises. This skill captures that shape so additions and edits stay consistent.
 
 ## Stanza skeleton
 

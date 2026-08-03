@@ -40,8 +40,7 @@ const CIM_APP_NAME = "Splunk_SA_CIM";
 const CISCO_SECURITY_APP_NAME = "CiscoSecurityCloud";
 const THOUSAND_EYES_APP_NAME = "ta_cisco_thousandeyes";
 const CATALYST_APP_NAME = "cisco-catalyst-app";
-const DATA_CENTER_NETWORKING_APP_NAME =
-  "cisco_dc_networking_app_for_splunk";
+const DATA_CENTER_NETWORKING_APP_NAME = "cisco_dc_networking_app_for_splunk";
 const TUNING_SEARCHBASE_ID = "admin_macro_index_tuning";
 const TUNING_SEARCH_NAME = "Admin - Macro Index Tuning";
 const ADHOC_MACRO_NAME = "scd_summariesonly";
@@ -53,8 +52,7 @@ const DEFAULT_SUMMARIESONLY_DESCRIPTION =
   "Controls whether data-model searches use only accelerated summaries or may fall back to raw events. Keep summariesonly=false until all required data models are fully accelerated.";
 const SUMMARIESONLY_ACCELERATION_ERROR =
   "summariesonly=true requires acceleration for Cisco Catalyst, Cisco Security, and Cisco ThousandEyes.";
-const SPLUNK_DOCS_VERSION =
-  versionLabel.match(/^(\d+\.\d+)/)?.[1] || "10.4";
+const SPLUNK_DOCS_VERSION = versionLabel.match(/^(\d+\.\d+)/)?.[1] || "10.4";
 const DATA_MODEL_ACCELERATION_DOCS_URL = `https://help.splunk.com/en/splunk-enterprise/manage-knowledge-objects/knowledge-management-manual/${SPLUNK_DOCS_VERSION}/use-data-summaries-to-accelerate-searches/accelerate-data-models`;
 const DATA_MODEL_ACCELERATION_SEARCH = `
 | rest splunk_server=local timeout=600 /servicesNS/-/-/data/models
@@ -1406,10 +1404,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
       row.events > 0 &&
       row.draftDefinition.trim(),
   );
-  const setupRowsToSave = [
-    ...setupScdRowsToSave,
-    ...setupExternalRowsToSave,
-  ];
+  const setupRowsToSave = [...setupScdRowsToSave, ...setupExternalRowsToSave];
   const summariesOnlyEnabled = usesSummariesOnly(adhocDefinition);
   const requiredDataModels = dataModelReadiness.filter(
     (item) => item.priority === "required",
@@ -1418,8 +1413,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
     requiredDataModels.length ===
       CORE_DATA_MODEL_REQUIREMENTS.filter(
         (requirement) => requirement.priority === "required",
-      ).length &&
-    requiredDataModels.every((item) => item.state === "enabled");
+      ).length && requiredDataModels.every((item) => item.state === "enabled");
   const accelerationCheckInProgress = dataModelReadiness.some(
     (item) => item.state === "checking",
   );
@@ -1433,9 +1427,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
     () => rows.filter((row) => rowMatchesFilter(row, filterTerms)),
     [filterTerms, rows],
   );
-  const dashboardMacroRows = rows.filter(
-    (row) => row.targetApp === APP_NAME,
-  );
+  const dashboardMacroRows = rows.filter((row) => row.targetApp === APP_NAME);
   const externalAppMacroRows = rows.filter(
     (row) => row.targetApp !== APP_NAME && row.targetApp !== CIM_APP_NAME,
   );
@@ -1476,9 +1468,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
   const externalAppMacroSummaries = TARGET_APP_ORDER.filter(
     (targetApp) => targetApp !== APP_NAME && targetApp !== CIM_APP_NAME,
   ).map((targetApp) => {
-    const appRows = modelMacroRows.filter(
-      (row) => row.targetApp === targetApp,
-    );
+    const appRows = modelMacroRows.filter((row) => row.targetApp === targetApp);
     return {
       targetApp,
       label: getTargetAppLabel(targetApp),
@@ -1531,8 +1521,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
           app,
           label: DATA_MODEL_APP_LABELS[app] || app,
           items,
-          enabledCount: items.filter((item) => item.state === "enabled")
-            .length,
+          enabledCount: items.filter((item) => item.state === "enabled").length,
           attentionCount: items.filter(
             (item) =>
               item.state === "disabled" ||
@@ -1576,10 +1565,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
     targetApp,
     href: splunkAppManagerUrl(targetApp, "data/macros"),
   }));
-  const cimMacrosManagerUrl = splunkAppManagerUrl(
-    CIM_APP_NAME,
-    "data/macros",
-  );
+  const cimMacrosManagerUrl = splunkAppManagerUrl(CIM_APP_NAME, "data/macros");
 
   const handleFastTimeRangeChange = useCallback(
     (_event: React.SyntheticEvent, data?: TimeRangeChange) => {
@@ -1926,9 +1912,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
       setSetupStatus({
         state: "error",
         message:
-          setupError instanceof Error
-            ? setupError.message
-            : String(setupError),
+          setupError instanceof Error ? setupError.message : String(setupError),
       });
     }
   }, [
@@ -2114,9 +2098,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
         value: unknownSourcetypeGroups,
         label: "Unmapped",
         colorClass:
-          unknownSourcetypeGroups > 0
-            ? "text-amber-700"
-            : "text-emerald-700",
+          unknownSourcetypeGroups > 0 ? "text-amber-700" : "text-emerald-700",
       },
     ];
     let scanEyebrow = "Automatic scan complete";
@@ -2133,8 +2115,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
       "Balanced mode is ready with no extra action.";
     if (summariesOnlyEnabled && accelerationCheckInProgress) {
       performanceStatusClass = "bg-sky-50 text-sky-800";
-      performanceStatusMessage =
-        "Checking required data-model acceleration…";
+      performanceStatusMessage = "Checking required data-model acceleration…";
     } else if (summariesOnlyBlocked) {
       performanceStatusClass = "bg-red-50 text-red-800";
       performanceStatusMessage = `${acceleratedRequiredModels} of ${requiredDataModels.length} required data models are accelerated.`;
@@ -2157,7 +2138,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
           <div className="mx-auto grid max-w-[1180px] gap-6 px-7 py-5 md:grid-cols-[minmax(0,1fr)_400px] md:items-center">
             <div className="min-w-0">
               <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-cyan-300">
-                Splunk Cisco Dashboards · Setup · Step 3 of 3
+                Splunk App for Secure Networking · Setup · Step 3 of 3
               </div>
               <h1 className="mt-1 text-2xl font-bold leading-tight text-white">
                 Finish setup with the detected index macros
@@ -2516,7 +2497,6 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 >
                   {performanceStatusMessage}
                 </div>
-
               </section>
 
               <section className="rounded-lg border border-slate-200 bg-white p-5">
@@ -2994,9 +2974,9 @@ export default function MacroIndexTuningPage(): JSX.Element {
               Tune app-owned index macros from this dashboard
             </h2>
             <p className="mt-1 max-w-3xl text-sm text-slate-600">
-              The same fast scan used during setup proposes definitions for
-              each supported Cisco app. Save them here so those apps are ready
-              before you open their dashboards.
+              The same fast scan used during setup proposes definitions for each
+              supported Cisco app. Save them here so those apps are ready before
+              you open their dashboards.
             </p>
           </div>
           <a
@@ -3205,8 +3185,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   summariesonly=true
                 </code>
                 . Authentication, Network Traffic, and every installed Cisco
-                Data Center Networking model are strongly recommended for
-                faster app searches.
+                Data Center Networking model are strongly recommended for faster
+                app searches.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -3238,9 +3218,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               >
                 <RefreshCw
                   size={14}
-                  className={
-                    accelerationCheckInProgress ? "animate-spin" : ""
-                  }
+                  className={accelerationCheckInProgress ? "animate-spin" : ""}
                 />
                 Check again
               </button>
@@ -3323,10 +3301,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                     ) : enabled ? (
                       <Check className="mt-0.5 shrink-0" size={14} />
                     ) : (
-                      <AlertTriangle
-                        className="mt-0.5 shrink-0"
-                        size={14}
-                      />
+                      <AlertTriangle className="mt-0.5 shrink-0" size={14} />
                     )}
                     <span>{item.message}</span>
                   </div>
@@ -3364,9 +3339,9 @@ export default function MacroIndexTuningPage(): JSX.Element {
             >
               <AlertTriangle className="mt-0.5 shrink-0" size={16} />
               <span>
-                <code className="font-mono">summariesonly=true</code> cannot
-                be saved yet. Enable acceleration for all three required Cisco
-                data models, then check again.
+                <code className="font-mono">summariesonly=true</code> cannot be
+                saved yet. Enable acceleration for all three required Cisco data
+                models, then check again.
               </span>
             </div>
           ) : summariesOnlyEnabled ? (
@@ -3381,8 +3356,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
             <div className="mt-3 flex items-start gap-2 border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
               <Info className="mt-0.5 shrink-0 text-sky-700" size={16} />
               <span>
-                <code className="font-mono">summariesonly=false</code> may
-                fall back to raw events while acceleration is being prepared.
+                <code className="font-mono">summariesonly=false</code> may fall
+                back to raw events while acceleration is being prepared.
               </span>
             </div>
           )}
@@ -3493,8 +3468,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   Dashboard index macro definitions
                 </h2>
                 <p className="mt-0.5 text-xs text-slate-500">
-                  Macros owned by {APP_NAME}. This search also filters the
-                  Cisco app section below.
+                  Macros owned by {APP_NAME}. This search also filters the Cisco
+                  app section below.
                 </p>
               </div>
             </div>

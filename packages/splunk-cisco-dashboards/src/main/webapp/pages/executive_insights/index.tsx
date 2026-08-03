@@ -1,5 +1,5 @@
 /**
- * Splunk Cisco Dashboards — Insights Workspace
+ * Splunk App for Secure Networking — Insights Workspace
  *
  * Executive landing page adapted for Splunk and pumped full of
  * dashboards-tooling niceties:
@@ -462,9 +462,7 @@ const parseWorkspaceSource = (raw: unknown): WorkspaceSourceId => {
   if (!trimmed || trimmed === "overview" || trimmed === "default") {
     return EXECUTIVE_WORKSPACE_SOURCE_ID;
   }
-  return isWorkspaceSourceId(trimmed)
-    ? trimmed
-    : EXECUTIVE_WORKSPACE_SOURCE_ID;
+  return isWorkspaceSourceId(trimmed) ? trimmed : EXECUTIVE_WORKSPACE_SOURCE_ID;
 };
 
 const parseOverviewSection = (
@@ -4380,17 +4378,17 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                 </a>
               </div>
             </div>
-              {canManageWorkspaceConfig && (
-                <button
-                  type="button"
-                  onClick={() => setWorkspaceManagerOpen(true)}
-                  title="Create, duplicate, or manage workspaces"
-                  aria-label="Manage workspaces"
-                  className={iconBtnClass}
-                >
-                  <Settings2 className="h-4 w-4" />
-                </button>
-              )}
+            {canManageWorkspaceConfig && (
+              <button
+                type="button"
+                onClick={() => setWorkspaceManagerOpen(true)}
+                title="Create, duplicate, or manage workspaces"
+                aria-label="Manage workspaces"
+                className={iconBtnClass}
+              >
+                <Settings2 className="h-4 w-4" />
+              </button>
+            )}
             {splunkUsername && (
               <div
                 className="w-8 h-8 rounded-full bg-sky-100 dark:bg-sky-900/40 border border-sky-200 dark:border-sky-800 flex items-center justify-center text-sky-600 dark:text-sky-300"
@@ -5693,10 +5691,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     const map = new Map<string, number>();
     for (const record of appFacetRecords) {
       if (record.catalogueApp) {
-        map.set(
-          record.catalogueApp,
-          (map.get(record.catalogueApp) ?? 0) + 1,
-        );
+        map.set(record.catalogueApp, (map.get(record.catalogueApp) ?? 0) + 1);
       }
     }
     return map;

@@ -1,4 +1,4 @@
-# Splunk Cisco Dashboards — Session Log
+# Splunk App for Secure Networking — Session Log
 
 > Running narrative of what we've built, the decisions behind it, and the
 > verification that proved it works. Newer sessions go at the **top**.
@@ -1198,7 +1198,7 @@ browser (`Cmd+Shift+R`); the canvas top-right pill should read
   * **App path on this machine:**
     `/opt/splunk/etc/apps/splunk-cisco-dashboards/`
   * **Network Diagram page:**
-    Splunk Web → app picker → "Splunk Cisco Dashboards" →
+    Splunk Web → app picker → "Splunk App for Secure Networking" →
     "Network Diagram" in the nav, **OR** direct URL:
     `http://sh-i-ak:8000/en-US/app/splunk-cisco-dashboards/network_diagram`
   * **Playwright MCP** is configured in `.cursor/mcp.json`. Storage
@@ -1467,7 +1467,7 @@ generalisation.
       2. Hover → tooltip reads "v1.0.10 · Build 1172"
          (matches what splunkd reports for the app).
       3. Help (i) popover footer reads
-         "Splunk Cisco Dashboards · v1.0.10 · Build 1172".
+         "Splunk App for Secure Networking · v1.0.10 · Build 1172".
 
 ### Lesson learned
 
@@ -1550,7 +1550,7 @@ property we want:
      unobtrusive but legible. This is the at-a-glance
      check.
    - **Footer of the Help (i) popover** with the full
-     "Splunk Cisco Dashboards · v1.0.10 · Build 1171"
+     "Splunk App for Secure Networking · v1.0.10 · Build 1171"
      label. Discoverable rather than always-on; gives the
      operator a copy-pasteable string for support
      tickets.
@@ -1604,7 +1604,7 @@ with anything for attention.
     landed: the literal string `"1171"` appears in
     `appserver/static/pages/network_diagram.js` (would
     not appear from any other code path), and the
-    literal "Splunk Cisco Dashboards · v" appears once
+    literal "Splunk App for Secure Networking · v" appears once
     (the popover footer template).
   • Manual checks the operator should run after install
     + `splunk _bump`:
@@ -1614,7 +1614,7 @@ with anything for attention.
       2. Hover the pill → tooltip reads
          "v1.0.10 · Build 1171".
       3. Open the Help (i) popover → footer reads
-         "Splunk Cisco Dashboards · v1.0.10 · Build 1171".
+         "Splunk App for Secure Networking · v1.0.10 · Build 1171".
       4. Future upgrade: install new tarball, run
          `splunk _bump`, hard-refresh. The pill should
          flip to the new build number IMMEDIATELY upon

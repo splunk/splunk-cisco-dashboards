@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Package the Splunk Cisco Dashboards app into a Splunk .tar.gz.
+# Package the Splunk App for Secure Networking app into a Splunk .tar.gz.
 # By default this script ONLY builds the package -- it does not touch
 # any Splunk instance. Pass --install or --deploy (and optionally
 # --restart) to push the build into a local Splunk.

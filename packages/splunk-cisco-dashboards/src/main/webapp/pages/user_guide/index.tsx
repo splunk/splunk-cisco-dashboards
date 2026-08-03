@@ -1025,12 +1025,12 @@ export default function UserGuidePage(): JSX.Element {
                 </table>
               </div>
               <p className="mt-4 text-sm leading-6 text-slate-600">
-                Splunk Cisco Dashboards currently uses the Cisco Security Cloud
-                and Cisco ThousandEyes data models, and will use the
-                Cisco_Catalyst_App data model from Cisco Enterprise Networking
-                for Splunk Platform. For best performance, the data models in
-                those three Cisco apps are expected to be accelerated when you
-                enable their related content.
+                Splunk App for Secure Networking currently uses the Cisco
+                Security Cloud and Cisco ThousandEyes data models, and will use
+                the Cisco_Catalyst_App data model from Cisco Enterprise
+                Networking for Splunk Platform. For best performance, the data
+                models in those three Cisco apps are expected to be accelerated
+                when you enable their related content.
               </p>
             </Section>
 

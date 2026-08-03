@@ -8,7 +8,7 @@ Working tree before this handoff file was created: clean
 
 ## Context
 
-This repo contains the Splunk Cisco Dashboards app. The recent work focused on making the Executive Overview page rely on `searchbase.conf` as the central source of truth for factory/default tile metadata and runtime SPL dispatch.
+This repo contains the Splunk App for Secure Networking app. The recent work focused on making the Executive Overview page rely on `searchbase.conf` as the central source of truth for factory/default tile metadata and runtime SPL dispatch.
 
 The user strongly wants `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf` to be the central DB for search metadata. Avoid adding hardcoded search names, search display names, tile labels, value fields, thresholds, or factory bindings directly in React where `searchbase.conf` can own them.
 

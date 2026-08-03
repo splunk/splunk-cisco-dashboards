@@ -2,7 +2,7 @@
 
 > Layer 2 of the SCD framework. See `COMPASS.md` for the QUESTION layer and `CONTEXT_TENSOR.md` for the CATALOG layer.
 
-This document specifies the **closed set of 11 canonical macros** that compute every executive metric in the Splunk Cisco Dashboards (SCD) app. The macros are defined in `default/macros.conf` and called by every saved search, every dashboard panel, and every drilldown.
+This document specifies the **closed set of 11 canonical macros** that compute every executive metric in the Splunk App for Secure Networking (SCD) app. The macros are defined in `default/macros.conf` and called by every saved search, every dashboard panel, and every drilldown.
 
 **Hard rules:**
 
