@@ -1560,6 +1560,54 @@ const buildThousandEyesTestLink = (teTestId?: string): string | undefined => {
     )}`;
 };
 
+interface ThousandEyesA2AEndpointOption {
+    key: string;
+    label: string;
+}
+
+const thousandEyesA2AEndpointValue = (
+    candidate: ThousandEyesA2ACandidate,
+    side: 'source' | 'target'
+): string => {
+    const location =
+        side === 'source' ? candidate.sourceLocation : candidate.targetLocation;
+    const agent = side === 'source' ? candidate.sourceAgent : candidate.targetAgent;
+    return textValue(location ?? agent);
+};
+
+const thousandEyesA2AEndpointKey = (
+    candidate: ThousandEyesA2ACandidate,
+    side: 'source' | 'target'
+): string => compactA2AMatchText(thousandEyesA2AEndpointValue(candidate, side));
+
+const thousandEyesA2AEndpointLabel = (
+    candidate: ThousandEyesA2ACandidate,
+    side: 'source' | 'target'
+): string => {
+    const location =
+        side === 'source' ? candidate.sourceLocation : candidate.targetLocation;
+    const agent = side === 'source' ? candidate.sourceAgent : candidate.targetAgent;
+    if (location && agent && normalizeA2AMatchText(location) !== normalizeA2AMatchText(agent)) {
+        return `${location} — ${agent}`;
+    }
+    return textValue(location ?? agent, side === 'source' ? 'Source agent' : 'Target agent');
+};
+
+const thousandEyesA2AEndpointOptions = (
+    candidates: ThousandEyesA2ACandidate[],
+    side: 'source' | 'target'
+): ThousandEyesA2AEndpointOption[] => {
+    const options = new Map<string, ThousandEyesA2AEndpointOption>();
+    for (const candidate of candidates) {
+        const key = thousandEyesA2AEndpointKey(candidate, side);
+        if (!key || options.has(key)) continue;
+        options.set(key, { key, label: thousandEyesA2AEndpointLabel(candidate, side) });
+    }
+    return [...options.values()].sort((a, b) =>
+        a.label.localeCompare(b.label, undefined, { sensitivity: 'base' })
+    );
+};
+
 const teBindingFromCandidate = (
     candidate: ThousandEyesA2ACandidate
 ): ThousandEyesA2ABinding => ({
@@ -3412,8 +3460,8 @@ const parseTeA2ACandidateRow = (
     const status =
         normalizeStatus(textFromRow(row, ['status', 'linkStatus'])) ?? 'unknown';
     const teLink =
-        buildThousandEyesTestLink(teTestId) ??
-        textFromRow(row, ['teLink', 'te_link', 'thousandeyes.permalink']);
+        textFromRow(row, ['teLink', 'te_link', 'thousandeyes.permalink']) ??
+        buildThousandEyesTestLink(teTestId);
 
     return {
         candidateId,
@@ -7279,6 +7327,9 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
     const [placingSiteIds, setPlacingSiteIds] = useState<Record<string, boolean>>(
         {}
     );
+    const [teEndpointSelectionsByLinkId, setTeEndpointSelectionsByLinkId] = useState<
+        Record<string, { source?: string; target?: string }>
+    >({});
 
     useEffect(() => {
         if (!open) return undefined;
@@ -7313,6 +7364,14 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                 })
             );
     }, [catalogueByName]);
+
+    const teA2AInventorySearchName = useMemo(
+        () =>
+            catalogueByName
+                ? findTeA2AInventorySearchbase(catalogueByName)?.searchName
+                : undefined,
+        [catalogueByName]
+    );
 
     const editorSiteById = useMemo(() => {
         const map: Record<string, TopologySite> = {};
@@ -7366,7 +7425,10 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
     // baseline. Without this, a long editing session can leave a
     // dozen cards expanded across multiple sessions.
     useEffect(() => {
-        if (!open) setExpandedCardKeys(new Set());
+        if (!open) {
+            setExpandedCardKeys(new Set());
+            setTeEndpointSelectionsByLinkId({});
+        }
     }, [open]);
 
     // SPL lookup helper for the per-card "Open in Search" button.
@@ -7531,6 +7593,13 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
         linkId: string,
         candidate: ThousandEyesA2ACandidate
     ) => {
+        setTeEndpointSelectionsByLinkId((current) => ({
+            ...current,
+            [linkId]: {
+                source: thousandEyesA2AEndpointKey(candidate, 'source'),
+                target: thousandEyesA2AEndpointKey(candidate, 'target'),
+            },
+        }));
         updateLink(linkId, {
             thousandEyesA2A: teBindingFromCandidate(candidate),
             searchName: '',
@@ -7549,6 +7618,20 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
             dataError: undefined,
             telemetrySource: 'Awaiting topology link telemetry',
         });
+    };
+
+    const updateThousandEyesEndpointSelection = (
+        linkId: string,
+        side: 'source' | 'target',
+        value: string
+    ) => {
+        setTeEndpointSelectionsByLinkId((current) => ({
+            ...current,
+            [linkId]: {
+                ...current[linkId],
+                [side]: value || undefined,
+            },
+        }));
     };
 
     const updateLinkEndpoints = (
@@ -8539,12 +8622,50 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                     } to ${
                                         targetSite?.shortName ?? link.targetSiteId
                                     }`;
+                                    const selection = teEndpointSelectionsByLinkId[link.id];
+                                    const sourceSelection = selection?.source ?? '';
+                                    const targetSelection = selection?.target ?? '';
+                                    const sourceEndpointOptions = teA2ACandidates
+                                        ? thousandEyesA2AEndpointOptions(
+                                              teA2ACandidates,
+                                              'source'
+                                          )
+                                        : [];
+                                    const targetEndpointOptions = teA2ACandidates
+                                        ? thousandEyesA2AEndpointOptions(
+                                              sourceSelection
+                                                  ? teA2ACandidates.filter(
+                                                        (candidate) =>
+                                                            thousandEyesA2AEndpointKey(
+                                                                candidate,
+                                                                'source'
+                                                            ) === sourceSelection
+                                                    )
+                                                  : teA2ACandidates,
+                                              'target'
+                                          )
+                                        : [];
+                                    const teCandidatesForEndpoints = teA2ACandidates
+                                        ? teA2ACandidates.filter(
+                                              (candidate) =>
+                                                  (!sourceSelection ||
+                                                      thousandEyesA2AEndpointKey(
+                                                          candidate,
+                                                          'source'
+                                                      ) === sourceSelection) &&
+                                                  (!targetSelection ||
+                                                      thousandEyesA2AEndpointKey(
+                                                          candidate,
+                                                          'target'
+                                                      ) === targetSelection)
+                                          )
+                                        : [];
                                     const teMatches = teA2ACandidates
                                         ? rankTeCandidatesForLink(
                                               link,
                                               sourceSite,
                                               targetSite,
-                                              teA2ACandidates
+                                              teCandidatesForEndpoints
                                           )
                                         : [];
                                     const boundTeMatch = teMatches.find(
@@ -8959,6 +9080,111 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                 </div>
                                             </div>
                                             <div className="mt-2">
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <label className="space-y-1">
+                                                        <span
+                                                            className={cn(
+                                                                editorLabelClass,
+                                                                isDark
+                                                                    ? 'text-slate-500'
+                                                                    : 'text-slate-400'
+                                                            )}
+                                                        >
+                                                            Observed source site
+                                                        </span>
+                                                        <select
+                                                            aria-label={`Observed ThousandEyes source site for link ${link.id}`}
+                                                            className={editorInputClass(isDark)}
+                                                            value={sourceSelection}
+                                                            disabled={teA2ACandidates === null}
+                                                            onChange={(event) =>
+                                                                updateThousandEyesEndpointSelection(
+                                                                    link.id,
+                                                                    'source',
+                                                                    event.target.value
+                                                                )
+                                                            }
+                                                        >
+                                                            <option value="">
+                                                                {teA2ACandidates === null
+                                                                    ? 'Loading observed sites'
+                                                                    : 'Any observed source'}
+                                                            </option>
+                                                            {sourceEndpointOptions.map((option) => (
+                                                                <option
+                                                                    key={option.key}
+                                                                    value={option.key}
+                                                                >
+                                                                    {option.label}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </label>
+                                                    <label className="space-y-1">
+                                                        <span
+                                                            className={cn(
+                                                                editorLabelClass,
+                                                                isDark
+                                                                    ? 'text-slate-500'
+                                                                    : 'text-slate-400'
+                                                            )}
+                                                        >
+                                                            Observed target site
+                                                        </span>
+                                                        <select
+                                                            aria-label={`Observed ThousandEyes target site for link ${link.id}`}
+                                                            className={editorInputClass(isDark)}
+                                                            value={targetSelection}
+                                                            disabled={teA2ACandidates === null}
+                                                            onChange={(event) =>
+                                                                updateThousandEyesEndpointSelection(
+                                                                    link.id,
+                                                                    'target',
+                                                                    event.target.value
+                                                                )
+                                                            }
+                                                        >
+                                                            <option value="">
+                                                                {teA2ACandidates === null
+                                                                    ? 'Loading observed sites'
+                                                                    : 'Any observed target'}
+                                                            </option>
+                                                            {targetEndpointOptions.map((option) => (
+                                                                <option
+                                                                    key={option.key}
+                                                                    value={option.key}
+                                                                >
+                                                                    {option.label}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </label>
+                                                </div>
+                                                <div
+                                                    className={cn(
+                                                        'mt-1 flex items-center justify-between gap-2 text-[9px] font-semibold',
+                                                        isDark
+                                                            ? 'text-slate-500'
+                                                            : 'text-slate-400'
+                                                    )}
+                                                >
+                                                    <span>
+                                                        Select values observed in Splunk to narrow the A2A tests below.
+                                                    </span>
+                                                    {teA2AInventorySearchName && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                handleOpenInSearch(
+                                                                    teA2AInventorySearchName
+                                                                )
+                                                            }
+                                                            className="shrink-0 text-sky-600 hover:text-sky-700 dark:text-sky-300 dark:hover:text-sky-200"
+                                                        >
+                                                            Open inventory
+                                                        </button>
+                                                    )}
+                                                </div>
                                                 <select
                                                     aria-label={`ThousandEyes A2A binding for link ${link.id}`}
                                                     className={editorInputClass(isDark)}
