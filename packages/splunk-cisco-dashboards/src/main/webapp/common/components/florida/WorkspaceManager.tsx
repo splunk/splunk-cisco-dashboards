@@ -426,32 +426,20 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                                     className="mt-1 block h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-xs font-normal text-slate-900 outline-none focus:border-sky-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
                                 />
                             </label>
-                            <div className="col-span-2">
-                                {draft.existingWorkspace ? (
-                                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-950/40">
-                                        <p className="text-[11px] font-bold text-slate-700 dark:text-slate-200">
-                                            Workspace blueprint
-                                        </p>
-                                        <p className="mt-1 text-xs font-semibold text-slate-900 dark:text-white">
-                                            {sourceLabel(draft.sourceWorkspace)}
-                                        </p>
-                                        <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                                            Blueprint is locked for existing workspaces so their section layout and customizations stay intact.
-                                        </p>
-                                    </div>
-                                ) : (
+                            {!draft.existingWorkspace && (
+                                <div className="col-span-2">
                                     <fieldset>
                                         <legend className="text-[11px] font-bold text-slate-700 dark:text-slate-200">
-                                            Workspace blueprint
+                                            Start from a template
                                         </legend>
                                         <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                                            Choose the collection of sections this new workspace can use.
+                                            Templates only provide a useful first configuration. After creation, this workspace owns its own sections, rail, map, theme, and layouts.
                                         </p>
                                         <div className="mt-3 grid grid-cols-2 gap-3">
                                             {(Object.keys(WORKSPACE_SOURCES) as WorkspaceSourceId[]).map(
                                                 (sourceId) => {
                                                     const selected = draft.sourceWorkspace === sourceId;
-                                                    const blueprint = WORKSPACE_SOURCES[sourceId];
+                                                    const template = WORKSPACE_SOURCES[sourceId];
                                                     return (
                                                         <button
                                                             key={sourceId}
@@ -472,7 +460,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                                                                 {sourceDescription(sourceId)}
                                                             </span>
                                                             <span className="mt-2 block text-[10px] font-semibold text-sky-700 dark:text-sky-300">
-                                                                {blueprint.sections.map((section) => section.title).join(' · ')}
+                                                                Includes: {template.sections.map((section) => section.title).join(' · ')}
                                                             </span>
                                                         </button>
                                                     );
@@ -480,8 +468,8 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                                             )}
                                         </div>
                                     </fieldset>
-                                )}
-                            </div>
+                                </div>
+                            )}
                             <label className="text-[11px] font-bold text-slate-700 dark:text-slate-200">
                                 Workspace theme
                                 <select
@@ -570,7 +558,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                                 Workspace sections
                             </legend>
                             <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                                Choose the use-case areas this customer demo should emphasize.
+                                Choose the areas this workspace should emphasize. These selections are owned by this workspace and can be changed at any time.
                             </p>
                             <div className="mt-3 grid grid-cols-2 gap-2">
                                 {source.sections.map((section) => (

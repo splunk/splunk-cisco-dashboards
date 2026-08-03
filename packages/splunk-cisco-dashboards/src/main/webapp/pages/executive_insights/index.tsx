@@ -2095,6 +2095,14 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
 }) => {
   // ------------------------------ Theme ------------------------------
   const { theme, resolvedTheme, setTheme, cycle: cycleTheme } = useTheme();
+  useLayoutEffect(() => {
+    document.documentElement.classList.add("scd-overview-active");
+    document.body.classList.add("scd-overview-active");
+    return () => {
+      document.documentElement.classList.remove("scd-overview-active");
+      document.body.classList.remove("scd-overview-active");
+    };
+  }, []);
   useEffect(() => {
     setTheme(insightsWorkspace.themePreference);
   }, [insightsWorkspace.id, insightsWorkspace.themePreference, setTheme]);
