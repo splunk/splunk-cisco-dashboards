@@ -116,6 +116,7 @@ import {
     getSearchbaseCatalogue,
     getSplunkAppLabels,
     plainTextFromHtml,
+    searchbaseAppLabel,
     type SearchbaseRecord,
 } from '@/common/services/searchbaseCatalogue';
 import {
@@ -128,26 +129,10 @@ const APP_NAME = 'splunk-cisco-dashboards';
 const STORAGE_KEY = 'scd_searchbase_canvas_v1';
 const MAX_BATCH_RUNS = 10;
 
-// REST returns the installed app's configured label when present. These keep
-// the catalogue readable for installed add-ons whose app.conf omits one.
-const CATALOGUE_APP_LABEL_FALLBACKS: Readonly<Record<string, string>> = {
-    'cisco-catalyst-app': 'Cisco Enterprise Networking for Splunk Platform',
-    'cisco_dc_networking_app_for_splunk': 'Cisco DC Networking App for Splunk',
-    CiscoSecurityCloud: 'Cisco Security Cloud',
-    Splunk_TA_Cisco_Intersight: 'Cisco Intersight Add-on for Splunk',
-    'Splunk_TA_cisco-esa': 'Splunk Add-on for Cisco ESA',
-    Splunk_TA_cisco_meraki: 'Cisco Meraki Add-on for Splunk',
-    'Splunk_TA_cisco-wsa': 'Splunk Add-on for Cisco WSA',
-    'TA-cisco-cloud-security-addon': 'Cisco Secure Access Add-on for Splunk',
-    TA_cisco_catalyst: 'Cisco Catalyst Add-on for Splunk',
-    ta_cisco_spaces: 'Cisco Spaces Add-on for Splunk',
-    ta_cisco_thousandeyes: 'Cisco ThousandEyes App for Splunk',
-};
-
 const catalogueAppLabel = (
     app: string,
     labelsByApp: ReadonlyMap<string, string>
-): string => labelsByApp.get(app) ?? CATALOGUE_APP_LABEL_FALLBACKS[app] ?? app;
+): string => searchbaseAppLabel(app, labelsByApp);
 
 const isCanvasDebug = (): boolean => {
     if (typeof window === 'undefined') return false;

@@ -34,6 +34,30 @@
 import { getSearchAppContext } from './splunkSearchService';
 import { resolveSearchbaseAppContexts } from './searchbaseDispatch';
 
+/**
+ * REST returns an installed app's configured label when present. Keep these
+ * fallbacks for common Cisco packages whose app.conf omits a display label.
+ */
+export const SEARCHBASE_APP_LABEL_FALLBACKS: Readonly<Record<string, string>> = {
+    'cisco-catalyst-app': 'Cisco Enterprise Networking for Splunk Platform',
+    'cisco_dc_networking_app_for_splunk': 'Cisco DC Networking App for Splunk',
+    CiscoSecurityCloud: 'Cisco Security Cloud',
+    Splunk_TA_Cisco_Intersight: 'Cisco Intersight Add-on for Splunk',
+    'Splunk_TA_cisco-esa': 'Splunk Add-on for Cisco ESA',
+    Splunk_TA_cisco_meraki: 'Cisco Meraki Add-on for Splunk',
+    'Splunk_TA_cisco-wsa': 'Splunk Add-on for Cisco WSA',
+    'TA-cisco-cloud-security-addon': 'Cisco Secure Access Add-on for Splunk',
+    TA_cisco_catalyst: 'Cisco Catalyst Add-on for Splunk',
+    ta_cisco_spaces: 'Cisco Spaces Add-on for Splunk',
+    ta_cisco_thousandeyes: 'Cisco ThousandEyes App for Splunk',
+};
+
+/** Prefer an installed app label while retaining the folder name as its ID. */
+export const searchbaseAppLabel = (
+    app: string,
+    labelsByApp: ReadonlyMap<string, string>
+): string => labelsByApp.get(app) ?? SEARCHBASE_APP_LABEL_FALLBACKS[app] ?? app;
+
 export interface SearchbaseCatalogueOptions {
     /**
      * When true, include stanzas marked `search_hidden`. Default false.

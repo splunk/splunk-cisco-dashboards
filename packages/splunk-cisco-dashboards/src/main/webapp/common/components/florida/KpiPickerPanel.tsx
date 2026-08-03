@@ -58,7 +58,9 @@ import { cn } from '@/common/lib/utils';
 import {
     clearSearchbaseCache,
     getSearchbaseCatalogue,
+    getSplunkAppLabels,
     plainTextFromHtml,
+    searchbaseAppLabel,
     type SearchbaseRecord,
 } from '@/common/services/searchbaseCatalogue';
 import type { MetricOverride } from '@/common/hooks/usePersistedMetricOverrides';
@@ -546,6 +548,7 @@ const buildSearchbaseEditUrl = (entry: SearchbaseRecord): string | null => {
 interface AppMultiSelectProps {
     apps: string[];
     appCountByName: ReadonlyMap<string, number>;
+    appLabelsById: ReadonlyMap<string, string>;
     selectedApps: ReadonlySet<string>;
     onChange: (next: Set<string>) => void;
     ariaLabel: string;
@@ -556,6 +559,7 @@ interface AppMultiSelectProps {
 const AppMultiSelect: React.FC<AppMultiSelectProps> = ({
     apps,
     appCountByName,
+    appLabelsById,
     selectedApps,
     onChange,
     ariaLabel,
@@ -649,7 +653,9 @@ const AppMultiSelect: React.FC<AppMultiSelectProps> = ({
                                         : 'py-0.5 pl-2 pr-1 text-[10px] uppercase tracking-wide'
                                 )}
                             >
-                                <span className="max-w-[210px] truncate">{app}</span>
+                                <span className="max-w-[210px] truncate" title={app}>
+                                    {searchbaseAppLabel(app, appLabelsById)}
+                                </span>
                                 {count > 0 && (
                                     <span className="font-normal opacity-75">{count}</span>
                                 )}
@@ -659,8 +665,8 @@ const AppMultiSelect: React.FC<AppMultiSelectProps> = ({
                                         e.stopPropagation();
                                         removeApp(app);
                                     }}
-                                    title={`Remove ${app} app filter`}
-                                    aria-label={`Remove ${app} app filter`}
+                                    title={`Remove ${searchbaseAppLabel(app, appLabelsById)} app filter`}
+                                    aria-label={`Remove ${searchbaseAppLabel(app, appLabelsById)} app filter`}
                                     className="rounded-full p-0.5 hover:bg-sky-700/40"
                                 >
                                     <X className={compact ? 'h-2 w-2' : 'h-2.5 w-2.5'} />
@@ -752,7 +758,9 @@ const AppMultiSelect: React.FC<AppMultiSelectProps> = ({
                                     >
                                         {selected && <Check className="h-3 w-3" />}
                                     </span>
-                                    <span className="truncate">{app}</span>
+                                    <span className="truncate" title={app}>
+                                        {searchbaseAppLabel(app, appLabelsById)}
+                                    </span>
                                 </span>
                                 <span className="shrink-0 text-[10px] font-bold text-slate-400 dark:text-slate-500">
                                     {count}
@@ -1363,6 +1371,25 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         }
         return map;
     }, [catalogue]);
+
+    const [appLabelsById, setAppLabelsById] = useState<Map<string, string>>(
+        () => new Map()
+    );
+
+    useEffect(() => {
+        let cancelled = false;
+        const appIds = new Set([...apps, DEFAULT_APP_SCOPE]);
+        getSplunkAppLabels(appIds)
+            .then((labels) => {
+                if (!cancelled) setAppLabelsById(labels);
+            })
+            .catch(() => {
+                if (!cancelled) setAppLabelsById(new Map());
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [apps]);
 
     const drilldownBaseEntries = useMemo(
         () =>
@@ -2262,6 +2289,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 <AppMultiSelect
                                     apps={apps}
                                     appCountByName={appCountByName}
+                                    appLabelsById={appLabelsById}
                                     selectedApps={selectedApps}
                                     onChange={setSelectedApps}
                                     ariaLabel="Filter searches by app"
@@ -3279,6 +3307,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                     appCountByName={
                                                                         drilldownAppCountByName
                                                                     }
+                                                                    appLabelsById={appLabelsById}
                                                                     selectedApps={
                                                                         drilldownSelectedApps
                                                                     }

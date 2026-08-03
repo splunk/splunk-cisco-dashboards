@@ -68,6 +68,8 @@ const GUIDE_GROUPS = [
     label: "Explore",
     sections: [
       { id: "dashboards", label: "Dashboard Map" },
+      { id: "workspaces", label: "Insights Workspaces" },
+      { id: "site-connectivity", label: "Site Connectivity" },
       { id: "lookups", label: "Supporting Assets" },
     ],
   },
@@ -76,6 +78,7 @@ const GUIDE_GROUPS = [
     sections: [
       { id: "operations", label: "Operations" },
       { id: "troubleshooting", label: "Troubleshooting" },
+      { id: "release-notes", label: "Release Notes" },
     ],
   },
 ];
@@ -388,10 +391,16 @@ function GuidePageToc({
 
 const dashboards = [
   {
-    title: "Executive Briefing",
-    view: "overview",
+    title: "Secure Networking",
+    view: "secure_networking_profile",
     summary:
-      "Executive landing page with health KPIs, signal rail, topology, and summary tiles.",
+      "Executive landing page with health KPIs, workspace-aware signal rail, topology, and summary tiles.",
+  },
+  {
+    title: "Insights Workspaces",
+    view: "insights_workspace",
+    summary:
+      "Reusable executive views that keep their own sections, tile choices, map placement, and theme.",
   },
   {
     title: "IT Health",
@@ -615,6 +624,9 @@ const troubleshootingRows = [
 
 export default function UserGuidePage(): JSX.Element {
   const macroTuningUrl = appUrl("macro_index_tuning");
+  const setupUrl = `${appUrl("start")}?setup=1`;
+  const workspaceUrl = appUrl("insights_workspace");
+  const secureNetworkingUrl = appUrl("secure_networking_profile");
   const scdMacrosUrl = managerUrl(APP_NAME, "data/macros");
   const cimMacrosUrl = managerUrl("Splunk_SA_CIM", "data/macros");
   const guideContentRef = useRef<HTMLDivElement | null>(null);
@@ -1037,7 +1049,7 @@ export default function UserGuidePage(): JSX.Element {
             <Section
               id="install"
               title="Day-One Setup"
-              kicker="Use this sequence after installing the app and required dependencies."
+              kicker="Use the guided setup to validate packages, tune index macros, and choose a search-performance mode."
               icon={<PlayCircle size={19} />}
             >
               <ol className="m-0 grid gap-3 pl-5 text-sm leading-6 text-slate-700">
@@ -1050,23 +1062,31 @@ export default function UserGuidePage(): JSX.Element {
                   tuning dashboards.
                 </li>
                 <li>
-                  Open Macro Index Tuning and run the fast scan for dashboard
-                  macros.
+                  Open the guided setup. It checks the required apps, detects
+                  Cisco sourcetypes, and proposes the index macro definitions
+                  used by this app and its companion apps.
                 </li>
                 <li>
-                  Save the generated SCD macros, then save any Cisco Security
-                  Cloud and ThousandEyes model macros that apply.
+                  Review and save the generated macro definitions. The setup
+                  keeps balanced mode available while acceleration catches up;
+                  accelerated-summaries-only mode remains guarded by its data
+                  model prerequisites.
                 </li>
                 <li>
                   Run CIM discovery separately with a short range, then save the
                   CIM macros into Splunk_SA_CIM.
                 </li>
                 <li>
-                  Refresh the app in Splunk Web, load the dashboards, and use
-                  Open in Search on any empty panel.
+                  Open the data-model readiness card to see which models need
+                  acceleration, then use Open in Search to inspect the exact
+                  readiness query or an empty dashboard panel.
                 </li>
               </ol>
               <div className="mt-4 flex flex-wrap gap-2">
+                <GuideLink href={setupUrl}>
+                  <PlayCircle size={15} />
+                  Open Guided Setup
+                </GuideLink>
                 <GuideLink href={macroTuningUrl}>
                   <SlidersHorizontal size={15} />
                   Open Macro Index Tuning
@@ -1107,13 +1127,24 @@ export default function UserGuidePage(): JSX.Element {
                       index_
                     </code>
                     from this app at runtime, so newly added index macros appear
-                    in the scan without updating a hardcoded list.
+                    in the scan without updating a hardcoded list. It also
+                    centralizes companion macro tuning, including Cisco Data
+                    Center Networking, Cisco Security Cloud, and ThousandEyes
+                    definitions, so their dashboards are ready when you open
+                    them.
                   </p>
                   <p className="m-0">
                     CIM discovery is intentionally separate because it uses
                     tag-based raw searches such as authentication and network
                     communication tags. Keep that range short unless you are
                     validating a new deployment.
+                  </p>
+                  <p className="m-0">
+                    The readiness panel reports acceleration independently of
+                    macro detection. Use its <strong>Open in Search</strong>{" "}
+                    link to review the REST-backed check, or an individual
+                    <strong> Accelerate data model</strong> link to open the
+                    matching Data Models manager page.
                   </p>
                   <CodeBlock>{`# SCD macro format
 [index_catalyst]
@@ -1288,6 +1319,88 @@ iseval = 0`}</CodeBlock>
             </Section>
 
             <Section
+              id="workspaces"
+              title="Insights Workspaces"
+              kicker="Create reusable, customer-ready views without changing the built-in Secure Networking workspace."
+              icon={<Layers size={19} />}
+            >
+              <div className="grid gap-4 md:grid-cols-2">
+                <InfoCard title="Workspace-owned configuration">
+                  A workspace stores its own section layout, selected tiles,
+                  signal rail, map visibility and placement, map presentation,
+                  and light, dark, or system theme. Changes remain isolated to
+                  that workspace.
+                </InfoCard>
+                <InfoCard title="Start with a template, then make it yours">
+                  Templates are only a starting point for a new workspace.
+                  After creation, edit the workspace directly: add or remove
+                  sections, choose the tiles shown in each section, and tune
+                  the visible tile count for the audience.
+                </InfoCard>
+                <InfoCard title="Use the right catalogue">
+                  The workspace source determines the safe tile catalogue. App
+                  labels are shown in the picker for readability; hover a label
+                  to see the Splunk app directory name when you need it.
+                </InfoCard>
+                <InfoCard title="Present the same data differently">
+                  Use executive workspaces for a concise briefing and a deeper
+                  operational workspace for troubleshooting. The map can sit
+                  beside, above, or below the tile grid, or be hidden when it
+                  is not useful to the audience.
+                </InfoCard>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <GuideLink href={workspaceUrl}>
+                  <Layers size={15} />
+                  Open Insights Workspaces
+                </GuideLink>
+                <GuideLink href={secureNetworkingUrl}>
+                  <Gauge size={15} />
+                  Open Secure Networking
+                </GuideLink>
+              </div>
+            </Section>
+
+            <Section
+              id="site-connectivity"
+              title="Customer Site Connectivity"
+              kicker="Use the topology editor to connect business sites to ThousandEyes agent-to-agent measurements."
+              icon={<MapIcon size={19} />}
+            >
+              <div className="grid gap-4 md:grid-cols-3">
+                <InfoCard title="Discover site names">
+                  The editor queries ThousandEyes agent-to-agent metric events
+                  and offers the observed agent locations and names as site
+                  inputs. Start from the sites Splunk already sees instead of
+                  manually typing a fragile search filter.
+                </InfoCard>
+                <InfoCard title="Bind an A2A test">
+                  Select the source and target sites, then choose a discovered
+                  agent-to-agent test. The saved binding drives inter-site
+                  latency, loss, and jitter with the matching test identity.
+                </InfoCard>
+                <InfoCard title="Investigate in ThousandEyes">
+                  A bound test retains the ThousandEyes permalink when it is
+                  present, or builds a link from the test and account IDs. Use
+                  it to open the same test in ThousandEyes for path-level
+                  investigation.
+                </InfoCard>
+              </div>
+              <div className="mt-4 border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
+                <strong>When no test is available:</strong> create an
+                agent-to-agent test between the two enterprise agents in
+                ThousandEyes, allow metric events to arrive in Splunk, then
+                reopen the topology editor and select the discovered test.
+              </div>
+              <div className="mt-4">
+                <GuideLink href={secureNetworkingUrl}>
+                  <MapIcon size={15} />
+                  Open Site Connectivity Map
+                </GuideLink>
+              </div>
+            </Section>
+
+            <Section
               id="lookups"
               title="Lookups, Searchbase, and Saved Searches"
               kicker="A few support assets are part of normal operation."
@@ -1299,7 +1412,15 @@ iseval = 0`}</CodeBlock>
                   <code>default/searchbase.conf</code> as the catalogue for
                   dashboard SPL, admin references, and helper tooling. React
                   utilities can read this catalogue when a page needs to expose
-                  or run a named search.
+                  or run a named search. Each entry can retain its source app
+                  classification while opening locally in Splunk App for Secure
+                  Networking.
+                </InfoCard>
+                <InfoCard title="Searchbase Canvas">
+                  Use the canvas to assemble a working view from catalogue
+                  searches. Filter tiles by app, working state, needs attention,
+                  or failed searches; the app filter adapts its counts to the
+                  other active filters.
                 </InfoCard>
                 <InfoCard title="site_topology_lookup">
                   The scheduled Site Topology Lookup Generator snapshots
@@ -1391,6 +1512,73 @@ iseval = 0`}</CodeBlock>
                   Searchbase Canvas
                 </GuideLink>
               </div>
+            </Section>
+
+            <Section
+              id="release-notes"
+              title="What’s New and Release Notes"
+              kicker="A concise record of user-visible changes included with this version of the app."
+              icon={<CheckCircle2 size={19} />}
+            >
+              <div className="overflow-x-auto">
+                <table className="min-w-full border-collapse text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                      <th className="px-3 py-2 font-bold">Version</th>
+                      <th className="px-3 py-2 font-bold">Release focus</th>
+                      <th className="px-3 py-2 font-bold">Administrator action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-slate-100 align-top">
+                      <td className="px-3 py-3 font-mono text-xs font-bold text-sky-800">
+                        {APP_VERSION_LABEL}
+                      </td>
+                      <td className="px-3 py-3 text-slate-700">
+                        Guided setup, workspace customization, Searchbase
+                        navigation, and site-connectivity improvements.
+                      </td>
+                      <td className="px-3 py-3 text-slate-700">
+                        Review setup readiness after installing companion apps;
+                        existing workspaces keep their saved configuration.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                <InfoCard title="Guided setup and performance readiness">
+                  Setup now brings package checks, index macro discovery, data
+                  model acceleration readiness, targeted Data Models links, and
+                  the readiness query&apos;s Open in Search path into one flow.
+                  Balanced mode remains available while recommended
+                  acceleration is completed.
+                </InfoCard>
+                <InfoCard title="Insights Workspaces">
+                  Workspaces now own their layout and presentation choices,
+                  including sections, tiles, signal rail, map configuration,
+                  and theme. A template helps create the initial workspace but
+                  does not constrain future customization.
+                </InfoCard>
+                <InfoCard title="Searchbase and tile selection">
+                  Searchbase Canvas distinguishes failed searches from other
+                  attention states and adds app filtering. Catalogue and tile
+                  pickers display friendly app labels with the on-disk name
+                  available as hover detail.
+                </InfoCard>
+                <InfoCard title="Site connectivity">
+                  The topology workflow can discover ThousandEyes agent-to-agent
+                  site inputs, bind a selected test, and link operators to the
+                  corresponding ThousandEyes test for deeper investigation.
+                </InfoCard>
+              </div>
+              <p className="mt-5 text-sm leading-6 text-slate-600">
+                This in-app section is the release-notes source for the current
+                version. For upgrades, use the setup workflow after installation
+                to confirm companion-package and data-model readiness before
+                publishing a workspace to users.
+              </p>
             </Section>
 
             <div className="grid gap-4 md:grid-cols-4">
