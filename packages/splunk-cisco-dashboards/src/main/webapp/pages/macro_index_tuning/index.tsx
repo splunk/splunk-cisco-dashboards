@@ -1838,7 +1838,6 @@ export default function MacroIndexTuningPage(): JSX.Element {
   }, [rowsToSave, saveOne]);
 
   const finishInitialSetup = useCallback(async () => {
-    if (scanState !== "ready") return;
     if (summariesOnlyBlocked) {
       setSetupStatus({
         state: "error",
@@ -1866,7 +1865,10 @@ export default function MacroIndexTuningPage(): JSX.Element {
 
       setSetupStatus({
         state: "saving",
-        message: "Saving detected index macros",
+        message:
+          scanState === "ready"
+            ? "Saving detected index macros"
+            : "Skipping index macro tuning",
       });
       for (const row of setupRowsToSave) {
         const rowKey = macroStatusKey(row);
@@ -2128,8 +2130,11 @@ export default function MacroIndexTuningPage(): JSX.Element {
     if (summariesOnlyBlocked) {
       setupActionMessage =
         "Choose Balanced or accelerate all three required Cisco data models.";
-    } else if (!setupScanReady) {
+    } else if (scanState === "loading") {
       setupActionMessage = "Waiting for the automatic index scan to finish.";
+    } else if (scanState === "error") {
+      setupActionMessage =
+        "The index scan did not complete. Finish setup now and retry macro tuning later.";
     }
 
     return (
@@ -2731,7 +2736,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
         >
           <div>
             <div className="text-[10px] font-bold uppercase tracking-wide text-sky-800">
-              Step 3 of 3 · {setupScanReady ? "Ready to finish" : "Scanning"}
+              Step 3 of 3 · {setupScanReady ? "Ready to finish" : scanState === "error" ? "Ready to finish without tuning" : "Scanning"}
             </div>
             <div className="mt-0.5 text-xs text-slate-600">
               {setupActionMessage}
@@ -2749,7 +2754,6 @@ export default function MacroIndexTuningPage(): JSX.Element {
               type="button"
               onClick={finishInitialSetup}
               disabled={
-                !setupScanReady ||
                 setupStatus.state === "saving" ||
                 isSavingAll ||
                 summariesOnlyBlocked
@@ -2835,8 +2839,10 @@ export default function MacroIndexTuningPage(): JSX.Element {
             <div className="mt-0.5 text-sm text-slate-600">
               {summariesOnlyBlocked
                 ? "Enable acceleration for the required Cisco data models before finishing."
-                : scanState !== "ready"
+                : scanState === "loading"
                   ? "Waiting for the automatic index scan to finish."
+                  : scanState === "error"
+                    ? "The index scan did not complete. Finish setup now and retry macro tuning later."
                   : `${setupRowsToSave.length} detected index macro${
                       setupRowsToSave.length === 1 ? "" : "s"
                     } will be saved when setup finishes.`}
@@ -2854,7 +2860,6 @@ export default function MacroIndexTuningPage(): JSX.Element {
               type="button"
               onClick={finishInitialSetup}
               disabled={
-                scanState !== "ready" ||
                 setupStatus.state === "saving" ||
                 isSavingAll ||
                 summariesOnlyBlocked

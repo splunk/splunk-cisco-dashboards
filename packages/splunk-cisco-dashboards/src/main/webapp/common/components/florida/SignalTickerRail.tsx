@@ -680,18 +680,58 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
         () => new Set(config.items.map((item) => item.searchName)),
         [config.items]
     );
+    // Keep every facet aligned with the visibility controls. The catalogue can
+    // briefly retain hidden entries while an async refresh is in flight, so
+    // applying this locally prevents an app with zero eligible searches from
+    // appearing in the App selector.
+    const drilldownSearchNames = useMemo(
+        () =>
+            new Set(
+                catalogue
+                    .map((entry) => entry.drilldownSearchName?.trim().toLowerCase())
+                    .filter((name): name is string => Boolean(name))
+            ),
+        [catalogue]
+    );
+    const visibilityCatalogue = useMemo(
+        () =>
+            catalogue.filter((entry) => {
+                if (!includeHiddenSearches && entry.searchHidden) return false;
+                const key = entry.searchName.trim().toLowerCase();
+                const id = entry.id.trim().toLowerCase();
+                if (
+                    !includeDrilldownSearches &&
+                    (drilldownSearchNames.has(key) || drilldownSearchNames.has(id))
+                ) {
+                    return false;
+                }
+                return includeTableSearches || entry.defaultViz !== 'splunk.table';
+            }),
+        [
+            catalogue,
+            drilldownSearchNames,
+            includeDrilldownSearches,
+            includeHiddenSearches,
+            includeTableSearches,
+        ]
+    );
     const apps = useMemo(() => {
         const set = new Set<string>();
-        for (const entry of catalogue) {
+        for (const entry of visibilityCatalogue) {
             if (entry.catalogueApp) set.add(entry.catalogueApp);
         }
         return Array.from(set).sort((a, b) =>
             a.localeCompare(b, undefined, { sensitivity: 'base' })
         );
-    }, [catalogue]);
+    }, [visibilityCatalogue]);
+    useEffect(() => {
+        if (selectedApp !== ALL_APPS && !apps.includes(selectedApp)) {
+            setSelectedApp(ALL_APPS);
+        }
+    }, [apps, selectedApp]);
     const categories = useMemo(() => {
         const set = new Set<string>();
-        for (const entry of catalogue) {
+        for (const entry of visibilityCatalogue) {
             if (
                 selectedApp !== ALL_APPS &&
                 entry.catalogueApp !== selectedApp
@@ -703,11 +743,11 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
         return Array.from(set).sort((a, b) =>
             a.localeCompare(b, undefined, { sensitivity: 'base' })
         );
-    }, [catalogue, selectedApp]);
+    }, [visibilityCatalogue, selectedApp]);
     const subCategories = useMemo(() => {
         if (selectedCategory === ALL_CATEGORIES) return [];
         const set = new Set<string>();
-        for (const entry of catalogue) {
+        for (const entry of visibilityCatalogue) {
             if (
                 selectedApp !== ALL_APPS &&
                 entry.catalogueApp !== selectedApp
@@ -720,10 +760,10 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
         return Array.from(set).sort((a, b) =>
             a.localeCompare(b, undefined, { sensitivity: 'base' })
         );
-    }, [catalogue, selectedApp, selectedCategory]);
+    }, [visibilityCatalogue, selectedApp, selectedCategory]);
     const tagFacetEntries = useMemo(() => {
         const q = query.trim().toLowerCase();
-        return catalogue.filter((entry) => {
+        return visibilityCatalogue.filter((entry) => {
             if (
                 selectedApp !== ALL_APPS &&
                 entry.catalogueApp !== selectedApp
@@ -760,7 +800,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
         });
     }, [
         activeTags,
-        catalogue,
+        visibilityCatalogue,
         query,
         selectedApp,
         selectedCategory,

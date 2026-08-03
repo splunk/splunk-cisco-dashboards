@@ -5672,12 +5672,25 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
 
   const appFacetRecords = useMemo(
     () =>
-      addableRecords.filter(
+      browseRecords.filter(
         (record) =>
-          includeHiddenSearches ||
-          !(record.searchHidden || hiddenSearchbaseIds.has(record.id)),
+          (includeHiddenSearches ||
+            !(record.searchHidden || hiddenSearchbaseIds.has(record.id))) &&
+          recordMatchesAddTileVisibility(
+            record,
+            drilldownSearchNames,
+            includeDrilldownSearches,
+            includeTableSearches,
+          ),
       ),
-    [addableRecords, hiddenSearchbaseIds, includeHiddenSearches],
+    [
+      browseRecords,
+      drilldownSearchNames,
+      hiddenSearchbaseIds,
+      includeDrilldownSearches,
+      includeHiddenSearches,
+      includeTableSearches,
+    ],
   );
 
   const apps = useMemo(() => {
@@ -5699,6 +5712,14 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     }
     return map;
   }, [appFacetRecords]);
+
+  useEffect(() => {
+    setSelectedApps((current) => {
+      if (current.size === 0) return current;
+      const next = new Set([...current].filter((app) => apps.includes(app)));
+      return next.size === current.size ? current : next;
+    });
+  }, [apps]);
 
   const categories = useMemo(() => {
     const set = new Set<string>();

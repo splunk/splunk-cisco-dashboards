@@ -90,6 +90,7 @@ import SpaceManagerButton from './SpaceManager/SpaceManagerButton';
 import useDashboardStore from '../../common/state/dashboardStore';
 import createSEIIconRegistry from '../../common/udf/IconProviders/createSEIIconRegistry';
 import { resolveSearchbaseDefinitionForNativeStudio } from './searchbaseDefinitionUtils';
+import { repairSearchbaseTimeQueryParameters } from './dashboardTimeUtils';
 
 const ENABLE_EXPERIMENTAL_SPACE_MANAGER = false;
 
@@ -730,6 +731,7 @@ const DashboardStudioEditor = ({
 
     const dashboardApiElem = useRef(null);
     const [apiRef, setApiRef] = useState();
+    const repairedTimeDefinitionRef = useRef();
 
     const [isDashboardMounted, setIsDashboardMounted] = useState(false);
 
@@ -1172,6 +1174,23 @@ const DashboardStudioEditor = ({
     useEffect(() => {
         if (dashboardCoreApi == null && apiRef) setDashboardCoreApi(apiRef);
     }, [apiRef]);
+
+    useEffect(() => {
+        const dashboardApi = dashboardApiElem.current ?? apiRef;
+        const definition = dashboardApi?.getDefinition?.();
+
+        if (!definition) {
+            return;
+        }
+
+        const repairedDefinition = repairSearchbaseTimeQueryParameters(definition);
+        if (repairedDefinition === definition || repairedTimeDefinitionRef.current === definition) {
+            return;
+        }
+
+        repairedTimeDefinitionRef.current = repairedDefinition;
+        dashboardApi.updateDefinition?.(repairedDefinition);
+    }, [apiRef, isDashboardMounted]);
 
     const toggleButton = (
         <Button data-test="clone-dashboard-toolbar-button" label={_('Actions')} isMenu />

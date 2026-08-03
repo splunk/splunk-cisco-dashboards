@@ -6,6 +6,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import Menu from '@splunk/react-ui/Menu';
 import WaitSpinner from '@splunk/react-ui/WaitSpinner';
 import Text from '@splunk/react-ui/Text';
+import { getDashboardTimeQueryParameters } from './dashboardTimeUtils';
 
 const cancelButtonStyle = {
     margin: '10px 15px',
@@ -51,17 +52,16 @@ const SelectSearchbaseSearchSidebar = ({ dataSourceTemplate, from, dataSourceBin
                 options: {
                     ...dataSourceTemplate.options,
                     ref: newSBSearch.name,
-                    queryParameters: {
-                        earliest: newSBSearch.earliest,
-                        latest: newSBSearch.latest,
-                    },
+                    queryParameters: getDashboardTimeQueryParameters(
+                        dashboardApi.getDefinition(),
+                    ),
                 },
                 name: newSBSearch.name,
             };
             //setSelectedSearchbaseSearch(newSBSearch);
             openNewDataSourcePanel(newDs, newSBSearch.metaData);
         },
-        [openNewDataSourcePanel, dataSourceTemplate]
+        [dashboardApi, openNewDataSourcePanel, dataSourceTemplate]
     );
 
     const handleRequestClose = useCallback(
@@ -103,8 +103,6 @@ const SelectSearchbaseSearchSidebar = ({ dataSourceTemplate, from, dataSourceBin
                                     onClick={() =>
                                         setSelectedSearch({
                                             name: search.name,
-                                            earliest: search.content.dispatch_earliest_time,
-                                            latest: search.content.dispatch_latest_time,
                                         })
                                     }
                                     description={search.name}

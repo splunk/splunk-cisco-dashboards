@@ -308,6 +308,14 @@ assert.match(macroTuningSource, /externalAppMacroSummaries/);
 assert.match(macroTuningSource, /Open CIM macros/);
 assert.match(macroTuningSource, /Advanced tuning/);
 assert.match(macroTuningSource, /Save and finish setup/);
+assert.match(
+  macroTuningSource,
+  /Finish setup now and retry macro tuning later/,
+);
+assert.doesNotMatch(
+  macroTuningSource,
+  /const finishInitialSetup[\s\S]*?if \(scanState !== "ready"\) return;/,
+);
 assert.match(macroTuningSource, /DATA_MODEL_ACCELERATION_SEARCH/);
 assert.match(macroTuningSource, /Accelerate recommended data models/);
 assert.match(macroTuningSource, /Recommended data model acceleration status/);

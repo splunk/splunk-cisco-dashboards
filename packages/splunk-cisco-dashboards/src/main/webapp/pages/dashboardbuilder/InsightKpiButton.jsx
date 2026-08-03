@@ -7,11 +7,7 @@ import {
     plainTextFromHtml,
 } from '../../common/services/searchbaseCatalogue';
 import DropdownWithSearch from './DropdownWithSearch';
-
-const GLOBAL_TIME_QUERY_PARAMETERS = {
-    earliest: '$global_time.earliest$',
-    latest: '$global_time.latest$',
-};
+import { getDashboardTimeQueryParameters } from './dashboardTimeUtils';
 
 const LAYOUT_MARGIN = 24;
 const LAYOUT_GAP = 24;
@@ -186,6 +182,9 @@ const InsightKpiButton = (props) => {
         if (selectedKpis && selectedKpis.length > 0) {
             const { dashboardApi } = props;
             const visualizationConfigs = [];
+            const queryParameters = getDashboardTimeQueryParameters(
+                dashboardApi.coreApi.getDefinition(),
+            );
 
             selectedKpis.forEach((selectedKpi) => {
                 const searchName = createDataSourceName(selectedKpi);
@@ -199,7 +198,7 @@ const InsightKpiButton = (props) => {
                         options: {
                             ref: selectedKpi.id,
                             ownerApp: selectedKpi.ownerApp,
-                            queryParameters: GLOBAL_TIME_QUERY_PARAMETERS,
+                            queryParameters,
                         },
                         name: searchName,
                     });

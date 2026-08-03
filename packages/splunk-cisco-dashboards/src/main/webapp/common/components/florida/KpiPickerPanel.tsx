@@ -484,9 +484,13 @@ const entryIsDrilldownSearch = (
 const entryMatchesBrowseVisibility = (
     entry: SearchbaseRecord,
     drilldownSearchNames: ReadonlySet<string>,
+    includeHiddenSearches: boolean,
     includeDrilldownSearches: boolean,
     includeTableSearches: boolean
 ): boolean => {
+    if (!includeHiddenSearches && entry.searchHidden) {
+        return false;
+    }
     if (
         !includeDrilldownSearches &&
         entryIsDrilldownSearch(entry, drilldownSearchNames)
@@ -1251,29 +1255,39 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         return names;
     }, [catalogue]);
 
-    // Entries the main browse list is allowed to render after App and
-    // Visibility filters. Category / sub-category / tag option lists are
-    // derived from this same slice so hidden drilldown/table-only branches
-    // cannot be selected into an empty result list.
-    const browseVisibleEntries = useMemo(() => {
-        return catalogue.filter((entry) => {
-            if (!entryMatchesAppSelection(entry, selectedApps)) {
-                return false;
-            }
-            return entryMatchesBrowseVisibility(
+    // This is deliberately independent of the App facet. App choices and
+    // counts must reflect the active visibility controls; otherwise an app
+    // containing only hidden searches remains selectable and leads to an
+    // empty result list.
+    const visibilityEligibleEntries = useMemo(() => {
+        return catalogue.filter((entry) =>
+            entryMatchesBrowseVisibility(
                 entry,
                 drilldownSearchNames,
+                includeHiddenSearches,
                 includeDrilldownSearches,
                 includeTableSearches
-            );
-        });
+            )
+        );
     }, [
         catalogue,
         drilldownSearchNames,
+        includeHiddenSearches,
         includeDrilldownSearches,
         includeTableSearches,
-        selectedApps,
     ]);
+
+    // Entries the main browse list is allowed to render after App and
+    // Visibility filters. Category / sub-category / tag option lists are
+    // derived from this same slice so unavailable branches cannot be selected
+    // into an empty result list.
+    const browseVisibleEntries = useMemo(
+        () =>
+            visibilityEligibleEntries.filter((entry) =>
+                entryMatchesAppSelection(entry, selectedApps)
+            ),
+        [selectedApps, visibilityEligibleEntries]
+    );
 
     // Distinct, sorted category list - drives the Category dropdown.
     // Scoped to the active App and Visibility facets so app selections
@@ -1322,28 +1336,35 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         }
     }, [selectedSubCategory, subCategories]);
 
-    // Distinct app namespaces (`dispatch_context` values) present in
-    // the catalogue. Drives the App facet dropdown. Sorted
-    // alphabetically so the order is stable across loads.
+    // Distinct app namespaces (`dispatch_context` values) in the visibility
+    // slice. Drives the App facet dropdown.
     const apps = useMemo(() => {
         const set = new Set<string>();
-        for (const e of catalogue) {
+        for (const e of visibilityEligibleEntries) {
             if (e.catalogueApp) set.add(e.catalogueApp);
         }
         return Array.from(set).sort((a, b) =>
             a.localeCompare(b, undefined, { sensitivity: 'base' })
         );
-    }, [catalogue]);
+    }, [visibilityEligibleEntries]);
 
     const appCountByName = useMemo(() => {
         const map = new Map<string, number>();
-        for (const entry of catalogue) {
+        for (const entry of visibilityEligibleEntries) {
             if (entry.catalogueApp) {
                 map.set(entry.catalogueApp, (map.get(entry.catalogueApp) ?? 0) + 1);
             }
         }
         return map;
-    }, [catalogue]);
+    }, [visibilityEligibleEntries]);
+
+    useEffect(() => {
+        setSelectedApps((current) => {
+            if (current.size === 0) return current;
+            const next = new Set([...current].filter((app) => apps.includes(app)));
+            return next.size === current.size ? current : next;
+        });
+    }, [apps]);
 
     const [appLabelsById, setAppLabelsById] = useState<Map<string, string>>(
         () => new Map()
@@ -1351,7 +1372,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
 
     useEffect(() => {
         let cancelled = false;
-        getSplunkAppLabels(apps)
+        getSplunkAppLabels(new Set(apps))
             .then((labels) => {
                 if (!cancelled) setAppLabelsById(labels);
             })
