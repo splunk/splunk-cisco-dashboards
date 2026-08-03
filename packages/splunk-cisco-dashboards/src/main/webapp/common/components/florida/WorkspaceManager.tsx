@@ -112,6 +112,11 @@ const copyDraft = (
 const sourceLabel = (sourceWorkspace: WorkspaceSourceId): string =>
     sourceWorkspace === 'secure_networking' ? 'Secure Networking' : 'Executive Briefing';
 
+const sourceDescription = (sourceWorkspace: WorkspaceSourceId): string =>
+    sourceWorkspace === 'secure_networking'
+        ? 'Network operations, access, infrastructure, segmentation, and firewalling.'
+        : 'Executive IT, security, building, and cross-domain signals.';
+
 export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
     open,
     currentWorkspace,
@@ -406,25 +411,6 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                                 )}
                             </label>
                             <label className="text-[11px] font-bold text-slate-700 dark:text-slate-200">
-                                Source workspace
-                                <select
-                                    value={draft.sourceWorkspace}
-                                    disabled={Boolean(draft.existingWorkspace)}
-                                    onChange={(event) =>
-                                        updateSource(event.target.value as WorkspaceSourceId)
-                                    }
-                                    className="mt-1 block h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-xs font-normal text-slate-900 outline-none focus:border-sky-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
-                                >
-                                    {(Object.keys(WORKSPACE_SOURCES) as WorkspaceSourceId[]).map(
-                                        (sourceId) => (
-                                            <option key={sourceId} value={sourceId}>
-                                                {sourceLabel(sourceId)}
-                                            </option>
-                                        ),
-                                    )}
-                                </select>
-                            </label>
-                            <label className="text-[11px] font-bold text-slate-700 dark:text-slate-200">
                                 Default visible tiles per section
                                 <input
                                     type="number"
@@ -440,6 +426,62 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                                     className="mt-1 block h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-xs font-normal text-slate-900 outline-none focus:border-sky-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
                                 />
                             </label>
+                            <div className="col-span-2">
+                                {draft.existingWorkspace ? (
+                                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-950/40">
+                                        <p className="text-[11px] font-bold text-slate-700 dark:text-slate-200">
+                                            Workspace blueprint
+                                        </p>
+                                        <p className="mt-1 text-xs font-semibold text-slate-900 dark:text-white">
+                                            {sourceLabel(draft.sourceWorkspace)}
+                                        </p>
+                                        <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                                            Blueprint is locked for existing workspaces so their section layout and customizations stay intact.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <fieldset>
+                                        <legend className="text-[11px] font-bold text-slate-700 dark:text-slate-200">
+                                            Workspace blueprint
+                                        </legend>
+                                        <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                                            Choose the collection of sections this new workspace can use.
+                                        </p>
+                                        <div className="mt-3 grid grid-cols-2 gap-3">
+                                            {(Object.keys(WORKSPACE_SOURCES) as WorkspaceSourceId[]).map(
+                                                (sourceId) => {
+                                                    const selected = draft.sourceWorkspace === sourceId;
+                                                    const blueprint = WORKSPACE_SOURCES[sourceId];
+                                                    return (
+                                                        <button
+                                                            key={sourceId}
+                                                            type="button"
+                                                            onClick={() => updateSource(sourceId)}
+                                                            aria-pressed={selected}
+                                                            className={cn(
+                                                                'rounded-lg border p-3 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-sky-300',
+                                                                selected
+                                                                    ? 'border-sky-400 bg-sky-50 ring-1 ring-sky-200 dark:border-sky-600 dark:bg-sky-950/40 dark:ring-sky-900'
+                                                                    : 'border-slate-200 bg-white hover:border-sky-300 hover:bg-sky-50/50 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-sky-700 dark:hover:bg-slate-800/80',
+                                                            )}
+                                                        >
+                                                            <span className="block text-xs font-bold text-slate-900 dark:text-white">
+                                                                {sourceLabel(sourceId)}
+                                                            </span>
+                                                            <span className="mt-1 block text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+                                                                {sourceDescription(sourceId)}
+                                                            </span>
+                                                            <span className="mt-2 block text-[10px] font-semibold text-sky-700 dark:text-sky-300">
+                                                                {blueprint.sections.map((section) => section.title).join(' · ')}
+                                                            </span>
+                                                        </button>
+                                                    );
+                                                },
+                                            )}
+                                        </div>
+                                    </fieldset>
+                                )}
+                            </div>
                             <label className="text-[11px] font-bold text-slate-700 dark:text-slate-200">
                                 Workspace theme
                                 <select
