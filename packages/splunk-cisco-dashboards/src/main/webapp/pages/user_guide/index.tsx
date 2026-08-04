@@ -1576,6 +1576,11 @@ iseval = 0`}</CodeBlock>
                   pickers display friendly app labels with the on-disk name
                   available as hover detail.
                 </InfoCard>
+                <InfoCard title="Contextual empty results">
+                  Searchbase-backed Secure Networking panels now explain when no
+                  matching telemetry exists in the selected time range, including
+                  when the monitored condition may simply not have occurred.
+                </InfoCard>
                 <InfoCard title="Site connectivity">
                   The topology workflow can discover ThousandEyes agent-to-agent
                   site inputs, bind a selected test, and link operators to the
