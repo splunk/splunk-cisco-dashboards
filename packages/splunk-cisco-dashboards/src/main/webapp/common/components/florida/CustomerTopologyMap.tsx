@@ -96,6 +96,7 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
     map: {
         center: [37.5, -98.5],
         zoom: 4.1,
+        fitSitesOnLoad: true,
         minZoom: 3,
         maxZoom: 11,
         bounds: [
@@ -103,22 +104,9 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
             [50.5, -66.0],
         ],
     },
-    // `internetEdgeMbps` is intentionally left undefined on every site.
-    // The earlier 1000 / 500 / 500 placeholders were initial estimates
-    // from a design-of-record conversation that was never confirmed
-    // against real circuit records. Shipping them on a customer-facing
-    // exec dashboard meant the popup was claiming a number we did not
-    // actually know. The site-level "Design of Record" block in the
-    // popup is conditional on the value being defined, so leaving it
-    // unset hides the block cleanly and matches the rest of the
-    // popup's "Awaiting"-pattern for empty fields. Customers who want
-    // to surface a real number can enter it through the existing
-    // topology editor pencil-tool ("Internet edge Mbps" field), which
-    // writes to the shared customer_topology.conf payload and immediately
-    // repopulates the popup for every user. If the customer's network
-    // team ever confirms actual circuit bandwidths, the values can be
-    // restored here as a packaged default and the shared config entry
-    // will override them at runtime.
+    // Factory topology is intentionally self-contained for product demos.
+    // These values are illustrative only; a customer-saved topology or
+    // bound telemetry search continues to override them at runtime.
     sites: [
         {
             id: 'nyc',
@@ -127,9 +115,11 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
             role: 'state_hq',
             lat: 40.7128,
             lng: -74.006,
-            status: 'unknown',
-            metrics: {},
-            telemetrySource: 'Configured topology item',
+            status: 'stable',
+            metrics: { healthPct: 99, activeDevices: 84, alerts: 1, latencyMs: 14 },
+            internetEdgeMbps: 1000,
+            dataState: 'static',
+            telemetrySource: 'Factory demo telemetry (healthy)',
         },
         {
             id: 'san-francisco',
@@ -138,9 +128,11 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
             role: 'datacenter',
             lat: 37.7749,
             lng: -122.4194,
-            status: 'unknown',
-            metrics: {},
-            telemetrySource: 'Configured topology item',
+            status: 'stable',
+            metrics: { healthPct: 98, activeDevices: 67, alerts: 0, latencyMs: 18 },
+            internetEdgeMbps: 1000,
+            dataState: 'static',
+            telemetrySource: 'Factory demo telemetry (healthy)',
         },
         {
             id: 'houston',
@@ -149,9 +141,11 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
             role: 'branch',
             lat: 29.7604,
             lng: -95.3698,
-            status: 'unknown',
-            metrics: {},
-            telemetrySource: 'Configured topology item',
+            status: 'warning',
+            metrics: { healthPct: 87, activeDevices: 52, alerts: 3, latencyMs: 48 },
+            internetEdgeMbps: 500,
+            dataState: 'static',
+            telemetrySource: 'Factory demo telemetry (attention)',
         },
     ],
     links: [
@@ -161,7 +155,19 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
             sourceSiteId: 'nyc',
             targetSiteId: 'san-francisco',
             status: 'stable',
+            capacityMbps: 1000,
+            throughputMbps: 620,
+            peakThroughputMbps: 760,
+            utilizationPct: 62,
+            peakUtilizationPct: 76,
+            latencyMs: 22,
+            lossPct: 0.02,
+            jitterMs: 3,
+            endpointHealthPct: 99,
+            endpointDevices: 151,
             searchName: 'Overview - Link Demo (Healthy)',
+            teLink: 'https://app.thousandeyes.com/',
+            dataState: 'static',
             telemetrySource: 'Demo synthetic SD-WAN feed (healthy)',
         },
         {
@@ -170,7 +176,19 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
             sourceSiteId: 'san-francisco',
             targetSiteId: 'houston',
             status: 'warning',
+            capacityMbps: 500,
+            throughputMbps: 420,
+            peakThroughputMbps: 460,
+            utilizationPct: 84,
+            peakUtilizationPct: 92,
+            latencyMs: 86,
+            lossPct: 0.7,
+            jitterMs: 18,
+            endpointHealthPct: 89,
+            endpointDevices: 119,
             searchName: 'Overview - Link Demo (Warning)',
+            teLink: 'https://app.thousandeyes.com/',
+            dataState: 'static',
             telemetrySource: 'Demo synthetic SD-WAN feed (degraded)',
         },
         {
@@ -179,7 +197,19 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
             sourceSiteId: 'houston',
             targetSiteId: 'nyc',
             status: 'stable',
+            capacityMbps: 1000,
+            throughputMbps: 320,
+            peakThroughputMbps: 480,
+            utilizationPct: 32,
+            peakUtilizationPct: 48,
+            latencyMs: 31,
+            lossPct: 0.04,
+            jitterMs: 5,
+            endpointHealthPct: 97,
+            endpointDevices: 136,
             searchName: 'Overview - Link Demo (Healthy)',
+            teLink: 'https://app.thousandeyes.com/',
+            dataState: 'static',
             telemetrySource: 'Demo synthetic SD-WAN feed (healthy)',
         },
     ],
@@ -1518,6 +1548,8 @@ const selectAutoTeMatch = (
     return best;
 };
 
+const THOUSAND_EYES_APP_URL = 'https://app.thousandeyes.com/';
+
 const buildThousandEyesTestLink = (teTestId?: string): string | undefined => {
     if (!teTestId) return undefined;
     return `https://app.thousandeyes.com/network-app-synthetics/views/?testId=${encodeURIComponent(
@@ -1642,6 +1674,13 @@ const sanitizeTopology = (
         const fallbackAliases = optionalTextArray(fallbackSite?.aliases);
         const resolvedAliases =
             aliases.length > 0 ? aliases : fallbackAliases.length > 0 ? fallbackAliases : [];
+        const hasConfiguredSiteMetric = Object.values(site.metrics ?? {}).some(
+            (value) => finiteOptionalNumber(value) !== undefined
+        );
+        const isLegacyFactorySite =
+            !hasConfiguredSiteMetric &&
+            optionalText(site.telemetrySource) === 'Configured topology item' &&
+            fallbackSite?.telemetrySource?.startsWith('Factory demo telemetry');
         return {
             id,
             name: textValue(site.name, fallbackSite?.name ?? shortName),
@@ -1657,16 +1696,27 @@ const sanitizeTopology = (
                 ? site.status
                 : fallbackSite?.status ?? 'unknown',
             metrics: {
-                activeDevices: finiteOptionalNumber(site.metrics?.activeDevices),
-                alerts: finiteOptionalNumber(site.metrics?.alerts),
-                healthPct: finiteOptionalNumber(site.metrics?.healthPct),
-                latencyMs: finiteOptionalNumber(site.metrics?.latencyMs),
+                activeDevices:
+                    finiteOptionalNumber(site.metrics?.activeDevices) ??
+                    fallbackSite?.metrics.activeDevices,
+                alerts:
+                    finiteOptionalNumber(site.metrics?.alerts) ??
+                    fallbackSite?.metrics.alerts,
+                healthPct:
+                    finiteOptionalNumber(site.metrics?.healthPct) ??
+                    fallbackSite?.metrics.healthPct,
+                latencyMs:
+                    finiteOptionalNumber(site.metrics?.latencyMs) ??
+                    fallbackSite?.metrics.latencyMs,
             },
             lastUpdated: optionalText(site.lastUpdated),
-            dataState: resolvedSiteSearchName ? 'loading' : site.dataState ?? 'static',
+            dataState:
+                site.dataState ?? (resolvedSiteSearchName ? 'loading' : 'static'),
             dataError: optionalText(site.dataError),
             telemetrySource:
-                optionalText(site.telemetrySource) ??
+                (isLegacyFactorySite
+                    ? fallbackSite?.telemetrySource
+                    : optionalText(site.telemetrySource)) ??
                 (resolvedSiteSearchName
                     ? 'Awaiting normalized site telemetry'
                     : 'Configured topology item'),
@@ -1698,6 +1748,10 @@ const sanitizeTopology = (
                 normalizeId(link.id, `${sourceSiteId}-${targetSiteId}`),
                 usedLinkIds
             );
+            const fallbackLinkById = fallbackLinksById.get(id) ?? fallbackLink;
+            const isLegacyFactoryLink =
+                optionalText(link.telemetrySource)?.startsWith('Demo synthetic SD-WAN feed') &&
+                fallbackLinkById?.telemetrySource?.startsWith('Demo synthetic SD-WAN feed');
             const searchName = normalizeSearchBinding(
                 link,
                 fallbackLinksById.get(id)?.searchName
@@ -1715,9 +1769,8 @@ const sanitizeTopology = (
                     ? link.status
                     : fallbackLink?.status ?? 'unknown',
                 dataState:
-                    searchName || thousandEyesA2A
-                        ? 'loading'
-                        : link.dataState ?? 'static',
+                    link.dataState ??
+                    (searchName || thousandEyesA2A ? 'loading' : 'static'),
                 telemetrySource:
                     optionalText(link.telemetrySource) ??
                     'Awaiting topology link telemetry',
@@ -1744,6 +1797,10 @@ const sanitizeTopology = (
             if (latencyMs !== undefined) normalized.latencyMs = latencyMs;
             const lossPct = finiteOptionalNumber(link.lossPct);
             if (lossPct !== undefined) normalized.lossPct = lossPct;
+            const jitterMs =
+                finiteOptionalNumber(link.jitterMs) ??
+                (isLegacyFactoryLink ? fallbackLinkById?.jitterMs : undefined);
+            if (jitterMs !== undefined) normalized.jitterMs = jitterMs;
             const endpointHealthPct = finiteOptionalNumber(link.endpointHealthPct);
             if (endpointHealthPct !== undefined) {
                 normalized.endpointHealthPct = endpointHealthPct;
@@ -1752,6 +1809,10 @@ const sanitizeTopology = (
             if (endpointDevices !== undefined) {
                 normalized.endpointDevices = endpointDevices;
             }
+            const teLink =
+                optionalText(link.teLink) ??
+                (isLegacyFactoryLink ? fallbackLinkById?.teLink : undefined);
+            if (teLink) normalized.teLink = teLink;
             const lastUpdated = optionalText(link.lastUpdated);
             if (lastUpdated) normalized.lastUpdated = lastUpdated;
             const dataError = optionalText(link.dataError);
@@ -1776,6 +1837,13 @@ const sanitizeTopology = (
                 numberValue(source.map?.center?.[1], fallbackMap.center[1], -180, 180),
             ],
             zoom: numberValue(source.map?.zoom, fallbackMap.zoom, 1, 16),
+            fitSitesOnLoad:
+                source.map?.fitSitesOnLoad === true ||
+                (source.map?.fitSitesOnLoad === undefined &&
+                    fallbackMap.fitSitesOnLoad === true &&
+                    source.map?.center?.[0] === 37.5 &&
+                    source.map?.center?.[1] === -98.5 &&
+                    source.map?.zoom === 4.1),
             minZoom: numberValue(source.map?.minZoom, fallbackMap.minZoom, 1, 16),
             maxZoom: numberValue(source.map?.maxZoom, fallbackMap.maxZoom, 1, 20),
             bounds: [
@@ -4881,6 +4949,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 ...current.map,
                 center: currentMapView.center,
                 zoom: currentMapView.zoom,
+                fitSitesOnLoad: false,
             },
         }));
     }, [currentMapView]);
@@ -5750,7 +5819,9 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     );
     const resolvedSiteSpread = topologySiteSpread(resolvedTopology.sites);
     const shouldAutoFitGlobalTopology =
-        resolvedSiteSpread.latSpan > 45 || resolvedSiteSpread.lngSpan > 120;
+        resolvedTopology.map.fitSitesOnLoad === true ||
+        resolvedSiteSpread.latSpan > 45 ||
+        resolvedSiteSpread.lngSpan > 120;
     const bounds = L.latLngBounds(effectiveMapBounds[0], effectiveMapBounds[1]);
     const roleLegendExpanded = roleLegendMode === 'expanded';
     const roleLegendPreviewSites = resolvedTopology.sites.slice(0, 6);
@@ -7706,6 +7777,9 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
             map: {
                 ...current.map,
                 ...patch,
+                ...(patch.center !== undefined || patch.zoom !== undefined
+                    ? { fitSitesOnLoad: false }
+                    : {}),
             },
         }));
     };
@@ -9704,6 +9778,7 @@ const LinkDetails: React.FC<LinkDetailsProps> = ({ link, siteById, isDark }) => 
     const isLoading = link.dataState === 'loading';
     const thousandEyesLink =
         buildThousandEyesTestLink(link.thousandEyesA2A?.teTestId) ?? link.teLink;
+    const isGenericThousandEyesLink = thousandEyesLink === THOUSAND_EYES_APP_URL;
     return (
         <>
             <div className="grid grid-cols-2 gap-2">
@@ -9893,7 +9968,9 @@ const LinkDetails: React.FC<LinkDetailsProps> = ({ link, siteById, isDark }) => 
                         )}
                     >
                         <ExternalLink className="w-3 h-3" />
-                        View in ThousandEyes
+                        {isGenericThousandEyesLink
+                            ? 'Open ThousandEyes'
+                            : 'View in ThousandEyes'}
                     </a>
                 )}
             </div>

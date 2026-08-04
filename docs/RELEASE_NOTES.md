@@ -2,6 +2,11 @@
 
 ## 1.0.34
 
+- Macro Index Tuning now separates the dashboard-macro heading from its search
+  and action controls, and its factory acceleration macro no longer applies a
+  global <code>fillnull_value</code> policy to every <code>tstats</code> search.
+- User Guide is now a first-class left-navigation item with its own book icon,
+  so it remains directly available from every app page.
 - Secure Network Segmentation now includes Palo Alto traffic detail and policy
   effectiveness searches enriched with Cisco ISE Security Group Tags by source
   IP.
@@ -15,6 +20,13 @@
   bind a selected test, and link operators to the corresponding test.
 - The factory Customer Site Connectivity map now starts with New York City,
   San Francisco, and Houston, with two healthy demo links and one warning link.
+- Factory site and path drill-ins now include clearly labeled demonstration
+  health, device, alert, capacity, utilization, latency, loss, and jitter
+  values, so the topology is useful before live telemetry is connected.
+- Factory links now offer a generic ThousandEyes launch link; a bound A2A test
+  continues to replace it with a direct test view.
+- Factory topology now fits its three demonstration sites when opened from any
+  workspace; a saved custom map view remains authoritative.
 - Searchbase Canvas distinguishes failed searches, supports app filtering, and
   updates app counts from the active filters.
 - The Insights tile picker and Searchbase filters show friendly Splunk app

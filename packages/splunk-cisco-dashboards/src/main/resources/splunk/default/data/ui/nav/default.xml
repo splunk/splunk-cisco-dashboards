@@ -67,6 +67,8 @@
         <view name="reports" label="Reports" />
     </collection>
 
+    <a href="user_guide" icon="book">User Guide</a>
+
     <collection label="Other" icon="layout">
         <collection label="Core Dashboards">
             <view name="executive_briefing_profile" label="Executive Briefing" />
@@ -100,7 +102,6 @@
 
         <collection label="Admin &amp; Tools">
             <a href="start?setup=1">Setup</a>
-            <a href="user_guide">User Guide</a>
             <a href="macro_index_tuning">Macro Index Tuning</a>
         </collection>
     </collection>

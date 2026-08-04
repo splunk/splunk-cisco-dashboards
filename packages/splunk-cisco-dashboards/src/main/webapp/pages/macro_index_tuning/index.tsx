@@ -45,9 +45,9 @@ const TUNING_SEARCHBASE_ID = "admin_macro_index_tuning";
 const TUNING_SEARCH_NAME = "Admin - Macro Index Tuning";
 const ADHOC_MACRO_NAME = "scd_summariesonly";
 const DEFAULT_SUMMARIESONLY_DEFINITION =
-  "summariesonly=false allow_old_summaries=false fillnull_value=null";
+  "summariesonly=false allow_old_summaries=false";
 const ACCELERATED_SUMMARIESONLY_DEFINITION =
-  "summariesonly=true allow_old_summaries=true fillnull_value=null";
+  "summariesonly=true allow_old_summaries=true";
 const DEFAULT_SUMMARIESONLY_DESCRIPTION =
   "Controls whether data-model searches use only accelerated summaries or may fall back to raw events. Keep summariesonly=false until all required data models are fully accelerated.";
 const SUMMARIESONLY_ACCELERATION_ERROR =
@@ -3589,23 +3589,23 @@ export default function MacroIndexTuningPage(): JSX.Element {
       )}
 
       <section className="mb-4 border border-slate-200 bg-white">
-        <div className="grid gap-3 border-b border-slate-200 px-4 py-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
-          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="flex shrink-0 items-center gap-2">
-              <Search size={17} className="text-sky-700" />
-              <div>
-                <h2 className="m-0 text-base font-bold text-slate-900">
-                  Dashboard index macro definitions
-                </h2>
-                <p className="mt-0.5 text-xs text-slate-500">
-                  Macros owned by {APP_NAME}. This search also filters the Cisco
-                  app section below.
-                </p>
-              </div>
+        <div className="border-b border-slate-200 px-4 py-3">
+          <div className="flex items-start gap-2">
+            <Search size={17} className="mt-0.5 shrink-0 text-sky-700" />
+            <div>
+              <h2 className="m-0 text-base font-bold text-slate-900">
+                Dashboard index macro definitions
+              </h2>
+              <p className="mt-0.5 text-xs text-slate-500">
+                Macros owned by {APP_NAME}. This search also filters the Cisco
+                app section below.
+              </p>
             </div>
+          </div>
+          <div className="mt-3 grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
             <label
               htmlFor="macro-index-tuning-search"
-              className="relative min-w-0 w-full sm:min-w-[260px] sm:max-w-[420px]"
+              className="relative min-w-0 w-full lg:max-w-2xl"
             >
               <span className="sr-only">
                 Search macro, definition, indexes, and sourcetypes
@@ -3623,22 +3623,22 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 className={tableSearchInputBase}
               />
             </label>
-          </div>
-          <div className="flex min-w-0 flex-wrap items-center gap-2 xl:justify-end">
-            <CopyButton
-              text={macroStanzas}
-              label="Copy macros.conf"
-              targetRef={macroPreviewRef}
-            />
-            <a
-              href={macrosManagerUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`${lightButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
-            >
-              <ExternalLink size={16} />
-              Open SCD macros
-            </a>
+            <div className="flex min-w-0 flex-wrap items-center gap-2 lg:justify-end">
+              <CopyButton
+                text={macroStanzas}
+                label="Copy macros.conf"
+                targetRef={macroPreviewRef}
+              />
+              <a
+                href={macrosManagerUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`${lightButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
+              >
+                <ExternalLink size={16} />
+                Open SCD macros
+              </a>
+            </div>
           </div>
         </div>
 

@@ -179,6 +179,8 @@ export interface CustomerTopology {
     map: {
         center: [number, number];
         zoom: number;
+        /** Fit configured sites on initial load until an operator saves a view. */
+        fitSitesOnLoad?: boolean;
         minZoom: number;
         maxZoom: number;
         bounds: [[number, number], [number, number]];
