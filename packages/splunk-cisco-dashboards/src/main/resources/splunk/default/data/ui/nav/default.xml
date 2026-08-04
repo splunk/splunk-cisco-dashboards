@@ -67,7 +67,7 @@
         <view name="reports" label="Reports" />
     </collection>
 
-    <a href="user_guide" icon="book">User Guide</a>
+    <a href="user_guide" icon="organizernotebook">User Guide</a>
 
     <collection label="Other" icon="layout">
         <collection label="Core Dashboards">

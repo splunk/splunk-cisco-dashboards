@@ -5,7 +5,7 @@
 - Macro Index Tuning now separates the dashboard-macro heading from its search
   and action controls, and its factory acceleration macro no longer applies a
   global <code>fillnull_value</code> policy to every <code>tstats</code> search.
-- User Guide is now a first-class left-navigation item with its own book icon,
+- User Guide is now a first-class left-navigation item with its own notebook icon,
   so it remains directly available from every app page.
 - Secure Network Segmentation now includes Palo Alto traffic detail and policy
   effectiveness searches enriched with Cisco ISE Security Group Tags by source
