@@ -1579,7 +1579,10 @@ iseval = 0`}</CodeBlock>
                 <InfoCard title="Contextual empty results">
                   Searchbase-backed Secure Networking panels now explain when no
                   matching telemetry exists in the selected time range, including
-                  when the monitored condition may simply not have occurred.
+                  when the monitored condition may simply not have occurred. The
+                  searches used by every Secure Networking Studio dashboard also
+                  emit visualization-compatible fallback rows, so the guidance is
+                  preserved outside Dashboard Manager.
                 </InfoCard>
                 <InfoCard title="Site connectivity">
                   The topology workflow can discover ThousandEyes agent-to-agent

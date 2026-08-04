@@ -17,8 +17,13 @@ const editorPath = path.join(
     packageRoot,
     "src/main/webapp/pages/dashboardbuilder/DashboardStudioEditor.jsx",
 );
+const searchbasePath = path.join(
+    packageRoot,
+    "src/main/resources/splunk/default/searchbase.conf",
+);
 const dataSource = fs.readFileSync(dataSourcePath, "utf8");
 const editor = fs.readFileSync(editorPath, "utf8");
+const searchbase = fs.readFileSync(searchbasePath, "utf8");
 const secureNetworkingViews = fs
     .readdirSync(viewsRoot)
     .filter((name) => /^secure_networking_.*\.xml$/.test(name));
@@ -26,6 +31,7 @@ const secureNetworkingViews = fs
 assert.ok(secureNetworkingViews.length > 0, "Secure Networking dashboards must exist");
 
 const searchbaseRefs = new Set();
+const singleValueBindings = new Map();
 secureNetworkingViews.forEach((name) => {
     const xml = fs.readFileSync(path.join(viewsRoot, name), "utf8");
     const definition = xml.match(/<definition><!\[CDATA\[([\s\S]*?)\]\]><\/definition>/);
@@ -44,9 +50,44 @@ secureNetworkingViews.forEach((name) => {
             searchbaseRefs.add(dataSourceDefinition.options.ref);
         }
     });
+    Object.values(dashboard.visualizations || {}).forEach((visualization) => {
+        if (!String(visualization?.type || "").startsWith("splunk.singlevalue")) {
+            return;
+        }
+        const dataSourceId = Object.values(visualization.dataSources || {})[0];
+        const ref = dashboard.dataSources?.[dataSourceId]?.options?.ref;
+        if (!ref) {
+            return;
+        }
+        const optionText = JSON.stringify(visualization.options || {});
+        const bindings = optionText.matchAll(/seriesByName\('([^']+)'\)/g);
+        if (!singleValueBindings.has(ref)) {
+            singleValueBindings.set(ref, new Set());
+        }
+        Array.from(bindings).forEach((match) => singleValueBindings.get(ref).add(match[1]));
+    });
 });
 
 assert.ok(searchbaseRefs.size > 0, "Secure Networking dashboards must use Searchbase searches");
+searchbaseRefs.forEach((ref) => {
+    const marker = `[${ref}]`;
+    const start = searchbase.indexOf(marker);
+    assert.notEqual(start, -1, `${ref} must exist in searchbase.conf`);
+    const next = searchbase.indexOf("\n[", start + marker.length);
+    const stanza = searchbase.slice(start, next === -1 ? searchbase.length : next);
+    assert.match(
+        stanza,
+        /\|\s*appendpipe\b|^search\s*=\s*\|\s*makeresults\b/m,
+        `${ref} must return a typed fallback row when its primary search is empty`,
+    );
+    const fallback = stanza.match(/\|\s*appendpipe\b[\s\S]*$/)?.[0] || stanza;
+    (singleValueBindings.get(ref) || []).forEach((field) => {
+        assert.ok(
+            fallback.includes(field),
+            `${ref} must preserve the Studio single-value binding ${field} in its fallback`,
+        );
+    });
+});
 assert.match(
     dataSource,
     /const getEmptyResultMessage = \(content = \{\}, ref = ''\)/,
@@ -69,5 +110,5 @@ assert.match(
 );
 
 console.log(
-    `✓ Reviewed ${secureNetworkingViews.length} Secure Networking dashboards and ${searchbaseRefs.size} Searchbase searches for contextual empty-result handling`,
+    `✓ Reviewed ${secureNetworkingViews.length} Secure Networking dashboards and ${searchbaseRefs.size} Searchbase searches for query-level and renderer-level empty-result handling`,
 );
