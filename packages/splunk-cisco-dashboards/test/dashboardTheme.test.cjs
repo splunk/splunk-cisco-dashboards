@@ -31,6 +31,16 @@ assert.match(
   /<SplunkThemeProvider[\s\S]*?colorScheme=\{dashboardColorScheme\}/,
   "The embedded Dashboard Studio theme provider must receive the dashboard theme",
 );
+const modalThemeProvider = editor.indexOf(
+  '<SplunkThemeProvider\n                family="prisma"\n                density="comfortable"\n                colorScheme={dashboardColorScheme}',
+);
+const firstEditorModal = editor.indexOf('<Modal\n                open={openConvertModal}');
+assert.ok(
+  modalThemeProvider !== -1 &&
+    firstEditorModal !== -1 &&
+    modalThemeProvider < firstEditorModal,
+  "Dashboard Studio confirmation dialogs must inherit the saved dashboard theme",
+);
 assert.match(
   editor,
   /ignoreAttributes:\s*false,[\s\S]*?attributeNamePrefix:\s*''/,

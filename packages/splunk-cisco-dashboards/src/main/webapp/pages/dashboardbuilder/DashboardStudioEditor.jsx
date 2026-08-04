@@ -1672,6 +1672,11 @@ const DashboardStudioEditor = ({
     return (
         <>
             <ToastMessages />
+            <SplunkThemeProvider
+                family="prisma"
+                density="comfortable"
+                colorScheme={dashboardColorScheme}
+            >
             <Modal
                 open={openConvertModal}
                 className={`dashboard-builder-themed-modal dashboard-builder-themed-modal-${dashboardColorScheme}`}
@@ -1881,6 +1886,7 @@ const DashboardStudioEditor = ({
                     <Button appearance="secondary" label="Cancel" onClick={goBackOrClose} />
                 </Modal.Footer>
             </Modal>
+            </SplunkThemeProvider>
             {currentDashboard == undefined ? (
                 <></>
             ) : (

@@ -1565,6 +1565,11 @@ iseval = 0`}</CodeBlock>
                   and theme. A template helps create the initial workspace but
                   does not constrain future customization.
                 </InfoCard>
+                <InfoCard title="Dashboard Studio editing">
+                  Dashboard Manager confirmation dialogs now use the edited
+                  dashboard&apos;s saved light or dark theme, even when it differs
+                  from the signed-in user&apos;s Splunk appearance preference.
+                </InfoCard>
                 <InfoCard title="Searchbase and tile selection">
                   Searchbase Canvas distinguishes failed searches from other
                   attention states and adds app filtering. Catalogue and tile
