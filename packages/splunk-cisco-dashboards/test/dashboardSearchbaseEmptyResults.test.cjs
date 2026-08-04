@@ -13,7 +13,12 @@ const dataSourcePath = path.join(
     packageRoot,
     "src/main/webapp/pages/dashboardbuilder/SearchBaseDataSource.jsx",
 );
+const editorPath = path.join(
+    packageRoot,
+    "src/main/webapp/pages/dashboardbuilder/DashboardStudioEditor.jsx",
+);
 const dataSource = fs.readFileSync(dataSourcePath, "utf8");
+const editor = fs.readFileSync(editorPath, "utf8");
 const secureNetworkingViews = fs
     .readdirSync(viewsRoot)
     .filter((name) => /^secure_networking_.*\.xml$/.test(name));
@@ -56,6 +61,11 @@ assert.match(
     dataSource,
     /this\.emptyResultMessage = getEmptyResultMessage\(content, this\.options\.ref\)/,
     "Each Searchbase stanza must supply context for its empty-result message",
+);
+assert.match(
+    editor,
+    /No matching telemetry was found in the selected time range/,
+    "Dashboard Studio must replace its generic empty-result copy with actionable guidance",
 );
 
 console.log(

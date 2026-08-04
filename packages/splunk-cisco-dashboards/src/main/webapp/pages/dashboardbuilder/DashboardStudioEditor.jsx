@@ -1669,6 +1669,80 @@ const DashboardStudioEditor = ({
         }
     };
 
+    useEffect(() => {
+        const usesDarkSurface = (element) => {
+            let ancestor = element.parentElement;
+
+            while (ancestor) {
+                const background = window.getComputedStyle(ancestor).backgroundColor;
+                const values = background.match(
+                    /rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/,
+                );
+                const opacity = values?.[4] == null ? 1 : Number(values[4]);
+
+                if (values && opacity > 0) {
+                    const [, red, green, blue] = values;
+                    return (
+                        Number(red) * 0.2126 +
+                            Number(green) * 0.7152 +
+                            Number(blue) * 0.0722 <
+                        140
+                    );
+                }
+
+                ancestor = ancestor.parentElement;
+            }
+
+            return false;
+        };
+
+        const replaceGenericEmptyState = (root = document) => {
+            const elements = [
+                ...(root instanceof Element ? [root] : []),
+                ...root.querySelectorAll('*'),
+            ];
+
+            elements.forEach((element) => {
+                if (
+                    element.children.length > 0 ||
+                    element.dataset.scdContextualEmptyState === 'true' ||
+                    element.textContent?.trim() !== 'No search results returned'
+                ) {
+                    return;
+                }
+
+                element.textContent =
+                    'No matching telemetry was found in the selected time range. The condition this panel detects may not have occurred; confirm its data source is onboarded, or widen the time range.';
+                element.style.setProperty(
+                    'color',
+                    usesDarkSurface(element) ? '#e2e8f0' : '#334155',
+                    'important',
+                );
+                element.style.lineHeight = '1.4';
+                element.style.maxWidth = '32rem';
+                element.setAttribute('aria-label', 'No matching telemetry was found');
+                element.dataset.scdContextualEmptyState = 'true';
+            });
+        };
+
+        replaceGenericEmptyState();
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.target instanceof Element) {
+                    replaceGenericEmptyState(mutation.target);
+                }
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        replaceGenericEmptyState(node);
+                    }
+                });
+            });
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        return () => observer.disconnect();
+    }, []);
+
     return (
         <>
             <ToastMessages />
