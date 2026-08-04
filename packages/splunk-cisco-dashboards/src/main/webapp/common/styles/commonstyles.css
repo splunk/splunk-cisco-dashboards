@@ -2885,8 +2885,11 @@ div.card-trend-footer [data-test='button'] {
 }
 
 .dropdown-kpi-menu {
+    display: flex;
+    flex-direction: column;
     width: 620px;
     max-width: calc(100vw - 48px);
+    overflow: hidden;
     background: var(--dashboard-builder-background-popup, #ffffff);
     border-color: var(--dashboard-builder-border-weak, #cccccc);
     color: var(--dashboard-builder-content-default, #4d4d4d);
@@ -2903,6 +2906,7 @@ div.card-trend-footer [data-test='button'] {
 }
 
 .dropdown-kpi-filter-shell {
+    flex: 0 0 auto;
     padding: 10px;
     border-bottom: 1px solid var(--dashboard-builder-border-weak, #dcdcdc);
 }
@@ -3048,11 +3052,13 @@ div.card-trend-footer [data-test='button'] {
 }
 
 .dropdown-kpi-select-all {
+    flex: 0 0 auto;
     padding: 7px 10px;
     border-bottom: 1px solid var(--dashboard-builder-border-weak, #dcdcdc);
 }
 
 .dropdown-kpi-selection-bar {
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -3081,6 +3087,18 @@ div.card-trend-footer [data-test='button'] {
     max-height: calc(100vh - 400px);
     overflow-y: auto;
     background: var(--dashboard-builder-background-popup, #ffffff);
+}
+
+.dropdown-kpi-results {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.dropdown-kpi-results .dropdown-list {
+    max-height: none;
+    overflow: visible;
 }
 
 .dropdown-item {
@@ -5459,6 +5477,18 @@ div[class^='adv-form-inputs-r'] div[class^='ColumnStyles__Styled'] {
 }
 .dashboard-builder-themed-modal-dark .dashboard-builder-modal-body {
     background-image: none !important;
+}
+
+/* Splunk renders the click-away layer in a portal outside Dashboard Studio.
+ * The editor marks body while a dialog is open because the portal is not a
+ * descendant of the themed editor root. */
+body.dashboard-builder-modal-portal-dark
+    [class*='ModalLayerStyles__StyledClickAwayOverlay'] {
+    background: rgba(2, 6, 23, 0.72) !important;
+}
+body.dashboard-builder-modal-portal-light
+    [class*='ModalLayerStyles__StyledClickAwayOverlay'] {
+    background: rgba(15, 23, 42, 0.32) !important;
 }
 .dashboard-builder-modal-content {
     padding: 4px 0px 12px 0px;

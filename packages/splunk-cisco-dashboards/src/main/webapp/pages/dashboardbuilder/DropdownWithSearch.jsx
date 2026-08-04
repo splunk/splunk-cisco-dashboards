@@ -22,6 +22,8 @@ const ALL_CATEGORIES = '__all_categories__';
 const ALL_SUB_CATEGORIES = '__all_sub_categories__';
 const KPI_MENU_WIDTH = 620;
 const MENU_VIEWPORT_MARGIN = 12;
+const KPI_MENU_MAX_HEIGHT = 640;
+const KPI_MENU_MIN_HEIGHT = 260;
 const CONFIG_PANEL_MIN_WIDTH = 240;
 const CONFIG_PANEL_MIN_HEIGHT = 300;
 
@@ -125,7 +127,7 @@ export default function DropdownWithSearch({
     const [includeHiddenSearches, setIncludeHiddenSearches] = useState(false);
     const [includeDrilldownSearches, setIncludeDrilldownSearches] = useState(false);
     const [includeTableSearches, setIncludeTableSearches] = useState(false);
-    const [filtersOpen, setFiltersOpen] = useState(true);
+    const [filtersOpen, setFiltersOpen] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
     const [menuPosition, setMenuPosition] = useState(undefined);
     const [selection, setSelection] = useState([]);
@@ -136,6 +138,7 @@ export default function DropdownWithSearch({
 
         const rect = dropdownRef.current.getBoundingClientRect();
         const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
         const maxMenuWidth = Math.max(320, viewportWidth - MENU_VIEWPORT_MARGIN * 2);
         const menuWidth = Math.min(KPI_MENU_WIDTH, maxMenuWidth);
         const configurationPanelLeft = getConfigurationPanelLeft();
@@ -151,11 +154,17 @@ export default function DropdownWithSearch({
             MENU_VIEWPORT_MARGIN,
             Math.min(preferredLeft, availableRight - menuWidth),
         );
+        const spaceBelow = viewportHeight - rect.bottom - MENU_VIEWPORT_MARGIN;
+        const spaceAbove = rect.top - MENU_VIEWPORT_MARGIN;
+        const openAbove = spaceBelow < KPI_MENU_MIN_HEIGHT && spaceAbove > spaceBelow;
+        const availableHeight = openAbove ? spaceAbove : spaceBelow;
+        const height = Math.max(180, Math.min(KPI_MENU_MAX_HEIGHT, availableHeight));
 
         setMenuPosition({
             left,
-            top: rect.bottom + 5,
+            top: openAbove ? Math.max(MENU_VIEWPORT_MARGIN, rect.top - height - 5) : rect.bottom + 5,
             width: menuWidth,
+            height,
         });
     }, [isOpen]);
 
@@ -386,6 +395,7 @@ export default function DropdownWithSearch({
                                       position: 'fixed',
                                       top: menuPosition.top,
                                       width: menuPosition.width,
+                                      height: menuPosition.height,
                                   }
                                 : dropdownThemeStyle
                         }
@@ -618,7 +628,7 @@ export default function DropdownWithSearch({
                             </div>
                         </div>
 
-                        <div style={{ maxHeight: 500, overflowY: 'auto' }}>
+                        <div className="dropdown-kpi-results">
                             <ul className="dropdown-list">
                                 {sortedSearches.map((search) => (
                                     <DropdownItem

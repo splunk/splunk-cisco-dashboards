@@ -5,10 +5,23 @@
         <meta http-equiv="x-ua-compatible" content="ie=edge" />
         <title>Cisco Dashboard Builder</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link
-            rel="stylesheet"
-            href="${make_url('/static/app/splunk-cisco-dashboards/application.css')}"
-        />
+        <script>
+            // Do not use make_url() for app static assets here. Splunk Web can
+            // retain an old @hash:build namespace after an in-place app update,
+            // which leaves Dashboard Manager running an earlier JavaScript and
+            // stylesheet bundle. The direct app path is refreshed per page load.
+            (function loadDashboardBuilderStylesheet() {
+                const localeMatch = window.location.pathname.match(/^\/[^/]+/);
+                const localePrefix = localeMatch ? localeMatch[0] : '';
+                const appStaticBase =
+                    localePrefix + '/static/app/splunk-cisco-dashboards/';
+                const stylesheet = document.createElement('link');
+                stylesheet.rel = 'stylesheet';
+                stylesheet.href = appStaticBase + 'application.css?v=' + Date.now();
+                document.head.appendChild(stylesheet);
+                window.scdDashboardBuilderAssetBase = appStaticBase;
+            })();
+        </script>
         <style>
             div[data-test='DashboardLayoutContainer'] {
                 height: calc(100%);
@@ -30,7 +43,7 @@
                 const dashboardBuilderBundle =
                     document.createElement('script');
                 dashboardBuilderBundle.src =
-                    "${make_url('/static/app/splunk-cisco-dashboards/pages/dashboardbuilder.js')}" +
+                    window.scdDashboardBuilderAssetBase + 'pages/dashboardbuilder.js' +
                     '?v=' +
                     Date.now();
                 document.body.appendChild(dashboardBuilderBundle);
@@ -38,7 +51,7 @@
 
             const setupGate = document.createElement('script');
             setupGate.src =
-                "${make_url('/static/app/splunk-cisco-dashboards/application.js')}" +
+                window.scdDashboardBuilderAssetBase + 'application.js' +
                 '?v=' +
                 Date.now();
             setupGate.onload = function () {

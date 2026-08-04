@@ -764,6 +764,28 @@ const DashboardStudioEditor = ({
         currentDashboard?.theme,
         dashboardBuilderColorScheme,
     );
+    const hasThemedPortalModal =
+        openConvertModal || openBackToManagerModal || openDashboardModal;
+
+    // Splunk React UI mounts modal backdrops in a portal outside the Dashboard
+    // Studio root. Mark the document while one of our dialogs is open so the
+    // portal uses the dashboard theme rather than the surrounding Splunk shell.
+    useEffect(() => {
+        const portalThemeClasses = [
+            'dashboard-builder-modal-portal-light',
+            'dashboard-builder-modal-portal-dark',
+        ];
+        const activePortalThemeClass = `dashboard-builder-modal-portal-${dashboardColorScheme}`;
+
+        document.body.classList.remove(...portalThemeClasses);
+        if (!hasThemedPortalModal) {
+            return undefined;
+        }
+
+        document.body.classList.add(activePortalThemeClass);
+        return () => document.body.classList.remove(activePortalThemeClass);
+    }, [dashboardColorScheme, hasThemedPortalModal]);
+
     const editorTheme =
         dashboardColorScheme === 'dark' ? prismaDarkTheme : prismaLightTheme;
     const dashboardBuilderThemeStyle = {
@@ -1652,7 +1674,7 @@ const DashboardStudioEditor = ({
             <ToastMessages />
             <Modal
                 open={openConvertModal}
-                className={`dashboard-builder-themed-modal dashboard-builder-themed-modal-${dashboardBuilderColorScheme}`}
+                className={`dashboard-builder-themed-modal dashboard-builder-themed-modal-${dashboardColorScheme}`}
                 style={{ width: '600px', ...dashboardBuilderModalThemeStyle }}
             >
                 <Modal.Header title="Convert dashboard definition" icon={<Cog width="30px" />} />
@@ -1683,7 +1705,7 @@ const DashboardStudioEditor = ({
             </Modal>
             <Modal
                 open={openBackToManagerModal}
-                className={`dashboard-builder-themed-modal dashboard-builder-themed-modal-${dashboardBuilderColorScheme}`}
+                className={`dashboard-builder-themed-modal dashboard-builder-themed-modal-${dashboardColorScheme}`}
                 style={{ width: '460px', ...dashboardBuilderModalThemeStyle }}
                 onRequestClose={() => setOpenBackToManagerModal(false)}
             >
@@ -1708,7 +1730,7 @@ const DashboardStudioEditor = ({
             </Modal>
             <Modal
                 open={openDashboardModal}
-                className={`dashboard-builder-themed-modal dashboard-builder-themed-modal-${dashboardBuilderColorScheme}`}
+                className={`dashboard-builder-themed-modal dashboard-builder-themed-modal-${dashboardColorScheme}`}
                 style={{ width: '700px', ...dashboardBuilderModalThemeStyle }}
                 onRequestClose={goBackOrClose}
             >

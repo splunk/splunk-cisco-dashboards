@@ -16,6 +16,7 @@ import {
 const APP_NAME = 'splunk-cisco-dashboards';
 export const INSIGHTS_WORKSPACES_CONF_BASENAME = 'insights_workspaces';
 const TILE_ID_PATTERN = /^[a-z0-9_]{1,128}$/;
+const SEARCHBASE_ID_PATTERN = /^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,255}$/;
 
 const WORKSPACE_STANZA_PREFIX = 'workspace.';
 const LAYOUT_STANZA_PREFIX = 'layout.';
@@ -23,6 +24,8 @@ const LAYOUT_STANZA_PREFIX = 'layout.';
 export interface WorkspaceLayoutSection {
     tiles: string[];
     visibleCount?: number;
+    /** Searchbase stanza IDs intentionally added to this shared workspace section. */
+    searchbaseAdditions?: string[];
 }
 
 export type WorkspaceLayoutConfig = Partial<
@@ -103,6 +106,9 @@ const splitCsv = (raw: unknown): string[] => {
 
 const splitTiles = (raw: unknown): string[] =>
     splitCsv(raw).filter((tileId) => TILE_ID_PATTERN.test(tileId));
+
+const splitSearchbaseAdditions = (raw: unknown): string[] =>
+    splitCsv(raw).filter((searchbaseId) => SEARCHBASE_ID_PATTERN.test(searchbaseId));
 
 const extractErrorMessage = async (
     response: Response,
@@ -211,6 +217,7 @@ export const parseInsightsWorkspaceEntries = (
         const config = layouts[workspaceId] ?? {};
         config[sectionId] = {
             tiles: splitTiles(content.tiles),
+            searchbaseAdditions: splitSearchbaseAdditions(content.searchbase_additions),
             visibleCount:
                 visibleCount !== undefined
                     ? Math.min(Math.max(visibleCount, 1), workspace.maxTileCount)
@@ -364,6 +371,7 @@ export const saveWorkspaceLayout = async (
         if (!sectionConfig) continue;
         await upsertStanza(layoutStanzaName(workspace.id, section.id), {
             tiles: sectionConfig.tiles.filter((tileId) => TILE_ID_PATTERN.test(tileId)).join(','),
+            searchbase_additions: splitSearchbaseAdditions(sectionConfig.searchbaseAdditions).join(','),
             visible_count: String(
                 Math.min(
                     Math.max(sectionConfig.visibleCount ?? sectionConfig.tiles.length, 1),

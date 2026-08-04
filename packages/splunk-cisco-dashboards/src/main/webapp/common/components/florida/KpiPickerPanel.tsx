@@ -1979,8 +1979,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         const drilldownChanged =
             nextDrilldown !== (configuredDrilldownNameFor(selectedEntry, drilldownBindings) || null);
 
-        // Rebinding a tile to a different search is org-wide and
-        // high-blast-radius (every viewer's dashboard changes), but
+        // Rebinding a tile to a different search is shared with the
+        // current workspace's viewers, but
         // `selectedEntry` also drives simple browsing/previewing in
         // the results list above — clicking around to look at other
         // searches while this picker happens to be open for a
@@ -1990,8 +1990,10 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         // actually writes anything, same pattern as Factory Reset.
         if (searchChanged && typeof window !== 'undefined') {
             const confirmed = window.confirm(
-                `Rebind "${context.defaultLabel}" from "${context.currentSavedSearch ?? '(none)'}" to "${selectedEntry.searchName}"?\n\n` +
-                    'This is an org-wide change — every viewer of this dashboard will see the new search, not just you.'
+                `Replace the search for "${context.defaultLabel}"?\n\n` +
+                    `Current: ${context.currentSavedSearch ?? '(none)'}\n` +
+                    `New: ${selectedEntry.searchName}\n\n` +
+                    'This shared workspace tile will show the new search for all viewers of this workspace.'
             );
             if (!confirmed) return;
         }

@@ -2,6 +2,9 @@
 
 ## 1.0.34
 
+- Secure Network Segmentation now includes Palo Alto traffic detail and policy
+  effectiveness searches enriched with Cisco ISE Security Group Tags by source
+  IP.
 - Guided setup now combines package validation, macro discovery, data-model
   acceleration readiness, targeted Data Models links, and an Open in Search
   path for the readiness check.
@@ -10,6 +13,8 @@
   used only to start a new workspace.
 - Customer Site Connectivity can discover ThousandEyes agent-to-agent inputs,
   bind a selected test, and link operators to the corresponding test.
+- The factory Customer Site Connectivity map now starts with New York City,
+  San Francisco, and Houston, with two healthy demo links and one warning link.
 - Searchbase Canvas distinguishes failed searches, supports app filtering, and
   updates app counts from the active filters.
 - The Insights tile picker and Searchbase filters show friendly Splunk app
@@ -31,5 +36,16 @@
   administrators can retry optional macro tuning afterward.
 - Dashboard Studio editor chrome now follows the saved dashboard theme so dark
   dashboards no longer render against light editor controls.
+- Dashboard Studio confirmation dialogs now use the edited dashboard's theme,
+  including their click-away overlays.
+- Dashboard Studio now explicitly themes portal-rendered dialog backdrops from
+  the saved dashboard theme, preventing a light Splunk shell from washing out
+  a dark dashboard editor.
+- Dashboard Manager now loads its installed CSS and JavaScript directly after
+  an in-place update, avoiding stale Splunk Web static-asset namespaces.
+- Tile search replacement now clearly confirms that the change is shared with
+  viewers of the current workspace, rather than describing it as org-wide.
+- Adding a search tile now explicitly distinguishes a browser-local “For me”
+  choice from a permission-gated shared-workspace choice.
 - The in-app User Guide now documents the workspace, site-connectivity,
   Searchbase, performance-readiness, and release-notes workflows.

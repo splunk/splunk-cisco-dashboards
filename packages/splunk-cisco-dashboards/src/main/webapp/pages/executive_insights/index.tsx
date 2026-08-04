@@ -2327,6 +2327,8 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     workspaceId: insightsWorkspace.id,
     availableSections,
   });
+  const { canManage: canManageWorkspaceConfig } =
+    useCanManageInsightsWorkspaces();
   const {
     isHidden: isSectionTileHidden,
     hideTile: hideSectionTile,
@@ -2337,6 +2339,33 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     availableSections,
   });
 
+  // Shared additions are stored with the workspace layout; personal additions
+  // remain scoped to this browser via usePersistedSectionTileAdditions.
+  const [workspaceLayout, setWorkspaceLayout] =
+    useState<WorkspaceLayoutConfig>(initialLayout);
+  const [workspaceLayoutStatus, setWorkspaceLayoutStatus] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
+  const sharedSectionTileAdditions = useMemo<SectionTileAdditionMap>(() => {
+    const additions: SectionTileAdditionMap = {};
+    for (const section of availableSections) {
+      const ids = workspaceLayout[section]?.searchbaseAdditions ?? [];
+      if (ids.length > 0) additions[section] = ids;
+    }
+    return additions;
+  }, [availableSections, workspaceLayout]);
+  const effectiveSectionTileAdditions = useMemo<SectionTileAdditionMap>(() => {
+    const additions: SectionTileAdditionMap = {};
+    for (const section of availableSections) {
+      const ids = [
+        ...(sharedSectionTileAdditions[section] ?? []),
+        ...(sectionTileAdditions[section] ?? []),
+      ];
+      if (ids.length > 0) additions[section] = Array.from(new Set(ids));
+    }
+    return additions;
+  }, [availableSections, sectionTileAdditions, sharedSectionTileAdditions]);
+
   const baseMetricConfig = useMemo(
     () => buildOverviewMetricConfig(searchbaseRecords, insightsWorkspace),
     [insightsWorkspace, searchbaseRecords],
@@ -2345,7 +2374,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     () =>
       buildAddedOverviewMetricConfig(
         searchbaseRecords,
-        sectionTileAdditions,
+        effectiveSectionTileAdditions,
         insightsWorkspace,
         baseMetricConfig,
       ),
@@ -2353,7 +2382,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       baseMetricConfig,
       insightsWorkspace,
       searchbaseRecords,
-      sectionTileAdditions,
+      effectiveSectionTileAdditions,
     ],
   );
   const metricConfig = useMemo(
@@ -2375,14 +2404,8 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   // ------------------------------ Shared workspace tile layout ------------------------------
   //
   // The searchbase overview metadata is the full tile catalogue. This
-  // app-level config controls only the shared factory order and visible
-  // count for each section; it never carries search bindings.
-  const [workspaceLayout, setWorkspaceLayout] =
-    useState<WorkspaceLayoutConfig>(initialLayout);
-  const [workspaceLayoutStatus, setWorkspaceLayoutStatus] = useState<
-    "idle" | "saving" | "saved" | "error"
-  >("idle");
-
+  // app-level config controls shared order, visible counts, and the explicit
+  // Searchbase additions that belong to a workspace.
   const factoryTileCountDefaults = useMemo(() => {
     const out: Partial<Record<SectionId, number>> = {};
     for (const section of availableSections) {
@@ -3186,8 +3209,16 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   const closeAddTilePicker = useCallback(() => setAddTileSection(null), []);
 
   const handleAddSearchToSection = useCallback(
-    (section: SectionId, record: SearchbaseRecord) => {
+    async (
+      section: SectionId,
+      record: SearchbaseRecord,
+      destination: "personal" | "workspace",
+    ) => {
       if (!record.id) return;
+      if (destination === "workspace" && !canManageWorkspaceConfig) {
+        window.alert("You do not have permission to change this shared workspace.");
+        return;
+      }
       const sectionMetrics = metricConfig.filter((m) => m.section === section);
       const visibleSectionMetrics = renderMetricConfig.filter(
         (m) => m.section === section,
@@ -3214,27 +3245,66 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           : Math.min(currentVisibleCount, nextOrder.length);
       nextOrder.splice(insertAt, 0, newTileId);
 
-      addSectionTile(section, record.id);
-      setSectionTileOrder(section, nextOrder);
-      setSectionTileCount(
-        section,
-        Math.min(
-          sectionTileBounds.maxCount,
-          currentVisibleCount + 1,
-          visibleSectionMetrics.length + 1,
-        ),
+      const nextVisibleCount = Math.min(
+        sectionTileBounds.maxCount,
+        currentVisibleCount + 1,
+        visibleSectionMetrics.length + 1,
       );
+      const applyPersonalViewState = () => {
+        setSectionTileOrder(section, nextOrder);
+        setSectionTileCount(section, nextVisibleCount);
+      };
+      if (destination === "personal") {
+        applyPersonalViewState();
+        addSectionTile(section, record.id);
+        return;
+      }
+
+      const currentSharedAdditions =
+        workspaceLayout[section]?.searchbaseAdditions ?? [];
+      const nextSectionLayout = {
+        ...(workspaceLayout[section] ?? { tiles: [] }),
+        tiles: nextOrder,
+        visibleCount: nextVisibleCount,
+        searchbaseAdditions: Array.from(
+          new Set([...currentSharedAdditions, record.id]),
+        ),
+      };
+      const nextLayout: WorkspaceLayoutConfig = {
+        ...workspaceLayout,
+        [section]: nextSectionLayout,
+      };
+      setWorkspaceLayoutStatus("saving");
+      try {
+        await saveWorkspaceLayout(insightsWorkspace, { [section]: nextSectionLayout });
+        setWorkspaceLayout(nextLayout);
+        applyPersonalViewState();
+        setWorkspaceLayoutStatus("saved");
+        window.setTimeout(() => setWorkspaceLayoutStatus("idle"), 2400);
+      } catch (error) {
+        console.error("[insights] failed to add shared workspace tile", error);
+        setWorkspaceLayoutStatus("error");
+        window.alert(
+          error instanceof Error
+            ? error.message
+            : "Could not add this search to the shared workspace.",
+        );
+        window.setTimeout(() => setWorkspaceLayoutStatus("idle"), 4000);
+      }
     },
     [
       addSectionTile,
+      canManageWorkspaceConfig,
       getFactoryTileOrder,
       getSectionTileOrder,
+      insightsWorkspace,
       metricConfig,
       renderMetricConfig,
       sectionTileBounds.maxCount,
       sectionTileCounts,
       setSectionTileCount,
       setSectionTileOrder,
+      workspaceLayout,
     ],
   );
 
@@ -3578,8 +3648,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   // searchbase.conf writes to `admin_all_objects`. See
   // `useCanManageFactoryTileConfig` and `searchbaseTileConfigService`.
   const { canManage: canManageFactoryConfig } = useCanManageFactoryTileConfig();
-  const { canManage: canManageWorkspaceConfig } =
-    useCanManageInsightsWorkspaces();
   const [workspaceManagerOpen, setWorkspaceManagerOpen] = useState(false);
   const [factoryTileConfigStatus, setFactoryTileConfigStatus] = useState<
     "idle" | "saving" | "saved" | "error"
@@ -3808,10 +3876,8 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   const handlePublishWorkspaceLayout = useCallback(async () => {
     const next: WorkspaceLayoutConfig = {};
     for (const section of availableSections) {
-      // Shared factory defaults must stay tied to searchbase-owned
-      // Overview definitions. Local additions are intentionally
-      // per-user until an admin promotes them by adding proper
-      // viz_options.overview metadata to searchbase.conf.
+      // Local additions stay personal; shared Searchbase additions are
+      // deliberately carried with this workspace's layout.
       const sectionMetrics = baseMetricConfig.filter(
         (m) => m.section === section,
       );
@@ -3825,6 +3891,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       next[section] = {
         tiles: effectiveOrder,
         visibleCount,
+        searchbaseAdditions: workspaceLayout[section]?.searchbaseAdditions,
       };
     }
 
@@ -3856,6 +3923,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     sectionTileBounds.maxCount,
     sectionTileCounts,
     insightsWorkspace.id,
+    workspaceLayout,
   ]);
 
   // ------------------------------ Map footer ------------------------------
@@ -5084,8 +5152,13 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           currentTileCount={addTilePickerState.currentTileCount}
           currentVisibleCount={addTilePickerState.currentVisibleCount}
           maxTileCount={sectionTileBounds.maxCount}
-          onAdd={(record) =>
-            handleAddSearchToSection(addTilePickerState.section, record)
+          canManageWorkspace={canManageWorkspaceConfig}
+          onAdd={(record, destination) =>
+            handleAddSearchToSection(
+              addTilePickerState.section,
+              record,
+              destination,
+            )
           }
           onRemove={(record) =>
             handleRemoveAddedSearchFromSection(
@@ -5510,7 +5583,11 @@ interface OverviewAddTilePanelProps {
   currentTileCount: number;
   currentVisibleCount: number;
   maxTileCount: number;
-  onAdd: (record: SearchbaseRecord) => void;
+  canManageWorkspace: boolean;
+  onAdd: (
+    record: SearchbaseRecord,
+    destination: "personal" | "workspace",
+  ) => void | Promise<void>;
   onRemove: (record: SearchbaseRecord) => void;
   onUnhide: (record: SearchbaseRecord) => void;
   onClose: () => void;
@@ -5529,6 +5606,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
   currentTileCount,
   currentVisibleCount,
   maxTileCount,
+  canManageWorkspace,
   onAdd,
   onRemove,
   onUnhide,
@@ -5552,6 +5630,10 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
   const [tagFilter, setTagFilter] = useState("");
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [addDestination, setAddDestination] = useState<
+    "personal" | "workspace"
+  >("personal");
+  const [addingRecordId, setAddingRecordId] = useState<string | null>(null);
   const [showAllProfileSearches, setShowAllProfileSearches] = useState(true);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const tagSelectRef = useRef<HTMLDivElement | null>(null);
@@ -5570,11 +5652,22 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     setTagFilter("");
     setTagDropdownOpen(false);
     setFiltersOpen(false);
+    setAddDestination("personal");
+    setAddingRecordId(null);
     setShowAllProfileSearches(true);
     if (typeof window === "undefined") return;
     const id = window.setTimeout(() => searchInputRef.current?.focus(), 30);
     return () => window.clearTimeout(id);
   }, [open, profile.id, section]);
+
+  const handleAdd = async (record: SearchbaseRecord) => {
+    setAddingRecordId(record.id);
+    try {
+      await onAdd(record, addDestination);
+    } finally {
+      setAddingRecordId(null);
+    }
+  };
 
   useEffect(() => {
     if (!open) return undefined;
@@ -6002,6 +6095,51 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
             />
           </label>
 
+          <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-2.5 dark:border-slate-800 dark:bg-slate-950/50">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+                Add to
+              </span>
+              <div
+                className="inline-flex rounded-md border border-slate-200 bg-white p-0.5 dark:border-slate-800 dark:bg-slate-950"
+                role="group"
+                aria-label="Where to add this search"
+              >
+                <button
+                  type="button"
+                  onClick={() => setAddDestination("personal")}
+                  className={cn(
+                    "rounded px-2.5 py-1 text-[10px] font-black uppercase tracking-wider transition-colors",
+                    addDestination === "personal"
+                      ? "bg-sky-600 text-white shadow-sm"
+                      : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100",
+                  )}
+                >
+                  For me
+                </button>
+                {canManageWorkspace && (
+                  <button
+                    type="button"
+                    onClick={() => setAddDestination("workspace")}
+                    className={cn(
+                      "rounded px-2.5 py-1 text-[10px] font-black uppercase tracking-wider transition-colors",
+                      addDestination === "workspace"
+                        ? "bg-sky-600 text-white shadow-sm"
+                        : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100",
+                    )}
+                  >
+                    Shared workspace
+                  </button>
+                )}
+              </div>
+            </div>
+            <p className="mt-1 text-[10px] leading-snug text-slate-500 dark:text-slate-400">
+              {addDestination === "workspace"
+                ? "Every viewer of this workspace will see the tile."
+                : "Only you will see the tile in this browser."}
+            </p>
+          </div>
+
           <div className="flex items-center justify-between gap-2">
             <button
               type="button"
@@ -6428,8 +6566,8 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                     ) : (
                       <button
                         type="button"
-                        onClick={() => onAdd(record)}
-                        disabled={disabled}
+                        onClick={() => void handleAdd(record)}
+                        disabled={disabled || addingRecordId === record.id}
                         title={
                           alreadyInSection
                             ? "Already in this section"
@@ -6445,7 +6583,13 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                         )}
                       >
                         <Plus className="h-3.5 w-3.5" />
-                        {alreadyInSection ? "Added" : "Add"}
+                        {alreadyInSection
+                          ? "Added"
+                          : addingRecordId === record.id
+                            ? "Adding"
+                            : addDestination === "workspace"
+                              ? "Add shared"
+                              : "Add for me"}
                       </button>
                     )}
                   </div>

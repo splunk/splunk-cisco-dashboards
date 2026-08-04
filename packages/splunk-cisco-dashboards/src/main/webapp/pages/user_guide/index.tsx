@@ -1329,7 +1329,10 @@ iseval = 0`}</CodeBlock>
                   A workspace stores its own section layout, selected tiles,
                   signal rail, map visibility and placement, map presentation,
                   and light, dark, or system theme. Changes remain isolated to
-                  that workspace.
+                  that workspace. When adding a search, choose <strong>For
+                  me</strong> for a browser-local tile or <strong>Shared
+                  workspace</strong> to show it to every viewer; the shared
+                  choice is available only to workspace managers.
                 </InfoCard>
                 <InfoCard title="Start with a template, then make it yours">
                   Templates are only a starting point for a new workspace.
