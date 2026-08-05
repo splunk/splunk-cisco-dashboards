@@ -2,6 +2,10 @@
 
 ## 1.0.36
 
+- Searchbase now includes eight Cisco SD-WAN controller threat hunts for rogue
+  peering, software downgrade, certificate failures, CVE-2022-20775 path
+  traversal, root access, local-account persistence, and attack-stage
+  correlation using off-appliance controller syslog.
 - Macro Index Tuning now includes all three Cisco Enterprise Networking app
   routing macros, including its sourcetype allow-list, and identifies each
   supported App or TA by both its display label and install folder.
