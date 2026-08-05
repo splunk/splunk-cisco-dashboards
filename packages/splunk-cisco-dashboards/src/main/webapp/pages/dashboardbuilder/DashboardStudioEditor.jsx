@@ -310,6 +310,15 @@ const getDefinitionTextValue = (definition, key, fallback = '') => {
     return trimmedValue || fallback;
 };
 
+const formatSasnDashboardTitle = (title) => {
+    const dashboardName = String(title || 'Dashboard Manager')
+        .replace(/^(?:SASN\s*\|\s*)+/i, '')
+        .replace(/\s*\|\s*Splunk(?:\s+Enterprise)?\s+[\w.-]+\s*$/i, '')
+        .trim();
+
+    return `SASN | ${dashboardName || 'Dashboard Manager'}`;
+};
+
 export const AbsolutSVG = () => {
     return (
         <svg
@@ -826,6 +835,15 @@ const DashboardStudioEditor = ({
     const mapTileConfig = { defaultTileConfig: testTileConfig };
 
     const { dashboardid, currentmode } = useParams();
+
+    useEffect(() => {
+        const activeDashboardTitle = getDefinitionTextValue(
+            editedDefinition,
+            'title',
+            currentDashboard?.label || dashID || 'Dashboard Manager',
+        );
+        document.title = formatSasnDashboardTitle(activeDashboardTitle);
+    }, [currentDashboard?.label, dashID, editedDefinition]);
 
     useEffect(() => {
         if (!openID && !readOnly) setDashMode(currentmode);

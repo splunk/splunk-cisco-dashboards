@@ -53,7 +53,7 @@ function DashboardStudioEditorPage() {
     return (
         <DashboardStudioEditor
             definition={initialDefinition}
-            pageName="Cisco Dashboard Builder"
+            pageName="SASN | Dashboard Manager"
             actionMenus={actionMenus}
             preset={customPresets}
         />
@@ -61,5 +61,5 @@ function DashboardStudioEditorPage() {
 }
 
 renderAsPage(<CustomDSEditorPage />, {
-    pageTitle: 'Cisco Dashboard Builder',
+    pageTitle: 'SASN | Dashboard Manager',
 });

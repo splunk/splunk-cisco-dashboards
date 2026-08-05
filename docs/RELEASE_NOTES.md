@@ -14,6 +14,11 @@
 - Macro Index Tuning now opens with a compact scan overview and independently
   collapsible app coverage, search-performance, macro-definition, CIM, and
   diagnostic sections, including global expand-all and collapse-all controls.
+- Macro Index Tuning now provides a CIM-specific batch save and writes CIM
+  macro overrides as definition-only stanzas without generated descriptions or
+  redundant `iseval` settings.
+- Dashboard browser tabs now use the consistent `SASN | Dashboard name` format
+  without displaying the Splunk product version.
 - On-demand CIM discovery can now tune all 25 Splunk Common Information Model
   index macros using each data model's shipped tag constraints.
 

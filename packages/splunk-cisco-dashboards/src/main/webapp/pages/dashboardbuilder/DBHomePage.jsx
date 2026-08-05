@@ -295,7 +295,7 @@ export default function DBHomePage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    document.title = "Dashboard Builder";
+    document.title = "SASN | Dashboard Manager";
   }, []);
 
   useEffect(() => {

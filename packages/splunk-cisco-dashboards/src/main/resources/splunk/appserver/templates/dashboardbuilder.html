@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8" />
         <meta http-equiv="x-ua-compatible" content="ie=edge" />
-        <title>Cisco Dashboard Builder</title>
+        <title>SASN | Dashboard Manager</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <script>
             // Do not use make_url() for app static assets here. Splunk Web can
@@ -19,6 +19,7 @@
                 stylesheet.rel = 'stylesheet';
                 stylesheet.href = appStaticBase + 'application.css?v=' + Date.now();
                 document.head.appendChild(stylesheet);
+
                 window.scdDashboardBuilderAssetBase = appStaticBase;
             })();
         </script>
@@ -34,6 +35,12 @@
         <script src="${make_url('/config?autoload=1')}" crossorigin="use-credentials"></script>
         <script src="${make_url('/static/js/i18n.js')}"></script>
         <script src="${make_url('/i18ncatalog?autoload=1')}"></script>
+        <script>
+            const titleScript = document.createElement('script');
+            titleScript.src =
+                window.scdDashboardBuilderAssetBase + 'dashboard.js?v=' + Date.now();
+            document.head.appendChild(titleScript);
+        </script>
         <script>
             __splunkd_partials__ = ${json_decode(splunkd)};
         </script>

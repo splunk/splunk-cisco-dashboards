@@ -347,14 +347,7 @@ const CISCO_SECURITY_DEFINITION_SUFFIXES: Record<string, string> = {
   nvm_combined_index:
     '(sourcetype="cisco:nvm:flowdata:v2" OR sourcetype="cisco:nvm:processinfodata:v2")',
 };
-const CIM_MACRO_DESCRIPTIONS: Record<string, string> = Object.fromEntries(
-  CIM_DATA_MODEL_DISCOVERY_CONFIGS.map(({ macro, model }) => [
-    macro,
-    `Limits Splunk CIM ${model} data-model searches to indexes containing events matched by its CIM constraints.`,
-  ]),
-);
 const EXTERNAL_MACRO_DESCRIPTIONS: Record<string, string> = {
-  ...CIM_MACRO_DESCRIPTIONS,
   nvm_sysdata_index:
     "Routes Cisco Security Cloud endpoint inventory searches to indexes containing Cisco NVM system-data events.",
   nvm_process_index:
@@ -932,6 +925,9 @@ const buildMacroStanzas = (
         row.draftDefinition.trim(),
     )
     .map((row) => {
+      if (targetApp === CIM_APP_NAME) {
+        return `[${row.macro}]\ndefinition = ${row.draftDefinition.trim()}`;
+      }
       const description = row.description.replace(/\s+/g, " ").trim();
       return `[${row.macro}]\ndefinition = ${row.draftDefinition.trim()}\niseval = 0\ndescription = ${description}`;
     })
@@ -977,10 +973,12 @@ const buildExpectedEditableRows = (
     return {
       macro: config.macro,
       description:
-        details?.description ||
-        scanned?.description ||
-        EXTERNAL_MACRO_DESCRIPTIONS[config.macro] ||
-        `Controls index routing for ${config.macro} searches in ${getTargetAppLabel(config.targetApp)}.`,
+        config.family === "cim"
+          ? ""
+          : details?.description ||
+            scanned?.description ||
+            EXTERNAL_MACRO_DESCRIPTIONS[config.macro] ||
+            `Controls index routing for ${config.macro} searches in ${getTargetAppLabel(config.targetApp)}.`,
       targetApp: config.targetApp,
       definitionFormat: config.definitionFormat,
       definition: draftDefinition,
@@ -1061,6 +1059,17 @@ const macroConfigUrl = (
   return `/en-US/splunkd/__raw/servicesNS/nobody/${app}/configs/conf-macros/${encodeURIComponent(
     macro,
   )}?output_mode=json`;
+};
+
+const macroPropertyUrl = (
+  macro: string,
+  property: string,
+  targetApp: string,
+): string => {
+  const app = encodeURIComponent(targetApp);
+  return `/${getSplunkLocale()}/splunkd/__raw/servicesNS/nobody/${app}/properties/macros/${encodeURIComponent(
+    macro,
+  )}/${encodeURIComponent(property)}?local_only=true&output_mode=json`;
 };
 
 interface SplunkAppInventoryEntry {
@@ -1163,14 +1172,16 @@ const saveMacroDefinition = async (
   description: string,
   targetApp = APP_NAME,
 ): Promise<void> => {
+  const definitionOnly = targetApp === CIM_APP_NAME;
+  const requestBody = new URLSearchParams({ definition });
+  if (!definitionOnly) {
+    requestBody.set("description", description);
+    requestBody.set("iseval", "0");
+  }
   const response = await fetch(macroConfigUrl(macro, targetApp), {
     ...getDefaultFetchInit(),
     method: "POST",
-    body: new URLSearchParams({
-      definition,
-      description,
-      iseval: "0",
-    }).toString(),
+    body: requestBody.toString(),
   });
 
   let payload: unknown = null;
@@ -1184,6 +1195,24 @@ const saveMacroDefinition = async (
     throw new Error(
       extractSplunkError(payload) ||
         `Save failed with HTTP ${response.status}.`,
+    );
+  }
+
+  if (definitionOnly) {
+    await Promise.all(
+      ["description", "iseval"].map(async (property) => {
+        const deleteResponse = await fetch(
+          macroPropertyUrl(macro, property, targetApp),
+          {
+            ...getDefaultFetchInit(),
+            method: "DELETE",
+          },
+        );
+        if (deleteResponse.ok || deleteResponse.status === 404) return;
+        throw new Error(
+          `Saved ${macro}, but could not remove its local ${property} setting (HTTP ${deleteResponse.status}).`,
+        );
+      }),
     );
   }
 };
@@ -1776,6 +1805,9 @@ export default function MacroIndexTuningPage(): JSX.Element {
   const rowsToSave = tunableRows.filter(
     (row) => isTargetAppInstalled(row.targetApp) && row.draftDefinition.trim(),
   );
+  const cimRowsToSave = rowsToSave.filter(
+    (row) => row.targetApp === CIM_APP_NAME,
+  );
   const setupScdRowsToSave = rows.filter(
     (row) =>
       row.targetApp === APP_NAME &&
@@ -1875,6 +1907,9 @@ export default function MacroIndexTuningPage(): JSX.Element {
   const isCimLoading = cimScanState === "loading";
   const isSavingAll = Object.values(saveStatuses).some(
     (status) => status.state === "saving",
+  );
+  const isSavingCim = cimRowsToSave.some(
+    (row) => saveStatuses[macroStatusKey(row)]?.state === "saving",
   );
   const setupIndexValueCount = setupRowsToSave.reduce(
     (sum, row) => sum + extractIndexTokens(row.draftDefinition).length,
@@ -2245,6 +2280,14 @@ export default function MacroIndexTuningPage(): JSX.Element {
       await saveOne(row);
     }
   }, [rowsToSave, saveOne]);
+
+  const saveAllCim = useCallback(async () => {
+    for (const row of cimRowsToSave) {
+      // Keep macros.conf writes ordered; at most 25 CIM macros are supported.
+      // eslint-disable-next-line no-await-in-loop
+      await saveOne(row);
+    }
+  }, [cimRowsToSave, saveOne]);
 
   const finishInitialSetup = useCallback(async () => {
     if (summariesOnlyBlocked) {
@@ -3380,6 +3423,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
             <button
               type="button"
               onClick={saveAll}
+              title="Save dashboard, companion app, and loaded CIM macros"
               disabled={
                 !rowsToSave.length || isLoading || isCimLoading || isSavingAll
               }
@@ -4189,6 +4233,22 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 <Play size={16} />
               )}
               {isCimLoading ? "Running" : "Run all CIM discovery"}
+            </button>
+            <button
+              type="button"
+              onClick={saveAllCim}
+              disabled={
+                !cimRowsToSave.length || isCimLoading || isSavingCim
+              }
+              title="Save all loaded CIM definitions without description or iseval settings"
+              className={`${lightButtonBase} border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700`}
+            >
+              {isSavingCim ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Save size={16} />
+              )}
+              {isSavingCim ? "Saving CIM" : "Save all CIM"}
             </button>
             <a
               href={openCimSearchUrl}
