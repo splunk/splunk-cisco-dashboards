@@ -143,13 +143,29 @@ DASHBOARDS = {
     },
 }
 
+TREND_DASHBOARDS = {
+    "secure_networking_agentic_ops_executive_overview",
+    "secure_networking_hmf_threat_detection_enforcement",
+    "secure_networking_secure_infrastructure_status",
+    "secure_networking_zta_authentication_policy_enforcement",
+}
+
 
 class SecureNetworkingPillarDashboardTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        cls.searchbase_text = SEARCHBASE.read_text(encoding="utf-8")
         cls.searchbase_stanzas = set(
-            re.findall(r"^\[([^\]]+)\]\s*$", SEARCHBASE.read_text(encoding="utf-8"), re.MULTILINE)
+            re.findall(r"^\[([^\]]+)\]\s*$", cls.searchbase_text, re.MULTILINE)
         )
+        cls.searchbase_by_stanza = {
+            match.group(1): match.group(2)
+            for match in re.finditer(
+                r"^\[([^\]]+)\]\s*$([\s\S]*?)(?=^\[|\Z)",
+                cls.searchbase_text,
+                re.MULTILINE,
+            )
+        }
         cls.nav_root = ET.parse(NAV).getroot()
 
     def test_dashboard_definitions_match_csv_mapping(self):
@@ -203,6 +219,47 @@ class SecureNetworkingPillarDashboardTest(unittest.TestCase):
             with self.subTest(dashboard_id=dashboard_id):
                 href = f"dashboardbuilder#/{dashboard_id}"
                 self.assertEqual(nav_links.get(href), expected["label"])
+
+    def test_requested_single_values_use_time_series_and_trend_chrome(self):
+        for dashboard_id in TREND_DASHBOARDS:
+            with self.subTest(dashboard_id=dashboard_id):
+                root = ET.parse(VIEWS / f"{dashboard_id}.xml").getroot()
+                definition = json.loads(root.findtext("definition"))
+                singles = [
+                    visualization
+                    for visualization in definition["visualizations"].values()
+                    if visualization.get("type") == "splunk.singlevalue"
+                ]
+                self.assertTrue(singles)
+                for visualization in singles:
+                    options = visualization["options"]
+                    self.assertEqual(options["sparklineDisplay"], "below")
+                    self.assertEqual(options["trendDisplay"], "percent")
+                    self.assertTrue(options["showTrendIndicator"])
+
+                    data_source_id = visualization["dataSources"]["primary"]
+                    ref = definition["dataSources"][data_source_id]["options"]["ref"]
+                    stanza = self.searchbase_by_stanza[ref]
+                    self.assertIn("_time", stanza, f"{ref} must return a time series")
+
+    def test_map_pie_and_latency_result_contracts(self):
+        sdwan = json.loads(
+            ET.parse(VIEWS / "secure_networking_hmf_sdwan_network_health_monitoring.xml")
+            .getroot()
+            .findtext("definition")
+        )
+        map_options = sdwan["visualizations"]["viz_monitoring_sdwan_site_health_map"]["options"]
+        self.assertEqual(map_options["center"], [20, -20])
+        self.assertLess(map_options["zoom"], 1)
+        self.assertIn("tonumber(raw_lat)", self.searchbase_by_stanza["monitoring_sdwan_site_health_map"])
+
+        pie_search = self.searchbase_by_stanza["secure_networking_ip_sgt_bindings_by_group"]
+        self.assertIn('| table "SGT Tag" "Bound IPs"', pie_search)
+        self.assertNotIn('"ISE Node"', pie_search)
+
+        latency_search = self.searchbase_by_stanza["security_resilience_ise_radius_latency"]
+        self.assertIn("limit=6 useother=false", latency_search)
+        self.assertIn("latency_ms>0", latency_search)
 
 
 if __name__ == "__main__":

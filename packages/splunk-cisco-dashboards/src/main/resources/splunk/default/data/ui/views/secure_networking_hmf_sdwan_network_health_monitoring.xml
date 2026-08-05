@@ -81,6 +81,8 @@
 						"latitude": "> primary | seriesByName('lat')",
 						"longitude": "> primary | seriesByName('lon')",
 						"markerColor": "#53bfff",
+						"resultLimit": 250,
+						"tooltipHeaderField": "site_name",
 						"additionalTooltipFields": [
 							"site_id",
 							"site_name",
@@ -89,9 +91,13 @@
 						]
 					}
 				],
+				"center": [
+					20,
+					-20
+				],
 				"showScale": false,
 				"showZoomControls": true,
-				"zoom": 3,
+				"zoom": 0.8,
 				"backgroundColor": "#0f1a2a"
 			},
 			"description": "Per-site geo-tagged rollup of overall Site Health for the SD-WAN map view. Uses the GPS coordinates reported by vManage so it does not require an external lookup."
@@ -406,4 +412,3 @@
 }
     ]]></definition>
 </dashboard>
-

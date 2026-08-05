@@ -79,8 +79,13 @@
 				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
-				"sparklineDisplay": "off",
-				"trendDisplay": "off",
+				"shouldAbbreviateTrendValue": true,
+				"showSparklineAreaGraph": true,
+				"showSparklineTooltip": true,
+				"showTrendIndicator": true,
+				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
+				"trendDisplay": "percent",
 				"majorColor": "#ff7169",
 				"majorValue": "> primary | seriesByName('count') | lastPoint()"
 			},
@@ -124,8 +129,13 @@
 				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
-				"sparklineDisplay": "off",
-				"trendDisplay": "off",
+				"shouldAbbreviateTrendValue": true,
+				"showSparklineAreaGraph": true,
+				"showSparklineTooltip": true,
+				"showTrendIndicator": true,
+				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
+				"trendDisplay": "percent",
 				"majorColor": "#ff7169",
 				"majorValue": "> primary | seriesByName('deny_pct') | lastPoint()"
 			},
@@ -498,4 +508,3 @@
 }
     ]]></definition>
 </dashboard>
-

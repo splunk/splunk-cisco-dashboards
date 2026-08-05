@@ -1559,6 +1559,12 @@ iseval = 0`}</CodeBlock>
                   section guidance, and visible Searchbase-derived
                   descriptions on all 131 data panels. Existing searches,
                   tokens, drilldowns, and data-source references are preserved.
+                  The 13 single-value KPIs across Executive Overview, Threat
+                  Detection and Enforcement, Authentication and Policy
+                  Enforcement, and Secure Infrastructure Status now include
+                  time-bucketed sparklines and percent trends. SD-WAN site
+                  mapping, the Segmentation binding pie, and ISE RADIUS latency
+                  formatting are also corrected for their live result shapes.
                 </InfoCard>
                 <InfoCard title="Guided setup and performance readiness">
                   Setup now brings package checks, index macro discovery, data

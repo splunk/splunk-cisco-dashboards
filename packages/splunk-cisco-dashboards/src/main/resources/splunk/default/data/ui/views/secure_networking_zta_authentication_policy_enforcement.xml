@@ -88,8 +88,13 @@
 				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
-				"sparklineDisplay": "off",
-				"trendDisplay": "off",
+				"shouldAbbreviateTrendValue": true,
+				"showSparklineAreaGraph": true,
+				"showSparklineTooltip": true,
+				"showTrendIndicator": true,
+				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
+				"trendDisplay": "percent",
 				"majorColor": "#53bfff",
 				"majorValue": "> primary | seriesByName('ise_device_count') | lastPoint()"
 			},
@@ -138,12 +143,17 @@
 					"#ff9a4a",
 					"#EF4444"
 				],
+				"dataValuesDisplay": "minmax",
+				"legendTruncation": "ellipsisEnd",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide",
-				"lineWidth": 2
+				"yAxisTitleVisibility": "show",
+				"yAxisTitleText": "Latency (ms)",
+				"lineWidth": 2,
+				"markerDisplay": "outlined",
+				"nullValueDisplay": "connect"
 			},
-			"description": "Tracks average RADIUS request processing latency in seconds per ISE node, the most direct indicator of authentication performance visible to end users and NADs."
+			"description": "Tracks average RADIUS request processing latency in milliseconds per ISE node, the most direct indicator of authentication performance visible to end users and NADs."
 		},
 		"viz_secure_networking_zta_duo_admin_activity_by_outcome": {
 			"type": "splunk.table",
@@ -420,4 +430,3 @@
 }
     ]]></definition>
 </dashboard>
-

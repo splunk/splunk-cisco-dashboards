@@ -2,6 +2,13 @@
 
 ## 1.0.36
 
+- Executive Overview, Threat Detection and Enforcement, Authentication and
+  Policy Enforcement, and Secure Infrastructure Status now render all 13
+  single-value KPIs with time-bucketed sparklines and percent trends.
+- Secure Networking visualization fixes now plot SD-WAN site coordinates on a
+  world view, supply the Segmentation binding pie with a strict category/value
+  result shape, and present ISE RADIUS latency with concise node labels,
+  bounded series, connected samples, and millisecond axis labeling.
 - All 16 Secure Networking Dashboard Studio views now use a Cisco-inspired
   dark-mode information hierarchy with purpose-led headers, compact audience
   and source context, decision-oriented section guidance, and visible

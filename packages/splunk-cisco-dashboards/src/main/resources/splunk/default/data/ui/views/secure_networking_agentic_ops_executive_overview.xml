@@ -60,8 +60,13 @@
 				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
-				"sparklineDisplay": "off",
-				"trendDisplay": "off",
+				"shouldAbbreviateTrendValue": true,
+				"showSparklineAreaGraph": true,
+				"showSparklineTooltip": true,
+				"showTrendIndicator": true,
+				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
+				"trendDisplay": "percent",
 				"majorColor": "#10b981",
 				"majorValue": "> primary | seriesByName('pct') | lastPoint()",
 				"unit": "%"
@@ -78,8 +83,13 @@
 				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
-				"sparklineDisplay": "off",
-				"trendDisplay": "off",
+				"shouldAbbreviateTrendValue": true,
+				"showSparklineAreaGraph": true,
+				"showSparklineTooltip": true,
+				"showTrendIndicator": true,
+				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
+				"trendDisplay": "percent",
 				"majorColor": "#2563EB",
 				"majorValue": "> primary | seriesByName('ap_count') | lastPoint()"
 			},
@@ -189,12 +199,17 @@
 				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
-				"sparklineDisplay": "off",
-				"trendDisplay": "off",
+				"shouldAbbreviateTrendValue": true,
+				"showSparklineAreaGraph": true,
+				"showSparklineTooltip": true,
+				"showTrendIndicator": true,
+				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
+				"trendDisplay": "percent",
 				"majorColor": "#3B82F6",
 				"majorValue": "> primary | seriesByName('current') | lastPoint()"
 			},
-			"description": "Device health trend from Catalyst Center: compares fleet-average reachability or manageability score for the current time range versus the previous range, with absolute delta and a directional marker."
+			"description": "Shows the Catalyst Center fleet-average device health trend across automatic time buckets in the selected dashboard range."
 		},
 		"viz_executive_summary_healthy_device_count": {
 			"type": "splunk.singlevalue",
@@ -206,8 +221,13 @@
 				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
-				"sparklineDisplay": "off",
-				"trendDisplay": "off",
+				"shouldAbbreviateTrendValue": true,
+				"showSparklineAreaGraph": true,
+				"showSparklineTooltip": true,
+				"showTrendIndicator": true,
+				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
+				"trendDisplay": "percent",
 				"majorColor": "#3B82F6",
 				"majorValue": "> primary | seriesByName('healthy_count') | lastPoint()"
 			},
@@ -572,4 +592,3 @@
 }
     ]]></definition>
 </dashboard>
-
