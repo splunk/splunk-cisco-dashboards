@@ -405,6 +405,13 @@ type DataModelAccelerationState =
   | "disabled"
   | "missing"
   | "error";
+type DashboardSectionKey =
+  | "appCoverage"
+  | "performance"
+  | "acceleration"
+  | "dashboardMacros"
+  | "externalMacros"
+  | "diagnostics";
 
 interface SearchTimeRange {
   earliest: string;
@@ -1624,6 +1631,16 @@ export default function MacroIndexTuningPage(): JSX.Element {
   const [collapsedRowGroups, setCollapsedRowGroups] = useState<
     Record<string, boolean>
   >(() => Object.fromEntries(TARGET_APP_ORDER.map((app) => [app, true])));
+  const [expandedDashboardSections, setExpandedDashboardSections] = useState<
+    Record<DashboardSectionKey, boolean>
+  >({
+    appCoverage: false,
+    performance: true,
+    acceleration: false,
+    dashboardMacros: true,
+    externalMacros: false,
+    diagnostics: false,
+  });
   const [installedAppIds, setInstalledAppIds] = useState<Set<string>>(
     () => new Set([APP_NAME]),
   );
@@ -1835,14 +1852,6 @@ export default function MacroIndexTuningPage(): JSX.Element {
     .filter((row) => row.targetApp === APP_NAME)
     .reduce((sum, row) => sum + row.events, 0);
   const totalIndexValues = indexMacroRows.reduce(
-    (sum, row) => sum + extractIndexTokens(row.draftDefinition).length,
-    0,
-  );
-  const totalCimIndexValues = cimMacroRows.reduce(
-    (sum, row) => sum + extractIndexTokens(row.draftDefinition).length,
-    0,
-  );
-  const totalModelIndexValues = modelMacroRows.reduce(
     (sum, row) => sum + extractIndexTokens(row.draftDefinition).length,
     0,
   );
@@ -2366,6 +2375,27 @@ export default function MacroIndexTuningPage(): JSX.Element {
       ...current,
       [targetApp]: !current[targetApp],
     }));
+  }, []);
+
+  const toggleDashboardSection = useCallback((section: DashboardSectionKey) => {
+    setExpandedDashboardSections((current) => ({
+      ...current,
+      [section]: !current[section],
+    }));
+  }, []);
+
+  const setAllDashboardSections = useCallback((expanded: boolean) => {
+    setExpandedDashboardSections({
+      appCoverage: expanded,
+      performance: expanded,
+      acceleration: expanded,
+      dashboardMacros: expanded,
+      externalMacros: expanded,
+      diagnostics: expanded,
+    });
+    setCollapsedRowGroups(
+      Object.fromEntries(TARGET_APP_ORDER.map((app) => [app, !expanded])),
+    );
   }, []);
 
   const renderEditableRow = (row: EditableMacroRow) => {
@@ -3293,30 +3323,18 @@ export default function MacroIndexTuningPage(): JSX.Element {
           </div>
         </section>
       )}
-      <section className="mb-4 border-b border-slate-200 pb-4">
+      <section className="mb-4 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="m-0 text-xl font-bold tracking-normal text-slate-900">
               Macro Index Tuning
             </h1>
             <p className="mt-1 max-w-3xl text-sm text-slate-600">
-              Scan known Cisco sourcetypes for fast dashboard macro tuning. SCD{" "}
-              <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">
-                index_*
-              </code>{" "}
-              macros are discovered from this app at runtime, so new index
-              macros are picked up automatically. Run CIM data model discovery
-              separately when you need the slower tag-based index search.
-            </p>
-            <p className="mt-1 max-w-3xl text-xs text-slate-500">
-              Powered by searchbase entry{" "}
-              <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">
-                {TUNING_SEARCHBASE_ID}
-              </code>
-              .
+              Scan known Cisco sourcetypes, review routing coverage, and save
+              only the macro changes you need.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="flex h-10 items-center gap-3 text-sm font-semibold text-slate-700">
               <span>Range</span>
               <TimeRangeDropdown
@@ -3379,171 +3397,238 @@ export default function MacroIndexTuningPage(): JSX.Element {
       </section>
 
       <section
-        aria-labelledby="external-app-macro-readiness-heading"
-        className="mb-4 overflow-hidden rounded-lg border border-sky-200 bg-sky-50/50"
+        aria-labelledby="scan-overview-heading"
+        className="mb-4 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm"
       >
-        <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-wide text-sky-700">
-              Cisco app macro coverage
-            </div>
             <h2
-              id="external-app-macro-readiness-heading"
-              className="mt-1 text-base font-bold text-slate-900"
+              id="scan-overview-heading"
+              className="m-0 text-base font-bold text-slate-900"
             >
-              Tune app-owned routing macros from this dashboard
+              Scan overview
             </h2>
-            <p className="mt-1 max-w-3xl text-sm text-slate-600">
-              The fast scan proposes definitions only for enabled companion apps
-              installed in this Splunk environment.
+            <p className="mt-1 text-xs text-slate-500">
+              One quick read on routing coverage, events, and acceleration.
             </p>
           </div>
-          <a
-            href="#external-app-macro-definitions"
-            className={`${compactButtonBase} border-sky-300 bg-white text-sky-700 hover:border-sky-500 hover:text-sky-900`}
+          <div className="flex items-center gap-2 text-xs font-semibold">
+            <button
+              type="button"
+              onClick={() => setAllDashboardSections(true)}
+              className="text-sky-700 hover:text-sky-900"
+            >
+              Expand all
+            </button>
+            <span className="text-slate-300">·</span>
+            <button
+              type="button"
+              onClick={() => setAllDashboardSections(false)}
+              className="text-slate-600 hover:text-slate-900"
+            >
+              Collapse all
+            </button>
+          </div>
+        </div>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-lg bg-sky-50 px-4 py-3">
+            <div className="text-lg font-bold text-sky-700">
+              {formatNumber(externalAppMacroSummaries.length)} apps
+            </div>
+            <div className="text-xs text-slate-500">Cisco app coverage</div>
+          </div>
+          <div className="rounded-lg bg-slate-100 px-4 py-3">
+            <div className="text-lg font-bold text-slate-900">
+              {formatNumber(totalIndexValues)} indexes
+            </div>
+            <div className="text-xs text-slate-500">Known routing targets</div>
+          </div>
+          <div className="rounded-lg bg-emerald-50 px-4 py-3">
+            <div className="text-lg font-bold text-emerald-700">
+              {formatNumber(totalEvents)} events
+            </div>
+            <div className="text-xs text-slate-500">Selected range</div>
+          </div>
+          <div className="rounded-lg bg-emerald-50 px-4 py-3">
+            <div className="text-lg font-bold text-emerald-700">
+              {formatNumber(acceleratedDataModelCount)} /{" "}
+              {formatNumber(dataModelReadiness.length)}
+            </div>
+            <div className="text-xs text-slate-500">
+              Data models accelerated
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section
+        aria-labelledby="external-app-macro-readiness-heading"
+        className="mb-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-4">
+          <button
+            type="button"
+            onClick={() => toggleDashboardSection("appCoverage")}
+            aria-expanded={expandedDashboardSections.appCoverage}
+            aria-controls="external-app-macro-readiness-content"
+            className="flex min-w-0 flex-1 items-start gap-2 text-left"
           >
-            Review app macros
-            <ChevronDown size={14} />
-          </a>
+            {expandedDashboardSections.appCoverage ? (
+              <ChevronDown size={18} className="mt-0.5 shrink-0 text-slate-500" />
+            ) : (
+              <ChevronRight size={18} className="mt-0.5 shrink-0 text-slate-500" />
+            )}
+            <span>
+              <span
+                id="external-app-macro-readiness-heading"
+                className="block text-sm font-bold text-slate-900"
+              >
+                Cisco app macro coverage
+              </span>
+              <span className="mt-1 block text-xs text-slate-500">
+                {formatNumber(externalAppMacroSummaries.length)} companion apps ·{" "}
+                {formatNumber(externalAppMacroRows.length)} macros ·{" "}
+                {formatNumber(
+                  externalAppMacroSummaries.filter(
+                    (summary) => summary.matchedMacroCount > 0,
+                  ).length,
+                )}{" "}
+                apps with detected data
+              </span>
+            </span>
+          </button>
+          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+            Ready to review
+          </span>
         </div>
 
-        {isLoading && externalAppMacroRows.length === 0 ? (
-          <div className="flex min-h-28 items-center justify-center gap-3 border-t border-sky-200 bg-white text-sm text-slate-600">
-            <Loader2 size={18} className="animate-spin text-sky-700" />
-            Checking Cisco app macro coverage...
-          </div>
-        ) : (
-          <div
-            className="grid gap-3 border-t border-sky-200 bg-white p-4 md:grid-cols-2 xl:grid-cols-4"
-            role="list"
-            aria-label="Cisco app-owned routing macro coverage"
-          >
-            {externalAppMacroSummaries.map((summary) => {
-              const managerLink = externalAppMacroManagerLinks.find(
-                (item) => item.targetApp === summary.targetApp,
-              );
-              const hasMatchingData = summary.matchedMacroCount > 0;
-              return (
-                <article
-                  key={summary.targetApp}
-                  role="listitem"
-                  className={`rounded-md border p-3 ${
-                    hasMatchingData
-                      ? "border-emerald-200 bg-emerald-50/50"
-                      : "border-slate-200 bg-slate-50"
-                  }`}
-                >
-                  <div className="flex items-start gap-2">
-                    {hasMatchingData ? (
-                      <Check
-                        size={16}
-                        className="mt-0.5 shrink-0 text-emerald-700"
-                      />
-                    ) : (
-                      <Info
-                        size={16}
-                        className="mt-0.5 shrink-0 text-slate-500"
-                      />
-                    )}
-                    <div className="min-w-0">
-                      <h3 className="m-0 truncate text-sm font-bold text-slate-900">
-                        {summary.label}
-                      </h3>
-                      <code
-                        className="mt-1 block truncate font-mono text-[10px] text-slate-500"
-                        title={summary.targetApp}
-                      >
-                        {summary.targetApp}
-                      </code>
-                    </div>
-                  </div>
-                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <div className="font-bold text-slate-900">
-                        {formatNumber(summary.rows.length)} macros
-                      </div>
-                      <div className="mt-0.5 text-slate-500">
-                        {formatNumber(summary.matchedMacroCount)} with data
-                      </div>
-                    </div>
-                    <div>
-                      <div className="font-bold text-slate-900">
-                        {formatNumber(summary.indexCount)} indexes
-                      </div>
-                      <div className="mt-0.5 text-slate-500">
-                        {formatNumber(summary.eventCount)} events
-                      </div>
-                    </div>
-                  </div>
-                  <div
-                    className={`mt-3 text-xs font-semibold ${
-                      hasMatchingData ? "text-emerald-700" : "text-slate-600"
-                    }`}
-                  >
-                    {hasMatchingData
-                      ? "Detected data is ready to review"
-                      : "No matching data in this range"}
-                  </div>
-                  {managerLink && (
-                    <a
-                      href={managerLink.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-sky-700 hover:text-sky-900"
+        {expandedDashboardSections.appCoverage && (
+          <div id="external-app-macro-readiness-content">
+            {isLoading && externalAppMacroRows.length === 0 ? (
+              <div className="flex min-h-24 items-center justify-center gap-3 border-t border-slate-200 text-sm text-slate-600">
+                <Loader2 size={18} className="animate-spin text-sky-700" />
+                Checking Cisco app macro coverage...
+              </div>
+            ) : (
+              <div
+                className="divide-y divide-slate-100 border-t border-slate-200"
+                role="list"
+                aria-label="Cisco app-owned routing macro coverage"
+              >
+                {externalAppMacroSummaries.map((summary) => {
+                  const managerLink = externalAppMacroManagerLinks.find(
+                    (item) => item.targetApp === summary.targetApp,
+                  );
+                  const hasMatchingData = summary.matchedMacroCount > 0;
+                  return (
+                    <article
+                      key={summary.targetApp}
+                      role="listitem"
+                      className="flex flex-wrap items-center gap-3 px-4 py-3 text-xs"
                     >
-                      Manage macros
-                      <ExternalLink size={11} />
-                    </a>
-                  )}
-                </article>
-              );
-            })}
-          </div>
-        )}
-        {appInventoryError && (
-          <div className="border-t border-sky-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            {appInventoryError}
+                      {hasMatchingData ? (
+                        <Check size={15} className="shrink-0 text-emerald-700" />
+                      ) : (
+                        <Info size={15} className="shrink-0 text-slate-500" />
+                      )}
+                      <div className="min-w-[240px] flex-1">
+                        <div className="font-bold text-slate-900">{summary.label}</div>
+                        <code className="font-mono text-[10px] text-slate-500">
+                          {summary.targetApp}
+                        </code>
+                      </div>
+                      <div className="text-slate-600">
+                        <strong className="text-slate-900">
+                          {formatNumber(summary.rows.length)}
+                        </strong>{" "}
+                        macros · <strong>{formatNumber(summary.indexCount)}</strong>{" "}
+                        indexes · <strong>{formatNumber(summary.eventCount)}</strong>{" "}
+                        events
+                      </div>
+                      {managerLink && (
+                        <a
+                          href={managerLink.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 font-bold text-sky-700 hover:text-sky-900"
+                        >
+                          Manage
+                          <ExternalLink size={11} />
+                        </a>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+            {appInventoryError && (
+              <div className="border-t border-slate-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                {appInventoryError}
+              </div>
+            )}
           </div>
         )}
       </section>
 
-      <section className="mb-4 border border-slate-200 bg-white">
+      <section className="mb-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
-          <div>
-            <h2 className="m-0 text-base font-bold text-slate-900">
-              Ad hoc macro
-            </h2>
-            <p className="mt-1 text-sm text-slate-600">
-              Choose whether data-model searches may use raw events.{" "}
-              <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">
-                summariesonly=true
-              </code>{" "}
-              reads accelerated summaries only and requires acceleration on all
-              three Cisco data models listed below.
-            </p>
-          </div>
           <button
             type="button"
-            onClick={() => {
-              void loadAdhocMacro();
-              void checkDataModelAcceleration();
-            }}
-            disabled={
-              adhocStatus.state === "saving" || accelerationCheckInProgress
-            }
-            className={`${lightButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
+            onClick={() => toggleDashboardSection("performance")}
+            aria-expanded={expandedDashboardSections.performance}
+            aria-controls="search-performance-content"
+            className="flex min-w-0 flex-1 items-start gap-2 text-left"
           >
-            <RefreshCw
-              size={16}
-              className={
-                adhocStatus.state === "saving" || accelerationCheckInProgress
-                  ? "animate-spin"
-                  : ""
-              }
-            />
-            Refresh
+            {expandedDashboardSections.performance ? (
+              <ChevronDown size={18} className="mt-0.5 shrink-0 text-slate-500" />
+            ) : (
+              <ChevronRight size={18} className="mt-0.5 shrink-0 text-slate-500" />
+            )}
+            <span>
+              <span className="block text-sm font-bold text-slate-900">
+                Search performance
+              </span>
+              <span className="mt-1 block text-xs text-slate-500">
+                Control ad hoc search mode and inspect acceleration only when needed.
+              </span>
+            </span>
           </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                dataModelsNeedingAttention.length
+                  ? "bg-amber-50 text-amber-800"
+                  : "bg-emerald-50 text-emerald-700"
+              }`}
+            >
+              {formatNumber(acceleratedDataModelCount)} /{" "}
+              {formatNumber(dataModelReadiness.length)} accelerated
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                void loadAdhocMacro();
+                void checkDataModelAcceleration();
+              }}
+              disabled={
+                adhocStatus.state === "saving" || accelerationCheckInProgress
+              }
+              className={`${compactButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
+            >
+              <RefreshCw
+                size={14}
+                className={
+                  adhocStatus.state === "saving" || accelerationCheckInProgress
+                    ? "animate-spin"
+                    : ""
+                }
+              />
+              Refresh
+            </button>
+          </div>
         </div>
+        {expandedDashboardSections.performance && (
+          <div id="search-performance-content">
         <div className="grid gap-3 px-4 py-4 lg:grid-cols-[180px_minmax(0,1fr)_auto] lg:items-start">
           <div>
             <div className="font-mono text-sm font-bold text-sky-800">
@@ -3598,21 +3683,29 @@ export default function MacroIndexTuningPage(): JSX.Element {
         </div>
         <div className="border-t border-slate-200 bg-slate-50 px-4 py-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h3 className="m-0 text-sm font-bold text-slate-900">
-                Data model acceleration readiness
-              </h3>
-              <p className="mt-1 max-w-4xl text-xs leading-5 text-slate-600">
-                Cisco Catalyst, Cisco Security, and Cisco ThousandEyes are
-                required for{" "}
-                <code className="rounded bg-white px-1 py-0.5 font-mono">
-                  summariesonly=true
-                </code>
-                . Authentication, Network Traffic, and every installed Cisco
-                Data Center Networking model are strongly recommended for faster
-                app searches.
-              </p>
-            </div>
+            <button
+              type="button"
+              onClick={() => toggleDashboardSection("acceleration")}
+              aria-expanded={expandedDashboardSections.acceleration}
+              aria-controls="data-model-acceleration-content"
+              className="flex min-w-0 flex-1 items-start gap-2 text-left"
+            >
+              {expandedDashboardSections.acceleration ? (
+                <ChevronDown size={17} className="mt-0.5 shrink-0 text-slate-500" />
+              ) : (
+                <ChevronRight size={17} className="mt-0.5 shrink-0 text-slate-500" />
+              )}
+              <span>
+                <span className="block text-sm font-bold text-slate-900">
+                  Data model acceleration readiness
+                </span>
+                <span className="mt-1 block text-xs text-slate-600">
+                  {accelerationCheckInProgress
+                    ? "Checking recommended models…"
+                    : `${acceleratedDataModelCount} of ${dataModelReadiness.length} accelerated`}
+                </span>
+              </span>
+            </button>
             <div className="flex flex-wrap items-center gap-2">
               <a
                 href={openAccelerationSearchUrl}
@@ -3649,6 +3742,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
             </div>
           </div>
 
+          {expandedDashboardSections.acceleration && (
+            <div id="data-model-acceleration-content">
           <div
             className={`mt-3 rounded-md px-3 py-2 text-xs font-semibold ${
               accelerationCheckInProgress
@@ -3667,85 +3762,93 @@ export default function MacroIndexTuningPage(): JSX.Element {
           </div>
 
           <div
-            className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3"
-            role="list"
-            aria-label="Data model acceleration requirements"
+            className="mt-3 grid gap-2"
+            aria-label="Data model acceleration requirements grouped by app"
           >
-            {dataModelReadiness.map((item) => {
-              const enabled = item.state === "enabled";
-              const checking = item.state === "checking";
-              const required = item.priority === "required";
-              return (
-                <div
-                  key={item.key}
-                  role="listitem"
-                  className={`border bg-white px-3 py-3 ${
-                    enabled
-                      ? "border-emerald-200"
-                      : checking
-                        ? "border-slate-200"
-                        : required
-                          ? "border-red-200"
-                          : "border-amber-200"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="font-semibold text-slate-900">
-                      {item.label}
-                    </div>
-                    <span
-                      className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
-                        required
-                          ? "bg-sky-100 text-sky-800"
-                          : "bg-amber-100 text-amber-800"
-                      }`}
-                    >
-                      {required ? "Required" : "Strongly recommended"}
-                    </span>
-                  </div>
-                  <code className="mt-2 block break-all font-mono text-[11px] text-slate-500">
-                    {item.model}
-                  </code>
-                  <div
-                    className={`mt-3 flex items-start gap-2 text-xs font-semibold ${
-                      enabled
-                        ? "text-emerald-700"
-                        : checking
-                          ? "text-slate-600"
-                          : required
-                            ? "text-red-700"
-                            : "text-amber-800"
-                    }`}
-                  >
-                    {checking ? (
-                      <Loader2
-                        className="mt-0.5 shrink-0 animate-spin"
-                        size={14}
-                      />
-                    ) : enabled ? (
-                      <Check className="mt-0.5 shrink-0" size={14} />
-                    ) : (
-                      <AlertTriangle className="mt-0.5 shrink-0" size={14} />
-                    )}
-                    <span>{item.message}</span>
-                  </div>
-                  {enabled && item.earliestTime && (
-                    <div className="mt-1 text-[11px] text-slate-500">
-                      Acceleration range: {item.earliestTime}
-                    </div>
+            {dataModelGroups.map((group) => (
+              <details
+                key={group.app}
+                open={group.attentionCount > 0}
+                className="group overflow-hidden rounded-md border border-slate-200 bg-white"
+              >
+                <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-xs [&::-webkit-details-marker]:hidden">
+                  {group.checkingCount ? (
+                    <Loader2 size={14} className="shrink-0 animate-spin text-sky-700" />
+                  ) : group.attentionCount ? (
+                    <AlertTriangle size={14} className="shrink-0 text-amber-700" />
+                  ) : (
+                    <Check size={14} className="shrink-0 text-emerald-700" />
                   )}
-                  <a
-                    href={splunkDataModelManagerUrl(item)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-sky-700 hover:text-sky-900"
-                  >
-                    {enabled ? "Open data model" : "Accelerate data model"}
-                    <ExternalLink size={12} />
-                  </a>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-bold text-slate-900">
+                      {group.label}
+                    </span>
+                    <span className="block text-[11px] text-slate-500">
+                      {group.checkingCount
+                        ? "Checking acceleration"
+                        : `${group.enabledCount} of ${group.items.length} accelerated`}
+                    </span>
+                  </span>
+                  <ChevronDown
+                    size={14}
+                    className="shrink-0 text-slate-500 transition-transform group-open:rotate-180"
+                  />
+                </summary>
+                <div className="divide-y divide-slate-100 border-t border-slate-200 bg-slate-50">
+                  {group.items.map((item) => {
+                    const enabled = item.state === "enabled";
+                    const checking = item.state === "checking";
+                    return (
+                      <div
+                        key={item.key}
+                        className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 px-3 py-2.5 text-xs"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            {checking ? (
+                              <Loader2 size={12} className="shrink-0 animate-spin text-sky-700" />
+                            ) : enabled ? (
+                              <Check size={12} className="shrink-0 text-emerald-700" />
+                            ) : (
+                              <AlertTriangle size={12} className="shrink-0 text-amber-700" />
+                            )}
+                            <span className="truncate font-bold text-slate-800">
+                              {item.label}
+                            </span>
+                          </div>
+                          <code className="mt-0.5 block truncate font-mono text-[10px] text-slate-500">
+                            {item.model}
+                          </code>
+                          <div
+                            className={`mt-0.5 text-[11px] ${
+                              enabled
+                                ? "text-emerald-700"
+                                : checking
+                                  ? "text-slate-500"
+                                  : "text-amber-800"
+                            }`}
+                          >
+                            {item.message}
+                            {enabled && item.earliestTime
+                              ? ` · ${item.earliestTime}`
+                              : ""}
+                          </div>
+                        </div>
+                        <a
+                          href={splunkDataModelManagerUrl(item)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-0.5 inline-flex h-7 items-center gap-1 rounded border border-slate-300 bg-white px-2 font-bold text-sky-700 hover:border-sky-400 hover:text-sky-900"
+                        >
+                          {enabled ? "Open" : "Accelerate"}
+                          <ExternalLink size={11} />
+                        </a>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
+              </details>
+            ))}
           </div>
 
           {summariesOnlyEnabled && accelerationCheckInProgress ? (
@@ -3785,76 +3888,11 @@ export default function MacroIndexTuningPage(): JSX.Element {
               </span>
             </div>
           )}
+            </div>
+          )}
         </div>
-      </section>
-
-      <section className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-        <div className="border border-slate-200 bg-white px-4 py-3">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Macros
           </div>
-          <div className="mt-1 text-2xl font-bold text-slate-900">
-            {formatNumber(tunableRows.length)}
-          </div>
-          <div className="mt-1 text-xs text-slate-500">
-            tunable routing macros
-          </div>
-        </div>
-        <div className="border border-slate-200 bg-white px-4 py-3">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Index values
-          </div>
-          <div className="mt-1 text-2xl font-bold text-slate-900">
-            {formatNumber(totalIndexValues)}
-          </div>
-          <div className="mt-1 text-xs text-slate-500">
-            SCD macro definitions
-          </div>
-        </div>
-        <div className="border border-slate-200 bg-white px-4 py-3">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            CIM indexes
-          </div>
-          <div className="mt-1 text-2xl font-bold text-slate-900">
-            {formatNumber(totalCimIndexValues)}
-          </div>
-          <div className="mt-1 text-xs text-slate-500">
-            Splunk_SA_CIM definitions
-          </div>
-        </div>
-        <div className="border border-slate-200 bg-white px-4 py-3">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Model indexes
-          </div>
-          <div className="mt-1 text-2xl font-bold text-slate-900">
-            {formatNumber(totalModelIndexValues)}
-          </div>
-          <div className="mt-1 text-xs text-slate-500">
-            Cisco model app definitions
-          </div>
-        </div>
-        <div className="border border-slate-200 bg-white px-4 py-3">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Events
-          </div>
-          <div className="mt-1 text-2xl font-bold text-slate-900">
-            {formatNumber(totalEvents)}
-          </div>
-          <div className="mt-1 text-xs text-slate-500">matched by the scan</div>
-        </div>
-        <div className="border border-slate-200 bg-white px-4 py-3">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Unknown
-          </div>
-          <div
-            className={`mt-1 text-2xl font-bold ${hasUnknown ? "text-amber-700" : "text-emerald-700"}`}
-          >
-            {formatNumber(rows.filter((row) => row.macro === "unknown").length)}
-          </div>
-          <div className="mt-1 text-xs text-slate-500">
-            unmapped sourcetype groups
-          </div>
-        </div>
+        )}
       </section>
 
       {error && (
@@ -3882,20 +3920,37 @@ export default function MacroIndexTuningPage(): JSX.Element {
         </section>
       )}
 
-      <section className="mb-4 border border-slate-200 bg-white">
-        <div className="border-b border-slate-200 px-4 py-3">
-          <div className="flex items-start gap-2">
-            <Search size={17} className="mt-0.5 shrink-0 text-sky-700" />
-            <div>
-              <h2 className="m-0 text-base font-bold text-slate-900">
-                Dashboard index macro definitions
-              </h2>
-              <p className="mt-0.5 text-xs text-slate-500">
-                Macros owned by {APP_NAME}. This search also filters the Cisco
-                app section below.
-              </p>
-            </div>
-          </div>
+      <section className="mb-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div
+          className={`px-4 py-3 ${
+            expandedDashboardSections.dashboardMacros
+              ? "border-b border-slate-200"
+              : ""
+          }`}
+        >
+          <button
+            type="button"
+            onClick={() => toggleDashboardSection("dashboardMacros")}
+            aria-expanded={expandedDashboardSections.dashboardMacros}
+            aria-controls="dashboard-macro-definitions-content"
+            className="flex w-full items-start gap-2 text-left"
+          >
+            {expandedDashboardSections.dashboardMacros ? (
+              <ChevronDown size={18} className="mt-0.5 shrink-0 text-slate-500" />
+            ) : (
+              <ChevronRight size={18} className="mt-0.5 shrink-0 text-slate-500" />
+            )}
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold text-slate-900">
+                Dashboard index macros
+              </span>
+              <span className="mt-0.5 block text-xs text-slate-500">
+                {formatNumber(dashboardMacroRows.length)} macros ·{" "}
+                {formatNumber(totalIndexValues)} indexes · owned by {APP_NAME}
+              </span>
+            </span>
+          </button>
+          {expandedDashboardSections.dashboardMacros && (
           <div className="mt-3 grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
             <label
               htmlFor="macro-index-tuning-search"
@@ -3934,8 +3989,11 @@ export default function MacroIndexTuningPage(): JSX.Element {
               </a>
             </div>
           </div>
+          )}
         </div>
 
+        {expandedDashboardSections.dashboardMacros && (
+          <div id="dashboard-macro-definitions-content">
         {isLoading && dashboardMacroRows.length === 0 ? (
           <div className="flex min-h-[260px] items-center justify-center gap-3 text-sm text-slate-600">
             <Loader2 size={18} className="animate-spin text-sky-700" />
@@ -3974,38 +4032,51 @@ export default function MacroIndexTuningPage(): JSX.Element {
             </table>
           </div>
         )}
+          </div>
+        )}
       </section>
 
       <section
         id="external-app-macro-definitions"
         aria-labelledby="external-app-macro-definitions-heading"
-        className="mb-4 scroll-mt-4 border border-sky-200 bg-white"
+        className="mb-4 scroll-mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
       >
-        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-sky-200 bg-sky-50/50 px-4 py-3">
-          <div>
-            <div className="text-[10px] font-bold uppercase tracking-wide text-sky-700">
-              Installed Cisco apps
-            </div>
-            <h2
-              id="external-app-macro-definitions-heading"
-              className="mt-1 text-base font-bold text-slate-900"
-            >
-              Cisco app macro definitions
-            </h2>
-            <p className="mt-1 max-w-3xl text-sm text-slate-600">
-              Edit and save each definition directly to the owning app&apos;s
-              local/macros.conf. App IDs remain visible so deployment packages
-              can be matched exactly.
-            </p>
-          </div>
-          <div className="rounded-md border border-sky-200 bg-white px-3 py-2 text-xs text-slate-600">
-            <span className="font-bold text-slate-900">
-              {formatNumber(externalAppMacroRows.length)} macros
-            </span>{" "}
-            across {formatNumber(externalAppMacroSummaries.length)} Cisco apps
-          </div>
+        <div
+          className={`px-4 py-3 ${
+            expandedDashboardSections.externalMacros
+              ? "border-b border-slate-200"
+              : ""
+          }`}
+        >
+          <button
+            type="button"
+            onClick={() => toggleDashboardSection("externalMacros")}
+            aria-expanded={expandedDashboardSections.externalMacros}
+            aria-controls="external-app-macro-definitions-content"
+            className="flex w-full items-start gap-2 text-left"
+          >
+            {expandedDashboardSections.externalMacros ? (
+              <ChevronDown size={18} className="mt-0.5 shrink-0 text-slate-500" />
+            ) : (
+              <ChevronRight size={18} className="mt-0.5 shrink-0 text-slate-500" />
+            )}
+            <span className="min-w-0 flex-1">
+              <span
+                id="external-app-macro-definitions-heading"
+                className="block text-sm font-bold text-slate-900"
+              >
+                Cisco app macros
+              </span>
+              <span className="mt-0.5 block text-xs text-slate-500">
+                {formatNumber(externalAppMacroRows.length)} macros across{" "}
+                {formatNumber(externalAppMacroSummaries.length)} companion apps
+              </span>
+            </span>
+          </button>
         </div>
 
+        {expandedDashboardSections.externalMacros && (
+          <div id="external-app-macro-definitions-content">
         {isLoading && externalAppMacroRows.length === 0 ? (
           <div className="flex min-h-[220px] items-center justify-center gap-3 text-sm text-slate-600">
             <Loader2 size={18} className="animate-spin text-sky-700" />
@@ -4044,11 +4115,17 @@ export default function MacroIndexTuningPage(): JSX.Element {
             </table>
           </div>
         )}
+          </div>
+        )}
       </section>
 
       {isTargetAppInstalled(CIM_APP_NAME) && (
-        <section className="mb-4 border border-slate-200 bg-white">
-          <div className="grid gap-3 border-b border-slate-200 px-4 py-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
+        <section className="mb-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div
+            className={`grid gap-3 px-4 py-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center ${
+              isCimGroupCollapsed ? "" : "border-b border-slate-200"
+            }`}
+          >
             <div className="min-w-0">
               <button
               type="button"
@@ -4081,6 +4158,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               </p>
             )}
           </div>
+          {!isCimGroupCollapsed && (
           <div className="flex min-w-0 flex-wrap items-center gap-2 xl:justify-end">
             <div className="flex h-10 items-center gap-2 text-sm font-semibold text-slate-700">
               <span>CIM range</span>
@@ -4131,6 +4209,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               Open CIM macros
             </a>
           </div>
+          )}
         </div>
 
         {!isCimGroupCollapsed && (
@@ -4190,8 +4269,34 @@ export default function MacroIndexTuningPage(): JSX.Element {
         </section>
       )}
 
-      <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
-        <details className="border border-slate-200 bg-white">
+      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <button
+          type="button"
+          onClick={() => toggleDashboardSection("diagnostics")}
+          aria-expanded={expandedDashboardSections.diagnostics}
+          aria-controls="macro-diagnostics-content"
+          className="flex w-full items-start gap-2 px-4 py-3 text-left"
+        >
+          {expandedDashboardSections.diagnostics ? (
+            <ChevronDown size={18} className="mt-0.5 shrink-0 text-slate-500" />
+          ) : (
+            <ChevronRight size={18} className="mt-0.5 shrink-0 text-slate-500" />
+          )}
+          <span>
+            <span className="block text-sm font-bold text-slate-900">
+              Preview & diagnostics
+            </span>
+            <span className="mt-0.5 block text-xs text-slate-500">
+              macros.conf preview, fast scan SPL, and CIM discovery SPL
+            </span>
+          </span>
+        </button>
+        {expandedDashboardSections.diagnostics && (
+        <div
+          id="macro-diagnostics-content"
+          className="grid gap-4 border-t border-slate-200 bg-slate-50 p-4 lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]"
+        >
+        <details className="rounded-lg border border-slate-200 bg-white">
           <summary className="cursor-pointer border-b border-slate-200 px-4 py-3 text-base font-bold text-slate-900">
             macros.conf preview
           </summary>
@@ -4207,7 +4312,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
         </details>
 
         <div className="grid gap-4">
-          <details className="border border-slate-200 bg-white">
+          <details className="rounded-lg border border-slate-200 bg-white">
             <summary className="cursor-pointer border-b border-slate-200 px-4 py-3 text-base font-bold text-slate-900">
               Fast scan SPL
             </summary>
@@ -4216,7 +4321,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
             </pre>
           </details>
 
-          <details className="border border-slate-200 bg-white">
+          <details className="rounded-lg border border-slate-200 bg-white">
             <summary className="cursor-pointer border-b border-slate-200 px-4 py-3 text-base font-bold text-slate-900">
               CIM discovery SPL
             </summary>
@@ -4225,6 +4330,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
             </pre>
           </details>
         </div>
+        </div>
+        )}
       </section>
     </main>
   );

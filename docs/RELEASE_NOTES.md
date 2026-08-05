@@ -11,6 +11,9 @@
   supported App or TA by both its display label and install folder.
 - Macro Index Tuning now also manages the installed Cisco Meraki, Cisco
   Intersight, and Cisco Spaces index macros from the same scan and setup flow.
+- Macro Index Tuning now opens with a compact scan overview and independently
+  collapsible app coverage, search-performance, macro-definition, CIM, and
+  diagnostic sections, including global expand-all and collapse-all controls.
 - On-demand CIM discovery can now tune all 25 Splunk Common Information Model
   index macros using each data model's shipped tag constraints.
 

@@ -10,6 +10,10 @@ export = system
 # The index abstraction is a shared contract used by searches harvested from
 # companion Cisco apps. Keep the definitions owned here, but make every
 # no-argument index_* macro resolve from any dispatch context.
+[macros/scd_summariesonly]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
 [macros/index_catalyst]
 access = read : [ * ], write : [ admin, power, sc_admin ]
 export = system
