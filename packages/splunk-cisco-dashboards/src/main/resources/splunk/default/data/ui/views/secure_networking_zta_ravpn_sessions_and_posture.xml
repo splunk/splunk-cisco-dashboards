@@ -184,7 +184,7 @@
 				"options": {
 					"backgroundColor": "#07101d",
 					"display": "auto-scale",
-					"height": 1198,
+					"height": 878,
 					"width": 1440
 				},
 				"structure": [
@@ -194,7 +194,7 @@
 							"x": 20,
 							"y": 0,
 							"w": 1400,
-							"h": 118
+							"h": 88
 						},
 						"type": "block"
 					},
@@ -202,19 +202,19 @@
 						"item": "viz_header_icon",
 						"position": {
 							"x": 36,
-							"y": 19,
-							"w": 80,
-							"h": 80
+							"y": 14,
+							"w": 56,
+							"h": 56
 						},
 						"type": "block"
 					},
 					{
 						"item": "viz_header",
 						"position": {
-							"x": 132,
-							"y": 8,
-							"w": 1268,
-							"h": 102
+							"x": 108,
+							"y": 4,
+							"w": 1292,
+							"h": 76
 						},
 						"type": "block"
 					},
@@ -222,9 +222,9 @@
 						"item": "viz_design_context",
 						"position": {
 							"x": 20,
-							"y": 138,
+							"y": 100,
 							"w": 1400,
-							"h": 92
+							"h": 64
 						},
 						"type": "block"
 					},
@@ -232,9 +232,9 @@
 						"item": "viz_design_section",
 						"position": {
 							"x": 20,
-							"y": 250,
+							"y": 176,
 							"w": 1400,
-							"h": 72
+							"h": 54
 						},
 						"type": "block"
 					},
@@ -242,9 +242,9 @@
 						"item": "viz_secure_networking_zta_ravpn_sessions_by_profile",
 						"position": {
 							"x": 20,
-							"y": 342,
+							"y": 242,
 							"w": 690,
-							"h": 408
+							"h": 300
 						},
 						"type": "block"
 					},
@@ -252,9 +252,9 @@
 						"item": "viz_secure_networking_zta_ravpn_connection_rate",
 						"position": {
 							"x": 730,
-							"y": 342,
+							"y": 242,
 							"w": 690,
-							"h": 408
+							"h": 300
 						},
 						"type": "block"
 					},
@@ -262,9 +262,9 @@
 						"item": "viz_secure_networking_zta_ravpn_failure_reasons",
 						"position": {
 							"x": 20,
-							"y": 770,
+							"y": 558,
 							"w": 690,
-							"h": 408
+							"h": 300
 						},
 						"type": "block"
 					},
@@ -272,9 +272,9 @@
 						"item": "viz_secure_networking_zta_ravpn_posture_alerts",
 						"position": {
 							"x": 730,
-							"y": 770,
+							"y": 558,
 							"w": 690,
-							"h": 408
+							"h": 300
 						},
 						"type": "block"
 					}

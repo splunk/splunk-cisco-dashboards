@@ -9,7 +9,7 @@ import { cloneDeep, isEqual } from 'lodash-es';
 import Dashboard from '@splunk/dashboard';
 import { DrilldownEditors } from '@splunk/dashboard-editors';
 import { DashboardContextProvider } from '@splunk/dashboard-context';
-import { serverTimezoneInfo, versionLabel } from '@splunk/splunk-utils/config';
+import { app as splunkApp, serverTimezoneInfo, versionLabel } from '@splunk/splunk-utils/config';
 import ItemGroup from '@splunk/dashboard-toolbar/ItemGroup';
 import ExportDashboardButton from '@splunk/dashboard-toolbar/buttons/ExportDashboardButton';
 import DashboardSourceEditor from '@splunk/dashboard/DashboardSourceEditor';
@@ -44,7 +44,7 @@ import Input from '@splunk/react-search/components/Input';
 import defaultSPLSyntax from '@splunk/dashboard-utils/defaultSPLSyntax.json';
 import {
     VisualizationGroup,
-    ControlGroup,
+    Zoom,
     HistoryGroup,
     SidebarControlGroup,
     GridLineSwitch,
@@ -317,6 +317,112 @@ const formatSasnDashboardTitle = (title) => {
         .trim();
 
     return `SASN | ${dashboardName || 'Dashboard Manager'}`;
+};
+
+const ViewDisplayMenu = ({ dashboardApi }) => {
+    const [open, setOpen] = useState(false);
+    const [navigationHidden, setNavigationHidden] = useState(false);
+
+    useEffect(() => {
+        document.body.classList.toggle('dashboardbuilder-navigation-hidden', navigationHidden);
+        return () => document.body.classList.remove('dashboardbuilder-navigation-hidden');
+    }, [navigationHidden]);
+
+    const toggle = (
+        <Button
+            appearance="default"
+            data-test="dashboardbuilder-display-button"
+            label={_('Display')}
+            isMenu
+        />
+    );
+
+    return (
+        <Dropdown
+            open={open}
+            onRequestOpen={() => setOpen(true)}
+            onRequestClose={() => setOpen(false)}
+            toggle={toggle}
+        >
+            <Menu style={{ minWidth: 170 }}>
+                <Menu.Item
+                    data-test="dashboardbuilder-fullscreen-action"
+                    onClick={() => {
+                        setOpen(false);
+                        dashboardApi?.enterFullscreen?.();
+                    }}
+                >
+                    {_('Fullscreen')}
+                </Menu.Item>
+                <Menu.Item
+                    data-test="dashboardbuilder-hide-navigation-action"
+                    selectable
+                    selected={navigationHidden}
+                    onClick={() => {
+                        setOpen(false);
+                        setNavigationHidden((hidden) => !hidden);
+                    }}
+                >
+                    {_('Hide navigation')}
+                </Menu.Item>
+            </Menu>
+        </Dropdown>
+    );
+};
+
+ViewDisplayMenu.propTypes = {
+    dashboardApi: PropTypes.shape({
+        enterFullscreen: PropTypes.func,
+    }),
+};
+
+ViewDisplayMenu.defaultProps = {
+    dashboardApi: undefined,
+};
+
+const ViewActionsMenu = ({ onClone, onExportJson }) => {
+    const [open, setOpen] = useState(false);
+    const runAction = (handler) => () => {
+        setOpen(false);
+        handler();
+    };
+    const toggle = (
+        <Button
+            appearance="default"
+            data-test="dashboardbuilder-actions-button"
+            label={_('Actions')}
+            isMenu
+        />
+    );
+
+    return (
+        <Dropdown
+            open={open}
+            onRequestOpen={() => setOpen(true)}
+            onRequestClose={() => setOpen(false)}
+            toggle={toggle}
+        >
+            <Menu style={{ minWidth: 220 }}>
+                <Menu.Item
+                    data-test="dashboardbuilder-export-json-action"
+                    onClick={runAction(onExportJson)}
+                >
+                    {_('Export JSON')}
+                </Menu.Item>
+                <Menu.Item
+                    data-test="dashboardbuilder-clone-action"
+                    onClick={runAction(onClone)}
+                >
+                    {_('Clone dashboard')}
+                </Menu.Item>
+            </Menu>
+        </Dropdown>
+    );
+};
+
+ViewActionsMenu.propTypes = {
+    onClone: PropTypes.func.isRequired,
+    onExportJson: PropTypes.func.isRequired,
 };
 
 export const AbsolutSVG = () => {
@@ -754,9 +860,6 @@ const DashboardStudioEditor = ({
 
     const [dashboardHeightDifference, setDashboardHeightDifference] = useState('79');
 
-    const [openCloneModal, setOpenCloneModal] = useState(false);
-
-    const cloneModalToggle = useRef();
     const [openDashboardModal, setOpenDashboardModal] = useState(false);
     const [openConvertModal, setOpenConvertModal] = useState(false);
     const [openBackToManagerModal, setOpenBackToManagerModal] = useState(false);
@@ -1232,9 +1335,64 @@ const DashboardStudioEditor = ({
         dashboardApi.updateDefinition?.(repairedDefinition);
     }, [apiRef, isDashboardMounted]);
 
-    const toggleButton = (
-        <Button data-test="clone-dashboard-toolbar-button" label={_('Actions')} isMenu />
-    );
+    const handleExportDashboardJson = useCallback(() => {
+        const dashboardDefinition =
+            dashboardApiElem.current?.getDefinition?.() ?? editedDefinition ?? {};
+        const blob = new Blob([JSON.stringify(dashboardDefinition, null, 2)], {
+            type: 'application/json;charset=utf-8',
+        });
+        const objectUrl = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = objectUrl;
+        anchor.download = `${dashID || 'dashboard'}.json`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(objectUrl);
+    }, [dashID, editedDefinition]);
+
+    const handleCloneDashboard = useCallback(async () => {
+        const dashboardDefinition = cloneDeep(
+            dashboardApiElem.current?.getDefinition?.() ?? editedDefinition ?? {},
+        );
+        const sourceTitle = getDefinitionTextValue(
+            dashboardDefinition,
+            'title',
+            currentDashboard?.label || dashID || 'Dashboard',
+        );
+        const cloneTitle = `${sourceTitle} Copy`;
+        const cloneId = `${dashID || 'dashboard'}_copy_${Date.now()}`;
+        dashboardDefinition.title = cloneTitle;
+
+        try {
+            const response = await addDash(
+                cloneId,
+                JSON.stringify(dashboardDefinition),
+                cloneTitle,
+                dashboardDefinition.description || currentDashboard?.description || '',
+                dashboardDefinition.tag || currentDashboard?.tag || '',
+                currentDashboard?.theme || dashboardColorScheme,
+            );
+            if (response.status < 200 || response.status > 299) {
+                throw new Error(getSplunkResponseErrorMessage(response, 'Clone failed.'));
+            }
+
+            makeCreateToast(Toaster)({
+                message: `Created ${cloneTitle}.`,
+                type: TOAST_TYPES.SUCCESS,
+            });
+            window.location.assign(
+                `/app/${encodeURIComponent(
+                    splunkApp || 'splunk-cisco-dashboards',
+                )}/dashboardbuilder#/${encodeURIComponent(cloneId)}/edit`,
+            );
+        } catch (error) {
+            makeCreateToast(Toaster)({
+                message: `Unable to clone the dashboard. ${getSafeErrorMessage(error)}`,
+                type: TOAST_TYPES.ERROR,
+            });
+        }
+    }, [currentDashboard, dashID, dashboardColorScheme, editedDefinition]);
 
     useEffect(() => {
         if (currentDashboard && currentDashboard.data) {
@@ -1246,10 +1404,15 @@ const DashboardStudioEditor = ({
         () => ({
             viewReadOnly: [],
             view: [
-                <ControlGroup key="controlGroup" />,
-
-                <ItemGroup key="sideToolbar" align="right">
+                <ItemGroup key="sideToolbar" align="right" borders={false}>
                     <ExportDashboardButton key="export-dashboard" />
+                    <ViewDisplayMenu key="display" />
+                    <Zoom key="zoom" mode="view" showSeparator={false} />
+                    <ViewActionsMenu
+                        key="actions"
+                        onClone={handleCloneDashboard}
+                        onExportJson={handleExportDashboardJson}
+                    />
                     <ModeSwitch key="modeSwitch" />
                 </ItemGroup>,
             ],
@@ -1329,6 +1492,8 @@ const DashboardStudioEditor = ({
             editedDefinition,
             handleBackToManagerClick,
             handleEnterSourceMode,
+            handleCloneDashboard,
+            handleExportDashboardJson,
             handleSaveClick,
             isDirty,
             setIsCodeEditable,

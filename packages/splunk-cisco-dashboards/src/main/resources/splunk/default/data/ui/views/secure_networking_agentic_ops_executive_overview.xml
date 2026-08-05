@@ -402,7 +402,7 @@
 				"options": {
 					"backgroundColor": "#07101d",
 					"display": "auto-scale",
-					"height": 2910,
+					"height": 1922,
 					"width": 1440
 				},
 				"structure": [
@@ -412,7 +412,7 @@
 							"x": 20,
 							"y": 0,
 							"w": 1400,
-							"h": 118
+							"h": 88
 						},
 						"type": "block"
 					},
@@ -420,19 +420,19 @@
 						"item": "viz_header_icon",
 						"position": {
 							"x": 36,
-							"y": 19,
-							"w": 80,
-							"h": 80
+							"y": 14,
+							"w": 56,
+							"h": 56
 						},
 						"type": "block"
 					},
 					{
 						"item": "viz_header",
 						"position": {
-							"x": 132,
-							"y": 8,
-							"w": 1268,
-							"h": 102
+							"x": 108,
+							"y": 4,
+							"w": 1292,
+							"h": 76
 						},
 						"type": "block"
 					},
@@ -440,9 +440,9 @@
 						"item": "viz_design_context",
 						"position": {
 							"x": 20,
-							"y": 138,
+							"y": 100,
 							"w": 1400,
-							"h": 92
+							"h": 64
 						},
 						"type": "block"
 					},
@@ -450,9 +450,9 @@
 						"item": "viz_design_section",
 						"position": {
 							"x": 20,
-							"y": 250,
+							"y": 176,
 							"w": 1400,
-							"h": 72
+							"h": 54
 						},
 						"type": "block"
 					},
@@ -460,9 +460,9 @@
 						"item": "viz_overview_ap_health",
 						"position": {
 							"x": 20,
-							"y": 342,
+							"y": 242,
 							"w": 690,
-							"h": 408
+							"h": 190
 						},
 						"type": "block"
 					},
@@ -470,9 +470,9 @@
 						"item": "viz_secure_networking_meraki_ap_count",
 						"position": {
 							"x": 730,
-							"y": 342,
+							"y": 242,
 							"w": 690,
-							"h": 408
+							"h": 190
 						},
 						"type": "block"
 					},
@@ -480,9 +480,9 @@
 						"item": "viz_secure_networking_dc_health_signals_trend",
 						"position": {
 							"x": 20,
-							"y": 770,
+							"y": 448,
 							"w": 690,
-							"h": 408
+							"h": 280
 						},
 						"type": "block"
 					},
@@ -490,9 +490,9 @@
 						"item": "viz_feed_monitor_all_feeds_health_matrix",
 						"position": {
 							"x": 730,
-							"y": 770,
+							"y": 448,
 							"w": 690,
-							"h": 408
+							"h": 300
 						},
 						"type": "block"
 					},
@@ -500,9 +500,9 @@
 						"item": "viz_overview_topology_overview",
 						"position": {
 							"x": 20,
-							"y": 1198,
+							"y": 764,
 							"w": 690,
-							"h": 408
+							"h": 300
 						},
 						"type": "block"
 					},
@@ -510,9 +510,9 @@
 						"item": "viz_overview_link_auburndale_tallahassee_health",
 						"position": {
 							"x": 730,
-							"y": 1198,
+							"y": 764,
 							"w": 690,
-							"h": 408
+							"h": 300
 						},
 						"type": "block"
 					},
@@ -520,9 +520,9 @@
 						"item": "viz_overview_link_state_drilldown",
 						"position": {
 							"x": 20,
-							"y": 1626,
+							"y": 1080,
 							"w": 690,
-							"h": 408
+							"h": 300
 						},
 						"type": "block"
 					},
@@ -530,9 +530,9 @@
 						"item": "viz_executive_dashboard_ds_device_health_current_drilldown",
 						"position": {
 							"x": 730,
-							"y": 1626,
+							"y": 1080,
 							"w": 690,
-							"h": 408
+							"h": 300
 						},
 						"type": "block"
 					},
@@ -540,9 +540,9 @@
 						"item": "viz_executive_dashboard_ds_device_health_trend_compare",
 						"position": {
 							"x": 20,
-							"y": 2054,
+							"y": 1396,
 							"w": 690,
-							"h": 408
+							"h": 190
 						},
 						"type": "block"
 					},
@@ -550,9 +550,9 @@
 						"item": "viz_executive_summary_healthy_device_count",
 						"position": {
 							"x": 730,
-							"y": 2054,
+							"y": 1396,
 							"w": 690,
-							"h": 408
+							"h": 190
 						},
 						"type": "block"
 					},
@@ -560,9 +560,9 @@
 						"item": "viz_executive_dashboard_data_source_status",
 						"position": {
 							"x": 20,
-							"y": 2482,
+							"y": 1602,
 							"w": 690,
-							"h": 408
+							"h": 300
 						},
 						"type": "block"
 					}

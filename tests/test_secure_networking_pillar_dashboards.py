@@ -150,6 +150,12 @@ TREND_DASHBOARDS = {
     "secure_networking_zta_authentication_policy_enforcement",
 }
 
+ALL_SECURE_NETWORKING_DASHBOARDS = sorted(
+    path
+    for path in VIEWS.glob("secure_networking_*.xml")
+    if path.name != "secure_networking_profile.xml"
+)
+
 
 class SecureNetworkingPillarDashboardTest(unittest.TestCase):
     @classmethod
@@ -260,6 +266,63 @@ class SecureNetworkingPillarDashboardTest(unittest.TestCase):
         latency_search = self.searchbase_by_stanza["security_resilience_ise_radius_latency"]
         self.assertIn("limit=6 useother=false", latency_search)
         self.assertIn("latency_ms>0", latency_search)
+
+    def test_all_secure_networking_layouts_use_compact_panel_heights(self):
+        self.assertEqual(len(ALL_SECURE_NETWORKING_DASHBOARDS), 16)
+        reserved_items = {
+            "viz_header_bg",
+            "viz_header_icon",
+            "viz_header",
+            "viz_design_context",
+            "viz_design_section",
+        }
+
+        for dashboard_path in ALL_SECURE_NETWORKING_DASHBOARDS:
+            with self.subTest(dashboard_id=dashboard_path.stem):
+                definition = json.loads(ET.parse(dashboard_path).getroot().findtext("definition"))
+                for layout in definition["layout"]["layoutDefinitions"].values():
+                    by_item = {entry["item"]: entry for entry in layout["structure"]}
+                    self.assertEqual(
+                        by_item["viz_header_bg"]["position"],
+                        {"x": 20, "y": 0, "w": 1400, "h": 88},
+                    )
+                    self.assertEqual(
+                        by_item["viz_design_context"]["position"],
+                        {"x": 20, "y": 100, "w": 1400, "h": 64},
+                    )
+                    self.assertEqual(
+                        by_item["viz_design_section"]["position"],
+                        {"x": 20, "y": 176, "w": 1400, "h": 54},
+                    )
+
+                    data_entries = [
+                        entry
+                        for entry in layout["structure"]
+                        if entry["item"] not in reserved_items
+                    ]
+                    self.assertTrue(data_entries)
+                    self.assertLessEqual(
+                        max(entry["position"]["h"] for entry in data_entries),
+                        300,
+                    )
+
+                    single_entries = [
+                        entry
+                        for entry in data_entries
+                        if definition["visualizations"].get(entry["item"], {}).get("type")
+                        in {"splunk.singlevalue", "splunk.singlevalueradial"}
+                    ]
+                    for entry in single_entries:
+                        self.assertLessEqual(entry["position"]["h"], 200)
+
+                    max_content_y = max(
+                        entry["position"]["y"] + entry["position"]["h"]
+                        for entry in layout["structure"]
+                    )
+                    self.assertEqual(
+                        layout["options"]["height"],
+                        max(640, max_content_y + 20),
+                    )
 
 
 if __name__ == "__main__":

@@ -446,7 +446,7 @@
 				"options": {
 					"backgroundColor": "#07101d",
 					"display": "auto-scale",
-					"height": 1914,
+					"height": 1370,
 					"width": 1440
 				},
 				"structure": [
@@ -456,7 +456,7 @@
 							"x": 20,
 							"y": 0,
 							"w": 1400,
-							"h": 118
+							"h": 88
 						},
 						"type": "block"
 					},
@@ -464,19 +464,19 @@
 						"item": "viz_header_icon",
 						"position": {
 							"x": 36,
-							"y": 19,
-							"w": 80,
-							"h": 80
+							"y": 14,
+							"w": 56,
+							"h": 56
 						},
 						"type": "block"
 					},
 					{
 						"item": "viz_header",
 						"position": {
-							"x": 132,
-							"y": 8,
-							"w": 1268,
-							"h": 102
+							"x": 108,
+							"y": 4,
+							"w": 1292,
+							"h": 76
 						},
 						"type": "block"
 					},
@@ -484,9 +484,9 @@
 						"item": "viz_design_context",
 						"position": {
 							"x": 20,
-							"y": 138,
+							"y": 100,
 							"w": 1400,
-							"h": 92
+							"h": 64
 						},
 						"type": "block"
 					},
@@ -494,9 +494,9 @@
 						"item": "viz_design_section",
 						"position": {
 							"x": 20,
-							"y": 250,
+							"y": 176,
 							"w": 1400,
-							"h": 72
+							"h": 54
 						},
 						"type": "block"
 					},
@@ -504,9 +504,9 @@
 						"item": "viz_agentic_ai_defense",
 						"position": {
 							"x": 20,
-							"y": 342,
+							"y": 242,
 							"w": 335,
-							"h": 228
+							"h": 200
 						},
 						"type": "block"
 					},
@@ -514,9 +514,9 @@
 						"item": "viz_agentic_te_feed",
 						"position": {
 							"x": 375,
-							"y": 342,
+							"y": 242,
 							"w": 335,
-							"h": 228
+							"h": 200
 						},
 						"type": "block"
 					},
@@ -524,9 +524,9 @@
 						"item": "viz_agentic_latency",
 						"position": {
 							"x": 730,
-							"y": 342,
+							"y": 242,
 							"w": 335,
-							"h": 228
+							"h": 200
 						},
 						"type": "block"
 					},
@@ -534,9 +534,9 @@
 						"item": "viz_agentic_loss",
 						"position": {
 							"x": 1085,
-							"y": 342,
+							"y": 242,
 							"w": 335,
-							"h": 228
+							"h": 200
 						},
 						"type": "block"
 					},
@@ -544,9 +544,9 @@
 						"item": "viz_agentic_loss_trend",
 						"position": {
 							"x": 20,
-							"y": 590,
+							"y": 458,
 							"w": 690,
-							"h": 388
+							"h": 280
 						},
 						"type": "block"
 					},
@@ -554,9 +554,9 @@
 						"item": "viz_agentic_bgp_changes",
 						"position": {
 							"x": 730,
-							"y": 590,
+							"y": 458,
 							"w": 690,
-							"h": 388
+							"h": 280
 						},
 						"type": "block"
 					},
@@ -564,9 +564,9 @@
 						"item": "viz_agentic_test_health",
 						"position": {
 							"x": 20,
-							"y": 998,
+							"y": 754,
 							"w": 690,
-							"h": 438
+							"h": 280
 						},
 						"type": "block"
 					},
@@ -574,9 +574,9 @@
 						"item": "viz_agentic_http_availability",
 						"position": {
 							"x": 730,
-							"y": 998,
+							"y": 754,
 							"w": 690,
-							"h": 438
+							"h": 280
 						},
 						"type": "block"
 					},
@@ -584,9 +584,9 @@
 						"item": "viz_agentic_web_errors",
 						"position": {
 							"x": 20,
-							"y": 1456,
+							"y": 1050,
 							"w": 690,
-							"h": 438
+							"h": 190
 						},
 						"type": "block"
 					},
@@ -594,9 +594,9 @@
 						"item": "viz_agentic_feed_matrix",
 						"position": {
 							"x": 730,
-							"y": 1456,
+							"y": 1050,
 							"w": 690,
-							"h": 438
+							"h": 300
 						},
 						"type": "block"
 					}

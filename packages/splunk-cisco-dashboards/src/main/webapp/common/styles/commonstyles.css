@@ -4445,6 +4445,14 @@ body > div[role='main'] > div:has(> #collection_container.dashboardbuilderview) 
     max-width: 100%;
     overflow-x: hidden;
 }
+
+/* Match Dashboard Studio's "Hide navigation" view control while keeping the
+ * dashboard toolbar and canvas available. The class is scoped to the manager
+ * page and removed automatically when the dashboard component unmounts. */
+body.dashboardbuilder-navigation-hidden header[class*='HeaderStyles__HeaderWrapper'],
+body.dashboardbuilder-navigation-hidden nav[class*='NavPanelStyles__NavPanelWrapper'] {
+    display: none !important;
+}
 .dashboardbuilderview-light,
 .dashboard-manager-page-light,
 .dashboard-builder-themed-modal-light {

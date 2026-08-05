@@ -272,7 +272,7 @@
 				"options": {
 					"backgroundColor": "#07101d",
 					"display": "auto-scale",
-					"height": 1626,
+					"height": 1194,
 					"width": 1440
 				},
 				"structure": [
@@ -282,7 +282,7 @@
 							"x": 20,
 							"y": 0,
 							"w": 1400,
-							"h": 118
+							"h": 88
 						},
 						"type": "block"
 					},
@@ -290,19 +290,19 @@
 						"item": "viz_header_icon",
 						"position": {
 							"x": 36,
-							"y": 19,
-							"w": 80,
-							"h": 80
+							"y": 14,
+							"w": 56,
+							"h": 56
 						},
 						"type": "block"
 					},
 					{
 						"item": "viz_header",
 						"position": {
-							"x": 132,
-							"y": 8,
-							"w": 1268,
-							"h": 102
+							"x": 108,
+							"y": 4,
+							"w": 1292,
+							"h": 76
 						},
 						"type": "block"
 					},
@@ -310,9 +310,9 @@
 						"item": "viz_design_context",
 						"position": {
 							"x": 20,
-							"y": 138,
+							"y": 100,
 							"w": 1400,
-							"h": 92
+							"h": 64
 						},
 						"type": "block"
 					},
@@ -320,9 +320,9 @@
 						"item": "viz_design_section",
 						"position": {
 							"x": 20,
-							"y": 250,
+							"y": 176,
 							"w": 1400,
-							"h": 72
+							"h": 54
 						},
 						"type": "block"
 					},
@@ -330,9 +330,9 @@
 						"item": "viz_monitoring_sdwan_circuit_state_summary",
 						"position": {
 							"x": 20,
-							"y": 342,
+							"y": 242,
 							"w": 690,
-							"h": 408
+							"h": 280
 						},
 						"type": "block"
 					},
@@ -340,9 +340,9 @@
 						"item": "viz_monitoring_sdwan_site_health_map",
 						"position": {
 							"x": 730,
-							"y": 342,
+							"y": 242,
 							"w": 690,
-							"h": 408
+							"h": 300
 						},
 						"type": "block"
 					},
@@ -350,9 +350,9 @@
 						"item": "viz_monitoring_sdwan_site_health_table",
 						"position": {
 							"x": 20,
-							"y": 770,
+							"y": 558,
 							"w": 690,
-							"h": 408
+							"h": 300
 						},
 						"type": "block"
 					},
@@ -360,9 +360,9 @@
 						"item": "viz_monitoring_sdwan_site_state_summary",
 						"position": {
 							"x": 730,
-							"y": 770,
+							"y": 558,
 							"w": 690,
-							"h": 408
+							"h": 280
 						},
 						"type": "block"
 					},
@@ -370,9 +370,9 @@
 						"item": "viz_secure_networking_sdwan_tunnel_health_log",
 						"position": {
 							"x": 20,
-							"y": 1198,
+							"y": 874,
 							"w": 690,
-							"h": 408
+							"h": 300
 						},
 						"type": "block"
 					},
@@ -380,9 +380,9 @@
 						"item": "viz_monitoring_sdwan_tunnel_health_poor_trend",
 						"position": {
 							"x": 730,
-							"y": 1198,
+							"y": 874,
 							"w": 690,
-							"h": 408
+							"h": 280
 						},
 						"type": "block"
 					}

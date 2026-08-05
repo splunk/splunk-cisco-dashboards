@@ -259,43 +259,36 @@ function descriptionForVisualization(definition, visualization, descriptions) {
     return { ref, description: raw ? concise(decodeHtml(raw)) : null };
 }
 
-function redesignLayout(layoutDefinition, hadDesignElements) {
+function compactPanelHeight(entry, definition, rowLength) {
+    if (rowLength >= 3) return 200;
+
+    const type =
+        definition.visualizations?.[entry.item]?.type ??
+        definition.inputs?.[entry.item]?.type ??
+        '';
+    if (type === 'splunk.singlevalue') return 190;
+    if (type === 'splunk.singlevalueradial') return 200;
+    if (['splunk.table', 'splunk.map'].includes(type)) return 300;
+    if (
+        ['splunk.area', 'splunk.bar', 'splunk.column', 'splunk.line', 'splunk.pie'].includes(
+            type
+        )
+    ) {
+        return 280;
+    }
+    return 260;
+}
+
+function redesignLayout(layoutDefinition, definition) {
     const structure = layoutDefinition.structure ?? [];
     const byItem = new Map(structure.map((entry) => [entry.item, entry]));
 
     const headerBg = byItem.get('viz_header_bg');
-    if (headerBg) headerBg.position = { x: 20, y: 0, w: 1400, h: 118 };
+    if (headerBg) headerBg.position = { x: 20, y: 0, w: 1400, h: 88 };
     const headerIcon = byItem.get('viz_header_icon');
-    if (headerIcon) headerIcon.position = { x: 36, y: 19, w: 80, h: 80 };
+    if (headerIcon) headerIcon.position = { x: 36, y: 14, w: 56, h: 56 };
     const header = byItem.get('viz_header');
-    if (header) header.position = { x: 132, y: 8, w: 1268, h: 102 };
-
-    if (!hadDesignElements) {
-        const dataEntries = structure.filter((entry) => {
-            return ![
-                'viz_header_bg',
-                'viz_header_icon',
-                'viz_header',
-                'viz_design_context',
-                'viz_design_section',
-            ].includes(entry.item);
-        });
-        const rows = [...new Set(dataEntries.map((entry) => entry.position.y))].sort(
-            (left, right) => left - right
-        );
-        let nextY = 342;
-        for (const rowY of rows) {
-            const entries = dataEntries.filter((entry) => entry.position.y === rowY);
-            let rowHeight = 0;
-            for (const entry of entries) {
-                entry.position.y = nextY;
-                entry.position.h += 48;
-                rowHeight = Math.max(rowHeight, entry.position.h);
-            }
-            nextY += rowHeight + 20;
-        }
-        layoutDefinition.options.height = Math.max(900, nextY);
-    }
+    if (header) header.position = { x: 108, y: 4, w: 1292, h: 76 };
 
     const withoutDesignElements = structure.filter(
         (entry) => !['viz_design_context', 'viz_design_section'].includes(entry.item)
@@ -309,16 +302,41 @@ function redesignLayout(layoutDefinition, hadDesignElements) {
         0,
         {
             item: 'viz_design_context',
-            position: { x: 20, y: 138, w: 1400, h: 92 },
+            position: { x: 20, y: 100, w: 1400, h: 64 },
             type: 'block',
         },
         {
             item: 'viz_design_section',
-            position: { x: 20, y: 250, w: 1400, h: 72 },
+            position: { x: 20, y: 176, w: 1400, h: 54 },
             type: 'block',
         }
     );
+
+    const reservedItems = new Set([
+        'viz_header_bg',
+        'viz_header_icon',
+        'viz_header',
+        'viz_design_context',
+        'viz_design_section',
+    ]);
+    const dataEntries = withoutDesignElements.filter((entry) => !reservedItems.has(entry.item));
+    const rowYs = [...new Set(dataEntries.map((entry) => entry.position.y))].sort(
+        (left, right) => left - right
+    );
+    let nextY = 242;
+    for (const rowY of rowYs) {
+        const entries = dataEntries.filter((entry) => entry.position.y === rowY);
+        const heights = entries.map((entry) => compactPanelHeight(entry, definition, entries.length));
+        const rowHeight = Math.max(...heights);
+        for (const entry of entries) {
+            entry.position.y = nextY;
+            entry.position.h = compactPanelHeight(entry, definition, entries.length);
+        }
+        nextY += rowHeight + 16;
+    }
+
     layoutDefinition.structure = withoutDesignElements;
+    layoutDefinition.options.height = Math.max(640, nextY + 4);
     layoutDefinition.options.backgroundColor = '#07101d';
 }
 
@@ -330,10 +348,6 @@ function redesignDashboard(fileName, descriptions) {
     if (!cdataMatch) throw new Error(`${fileName}: Dashboard Studio definition CDATA not found`);
 
     const definition = JSON.parse(cdataMatch[1]);
-    const hadDesignElements = Boolean(
-        definition.visualizations.viz_design_context ||
-            definition.visualizations.viz_design_section
-    );
     replaceColors(definition);
     definition.description = copy.purpose;
 
@@ -403,7 +417,7 @@ function redesignDashboard(fileName, descriptions) {
     }
 
     for (const layoutDefinition of Object.values(definition.layout?.layoutDefinitions ?? {})) {
-        redesignLayout(layoutDefinition, hadDesignElements);
+        redesignLayout(layoutDefinition, definition);
     }
 
     const serialized = JSON.stringify(definition, null, '\t');

@@ -2,6 +2,13 @@
 
 ## 1.0.36
 
+- Dashboard Manager view mode now adds Studio-style Display, zoom, Export JSON,
+  and Clone controls alongside the existing Download and Edit actions. Display
+  supports fullscreen and temporarily hiding Splunk navigation without leaving
+  the Searchbase-capable manager renderer.
+- All 16 Secure Networking canvases now use compact headers and 190-300 pixel
+  visualization rows instead of the previous 408-438 pixel panels, reducing
+  dashboard height while preserving panel order, searches, and drilldowns.
 - Executive Overview, Threat Detection and Enforcement, Authentication and
   Policy Enforcement, and Secure Infrastructure Status now render all 13
   single-value KPIs with time-bucketed sparklines and percent trends.

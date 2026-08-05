@@ -1559,6 +1559,9 @@ iseval = 0`}</CodeBlock>
                   section guidance, and visible Searchbase-derived
                   descriptions on all 131 data panels. Existing searches,
                   tokens, drilldowns, and data-source references are preserved.
+                  Panel rows are now compact, and Dashboard Manager view mode
+                  provides Studio-style Display, zoom, JSON export, and clone
+                  controls without giving up Searchbase-backed rendering.
                   The 13 single-value KPIs across Executive Overview, Threat
                   Detection and Enforcement, Authentication and Policy
                   Enforcement, and Secure Infrastructure Status now include

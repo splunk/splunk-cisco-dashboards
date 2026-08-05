@@ -198,7 +198,7 @@
 				"lineWidth": 2,
 				"nullValueDisplay": "gaps"
 			},
-			"description": "Tracks average RADIUS request processing latency in seconds per ISE node, the most direct indicator of authentication performance visible to end users and NADs."
+			"description": "Tracks average RADIUS request processing latency in milliseconds per ISE node, the most direct indicator of authentication performance visible to end users and NADs."
 		},
 		"viz_zta_ztna_status": {
 			"type": "splunk.area",
@@ -473,7 +473,7 @@
 				"options": {
 					"backgroundColor": "#07101d",
 					"display": "auto-scale",
-					"height": 2372,
+					"height": 1706,
 					"width": 1440
 				},
 				"structure": [
@@ -483,7 +483,7 @@
 							"x": 20,
 							"y": 0,
 							"w": 1400,
-							"h": 118
+							"h": 88
 						},
 						"type": "block"
 					},
@@ -491,19 +491,19 @@
 						"item": "viz_header_icon",
 						"position": {
 							"x": 36,
-							"y": 19,
-							"w": 80,
-							"h": 80
+							"y": 14,
+							"w": 56,
+							"h": 56
 						},
 						"type": "block"
 					},
 					{
 						"item": "viz_header",
 						"position": {
-							"x": 132,
-							"y": 8,
-							"w": 1268,
-							"h": 102
+							"x": 108,
+							"y": 4,
+							"w": 1292,
+							"h": 76
 						},
 						"type": "block"
 					},
@@ -511,9 +511,9 @@
 						"item": "viz_design_context",
 						"position": {
 							"x": 20,
-							"y": 138,
+							"y": 100,
 							"w": 1400,
-							"h": 92
+							"h": 64
 						},
 						"type": "block"
 					},
@@ -521,9 +521,9 @@
 						"item": "viz_design_section",
 						"position": {
 							"x": 20,
-							"y": 250,
+							"y": 176,
 							"w": 1400,
-							"h": 72
+							"h": 54
 						},
 						"type": "block"
 					},
@@ -531,9 +531,9 @@
 						"item": "viz_zta_auth_events",
 						"position": {
 							"x": 20,
-							"y": 342,
+							"y": 242,
 							"w": 335,
-							"h": 228
+							"h": 200
 						},
 						"type": "block"
 					},
@@ -541,9 +541,9 @@
 						"item": "viz_zta_failed_auth",
 						"position": {
 							"x": 375,
-							"y": 342,
+							"y": 242,
 							"w": 335,
-							"h": 228
+							"h": 200
 						},
 						"type": "block"
 					},
@@ -551,9 +551,9 @@
 						"item": "viz_zta_failed_pct",
 						"position": {
 							"x": 730,
-							"y": 342,
+							"y": 242,
 							"w": 335,
-							"h": 228
+							"h": 200
 						},
 						"type": "block"
 					},
@@ -561,9 +561,9 @@
 						"item": "viz_zta_feed_health",
 						"position": {
 							"x": 1085,
-							"y": 342,
+							"y": 242,
 							"w": 335,
-							"h": 228
+							"h": 200
 						},
 						"type": "block"
 					},
@@ -571,9 +571,9 @@
 						"item": "viz_zta_auth_outcome",
 						"position": {
 							"x": 20,
-							"y": 590,
+							"y": 458,
 							"w": 690,
-							"h": 388
+							"h": 280
 						},
 						"type": "block"
 					},
@@ -581,9 +581,9 @@
 						"item": "viz_zta_radius_latency",
 						"position": {
 							"x": 730,
-							"y": 590,
+							"y": 458,
 							"w": 690,
-							"h": 388
+							"h": 280
 						},
 						"type": "block"
 					},
@@ -591,9 +591,9 @@
 						"item": "viz_zta_ztna_status",
 						"position": {
 							"x": 20,
-							"y": 998,
+							"y": 754,
 							"w": 690,
-							"h": 438
+							"h": 280
 						},
 						"type": "block"
 					},
@@ -601,9 +601,9 @@
 						"item": "viz_zta_auth_by_device",
 						"position": {
 							"x": 730,
-							"y": 998,
+							"y": 754,
 							"w": 690,
-							"h": 438
+							"h": 300
 						},
 						"type": "block"
 					},
@@ -611,9 +611,9 @@
 						"item": "viz_zta_failure_reasons",
 						"position": {
 							"x": 20,
-							"y": 1456,
+							"y": 1070,
 							"w": 690,
-							"h": 438
+							"h": 280
 						},
 						"type": "block"
 					},
@@ -621,9 +621,9 @@
 						"item": "viz_zta_user_cross_source",
 						"position": {
 							"x": 730,
-							"y": 1456,
+							"y": 1070,
 							"w": 690,
-							"h": 438
+							"h": 300
 						},
 						"type": "block"
 					},
@@ -631,9 +631,9 @@
 						"item": "viz_zta_ravpn_connection_rate",
 						"position": {
 							"x": 20,
-							"y": 1914,
+							"y": 1386,
 							"w": 690,
-							"h": 438
+							"h": 280
 						},
 						"type": "block"
 					},
@@ -641,9 +641,9 @@
 						"item": "viz_zta_ravpn_posture_alerts",
 						"position": {
 							"x": 730,
-							"y": 1914,
+							"y": 1386,
 							"w": 690,
-							"h": 438
+							"h": 300
 						},
 						"type": "block"
 					}
