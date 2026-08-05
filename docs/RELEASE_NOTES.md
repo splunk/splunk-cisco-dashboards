@@ -5,6 +5,8 @@
 - Macro Index Tuning now includes all three Cisco Enterprise Networking app
   routing macros, including its sourcetype allow-list, and identifies each
   supported App or TA by both its display label and install folder.
+- Macro Index Tuning now also manages the installed Cisco Meraki, Cisco
+  Intersight, and Cisco Spaces index macros from the same scan and setup flow.
 
 ## 1.0.34
 

@@ -41,6 +41,9 @@ const CISCO_SECURITY_APP_NAME = "CiscoSecurityCloud";
 const THOUSAND_EYES_APP_NAME = "ta_cisco_thousandeyes";
 const CATALYST_APP_NAME = "cisco-catalyst-app";
 const DATA_CENTER_NETWORKING_APP_NAME = "cisco_dc_networking_app_for_splunk";
+const MERAKI_APP_NAME = "Splunk_TA_cisco_meraki";
+const INTERSIGHT_APP_NAME = "Splunk_TA_Cisco_Intersight";
+const SPACES_APP_NAME = "ta_cisco_spaces";
 const TUNING_SEARCHBASE_ID = "admin_macro_index_tuning";
 const TUNING_SEARCH_NAME = "Admin - Macro Index Tuning";
 const ADHOC_MACRO_NAME = "scd_summariesonly";
@@ -118,10 +121,30 @@ const DATA_CENTER_NETWORKING_INDEX_MACRO_NAMES = [
   "cisco_dc_nd_index",
   "cisco_dc_n9k_index",
 ] as const;
+const COMPANION_APP_INDEX_MACROS = [
+  {
+    macro: "meraki_index",
+    targetApp: MERAKI_APP_NAME,
+    family: "meraki",
+  },
+  {
+    macro: "cisco_intersight_index",
+    targetApp: INTERSIGHT_APP_NAME,
+    family: "intersight",
+  },
+  {
+    macro: "spaces_index",
+    targetApp: SPACES_APP_NAME,
+    family: "spaces",
+  },
+] as const;
 const TARGET_APP_ORDER = [
   APP_NAME,
   CATALYST_APP_NAME,
   DATA_CENTER_NETWORKING_APP_NAME,
+  MERAKI_APP_NAME,
+  INTERSIGHT_APP_NAME,
+  SPACES_APP_NAME,
   CISCO_SECURITY_APP_NAME,
   THOUSAND_EYES_APP_NAME,
   CIM_APP_NAME,
@@ -130,6 +153,9 @@ const TARGET_APP_LABELS: Record<string, string> = {
   [APP_NAME]: "Splunk App for Secure Networking",
   [CATALYST_APP_NAME]: "Cisco Enterprise Networking for Splunk Platform",
   [DATA_CENTER_NETWORKING_APP_NAME]: "Cisco DC Networking App for Splunk",
+  [MERAKI_APP_NAME]: "Cisco Meraki Add-on for Splunk",
+  [INTERSIGHT_APP_NAME]: "Cisco Intersight Add-On for Splunk",
+  [SPACES_APP_NAME]: "Cisco Spaces Add-on for Splunk",
   [CIM_APP_NAME]: "Splunk Common Information Model",
   [CISCO_SECURITY_APP_NAME]: "Cisco Security Cloud",
   [THOUSAND_EYES_APP_NAME]: "Cisco ThousandEyes App for Splunk",
@@ -178,6 +204,12 @@ const EXTERNAL_MACRO_DESCRIPTIONS: Record<string, string> = {
     "Routes Cisco Data Center Networking Nexus Dashboard searches to indexes containing Nexus Dashboard and MSO events.",
   cisco_dc_n9k_index:
     "Routes Cisco Data Center Networking Nexus 9000 searches to indexes containing Nexus 9000 events.",
+  meraki_index:
+    "Routes Cisco Meraki Add-on searches to indexes containing Meraki dashboard, appliance, switch, wireless, and security events.",
+  cisco_intersight_index:
+    "Routes Cisco Intersight Add-On searches to indexes containing Cisco Intersight inventory, health, and operations events.",
+  spaces_index:
+    "Routes Cisco Spaces Add-on searches to indexes containing Cisco Spaces firehose events.",
 };
 
 type ScanState = "idle" | "loading" | "ready" | "error";
@@ -219,6 +251,9 @@ interface TunableMacroConfig {
     | "cim"
     | "catalyst"
     | "dataCenterNetworking"
+    | "meraki"
+    | "intersight"
+    | "spaces"
     | "ciscoSecurity"
     | "thousandEyes";
 }
@@ -265,6 +300,13 @@ const DATA_CENTER_NETWORKING_INDEX_MACRO_CONFIGS: TunableMacroConfig[] =
     definitionFormat: "indexIn",
     family: "dataCenterNetworking",
   }));
+const COMPANION_APP_INDEX_MACRO_CONFIGS: TunableMacroConfig[] =
+  COMPANION_APP_INDEX_MACROS.map(({ macro, targetApp, family }) => ({
+    macro,
+    targetApp,
+    definitionFormat: "indexIn",
+    family,
+  }));
 
 const buildScdIndexMacroConfigs = (
   macroNames: readonly string[],
@@ -282,6 +324,7 @@ const buildTuningMacroCatalog = (scdIndexMacroNames: readonly string[]) => {
     ...indexMacroConfigs,
     ...CATALYST_APP_MACRO_CONFIGS,
     ...DATA_CENTER_NETWORKING_INDEX_MACRO_CONFIGS,
+    ...COMPANION_APP_INDEX_MACRO_CONFIGS,
     ...CISCO_SECURITY_MODEL_MACRO_CONFIGS,
     ...THOUSAND_EYES_MODEL_MACRO_CONFIGS,
   ];

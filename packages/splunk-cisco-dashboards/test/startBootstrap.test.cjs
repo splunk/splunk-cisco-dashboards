@@ -342,19 +342,33 @@ for (const recommendedDataModelApp of [
 ]) {
   assert.match(macroTuningSource, new RegExp(recommendedDataModelApp));
 }
-for (const appOwnedIndexMacro of [
+for (const appOwnedRoutingMacro of [
   "cisco_catalyst_app_index",
   "cisco_catalyst_app_sourcetypes",
   "cisco_catalyst_sdwan_index",
   "cisco_dc_aci_index",
   "cisco_dc_nd_index",
   "cisco_dc_n9k_index",
+  "meraki_index",
+  "cisco_intersight_index",
+  "spaces_index",
 ]) {
-  assert.match(macroTuningSource, new RegExp(appOwnedIndexMacro));
-  assert.match(searchbaseSource, new RegExp(appOwnedIndexMacro));
+  assert.match(macroTuningSource, new RegExp(appOwnedRoutingMacro));
+  assert.match(searchbaseSource, new RegExp(appOwnedRoutingMacro));
+}
+for (const supportedCompanionApp of [
+  "Splunk_TA_cisco_meraki",
+  "Splunk_TA_Cisco_Intersight",
+  "ta_cisco_spaces",
+]) {
+  assert.match(macroTuningSource, new RegExp(supportedCompanionApp));
+  assert.match(searchbaseSource, new RegExp(supportedCompanionApp));
 }
 assert.match(macroTuningSource, /sourcetypeIn/);
 assert.match(macroTuningSource, /Cisco Enterprise Networking for Splunk Platform/);
+assert.match(macroTuningSource, /Cisco Meraki Add-on for Splunk/);
+assert.match(macroTuningSource, /Cisco Intersight Add-On for Splunk/);
+assert.match(macroTuningSource, /Cisco Spaces Add-on for Splunk/);
 assert.match(searchbaseSource, /definition_format=="sourcetypeIn"/);
 assert.match(searchbaseSource, /sourcetype IN \(\\"/);
 
