@@ -93,10 +93,190 @@ const FALLBACK_SCD_INDEX_MACRO_NAMES = [
   "index_windows",
   "index_zeek",
 ] as const;
-const CIM_MACRO_NAMES = [
-  "cim_Authentication_indexes",
-  "cim_Network_Traffic_indexes",
+const cimHasTag = (tag: string): string =>
+  `mvfind(cim_tags,"^${tag}$")>=0`;
+const cimAll = (...predicates: string[]): string =>
+  `(${predicates.join(" AND ")})`;
+const cimAny = (...predicates: string[]): string =>
+  `(${predicates.join(" OR ")})`;
+
+const CIM_DATA_MODEL_DISCOVERY_CONFIGS = [
+  {
+    macro: "cim_Alerts_indexes",
+    model: "Alerts",
+    predicate: cimHasTag("alert"),
+  },
+  {
+    macro: "cim_Application_State_indexes",
+    model: "Application State",
+    predicate: cimAny(
+      cimAll(cimHasTag("listening"), cimHasTag("port")),
+      cimAll(cimHasTag("process"), cimHasTag("report")),
+      cimAll(cimHasTag("service"), cimHasTag("report")),
+    ),
+  },
+  {
+    macro: "cim_Authentication_indexes",
+    model: "Authentication",
+    predicate: cimAll(
+      cimHasTag("authentication"),
+      'NOT (action=="success" AND match(user,"\\$$"))',
+    ),
+  },
+  {
+    macro: "cim_Certificates_indexes",
+    model: "Certificates",
+    predicate: cimHasTag("certificate"),
+  },
+  {
+    macro: "cim_Change_Analysis_indexes",
+    model: "Change Analysis",
+    predicate: cimHasTag("change"),
+  },
+  {
+    macro: "cim_Change_indexes",
+    model: "Change",
+    predicate: cimHasTag("change"),
+  },
+  {
+    macro: "cim_Compute_Inventory_indexes",
+    model: "Compute Inventory",
+    predicate: cimAll(
+      cimHasTag("inventory"),
+      cimAny(
+        cimHasTag("cpu"),
+        cimHasTag("memory"),
+        cimHasTag("network"),
+        cimHasTag("storage"),
+        cimAll(cimHasTag("system"), cimHasTag("version")),
+        cimHasTag("user"),
+        cimHasTag("virtual"),
+      ),
+    ),
+  },
+  {
+    macro: "cim_DLP_indexes",
+    model: "Data Loss Prevention",
+    predicate: cimAll(cimHasTag("dlp"), cimHasTag("incident")),
+  },
+  {
+    macro: "cim_Databases_indexes",
+    model: "Databases",
+    predicate: cimHasTag("database"),
+  },
+  {
+    macro: "cim_Data_Access_indexes",
+    model: "Data Access",
+    predicate: cimAll(cimHasTag("data"), cimHasTag("access")),
+  },
+  {
+    macro: "cim_Email_indexes",
+    model: "Email",
+    predicate: cimHasTag("email"),
+  },
+  {
+    macro: "cim_Endpoint_indexes",
+    model: "Endpoint",
+    predicate: cimAny(
+      cimAll(cimHasTag("listening"), cimHasTag("port")),
+      cimAll(cimHasTag("process"), cimHasTag("report")),
+      cimAll(cimHasTag("service"), cimHasTag("report")),
+      cimAll(cimHasTag("endpoint"), cimHasTag("filesystem")),
+      cimAll(cimHasTag("endpoint"), cimHasTag("registry")),
+    ),
+  },
+  {
+    macro: "cim_Event_Signatures_indexes",
+    model: "Event Signatures",
+    predicate: cimAll(
+      cimHasTag("track_event_signatures"),
+      "(isnotnull(signature) OR isnotnull(signature_id))",
+    ),
+  },
+  {
+    macro: "cim_Interprocess_Messaging_indexes",
+    model: "Interprocess Messaging",
+    predicate: cimHasTag("messaging"),
+  },
+  {
+    macro: "cim_Intrusion_Detection_indexes",
+    model: "Intrusion Detection",
+    predicate: cimAll(cimHasTag("ids"), cimHasTag("attack")),
+  },
+  {
+    macro: "cim_JVM_indexes",
+    model: "JVM",
+    predicate: cimHasTag("jvm"),
+  },
+  {
+    macro: "cim_Malware_indexes",
+    model: "Malware",
+    predicate: cimAll(cimHasTag("malware"), cimHasTag("attack")),
+  },
+  {
+    macro: "cim_Network_Resolution_indexes",
+    model: "Network Resolution",
+    predicate: cimAll(
+      cimHasTag("network"),
+      cimHasTag("resolution"),
+      cimHasTag("dns"),
+    ),
+  },
+  {
+    macro: "cim_Network_Sessions_indexes",
+    model: "Network Sessions",
+    predicate: cimAll(cimHasTag("network"), cimHasTag("session")),
+  },
+  {
+    macro: "cim_Network_Traffic_indexes",
+    model: "Network Traffic",
+    predicate: cimAll(cimHasTag("network"), cimHasTag("communicate")),
+  },
+  {
+    macro: "cim_Performance_indexes",
+    model: "Performance",
+    predicate: cimAll(
+      cimHasTag("performance"),
+      cimAny(
+        cimHasTag("cpu"),
+        cimHasTag("facilities"),
+        cimHasTag("memory"),
+        cimHasTag("storage"),
+        cimHasTag("network"),
+        cimAll(
+          cimHasTag("os"),
+          cimAny(
+            cimAll(cimHasTag("time"), cimHasTag("synchronize")),
+            cimHasTag("uptime"),
+          ),
+        ),
+      ),
+    ),
+  },
+  {
+    macro: "cim_Ticket_Management_indexes",
+    model: "Ticket Management",
+    predicate: cimHasTag("ticketing"),
+  },
+  {
+    macro: "cim_Updates_indexes",
+    model: "Updates",
+    predicate: cimAll(cimHasTag("update"), cimHasTag("status")),
+  },
+  {
+    macro: "cim_Vulnerabilities_indexes",
+    model: "Vulnerabilities",
+    predicate: cimAll(cimHasTag("vulnerability"), cimHasTag("report")),
+  },
+  {
+    macro: "cim_Web_indexes",
+    model: "Web",
+    predicate: cimHasTag("web"),
+  },
 ] as const;
+const CIM_MACRO_NAMES = CIM_DATA_MODEL_DISCOVERY_CONFIGS.map(
+  ({ macro }) => macro,
+);
 const CISCO_SECURITY_MODEL_MACRO_NAMES = [
   "nvm_sysdata_index",
   "nvm_process_index",
@@ -167,11 +347,14 @@ const CISCO_SECURITY_DEFINITION_SUFFIXES: Record<string, string> = {
   nvm_combined_index:
     '(sourcetype="cisco:nvm:flowdata:v2" OR sourcetype="cisco:nvm:processinfodata:v2")',
 };
+const CIM_MACRO_DESCRIPTIONS: Record<string, string> = Object.fromEntries(
+  CIM_DATA_MODEL_DISCOVERY_CONFIGS.map(({ macro, model }) => [
+    macro,
+    `Limits Splunk CIM ${model} data-model searches to indexes containing events matched by its CIM constraints.`,
+  ]),
+);
 const EXTERNAL_MACRO_DESCRIPTIONS: Record<string, string> = {
-  cim_Authentication_indexes:
-    "Limits Splunk CIM Authentication data-model searches to indexes containing authentication-tagged events.",
-  cim_Network_Traffic_indexes:
-    "Limits Splunk CIM Network Traffic data-model searches to indexes containing network communication events.",
+  ...CIM_MACRO_DESCRIPTIONS,
   nvm_sysdata_index:
     "Routes Cisco Security Cloud endpoint inventory searches to indexes containing Cisco NVM system-data events.",
   nvm_process_index:
@@ -499,16 +682,44 @@ const TIME_PRESETS = [
   { label: "All time", earliest: "0", latest: "now" },
 ];
 
+const CIM_DISCOVERY_BASE_TAGS = [
+  "alert",
+  "listening",
+  "process",
+  "service",
+  "authentication",
+  "certificate",
+  "change",
+  "inventory",
+  "dlp",
+  "database",
+  "data",
+  "email",
+  "endpoint",
+  "track_event_signatures",
+  "messaging",
+  "ids",
+  "jvm",
+  "malware",
+  "network",
+  "performance",
+  "ticketing",
+  "update",
+  "vulnerability",
+  "web",
+] as const;
 const CIM_DISCOVERY_SEARCH = [
-  "search index=* tag=authentication NOT (action=success user=*$)",
+  `search index=* (${CIM_DISCOVERY_BASE_TAGS.map((tag) => `tag=${tag}`).join(" OR ")})`,
+  "| tags outputfield=cim_tags",
+  `| eval macro=mvappend(${CIM_DATA_MODEL_DISCOVERY_CONFIGS.map(
+    ({ macro, predicate }) =>
+      `if(${predicate},"${macro}",null())`,
+  ).join(",")})`,
+  "| where isnotnull(macro)",
+  "| mvexpand macro",
   '| eval sourcetype=coalesce(sourcetype, "(unknown sourcetype)")',
-  "| stats count by index, sourcetype",
-  `| eval macro="cim_Authentication_indexes", target_app="${CIM_APP_NAME}", definition_format="indexOr"`,
-  "| append [ search index=* tag=network tag=communicate",
-  '| eval sourcetype=coalesce(sourcetype, "(unknown sourcetype)")',
-  "| stats count by index, sourcetype",
-  `| eval macro="cim_Network_Traffic_indexes", target_app="${CIM_APP_NAME}", definition_format="indexOr" ]`,
-  "| stats values(index) as indexes, values(sourcetype) as sourcetypes, dc(sourcetype) as sourcetype_count, sum(count) as events by macro, target_app, definition_format",
+  "| stats values(index) as indexes, values(sourcetype) as sourcetypes, dc(sourcetype) as sourcetype_count, count as events by macro",
+  `| eval target_app="${CIM_APP_NAME}", definition_format="indexOr"`,
   '| eval definition="(index=".mvjoin(indexes, " OR index=").")"',
   "| table macro, target_app, definition_format, definition, indexes, sourcetypes, sourcetype_count, events",
 ].join("\n");
@@ -2634,7 +2845,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
               </section>
 
               <p className="mt-3 text-xs text-slate-500">
-                CIM macro tuning remains optional and can be run after setup.
+                All CIM data-model macros remain optional and can be tuned
+                after setup.
               </p>
             </section>
 
@@ -3863,8 +4075,9 @@ export default function MacroIndexTuningPage(): JSX.Element {
             </button>
             {!isCimGroupCollapsed && (
               <p className="mt-1 text-sm text-slate-600">
-                CIM data model discovery. Discover Splunk_SA_CIM index macros
-                with tag-based searches only when needed.
+                CIM data model discovery. Discover all {CIM_MACRO_NAMES.length}{" "}
+                Splunk_SA_CIM index macros with their shipped tag-based
+                constraints only when needed.
               </p>
             )}
           </div>
@@ -3897,7 +4110,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               ) : (
                 <Play size={16} />
               )}
-              {isCimLoading ? "Running" : "Run CIM discovery"}
+              {isCimLoading ? "Running" : "Run all CIM discovery"}
             </button>
             <a
               href={openCimSearchUrl}
@@ -3935,7 +4148,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
             {isCimLoading && cimRows.length === 0 ? (
               <div className="flex min-h-[180px] items-center justify-center gap-3 text-sm text-slate-600">
                 <Loader2 size={18} className="animate-spin text-sky-700" />
-                Discovering CIM indexes...
+                Discovering indexes for all CIM data models...
               </div>
             ) : cimRows.length === 0 ? (
               <div className="min-h-[160px] px-4 py-12 text-center text-sm text-slate-500">

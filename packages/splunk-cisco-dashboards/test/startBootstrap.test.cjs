@@ -356,6 +356,40 @@ for (const appOwnedRoutingMacro of [
   assert.match(macroTuningSource, new RegExp(appOwnedRoutingMacro));
   assert.match(searchbaseSource, new RegExp(appOwnedRoutingMacro));
 }
+for (const cimIndexMacro of [
+  "cim_Alerts_indexes",
+  "cim_Application_State_indexes",
+  "cim_Authentication_indexes",
+  "cim_Certificates_indexes",
+  "cim_Change_Analysis_indexes",
+  "cim_Change_indexes",
+  "cim_Compute_Inventory_indexes",
+  "cim_DLP_indexes",
+  "cim_Databases_indexes",
+  "cim_Data_Access_indexes",
+  "cim_Email_indexes",
+  "cim_Endpoint_indexes",
+  "cim_Event_Signatures_indexes",
+  "cim_Interprocess_Messaging_indexes",
+  "cim_Intrusion_Detection_indexes",
+  "cim_JVM_indexes",
+  "cim_Malware_indexes",
+  "cim_Network_Resolution_indexes",
+  "cim_Network_Sessions_indexes",
+  "cim_Network_Traffic_indexes",
+  "cim_Performance_indexes",
+  "cim_Ticket_Management_indexes",
+  "cim_Updates_indexes",
+  "cim_Vulnerabilities_indexes",
+  "cim_Web_indexes",
+]) {
+  assert.match(macroTuningSource, new RegExp(cimIndexMacro));
+}
+assert.match(macroTuningSource, /Run all CIM discovery/);
+assert.match(macroTuningSource, /cimHasTag\("filesystem"\)/);
+assert.match(macroTuningSource, /cimHasTag\("performance"\)/);
+assert.match(macroTuningSource, /tags outputfield=cim_tags/);
+assert.match(macroTuningSource, /mvexpand macro/);
 for (const supportedCompanionApp of [
   "Splunk_TA_cisco_meraki",
   "Splunk_TA_Cisco_Intersight",
