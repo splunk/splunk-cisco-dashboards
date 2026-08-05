@@ -66,6 +66,7 @@ const DATA_MODEL_ACCELERATION_SEARCH = `
 `;
 const DEFAULT_INDEX_IN_DEFINITION = "index IN (*)";
 const DEFAULT_INDEX_OR_DEFINITION = "(index=*)";
+const DEFAULT_SOURCETYPE_IN_DEFINITION = "sourcetype IN (*)";
 const SCD_INDEX_MACRO_OR_PLACEHOLDER = "__SCD_INDEX_MACRO_OR__";
 const FALLBACK_SCD_INDEX_MACRO_NAMES = [
   "index_catalyst",
@@ -107,8 +108,9 @@ const THOUSAND_EYES_MODEL_MACRO_NAMES = [
   "trace_index",
   "alert_index",
 ] as const;
-const CATALYST_APP_INDEX_MACRO_NAMES = [
+const CATALYST_APP_MACRO_NAMES = [
   "cisco_catalyst_app_index",
+  "cisco_catalyst_app_sourcetypes",
   "cisco_catalyst_sdwan_index",
 ] as const;
 const DATA_CENTER_NETWORKING_INDEX_MACRO_NAMES = [
@@ -125,12 +127,12 @@ const TARGET_APP_ORDER = [
   CIM_APP_NAME,
 ] as const;
 const TARGET_APP_LABELS: Record<string, string> = {
-  [APP_NAME]: "SCD",
-  [CATALYST_APP_NAME]: "Cisco Catalyst",
-  [DATA_CENTER_NETWORKING_APP_NAME]: "Cisco Data Center Networking",
-  [CIM_APP_NAME]: "CIM",
-  [CISCO_SECURITY_APP_NAME]: "Cisco Security",
-  [THOUSAND_EYES_APP_NAME]: "ThousandEyes",
+  [APP_NAME]: "Splunk App for Secure Networking",
+  [CATALYST_APP_NAME]: "Cisco Enterprise Networking for Splunk Platform",
+  [DATA_CENTER_NETWORKING_APP_NAME]: "Cisco DC Networking App for Splunk",
+  [CIM_APP_NAME]: "Splunk Common Information Model",
+  [CISCO_SECURITY_APP_NAME]: "Cisco Security Cloud",
+  [THOUSAND_EYES_APP_NAME]: "Cisco ThousandEyes App for Splunk",
 };
 const CISCO_SECURITY_DEFINITION_SUFFIXES: Record<string, string> = {
   nvm_sysdata_index: 'sourcetype="cisco:nvm:sysdata:v2"',
@@ -166,6 +168,8 @@ const EXTERNAL_MACRO_DESCRIPTIONS: Record<string, string> = {
     "Routes ThousandEyes alert searches to indexes containing active and historical alert events.",
   cisco_catalyst_app_index:
     "Routes Cisco Catalyst dashboard searches to indexes containing Catalyst Center, ISE, SD-WAN, CyberVision, Meraki, IOS, ThousandEyes, and related network events.",
+  cisco_catalyst_app_sourcetypes:
+    "Defines the broad app-owned sourcetype allow-list used by the Cisco Catalyst data model and index discovery. Keep it broad; use the index macros for deployment-specific scoping.",
   cisco_catalyst_sdwan_index:
     "Routes Cisco Catalyst SD-WAN dashboard searches to indexes containing Cisco SD-WAN events.",
   cisco_dc_aci_index:
@@ -179,7 +183,7 @@ const EXTERNAL_MACRO_DESCRIPTIONS: Record<string, string> = {
 type ScanState = "idle" | "loading" | "ready" | "error";
 type SaveState = "idle" | "saving" | "saved" | "error";
 type CopyState = "idle" | "copied" | "selected" | "error";
-type DefinitionFormat = "indexIn" | "indexOr";
+type DefinitionFormat = "indexIn" | "indexOr" | "sourcetypeIn";
 type DataModelAccelerationState =
   | "checking"
   | "enabled"
@@ -209,6 +213,7 @@ interface TunableMacroConfig {
   targetApp: string;
   definitionFormat: DefinitionFormat;
   definitionSuffix?: string;
+  preserveCurrentDefinition?: boolean;
   family:
     | "scd"
     | "cim"
@@ -241,11 +246,16 @@ const THOUSAND_EYES_MODEL_MACRO_CONFIGS: TunableMacroConfig[] =
     definitionFormat: "indexOr",
     family: "thousandEyes",
   }));
-const CATALYST_APP_INDEX_MACRO_CONFIGS: TunableMacroConfig[] =
-  CATALYST_APP_INDEX_MACRO_NAMES.map((macro) => ({
+const CATALYST_APP_MACRO_CONFIGS: TunableMacroConfig[] =
+  CATALYST_APP_MACRO_NAMES.map((macro) => ({
     macro,
     targetApp: CATALYST_APP_NAME,
-    definitionFormat: "indexIn",
+    definitionFormat:
+      macro === "cisco_catalyst_app_sourcetypes"
+        ? "sourcetypeIn"
+        : "indexIn",
+    preserveCurrentDefinition:
+      macro === "cisco_catalyst_app_sourcetypes",
     family: "catalyst",
   }));
 const DATA_CENTER_NETWORKING_INDEX_MACRO_CONFIGS: TunableMacroConfig[] =
@@ -270,7 +280,7 @@ const buildTuningMacroCatalog = (scdIndexMacroNames: readonly string[]) => {
   const indexMacroConfigs = buildScdIndexMacroConfigs(scdIndexMacroNames);
   const fastTuningMacroConfigs: TunableMacroConfig[] = [
     ...indexMacroConfigs,
-    ...CATALYST_APP_INDEX_MACRO_CONFIGS,
+    ...CATALYST_APP_MACRO_CONFIGS,
     ...DATA_CENTER_NETWORKING_INDEX_MACRO_CONFIGS,
     ...CISCO_SECURITY_MODEL_MACRO_CONFIGS,
     ...THOUSAND_EYES_MODEL_MACRO_CONFIGS,
@@ -505,7 +515,9 @@ const getTargetAppLabel = (targetApp: string): string =>
 
 const normalizeDefinitionFormat = (value: unknown): DefinitionFormat => {
   const normalized = normalizeText(value).trim();
-  return normalized === "indexOr" ? "indexOr" : "indexIn";
+  if (normalized === "indexOr") return "indexOr";
+  if (normalized === "sourcetypeIn") return "sourcetypeIn";
+  return "indexIn";
 };
 
 const parseSearchResult = (
@@ -611,13 +623,28 @@ const extractIndexTokens = (definition: string): string[] => {
   return Array.from(tokens);
 };
 
-const formatIndexDefinition = (
-  indexes: string[],
+const extractSourcetypeTokens = (definition: string): string[] => {
+  const inMatch = definition.match(/\bsourcetype\s+IN\s*\(([^)]*)\)/i);
+  if (!inMatch) return [];
+  return inMatch[1]
+    .split(",")
+    .map(cleanIndexToken)
+    .filter(Boolean);
+};
+
+const formatMacroDefinition = (
+  values: string[],
   definitionFormat: DefinitionFormat,
   definitionSuffix = "",
 ): string => {
-  const tokens = indexes.map(cleanIndexToken).filter(Boolean);
+  const tokens = values.map(cleanIndexToken).filter(Boolean);
   const suffix = definitionSuffix.trim() ? ` ${definitionSuffix.trim()}` : "";
+  if (definitionFormat === "sourcetypeIn") {
+    const definition = tokens.length
+      ? `sourcetype IN (${tokens.map((token) => `"${token}"`).join(", ")})`
+      : DEFAULT_SOURCETYPE_IN_DEFINITION;
+    return `${definition}${suffix}`;
+  }
   if (!tokens.length) {
     const defaultDefinition =
       definitionFormat === "indexOr"
@@ -676,12 +703,15 @@ const buildExpectedEditableRows = (
     const fallbackDefinition =
       details?.definition ||
       scanned?.definition ||
-      formatIndexDefinition(
+      formatMacroDefinition(
         [],
         config.definitionFormat,
         config.definitionSuffix,
       );
-    const draftDefinition = scanned?.definition || fallbackDefinition;
+    const draftDefinition =
+      config.preserveCurrentDefinition && details?.definition
+        ? details.definition
+        : scanned?.definition || fallbackDefinition;
 
     return {
       macro: config.macro,
@@ -696,7 +726,11 @@ const buildExpectedEditableRows = (
       indexes: scanned?.indexes?.length
         ? scanned.indexes
         : extractIndexTokens(fallbackDefinition),
-      sourcetypes: scanned?.sourcetypes || [],
+      sourcetypes: scanned?.sourcetypes?.length
+        ? scanned.sourcetypes
+        : config.definitionFormat === "sourcetypeIn"
+          ? extractSourcetypeTokens(fallbackDefinition)
+          : [],
       sourcetypeCount: scanned?.sourcetypeCount || 0,
       events: scanned?.events || 0,
       draftDefinition,
@@ -1959,7 +1993,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
     }
     setSetupStatus({
       state: "saving",
-      message: "Saving detected index macros",
+      message: "Saving detected routing macros",
     });
 
     try {
@@ -1987,8 +2021,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
         state: "saving",
         message:
           scanState === "ready"
-            ? "Saving detected index macros"
-            : "Skipping index macro tuning",
+            ? "Saving detected routing macros"
+            : "Skipping routing macro tuning",
       });
       for (const row of setupRowsToSave) {
         const rowKey = macroStatusKey(row);
@@ -2182,8 +2216,13 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 ) : (
                   <ChevronDown size={15} className="shrink-0" />
                 )}
-                <span className="min-w-0 truncate">
-                  {targetApp}/local/macros.conf
+                <span className="flex min-w-0 items-center gap-2 normal-case tracking-normal">
+                  <span className="truncate text-sm font-semibold text-slate-700">
+                    {getTargetAppLabel(targetApp)}
+                  </span>
+                  <code className="shrink-0 font-mono text-[11px] font-medium text-slate-500">
+                    {targetApp}/local/macros.conf
+                  </code>
                 </span>
                 <span className="ml-auto shrink-0 rounded bg-white px-2 py-0.5 text-[11px] font-semibold normal-case tracking-normal text-slate-500">
                   {formatNumber(appRows.length)} macros
@@ -2203,9 +2242,9 @@ export default function MacroIndexTuningPage(): JSX.Element {
     );
     const setupScanReady = scanState === "ready";
     const setupMacroCountLabel =
-      setupRowsToSave.length === 1 ? "index macro is" : "index macros are";
+      setupRowsToSave.length === 1 ? "routing macro is" : "routing macros are";
     const setupMacroNoun =
-      setupRowsToSave.length === 1 ? "index macro" : "index macros";
+      setupRowsToSave.length === 1 ? "routing macro" : "routing macros";
     const setupMetrics = [
       {
         value: setupRowsToSave.length,
@@ -2228,7 +2267,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
     let scanHeading = `${setupRowsToSave.length} ${setupMacroCountLabel} ready to save`;
     if (isLoading) {
       scanEyebrow = "Automatic scan in progress";
-      scanHeading = "Finding Cisco index macros…";
+      scanHeading = "Finding Cisco routing macros…";
     } else if (error) {
       scanEyebrow = "Automatic scan needs attention";
       scanHeading = "The index scan could not complete";
@@ -2267,7 +2306,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 Splunk App for Secure Networking · Setup · Step 3 of 3
               </div>
               <h1 className="mt-1 text-2xl font-bold leading-tight text-white">
-                Finish setup with the detected index macros
+                Finish setup with the detected routing macros
               </h1>
               <p className="mt-1.5 max-w-3xl text-sm text-slate-300">
                 Review exceptions, choose a search-performance mode, then save
@@ -2424,7 +2463,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                     <div className="mt-0.5 text-xs text-slate-600">
                       {hasUnknown
                         ? "Open the definitions below and map unexpected data before finishing."
-                        : "All detected Cisco data maps to a known index macro."}
+                        : "All detected Cisco data maps to a known routing macro."}
                     </div>
                   </div>
                 </div>
@@ -2490,7 +2529,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                     id="setup-external-app-macros-heading"
                     className="mt-1 text-base font-bold text-slate-900"
                   >
-                    Tune app-owned index macros
+                    Tune app-owned routing macros
                   </h3>
                   <p className="mt-1 text-xs text-slate-600">
                     Save detected indexes directly to each app&apos;s
@@ -2918,8 +2957,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   index_*
                 </code>{" "}
                 definitions, edit them if needed, then finish setup. Finishing
-                saves detected SCD index macros and unlocks the landing page;
-                optional CIM and external-app macros can be tuned later.
+                saves detected SCD and installed-app routing macros and unlocks
+                the landing page; optional CIM macros can be tuned later.
               </p>
               {setupStatus.state === "error" && setupStatus.message && (
                 <div
@@ -2964,7 +3003,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   ? "Waiting for the automatic index scan to finish."
                   : scanState === "error"
                     ? "The index scan did not complete. Finish setup now and retry macro tuning later."
-                  : `${setupRowsToSave.length} detected index macro${
+                  : `${setupRowsToSave.length} detected routing macro${
                       setupRowsToSave.length === 1 ? "" : "s"
                     } will be saved when setup finishes.`}
             </div>
@@ -3097,7 +3136,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               id="external-app-macro-readiness-heading"
               className="mt-1 text-base font-bold text-slate-900"
             >
-              Tune app-owned index macros from this dashboard
+              Tune app-owned routing macros from this dashboard
             </h2>
             <p className="mt-1 max-w-3xl text-sm text-slate-600">
               The fast scan proposes definitions only for enabled companion apps
@@ -3122,7 +3161,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
           <div
             className="grid gap-3 border-t border-sky-200 bg-white p-4 md:grid-cols-2 xl:grid-cols-4"
             role="list"
-            aria-label="Cisco app-owned index macro coverage"
+            aria-label="Cisco app-owned routing macro coverage"
           >
             {externalAppMacroSummaries.map((summary) => {
               const managerLink = externalAppMacroManagerLinks.find(
@@ -3503,7 +3542,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
             {formatNumber(tunableRows.length)}
           </div>
           <div className="mt-1 text-xs text-slate-500">
-            tunable index macros
+            tunable routing macros
           </div>
         </div>
         <div className="border border-slate-200 bg-white px-4 py-3">
@@ -3767,8 +3806,13 @@ export default function MacroIndexTuningPage(): JSX.Element {
               ) : (
                 <ChevronDown size={15} className="shrink-0" />
               )}
-              <span className="min-w-0 truncate">
-                {CIM_APP_NAME}/local/macros.conf
+              <span className="flex min-w-0 items-center gap-2 normal-case tracking-normal">
+                <span className="truncate text-sm font-semibold text-slate-700">
+                  {getTargetAppLabel(CIM_APP_NAME)}
+                </span>
+                <code className="shrink-0 font-mono text-[11px] font-medium text-slate-500">
+                  {CIM_APP_NAME}/local/macros.conf
+                </code>
               </span>
               <span className="shrink-0 rounded bg-slate-100 px-2 py-0.5 text-[11px] font-semibold normal-case tracking-normal text-slate-500">
                 {formatNumber(cimMacroRows.length)} macros

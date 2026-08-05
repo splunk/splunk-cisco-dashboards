@@ -1,5 +1,11 @@
 # Release notes
 
+## 1.0.36
+
+- Macro Index Tuning now includes all three Cisco Enterprise Networking app
+  routing macros, including its sourcetype allow-list, and identifies each
+  supported App or TA by both its display label and install folder.
+
 ## 1.0.34
 
 - Macro Index Tuning now separates the dashboard-macro heading from its search

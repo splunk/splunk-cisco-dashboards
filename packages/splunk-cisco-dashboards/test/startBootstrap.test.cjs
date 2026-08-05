@@ -297,7 +297,7 @@ const searchbaseSource = fs.readFileSync(
 );
 assert.match(macroTuningSource, /Review only what needs attention/);
 assert.match(macroTuningSource, /Balanced \(recommended\)/);
-assert.match(macroTuningSource, /Tune app-owned index macros/);
+assert.match(macroTuningSource, /Tune app-owned routing macros/);
 assert.match(macroTuningSource, /setupExternalRowsToSave/);
 assert.match(macroTuningSource, /loadInstalledAppIds/);
 assert.match(macroTuningSource, /enabled companion apps/);
@@ -344,6 +344,7 @@ for (const recommendedDataModelApp of [
 }
 for (const appOwnedIndexMacro of [
   "cisco_catalyst_app_index",
+  "cisco_catalyst_app_sourcetypes",
   "cisco_catalyst_sdwan_index",
   "cisco_dc_aci_index",
   "cisco_dc_nd_index",
@@ -352,6 +353,10 @@ for (const appOwnedIndexMacro of [
   assert.match(macroTuningSource, new RegExp(appOwnedIndexMacro));
   assert.match(searchbaseSource, new RegExp(appOwnedIndexMacro));
 }
+assert.match(macroTuningSource, /sourcetypeIn/);
+assert.match(macroTuningSource, /Cisco Enterprise Networking for Splunk Platform/);
+assert.match(searchbaseSource, /definition_format=="sourcetypeIn"/);
+assert.match(searchbaseSource, /sourcetype IN \(\\"/);
 
 // Executive Insights deliberately uses Simple XML rather than a custom Mako
 // template. Splunk Web can reload these profile views on first install;
