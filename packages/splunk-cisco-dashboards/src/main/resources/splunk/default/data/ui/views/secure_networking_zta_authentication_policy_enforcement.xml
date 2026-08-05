@@ -1,10 +1,10 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
     <label>Authentication and Policy Enforcement</label>
-    <description>Zero Trust Access drill-down dashboard for Authentication and Policy Enforcement.</description>
+    <description>Validate authentication outcomes and verify access policy enforcement.</description>
     <definition><![CDATA[
 {
 	"title": "Authentication and Policy Enforcement",
-	"description": "Zero Trust Access drill-down dashboard for Authentication and Policy Enforcement.",
+	"description": "Validate authentication outcomes and verify access policy enforcement.",
 	"inputs": {
 		"input_time_range": {
 			"options": {
@@ -27,8 +27,8 @@
 		"viz_header_bg": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "#0f172a",
-				"strokeColor": "rgba(148,163,184,0.22)"
+				"fillColor": "#16283c",
+				"strokeColor": "rgba(53,207,245,0.42)"
 			}
 		},
 		"viz_header_icon": {
@@ -46,8 +46,8 @@
 			"showProgressBar": false,
 			"options": {
 				"backgroundColor": "transparent",
-				"fontColor": "#e2e8f0",
-				"markdown": "# Authentication and Policy Enforcement\nZero Trust Access • Searchbase-backed operational views."
+				"fontColor": "#e8f1fb",
+				"markdown": "# Authentication and Policy Enforcement\nValidate authentication outcomes and verify access policy enforcement."
 			}
 		},
 		"viz_secure_networking_zta_ise_auth_by_device_fail_rate": {
@@ -57,11 +57,12 @@
 				"primary": "ds_secure_networking_zta_ise_auth_by_device_fail_rate"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Per- network access device (NAD) ISE authentication failure rate , identifying which switches, WLCs, or VPN concentrators are contributing most to failed authentications and may require investigation."
 		},
 		"viz_secure_networking_ise_policy_hits_by_device": {
 			"type": "splunk.table",
@@ -70,11 +71,12 @@
 				"primary": "ds_secure_networking_ise_policy_hits_by_device"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Ranks ISE policy-set hits by the network device (site/branch identity, e.g. wireless controller or firewall hostname) that triggered them — the closest real, validated proxy for \"Policy Hits by Site\" available today."
 		},
 		"viz_secure_networking_infra_ise_device_count": {
 			"type": "splunk.singlevalue",
@@ -83,14 +85,15 @@
 				"primary": "ds_secure_networking_infra_ise_device_count"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"sparklineDisplay": "off",
 				"trendDisplay": "off",
-				"majorColor": "#0EA5E9",
+				"majorColor": "#53bfff",
 				"majorValue": "> primary | seriesByName('ise_device_count') | lastPoint()"
-			}
+			},
+			"description": "Total count of unique network access devices (NADs) enforcing ISE policy , based on distinct device names seen in ISE syslog, providing the Zero Trust enforcement infrastructure footprint KPI."
 		},
 		"viz_secure_networking_ise_policy_family_overview": {
 			"type": "splunk.table",
@@ -99,11 +102,12 @@
 				"primary": "ds_secure_networking_ise_policy_family_overview"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Breaks down Cisco ISE policy sets by protocol family — RADIUS (network access) vs. TACACS+ (device administration) — showing policy set counts, cumulative hit counts, and enablement state per ISE host."
 		},
 		"viz_secure_networking_zta_radius_node_health_by_site": {
 			"type": "splunk.table",
@@ -112,11 +116,12 @@
 				"primary": "ds_secure_networking_zta_radius_node_health_by_site"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Summarizes ISE/RADIUS control-plane health by ISE host, site, and network device using success/failure mix and last-seen freshness."
 		},
 		"viz_security_resilience_ise_radius_latency": {
 			"type": "splunk.line",
@@ -125,19 +130,20 @@
 				"primary": "ds_security_resilience_ise_radius_latency"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"legendDisplay": "bottom",
 				"seriesColors": [
 					"#3B82F6",
 					"#10B981",
-					"#F59E0B",
+					"#ff9a4a",
 					"#EF4444"
 				],
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"lineWidth": 2
-			}
+			},
+			"description": "Tracks average RADIUS request processing latency in seconds per ISE node, the most direct indicator of authentication performance visible to end users and NADs."
 		},
 		"viz_secure_networking_zta_duo_admin_activity_by_outcome": {
 			"type": "splunk.table",
@@ -146,10 +152,33 @@
 				"primary": "ds_secure_networking_zta_duo_admin_activity_by_outcome"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
+			},
+			"description": "Breaks down Cisco Duo admin-panel activity by action and outcome, showing success vs. non-success counts and distinct admins per action."
+		},
+		"viz_design_context": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#111f31",
+				"fontColor": "#e8f1fb",
+				"markdown": "**Audience:** Identity, NAC, and access-policy operations  •  **Sources:** Cisco ISE RADIUS, policy-set, and network-device telemetry  •  **Reading guide:** Confirm enforcement footprint and latency, then investigate devices and policy hits.  •  **Freshness:** Uses the dashboard time range"
+			}
+		},
+		"viz_design_section": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#111f31",
+				"fontColor": "#e8f1fb",
+				"markdown": "### Policy enforcement\nConfirm enforcement footprint and latency, then investigate devices and policy hits."
 			}
 		}
 	},
@@ -239,9 +268,9 @@
 		"layoutDefinitions": {
 			"layout_overview": {
 				"options": {
-					"backgroundColor": "#020617",
+					"backgroundColor": "#07101d",
 					"display": "auto-scale",
-					"height": 1650,
+					"height": 2054,
 					"width": 1440
 				},
 				"structure": [
@@ -251,7 +280,7 @@
 							"x": 20,
 							"y": 0,
 							"w": 1400,
-							"h": 90
+							"h": 118
 						},
 						"type": "block"
 					},
@@ -259,19 +288,39 @@
 						"item": "viz_header_icon",
 						"position": {
 							"x": 36,
-							"y": 9,
-							"w": 72,
-							"h": 72
+							"y": 19,
+							"w": 80,
+							"h": 80
 						},
 						"type": "block"
 					},
 					{
 						"item": "viz_header",
 						"position": {
-							"x": 120,
-							"y": 0,
-							"w": 1300,
-							"h": 90
+							"x": 132,
+							"y": 8,
+							"w": 1268,
+							"h": 102
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_design_context",
+						"position": {
+							"x": 20,
+							"y": 138,
+							"w": 1400,
+							"h": 92
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_design_section",
+						"position": {
+							"x": 20,
+							"y": 250,
+							"w": 1400,
+							"h": 72
 						},
 						"type": "block"
 					},
@@ -279,9 +328,9 @@
 						"item": "viz_secure_networking_zta_ise_auth_by_device_fail_rate",
 						"position": {
 							"x": 20,
-							"y": 110,
+							"y": 342,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -289,9 +338,9 @@
 						"item": "viz_secure_networking_ise_policy_hits_by_device",
 						"position": {
 							"x": 730,
-							"y": 110,
+							"y": 342,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -299,9 +348,9 @@
 						"item": "viz_secure_networking_infra_ise_device_count",
 						"position": {
 							"x": 20,
-							"y": 490,
+							"y": 770,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -309,9 +358,9 @@
 						"item": "viz_secure_networking_ise_policy_family_overview",
 						"position": {
 							"x": 730,
-							"y": 490,
+							"y": 770,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -319,9 +368,9 @@
 						"item": "viz_secure_networking_zta_radius_node_health_by_site",
 						"position": {
 							"x": 20,
-							"y": 870,
+							"y": 1198,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -329,9 +378,9 @@
 						"item": "viz_security_resilience_ise_radius_latency",
 						"position": {
 							"x": 730,
-							"y": 870,
+							"y": 1198,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -339,9 +388,9 @@
 						"item": "viz_secure_networking_zta_duo_admin_activity_by_outcome",
 						"position": {
 							"x": 20,
-							"y": 1250,
+							"y": 1626,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					}

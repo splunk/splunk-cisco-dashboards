@@ -1,10 +1,10 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
     <label>Agentic Ops</label>
-    <description>Secure Networking drill-down dashboard for Agentic Ops.</description>
+    <description>Coordinate telemetry readiness, path health, routing instability, and AI Defense signals.</description>
     <definition><![CDATA[
 {
 	"title": "Agentic Ops",
-	"description": "Secure Networking drill-down dashboard for Agentic Ops.",
+	"description": "Coordinate telemetry readiness, path health, routing instability, and AI Defense signals.",
 	"inputs": {
 		"input_time_range": {
 			"options": {
@@ -27,8 +27,8 @@
 		"viz_header_bg": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "#0f172a",
-				"strokeColor": "rgba(148,163,184,0.22)"
+				"fillColor": "#16283c",
+				"strokeColor": "rgba(53,207,245,0.42)"
 			}
 		},
 		"viz_header_icon": {
@@ -46,8 +46,8 @@
 			"showProgressBar": false,
 			"options": {
 				"backgroundColor": "transparent",
-				"fontColor": "#e2e8f0",
-				"markdown": "# Agentic Ops\nTelemetry readiness, synthetic-path health, routing instability, and AI Defense signals."
+				"fontColor": "#e8f1fb",
+				"markdown": "# Agentic Ops\nCoordinate telemetry readiness, path health, routing instability, and AI Defense signals."
 			}
 		},
 		"viz_agentic_ai_defense": {
@@ -57,7 +57,7 @@
 				"primary": "ds_agentic_ai_defense"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('block_pct') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -70,19 +70,20 @@
 				"lowerBetter": [
 					{
 						"to": 20,
-						"value": "#16a34a"
+						"value": "#8bd45b"
 					},
 					{
 						"from": 20,
 						"to": 50,
-						"value": "#eab308"
+						"value": "#ff9a4a"
 					},
 					{
 						"from": 50,
-						"value": "#dc2626"
+						"value": "#ff7169"
 					}
 				]
-			}
+			},
+			"description": "Single-value block rate for Cisco AI Defense over the dashboard window - share of GenAI prompts and responses denied by policy."
 		},
 		"viz_agentic_te_feed": {
 			"type": "splunk.singlevalueradial",
@@ -91,7 +92,7 @@
 				"primary": "ds_agentic_te_feed_health"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('age_minutes') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -104,19 +105,20 @@
 				"staleness": [
 					{
 						"to": 30,
-						"value": "#16a34a"
+						"value": "#8bd45b"
 					},
 					{
 						"from": 30,
 						"to": 90,
-						"value": "#eab308"
+						"value": "#ff9a4a"
 					},
 					{
 						"from": 90,
-						"value": "#dc2626"
+						"value": "#ff7169"
 					}
 				]
-			}
+			},
+			"description": "Staleness monitor for the ThousandEyes OTel metric stream. Detects feed death within 30 minutes - the typical symptom of an OAuth2 token expiry, endpoint URL change after a TE platform upgrade, or HEC token rotation."
 		},
 		"viz_agentic_latency": {
 			"type": "splunk.singlevalueradial",
@@ -125,7 +127,7 @@
 				"primary": "ds_agentic_latency"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('avg_latency_ms') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -138,19 +140,20 @@
 				"latencyRange": [
 					{
 						"to": 100,
-						"value": "#16a34a"
+						"value": "#8bd45b"
 					},
 					{
 						"from": 100,
 						"to": 200,
-						"value": "#eab308"
+						"value": "#ff9a4a"
 					},
 					{
 						"from": 200,
-						"value": "#dc2626"
+						"value": "#ff7169"
 					}
 				]
-			}
+			},
+			"description": "Average round-trip network latency in milliseconds across all Cisco ThousandEyes network tests, with max and 95th-percentile values as a composite network performance KPI for the Agentic Ops pillar."
 		},
 		"viz_agentic_loss": {
 			"type": "splunk.singlevalueradial",
@@ -159,7 +162,7 @@
 				"primary": "ds_agentic_loss"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('avg_loss_pct') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -172,19 +175,20 @@
 				"lowerBetter": [
 					{
 						"to": 1,
-						"value": "#16a34a"
+						"value": "#8bd45b"
 					},
 					{
 						"from": 1,
 						"to": 5,
-						"value": "#eab308"
+						"value": "#ff9a4a"
 					},
 					{
 						"from": 5,
-						"value": "#dc2626"
+						"value": "#ff7169"
 					}
 				]
-			}
+			},
+			"description": "Average network packet loss percentage across all Cisco ThousandEyes network tests, with maximum loss for outlier context, as the primary network path quality KPI for Agentic Ops."
 		},
 		"viz_agentic_loss_trend": {
 			"type": "splunk.area",
@@ -193,18 +197,19 @@
 				"primary": "ds_agentic_loss_trend"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#dc2626",
-					"#f59e0b"
+					"#ff7169",
+					"#ff9a4a"
 				],
 				"lineWidth": 2,
 				"nullValueDisplay": "gaps"
-			}
+			},
+			"description": "Hourly trend of average and maximum network packet loss from Cisco ThousandEyes, enabling detection of transient vs sustained path quality degradation over time."
 		},
 		"viz_agentic_bgp_changes": {
 			"type": "splunk.area",
@@ -213,19 +218,20 @@
 				"primary": "ds_agentic_bgp_changes"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
 					"#7c3aed",
-					"#0ea5e9",
-					"#f59e0b"
+					"#53bfff",
+					"#ff9a4a"
 				],
 				"lineWidth": 2,
 				"nullValueDisplay": "gaps"
-			}
+			},
+			"description": "Hourly trend of BGP path changes detected by Cisco ThousandEyes per monitored test, surfacing internet routing instability that can degrade application reachability and performance before users report issues."
 		},
 		"viz_agentic_test_health": {
 			"type": "splunk.column",
@@ -234,16 +240,17 @@
 				"primary": "ds_agentic_test_health"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#16a34a",
-					"#dc2626"
+					"#8bd45b",
+					"#ff7169"
 				]
-			}
+			},
+			"description": "Summary of Cisco ThousandEyes test health — total tests monitored, healthy tests, and degraded tests — derived from network loss and HTTP availability metrics to provide the Agentic Ops visibility KPI."
 		},
 		"viz_agentic_http_availability": {
 			"type": "splunk.bar",
@@ -252,16 +259,17 @@
 				"primary": "ds_agentic_http_availability"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#16a34a",
-					"#f59e0b"
+					"#8bd45b",
+					"#ff9a4a"
 				]
-			}
+			},
+			"description": "Per-test HTTP server availability from Cisco ThousandEyes, showing average and minimum availability percentages with health status for each monitored application or service endpoint."
 		},
 		"viz_agentic_web_errors": {
 			"type": "splunk.singlevalue",
@@ -270,14 +278,15 @@
 				"primary": "ds_agentic_web_errors"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('total_errors') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"sparklineDisplay": "off",
 				"trendDisplay": "off",
-				"majorColor": "#dc2626"
-			}
+				"majorColor": "#ff7169"
+			},
+			"description": "Total count of web transaction errors detected by Cisco ThousandEyes across all monitored web transaction tests, indicating failed steps or HTTP errors encountered during synthetic transaction execution."
 		},
 		"viz_agentic_feed_matrix": {
 			"type": "splunk.table",
@@ -286,10 +295,33 @@
 				"primary": "ds_agentic_feed_matrix"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 25,
 				"fontSize": "small",
 				"showInternalFields": false
+			},
+			"description": "Single-pane consolidated health matrix for every critical Cisco data feed - ThousandEyes, FTD, FMC eStreamer, Catalyst Center, SD-WAN, ISE, Cisco Spaces, IOS syslog, Duo, Meraki, Zeek, and ACI/ND."
+		},
+		"viz_design_context": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#111f31",
+				"fontColor": "#e8f1fb",
+				"markdown": "**Audience:** Security and network operations  •  **Sources:** AI Defense, ThousandEyes, routing, and feed-health telemetry  •  **Reading guide:** Confirm feed health first, then investigate path quality, routing, and enforcement exceptions.  •  **Freshness:** Uses the dashboard time range"
+			}
+		},
+		"viz_design_section": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#111f31",
+				"fontColor": "#e8f1fb",
+				"markdown": "### Operational posture\nConfirm feed health first, then investigate path quality, routing, and enforcement exceptions."
 			}
 		}
 	},
@@ -412,9 +444,9 @@
 		"layoutDefinitions": {
 			"layout_overview": {
 				"options": {
-					"backgroundColor": "#020617",
+					"backgroundColor": "#07101d",
 					"display": "auto-scale",
-					"height": 1490,
+					"height": 1914,
 					"width": 1440
 				},
 				"structure": [
@@ -424,7 +456,7 @@
 							"x": 20,
 							"y": 0,
 							"w": 1400,
-							"h": 90
+							"h": 118
 						},
 						"type": "block"
 					},
@@ -432,19 +464,39 @@
 						"item": "viz_header_icon",
 						"position": {
 							"x": 36,
-							"y": 9,
-							"w": 72,
-							"h": 72
+							"y": 19,
+							"w": 80,
+							"h": 80
 						},
 						"type": "block"
 					},
 					{
 						"item": "viz_header",
 						"position": {
-							"x": 120,
-							"y": 0,
-							"w": 1300,
-							"h": 90
+							"x": 132,
+							"y": 8,
+							"w": 1268,
+							"h": 102
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_design_context",
+						"position": {
+							"x": 20,
+							"y": 138,
+							"w": 1400,
+							"h": 92
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_design_section",
+						"position": {
+							"x": 20,
+							"y": 250,
+							"w": 1400,
+							"h": 72
 						},
 						"type": "block"
 					},
@@ -452,9 +504,9 @@
 						"item": "viz_agentic_ai_defense",
 						"position": {
 							"x": 20,
-							"y": 110,
+							"y": 342,
 							"w": 335,
-							"h": 180
+							"h": 228
 						},
 						"type": "block"
 					},
@@ -462,9 +514,9 @@
 						"item": "viz_agentic_te_feed",
 						"position": {
 							"x": 375,
-							"y": 110,
+							"y": 342,
 							"w": 335,
-							"h": 180
+							"h": 228
 						},
 						"type": "block"
 					},
@@ -472,9 +524,9 @@
 						"item": "viz_agentic_latency",
 						"position": {
 							"x": 730,
-							"y": 110,
+							"y": 342,
 							"w": 335,
-							"h": 180
+							"h": 228
 						},
 						"type": "block"
 					},
@@ -482,9 +534,9 @@
 						"item": "viz_agentic_loss",
 						"position": {
 							"x": 1085,
-							"y": 110,
+							"y": 342,
 							"w": 335,
-							"h": 180
+							"h": 228
 						},
 						"type": "block"
 					},
@@ -492,9 +544,9 @@
 						"item": "viz_agentic_loss_trend",
 						"position": {
 							"x": 20,
-							"y": 310,
+							"y": 590,
 							"w": 690,
-							"h": 340
+							"h": 388
 						},
 						"type": "block"
 					},
@@ -502,9 +554,9 @@
 						"item": "viz_agentic_bgp_changes",
 						"position": {
 							"x": 730,
-							"y": 310,
+							"y": 590,
 							"w": 690,
-							"h": 340
+							"h": 388
 						},
 						"type": "block"
 					},
@@ -512,9 +564,9 @@
 						"item": "viz_agentic_test_health",
 						"position": {
 							"x": 20,
-							"y": 670,
+							"y": 998,
 							"w": 690,
-							"h": 390
+							"h": 438
 						},
 						"type": "block"
 					},
@@ -522,9 +574,9 @@
 						"item": "viz_agentic_http_availability",
 						"position": {
 							"x": 730,
-							"y": 670,
+							"y": 998,
 							"w": 690,
-							"h": 390
+							"h": 438
 						},
 						"type": "block"
 					},
@@ -532,9 +584,9 @@
 						"item": "viz_agentic_web_errors",
 						"position": {
 							"x": 20,
-							"y": 1080,
+							"y": 1456,
 							"w": 690,
-							"h": 390
+							"h": 438
 						},
 						"type": "block"
 					},
@@ -542,9 +594,9 @@
 						"item": "viz_agentic_feed_matrix",
 						"position": {
 							"x": 730,
-							"y": 1080,
+							"y": 1456,
 							"w": 690,
-							"h": 390
+							"h": 438
 						},
 						"type": "block"
 					}

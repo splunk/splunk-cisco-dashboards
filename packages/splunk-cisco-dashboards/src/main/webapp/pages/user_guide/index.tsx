@@ -1538,8 +1538,9 @@ iseval = 0`}</CodeBlock>
                         {APP_VERSION_LABEL}
                       </td>
                       <td className="px-3 py-3 text-slate-700">
-                        Guided setup, workspace customization, Searchbase
-                        navigation, and site-connectivity improvements.
+                        Secure Networking dashboard clarity, guided setup,
+                        workspace customization, Searchbase navigation, and
+                        site-connectivity improvements.
                       </td>
                       <td className="px-3 py-3 text-slate-700">
                         Review setup readiness after installing companion apps;
@@ -1551,6 +1552,14 @@ iseval = 0`}</CodeBlock>
               </div>
 
               <div className="mt-5 grid gap-4 md:grid-cols-2">
+                <InfoCard title="Secure Networking dashboards">
+                  All 16 Secure Networking Dashboard Studio views now use a
+                  Cisco-inspired dark-mode hierarchy with purpose-led headers,
+                  compact audience and source context, decision-oriented
+                  section guidance, and visible Searchbase-derived
+                  descriptions on all 131 data panels. Existing searches,
+                  tokens, drilldowns, and data-source references are preserved.
+                </InfoCard>
                 <InfoCard title="Guided setup and performance readiness">
                   Setup now brings package checks, index macro discovery, data
                   model acceleration readiness, targeted Data Models links, and

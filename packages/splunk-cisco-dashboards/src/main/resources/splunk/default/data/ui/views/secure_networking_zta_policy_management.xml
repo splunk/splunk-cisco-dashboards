@@ -1,10 +1,10 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
     <label>Policy Management</label>
-    <description>Zero Trust Access drill-down dashboard for Policy Management.</description>
+    <description>Monitor access-policy coverage, change, and exceptions needing review.</description>
     <definition><![CDATA[
 {
 	"title": "Policy Management",
-	"description": "Zero Trust Access drill-down dashboard for Policy Management.",
+	"description": "Monitor access-policy coverage, change, and exceptions needing review.",
 	"inputs": {
 		"input_time_range": {
 			"options": {
@@ -27,8 +27,8 @@
 		"viz_header_bg": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "#0f172a",
-				"strokeColor": "rgba(148,163,184,0.22)"
+				"fillColor": "#16283c",
+				"strokeColor": "rgba(53,207,245,0.42)"
 			}
 		},
 		"viz_header_icon": {
@@ -46,8 +46,8 @@
 			"showProgressBar": false,
 			"options": {
 				"backgroundColor": "transparent",
-				"fontColor": "#e2e8f0",
-				"markdown": "# Policy Management\nZero Trust Access • Searchbase-backed operational views."
+				"fontColor": "#e8f1fb",
+				"markdown": "# Policy Management\nMonitor access-policy coverage, change, and exceptions needing review."
 			}
 		},
 		"viz_secure_networking_zta_duo_auth_outcomes_by_application": {
@@ -57,11 +57,12 @@
 				"primary": "ds_secure_networking_zta_duo_auth_outcomes_by_application"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Summarizes end-user Cisco Duo MFA decisions by protected application and factor, including successes, denials, fraud reports, affected users, and failure rate."
 		},
 		"viz_secure_networking_infra_duo_blocked_posture_identity": {
 			"type": "splunk.table",
@@ -70,10 +71,33 @@
 				"primary": "ds_secure_networking_infra_duo_blocked_posture_identity"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
+			},
+			"description": "Combines Duo denied identity decisions with current endpoint posture failures such as missing encryption, firewall, password, or trust controls."
+		},
+		"viz_design_context": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#111f31",
+				"fontColor": "#e8f1fb",
+				"markdown": "**Audience:** Identity-security and access-policy owners  •  **Sources:** Cisco Duo authentication, identity, and endpoint-posture telemetry  •  **Reading guide:** Review decisions by application, then investigate denied identities and posture gaps.  •  **Freshness:** Uses the dashboard time range"
+			}
+		},
+		"viz_design_section": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#111f31",
+				"fontColor": "#e8f1fb",
+				"markdown": "### Policy outcomes\nReview decisions by application, then investigate denied identities and posture gaps."
 			}
 		}
 	},
@@ -108,9 +132,9 @@
 		"layoutDefinitions": {
 			"layout_overview": {
 				"options": {
-					"backgroundColor": "#020617",
+					"backgroundColor": "#07101d",
 					"display": "auto-scale",
-					"height": 510,
+					"height": 900,
 					"width": 1440
 				},
 				"structure": [
@@ -120,7 +144,7 @@
 							"x": 20,
 							"y": 0,
 							"w": 1400,
-							"h": 90
+							"h": 118
 						},
 						"type": "block"
 					},
@@ -128,19 +152,39 @@
 						"item": "viz_header_icon",
 						"position": {
 							"x": 36,
-							"y": 9,
-							"w": 72,
-							"h": 72
+							"y": 19,
+							"w": 80,
+							"h": 80
 						},
 						"type": "block"
 					},
 					{
 						"item": "viz_header",
 						"position": {
-							"x": 120,
-							"y": 0,
-							"w": 1300,
-							"h": 90
+							"x": 132,
+							"y": 8,
+							"w": 1268,
+							"h": 102
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_design_context",
+						"position": {
+							"x": 20,
+							"y": 138,
+							"w": 1400,
+							"h": 92
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_design_section",
+						"position": {
+							"x": 20,
+							"y": 250,
+							"w": 1400,
+							"h": 72
 						},
 						"type": "block"
 					},
@@ -148,9 +192,9 @@
 						"item": "viz_secure_networking_zta_duo_auth_outcomes_by_application",
 						"position": {
 							"x": 20,
-							"y": 110,
+							"y": 342,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -158,9 +202,9 @@
 						"item": "viz_secure_networking_infra_duo_blocked_posture_identity",
 						"position": {
 							"x": 730,
-							"y": 110,
+							"y": 342,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					}

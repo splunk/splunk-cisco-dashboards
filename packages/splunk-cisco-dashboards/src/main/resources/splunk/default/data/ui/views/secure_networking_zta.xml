@@ -1,10 +1,10 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
     <label>Zero Trust Access</label>
-    <description>Secure Networking drill-down dashboard for Zero Trust Access.</description>
+    <description>Connect identity, posture, policy, and response signals across the access journey.</description>
     <definition><![CDATA[
 {
 	"title": "Zero Trust Access",
-	"description": "Secure Networking drill-down dashboard for Zero Trust Access.",
+	"description": "Connect identity, posture, policy, and response signals across the access journey.",
 	"inputs": {
 		"input_time_range": {
 			"options": {
@@ -27,8 +27,8 @@
 		"viz_header_bg": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "#0f172a",
-				"strokeColor": "rgba(148,163,184,0.22)"
+				"fillColor": "#16283c",
+				"strokeColor": "rgba(53,207,245,0.42)"
 			}
 		},
 		"viz_header_icon": {
@@ -46,8 +46,8 @@
 			"showProgressBar": false,
 			"options": {
 				"backgroundColor": "transparent",
-				"fontColor": "#e2e8f0",
-				"markdown": "# Zero Trust Access\nIdentity enforcement, policy outcomes, ZTNA sessions, and authentication friction."
+				"fontColor": "#e8f1fb",
+				"markdown": "# Zero Trust Access\nConnect identity, posture, policy, and response signals across the access journey."
 			}
 		},
 		"viz_zta_auth_events": {
@@ -57,14 +57,15 @@
 				"primary": "ds_zta_auth_events"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('auth_events') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"sparklineDisplay": "off",
 				"trendDisplay": "off",
-				"majorColor": "#0ea5e9"
-			}
+				"majorColor": "#53bfff"
+			},
+			"description": "Total count of ISE authentication events (passed and failed) across all network devices and policy sets, serving as the primary Zero Trust Access activity volume KPI."
 		},
 		"viz_zta_failed_auth": {
 			"type": "splunk.singlevalue",
@@ -73,14 +74,15 @@
 				"primary": "ds_zta_failed_auth"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('failed_auth') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"sparklineDisplay": "off",
 				"trendDisplay": "off",
-				"majorColor": "#dc2626"
-			}
+				"majorColor": "#ff7169"
+			},
+			"description": "Count of failed ISE authentication attempts , covering credential failures, certificate validation errors, and policy-denied access requests, as the primary Zero Trust denial KPI."
 		},
 		"viz_zta_failed_pct": {
 			"type": "splunk.singlevalueradial",
@@ -89,7 +91,7 @@
 				"primary": "ds_zta_failed_pct"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('failed_pct') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -102,19 +104,20 @@
 				"lowerBetter": [
 					{
 						"to": 1,
-						"value": "#16a34a"
+						"value": "#8bd45b"
 					},
 					{
 						"from": 1,
 						"to": 5,
-						"value": "#eab308"
+						"value": "#ff9a4a"
 					},
 					{
 						"from": 5,
-						"value": "#dc2626"
+						"value": "#ff7169"
 					}
 				]
-			}
+			},
+			"description": "Authentication failure rate percentage from Cisco ISE , calculated from the observed passed- and failed-authentication event categories, providing a normalized health indicator for the Zero Trust Access enforcement…"
 		},
 		"viz_zta_feed_health": {
 			"type": "splunk.singlevalueradial",
@@ -123,7 +126,7 @@
 				"primary": "ds_zta_feed_health"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('age_minutes') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -136,19 +139,20 @@
 				"staleness": [
 					{
 						"to": 30,
-						"value": "#16a34a"
+						"value": "#8bd45b"
 					},
 					{
 						"from": 30,
 						"to": 90,
-						"value": "#eab308"
+						"value": "#ff9a4a"
 					},
 					{
 						"from": 90,
-						"value": "#dc2626"
+						"value": "#ff7169"
 					}
 				]
-			}
+			},
+			"description": "Staleness monitor for the Cisco ISE RADIUS authentication syslog feed. Any active corporate network generates RADIUS auth events continuously - silence beyond 30 minutes indicates the MnT syslog target has broken, not…"
 		},
 		"viz_zta_auth_outcome": {
 			"type": "splunk.area",
@@ -157,20 +161,21 @@
 				"primary": "ds_zta_auth_outcome_trend"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#16a34a",
-					"#dc2626",
+					"#8bd45b",
+					"#ff7169",
 					"#64748b"
 				],
 				"stackMode": "stacked",
 				"lineWidth": 2,
 				"nullValueDisplay": "gaps"
-			}
+			},
+			"description": "Charts Cisco ISE authentication outcomes over time, split into success and failure series for Zero Trust Access monitoring."
 		},
 		"viz_zta_radius_latency": {
 			"type": "splunk.line",
@@ -179,20 +184,21 @@
 				"primary": "ds_zta_radius_latency"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
 					"#2563eb",
-					"#16a34a",
-					"#f59e0b",
-					"#dc2626"
+					"#8bd45b",
+					"#ff9a4a",
+					"#ff7169"
 				],
 				"lineWidth": 2,
 				"nullValueDisplay": "gaps"
-			}
+			},
+			"description": "Tracks average RADIUS request processing latency in seconds per ISE node, the most direct indicator of authentication performance visible to end users and NADs."
 		},
 		"viz_zta_ztna_status": {
 			"type": "splunk.area",
@@ -201,21 +207,22 @@
 				"primary": "ds_zta_ztna_status"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#16a34a",
-					"#f59e0b",
-					"#dc2626",
+					"#8bd45b",
+					"#ff9a4a",
+					"#ff7169",
 					"#64748b"
 				],
 				"stackMode": "stacked",
 				"lineWidth": 2,
 				"nullValueDisplay": "gaps"
-			}
+			},
+			"description": "Hourly trend of Cisco SSE ZTNA connection statuses over time, enabling operators to track ZTNA adoption growth, detect access disruptions, and correlate denial spikes with policy or infrastructure changes."
 		},
 		"viz_zta_auth_by_device": {
 			"type": "splunk.table",
@@ -224,11 +231,12 @@
 				"primary": "ds_zta_auth_by_device"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Per- network access device (NAD) ISE authentication failure rate , identifying which switches, WLCs, or VPN concentrators are contributing most to failed authentications and may require investigation."
 		},
 		"viz_zta_failure_reasons": {
 			"type": "splunk.bar",
@@ -237,15 +245,16 @@
 				"primary": "ds_zta_failure_reasons"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"legendDisplay": "off",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#dc2626"
+					"#ff7169"
 				]
-			}
+			},
+			"description": "Ranks ISE authentication failure reasons by site/location and network device so access-policy failures become actionable instead of a single failed-auth count."
 		},
 		"viz_zta_user_cross_source": {
 			"type": "splunk.table",
@@ -254,11 +263,12 @@
 				"primary": "ds_zta_user_cross_source"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Cross-source user/identity activity correlation spanning ISE NAC, Cisco ZTNA, and FMC firewall layers, providing a unified per-user view of how many Zero Trust enforcement layers an identity is active across and whether…"
 		},
 		"viz_zta_ravpn_connection_rate": {
 			"type": "splunk.line",
@@ -267,20 +277,21 @@
 				"primary": "ds_zta_ravpn_connection_rate"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
 					"#2563eb",
-					"#0ea5e9",
-					"#16a34a",
-					"#dc2626"
+					"#53bfff",
+					"#8bd45b",
+					"#ff7169"
 				],
 				"lineWidth": 2,
 				"nullValueDisplay": "gaps"
-			}
+			},
+			"description": "Tracks remote-access VPN clients, sessions, successful connections, and failed connections in 15-minute intervals."
 		},
 		"viz_zta_ravpn_posture_alerts": {
 			"type": "splunk.table",
@@ -289,10 +300,33 @@
 				"primary": "ds_zta_ravpn_posture_alerts"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
+			},
+			"description": "Surfaces RaVPN posture failures, warnings, alerts, and operational log reasons with user, profile, region, and device context."
+		},
+		"viz_design_context": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#111f31",
+				"fontColor": "#e8f1fb",
+				"markdown": "**Audience:** Identity, network-security, and SOC teams  •  **Sources:** Cisco ISE authentication and network-device enforcement telemetry  •  **Reading guide:** Compare authentication volume and failure pressure before investigating devices and policy.  •  **Freshness:** Uses the dashboard time range"
+			}
+		},
+		"viz_design_section": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#111f31",
+				"fontColor": "#e8f1fb",
+				"markdown": "### Access posture\nCompare authentication volume and failure pressure before investigating devices and policy."
 			}
 		}
 	},
@@ -437,9 +471,9 @@
 		"layoutDefinitions": {
 			"layout_overview": {
 				"options": {
-					"backgroundColor": "#020617",
+					"backgroundColor": "#07101d",
 					"display": "auto-scale",
-					"height": 1900,
+					"height": 2372,
 					"width": 1440
 				},
 				"structure": [
@@ -449,7 +483,7 @@
 							"x": 20,
 							"y": 0,
 							"w": 1400,
-							"h": 90
+							"h": 118
 						},
 						"type": "block"
 					},
@@ -457,19 +491,39 @@
 						"item": "viz_header_icon",
 						"position": {
 							"x": 36,
-							"y": 9,
-							"w": 72,
-							"h": 72
+							"y": 19,
+							"w": 80,
+							"h": 80
 						},
 						"type": "block"
 					},
 					{
 						"item": "viz_header",
 						"position": {
-							"x": 120,
-							"y": 0,
-							"w": 1300,
-							"h": 90
+							"x": 132,
+							"y": 8,
+							"w": 1268,
+							"h": 102
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_design_context",
+						"position": {
+							"x": 20,
+							"y": 138,
+							"w": 1400,
+							"h": 92
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_design_section",
+						"position": {
+							"x": 20,
+							"y": 250,
+							"w": 1400,
+							"h": 72
 						},
 						"type": "block"
 					},
@@ -477,9 +531,9 @@
 						"item": "viz_zta_auth_events",
 						"position": {
 							"x": 20,
-							"y": 110,
+							"y": 342,
 							"w": 335,
-							"h": 180
+							"h": 228
 						},
 						"type": "block"
 					},
@@ -487,9 +541,9 @@
 						"item": "viz_zta_failed_auth",
 						"position": {
 							"x": 375,
-							"y": 110,
+							"y": 342,
 							"w": 335,
-							"h": 180
+							"h": 228
 						},
 						"type": "block"
 					},
@@ -497,9 +551,9 @@
 						"item": "viz_zta_failed_pct",
 						"position": {
 							"x": 730,
-							"y": 110,
+							"y": 342,
 							"w": 335,
-							"h": 180
+							"h": 228
 						},
 						"type": "block"
 					},
@@ -507,9 +561,9 @@
 						"item": "viz_zta_feed_health",
 						"position": {
 							"x": 1085,
-							"y": 110,
+							"y": 342,
 							"w": 335,
-							"h": 180
+							"h": 228
 						},
 						"type": "block"
 					},
@@ -517,9 +571,9 @@
 						"item": "viz_zta_auth_outcome",
 						"position": {
 							"x": 20,
-							"y": 310,
+							"y": 590,
 							"w": 690,
-							"h": 340
+							"h": 388
 						},
 						"type": "block"
 					},
@@ -527,9 +581,9 @@
 						"item": "viz_zta_radius_latency",
 						"position": {
 							"x": 730,
-							"y": 310,
+							"y": 590,
 							"w": 690,
-							"h": 340
+							"h": 388
 						},
 						"type": "block"
 					},
@@ -537,9 +591,9 @@
 						"item": "viz_zta_ztna_status",
 						"position": {
 							"x": 20,
-							"y": 670,
+							"y": 998,
 							"w": 690,
-							"h": 390
+							"h": 438
 						},
 						"type": "block"
 					},
@@ -547,9 +601,9 @@
 						"item": "viz_zta_auth_by_device",
 						"position": {
 							"x": 730,
-							"y": 670,
+							"y": 998,
 							"w": 690,
-							"h": 390
+							"h": 438
 						},
 						"type": "block"
 					},
@@ -557,9 +611,9 @@
 						"item": "viz_zta_failure_reasons",
 						"position": {
 							"x": 20,
-							"y": 1080,
+							"y": 1456,
 							"w": 690,
-							"h": 390
+							"h": 438
 						},
 						"type": "block"
 					},
@@ -567,9 +621,9 @@
 						"item": "viz_zta_user_cross_source",
 						"position": {
 							"x": 730,
-							"y": 1080,
+							"y": 1456,
 							"w": 690,
-							"h": 390
+							"h": 438
 						},
 						"type": "block"
 					},
@@ -577,9 +631,9 @@
 						"item": "viz_zta_ravpn_connection_rate",
 						"position": {
 							"x": 20,
-							"y": 1490,
+							"y": 1914,
 							"w": 690,
-							"h": 390
+							"h": 438
 						},
 						"type": "block"
 					},
@@ -587,9 +641,9 @@
 						"item": "viz_zta_ravpn_posture_alerts",
 						"position": {
 							"x": 730,
-							"y": 1490,
+							"y": 1914,
 							"w": 690,
-							"h": 390
+							"h": 438
 						},
 						"type": "block"
 					}

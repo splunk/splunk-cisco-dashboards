@@ -1,10 +1,10 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
     <label>Segmentation Overview</label>
-    <description>Scalable Network Segmentation drill-down dashboard for Segmentation Overview.</description>
+    <description>Summarize segment health, policy alignment, and areas needing investigation.</description>
     <definition><![CDATA[
 {
 	"title": "Segmentation Overview",
-	"description": "Scalable Network Segmentation drill-down dashboard for Segmentation Overview.",
+	"description": "Summarize segment health, policy alignment, and areas needing investigation.",
 	"inputs": {
 		"input_time_range": {
 			"options": {
@@ -27,8 +27,8 @@
 		"viz_header_bg": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "#0f172a",
-				"strokeColor": "rgba(148,163,184,0.22)"
+				"fillColor": "#16283c",
+				"strokeColor": "rgba(53,207,245,0.42)"
 			}
 		},
 		"viz_header_icon": {
@@ -46,8 +46,8 @@
 			"showProgressBar": false,
 			"options": {
 				"backgroundColor": "transparent",
-				"fontColor": "#e2e8f0",
-				"markdown": "# Segmentation Overview\nScalable Network Segmentation • Searchbase-backed operational views."
+				"fontColor": "#e8f1fb",
+				"markdown": "# Segmentation Overview\nSummarize segment health, policy alignment, and areas needing investigation."
 			}
 		},
 		"viz_secure_networking_sgt_by_site": {
@@ -57,11 +57,12 @@
 				"primary": "ds_secure_networking_sgt_by_site"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Breaks down Security Group Tag–tagged ISE authentication events by site location , using ISE's own structured Location hierarchy — a real, validated \"SGT by Site\" view for the Segmentation pillar."
 		},
 		"viz_secure_networking_ip_sgt_bindings_by_group": {
 			"type": "splunk.pie",
@@ -70,15 +71,16 @@
 				"primary": "ds_secure_networking_ip_sgt_bindings_by_group"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"legendDisplay": "right",
 				"seriesColors": [
 					"#0D9488",
 					"#2563EB",
-					"#F59E0B",
-					"#DC2626"
+					"#ff9a4a",
+					"#ff7169"
 				]
-			}
+			},
+			"description": "Shows the distribution of IP-to-SGT bindings across Security Group Tags, reporting how many bound IPs fall under each Security Group — the core \"SGT by Site/Device\" view for the Segmentation pillar."
 		},
 		"viz_secure_networking_sgt_distribution_by_site_device": {
 			"type": "splunk.table",
@@ -87,11 +89,12 @@
 				"primary": "ds_secure_networking_sgt_distribution_by_site_device"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Breaks SGT-tagged authentications down by site, network device, and Security Group Tag for segmentation drilldowns."
 		},
 		"viz_secure_networking_sgt_binding_inventory": {
 			"type": "splunk.table",
@@ -100,10 +103,33 @@
 				"primary": "ds_secure_networking_sgt_binding_inventory"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
+			},
+			"description": "Summarizes ISE IP-SGT binding inventory by Security Group Tag, binding type, SXP domain, source node, peer path, and bound prefixes."
+		},
+		"viz_design_context": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#111f31",
+				"fontColor": "#e8f1fb",
+				"markdown": "**Audience:** Network security and segmentation owners  •  **Sources:** Cisco ISE Security Group Tag and IP-SGT binding telemetry  •  **Reading guide:** Start with binding distribution, then use site and device detail to locate gaps.  •  **Freshness:** Uses the dashboard time range"
+			}
+		},
+		"viz_design_section": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#111f31",
+				"fontColor": "#e8f1fb",
+				"markdown": "### Binding inventory\nStart with binding distribution, then use site and device detail to locate gaps."
 			}
 		}
 	},
@@ -160,9 +186,9 @@
 		"layoutDefinitions": {
 			"layout_overview": {
 				"options": {
-					"backgroundColor": "#020617",
+					"backgroundColor": "#07101d",
 					"display": "auto-scale",
-					"height": 890,
+					"height": 1198,
 					"width": 1440
 				},
 				"structure": [
@@ -172,7 +198,7 @@
 							"x": 20,
 							"y": 0,
 							"w": 1400,
-							"h": 90
+							"h": 118
 						},
 						"type": "block"
 					},
@@ -180,19 +206,39 @@
 						"item": "viz_header_icon",
 						"position": {
 							"x": 36,
-							"y": 9,
-							"w": 72,
-							"h": 72
+							"y": 19,
+							"w": 80,
+							"h": 80
 						},
 						"type": "block"
 					},
 					{
 						"item": "viz_header",
 						"position": {
-							"x": 120,
-							"y": 0,
-							"w": 1300,
-							"h": 90
+							"x": 132,
+							"y": 8,
+							"w": 1268,
+							"h": 102
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_design_context",
+						"position": {
+							"x": 20,
+							"y": 138,
+							"w": 1400,
+							"h": 92
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_design_section",
+						"position": {
+							"x": 20,
+							"y": 250,
+							"w": 1400,
+							"h": 72
 						},
 						"type": "block"
 					},
@@ -200,9 +246,9 @@
 						"item": "viz_secure_networking_sgt_by_site",
 						"position": {
 							"x": 20,
-							"y": 110,
+							"y": 342,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -210,9 +256,9 @@
 						"item": "viz_secure_networking_ip_sgt_bindings_by_group",
 						"position": {
 							"x": 730,
-							"y": 110,
+							"y": 342,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -220,9 +266,9 @@
 						"item": "viz_secure_networking_sgt_distribution_by_site_device",
 						"position": {
 							"x": 20,
-							"y": 490,
+							"y": 770,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -230,9 +276,9 @@
 						"item": "viz_secure_networking_sgt_binding_inventory",
 						"position": {
 							"x": 730,
-							"y": 490,
+							"y": 770,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					}

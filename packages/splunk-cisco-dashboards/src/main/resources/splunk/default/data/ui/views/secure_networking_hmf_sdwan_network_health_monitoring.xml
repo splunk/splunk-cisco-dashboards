@@ -1,10 +1,10 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
     <label>SD-WAN and Network Health Monitoring</label>
-    <description>Hybrid Mesh Firewalling drill-down dashboard for SD-WAN and Network Health Monitoring.</description>
+    <description>Correlate WAN health, reachability, and service-impact signals across the mesh.</description>
     <definition><![CDATA[
 {
 	"title": "SD-WAN and Network Health Monitoring",
-	"description": "Hybrid Mesh Firewalling drill-down dashboard for SD-WAN and Network Health Monitoring.",
+	"description": "Correlate WAN health, reachability, and service-impact signals across the mesh.",
 	"inputs": {
 		"input_time_range": {
 			"options": {
@@ -27,8 +27,8 @@
 		"viz_header_bg": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "#0f172a",
-				"strokeColor": "rgba(148,163,184,0.22)"
+				"fillColor": "#16283c",
+				"strokeColor": "rgba(53,207,245,0.42)"
 			}
 		},
 		"viz_header_icon": {
@@ -46,8 +46,8 @@
 			"showProgressBar": false,
 			"options": {
 				"backgroundColor": "transparent",
-				"fontColor": "#e2e8f0",
-				"markdown": "# SD-WAN and Network Health Monitoring\nHybrid Mesh Firewalling • Searchbase-backed operational views."
+				"fontColor": "#e8f1fb",
+				"markdown": "# SD-WAN and Network Health Monitoring\nCorrelate WAN health, reachability, and service-impact signals across the mesh."
 			}
 		},
 		"viz_monitoring_sdwan_circuit_state_summary": {
@@ -57,15 +57,16 @@
 				"primary": "ds_monitoring_sdwan_circuit_state_summary"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"legendDisplay": "right",
 				"seriesColors": [
 					"#2563EB",
-					"#16A34A",
-					"#F59E0B",
-					"#DC2626"
+					"#8bd45b",
+					"#ff9a4a",
+					"#ff7169"
 				]
-			}
+			},
+			"description": "Counts of SD-WAN WAN-transport circuits (physical/virtual interfaces carrying a TLOC color) that are currently Up vs Down. Mirrors the Circuits tile on Monitor → Overview."
 		},
 		"viz_monitoring_sdwan_site_health_map": {
 			"type": "splunk.map",
@@ -79,7 +80,7 @@
 						"type": "marker",
 						"latitude": "> primary | seriesByName('lat')",
 						"longitude": "> primary | seriesByName('lon')",
-						"markerColor": "#0ea5e9",
+						"markerColor": "#53bfff",
 						"additionalTooltipFields": [
 							"site_id",
 							"site_name",
@@ -90,8 +91,10 @@
 				],
 				"showScale": false,
 				"showZoomControls": true,
-				"zoom": 3
-			}
+				"zoom": 3,
+				"backgroundColor": "#0f1a2a"
+			},
+			"description": "Per-site geo-tagged rollup of overall Site Health for the SD-WAN map view. Uses the GPS coordinates reported by vManage so it does not require an external lookup."
 		},
 		"viz_monitoring_sdwan_site_health_table": {
 			"type": "splunk.table",
@@ -100,11 +103,12 @@
 				"primary": "ds_monitoring_sdwan_site_health_table"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Per-site health table from the SD-WAN Manager Monitor → Sites view: Site ID , Site Name , Site Role , overall Site Health , plus the devices , tunnels , and apps sub-scores."
 		},
 		"viz_monitoring_sdwan_site_state_summary": {
 			"type": "splunk.pie",
@@ -113,15 +117,16 @@
 				"primary": "ds_monitoring_sdwan_site_state_summary"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"legendDisplay": "right",
 				"seriesColors": [
 					"#2563EB",
-					"#16A34A",
-					"#F59E0B",
-					"#DC2626"
+					"#8bd45b",
+					"#ff9a4a",
+					"#ff7169"
 				]
-			}
+			},
+			"description": "Counts of SD-WAN sites by overall health bucket (good / fair / poor / no_data) using the most recent poll per site. Mirrors the Overview tile that summarises Sites Up/Down on Monitor → Overview."
 		},
 		"viz_secure_networking_sdwan_tunnel_health_log": {
 			"type": "splunk.table",
@@ -130,11 +135,12 @@
 				"primary": "ds_secure_networking_sdwan_tunnel_health_log"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Current health status of all Cisco Catalyst SD-WAN tunnels including latency, jitter, and packet loss metrics, providing the per-tunnel performance view for the Secure Infrastructure pillar."
 		},
 		"viz_monitoring_sdwan_tunnel_health_poor_trend": {
 			"type": "splunk.line",
@@ -143,13 +149,13 @@
 				"primary": "ds_monitoring_sdwan_tunnel_health_poor_trend"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"legendDisplay": "bottom",
 				"seriesColors": [
 					"#2563EB",
-					"#16A34A",
-					"#F59E0B",
-					"#DC2626"
+					"#8bd45b",
+					"#ff9a4a",
+					"#ff7169"
 				],
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
@@ -157,6 +163,29 @@
 				"lineWidth": 2,
 				"nullValueDisplay": "gaps",
 				"dataValuesDisplay": "minmax"
+			},
+			"description": "Time series of the count of poor-latency SD-WAN tunnels per 15-minute bucket. Mirrors the Overview → Tunnel Health (Latency, Poor Tunnels) tile."
+		},
+		"viz_design_context": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#111f31",
+				"fontColor": "#e8f1fb",
+				"markdown": "**Audience:** Network operations and service-assurance teams  •  **Sources:** Catalyst SD-WAN Manager site, circuit, tunnel, and health telemetry  •  **Reading guide:** Use state distribution for posture, then move into site detail and geography.  •  **Freshness:** Uses the dashboard time range"
+			}
+		},
+		"viz_design_section": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#111f31",
+				"fontColor": "#e8f1fb",
+				"markdown": "### WAN service health\nUse state distribution for posture, then move into site detail and geography."
 			}
 		}
 	},
@@ -235,9 +264,9 @@
 		"layoutDefinitions": {
 			"layout_overview": {
 				"options": {
-					"backgroundColor": "#020617",
+					"backgroundColor": "#07101d",
 					"display": "auto-scale",
-					"height": 1270,
+					"height": 1626,
 					"width": 1440
 				},
 				"structure": [
@@ -247,7 +276,7 @@
 							"x": 20,
 							"y": 0,
 							"w": 1400,
-							"h": 90
+							"h": 118
 						},
 						"type": "block"
 					},
@@ -255,19 +284,39 @@
 						"item": "viz_header_icon",
 						"position": {
 							"x": 36,
-							"y": 9,
-							"w": 72,
-							"h": 72
+							"y": 19,
+							"w": 80,
+							"h": 80
 						},
 						"type": "block"
 					},
 					{
 						"item": "viz_header",
 						"position": {
-							"x": 120,
-							"y": 0,
-							"w": 1300,
-							"h": 90
+							"x": 132,
+							"y": 8,
+							"w": 1268,
+							"h": 102
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_design_context",
+						"position": {
+							"x": 20,
+							"y": 138,
+							"w": 1400,
+							"h": 92
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_design_section",
+						"position": {
+							"x": 20,
+							"y": 250,
+							"w": 1400,
+							"h": 72
 						},
 						"type": "block"
 					},
@@ -275,9 +324,9 @@
 						"item": "viz_monitoring_sdwan_circuit_state_summary",
 						"position": {
 							"x": 20,
-							"y": 110,
+							"y": 342,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -285,9 +334,9 @@
 						"item": "viz_monitoring_sdwan_site_health_map",
 						"position": {
 							"x": 730,
-							"y": 110,
+							"y": 342,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -295,9 +344,9 @@
 						"item": "viz_monitoring_sdwan_site_health_table",
 						"position": {
 							"x": 20,
-							"y": 490,
+							"y": 770,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -305,9 +354,9 @@
 						"item": "viz_monitoring_sdwan_site_state_summary",
 						"position": {
 							"x": 730,
-							"y": 490,
+							"y": 770,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -315,9 +364,9 @@
 						"item": "viz_secure_networking_sdwan_tunnel_health_log",
 						"position": {
 							"x": 20,
-							"y": 870,
+							"y": 1198,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -325,9 +374,9 @@
 						"item": "viz_monitoring_sdwan_tunnel_health_poor_trend",
 						"position": {
 							"x": 730,
-							"y": 870,
+							"y": 1198,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					}

@@ -1,10 +1,10 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
     <label>Secure Infrastructure</label>
-    <description>Secure Networking drill-down dashboard for Secure Infrastructure.</description>
+    <description>Unify infrastructure assurance, exposure, and operational control signals.</description>
     <definition><![CDATA[
 {
 	"title": "Secure Infrastructure",
-	"description": "Secure Networking drill-down dashboard for Secure Infrastructure.",
+	"description": "Unify infrastructure assurance, exposure, and operational control signals.",
 	"inputs": {
 		"input_time_range": {
 			"options": {
@@ -27,8 +27,8 @@
 		"viz_header_bg": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "#0f172a",
-				"strokeColor": "rgba(148,163,184,0.22)"
+				"fillColor": "#16283c",
+				"strokeColor": "rgba(53,207,245,0.42)"
 			}
 		},
 		"viz_header_icon": {
@@ -46,8 +46,8 @@
 			"showProgressBar": false,
 			"options": {
 				"backgroundColor": "transparent",
-				"fontColor": "#e2e8f0",
-				"markdown": "# Secure Infrastructure\nDevice posture, advisory exposure, SD-WAN health, and wireless infrastructure risk."
+				"fontColor": "#e8f1fb",
+				"markdown": "# Secure Infrastructure\nUnify infrastructure assurance, exposure, and operational control signals."
 			}
 		},
 		"viz_infra_sdwan_edges": {
@@ -57,14 +57,15 @@
 				"primary": "ds_infra_sdwan_edge_count"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('sdwan_site_count') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"sparklineDisplay": "off",
 				"trendDisplay": "off",
-				"majorColor": "#0ea5e9"
-			}
+				"majorColor": "#53bfff"
+			},
+			"description": "Total count of unique Cisco Catalyst SD-WAN sites actively reporting health telemetry, providing the WAN edge infrastructure footprint KPI."
 		},
 		"viz_infra_dc_anomaly_count": {
 			"type": "splunk.singlevalue",
@@ -73,14 +74,15 @@
 				"primary": "ds_infra_dc_anomalies"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('anomaly_count') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"sparklineDisplay": "off",
 				"trendDisplay": "off",
-				"majorColor": "#f59e0b"
-			}
+				"majorColor": "#ff9a4a"
+			},
+			"description": "Total count of fabric anomalies detected by Cisco Nexus Dashboard , with unique fabric count and count of critical/high severity entities, providing the primary DC network health KPI."
 		},
 		"viz_infra_dc_advisory_count": {
 			"type": "splunk.singlevalue",
@@ -89,14 +91,15 @@
 				"primary": "ds_infra_dc_advisories"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('advisory_count') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"sparklineDisplay": "off",
 				"trendDisplay": "off",
-				"majorColor": "#dc2626"
-			}
+				"majorColor": "#ff7169"
+			},
+			"description": "Count of active security advisories from Cisco Nexus Dashboard , including unique advisory IDs and critical-severity advisory count, providing the DC vulnerability posture KPI."
 		},
 		"viz_infra_rogue_ap_count": {
 			"type": "splunk.singlevalue",
@@ -105,14 +108,15 @@
 				"primary": "ds_infra_rogue_ap_count"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('rogue_ap_count') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"sparklineDisplay": "off",
 				"trendDisplay": "off",
-				"majorColor": "#dc2626"
-			}
+				"majorColor": "#ff7169"
+			},
+			"description": "Total count of unique rogue access points detected by Cisco Meraki Air Marshal , providing the wireless threat detection KPI for the Secure Infrastructure pillar."
 		},
 		"viz_infra_dc_trend": {
 			"type": "splunk.area",
@@ -121,19 +125,20 @@
 				"primary": "ds_infra_dc_trend"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#f59e0b",
-					"#dc2626"
+					"#ff9a4a",
+					"#ff7169"
 				],
 				"stackMode": "stacked",
 				"lineWidth": 2,
 				"nullValueDisplay": "gaps"
-			}
+			},
+			"description": "Hourly trend combining Cisco Nexus Dashboard anomalies and security advisories as a unified DC health signal, enabling operators to correlate infrastructure health degradation with specific time windows."
 		},
 		"viz_infra_sdwan_apps": {
 			"type": "splunk.bar",
@@ -142,18 +147,19 @@
 				"primary": "ds_infra_sdwan_apps_health"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#16a34a",
-					"#f59e0b",
-					"#dc2626",
+					"#8bd45b",
+					"#ff9a4a",
+					"#ff7169",
 					"#64748b"
 				]
-			}
+			},
+			"description": "Distribution of Cisco Catalyst SD-WAN sites by application health status , showing how many sites report good, fair, poor, or no-data application experience quality across the WAN fabric."
 		},
 		"viz_infra_status_rollup": {
 			"type": "splunk.table",
@@ -162,11 +168,12 @@
 				"primary": "ds_infra_status_rollup"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Rolls up Secure Infrastructure posture from Catalyst Center device health, inventory, and compliance records."
 		},
 		"viz_infra_psirt_exposure": {
 			"type": "splunk.table",
@@ -175,11 +182,12 @@
 				"primary": "ds_infra_psirt_exposure"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Ranks PSIRT exposure by site/location and device family using Catalyst Center advisory records."
 		},
 		"viz_infra_software_versions": {
 			"type": "splunk.bar",
@@ -188,15 +196,16 @@
 				"primary": "ds_infra_software_versions"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"legendDisplay": "off",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#0ea5e9"
+					"#53bfff"
 				]
-			}
+			},
+			"description": "Groups managed devices by device family and software version from Catalyst Center inventory, providing the version-distribution baseline needed to flag devices approaching End of Life/End of Support (LDOS)."
 		},
 		"viz_infra_rogue_containment": {
 			"type": "splunk.column",
@@ -205,17 +214,18 @@
 				"primary": "ds_infra_rogue_containment"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#16a34a",
-					"#dc2626"
+					"#8bd45b",
+					"#ff7169"
 				],
 				"stackMode": "stacked"
-			}
+			},
+			"description": "Per-SSID breakdown of Cisco Meraki Air Marshal rogue AP containment status , showing which networks have contained vs uncontained rogue APs to prioritize manual response where auto-containment is insufficient."
 		},
 		"viz_infra_secure_endpoint_incidents": {
 			"type": "splunk.table",
@@ -224,11 +234,12 @@
 				"primary": "ds_infra_secure_endpoint_incidents"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Ranks Cisco Secure Endpoint incidents and malware detections by severity, disposition, threat, endpoint, and user."
 		},
 		"viz_infra_duo_blocked_posture": {
 			"type": "splunk.table",
@@ -237,11 +248,12 @@
 				"primary": "ds_infra_duo_blocked_posture"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Combines Duo denied identity decisions with current endpoint posture failures such as missing encryption, firewall, password, or trust controls."
 		},
 		"viz_infra_duo_application_access": {
 			"type": "splunk.table",
@@ -250,10 +262,33 @@
 				"primary": "ds_infra_duo_application_access"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 25,
 				"fontSize": "small",
 				"showInternalFields": false
+			},
+			"description": "Answers which Duo-protected applications were accessed, by whom, from where, and when , including factor and outcome."
+		},
+		"viz_design_context": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#111f31",
+				"fontColor": "#e8f1fb",
+				"markdown": "**Audience:** Infrastructure, NetOps, and network-security teams  •  **Sources:** Catalyst Center, Catalyst SD-WAN, Nexus Dashboard, and Meraki  •  **Reading guide:** Use footprint and anomaly KPIs to orient, then review trends and detailed rollups.  •  **Freshness:** Uses the dashboard time range"
+			}
+		},
+		"viz_design_section": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#111f31",
+				"fontColor": "#e8f1fb",
+				"markdown": "### Infrastructure assurance\nUse footprint and anomaly KPIs to orient, then review trends and detailed rollups."
 			}
 		}
 	},
@@ -409,9 +444,9 @@
 		"layoutDefinitions": {
 			"layout_overview": {
 				"options": {
-					"backgroundColor": "#020617",
+					"backgroundColor": "#07101d",
 					"display": "auto-scale",
-					"height": 2310,
+					"height": 2830,
 					"width": 1440
 				},
 				"structure": [
@@ -421,7 +456,7 @@
 							"x": 20,
 							"y": 0,
 							"w": 1400,
-							"h": 90
+							"h": 118
 						},
 						"type": "block"
 					},
@@ -429,19 +464,39 @@
 						"item": "viz_header_icon",
 						"position": {
 							"x": 36,
-							"y": 9,
-							"w": 72,
-							"h": 72
+							"y": 19,
+							"w": 80,
+							"h": 80
 						},
 						"type": "block"
 					},
 					{
 						"item": "viz_header",
 						"position": {
-							"x": 120,
-							"y": 0,
-							"w": 1300,
-							"h": 90
+							"x": 132,
+							"y": 8,
+							"w": 1268,
+							"h": 102
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_design_context",
+						"position": {
+							"x": 20,
+							"y": 138,
+							"w": 1400,
+							"h": 92
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_design_section",
+						"position": {
+							"x": 20,
+							"y": 250,
+							"w": 1400,
+							"h": 72
 						},
 						"type": "block"
 					},
@@ -449,9 +504,9 @@
 						"item": "viz_infra_sdwan_edges",
 						"position": {
 							"x": 20,
-							"y": 110,
+							"y": 342,
 							"w": 335,
-							"h": 180
+							"h": 228
 						},
 						"type": "block"
 					},
@@ -459,9 +514,9 @@
 						"item": "viz_infra_dc_anomaly_count",
 						"position": {
 							"x": 375,
-							"y": 110,
+							"y": 342,
 							"w": 335,
-							"h": 180
+							"h": 228
 						},
 						"type": "block"
 					},
@@ -469,9 +524,9 @@
 						"item": "viz_infra_dc_advisory_count",
 						"position": {
 							"x": 730,
-							"y": 110,
+							"y": 342,
 							"w": 335,
-							"h": 180
+							"h": 228
 						},
 						"type": "block"
 					},
@@ -479,9 +534,9 @@
 						"item": "viz_infra_rogue_ap_count",
 						"position": {
 							"x": 1085,
-							"y": 110,
+							"y": 342,
 							"w": 335,
-							"h": 180
+							"h": 228
 						},
 						"type": "block"
 					},
@@ -489,9 +544,9 @@
 						"item": "viz_infra_dc_trend",
 						"position": {
 							"x": 20,
-							"y": 310,
+							"y": 590,
 							"w": 690,
-							"h": 340
+							"h": 388
 						},
 						"type": "block"
 					},
@@ -499,9 +554,9 @@
 						"item": "viz_infra_sdwan_apps",
 						"position": {
 							"x": 730,
-							"y": 310,
+							"y": 590,
 							"w": 690,
-							"h": 340
+							"h": 388
 						},
 						"type": "block"
 					},
@@ -509,9 +564,9 @@
 						"item": "viz_infra_status_rollup",
 						"position": {
 							"x": 20,
-							"y": 670,
+							"y": 998,
 							"w": 690,
-							"h": 390
+							"h": 438
 						},
 						"type": "block"
 					},
@@ -519,9 +574,9 @@
 						"item": "viz_infra_psirt_exposure",
 						"position": {
 							"x": 730,
-							"y": 670,
+							"y": 998,
 							"w": 690,
-							"h": 390
+							"h": 438
 						},
 						"type": "block"
 					},
@@ -529,9 +584,9 @@
 						"item": "viz_infra_software_versions",
 						"position": {
 							"x": 20,
-							"y": 1080,
+							"y": 1456,
 							"w": 690,
-							"h": 390
+							"h": 438
 						},
 						"type": "block"
 					},
@@ -539,9 +594,9 @@
 						"item": "viz_infra_rogue_containment",
 						"position": {
 							"x": 730,
-							"y": 1080,
+							"y": 1456,
 							"w": 690,
-							"h": 390
+							"h": 438
 						},
 						"type": "block"
 					},
@@ -549,9 +604,9 @@
 						"item": "viz_infra_secure_endpoint_incidents",
 						"position": {
 							"x": 20,
-							"y": 1490,
+							"y": 1914,
 							"w": 690,
-							"h": 390
+							"h": 438
 						},
 						"type": "block"
 					},
@@ -559,9 +614,9 @@
 						"item": "viz_infra_duo_blocked_posture",
 						"position": {
 							"x": 730,
-							"y": 1490,
+							"y": 1914,
 							"w": 690,
-							"h": 390
+							"h": 438
 						},
 						"type": "block"
 					},
@@ -569,9 +624,9 @@
 						"item": "viz_infra_duo_application_access",
 						"position": {
 							"x": 20,
-							"y": 1900,
+							"y": 2372,
 							"w": 1400,
-							"h": 390
+							"h": 438
 						},
 						"type": "block"
 					}

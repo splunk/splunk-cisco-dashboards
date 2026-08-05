@@ -1,10 +1,10 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
     <label>Detection &amp; Response</label>
-    <description>Zero Trust Access drill-down dashboard for Detection &amp; Response.</description>
+    <description>Surface access-related detections and the response actions that contain risk.</description>
     <definition><![CDATA[
 {
 	"title": "Detection & Response",
-	"description": "Zero Trust Access drill-down dashboard for Detection & Response.",
+	"description": "Surface access-related detections and the response actions that contain risk.",
 	"inputs": {
 		"input_time_range": {
 			"options": {
@@ -27,8 +27,8 @@
 		"viz_header_bg": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "#0f172a",
-				"strokeColor": "rgba(148,163,184,0.22)"
+				"fillColor": "#16283c",
+				"strokeColor": "rgba(53,207,245,0.42)"
 			}
 		},
 		"viz_header_icon": {
@@ -46,8 +46,8 @@
 			"showProgressBar": false,
 			"options": {
 				"backgroundColor": "transparent",
-				"fontColor": "#e2e8f0",
-				"markdown": "# Detection & Response\nZero Trust Access • Searchbase-backed operational views."
+				"fontColor": "#e8f1fb",
+				"markdown": "# Detection & Response\nSurface access-related detections and the response actions that contain risk."
 			}
 		},
 		"viz_xdr_incident_status_severity_pressure": {
@@ -57,11 +57,12 @@
 				"primary": "ds_xdr_incident_status_severity_pressure"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Summarizes Cisco XDR incident pressure by lifecycle status and severity, including unique incident volume and average global score."
 		},
 		"viz_xdr_incident_global_risk_leaderboard": {
 			"type": "splunk.table",
@@ -70,11 +71,12 @@
 				"primary": "ds_xdr_incident_global_risk_leaderboard"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Ranks Cisco XDR incidents by global risk score and repeated event pressure with status, severity, and confidence context."
 		},
 		"viz_xdr_aa_forensic_network_internal_service_pressure": {
 			"type": "splunk.table",
@@ -83,11 +85,12 @@
 				"primary": "ds_xdr_aa_forensic_network_internal_service_pressure"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Ranks protocol, destination, and service combinations in sandbox network telemetry to expose dominant communication patterns."
 		},
 		"viz_xdr_aa_forensic_network_external_egress_watch": {
 			"type": "splunk.table",
@@ -96,11 +99,12 @@
 				"primary": "ds_xdr_aa_forensic_network_external_egress_watch"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Isolates external destination flows from sandbox telemetry, including management-port and encrypted-egress risk labels."
 		},
 		"viz_xdr_aa_forensic_files_network_source_hotspots": {
 			"type": "splunk.table",
@@ -109,10 +113,33 @@
 				"primary": "ds_xdr_aa_forensic_files_network_source_hotspots"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
+			},
+			"description": "Ranks upstream network sources that delivered the most forensic file artifacts and unique hashes into analysis jobs."
+		},
+		"viz_design_context": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#111f31",
+				"fontColor": "#e8f1fb",
+				"markdown": "**Audience:** SOC analysts and incident responders  •  **Sources:** Cisco XDR incidents and Attack Analyzer forensic telemetry  •  **Reading guide:** Prioritize lifecycle and severity pressure, then open the supporting forensic evidence.  •  **Freshness:** Uses the dashboard time range"
+			}
+		},
+		"viz_design_section": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#111f31",
+				"fontColor": "#e8f1fb",
+				"markdown": "### Incident pressure\nPrioritize lifecycle and severity pressure, then open the supporting forensic evidence."
 			}
 		}
 	},
@@ -180,9 +207,9 @@
 		"layoutDefinitions": {
 			"layout_overview": {
 				"options": {
-					"backgroundColor": "#020617",
+					"backgroundColor": "#07101d",
 					"display": "auto-scale",
-					"height": 1270,
+					"height": 1626,
 					"width": 1440
 				},
 				"structure": [
@@ -192,7 +219,7 @@
 							"x": 20,
 							"y": 0,
 							"w": 1400,
-							"h": 90
+							"h": 118
 						},
 						"type": "block"
 					},
@@ -200,19 +227,39 @@
 						"item": "viz_header_icon",
 						"position": {
 							"x": 36,
-							"y": 9,
-							"w": 72,
-							"h": 72
+							"y": 19,
+							"w": 80,
+							"h": 80
 						},
 						"type": "block"
 					},
 					{
 						"item": "viz_header",
 						"position": {
-							"x": 120,
-							"y": 0,
-							"w": 1300,
-							"h": 90
+							"x": 132,
+							"y": 8,
+							"w": 1268,
+							"h": 102
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_design_context",
+						"position": {
+							"x": 20,
+							"y": 138,
+							"w": 1400,
+							"h": 92
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_design_section",
+						"position": {
+							"x": 20,
+							"y": 250,
+							"w": 1400,
+							"h": 72
 						},
 						"type": "block"
 					},
@@ -220,9 +267,9 @@
 						"item": "viz_xdr_incident_status_severity_pressure",
 						"position": {
 							"x": 20,
-							"y": 110,
+							"y": 342,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -230,9 +277,9 @@
 						"item": "viz_xdr_incident_global_risk_leaderboard",
 						"position": {
 							"x": 730,
-							"y": 110,
+							"y": 342,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -240,9 +287,9 @@
 						"item": "viz_xdr_aa_forensic_network_internal_service_pressure",
 						"position": {
 							"x": 20,
-							"y": 490,
+							"y": 770,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -250,9 +297,9 @@
 						"item": "viz_xdr_aa_forensic_network_external_egress_watch",
 						"position": {
 							"x": 730,
-							"y": 490,
+							"y": 770,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -260,9 +307,9 @@
 						"item": "viz_xdr_aa_forensic_files_network_source_hotspots",
 						"position": {
 							"x": 20,
-							"y": 870,
+							"y": 1198,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					}

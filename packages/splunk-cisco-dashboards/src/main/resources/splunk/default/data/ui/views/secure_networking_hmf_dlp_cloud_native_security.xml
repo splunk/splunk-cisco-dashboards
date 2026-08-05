@@ -1,10 +1,10 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
     <label>DLP and Cloud Native Security</label>
-    <description>Hybrid Mesh Firewalling drill-down dashboard for DLP and Cloud Native Security.</description>
+    <description>Expose data-loss risk and cloud-native workload controls in one operational view.</description>
     <definition><![CDATA[
 {
 	"title": "DLP and Cloud Native Security",
-	"description": "Hybrid Mesh Firewalling drill-down dashboard for DLP and Cloud Native Security.",
+	"description": "Expose data-loss risk and cloud-native workload controls in one operational view.",
 	"inputs": {
 		"input_time_range": {
 			"options": {
@@ -27,8 +27,8 @@
 		"viz_header_bg": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "#0f172a",
-				"strokeColor": "rgba(148,163,184,0.22)"
+				"fillColor": "#16283c",
+				"strokeColor": "rgba(53,207,245,0.42)"
 			}
 		},
 		"viz_header_icon": {
@@ -46,8 +46,8 @@
 			"showProgressBar": false,
 			"options": {
 				"backgroundColor": "transparent",
-				"fontColor": "#e2e8f0",
-				"markdown": "# DLP and Cloud Native Security\nHybrid Mesh Firewalling • Searchbase-backed operational views."
+				"fontColor": "#e8f1fb",
+				"markdown": "# DLP and Cloud Native Security\nExpose data-loss risk and cloud-native workload controls in one operational view."
 			}
 		},
 		"viz_secure_networking_secure_access_dlp_findings": {
@@ -57,11 +57,12 @@
 				"primary": "ds_secure_networking_secure_access_dlp_findings"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Summarizes Secure Access DLP findings by severity, action, rule, data classification, application, and traffic direction."
 		},
 		"viz_secure_networking_segmentation_secure_workload_alerts_by_type": {
 			"type": "splunk.table",
@@ -70,11 +71,12 @@
 				"primary": "ds_secure_networking_segmentation_secure_workload_alerts_by_type"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Breaks down Cisco Secure Workload (Tetration) alerts by type and severity — compliance policy violations, anomalous traffic, and sensor issues — across the micro-segmented workload fabric."
 		},
 		"viz_security_microseg_tetration_alerts_by_severity_type": {
 			"type": "splunk.bar",
@@ -83,19 +85,20 @@
 				"primary": "ds_security_microseg_tetration_alerts_by_severity_type"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"legendDisplay": "bottom",
 				"seriesColors": [
-					"#DC2626",
-					"#F59E0B",
+					"#ff7169",
+					"#ff9a4a",
 					"#2563EB",
-					"#16A34A"
+					"#8bd45b"
 				],
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"stackMode": "unstacked"
-			}
+			},
+			"description": "Cisco Secure Workload (Tetration) alerts split by type (COMPLIANCE, TRAFFIC, SENSOR) and severity (critical, high, medium, and low), sourced from Cisco Secure Workload."
 		},
 		"viz_secure_networking_cloud_native_security_activity": {
 			"type": "splunk.bar",
@@ -104,17 +107,40 @@
 				"primary": "ds_secure_networking_cloud_native_security_activity"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"legendDisplay": "bottom",
 				"seriesColors": [
-					"#F59E0B",
+					"#ff9a4a",
 					"#2563EB",
-					"#16A34A"
+					"#8bd45b"
 				],
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"stackMode": "stacked"
+			},
+			"description": "Summarizes confirmed native AWS, Azure, and GCP/Google Workspace security activity by provider and sourcetype, covering threat detections, audit and identity events, configuration findings, and vulnerability…"
+		},
+		"viz_design_context": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#111f31",
+				"fontColor": "#e8f1fb",
+				"markdown": "**Audience:** Cloud security, SOC, and workload-security teams  •  **Sources:** Secure Access, Secure Workload, and cloud-native security telemetry  •  **Reading guide:** Review severity patterns first, then investigate DLP findings and workload evidence.  •  **Freshness:** Uses the dashboard time range"
+			}
+		},
+		"viz_design_section": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#111f31",
+				"fontColor": "#e8f1fb",
+				"markdown": "### Data and workload risk\nReview severity patterns first, then investigate DLP findings and workload evidence."
 			}
 		}
 	},
@@ -171,9 +197,9 @@
 		"layoutDefinitions": {
 			"layout_overview": {
 				"options": {
-					"backgroundColor": "#020617",
+					"backgroundColor": "#07101d",
 					"display": "auto-scale",
-					"height": 890,
+					"height": 1198,
 					"width": 1440
 				},
 				"structure": [
@@ -183,7 +209,7 @@
 							"x": 20,
 							"y": 0,
 							"w": 1400,
-							"h": 90
+							"h": 118
 						},
 						"type": "block"
 					},
@@ -191,19 +217,39 @@
 						"item": "viz_header_icon",
 						"position": {
 							"x": 36,
-							"y": 9,
-							"w": 72,
-							"h": 72
+							"y": 19,
+							"w": 80,
+							"h": 80
 						},
 						"type": "block"
 					},
 					{
 						"item": "viz_header",
 						"position": {
-							"x": 120,
-							"y": 0,
-							"w": 1300,
-							"h": 90
+							"x": 132,
+							"y": 8,
+							"w": 1268,
+							"h": 102
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_design_context",
+						"position": {
+							"x": 20,
+							"y": 138,
+							"w": 1400,
+							"h": 92
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_design_section",
+						"position": {
+							"x": 20,
+							"y": 250,
+							"w": 1400,
+							"h": 72
 						},
 						"type": "block"
 					},
@@ -211,9 +257,9 @@
 						"item": "viz_secure_networking_secure_access_dlp_findings",
 						"position": {
 							"x": 20,
-							"y": 110,
+							"y": 342,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -221,9 +267,9 @@
 						"item": "viz_secure_networking_segmentation_secure_workload_alerts_by_type",
 						"position": {
 							"x": 730,
-							"y": 110,
+							"y": 342,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -231,9 +277,9 @@
 						"item": "viz_security_microseg_tetration_alerts_by_severity_type",
 						"position": {
 							"x": 20,
-							"y": 490,
+							"y": 770,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -241,9 +287,9 @@
 						"item": "viz_secure_networking_cloud_native_security_activity",
 						"position": {
 							"x": 730,
-							"y": 490,
+							"y": 770,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					}

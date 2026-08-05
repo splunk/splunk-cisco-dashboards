@@ -2,6 +2,11 @@
 
 ## 1.0.36
 
+- All 16 Secure Networking Dashboard Studio views now use a Cisco-inspired
+  dark-mode information hierarchy with purpose-led headers, compact audience
+  and source context, decision-oriented section guidance, and visible
+  Searchbase-derived descriptions on all 131 data panels. Existing searches,
+  tokens, drilldowns, and data-source references are unchanged.
 - Searchbase now includes eight Cisco SD-WAN controller threat hunts for rogue
   peering, software downgrade, certificate failures, CVE-2022-20775 path
   traversal, root access, local-account persistence, and attack-stage

@@ -1,10 +1,10 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
     <label>Executive Overview</label>
-    <description>Agentic Ops drill-down dashboard for Executive Overview.</description>
+    <description>Summarize secure-networking posture, operational risk, and business-relevant outcomes.</description>
     <definition><![CDATA[
 {
 	"title": "Executive Overview",
-	"description": "Agentic Ops drill-down dashboard for Executive Overview.",
+	"description": "Summarize secure-networking posture, operational risk, and business-relevant outcomes.",
 	"inputs": {
 		"input_time_range": {
 			"options": {
@@ -27,8 +27,8 @@
 		"viz_header_bg": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "#0f172a",
-				"strokeColor": "rgba(148,163,184,0.22)"
+				"fillColor": "#16283c",
+				"strokeColor": "rgba(53,207,245,0.42)"
 			}
 		},
 		"viz_header_icon": {
@@ -46,8 +46,8 @@
 			"showProgressBar": false,
 			"options": {
 				"backgroundColor": "transparent",
-				"fontColor": "#e2e8f0",
-				"markdown": "# Executive Overview\nAgentic Ops • Searchbase-backed operational views."
+				"fontColor": "#e8f1fb",
+				"markdown": "# Executive Overview\nSummarize secure-networking posture, operational risk, and business-relevant outcomes."
 			}
 		},
 		"viz_overview_ap_health": {
@@ -57,7 +57,7 @@
 				"primary": "ds_overview_ap_health"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"sparklineDisplay": "off",
@@ -65,7 +65,8 @@
 				"majorColor": "#10b981",
 				"majorValue": "> primary | seriesByName('pct') | lastPoint()",
 				"unit": "%"
-			}
+			},
+			"description": "Shows what percentage of Catalyst Center access points are reachable at any moment, along with a count of how many are up or down."
 		},
 		"viz_secure_networking_meraki_ap_count": {
 			"type": "splunk.singlevalue",
@@ -74,14 +75,15 @@
 				"primary": "ds_secure_networking_meraki_ap_count"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"sparklineDisplay": "off",
 				"trendDisplay": "off",
 				"majorColor": "#2563EB",
 				"majorValue": "> primary | seriesByName('ap_count') | lastPoint()"
-			}
+			},
+			"description": "Total count of unique Cisco Meraki access points in the managed wireless infrastructure, providing the wireless footprint KPI."
 		},
 		"viz_secure_networking_dc_health_signals_trend": {
 			"type": "splunk.area",
@@ -90,13 +92,13 @@
 				"primary": "ds_secure_networking_dc_health_signals_trend"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"legendDisplay": "bottom",
 				"seriesColors": [
 					"#2563EB",
-					"#16A34A",
-					"#F59E0B",
-					"#DC2626"
+					"#8bd45b",
+					"#ff9a4a",
+					"#ff7169"
 				],
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
@@ -104,7 +106,8 @@
 				"lineWidth": 2,
 				"nullValueDisplay": "gaps",
 				"dataValuesDisplay": "minmax"
-			}
+			},
+			"description": "Hourly trend combining Cisco Nexus Dashboard anomalies and security advisories as a unified DC health signal, enabling operators to correlate infrastructure health degradation with specific time windows."
 		},
 		"viz_feed_monitor_all_feeds_health_matrix": {
 			"type": "splunk.table",
@@ -113,11 +116,12 @@
 				"primary": "ds_feed_monitor_all_feeds_health_matrix"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Single-pane consolidated health matrix for every critical Cisco data feed - ThousandEyes, FTD, FMC eStreamer, Catalyst Center, SD-WAN, ISE, Cisco Spaces, IOS syslog, Duo, Meraki, Zeek, and ACI/ND."
 		},
 		"viz_overview_topology_overview": {
 			"type": "splunk.table",
@@ -126,11 +130,12 @@
 				"primary": "ds_overview_topology_overview"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Overview topology feed - one normalized search that populates topology sites, topology links, and the two right-column KPI cards next to the map. Rows use itemType values of site , link , or summary ."
 		},
 		"viz_overview_link_auburndale_tallahassee_health": {
 			"type": "splunk.table",
@@ -139,11 +144,12 @@
 				"primary": "ds_overview_link_auburndale_tallahassee_health"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Site 1 to Site 2 link health — normalized topology-link row for the Overview map. This is the only inter-site link stanza for a two-site footprint."
 		},
 		"viz_overview_link_state_drilldown": {
 			"type": "splunk.table",
@@ -152,11 +158,12 @@
 				"primary": "ds_overview_link_state_drilldown"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Per-link SD-WAN telemetry snapshot used as the drilldown for the topology link tiles. One row per (device, interface) pair with the latest utilization and a thresholded Stable/Warning/Critical flag."
 		},
 		"viz_executive_dashboard_ds_device_health_current_drilldown": {
 			"type": "splunk.table",
@@ -165,11 +172,12 @@
 				"primary": "ds_executive_dashboard_ds_device_health_current_drilldown"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Per-device detail roster backing the DEVICE HEALTH tile drilldown. One row per DeviceID with the latest reachability and manageability flags, the 0/50/100 health score the parent tile averages, and the most-recent event…"
 		},
 		"viz_executive_dashboard_ds_device_health_trend_compare": {
 			"type": "splunk.singlevalue",
@@ -178,14 +186,15 @@
 				"primary": "ds_executive_dashboard_ds_device_health_trend_compare"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"sparklineDisplay": "off",
 				"trendDisplay": "off",
 				"majorColor": "#3B82F6",
 				"majorValue": "> primary | seriesByName('current') | lastPoint()"
-			}
+			},
+			"description": "Device health trend from Catalyst Center: compares fleet-average reachability or manageability score for the current time range versus the previous range, with absolute delta and a directional marker."
 		},
 		"viz_executive_summary_healthy_device_count": {
 			"type": "splunk.singlevalue",
@@ -194,14 +203,15 @@
 				"primary": "ds_executive_summary_healthy_device_count"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"sparklineDisplay": "off",
 				"trendDisplay": "off",
 				"majorColor": "#3B82F6",
 				"majorValue": "> primary | seriesByName('healthy_count') | lastPoint()"
-			}
+			},
+			"description": "Supplies the Healthy Devices KPI tile with an absolute count of reachable, managed assets plus the fleet total and percent healthy for quick ratio context."
 		},
 		"viz_executive_dashboard_data_source_status": {
 			"type": "splunk.table",
@@ -210,10 +220,33 @@
 				"primary": "ds_executive_dashboard_data_source_status"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
+			},
+			"description": "Shows which Cisco and IT systems are actively sending data to Splunk and how many events each sent in the last 24 hours. A row appearing here confirms that integration is working — a missing row means that system’s data…"
+		},
+		"viz_design_context": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#111f31",
+				"fontColor": "#e8f1fb",
+				"markdown": "**Audience:** Executives, security leaders, and network leaders  •  **Sources:** Cisco network, security, data-center, and telemetry feeds  •  **Reading guide:** Use KPIs for posture, trends for trajectory, and feed health to judge confidence.  •  **Freshness:** Uses the dashboard time range"
+			}
+		},
+		"viz_design_section": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#111f31",
+				"fontColor": "#e8f1fb",
+				"markdown": "### Executive signals\nUse KPIs for posture, trends for trajectory, and feed health to judge confidence."
 			}
 		}
 	},
@@ -347,9 +380,9 @@
 		"layoutDefinitions": {
 			"layout_overview": {
 				"options": {
-					"backgroundColor": "#020617",
+					"backgroundColor": "#07101d",
 					"display": "auto-scale",
-					"height": 2410,
+					"height": 2910,
 					"width": 1440
 				},
 				"structure": [
@@ -359,7 +392,7 @@
 							"x": 20,
 							"y": 0,
 							"w": 1400,
-							"h": 90
+							"h": 118
 						},
 						"type": "block"
 					},
@@ -367,19 +400,39 @@
 						"item": "viz_header_icon",
 						"position": {
 							"x": 36,
-							"y": 9,
-							"w": 72,
-							"h": 72
+							"y": 19,
+							"w": 80,
+							"h": 80
 						},
 						"type": "block"
 					},
 					{
 						"item": "viz_header",
 						"position": {
-							"x": 120,
-							"y": 0,
-							"w": 1300,
-							"h": 90
+							"x": 132,
+							"y": 8,
+							"w": 1268,
+							"h": 102
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_design_context",
+						"position": {
+							"x": 20,
+							"y": 138,
+							"w": 1400,
+							"h": 92
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_design_section",
+						"position": {
+							"x": 20,
+							"y": 250,
+							"w": 1400,
+							"h": 72
 						},
 						"type": "block"
 					},
@@ -387,9 +440,9 @@
 						"item": "viz_overview_ap_health",
 						"position": {
 							"x": 20,
-							"y": 110,
+							"y": 342,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -397,9 +450,9 @@
 						"item": "viz_secure_networking_meraki_ap_count",
 						"position": {
 							"x": 730,
-							"y": 110,
+							"y": 342,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -407,9 +460,9 @@
 						"item": "viz_secure_networking_dc_health_signals_trend",
 						"position": {
 							"x": 20,
-							"y": 490,
+							"y": 770,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -417,9 +470,9 @@
 						"item": "viz_feed_monitor_all_feeds_health_matrix",
 						"position": {
 							"x": 730,
-							"y": 490,
+							"y": 770,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -427,9 +480,9 @@
 						"item": "viz_overview_topology_overview",
 						"position": {
 							"x": 20,
-							"y": 870,
+							"y": 1198,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -437,9 +490,9 @@
 						"item": "viz_overview_link_auburndale_tallahassee_health",
 						"position": {
 							"x": 730,
-							"y": 870,
+							"y": 1198,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -447,9 +500,9 @@
 						"item": "viz_overview_link_state_drilldown",
 						"position": {
 							"x": 20,
-							"y": 1250,
+							"y": 1626,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -457,9 +510,9 @@
 						"item": "viz_executive_dashboard_ds_device_health_current_drilldown",
 						"position": {
 							"x": 730,
-							"y": 1250,
+							"y": 1626,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -467,9 +520,9 @@
 						"item": "viz_executive_dashboard_ds_device_health_trend_compare",
 						"position": {
 							"x": 20,
-							"y": 1630,
+							"y": 2054,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -477,9 +530,9 @@
 						"item": "viz_executive_summary_healthy_device_count",
 						"position": {
 							"x": 730,
-							"y": 1630,
+							"y": 2054,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -487,9 +540,9 @@
 						"item": "viz_executive_dashboard_data_source_status",
 						"position": {
 							"x": 20,
-							"y": 2010,
+							"y": 2482,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					}

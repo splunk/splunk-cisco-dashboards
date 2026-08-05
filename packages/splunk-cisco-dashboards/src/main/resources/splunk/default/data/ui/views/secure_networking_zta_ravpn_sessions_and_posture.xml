@@ -1,10 +1,10 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
     <label>Remote Access VPN (RaVPN) Sessions and Posture</label>
-    <description>Zero Trust Access drill-down dashboard for Remote Access VPN (RaVPN) Sessions and Posture.</description>
+    <description>Connect remote-session health with endpoint posture and access risk.</description>
     <definition><![CDATA[
 {
 	"title": "Remote Access VPN (RaVPN) Sessions and Posture",
-	"description": "Zero Trust Access drill-down dashboard for Remote Access VPN (RaVPN) Sessions and Posture.",
+	"description": "Connect remote-session health with endpoint posture and access risk.",
 	"inputs": {
 		"input_time_range": {
 			"options": {
@@ -27,8 +27,8 @@
 		"viz_header_bg": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "#0f172a",
-				"strokeColor": "rgba(148,163,184,0.22)"
+				"fillColor": "#16283c",
+				"strokeColor": "rgba(53,207,245,0.42)"
 			}
 		},
 		"viz_header_icon": {
@@ -46,8 +46,8 @@
 			"showProgressBar": false,
 			"options": {
 				"backgroundColor": "transparent",
-				"fontColor": "#e2e8f0",
-				"markdown": "# Remote Access VPN (RaVPN) Sessions and Posture\nZero Trust Access • Searchbase-backed operational views."
+				"fontColor": "#e8f1fb",
+				"markdown": "# Remote Access VPN (RaVPN) Sessions and Posture\nConnect remote-session health with endpoint posture and access risk."
 			}
 		},
 		"viz_secure_networking_zta_ravpn_sessions_by_profile": {
@@ -57,11 +57,12 @@
 				"primary": "ds_secure_networking_zta_ravpn_sessions_by_profile"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Summarizes remote-access VPN activity by Secure Access VPN profile, region, enforcement host, and Security Group Tag."
 		},
 		"viz_secure_networking_zta_ravpn_connection_rate": {
 			"type": "splunk.table",
@@ -70,11 +71,12 @@
 				"primary": "ds_secure_networking_zta_ravpn_connection_rate"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Tracks remote-access VPN clients, sessions, successful connections, and failed connections in 15-minute intervals."
 		},
 		"viz_secure_networking_zta_ravpn_failure_reasons": {
 			"type": "splunk.table",
@@ -83,11 +85,12 @@
 				"primary": "ds_secure_networking_zta_ravpn_failure_reasons"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Ranks remote-access VPN failure and warning reasons by profile, region, ASA syslog identifier, and Secure Access enforcement host."
 		},
 		"viz_secure_networking_zta_ravpn_posture_alerts": {
 			"type": "splunk.table",
@@ -96,10 +99,33 @@
 				"primary": "ds_secure_networking_zta_ravpn_posture_alerts"
 			},
 			"options": {
-				"backgroundColor": "#0f172a",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
+			},
+			"description": "Surfaces RaVPN posture failures, warnings, alerts, and operational log reasons with user, profile, region, and device context."
+		},
+		"viz_design_context": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#111f31",
+				"fontColor": "#e8f1fb",
+				"markdown": "**Audience:** Remote-access, identity, and security operations  •  **Sources:** Secure Access RaVPN, ASA, identity, and endpoint-posture telemetry  •  **Reading guide:** Review profile volume and connection pressure before opening failure and posture detail.  •  **Freshness:** Uses the dashboard time range"
+			}
+		},
+		"viz_design_section": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#111f31",
+				"fontColor": "#e8f1fb",
+				"markdown": "### Remote-access assurance\nReview profile volume and connection pressure before opening failure and posture detail."
 			}
 		}
 	},
@@ -156,9 +182,9 @@
 		"layoutDefinitions": {
 			"layout_overview": {
 				"options": {
-					"backgroundColor": "#020617",
+					"backgroundColor": "#07101d",
 					"display": "auto-scale",
-					"height": 890,
+					"height": 1198,
 					"width": 1440
 				},
 				"structure": [
@@ -168,7 +194,7 @@
 							"x": 20,
 							"y": 0,
 							"w": 1400,
-							"h": 90
+							"h": 118
 						},
 						"type": "block"
 					},
@@ -176,19 +202,39 @@
 						"item": "viz_header_icon",
 						"position": {
 							"x": 36,
-							"y": 9,
-							"w": 72,
-							"h": 72
+							"y": 19,
+							"w": 80,
+							"h": 80
 						},
 						"type": "block"
 					},
 					{
 						"item": "viz_header",
 						"position": {
-							"x": 120,
-							"y": 0,
-							"w": 1300,
-							"h": 90
+							"x": 132,
+							"y": 8,
+							"w": 1268,
+							"h": 102
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_design_context",
+						"position": {
+							"x": 20,
+							"y": 138,
+							"w": 1400,
+							"h": 92
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_design_section",
+						"position": {
+							"x": 20,
+							"y": 250,
+							"w": 1400,
+							"h": 72
 						},
 						"type": "block"
 					},
@@ -196,9 +242,9 @@
 						"item": "viz_secure_networking_zta_ravpn_sessions_by_profile",
 						"position": {
 							"x": 20,
-							"y": 110,
+							"y": 342,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -206,9 +252,9 @@
 						"item": "viz_secure_networking_zta_ravpn_connection_rate",
 						"position": {
 							"x": 730,
-							"y": 110,
+							"y": 342,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -216,9 +262,9 @@
 						"item": "viz_secure_networking_zta_ravpn_failure_reasons",
 						"position": {
 							"x": 20,
-							"y": 490,
+							"y": 770,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					},
@@ -226,9 +272,9 @@
 						"item": "viz_secure_networking_zta_ravpn_posture_alerts",
 						"position": {
 							"x": 730,
-							"y": 490,
+							"y": 770,
 							"w": 690,
-							"h": 360
+							"h": 408
 						},
 						"type": "block"
 					}
