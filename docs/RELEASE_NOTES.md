@@ -17,6 +17,10 @@
   and per-SGT traffic timecharts that drill into the existing effectiveness
   rollup and correlated flow table; policy actions normalize both PAN and CIM
   allow/block variants.
+- Six Palo Alto and firewall searches now minimize last-24-hour dispatch cost:
+  PAN/ISE correlations extract only their source-specific fields before
+  enrichment, while blocked-versus-allowed trends use one accelerated
+  data-model scan instead of appended scans.
 - Eight demo-bound Searchbase searches now use portable Cisco Catalyst Center,
   Secure Firewall, SD-WAN UTD, Cisco Spaces, and ThousandEyes source contracts;
   every live Searchbase pipeline also avoids redundant `spath` commands.
