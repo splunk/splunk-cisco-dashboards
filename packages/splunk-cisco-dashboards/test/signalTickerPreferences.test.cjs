@@ -35,6 +35,7 @@ new Function(
 );
 
 const {
+  DEFAULT_SIGNAL_TICKER_CONFIG,
   MAX_SIGNAL_TICKER_ITEMS,
   applySignalTickerPreferencePatch,
   createSignalTickerPreferencePatch,
@@ -50,12 +51,59 @@ const workspaceIds = [
   "security_operations_demo",
   "executive",
 ];
+const expectedWorkspaceItemIds = {
+  secure_networking: [
+    "zta_auth_failure_rate",
+    "dc_critical_anomalies",
+    "sgt_active_assignments",
+    "hmf_blocked_flows",
+    "te_degraded_tests",
+    "palo_alto_sgt_blocks",
+  ],
+  zero_trust_access_demo: [
+    "zta_auth_failure_rate",
+    "zta_failed_identities",
+    "zta_auth_events",
+    "ise_device_footprint",
+    "sgt_active_assignments",
+    "security_domain_score",
+  ],
+  network_resilience_demo: [
+    "network_health",
+    "device_health",
+    "critical_network_issues",
+    "dc_critical_anomalies",
+    "dc_critical_advisories",
+    "catalyst_center_age",
+  ],
+  security_operations_demo: [
+    "xdr_incidents",
+    "hmf_blocked_flows",
+    "zta_failed_identities",
+    "zta_auth_failure_rate",
+    "dc_critical_advisories",
+    "palo_alto_sgt_blocks",
+  ],
+  executive: [
+    "it_domain_score",
+    "security_domain_score",
+    "user_experience_score",
+    "building_domain_score",
+    "critical_network_issues",
+    "xdr_incidents",
+  ],
+};
 for (const workspaceId of workspaceIds) {
   const fallback = getDefaultSignalTickerConfig(workspaceId);
   assert.ok(fallback.items.length > 0, `${workspaceId} needs a fallback rail`);
   assert.ok(
     fallback.items.length <= MAX_SIGNAL_TICKER_ITEMS,
     `${workspaceId} fallback must remain bounded`,
+  );
+  assert.deepEqual(
+    fallback.items.map(({ id }) => id),
+    expectedWorkspaceItemIds[workspaceId],
+    `${workspaceId} needs its intended audience-specific rail`,
   );
 }
 
@@ -111,7 +159,51 @@ const stanzaBlocks = conf.split(/(?=^\[)/m);
 const signalItemNames = stanzaBlocks
   .filter((block) => block.startsWith("[signal_item."))
   .map((block) => block.match(/^\[signal_item\.([^\]]+)\]/)?.[1]);
-assert.equal(signalItemNames.length, 6, "expected six reusable Signal Rail items");
+assert.equal(
+  signalItemNames.length,
+  DEFAULT_SIGNAL_TICKER_CONFIG.items.length,
+  "TypeScript and central Signal Rail catalogues must contain the same items",
+);
+assert.equal(
+  signalItemNames.length,
+  MAX_SIGNAL_TICKER_ITEMS,
+  "the reusable Signal Rail catalogue should stay within the bounded fallback size",
+);
+assert.deepEqual(
+  new Set(signalItemNames),
+  new Set(DEFAULT_SIGNAL_TICKER_CONFIG.items.map(({ id }) => id)),
+  "TypeScript and central Signal Rail catalogue IDs must match",
+);
+
+const searchbase = fs.readFileSync(
+  path.join(
+    packageRoot,
+    "src/main/resources/splunk/default/searchbase.conf",
+  ),
+  "utf8",
+);
+const searchbaseNames = new Set(
+  [...searchbase.matchAll(/^search_name = (.+)$/gm)].map((match) => match[1]),
+);
+for (const item of DEFAULT_SIGNAL_TICKER_CONFIG.items) {
+  assert.ok(
+    searchbaseNames.has(item.searchName),
+    `Signal Rail item ${item.id} references missing search ${item.searchName}`,
+  );
+}
+const searchbaseBlocks = searchbase.split(/(?=^\[)/m);
+const paloAltoRailSearch = searchbaseBlocks.find((block) =>
+  block.startsWith("[secure_networking_palo_alto_policy_enforcement_signal]"),
+);
+assert.ok(paloAltoRailSearch, "missing the bounded Palo Alto Signal Rail search");
+assert.match(paloAltoRailSearch, /sourcetype="pan:traffic"/);
+assert.match(paloAltoRailSearch, /timechart fixedrange=false cont=false bins=60/);
+assert.match(paloAltoRailSearch, /Blocked=coalesce\(Blocked,0\)/);
+assert.doesNotMatch(
+  paloAltoRailSearch,
+  /\| multisearch|\| eventstats/,
+  "the always-on Palo Alto rail search must defer identity correlation to drill-down",
+);
 for (const workspaceId of workspaceIds) {
   const block = stanzaBlocks.find((candidate) =>
     candidate.startsWith(`[signal_rail.${workspaceId}]`),
@@ -119,6 +211,11 @@ for (const workspaceId of workspaceIds) {
   assert.ok(block, `missing central Signal Rail preset for ${workspaceId}`);
   const itemIds = block.match(/^items = (.*)$/m)?.[1].split(",") ?? [];
   assert.ok(itemIds.length > 0 && itemIds.length <= MAX_SIGNAL_TICKER_ITEMS);
+  assert.deepEqual(
+    itemIds,
+    expectedWorkspaceItemIds[workspaceId],
+    `${workspaceId} central preset must match its TypeScript fallback`,
+  );
   for (const itemId of itemIds) {
     assert.ok(
       signalItemNames.includes(itemId),

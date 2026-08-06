@@ -13,10 +13,12 @@
 - Executive Insights tile actions are slightly larger, and drilldowns now use
   an open-details-panel icon with explicit drilldown tooltips instead of an
   ambiguous table glyph.
-- Every built-in Insights Workspace now ships a distinct topology and signal
-  rail preset, including London-Paris-Frankfurt, APAC resilience, Americas SOC,
-  and global executive connectivity stories. Saved topology edits are scoped
-  to the owning workspace.
+- Every built-in Insights Workspace now ships a distinct topology and
+  audience-specific six-KPI signal rail preset. Secure Networking maps one KPI
+  to each of its five pillars plus a bounded Palo Alto enforcement trend whose
+  drill-down correlates third-party firewall activity with Cisco ISE identity;
+  the other rails focus on zero trust, resilience, SOC, and executive outcomes.
+  Saved topology edits are scoped to the owning workspace.
 - Signal Rail presets are now centrally governed in
   `insights_workspaces.conf`, while sparse personal differences are saved in
   the authenticated Splunk user's workspace namespace. Rapid editor changes
