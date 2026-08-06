@@ -2,10 +2,22 @@
 
 ## 1.0.36
 
+- Eight demo-bound Searchbase searches now use portable Cisco Catalyst Center,
+  Secure Firewall, SD-WAN UTD, Cisco Spaces, and ThousandEyes source contracts;
+  every live Searchbase pipeline also avoids redundant `spath` commands.
+- Searchbase now keeps 156 disconnected, currently nonworking searches in a
+  non-runtime archive while preserving every search referenced by a dashboard,
+  drilldown, or Insights Workspace. Automated integrity checks prevent archived
+  IDs or display names from being reintroduced into live runtime references.
 - Dashboard Manager view mode now adds Studio-style Display, zoom, Export JSON,
   and Clone controls alongside the existing Download and Edit actions. Display
   supports fullscreen and temporarily hiding Splunk navigation without leaving
   the Searchbase-capable manager renderer.
+- Dashboard Manager edit mode now promotes its Searchbase catalogue control to
+  a labeled Cisco-accented action with clearer guidance, and Searchbase-wired
+  dashboards show a dismissible context and portability notice on each edit
+  entry. Convert messaging now distinguishes native Studio compatibility from
+  remaining app, macro, lookup, data-model, command, and data dependencies.
 - All 16 Secure Networking canvases now use compact headers and 190-300 pixel
   visualization rows instead of the previous 408-438 pixel panels, reducing
   dashboard height while preserving panel order, searches, and drilldowns.

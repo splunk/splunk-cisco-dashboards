@@ -14,6 +14,11 @@ const editorPath = path.resolve(
   "../src/main/webapp/pages/dashboardbuilder/DashboardStudioEditor.jsx",
 );
 const editor = fs.readFileSync(editorPath, "utf8");
+const insightKpiButtonPath = path.resolve(
+  __dirname,
+  "../src/main/webapp/pages/dashboardbuilder/InsightKpiButton.jsx",
+);
+const insightKpiButton = fs.readFileSync(insightKpiButtonPath, "utf8");
 const wrapperSelector =
   "body > div[role='main'] > div:has(> #collection_container.dashboardbuilderview)";
 const ruleStart = styles.indexOf(wrapperSelector);
@@ -36,5 +41,20 @@ assert.match(editor, /dashboardbuilder-export-json-action/);
 assert.match(editor, /dashboardbuilder-clone-action/);
 assert.match(styles, /body\.dashboardbuilder-navigation-hidden header/);
 assert.match(styles, /body\.dashboardbuilder-navigation-hidden nav/);
+assert.match(insightKpiButton, /label="Add Searchbase"/);
+assert.match(insightKpiButton, /ariaLabel="Add visualizations from Searchbase"/);
+assert.match(insightKpiButton, /dashboardbuilder-searchbase-toolbar-control/);
+assert.match(styles, /\.dashboardbuilder-searchbase-toolbar-control \[data-test='button'\]/);
+assert.match(editor, /Editing a Searchbase-wired dashboard/);
+assert.match(
+  editor,
+  /dashMode === 'edit' && dashboardUsesSearchbase && showEditContextNotice/,
+);
+assert.match(editor, /onRequestRemove=\{\(\) => setShowEditContextNotice\(false\)\}/);
+assert.match(editor, /does\s+not make the dashboard deploy-anywhere/);
+assert.match(editor, /Conversion does <b>not<\/b> package or remove environmental dependencies/);
+assert.doesNotMatch(editor, /open it in Dashboard Studio from\s+any context/);
 
-console.log("✓ Dashboard Builder shell-width and view-toolbar regression tests passed");
+console.log(
+  "✓ Dashboard Builder shell-width, toolbar, and edit-guidance regression tests passed",
+);

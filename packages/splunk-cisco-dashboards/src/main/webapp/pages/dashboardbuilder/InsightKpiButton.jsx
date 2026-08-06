@@ -230,33 +230,44 @@ const InsightKpiButton = (props) => {
     };
 
     return (
-        <>
-            <Tooltip content="Cisco extension: add Searchbase KPIs">
-                <DropdownWithSearch
-                    onSelect={(selection) => {
-                        if (selection) {
-                            setSelectedKpis(searches.filter((s) => selection.includes(s.id)));
-                        }
-                    }}
-                    appearance="subtle"
-                    icon={
-                        <img
-                            alt=""
-                            className="dashboardbuilder-searchbase-toolbar-icon"
-                            src={SEARCHBASE_ICON_SRC}
-                            style={{
-                                width: 24,
-                                height: 24,
-                            }}
-                        />
+        <Tooltip
+            content={
+                <div className="dashboardbuilder-searchbase-toolbar-tooltip">
+                    <strong>Add visualizations from Searchbase</strong>
+                    <span>
+                        Browse the Cisco Searchbase catalogue and add reusable, centrally managed
+                        searches to this dashboard.
+                    </span>
+                </div>
+            }
+        >
+            <DropdownWithSearch
+                onSelect={(selection) => {
+                    if (selection) {
+                        setSelectedKpis(searches.filter((s) => selection.includes(s.id)));
                     }
-                    style={{ maxWidth: 40, marginLeft: 10 }}
-                    searches={searches.filter(
-                        (s) => s.searchName != undefined && s.id != undefined,
-                    )}
-                ></DropdownWithSearch>
-            </Tooltip>
-        </>
+                }}
+                appearance="primary"
+                ariaLabel="Add visualizations from Searchbase"
+                className="dashboardbuilder-searchbase-toolbar-control"
+                label="Add Searchbase"
+                icon={
+                    <img
+                        alt=""
+                        className="dashboardbuilder-searchbase-toolbar-icon"
+                        src={SEARCHBASE_ICON_SRC}
+                        style={{
+                            width: 24,
+                            height: 24,
+                        }}
+                    />
+                }
+                style={{ marginLeft: 10 }}
+                searches={searches.filter(
+                    (s) => s.searchName != undefined && s.id != undefined,
+                )}
+            />
+        </Tooltip>
     );
 };
 

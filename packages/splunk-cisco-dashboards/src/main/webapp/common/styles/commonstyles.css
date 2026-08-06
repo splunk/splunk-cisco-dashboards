@@ -4373,13 +4373,80 @@ code {
 }
 
 .dashboardbuilder-searchbase-toolbar-icon {
+    background: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.78);
+    border-radius: 4px;
+    box-sizing: border-box;
     display: block;
     object-fit: contain;
+    padding: 2px;
 }
 
 .dashboardbuilderview-dark .dashboardbuilder-searchbase-toolbar-icon {
-    filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.95))
-        drop-shadow(0 0 4px rgba(23, 125, 220, 0.62));
+    filter: drop-shadow(0 0 5px rgba(88, 189, 244, 0.72));
+}
+
+.dashboardbuilder-searchbase-toolbar-control {
+    display: inline-flex;
+}
+
+.dashboardbuilder-searchbase-toolbar-control [data-test='button'] {
+    border: 1px solid #1674b8 !important;
+    border-radius: 4px !important;
+    box-shadow: 0 0 0 1px rgba(22, 116, 184, 0.14), 0 2px 5px rgba(15, 23, 42, 0.18);
+    font-weight: 600;
+    min-height: 32px;
+    padding-left: 9px !important;
+    padding-right: 11px !important;
+}
+
+.dashboardbuilder-searchbase-toolbar-control [data-test='button']:hover,
+.dashboardbuilder-searchbase-toolbar-control [data-test='button']:focus-visible {
+    border-color: #58bdf4 !important;
+    box-shadow: 0 0 0 2px rgba(88, 189, 244, 0.38), 0 3px 8px rgba(15, 23, 42, 0.26);
+}
+
+.dashboardbuilderview-dark .dashboardbuilder-searchbase-toolbar-control [data-test='button'] {
+    background: #1674b8 !important;
+    color: #ffffff !important;
+}
+
+.dashboardbuilder-searchbase-toolbar-tooltip {
+    display: grid;
+    gap: 3px;
+    max-width: 310px;
+}
+
+.dashboardbuilder-searchbase-toolbar-tooltip span {
+    line-height: 1.35;
+}
+
+.dashboardbuilder-edit-context-message {
+    background: var(--dashboard-builder-background-section, #ffffff) !important;
+    border: 1px solid var(--dashboard-builder-border-strong, #a8b3bd) !important;
+    border-left: 4px solid var(--dashboard-builder-accent, #006d9c) !important;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+    color: var(--dashboard-builder-content-default, #334155) !important;
+    margin: 8px 12px;
+}
+
+.dashboardbuilder-edit-context-message-copy {
+    display: grid;
+    gap: 6px;
+    line-height: 1.4;
+    max-width: 1280px;
+}
+
+.dashboardbuilder-convert-explanation {
+    line-height: 1.5;
+}
+
+.dashboardbuilder-convert-explanation p:first-child {
+    margin-top: 0;
+}
+
+.dashboardbuilder-convert-explanation p:last-child {
+    margin-bottom: 0;
 }
 
 .dashboardbuilderview [data-test='header'] {

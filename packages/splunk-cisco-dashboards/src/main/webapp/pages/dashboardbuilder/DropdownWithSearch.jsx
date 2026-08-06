@@ -87,6 +87,8 @@ export default function DropdownWithSearch({
     label,
     icon,
     appearance,
+    ariaLabel,
+    className,
     style,
     onSelect,
     searches,
@@ -375,12 +377,17 @@ export default function DropdownWithSearch({
                     </div>
                 </Modal.Footer>
             </Modal>
-            <div ref={dropdownRef} className="dropdown" style={style}>
+            <div
+                ref={dropdownRef}
+                className={['dropdown', className].filter(Boolean).join(' ')}
+                style={style}
+            >
                 <Button
                     appearance={appearance}
                     onClick={() => setIsOpen(!isOpen)}
                     label={label}
                     icon={icon}
+                    aria-label={ariaLabel || label}
                 />
 
                 {isOpen && (

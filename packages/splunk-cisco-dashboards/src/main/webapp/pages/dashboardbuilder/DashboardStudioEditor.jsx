@@ -35,6 +35,7 @@ import LayoutOverview from '@splunk/react-icons/LayoutOverview';
 
 import { default as SplunkControlGroup } from '@splunk/react-ui/ControlGroup';
 import Modal from '@splunk/react-ui/Modal';
+import Message from '@splunk/react-ui/Message';
 import Tooltip from '@splunk/react-ui/Tooltip';
 import Select from '@splunk/react-ui/Select';
 import Text from '@splunk/react-ui/Text';
@@ -89,7 +90,10 @@ import BackgroundButton from './BackgroundButton';
 import SpaceManagerButton from './SpaceManager/SpaceManagerButton';
 import useDashboardStore from '../../common/state/dashboardStore';
 import createSEIIconRegistry from '../../common/udf/IconProviders/createSEIIconRegistry';
-import { resolveSearchbaseDefinitionForNativeStudio } from './searchbaseDefinitionUtils';
+import {
+    hasSearchbaseDataSources,
+    resolveSearchbaseDefinitionForNativeStudio,
+} from './searchbaseDefinitionUtils';
 import { repairSearchbaseTimeQueryParameters } from './dashboardTimeUtils';
 
 const ENABLE_EXPERIMENTAL_SPACE_MANAGER = false;
@@ -930,7 +934,28 @@ const DashboardStudioEditor = ({
     };
     const [dashID, setDashID] = useState(openID);
     const [dashMode, setDashMode] = useState(readOnly ? 'view' : openID ? 'edit' : 'view');
+    const [showEditContextNotice, setShowEditContextNotice] = useState(false);
+    const previousDashModeRef = useRef();
     const [serverInfo, setServerInfo] = useState();
+
+    const dashboardUsesSearchbase = useMemo(() => {
+        if (editedDefinition) {
+            return hasSearchbaseDataSources(editedDefinition);
+        }
+
+        try {
+            return hasSearchbaseDataSources(JSON.parse(currentDashboard?.data || '{}'));
+        } catch {
+            return false;
+        }
+    }, [currentDashboard?.data, editedDefinition]);
+
+    useEffect(() => {
+        if (dashMode === 'edit' && previousDashModeRef.current !== 'edit') {
+            setShowEditContextNotice(true);
+        }
+        previousDashModeRef.current = dashMode;
+    }, [dashMode]);
 
     // This fix was provided by UDF team.
     delete self.requirejs;
@@ -1710,6 +1735,31 @@ const DashboardStudioEditor = ({
     const uiEditorPanel = useMemo(() => {
         return isCodeEditable ? null : (
             <div>
+                {dashMode === 'edit' && dashboardUsesSearchbase && showEditContextNotice && (
+                    <Message
+                        appearance="fill"
+                        className="dashboardbuilder-edit-context-message"
+                        type="info"
+                        onRequestRemove={() => setShowEditContextNotice(false)}
+                    >
+                        <Message.Title>Editing a Searchbase-wired dashboard</Message.Title>
+                        <div className="dashboardbuilder-edit-context-message-copy">
+                            <span>
+                                Open this dashboard from the <b>SASN app menu</b>, or open{' '}
+                                <b>Dashboard Manager</b> first and select it there. Dashboard Manager
+                                registers the Cisco Searchbase data source and keeps its SPL
+                                synchronized; opening the saved view directly in native Dashboard
+                                Studio can display custom data-source errors.
+                            </span>
+                            <span>
+                                <b>Convert</b> replaces the custom data sources with native Studio
+                                searches for direct Studio editing. It does not bundle required apps,
+                                macros, lookups, data models, or indexed data, so conversion alone does
+                                not make the dashboard deploy-anywhere.
+                            </span>
+                        </div>
+                    </Message>
+                )}
                 <Dashboard
                     key="DashboardStudioEditorUi"
                     width="100%"
@@ -1754,6 +1804,8 @@ const DashboardStudioEditor = ({
     }, [
         isCodeEditable,
         dashMode,
+        dashboardUsesSearchbase,
+        showEditContextNotice,
         handleModeChange,
         handleDefinitionChange,
         toolbarMenus,
@@ -1824,7 +1876,11 @@ const DashboardStudioEditor = ({
 
     const convertDashboard = async () => {
         try {
-            const { definition: def } = await resolveSearchbaseDefinitionForNativeStudio(
+            const {
+                definition: def,
+                convertedDataSources,
+                convertedInputs,
+            } = await resolveSearchbaseDefinitionForNativeStudio(
                 dashboardApiElem.current.getDefinition(),
             );
 
@@ -1832,7 +1888,11 @@ const DashboardStudioEditor = ({
 
             setOpenConvertModal(false);
             makeCreateToast(Toaster)({
-                message: `The dashboard has been migrated, and all custom items have been converted to standard Splunk Studio items. Please review the changes and save the dashboard to apply them.`,
+                message: `Converted ${convertedDataSources} Searchbase data source${
+                    convertedDataSources === 1 ? '' : 's'
+                } and ${convertedInputs} custom time input${
+                    convertedInputs === 1 ? '' : 's'
+                } to native Studio definitions. Review and save to apply the changes.`,
                 type: TOAST_TYPES.SUCCESS,
             });
         } catch (error) {
@@ -1941,20 +2001,26 @@ const DashboardStudioEditor = ({
             >
                 <Modal.Header title="Convert dashboard definition" icon={<Cog width="30px" />} />
                 <Modal.Body>
-                    This dashboard contains custom data sources that work{' '}
-                    <b>exclusively within the Cisco dashboards application context.</b> <br />
-                    These custom data sources ensure a{' '}
-                    <b>seamless and transparent synchronization</b> with the search SPL definitions
-                    defined in the search base, eliminating the need for manual synchronization.
-                    <br />
-                    However, if you want this dashboard to function in Dashboard Studio without
-                    custom data sources, you can click "Convert" button to standardize its
-                    definition. Once converted, you will be able to open it in Dashboard Studio from
-                    any context,{' '}
-                    <b>
-                        but you will lose automatic synchronization with the search base
-                        definitions.
-                    </b>
+                    <div className="dashboardbuilder-convert-explanation">
+                        <p>
+                            This dashboard uses Cisco Searchbase data sources. Dashboard Manager
+                            registers those data sources and keeps their SPL synchronized with{' '}
+                            <code>searchbase.conf</code>. Opening the saved view directly in native
+                            Dashboard Studio can therefore display custom data-source errors.
+                        </p>
+                        <p>
+                            <b>Convert</b> copies the current Searchbase SPL into native{' '}
+                            <code>ds.search</code> data sources and converts the custom time picker to
+                            its native Studio equivalent. The converted definition can then open
+                            directly in Dashboard Studio, but it no longer receives Searchbase SPL
+                            updates automatically.
+                        </p>
+                        <p>
+                            Conversion does <b>not</b> package or remove environmental dependencies.
+                            Any required apps, macros, lookups, data models, custom commands, and
+                            indexed data must still exist in the destination environment.
+                        </p>
+                    </div>
                 </Modal.Body>
                 <Modal.Footer>
                     <Button
