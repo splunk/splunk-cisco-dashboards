@@ -445,9 +445,9 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                     aria-label={`Expanded ${label} bar chart. Total ${formatCount(
                         aggregated.total
                     )}.`}
-                    className="flex min-h-[420px] flex-col rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
+                    className="flex h-full min-h-[320px] flex-col rounded-[10px] border border-[#1e3449] bg-[#0e1a2b] p-5"
                 >
-                    <span className="text-5xl font-black tracking-tighter leading-none text-slate-700 dark:text-slate-100">
+                    <span className="text-5xl font-black tracking-tighter leading-none text-slate-100">
                         {formatCount(aggregated.total)}
                     </span>
                     <div className="mt-7 flex flex-1 flex-col gap-4 overflow-y-auto">
@@ -461,10 +461,10 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                                     key={entry.key}
                                     className="flex items-center gap-3 text-sm leading-tight"
                                 >
-                                    <span className="w-40 truncate font-semibold capitalize text-slate-600 dark:text-slate-300">
+                                    <span className="w-40 truncate font-semibold capitalize text-slate-300">
                                         {entry.key}
                                     </span>
-                                    <div className="h-5 min-w-0 flex-1 overflow-hidden rounded bg-slate-100 dark:bg-slate-800">
+                                    <div className="h-5 min-w-0 flex-1 overflow-hidden rounded bg-slate-800">
                                         <div
                                             className={cn(
                                                 'h-full rounded',
@@ -473,14 +473,14 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                                             style={{ width: `${widthPct}%` }}
                                         />
                                     </div>
-                                    <span className="w-20 text-right font-bold tabular-nums text-slate-800 dark:text-slate-100">
+                                    <span className="w-20 text-right font-bold tabular-nums text-slate-100">
                                         {formatCount(entry.value)}
                                     </span>
                                 </div>
                             );
                         })}
                         {focusOverflowCount > 0 && (
-                            <span className="text-xs italic text-slate-400 dark:text-slate-500">
+                            <span className="text-xs italic text-slate-500">
                                 +{focusOverflowCount} more
                             </span>
                         )}

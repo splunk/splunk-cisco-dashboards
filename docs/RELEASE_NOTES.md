@@ -2,6 +2,10 @@
 
 ## 1.0.36
 
+- Insights Workspace metric, chart, and detail drill-down dialogs now share a
+  responsive Cisco dark-mode shell with content-specific footprints, compact
+  headers, consistent Search/Details/Close actions, keyboard focus trapping,
+  focus restoration, and mobile bottom-sheet behavior.
 - Executive Insights pie tiles now use Splunk's native Dashboard Studio pie
   renderer with larger charts, visible values and percentages, and matching
   dark theme colors. Pie and categorical bar charts use the same deliberate

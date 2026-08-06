@@ -52,7 +52,6 @@ import {
   ChevronDown,
   ChevronRight,
   AlertCircle,
-  Table2,
   ClipboardCheck,
   ArrowRight,
   ArrowUp,
@@ -77,6 +76,7 @@ import {
 } from "lucide-react";
 import { DashboardSection } from "@/common/components/florida/DashboardSection";
 import { MetricItem } from "@/common/components/florida/MetricItem";
+import { WorkspaceModalShell } from "@/common/components/florida/WorkspaceModalShell";
 import { TableTile } from "@/common/components/florida/TableTile";
 import { BarBreakdownTile } from "@/common/components/florida/BarBreakdownTile";
 import { PieTile } from "@/common/components/florida/PieTile";
@@ -6831,17 +6831,6 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
   );
 
   useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      onClose();
-    };
-    window.addEventListener("keydown", onKeyDown, true);
-    return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [onClose]);
-
-  useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setRows([]);
@@ -6939,75 +6928,33 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
   );
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-      className="fixed inset-0 z-[1900] flex items-center justify-center p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+    <WorkspaceModalShell
+      variant="detail"
+      title={config.title}
+      subtitle={config.subtitle(range)}
+      titleId={titleId}
+      onClose={onClose}
+      openInSearchHref={searchUrl}
+      wide={displayColumns.length > 5}
+      contentClassName="overflow-auto bg-[#0b1220]"
+      headerMeta={
+        statusField ? (
+          <>
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-950/70 px-2 py-1 text-xs font-semibold text-emerald-300">
+              <CheckCircle2 className="h-3 w-3" />
+              {availableCount} available
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-rose-950/70 px-2 py-1 text-xs font-semibold text-rose-300">
+              <AlertCircle className="h-3 w-3" />
+              {unavailableCount} unavailable
+            </span>
+          </>
+        ) : undefined
+      }
     >
-      <div
-        className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div className="relative w-full max-w-6xl max-h-[88vh] overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 shadow-2xl">
-        <div className="flex items-start justify-between gap-4 px-5 py-4 border-b border-slate-200 dark:border-slate-800">
-          <div>
-            <div className="flex items-center gap-2">
-              <Table2 className="w-4 h-4 text-sky-600 dark:text-sky-300" />
-              <h2
-                id={titleId}
-                className="text-base font-bold text-slate-900 dark:text-slate-100"
-              >
-                {config.title}
-              </h2>
-            </div>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              {config.subtitle(range)}
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            {statusField && (
-              <div className="hidden sm:flex items-center gap-2 text-xs font-semibold">
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 px-2 py-1 text-emerald-700 dark:text-emerald-300">
-                  <CheckCircle2 className="w-3 h-3" />
-                  {availableCount} available
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 dark:bg-rose-950/50 px-2 py-1 text-rose-700 dark:text-rose-300">
-                  <AlertCircle className="w-3 h-3" />
-                  {unavailableCount} unavailable
-                </span>
-              </div>
-            )}
-            <a
-              href={searchUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              title={`Open ${config.title} in Search`}
-              aria-label={`Open ${config.title} in Search`}
-              className="inline-flex items-center gap-1.5 rounded border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-sky-700 dark:hover:text-sky-200 hover:border-sky-300 dark:hover:border-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/40 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              <span>Open in Search</span>
-            </a>
-            <button
-              type="button"
-              onClick={onClose}
-              title="Close"
-              aria-label={`Close ${config.title}`}
-              className="p-1.5 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        <div className="overflow-auto max-h-[calc(88vh-90px)]">
-          <table className="w-full min-w-[860px] text-sm">
-            <thead className="sticky top-0 z-10 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
-              <tr className="text-left text-xs font-bold text-slate-500 dark:text-slate-400">
+          <table className="w-full min-w-[860px] bg-[#0b1220] text-sm">
+            <thead className="sticky top-0 z-10 border-b border-[#1e3449] bg-[#101c2e]">
+              <tr className="text-left text-xs font-bold text-[#8ea3b8]">
                 {displayColumns.map((column, index) => {
                   const isSorted = sortState?.field === column.field;
                   const SortIcon = isSorted
@@ -7060,7 +7007,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
                 })}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody className="divide-y divide-[#1e293b]">
               {loading ? (
                 <tr>
                   <td
@@ -7101,7 +7048,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
                   return (
                     <tr
                       key={`${rowKey}-${rowIndex}`}
-                      className="hover:bg-slate-50 dark:hover:bg-slate-900/70 transition-colors"
+                      className="odd:bg-[#0d1828] even:bg-[#0b1525] transition-colors hover:bg-[#132238]"
                     >
                       {displayColumns.map((column, index) => {
                         const value = row[column.field];
@@ -7113,8 +7060,8 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
                             key={column.field}
                             className={cn(
                               index === 0
-                                ? "px-5 font-medium text-slate-900 dark:text-slate-100"
-                                : "px-4 text-slate-600 dark:text-slate-300",
+                                ? "px-5 font-medium text-[#f3f7fb]"
+                                : "px-4 text-[#d6e1eb]",
                               "py-3",
                               column.align === "right" &&
                                 "text-right tabular-nums",
@@ -7156,9 +7103,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
               )}
             </tbody>
           </table>
-        </div>
-      </div>
-    </div>
+    </WorkspaceModalShell>
   );
 };
 

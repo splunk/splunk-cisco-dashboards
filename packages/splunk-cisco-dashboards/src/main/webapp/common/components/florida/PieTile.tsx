@@ -204,6 +204,10 @@ export const PieTile: React.FC<PieTileProps> = ({
         }),
         [colors, isDark]
     );
+    const focusStudioOptions = useMemo(
+        () => ({ ...studioOptions, backgroundColor: '#0e1a2b' }),
+        [studioOptions]
+    );
     return (
         <div
             className={cn(
@@ -357,20 +361,20 @@ export const PieTile: React.FC<PieTileProps> = ({
                 <div
                     role="img"
                     aria-label={`Expanded ${label} pie chart. Total ${formatCount(total)}.`}
-                    className="relative h-[62vh] min-h-[360px] rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900"
+                    className="relative h-full min-h-[320px] rounded-[10px] border border-[#1e3449] bg-[#0e1a2b] p-3"
                 >
                     <StudioPie
                         width="100%"
                         height="100%"
-                        themeKey={isDark ? 'enterpriseDark' : 'enterpriseLight'}
-                        options={studioOptions}
+                        themeKey="enterpriseDark"
+                        options={focusStudioOptions}
                         dataSources={studioDataSources}
                     />
-                    <span className="pointer-events-none absolute left-4 top-4 rounded bg-white/90 px-2 py-1 text-xs font-bold tabular-nums text-slate-600 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-950/90 dark:text-slate-200 dark:ring-slate-700/80">
+                    <span className="pointer-events-none absolute left-4 top-4 rounded bg-slate-950/90 px-2 py-1 text-xs font-bold tabular-nums text-slate-200 shadow-sm ring-1 ring-slate-700/80">
                         Total {formatCount(total)}
                     </span>
                     {overflowCount > 0 && (
-                        <span className="pointer-events-none absolute bottom-3 left-4 rounded bg-white/85 px-1.5 py-0.5 text-xs italic text-slate-400 dark:bg-slate-950/85 dark:text-slate-500">
+                        <span className="pointer-events-none absolute bottom-3 left-4 rounded bg-slate-950/85 px-1.5 py-0.5 text-xs italic text-slate-500">
                             +{overflowCount} more
                         </span>
                     )}

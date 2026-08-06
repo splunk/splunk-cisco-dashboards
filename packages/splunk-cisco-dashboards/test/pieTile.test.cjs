@@ -16,6 +16,10 @@ const chartFocusPath = path.resolve(
   __dirname,
   "../src/main/webapp/common/components/florida/ChartFocusDialog.tsx",
 );
+const modalShellPath = path.resolve(
+  __dirname,
+  "../src/main/webapp/common/components/florida/WorkspaceModalShell.tsx",
+);
 const barBreakdownPath = path.resolve(
   __dirname,
   "../src/main/webapp/common/components/florida/BarBreakdownTile.tsx",
@@ -24,6 +28,7 @@ const barBreakdownPath = path.resolve(
 const pieTile = fs.readFileSync(pieTilePath, "utf8");
 const profile = fs.readFileSync(profilePath, "utf8");
 const chartFocus = fs.readFileSync(chartFocusPath, "utf8");
+const modalShell = fs.readFileSync(modalShellPath, "utf8");
 const barBreakdown = fs.readFileSync(barBreakdownPath, "utf8");
 
 assert.match(
@@ -57,9 +62,14 @@ assert.match(
   "Bar breakdown charts must use an explicit expand action",
 );
 assert.match(
-  chartFocus,
+  modalShell,
   /role="dialog"[\s\S]*?aria-modal="true"/,
-  "Expanded charts must open in an accessible modal dialog",
+  "Expanded charts must use the shared accessible modal dialog shell",
+);
+assert.match(
+  chartFocus,
+  /variant="chart"/,
+  "Expanded categorical charts must use the chart-focus size variant",
 );
 assert.doesNotMatch(
   pieTile,
