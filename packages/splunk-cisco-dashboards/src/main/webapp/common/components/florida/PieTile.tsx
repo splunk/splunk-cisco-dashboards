@@ -6,10 +6,10 @@
  * = slice label, second = numeric value).
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import StudioPie from '@splunk/visualizations/Pie';
-import { ExternalLink, PanelRightOpen, Settings2 } from 'lucide-react';
-import { HoverZoomFrame } from './HoverZoomFrame';
+import { ExternalLink, Maximize2, PanelRightOpen, Settings2 } from 'lucide-react';
+import { ChartFocusDialog } from './ChartFocusDialog';
 import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
 import { cn } from '@/common/lib/utils';
 import type { DataSource, NoDataReason } from '@/common/hooks/useMetric';
@@ -117,6 +117,7 @@ export const PieTile: React.FC<PieTileProps> = ({
     isDark = false,
     className,
 }) => {
+    const [isFocusOpen, setIsFocusOpen] = useState(false);
     const dimensionCol = columns[0];
     const valueCol = columns[1];
 
@@ -272,6 +273,18 @@ export const PieTile: React.FC<PieTileProps> = ({
                                 <PanelRightOpen className="w-3.5 h-3.5 stroke-[2.4px]" />
                             </button>
                         )}
+                        {hasData && (
+                            <button
+                                type="button"
+                                onClick={() => setIsFocusOpen(true)}
+                                title={`Expand ${label}`}
+                                aria-label={`Expand ${label}`}
+                                data-tile-control="true"
+                                className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
+                            >
+                                <Maximize2 className="w-3.5 h-3.5 stroke-[2.4px]" />
+                            </button>
+                        )}
                         {onConfigure && (
                             <button
                                 type="button"
@@ -301,12 +314,12 @@ export const PieTile: React.FC<PieTileProps> = ({
             </div>
 
             {hasData ? (
-                <HoverZoomFrame
-                    ariaLabel={`${label} pie chart. Total ${formatCount(total)}. Hover or focus to enlarge.`}
-                    title="Values and percentages are shown on the chart · Hover to enlarge"
-                    anchor={infoAnchor}
-                    scale={1.45}
-                    className="mt-0.5 flex min-h-[118px] flex-1"
+                <div
+                    role="img"
+                    aria-label={`${label} pie chart. Total ${formatCount(total)}.`}
+                    title="Values and percentages are shown on the chart"
+                    data-tile-control="true"
+                    className="relative mt-0.5 flex min-h-[118px] flex-1"
                 >
                     <StudioPie
                         width="100%"
@@ -323,7 +336,7 @@ export const PieTile: React.FC<PieTileProps> = ({
                             +{overflowCount} more
                         </span>
                     )}
-                </HoverZoomFrame>
+                </div>
             ) : (
                 <NoDataState
                     noDataReason={noDataReason}
@@ -331,6 +344,38 @@ export const PieTile: React.FC<PieTileProps> = ({
                     source={source}
                 />
             )}
+
+            <ChartFocusDialog
+                isOpen={isFocusOpen && hasData}
+                label={label}
+                subLabel={subLabel}
+                onClose={() => setIsFocusOpen(false)}
+                onOpenInSearch={onOpenInSearch}
+                onOpenDetailTable={onOpenDetailTable}
+                detailTableTitle={detailTableTitle}
+            >
+                <div
+                    role="img"
+                    aria-label={`Expanded ${label} pie chart. Total ${formatCount(total)}.`}
+                    className="relative h-[62vh] min-h-[360px] rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900"
+                >
+                    <StudioPie
+                        width="100%"
+                        height="100%"
+                        themeKey={isDark ? 'enterpriseDark' : 'enterpriseLight'}
+                        options={studioOptions}
+                        dataSources={studioDataSources}
+                    />
+                    <span className="pointer-events-none absolute left-4 top-4 rounded bg-white/90 px-2 py-1 text-xs font-bold tabular-nums text-slate-600 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-950/90 dark:text-slate-200 dark:ring-slate-700/80">
+                        Total {formatCount(total)}
+                    </span>
+                    {overflowCount > 0 && (
+                        <span className="pointer-events-none absolute bottom-3 left-4 rounded bg-white/85 px-1.5 py-0.5 text-xs italic text-slate-400 dark:bg-slate-950/85 dark:text-slate-500">
+                            +{overflowCount} more
+                        </span>
+                    )}
+                </div>
+            </ChartFocusDialog>
         </div>
     );
 };

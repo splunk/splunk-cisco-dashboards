@@ -29,9 +29,9 @@
  * them. All dispatch and column-derivation logic lives in the hook.
  */
 
-import React, { useMemo } from 'react';
-import { ExternalLink, PanelRightOpen, Settings2 } from 'lucide-react';
-import { HoverZoomFrame } from './HoverZoomFrame';
+import React, { useMemo, useState } from 'react';
+import { ExternalLink, Maximize2, PanelRightOpen, Settings2 } from 'lucide-react';
+import { ChartFocusDialog } from './ChartFocusDialog';
 import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
 import { cn } from '@/common/lib/utils';
 import type { DataSource, NoDataReason } from '@/common/hooks/useMetric';
@@ -183,6 +183,7 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
     visibleRowCap = DEFAULT_VISIBLE_ROW_CAP,
     className,
 }) => {
+    const [isFocusOpen, setIsFocusOpen] = useState(false);
     // First column = dimension (severity), second column = numeric
     // count. We don't try to be smart about which numeric column to
     // pick because the bar tile is single-series by design — the
@@ -228,6 +229,8 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
 
     const visibleEntries = aggregated.entries.slice(0, visibleRowCap);
     const overflowCount = Math.max(0, aggregated.entries.length - visibleEntries.length);
+    const focusEntries = aggregated.entries.slice(0, Math.max(visibleRowCap, 12));
+    const focusOverflowCount = Math.max(0, aggregated.entries.length - focusEntries.length);
     const hasData = aggregated.entries.length > 0;
 
     return (
@@ -310,6 +313,18 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                                 <PanelRightOpen className="w-3.5 h-3.5 stroke-[2.4px]" />
                             </button>
                         )}
+                        {hasData && (
+                            <button
+                                type="button"
+                                onClick={() => setIsFocusOpen(true)}
+                                title={`Expand ${label}`}
+                                aria-label={`Expand ${label}`}
+                                data-tile-control="true"
+                                className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
+                            >
+                                <Maximize2 className="w-3.5 h-3.5 stroke-[2.4px]" />
+                            </button>
+                        )}
                         {onConfigure && (
                             <button
                                 type="button"
@@ -339,15 +354,14 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
             </div>
 
             {hasData ? (
-                <HoverZoomFrame
-                    ariaLabel={`${label} bar chart. Total ${formatCount(
+                <div
+                    role="img"
+                    aria-label={`${label} bar chart. Total ${formatCount(
                         aggregated.total
-                    )}. Hover or focus to enlarge.`}
-                    title="Category values are shown beside each bar · Hover to enlarge"
-                    anchor={infoAnchor}
-                    scale={1.35}
-                    className="mt-0.5 flex min-h-[116px] max-h-36 flex-1"
-                    contentClassName="flex flex-col p-1"
+                    )}.`}
+                    title="Category values are shown beside each bar"
+                    data-tile-control="true"
+                    className="mt-0.5 flex min-h-[116px] max-h-36 flex-1 flex-col p-1"
                 >
                     {/* Headline = sum across all rows. Same big-number
                         shape as MetricItem so a row of mixed sparkline
@@ -408,7 +422,7 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                             </span>
                         )}
                     </div>
-                </HoverZoomFrame>
+                </div>
             ) : (
                 <NoDataState
                     noDataReason={noDataReason}
@@ -416,6 +430,63 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                     source={source}
                 />
             )}
+
+            <ChartFocusDialog
+                isOpen={isFocusOpen && hasData}
+                label={label}
+                subLabel={subLabel}
+                onClose={() => setIsFocusOpen(false)}
+                onOpenInSearch={onOpenInSearch}
+                onOpenDetailTable={onOpenDetailTable}
+                detailTableTitle={detailTableTitle}
+            >
+                <div
+                    role="img"
+                    aria-label={`Expanded ${label} bar chart. Total ${formatCount(
+                        aggregated.total
+                    )}.`}
+                    className="flex min-h-[420px] flex-col rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
+                >
+                    <span className="text-5xl font-black tracking-tighter leading-none text-slate-700 dark:text-slate-100">
+                        {formatCount(aggregated.total)}
+                    </span>
+                    <div className="mt-7 flex flex-1 flex-col gap-4 overflow-y-auto">
+                        {focusEntries.map((entry) => {
+                            const widthPct =
+                                aggregated.max > 0
+                                    ? Math.max(2, (entry.value / aggregated.max) * 100)
+                                    : 0;
+                            return (
+                                <div
+                                    key={entry.key}
+                                    className="flex items-center gap-3 text-sm leading-tight"
+                                >
+                                    <span className="w-40 truncate font-semibold capitalize text-slate-600 dark:text-slate-300">
+                                        {entry.key}
+                                    </span>
+                                    <div className="h-5 min-w-0 flex-1 overflow-hidden rounded bg-slate-100 dark:bg-slate-800">
+                                        <div
+                                            className={cn(
+                                                'h-full rounded',
+                                                colorForLabel(entry.key)
+                                            )}
+                                            style={{ width: `${widthPct}%` }}
+                                        />
+                                    </div>
+                                    <span className="w-20 text-right font-bold tabular-nums text-slate-800 dark:text-slate-100">
+                                        {formatCount(entry.value)}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                        {focusOverflowCount > 0 && (
+                            <span className="text-xs italic text-slate-400 dark:text-slate-500">
+                                +{focusOverflowCount} more
+                            </span>
+                        )}
+                    </div>
+                </div>
+            </ChartFocusDialog>
         </div>
     );
 };

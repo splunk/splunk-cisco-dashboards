@@ -4,8 +4,8 @@
 
 - Executive Insights pie tiles now use Splunk's native Dashboard Studio pie
   renderer with larger charts, visible values and percentages, and matching
-  dark theme colors. Pie and categorical bar charts share hover or
-  keyboard-focus magnification for closer inspection.
+  dark theme colors. Pie and categorical bar charts use the same deliberate
+  expand-dialog interaction as time-series tiles instead of enlarging on hover.
 - Executive Insights tile actions are slightly larger, and drilldowns now use
   an open-details-panel icon with explicit drilldown tooltips instead of an
   ambiguous table glyph.
