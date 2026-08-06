@@ -6,7 +6,7 @@
  * = slice label, second = numeric value).
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import StudioPie from '@splunk/visualizations/Pie';
 import { ExternalLink, Settings2, Table2 } from 'lucide-react';
 import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
@@ -118,6 +118,7 @@ export const PieTile: React.FC<PieTileProps> = ({
 }) => {
     const dimensionCol = columns[0];
     const valueCol = columns[1];
+    const [isZoomed, setIsZoomed] = useState(false);
 
     const chartData = useMemo(() => {
         if (!dimensionCol || !valueCol) return [];
@@ -184,8 +185,12 @@ export const PieTile: React.FC<PieTileProps> = ({
 
     const studioOptions = useMemo(
         () => ({
-            label: dimensionCol,
-            value: valueCol,
+            // Dashboard Studio resolves visualization fields through its
+            // dynamic-options evaluator. Supplying a bare field name causes
+            // the native component to show its placeholder icon instead of
+            // the chart, even when the datasource contains valid values.
+            label: '> primary | seriesByIndex(0)',
+            value: '> primary | seriesByIndex(1)',
             showDonutHole: false,
             labelDisplay: 'valuesAndPercentage',
             percentagePrecision: 1,
@@ -196,14 +201,14 @@ export const PieTile: React.FC<PieTileProps> = ({
             seriesColors: colors,
             backgroundColor: isDark ? '#0f172a' : '#ffffff',
         }),
-        [colors, dimensionCol, isDark, valueCol]
+        [colors, isDark]
     );
-    const zoomOriginClass =
+    const zoomOrigin =
         infoAnchor === 'right'
-            ? 'origin-right'
+            ? 'right bottom'
             : infoAnchor === 'left'
-            ? 'origin-left'
-            : 'origin-center';
+            ? 'left bottom'
+            : 'center bottom';
 
     return (
         <div
@@ -303,23 +308,28 @@ export const PieTile: React.FC<PieTileProps> = ({
                     role="img"
                     data-tile-control="true"
                     tabIndex={0}
+                    onPointerEnter={() => setIsZoomed(true)}
+                    onPointerLeave={() => setIsZoomed(false)}
+                    onFocus={() => setIsZoomed(true)}
+                    onBlur={() => setIsZoomed(false)}
                     aria-label={`${label} pie chart. Total ${formatCount(total)}. Hover or focus to enlarge.`}
                     title="Values and percentages are shown on the chart · Hover to enlarge"
+                    style={{ zIndex: isZoomed ? 30 : 0 }}
                     className={cn(
-                        'group/piezoom relative z-0 mt-0.5 flex min-h-[118px] flex-1 overflow-visible rounded-md',
+                        'relative mt-0.5 flex min-h-[118px] flex-1 overflow-visible rounded-md',
                         'focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
-                        'hover:z-30 focus-within:z-30'
+                        isZoomed && 'z-30'
                     )}
                 >
                     <div
+                        style={{
+                            transform: `scale(${isZoomed ? 1.45 : 1})`,
+                            transformOrigin: zoomOrigin,
+                        }}
                         className={cn(
                             'absolute inset-0 transform-gpu rounded-md transition-[transform,box-shadow,background-color] duration-200 ease-out',
-                            'group-hover/piezoom:scale-[1.28] group-focus-within/piezoom:scale-[1.28]',
-                            'group-hover/piezoom:bg-white group-hover/piezoom:shadow-2xl group-hover/piezoom:ring-1 group-hover/piezoom:ring-sky-300',
-                            'dark:group-hover/piezoom:bg-slate-900 dark:group-hover/piezoom:ring-sky-700',
-                            'group-focus-within/piezoom:bg-white group-focus-within/piezoom:shadow-2xl group-focus-within/piezoom:ring-1 group-focus-within/piezoom:ring-sky-300',
-                            'dark:group-focus-within/piezoom:bg-slate-900 dark:group-focus-within/piezoom:ring-sky-700',
-                            zoomOriginClass
+                            isZoomed &&
+                                'bg-white shadow-2xl ring-1 ring-sky-300 dark:bg-slate-900 dark:ring-sky-700'
                         )}
                     >
                         <StudioPie

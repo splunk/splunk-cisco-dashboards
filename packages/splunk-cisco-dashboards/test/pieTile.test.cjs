@@ -38,13 +38,18 @@ assert.match(
 );
 assert.match(
   pieTile,
-  /group-hover\/piezoom:scale-\[1\.28\]/,
+  /onPointerEnter=\{\(\) => setIsZoomed\(true\)\}/,
   "Pie charts must enlarge on hover",
 );
 assert.match(
   pieTile,
-  /group-focus-within\/piezoom:scale-\[1\.28\]/,
+  /onFocus=\{\(\) => setIsZoomed\(true\)\}/,
   "Pie charts must enlarge for keyboard users",
+);
+assert.match(
+  pieTile,
+  /transform: `scale\(\$\{isZoomed \? 1\.45 : 1\}\)`/,
+  "Pie chart hover and focus zoom must be prominent",
 );
 assert.match(
   profile,
