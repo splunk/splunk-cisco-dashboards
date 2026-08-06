@@ -13,10 +13,14 @@
   rail preset, including London-Paris-Frankfurt, APAC resilience, Americas SOC,
   and global executive connectivity stories. Saved topology edits are scoped
   to the owning workspace.
-- Secure Network Segmentation now includes bounded Palo Alto policy-outcome
-  and per-SGT traffic timecharts that drill into the existing effectiveness
-  rollup and correlated flow table; policy actions normalize both PAN and CIM
-  allow/block variants.
+- Hybrid Mesh Firewalling now includes bounded Palo Alto policy-outcome and
+  per-SGT traffic timecharts in its shared workspace layout. Each trend drills
+  into its corresponding effectiveness rollup or correlated flow table, and
+  policy actions normalize both PAN and CIM allow/block variants.
+- Secure Networking Searchbase metadata now uses the five exact app-menu
+  section names, keeping workspace discovery and filtering aligned with Zero
+  Trust Access, Secure Infrastructure, Scalable Network Segmentation, Hybrid
+  Mesh Firewalling, and Agentic Ops.
 - Six Palo Alto and firewall searches now minimize last-24-hour dispatch cost:
   PAN/ISE correlations extract only their source-specific fields before
   enrichment, while blocked-versus-allowed trends use one accelerated
