@@ -21,7 +21,8 @@
   `insights_workspaces.conf`, while sparse personal differences are saved in
   the authenticated Splunk user's workspace namespace. Rapid editor changes
   are coalesced, preferences are capped at 24 items, and reset returns to the
-  latest shared workspace default.
+  latest shared workspace default. Empty personal-preference lookups now return
+  a successful collection response instead of an expected 404.
 - Hybrid Mesh Firewalling now includes bounded Palo Alto policy-outcome and
   per-SGT traffic timecharts in its shared workspace layout. Each trend drills
   into its corresponding effectiveness rollup or correlated flow table, and

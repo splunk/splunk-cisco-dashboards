@@ -140,6 +140,46 @@ assert.match(
 );
 assert.doesNotMatch(preferenceService, /servicesNS\/nobody/);
 assert.match(preferenceService, /MAX_PREFERENCE_JSON_CHARS = 65_536/);
+assert.match(preferenceService, /search: `name="\$\{name\}"`/);
+assert.match(preferenceService, /const stanzaPresence = new Map/);
+
+const preferenceServiceOutput = ts.transpileModule(preferenceService, {
+  compilerOptions: {
+    module: ts.ModuleKind.CommonJS,
+    target: ts.ScriptTarget.ES2020,
+  },
+  fileName: "signalTickerPreferenceService.ts",
+}).outputText;
+const preferenceServiceModule = { exports: {} };
+const preferenceServiceRequire = (moduleName) => {
+  if (moduleName === "@splunk/splunk-utils/fetch") {
+    return { createFetchInit: (init) => init };
+  }
+  if (moduleName === "@/common/config/insightsWorkspaces") {
+    return { isWorkspaceId: (value) => workspaceIds.includes(value) };
+  }
+  if (moduleName === "@/common/config/signalTicker") {
+    return {
+      sanitizeSignalTickerPreferencePatch: (value) =>
+        value && typeof value === "object" ? value : null,
+    };
+  }
+  throw new Error(`Unexpected test dependency: ${moduleName}`);
+};
+new Function(
+  "exports",
+  "module",
+  "require",
+  "__filename",
+  "__dirname",
+  preferenceServiceOutput,
+)(
+  preferenceServiceModule.exports,
+  preferenceServiceModule,
+  preferenceServiceRequire,
+  "signalTickerPreferenceService.ts",
+  packageRoot,
+);
 
 const appConf = fs.readFileSync(
   path.join(packageRoot, "src/main/resources/splunk/default/app.conf"),
@@ -161,4 +201,123 @@ assert.match(
 assert.match(defaultMeta, /^\[insights_workspace_preferences\]$/m);
 assert.match(defaultMeta, /^export = none$/m);
 
-console.log("✓ Signal Rail central defaults and private preference tests passed");
+const {
+  deleteSignalTickerPreference,
+  loadSignalTickerPreference,
+  saveSignalTickerPreference,
+} = preferenceServiceModule.exports;
+
+const originalWindow = global.window;
+const originalDocument = global.document;
+const originalFetch = global.fetch;
+const queuedResponses = [];
+const capturedRequests = [];
+const jsonResponse = (status, body = {}) => ({
+  ok: status >= 200 && status < 300,
+  status,
+  json: async () => body,
+});
+
+const restoreGlobal = (name, value) => {
+  if (value === undefined) delete global[name];
+  else global[name] = value;
+};
+
+(async () => {
+  global.window = {
+    __SPLUNK_RUNTIME__: true,
+    $C: { USERNAME: "alice" },
+    setTimeout,
+  };
+  global.document = { cookie: "" };
+  global.fetch = async (url, init = {}) => {
+    capturedRequests.push({ url: String(url), init });
+    assert.ok(queuedResponses.length, `unexpected fetch: ${url}`);
+    return queuedResponses.shift();
+  };
+
+  try {
+    queuedResponses.push(jsonResponse(200, { entry: [] }));
+    const emptyLoad = await loadSignalTickerPreference("secure_networking");
+    assert.deepEqual(emptyLoad, { available: true, patch: null });
+    assert.equal(capturedRequests.length, 1);
+    const lookupUrl = new URL(capturedRequests[0].url, "http://localhost");
+    assert.ok(
+      lookupUrl.pathname.endsWith("/conf-insights_workspace_preferences"),
+      "missing preferences must query the collection instead of a stanza URL",
+    );
+    assert.equal(lookupUrl.searchParams.get("count"), "1");
+    assert.equal(
+      lookupUrl.searchParams.get("search"),
+      'name="signal_rail.secure_networking"',
+    );
+
+    queuedResponses.push(jsonResponse(201));
+    assert.equal(
+      await saveSignalTickerPreference("secure_networking", {
+        density: "comfortable",
+      }),
+      true,
+    );
+    assert.equal(capturedRequests.length, 2, "known absence must skip an update probe");
+    assert.equal(capturedRequests[1].init.method, "POST");
+    assert.ok(
+      capturedRequests[1].init.body.includes(
+        "name=signal_rail.secure_networking",
+      ),
+    );
+
+    queuedResponses.push(jsonResponse(200));
+    assert.equal(await deleteSignalTickerPreference("secure_networking"), true);
+    assert.equal(capturedRequests.length, 3);
+    assert.equal(capturedRequests[2].init.method, "DELETE");
+
+    assert.equal(await deleteSignalTickerPreference("secure_networking"), true);
+    assert.equal(
+      capturedRequests.length,
+      3,
+      "resetting an already absent override must not issue a DELETE probe",
+    );
+
+    queuedResponses.push(
+      jsonResponse(200, {
+        entry: [
+          {
+            name: "signal_rail.executive",
+            content: {
+              preferences_json: JSON.stringify({ speed: 6 }),
+            },
+          },
+        ],
+      }),
+    );
+    const existingLoad = await loadSignalTickerPreference("executive");
+    assert.deepEqual(existingLoad, {
+      available: true,
+      patch: { speed: 6 },
+    });
+
+    queuedResponses.push(jsonResponse(200));
+    assert.equal(
+      await saveSignalTickerPreference("executive", { speed: 8 }),
+      true,
+    );
+    assert.equal(capturedRequests.length, 5, "known presence must update directly");
+    assert.ok(capturedRequests[4].url.endsWith("/signal_rail.executive"));
+
+    queuedResponses.push(jsonResponse(200));
+    assert.equal(await deleteSignalTickerPreference("executive"), true);
+    assert.equal(capturedRequests.length, 6);
+
+    console.log(
+      "✓ Signal Rail central defaults and private preference tests passed",
+    );
+  } finally {
+    restoreGlobal("window", originalWindow);
+    restoreGlobal("document", originalDocument);
+    restoreGlobal("fetch", originalFetch);
+  }
+})().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
