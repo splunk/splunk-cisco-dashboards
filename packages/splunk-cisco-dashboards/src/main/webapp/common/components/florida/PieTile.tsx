@@ -7,14 +7,8 @@
  */
 
 import React, { useMemo } from 'react';
+import StudioPie from '@splunk/visualizations/Pie';
 import { ExternalLink, Settings2, Table2 } from 'lucide-react';
-import {
-    Cell,
-    Pie,
-    PieChart,
-    ResponsiveContainer,
-    Tooltip,
-} from 'recharts';
 import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
 import { cn } from '@/common/lib/utils';
 import type { DataSource, NoDataReason } from '@/common/hooks/useMetric';
@@ -39,6 +33,8 @@ interface PieTileProps {
     noDataReason?: NoDataReason;
     rangeLabel?: string;
     visibleSliceCap?: number;
+    /** Selects the matching Dashboard Studio chart theme. */
+    isDark?: boolean;
     className?: string;
 }
 
@@ -98,30 +94,6 @@ const NoDataState: React.FC<{
     );
 };
 
-interface PieTooltipProps {
-    active?: boolean;
-    payload?: Array<{ payload?: { name: string; value: number } }>;
-}
-
-const PieTooltipContent: React.FC<PieTooltipProps> = ({ active, payload }) => {
-    if (!active || !payload?.length) return null;
-    const point = payload[0]?.payload;
-    if (!point) return null;
-    return (
-        <div
-            role="tooltip"
-            className="pointer-events-none rounded-md border border-slate-200 bg-white/95 px-2 py-1 text-[10px] shadow-lg dark:border-slate-700 dark:bg-slate-900/95"
-        >
-            <span className="font-semibold text-slate-700 dark:text-slate-200">
-                {point.name}
-            </span>
-            <span className="ml-1.5 tabular-nums text-slate-500 dark:text-slate-400">
-                {formatCount(point.value)}
-            </span>
-        </div>
-    );
-};
-
 export const PieTile: React.FC<PieTileProps> = ({
     label,
     subLabel,
@@ -141,6 +113,7 @@ export const PieTile: React.FC<PieTileProps> = ({
     noDataReason,
     rangeLabel,
     visibleSliceCap = DEFAULT_SLICE_CAP,
+    isDark = false,
     className,
 }) => {
     const dimensionCol = columns[0];
@@ -165,7 +138,10 @@ export const PieTile: React.FC<PieTileProps> = ({
             .sort((a, b) => b.value - a.value);
     }, [rows, dimensionCol, valueCol]);
 
-    const visibleSlices = chartData.slice(0, visibleSliceCap);
+    const visibleSlices = useMemo(
+        () => chartData.slice(0, visibleSliceCap),
+        [chartData, visibleSliceCap]
+    );
     const overflowCount = Math.max(0, chartData.length - visibleSlices.length);
     const hasData = visibleSlices.length > 0;
     const total = chartData.reduce((acc, e) => acc + e.value, 0);
@@ -177,6 +153,57 @@ export const PieTile: React.FC<PieTileProps> = ({
         if (fromOptions.length > 0) return fromOptions.map((c) => c.trim());
         return PIE_FALLBACK_COLORS;
     }, [seriesColors]);
+
+    // Dashboard Studio visualizations consume columnar search results rather
+    // than Recharts' row objects. Keeping this adapter here lets the profile,
+    // Searchbase Canvas, and any future overview reuse the same native
+    // `splunk.pie` renderer that Studio itself ships.
+    const studioDataSources = useMemo(
+        () => ({
+            primary: {
+                requestParams: { offset: 0, count: visibleSlices.length },
+                data: {
+                    fields: [
+                        { name: dimensionCol || 'Label', type: 'string' },
+                        {
+                            name: valueCol || 'Value',
+                            type: 'number',
+                            type_special: 'count',
+                        },
+                    ],
+                    columns: [
+                        visibleSlices.map((slice) => slice.name),
+                        visibleSlices.map((slice) => String(slice.value)),
+                    ],
+                },
+                meta: { totalCount: visibleSlices.length },
+            },
+        }),
+        [dimensionCol, valueCol, visibleSlices]
+    );
+
+    const studioOptions = useMemo(
+        () => ({
+            label: dimensionCol,
+            value: valueCol,
+            showDonutHole: false,
+            labelDisplay: 'valuesAndPercentage',
+            percentagePrecision: 1,
+            collapseThreshold: 0,
+            collapseExcludeZero: true,
+            collapseLabel: 'Other',
+            legendDisplay: 'right',
+            seriesColors: colors,
+            backgroundColor: isDark ? '#0f172a' : '#ffffff',
+        }),
+        [colors, dimensionCol, isDark, valueCol]
+    );
+    const zoomOriginClass =
+        infoAnchor === 'right'
+            ? 'origin-right'
+            : infoAnchor === 'left'
+            ? 'origin-left'
+            : 'origin-center';
 
     return (
         <div
@@ -272,49 +299,46 @@ export const PieTile: React.FC<PieTileProps> = ({
             </div>
 
             {hasData ? (
-                <>
-                    <div className="flex items-baseline gap-2 mb-1">
-                        <span className="text-4xl font-black tracking-tighter leading-none text-slate-700 dark:text-slate-100">
-                            {formatCount(total)}
+                <div
+                    role="img"
+                    data-tile-control="true"
+                    tabIndex={0}
+                    aria-label={`${label} pie chart. Total ${formatCount(total)}. Hover or focus to enlarge.`}
+                    title="Values and percentages are shown on the chart · Hover to enlarge"
+                    className={cn(
+                        'group/piezoom relative z-0 mt-0.5 flex min-h-[118px] flex-1 overflow-visible rounded-md',
+                        'focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
+                        'hover:z-30 focus-within:z-30'
+                    )}
+                >
+                    <div
+                        className={cn(
+                            'absolute inset-0 transform-gpu rounded-md transition-[transform,box-shadow,background-color] duration-200 ease-out',
+                            'group-hover/piezoom:scale-[1.28] group-focus-within/piezoom:scale-[1.28]',
+                            'group-hover/piezoom:bg-white group-hover/piezoom:shadow-2xl group-hover/piezoom:ring-1 group-hover/piezoom:ring-sky-300',
+                            'dark:group-hover/piezoom:bg-slate-900 dark:group-hover/piezoom:ring-sky-700',
+                            'group-focus-within/piezoom:bg-white group-focus-within/piezoom:shadow-2xl group-focus-within/piezoom:ring-1 group-focus-within/piezoom:ring-sky-300',
+                            'dark:group-focus-within/piezoom:bg-slate-900 dark:group-focus-within/piezoom:ring-sky-700',
+                            zoomOriginClass
+                        )}
+                    >
+                        <StudioPie
+                            width="100%"
+                            height="100%"
+                            themeKey={isDark ? 'enterpriseDark' : 'enterpriseLight'}
+                            options={studioOptions}
+                            dataSources={studioDataSources}
+                        />
+                        <span className="pointer-events-none absolute left-1 top-1 rounded bg-white/90 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-slate-600 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-950/90 dark:text-slate-200 dark:ring-slate-700/80">
+                            Total {formatCount(total)}
                         </span>
                     </div>
-                    <div
-                        data-tile-control="true"
-                        className="flex-1 min-h-[72px] max-h-28 mt-1 flex flex-col gap-1"
-                    >
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Tooltip
-                                    content={<PieTooltipContent />}
-                                    wrapperStyle={{ zIndex: 50, outline: 'none' }}
-                                />
-                                <Pie
-                                    data={visibleSlices}
-                                    dataKey="value"
-                                    nameKey="name"
-                                    innerRadius="42%"
-                                    outerRadius="88%"
-                                    paddingAngle={1}
-                                    stroke="#ffffff"
-                                    strokeWidth={1}
-                                    isAnimationActive={false}
-                                >
-                                    {visibleSlices.map((entry, index) => (
-                                        <Cell
-                                            key={entry.name}
-                                            fill={colors[index % colors.length]}
-                                        />
-                                    ))}
-                                </Pie>
-                            </PieChart>
-                        </ResponsiveContainer>
-                        {overflowCount > 0 && (
-                            <span className="text-[9px] text-slate-400 dark:text-slate-500 italic text-center">
-                                +{overflowCount} more
-                            </span>
-                        )}
-                    </div>
-                </>
+                    {overflowCount > 0 && (
+                        <span className="pointer-events-none absolute bottom-0 left-1 z-10 rounded bg-white/85 px-1 text-[9px] italic text-slate-400 dark:bg-slate-950/85 dark:text-slate-500">
+                            +{overflowCount} more
+                        </span>
+                    )}
+                </div>
             ) : (
                 <NoDataState
                     noDataReason={noDataReason}

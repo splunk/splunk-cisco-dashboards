@@ -1235,6 +1235,8 @@ interface MetricCardProps {
   infoAnchor?: "auto" | "left" | "right";
   /** Tightens nonessential chart chrome when the available viewport is short. */
   compactDensity?: boolean;
+  /** Keeps native Dashboard Studio visualizations aligned with the profile theme. */
+  isDark?: boolean;
   /**
    * Optional override applied on top of the static config. When
    * present, the gear icon is rendered with a "modified" dot.
@@ -1349,6 +1351,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
   onStatus,
   infoAnchor = "auto",
   compactDensity = false,
+  isDark = false,
   override,
   onConfigure,
   onOpenDetailTable,
@@ -1509,6 +1512,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
         detailTableTitle={detailTableConfig?.buttonTitle}
         infoAnchor={infoAnchor}
         isCustomized={Boolean(override)}
+        isDark={isDark}
       />
     );
   }
@@ -1928,6 +1932,7 @@ const BarBreakdownCardLeaf: React.FC<CommonLeafProps> = ({
 
 interface PieCardLeafProps extends CommonLeafProps {
   sbRecord: SearchbaseRecord | null;
+  isDark: boolean;
 }
 
 /**
@@ -1947,6 +1952,7 @@ const PieCardLeaf: React.FC<PieCardLeafProps> = ({
   detailTableTitle,
   infoAnchor,
   isCustomized,
+  isDark,
 }) => {
   const result = useTableData(dispatchedConfig, range, refreshToken);
 
@@ -1985,6 +1991,7 @@ const PieCardLeaf: React.FC<PieCardLeafProps> = ({
       isCustomized={isCustomized}
       noDataReason={result.noDataReason}
       rangeLabel={result.rangeLabel}
+      isDark={isDark}
     />
   );
 };
@@ -4844,6 +4851,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                               searchbaseById={searchbaseById}
                               searchbaseDrilldowns={searchbaseDrilldowns}
                               compactDensity={compactDensity}
+                              isDark={resolvedTheme === "dark"}
                               onOpenDetailTable={setActiveDetailTable}
                               onConfigure={() =>
                                 openPicker(cfg.id, cfg.label, {

@@ -2,6 +2,13 @@
 
 ## 1.0.36
 
+- Executive Insights pie tiles now use Splunk's native Dashboard Studio pie
+  renderer with larger charts, visible values and percentages, matching dark
+  theme colors, and hover or keyboard-focus magnification.
+- Secure Network Segmentation now includes bounded Palo Alto policy-outcome
+  and per-SGT traffic timecharts that drill into the existing effectiveness
+  rollup and correlated flow table; policy actions normalize both PAN and CIM
+  allow/block variants.
 - Eight demo-bound Searchbase searches now use portable Cisco Catalyst Center,
   Secure Firewall, SD-WAN UTD, Cisco Spaces, and ThousandEyes source contracts;
   every live Searchbase pipeline also avoids redundant `spath` commands.
