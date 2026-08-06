@@ -1,0 +1,307 @@
+<dashboard version="2" theme="dark" stylesheet="application.css">
+    <label>Remote Access VPN (RaVPN) Sessions and Posture</label>
+    <description>Connect remote-session health with endpoint posture and access risk.</description>
+    <definition><![CDATA[
+{
+	"title": "Remote Access VPN (RaVPN) Sessions and Posture",
+	"description": "Connect remote-session health with endpoint posture and access risk.",
+	"inputs": {
+		"input_time_range": {
+			"options": {
+				"defaultValue": "-24h@h,now",
+				"token": "time_tok"
+			},
+			"title": "Time Range",
+			"type": "input.timerange"
+		}
+	},
+	"defaults": {
+		"visualizations": {
+			"global": {
+				"showLastUpdated": true,
+				"showProgressBar": true
+			}
+		}
+	},
+	"visualizations": {
+		"viz_header_bg": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#16283c",
+				"strokeColor": "rgba(53,207,245,0.42)"
+			}
+		},
+		"viz_header_icon": {
+			"type": "splunk.image",
+			"title": "Zero Trust Access",
+			"options": {
+				"preserveAspectRatio": true,
+				"src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/zero-trust-access.svg"
+			}
+		},
+		"viz_header": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#e8f1fb",
+				"markdown": "# Remote Access VPN (RaVPN) Sessions and Posture\nConnect remote-session health with endpoint posture and access risk."
+			}
+		},
+		"viz_secure_networking_zta_ravpn_sessions_by_profile": {
+			"type": "splunk.table",
+			"title": "ZTA RaVPN Sessions by Profile",
+			"dataSources": {
+				"primary": "ds_secure_networking_zta_ravpn_sessions_by_profile"
+			},
+			"options": {
+				"backgroundColor": "#0f1a2a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			},
+			"description": "Summarizes remote-access VPN activity by Secure Access VPN profile, region, enforcement host, and Security Group Tag."
+		},
+		"viz_secure_networking_zta_ravpn_connection_rate": {
+			"type": "splunk.table",
+			"title": "ZTA RaVPN Connection Rate and Clients",
+			"dataSources": {
+				"primary": "ds_secure_networking_zta_ravpn_connection_rate"
+			},
+			"options": {
+				"backgroundColor": "#0f1a2a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			},
+			"description": "Tracks remote-access VPN clients, sessions, successful connections, and failed connections in 15-minute intervals."
+		},
+		"viz_secure_networking_zta_ravpn_failure_reasons": {
+			"type": "splunk.table",
+			"title": "ZTA RaVPN Failure Reasons",
+			"dataSources": {
+				"primary": "ds_secure_networking_zta_ravpn_failure_reasons"
+			},
+			"options": {
+				"backgroundColor": "#0f1a2a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			},
+			"description": "Ranks remote-access VPN failure and warning reasons by profile, region, ASA syslog identifier, and Secure Access enforcement host."
+		},
+		"viz_secure_networking_zta_ravpn_posture_alerts": {
+			"type": "splunk.table",
+			"title": "ZTA RaVPN Posture Alerts and Logs",
+			"dataSources": {
+				"primary": "ds_secure_networking_zta_ravpn_posture_alerts"
+			},
+			"options": {
+				"backgroundColor": "#0f1a2a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			},
+			"description": "Surfaces RaVPN posture failures, warnings, alerts, and operational log reasons with user, profile, region, and device context."
+		},
+		"viz_design_context": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#111f31",
+				"fontColor": "#e8f1fb",
+				"markdown": "**Audience:** Remote-access, identity, and security operations  •  **Sources:** Secure Access RaVPN, ASA, identity, and endpoint-posture telemetry  •  **Reading guide:** Review profile volume and connection pressure before opening failure and posture detail.  •  **Freshness:** Uses the dashboard time range"
+			}
+		},
+		"viz_design_section": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#111f31",
+				"fontColor": "#e8f1fb",
+				"markdown": "### Remote-access assurance\nReview profile volume and connection pressure before opening failure and posture detail."
+			}
+		}
+	},
+	"dataSources": {
+		"ds_secure_networking_zta_ravpn_sessions_by_profile": {
+			"name": "Secure Networking - ZTA RaVPN Sessions by Profile",
+			"options": {
+				"ref": "secure_networking_zta_ravpn_sessions_by_profile",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_zta_ravpn_connection_rate": {
+			"name": "Secure Networking - ZTA RaVPN Connection Rate and Clients",
+			"options": {
+				"ref": "secure_networking_zta_ravpn_connection_rate",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_zta_ravpn_failure_reasons": {
+			"name": "Secure Networking - ZTA RaVPN Failure Reasons",
+			"options": {
+				"ref": "secure_networking_zta_ravpn_failure_reasons",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_zta_ravpn_posture_alerts": {
+			"name": "Secure Networking - ZTA RaVPN Posture Alerts and Logs",
+			"options": {
+				"ref": "secure_networking_zta_ravpn_posture_alerts",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		}
+	},
+	"layout": {
+		"globalInputs": [
+			"input_time_range"
+		],
+		"layoutDefinitions": {
+			"layout_overview": {
+				"options": {
+					"backgroundColor": "#07101d",
+					"display": "auto-scale",
+					"height": 878,
+					"width": 1440
+				},
+				"structure": [
+					{
+						"item": "viz_header_bg",
+						"position": {
+							"x": 20,
+							"y": 0,
+							"w": 1400,
+							"h": 88
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_header_icon",
+						"position": {
+							"x": 36,
+							"y": 14,
+							"w": 56,
+							"h": 56
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_header",
+						"position": {
+							"x": 108,
+							"y": 4,
+							"w": 1292,
+							"h": 76
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_design_context",
+						"position": {
+							"x": 20,
+							"y": 100,
+							"w": 1400,
+							"h": 64
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_design_section",
+						"position": {
+							"x": 20,
+							"y": 176,
+							"w": 1400,
+							"h": 54
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_zta_ravpn_sessions_by_profile",
+						"position": {
+							"x": 20,
+							"y": 242,
+							"w": 690,
+							"h": 300
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_zta_ravpn_connection_rate",
+						"position": {
+							"x": 730,
+							"y": 242,
+							"w": 690,
+							"h": 300
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_zta_ravpn_failure_reasons",
+						"position": {
+							"x": 20,
+							"y": 558,
+							"w": 690,
+							"h": 300
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_zta_ravpn_posture_alerts",
+						"position": {
+							"x": 730,
+							"y": 558,
+							"w": 690,
+							"h": 300
+						},
+						"type": "block"
+					}
+				],
+				"type": "absolute"
+			}
+		},
+		"options": {
+			"showTitleAndDescription": false,
+			"submitButton": false,
+			"submitOnDashboardLoad": true
+		},
+		"tabs": {
+			"items": [
+				{
+					"label": "overview",
+					"layoutId": "layout_overview"
+				}
+			]
+		}
+	},
+	"applicationProperties": {
+		"collapseNavigation": false,
+		"hideEdit": false,
+		"hideExport": false
+	}
+}
+    ]]></definition>
+</dashboard>
+

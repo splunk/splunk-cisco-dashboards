@@ -92,22 +92,22 @@ def static_validate(stanza) -> list[StaticIssue]:
     force = stanza.fields.get("dispatch_context_force", "").strip()
 
     if uses_dm:
-        if ctx != SEARCHBASE_APP:
+        if ctx != CATALYST_APP:
             issues.append(
                 StaticIssue(
                     stanza.name,
                     stanza.line_start,
                     "error",
-                    f"DM search must set dispatch_context = {SEARCHBASE_APP}",
+                    f"DM search must set dispatch_context = {CATALYST_APP}",
                 )
             )
-        if force != "1":
+        if force != "0":
             issues.append(
                 StaticIssue(
                     stanza.name,
                     stanza.line_start,
                     "warn",
-                    "DM search should set dispatch_context_force = 1",
+                    "DM search should set dispatch_context_force = 0",
                 )
             )
         if "`summariesonly`" not in spl and "summariesonly" not in spl:
@@ -121,13 +121,13 @@ def static_validate(stanza) -> list[StaticIssue]:
             )
 
     if stanza.name.startswith("catalyst_harvest_"):
-        if ctx != SEARCHBASE_APP:
+        if ctx != CATALYST_APP:
             issues.append(
                 StaticIssue(
                     stanza.name,
                     stanza.line_start,
                     "error",
-                    f"harvest stanza must set dispatch_context = {SEARCHBASE_APP}",
+                    f"harvest stanza must set dispatch_context = {CATALYST_APP}",
                 )
             )
 
@@ -211,7 +211,8 @@ def check_prerequisites(
 
 def dispatch_app_for(stanza, prereqs: PrerequisiteReport) -> tuple[str, str]:
     ctx = stanza.fields.get("dispatch_context", "").strip()
-    if ctx:
+    force = stanza.fields.get("dispatch_context_force", "").strip().lower()
+    if ctx and force in {"1", "true", "yes"}:
         return prereqs.dispatch_owner, ctx
     return prereqs.dispatch_owner, prereqs.dispatch_app
 

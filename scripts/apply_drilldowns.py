@@ -235,9 +235,101 @@ BEST_FIT = {
     # === Other mapped ===
     "asset_inventory_build_lookup": ("asset_inventory_ds_gap_analysis", "View inventory gap analysis"),
     "asset_inventory_firewall_gap": ("asset_inventory_ds_gap_analysis", "View inventory gap analysis"),
-    "network_activation_wired_health_kpi": ("network_activation_ds_wired_health", "View wired health detail"),
+    "catalyst_center_wired_health_kpi": ("statewide_client_wired_drilldown", "View wired health detail"),
     "network_activation_wireless_health_kpi": ("network_activation_ds_wireless_health", "View wireless health detail"),
 }
+
+# Reviewed against the current Searchbase catalogue on 2026-07-28. These
+# mappings cover newer product families and forecast/feed-monitor searches that
+# were added after the original dashboard-oriented map above.
+BEST_FIT.update({
+    "executive_dashboard_ise_authentication_rate": ("security_resilience_ds_ise_by_nas", "View ISE authentication detail"),
+    "executive_dashboard_xdr_incident_count": ("security_resilience_xdr_incident_detail", "View XDR incident detail"),
+    "security_resilience_cloud_fw_blocked": ("security_resilience_recent_security_events", "View cloud firewall event detail"),
+    "security_resilience_ise_authentication_rate": ("security_resilience_ds_ise_by_nas", "View ISE authentication detail"),
+    "user_experience_thousandeyes_agents": ("it_health_te_app_test_detail", "View ThousandEyes test detail"),
+    "executive_dashboard_security_trend_compare": ("security_resilience_recent_security_events", "View recent security events"),
+    "executive_dashboard_fw_blocked_trend_compare": ("executive_dashboard_firewall_blocked_with_baseline_drilldown", "View firewall block detail"),
+    "it_critical_systems_ap_air_quality_by_site": ("it_critical_systems_ap_interference_hotspots", "View AP interference detail"),
+    "it_critical_systems_ap_channel_utilization": ("it_critical_systems_ap_interference_hotspots", "View AP interference detail"),
+    "it_critical_systems_link_flap_storm": ("it_critical_systems_port_flapping", "View port flapping detail"),
+    "teuc_5_9_15_dnssec_validity_monitoring": ("teuc_5_9_17_dns_trace_delegation_chain_monitoring", "View DNS trace detail"),
+    "teuc_5_9_39_api_endpoint_completion_rate": ("it_health_te_app_test_detail", "View application test detail"),
+    "teuc_5_9_54_mttr_reduction_via_network_vs_application_isolation": ("teuc_5_9_18_network_outage_event_detection", "View outage event detail"),
+    "building_resilience_ds_ap_health_site": ("overview_ap_health_drilldown", "View AP health detail"),
+    "executive_dashboard_ds_device_health_trend_compare": ("executive_dashboard_ds_device_health_current_drilldown", "View current device health"),
+    "executive_dashboard_ds_security_trend_compare": ("executive_dashboard_failed_logon_with_baseline_drilldown", "View security event detail"),
+    "user_experience_ds_client_peak_by_ssid": ("user_experience_top_ssids_by_clients", "View SSID client detail"),
+    "user_experience_ds_top_ssids_by_clients": ("user_experience_top_ssids_by_clients", "View SSID client detail"),
+    "overview_topology_overview": ("overview_link_state_drilldown", "View topology link detail"),
+    "overview_operational_lead": ("overview_site_state_drilldown", "View site state detail"),
+    "it_health_te_activity_event_types": ("it_health_te_activity_audit_log_detail", "View activity log detail"),
+    "it_health_te_alerts_count_by_severity": ("it_health_te_alerts_recent_detail", "View recent alert detail"),
+    "it_health_te_app_account_id_inventory": ("it_health_te_app_test_detail", "View application test detail"),
+    "it_health_te_config_account_id_listing": ("it_health_te_activity_audit_log_detail", "View ThousandEyes account activity"),
+    "it_health_te_net_tests_by_type": ("teuc_5_9_1_network_latency_monitoring", "View network test detail"),
+    "it_health_te_net_account_id_inventory": ("teuc_5_9_1_network_latency_monitoring", "View network test detail"),
+    "it_health_te_voice_account_id_inventory": ("teuc_11_3_27_rtp_mos_score_monitoring", "View voice test detail"),
+    "it_health_te_voice_tests_by_type": ("teuc_11_3_27_rtp_mos_score_monitoring", "View voice test detail"),
+    "monitoring_sdwan_tunnel_kpi_total": ("monitoring_sdwan_tunnel_health_table", "View tunnel health detail"),
+    "monitoring_sdwan_tunnel_state_summary": ("monitoring_sdwan_tunnel_health_table", "View tunnel health detail"),
+    "monitoring_sdwan_site_state_summary": ("monitoring_sdwan_site_health_table", "View site health detail"),
+    "monitoring_sdwan_wan_edge_reachability_summary": ("monitoring_sdwan_device_inventory_table", "View WAN edge detail"),
+    "monitoring_sdwan_circuit_state_summary": ("monitoring_sdwan_site_health_table", "View circuit and site detail"),
+    "security_resilience_sdwan_sig_sse_state_summary": ("security_resilience_sdwan_sig_sse_tunnel_table", "View SIG/SSE tunnel detail"),
+    "security_resilience_sdwan_sig_sse_down_by_site": ("security_resilience_sdwan_sig_sse_tunnel_table", "View down tunnel detail"),
+    "security_resilience_sdwan_audit_log_total": ("security_resilience_sdwan_audit_log_table", "View audit log detail"),
+    "security_resilience_sdwan_audit_log_top_users": ("security_resilience_sdwan_audit_log_table", "View audit user detail"),
+    "security_resilience_sdwan_utd_action_summary": ("security_resilience_sdwan_utd_top_threats", "View UTD threat detail"),
+    "security_resilience_sdwan_utd_top_policies": ("security_resilience_sdwan_utd_top_threats", "View UTD policy event detail"),
+    "security_resilience_sdwan_utd_top_signatures": ("security_resilience_sdwan_utd_top_threats", "View IPS signature detail"),
+    "security_resilience_sdwan_utd_url_filter_top_categories": ("security_resilience_sdwan_utd_top_threats", "View URL-filter event detail"),
+    "security_resilience_sdwan_utd_container_health_summary": ("security_resilience_sdwan_utd_container_health_table", "View container health detail"),
+    "security_ai_defense_block_rate_kpi": ("security_ai_defense_recent_blocked_prompts", "View blocked message detail"),
+    "security_ai_defense_top_blocked_policies": ("security_ai_defense_recent_blocked_prompts", "View blocked policy event detail"),
+    "security_ai_defense_mitre_atlas_leaderboard": ("security_ai_defense_top_blocked_models_apps", "View blocked model and application detail"),
+    "security_multicloud_defense_action_breakdown_kpi": ("security_multicloud_defense_url_fqdn_blocks", "View blocked URL and FQDN detail"),
+    "security_multicloud_defense_threat_type_distribution": ("security_multicloud_defense_waf_findings", "View threat finding detail"),
+    "security_multicloud_defense_top_blocked_apps": ("security_multicloud_defense_url_fqdn_blocks", "View blocked application detail"),
+    "identity_duo_auth_outcome_mix": ("secure_networking_zta_duo_auth_outcomes_by_application", "View Duo authentication detail"),
+    "network_dc_nd_active_anomalies_by_fabric": ("secure_networking_dc_anomalies_by_severity", "View fabric anomaly detail"),
+    "network_dc_nd_top_active_anomaly_types": ("secure_networking_dc_anomalies_by_severity", "View anomaly type detail"),
+    "network_ccc_inventory_software_version_distribution": ("secure_networking_catalyst_center_software_version_inventory", "View software inventory detail"),
+    "security_microseg_tetration_alerts_by_severity_type": ("security_microseg_tetration_top_scopes_by_alert", "View Secure Workload alert detail"),
+    "security_sna_top_applications_by_volume": ("security_sna_top_internal_talkers", "View SNA traffic detail"),
+    "security_sna_destination_category_breakdown": ("security_sna_top_internal_talkers", "View destination traffic detail"),
+    "security_etd_admin_action_volume": ("security_etd_recent_admin_activity", "View administrator activity detail"),
+    "security_etd_verdict_reclassification_distribution": ("security_etd_recent_admin_activity", "View reclassification activity detail"),
+    "security_sma_threat_score_distribution": ("security_sma_top_high_risk_submissions", "View high-risk submission detail"),
+    "network_nvm_top_processes_by_flow_volume": ("network_nvm_endpoint_os_inventory", "View endpoint inventory detail"),
+    "network_nvm_top_destination_hosts": ("network_nvm_endpoint_os_inventory", "View endpoint inventory detail"),
+    "network_nvm_top_users_by_egress": ("network_nvm_endpoint_os_inventory", "View endpoint inventory detail"),
+    "security_cvi_cves_by_severity_bucket": ("security_cvi_easily_exploitable_critical_table", "View exploitable CVE detail"),
+    "security_cvi_top_vulnerability_categories": ("security_cvi_easily_exploitable_critical_table", "View vulnerability detail"),
+    "network_aci_top_fault_codes": ("network_aci_recent_faults_table", "View recent fault detail"),
+    "security_isovalent_alerts_by_severity": ("security_isovalent_top_alert_rules", "View Isovalent alert rule detail"),
+    "network_ios_traceback_by_device": ("network_ios_recent_tracebacks_table", "View traceback detail"),
+    "security_resilience_ftd_intrusionpacket_burst_summary": ("security_resilience_ftd_connection_reason_pressure", "View FTD security event detail"),
+    "spaces_predict_camera_headcount_24h_forecast": ("spaces_fit_camera_multivariate_anomaly", "View camera anomaly detail"),
+    "spaces_predict_iot_temperature_forecast": ("spaces_fit_iot_temperature_calendar_profile", "View temperature profile detail"),
+    "spaces_predict_desk_utilization_forecast": ("spaces_fit_room_utilization_vs_capacity", "View utilization profile detail"),
+    "spaces_predict_webex_active_calls_forecast": ("spaces_fit_webex_room_utilization_calendar", "View Webex utilization detail"),
+    "teuc_predict_network_latency_forecast": ("teuc_fit_multivariate_network_health_anomaly", "View network anomaly detail"),
+    "teuc_predict_http_availability_forecast": ("teuc_5_9_34_http_server_availability_monitoring", "View HTTP availability detail"),
+    "teuc_predict_voip_mos_forecast": ("teuc_11_3_27_rtp_mos_score_monitoring", "View VoIP quality detail"),
+    "spaces_predict_30day_occupancy_forecast": ("spaces_day_of_week_occupancy_fingerprint", "View occupancy profile detail"),
+    "feed_monitor_thousandeyes_stream_staleness": ("feed_monitor_all_feeds_health_matrix", "View feed health detail"),
+    "feed_monitor_ftd_firewall_staleness": ("feed_monitor_all_feeds_health_matrix", "View feed health detail"),
+    "feed_monitor_fmc_estreamer_staleness": ("feed_monitor_all_feeds_health_matrix", "View feed health detail"),
+    "feed_monitor_catalyst_center_staleness": ("feed_monitor_all_feeds_health_matrix", "View feed health detail"),
+    "feed_monitor_sdwan_vmanage_staleness": ("feed_monitor_all_feeds_health_matrix", "View feed health detail"),
+    "feed_monitor_ise_syslog_staleness": ("feed_monitor_all_feeds_health_matrix", "View feed health detail"),
+    "feed_monitor_cisco_spaces_staleness": ("feed_monitor_all_feeds_health_matrix", "View feed health detail"),
+    "feed_monitor_ios_syslog_staleness": ("feed_monitor_all_feeds_health_matrix", "View feed health detail"),
+    "feed_monitor_duo_api_staleness": ("feed_monitor_all_feeds_health_matrix", "View feed health detail"),
+    "feed_monitor_zeek_ndr_staleness": ("feed_monitor_all_feeds_health_matrix", "View feed health detail"),
+    "feed_monitor_aci_nd_staleness": ("feed_monitor_all_feeds_health_matrix", "View feed health detail"),
+})
 
 # Verify all targets exist
 missing_targets = set()
@@ -260,6 +352,11 @@ for src_name, (tgt_name, btn_title) in BEST_FIT.items():
         skipped += 1
         continue
 
+    if tgt_name not in blocks:
+        print(f"SKIP: target stanza {tgt_name} not found for {src_name}")
+        skipped += 1
+        continue
+
     # Idempotency: if the stanza already has any drilldown_search_name,
     # leave it alone. Re-running this script must not duplicate fields
     # or overwrite hand-tuned drilldowns. Run a separate audit if you
@@ -268,10 +365,7 @@ for src_name, (tgt_name, btn_title) in BEST_FIT.items():
         already_set += 1
         continue
 
-    tgt_search_name = snames.get(tgt_name)
-    if not tgt_search_name:
-        # Use the stanza name as fallback
-        tgt_search_name = tgt_name
+    tgt_search_name = snames[tgt_name]
 
     # Find the stanza header line and insert after dispatch_context_force line.
     # The canonical field-order formatter (`format_searchbase_conf.py`)

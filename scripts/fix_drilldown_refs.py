@@ -84,7 +84,7 @@ DOMAIN_BEST = {
         "blocked_sources": "Network Intelligence - External Sources",
     },
     "network_activation": {
-        "wired_health": "Network Activation - Wired Health KPI",
+    "wired_health": "Catalyst Center - Wired Health KPI",
         "wireless_health": "Network Activation - Wireless Health KPI",
     },
 }

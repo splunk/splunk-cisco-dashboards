@@ -1,10 +1,10 @@
-<dashboard version="2" theme="light">
+<dashboard version="2" theme="dark" stylesheet="application.css">
     <label>Scalable Network Segmentation</label>
-    <description>Secure Networking drill-down dashboard for Scalable Network Segmentation.</description>
+    <description>Connect segmentation posture, trust boundaries, and enforcement coverage at scale.</description>
     <definition><![CDATA[
 {
 	"title": "Scalable Network Segmentation",
-	"description": "Secure Networking drill-down dashboard for Scalable Network Segmentation.",
+	"description": "Connect segmentation posture, trust boundaries, and enforcement coverage at scale.",
 	"inputs": {
 		"input_time_range": {
 			"options": {
@@ -16,24 +16,6 @@
 		}
 	},
 	"defaults": {
-		"dataSources": {
-			"ds.search": {
-				"options": {
-					"queryParameters": {
-						"earliest": "$time_tok.earliest$",
-						"latest": "$time_tok.latest$"
-					}
-				}
-			},
-			"ds.spl2": {
-				"options": {
-					"queryParameters": {
-						"earliest": "$time_tok.earliest$",
-						"latest": "$time_tok.latest$"
-					}
-				}
-			}
-		},
 		"visualizations": {
 			"global": {
 				"showLastUpdated": true,
@@ -42,15 +24,30 @@
 		}
 	},
 	"visualizations": {
+		"viz_header_bg": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#16283c",
+				"strokeColor": "rgba(53,207,245,0.42)"
+			}
+		},
+		"viz_header_icon": {
+			"type": "splunk.image",
+			"title": "Scalable Network Segmentation",
+			"options": {
+				"preserveAspectRatio": true,
+				"src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/segmentation.svg"
+			}
+		},
 		"viz_header": {
 			"type": "splunk.markdown",
 			"title": "",
 			"showLastUpdated": false,
 			"showProgressBar": false,
 			"options": {
-				"backgroundColor": "#ffffff",
-				"fontColor": "#111827",
-				"markdown": "# Scalable Network Segmentation\nSGT adoption, endpoint coverage, TrustSec readiness, and OT/IoT segmentation visibility."
+				"backgroundColor": "transparent",
+				"fontColor": "#e8f1fb",
+				"markdown": "# Scalable Network Segmentation\nConnect segmentation posture, trust boundaries, and enforcement coverage at scale."
 			}
 		},
 		"viz_seg_total_assignments": {
@@ -60,14 +57,15 @@
 				"primary": "ds_seg_total_assignments"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('total_assignments') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"sparklineDisplay": "off",
 				"trendDisplay": "off",
-				"majorColor": "#0ea5e9"
-			}
+				"majorColor": "#53bfff"
+			},
+			"description": "Count of active SGT assignments observed in the selected time window from Cisco ISE authentication syslog, reflecting the number of distinct user/device classifications where a non-default Security Group Tag was…"
 		},
 		"viz_seg_unique_sgts": {
 			"type": "splunk.singlevalue",
@@ -76,14 +74,15 @@
 				"primary": "ds_seg_unique_sgts"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('unique_sgts') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"sparklineDisplay": "off",
 				"trendDisplay": "off",
 				"majorColor": "#14b8a6"
-			}
+			},
+			"description": "Count of unique Security Group Tags actively in use across ISE authentication events, reflecting the breadth of TrustSec segmentation classification deployed in the environment."
 		},
 		"viz_seg_sgt_blocks": {
 			"type": "splunk.singlevalue",
@@ -92,14 +91,15 @@
 				"primary": "ds_seg_sgt_blocks_total"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('sgt_enforced_blocks') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"sparklineDisplay": "off",
 				"trendDisplay": "off",
-				"majorColor": "#dc2626"
-			}
+				"majorColor": "#ff7169"
+			},
+			"description": "Total count of FMC block decisions where the source carried an active TrustSec SGT , serving as the primary Scalable Network Segmentation enforcement KPI for the Hybrid Mesh Firewalling overview."
 		},
 		"viz_seg_binding_mix": {
 			"type": "splunk.pie",
@@ -108,16 +108,17 @@
 				"primary": "ds_seg_ip_sgt_bindings"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f1a2a",
 				"legendDisplay": "right",
 				"seriesColors": [
-					"#0ea5e9",
-					"#16a34a",
-					"#f59e0b",
-					"#dc2626",
+					"#53bfff",
+					"#8bd45b",
+					"#ff9a4a",
+					"#ff7169",
 					"#7c3aed"
 				]
-			}
+			},
+			"description": "Shows the distribution of IP-to-SGT bindings across Security Group Tags, reporting how many bound IPs fall under each Security Group — the core \"SGT by Site/Device\" view for the Segmentation pillar."
 		},
 		"viz_seg_status_rollup": {
 			"type": "splunk.table",
@@ -126,11 +127,12 @@
 				"primary": "ds_seg_status_rollup"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Creates a segmentation adoption rollup by ISE site, comparing total authenticated endpoints to the subset carrying Security Group Tags."
 		},
 		"viz_seg_sgt_distribution": {
 			"type": "splunk.table",
@@ -139,11 +141,12 @@
 				"primary": "ds_seg_sgt_distribution"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Breaks SGT-tagged authentications down by site, network device, and Security Group Tag for segmentation drilldowns."
 		},
 		"viz_seg_policy_hits": {
 			"type": "splunk.bar",
@@ -152,7 +155,7 @@
 				"primary": "ds_seg_policy_hits"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f1a2a",
 				"legendDisplay": "off",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
@@ -160,7 +163,8 @@
 				"seriesColors": [
 					"#7c3aed"
 				]
-			}
+			},
+			"description": "Ranks ISE policy-set hits by the network device (site/branch identity, e.g. wireless controller or firewall hostname) that triggered them — the closest real, validated proxy for \"Policy Hits by Site\" available today."
 		},
 		"viz_seg_trustsec_readiness": {
 			"type": "splunk.bar",
@@ -169,7 +173,7 @@
 				"primary": "ds_seg_trustsec_readiness"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f1a2a",
 				"legendDisplay": "off",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
@@ -177,7 +181,8 @@
 				"seriesColors": [
 					"#14b8a6"
 				]
-			}
+			},
+			"description": "Rolls up managed devices by Device Family and exact Device Type (model) from Catalyst Center inventory — the baseline needed to determine TrustSec/SGT hardware readiness across the fleet."
 		},
 		"viz_seg_excessive_mac": {
 			"type": "splunk.table",
@@ -186,11 +191,12 @@
 				"primary": "ds_seg_excessive_mac"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Ranks wired switch ports by the number of distinct MAC addresses that authenticated behind them — a NAC-deployment health check that surfaces ports with a hub, daisy-chained switch, or loop behind a single access port."
 		},
 		"viz_seg_ot_iot": {
 			"type": "splunk.table",
@@ -199,130 +205,206 @@
 				"primary": "ds_seg_ot_iot"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
+			},
+			"description": "Inventories OT/IoT devices discovered by Cisco Cyber Vision , grouped by device type with device counts and average risk score — the Cisco-native operational-technology visibility layer for segmentation planning."
+		},
+		"viz_seg_router_feature_trend": {
+			"type": "splunk.area",
+			"title": "Router Segmentation Feature Event Trend",
+			"dataSources": {
+				"primary": "ds_seg_router_feature_trend"
+			},
+			"options": {
+				"backgroundColor": "#0f1a2a",
+				"legendDisplay": "right",
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"seriesColors": [
+					"#0d9488",
+					"#2563eb",
+					"#ff9a4a",
+					"#ff7169",
+					"#7c3aed"
+				],
+				"lineWidth": 2,
+				"nullValueDisplay": "gaps"
+			},
+			"description": "Trends observed Cisco IOS VRF, VLAN, VXLAN, VPN, and SGT/TrustSec events over time."
+		},
+		"viz_seg_router_feature_evidence": {
+			"type": "splunk.table",
+			"title": "Router VRF, VLAN, VXLAN, VPN, and SGT Evidence",
+			"dataSources": {
+				"primary": "ds_seg_router_feature_evidence"
+			},
+			"options": {
+				"backgroundColor": "#0f1a2a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			},
+			"description": "Shows Cisco router and switch telemetry containing VRF, 802.1Q VLAN subinterface, VXLAN/VNI, VPN, or SGT/TrustSec evidence by device."
+		},
+		"viz_design_context": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#111f31",
+				"fontColor": "#e8f1fb",
+				"markdown": "**Audience:** Network security, identity, and TrustSec operations  •  **Sources:** Cisco ISE authentication, SGT, and IP-SGT binding telemetry  •  **Reading guide:** Read adoption breadth first, then investigate binding mix and site-level gaps.  •  **Freshness:** Uses the dashboard time range"
+			}
+		},
+		"viz_design_section": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#111f31",
+				"fontColor": "#e8f1fb",
+				"markdown": "### TrustSec posture\nRead adoption breadth first, then investigate binding mix and site-level gaps."
 			}
 		}
 	},
 	"dataSources": {
-		"ds_base_seg_ise": {
-			"name": "Secure Networking base - segmentation ISE auth events",
+		"ds_seg_total_assignments": {
+			"name": "Secure Networking chain - SGT assignment count",
 			"options": {
-				"query": "`index_identity` sourcetype=\"cisco:ise:syslog\" (CISE_Passed_Authentications OR CISE_Failed_Attempts OR security_group_tag=*)\n| rex field=Location \"Location#All Locations#(?<site_from_location>.*)\"\n| eval site=coalesce(site_from_location, Location, \"Unknown\"), endpoint=upper(replace(coalesce(EndPointMACAddress, Calling_Station_ID), \"-\", \":\")), tagged=if(isnotnull(security_group_tag) AND security_group_tag!=\"\" AND security_group_tag!=\"0000-0 Unknown\" AND security_group_tag!=\"0-0 Unknown\",1,0)",
+				"ref": "secure_networking_sgt_total_assignments_count",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
 				}
 			},
-			"type": "ds.search"
-		},
-		"ds_seg_total_assignments": {
-			"name": "Secure Networking chain - SGT assignment count",
-			"options": {
-				"extend": "ds_base_seg_ise",
-				"query": "| search tagged=1\n| stats dc(eval(coalesce(UserName,\"_\").\"|\".coalesce(NetworkDeviceName,\"_\"))) as total_assignments\n| eval label=\"Active SGT Assignments\"\n| fields label total_assignments"
-			},
-			"type": "ds.chain"
+			"type": "ds.searchbase"
 		},
 		"ds_seg_unique_sgts": {
 			"name": "Secure Networking chain - unique SGT count",
 			"options": {
-				"extend": "ds_base_seg_ise",
-				"query": "| search tagged=1\n| stats dc(security_group_tag) as unique_sgts\n| eval label=\"Unique SGTs in Use\"\n| fields label unique_sgts"
-			},
-			"type": "ds.chain"
-		},
-		"ds_seg_status_rollup": {
-			"name": "Secure Networking chain - segmentation status",
-			"options": {
-				"extend": "ds_base_seg_ise",
-				"query": "| stats count as \"Auth Events\", dc(endpoint) as \"Endpoints\", sum(tagged) as \"SGT Auth Events\", dc(eval(if(tagged=1,security_group_tag,null()))) as \"Distinct SGTs\", dc(NetworkDeviceName) as \"Network Devices\" by site\n| eval \"SGT Coverage %\"=if('Auth Events'>0, round('SGT Auth Events'/'Auth Events'*100, 1), 0)\n| rename site as \"Site\"\n| table \"Site\", \"Auth Events\", \"Endpoints\", \"SGT Auth Events\", \"Distinct SGTs\", \"SGT Coverage %\", \"Network Devices\"\n| sort - \"Auth Events\""
-			},
-			"type": "ds.chain"
-		},
-		"ds_seg_sgt_distribution": {
-			"name": "Secure Networking chain - SGT distribution",
-			"options": {
-				"extend": "ds_base_seg_ise",
-				"query": "| search tagged=1\n| stats count as \"Auth Events\", dc(endpoint) as \"Endpoints\", latest(_time) as last_seen by site, NetworkDeviceName, security_group_tag\n| eval \"Last Seen\"=strftime(last_seen,\"%Y-%m-%d %H:%M:%S\")\n| rename site as \"Site\", NetworkDeviceName as \"Network Device\", security_group_tag as \"SGT\"\n| table \"Site\", \"Network Device\", \"SGT\", \"Auth Events\", \"Endpoints\", \"Last Seen\"\n| sort \"Site\", \"Network Device\", - \"Auth Events\""
-			},
-			"type": "ds.chain"
-		},
-		"ds_seg_policy_hits": {
-			"name": "Secure Networking - ISE Policy Hits by Network Device",
-			"options": {
-				"query": "`index_identity` sourcetype=\"cisco:ise:syslog\" MESSAGE_CODE IN (5200,5201,5206,5232,5233,5236) ISEPolicySetName=* NetworkDeviceName=*\n| stats count as \"Policy Hits\" by ISEPolicySetName, NetworkDeviceName\n| eval \"Policy / Device\"=ISEPolicySetName.\" / \".NetworkDeviceName\n| sort - \"Policy Hits\"\n| head 20\n| table \"Policy / Device\", \"Policy Hits\"",
+				"ref": "secure_networking_sgt_unique_count",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
 				}
 			},
-			"type": "ds.search"
-		},
-		"ds_seg_ip_sgt_bindings": {
-			"name": "Secure Networking - IP-SGT Bindings by Security Group",
-			"options": {
-				"query": "`index_identity` sourcetype=\"cisco:ise:sgtbindings\"\n| eval sgt=coalesce(sgt_tag, tag, \"Unknown\"), ise_node=coalesce(host, src, \"Unknown\")\n| stats dc(ipPrefix) as \"Bound IPs\", count as \"Binding Events\" by sgt, ise_node\n| rename sgt as \"SGT Tag\", ise_node as \"ISE Node\"\n| sort - \"Bound IPs\"",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_seg_trustsec_readiness": {
-			"name": "Secure Networking - TrustSec Hardware Readiness",
-			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:catalyst:center:inventory:report\"\n| dedup \"Serial No.\"\n| stats count as \"Device Count\" by \"Device Family\", \"Device Type\"\n| eval \"Family / Type\"='Device Family'.\" / \".'Device Type'\n| sort - \"Device Count\"\n| head 20\n| table \"Family / Type\", \"Device Count\"",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_seg_excessive_mac": {
-			"name": "Secure Networking - Excessive Unique MAC per Wired Port",
-			"options": {
-				"query": "`index_identity` sourcetype=\"cisco:ise:syslog\" NAS_Port_Type=\"Ethernet\" NAS_Port_Id=*\n| eval mac=upper(replace(coalesce(EndPointMACAddress, Calling_Station_ID), \"-\", \":\"))\n| stats dc(mac) as unique_macs values(NAS_IP_Address) as address latest(Location) as location by NetworkDeviceName, NAS_Port_Id\n| rename unique_macs as \"Unique MACs\", NetworkDeviceName as \"Network Device\", NAS_Port_Id as \"Port\", address as \"Address\", location as \"Location\"\n| sort - \"Unique MACs\"",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_seg_ot_iot": {
-			"name": "Secure Networking - OT/IoT Device Visibility",
-			"options": {
-				"query": "`index_cybervision` sourcetype=\"cisco:cybervision:devices\"\n| spath deviceType | spath riskScore\n| stats dc(id) as devices avg(riskScore) as avg_risk by deviceType\n| eval \"Avg Risk Score\"=round(avg_risk,1)\n| rename deviceType as \"Device Type\", devices as \"Devices\"\n| table \"Device Type\", \"Devices\", \"Avg Risk Score\"\n| sort - \"Devices\"",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_base_seg_sgt_blocks": {
-			"name": "Secure Networking base - SGT FMC blocks",
-			"options": {
-				"query": "`index_firewall` sourcetype=\"cisco:ftd:syslog\" (AC_RuleAction=\"Block\" OR AC_RuleAction=\"Block with reset\") SourceSecurityGroupTag!=\"\" SourceSecurityGroupTag!=\"0\"\n| eval sgt_hex=printf(\"%04X\",tonumber(SourceSecurityGroupTag))\n| lookup sgt_naming.csv SGT_Hex as sgt_hex OUTPUT Name as sgt_name\n| eval sgt_label=coalesce(sgt_name,\"SGT-\".SourceSecurityGroupTag)",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.search"
+			"type": "ds.searchbase"
 		},
 		"ds_seg_sgt_blocks_total": {
 			"name": "Secure Networking chain - SGT block count",
 			"options": {
-				"extend": "ds_base_seg_sgt_blocks",
-				"query": "| stats count as sgt_enforced_blocks\n| eval label=\"SGT-Enforced Firewall Blocks\"\n| fields label sgt_enforced_blocks"
+				"ref": "secure_networking_sgt_fmc_blocks_total_count",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
 			},
-			"type": "ds.chain"
+			"type": "ds.searchbase"
+		},
+		"ds_seg_ip_sgt_bindings": {
+			"name": "Secure Networking - IP-SGT Bindings by Security Group",
+			"options": {
+				"ref": "secure_networking_ip_sgt_bindings_by_group",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_seg_status_rollup": {
+			"name": "Secure Networking chain - segmentation status",
+			"options": {
+				"ref": "secure_networking_segmentation_status_rollup",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_seg_sgt_distribution": {
+			"name": "Secure Networking chain - SGT distribution",
+			"options": {
+				"ref": "secure_networking_sgt_distribution_by_site_device",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_seg_policy_hits": {
+			"name": "Secure Networking - ISE Policy Hits by Network Device",
+			"options": {
+				"ref": "secure_networking_ise_policy_hits_by_device",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_seg_trustsec_readiness": {
+			"name": "Secure Networking - TrustSec Hardware Readiness",
+			"options": {
+				"ref": "secure_networking_trustsec_hardware_readiness",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_seg_excessive_mac": {
+			"name": "Secure Networking - Excessive Unique MAC per Wired Port",
+			"options": {
+				"ref": "secure_networking_excessive_mac_per_port",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_seg_ot_iot": {
+			"name": "Secure Networking - OT IoT Device Visibility",
+			"options": {
+				"ref": "secure_networking_ot_iot_device_visibility",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_seg_router_feature_trend": {
+			"name": "Secure Networking - Router Segmentation Feature Event Trend",
+			"options": {
+				"ref": "secure_networking_router_segmentation_feature_trend",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_seg_router_feature_evidence": {
+			"name": "Secure Networking - Router Segmentation Feature Evidence",
+			"options": {
+				"ref": "secure_networking_router_segmentation_feature_evidence",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
 		}
 	},
 	"layout": {
@@ -332,19 +414,59 @@
 		"layoutDefinitions": {
 			"layout_overview": {
 				"options": {
-					"backgroundColor": "#f5f7fb",
+					"backgroundColor": "#07101d",
 					"display": "auto-scale",
-					"height": 1490,
+					"height": 1706,
 					"width": 1440
 				},
 				"structure": [
 					{
-						"item": "viz_header",
+						"item": "viz_header_bg",
 						"position": {
 							"x": 20,
 							"y": 0,
 							"w": 1400,
-							"h": 90
+							"h": 88
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_header_icon",
+						"position": {
+							"x": 36,
+							"y": 14,
+							"w": 56,
+							"h": 56
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_header",
+						"position": {
+							"x": 108,
+							"y": 4,
+							"w": 1292,
+							"h": 76
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_design_context",
+						"position": {
+							"x": 20,
+							"y": 100,
+							"w": 1400,
+							"h": 64
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_design_section",
+						"position": {
+							"x": 20,
+							"y": 176,
+							"w": 1400,
+							"h": 54
 						},
 						"type": "block"
 					},
@@ -352,9 +474,9 @@
 						"item": "viz_seg_total_assignments",
 						"position": {
 							"x": 20,
-							"y": 110,
+							"y": 242,
 							"w": 335,
-							"h": 180
+							"h": 200
 						},
 						"type": "block"
 					},
@@ -362,9 +484,9 @@
 						"item": "viz_seg_unique_sgts",
 						"position": {
 							"x": 375,
-							"y": 110,
+							"y": 242,
 							"w": 335,
-							"h": 180
+							"h": 200
 						},
 						"type": "block"
 					},
@@ -372,9 +494,9 @@
 						"item": "viz_seg_sgt_blocks",
 						"position": {
 							"x": 730,
-							"y": 110,
+							"y": 242,
 							"w": 335,
-							"h": 180
+							"h": 200
 						},
 						"type": "block"
 					},
@@ -382,9 +504,9 @@
 						"item": "viz_seg_binding_mix",
 						"position": {
 							"x": 1085,
-							"y": 110,
+							"y": 242,
 							"w": 335,
-							"h": 180
+							"h": 200
 						},
 						"type": "block"
 					},
@@ -392,9 +514,9 @@
 						"item": "viz_seg_status_rollup",
 						"position": {
 							"x": 20,
-							"y": 310,
+							"y": 458,
 							"w": 690,
-							"h": 340
+							"h": 300
 						},
 						"type": "block"
 					},
@@ -402,9 +524,9 @@
 						"item": "viz_seg_sgt_distribution",
 						"position": {
 							"x": 730,
-							"y": 310,
+							"y": 458,
 							"w": 690,
-							"h": 340
+							"h": 300
 						},
 						"type": "block"
 					},
@@ -412,9 +534,9 @@
 						"item": "viz_seg_policy_hits",
 						"position": {
 							"x": 20,
-							"y": 670,
+							"y": 774,
 							"w": 690,
-							"h": 390
+							"h": 280
 						},
 						"type": "block"
 					},
@@ -422,9 +544,9 @@
 						"item": "viz_seg_trustsec_readiness",
 						"position": {
 							"x": 730,
-							"y": 670,
+							"y": 774,
 							"w": 690,
-							"h": 390
+							"h": 280
 						},
 						"type": "block"
 					},
@@ -432,9 +554,9 @@
 						"item": "viz_seg_excessive_mac",
 						"position": {
 							"x": 20,
-							"y": 1080,
+							"y": 1070,
 							"w": 690,
-							"h": 390
+							"h": 300
 						},
 						"type": "block"
 					},
@@ -442,9 +564,29 @@
 						"item": "viz_seg_ot_iot",
 						"position": {
 							"x": 730,
-							"y": 1080,
+							"y": 1070,
 							"w": 690,
-							"h": 390
+							"h": 300
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_seg_router_feature_trend",
+						"position": {
+							"x": 20,
+							"y": 1386,
+							"w": 690,
+							"h": 280
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_seg_router_feature_evidence",
+						"position": {
+							"x": 730,
+							"y": 1386,
+							"w": 690,
+							"h": 300
 						},
 						"type": "block"
 					}
@@ -468,7 +610,7 @@
 	},
 	"applicationProperties": {
 		"collapseNavigation": false,
-		"hideEdit": true,
+		"hideEdit": false,
 		"hideExport": false
 	}
 }

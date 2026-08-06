@@ -1,0 +1,641 @@
+{
+  "source_app": "/opt/10/etc/apps/cisco_dc_networking_app_for_splunk",
+  "dashboards_scanned": 76,
+  "dashboards": {
+    "aci_syslog": {
+      "label": "ACI Syslog",
+      "extracted": 7,
+      "skipped": 0
+    },
+    "acl_logs": {
+      "label": "ACL Logs",
+      "extracted": 16,
+      "skipped": 5
+    },
+    "advisories": {
+      "label": "Advisories",
+      "extracted": 5,
+      "skipped": 6
+    },
+    "anomalies": {
+      "label": "Anomalies",
+      "extracted": 7,
+      "skipped": 7
+    },
+    "application_details": {
+      "label": "Application Details",
+      "extracted": 3,
+      "skipped": 6
+    },
+    "auditing": {
+      "label": "Auditing",
+      "extracted": 7,
+      "skipped": 3
+    },
+    "authentication": {
+      "label": "Authentication",
+      "extracted": 10,
+      "skipped": 7
+    },
+    "bd_details": {
+      "label": "Bridge Domain Details",
+      "extracted": 3,
+      "skipped": 5
+    },
+    "cdp_neighbor": {
+      "label": "CDP neighbor",
+      "extracted": 1,
+      "skipped": 1
+    },
+    "change_bd_threshold_xml": {
+      "label": "Change Bridge Domain Threshold",
+      "extracted": 1,
+      "skipped": 0
+    },
+    "change_contract_threshold_xml": {
+      "label": "Change Contract Threshold",
+      "extracted": 1,
+      "skipped": 0
+    },
+    "change_epg_threshold_xml": {
+      "label": "Change EPG Threshold",
+      "extracted": 1,
+      "skipped": 0
+    },
+    "change_filter_threshold_xml": {
+      "label": "Change Filters Threshold",
+      "extracted": 1,
+      "skipped": 0
+    },
+    "change_l3outnetworks_threshold_xml": {
+      "label": "Change L3OUT Network Threshold",
+      "extracted": 1,
+      "skipped": 0
+    },
+    "change_portutil_threshold_xml": {
+      "label": "Change Link Utilization Threshold",
+      "extracted": 1,
+      "skipped": 0
+    },
+    "change_tcam_threshold_xml": {
+      "label": "Change TCAM Threshold",
+      "extracted": 1,
+      "skipped": 0
+    },
+    "change_tenant_threshold_xml": {
+      "label": "Change Tenant Threshold",
+      "extracted": 1,
+      "skipped": 0
+    },
+    "configuration": {
+      "label": "Configuration",
+      "extracted": 0,
+      "skipped": 0
+    },
+    "contracts_details": {
+      "label": "Contracts Details",
+      "extracted": 4,
+      "skipped": 5
+    },
+    "controller_statistics": {
+      "label": "Controller Statistics",
+      "extracted": 10,
+      "skipped": 8
+    },
+    "critical_faults": {
+      "label": "Critical Faults",
+      "extracted": 1,
+      "skipped": 8
+    },
+    "custom_dashboard": {
+      "label": "Custom form",
+      "extracted": 0,
+      "skipped": 0
+    },
+    "dashboard": {
+      "label": "Monitoring Dashboard",
+      "extracted": 0,
+      "skipped": 0
+    },
+    "epg_details": {
+      "label": "EPG Details",
+      "extracted": 4,
+      "skipped": 5
+    },
+    "events": {
+      "label": "Events",
+      "extracted": 8,
+      "skipped": 7
+    },
+    "fabric_dashboard": {
+      "label": "Fabric Details",
+      "extracted": 17,
+      "skipped": 6
+    },
+    "fabric_extenders_detail": {
+      "label": "Fabric Extenders Detail",
+      "extracted": 11,
+      "skipped": 7
+    },
+    "fault_report": {
+      "label": "Fault Report",
+      "extracted": 1,
+      "skipped": 5
+    },
+    "fault_transition": {
+      "label": "Faults Transition",
+      "extracted": 8,
+      "skipped": 6
+    },
+    "filters_details": {
+      "label": "Filters Details",
+      "extracted": 3,
+      "skipped": 5
+    },
+    "help_desk": {
+      "label": "System Faults",
+      "extracted": 20,
+      "skipped": 6
+    },
+    "help_desk_ack_fault_detail": {
+      "label": "Acknowledged Faults Detail",
+      "extracted": 1,
+      "skipped": 5
+    },
+    "help_desk_fault_detail": {
+      "label": "All Faults Detail",
+      "extracted": 1,
+      "skipped": 6
+    },
+    "help_desk_unack_fault_detail": {
+      "label": "Unacknowledged Faults Detail",
+      "extracted": 1,
+      "skipped": 5
+    },
+    "home": {
+      "label": "Home",
+      "extracted": 6,
+      "skipped": 3
+    },
+    "home_page": {
+      "label": "Home",
+      "extracted": 13,
+      "skipped": 5
+    },
+    "howtocustom": {
+      "label": "NX-API collector",
+      "extracted": 0,
+      "skipped": 0
+    },
+    "inputs": {
+      "label": "Inputs",
+      "extracted": 0,
+      "skipped": 0
+    },
+    "interfaces": {
+      "label": "All Interfaces details",
+      "extracted": 3,
+      "skipped": 5
+    },
+    "inventory": {
+      "label": "Physical Inventory",
+      "extracted": 7,
+      "skipped": 2
+    },
+    "l3outnetworks_details": {
+      "label": "L3OUT Networks",
+      "extracted": 3,
+      "skipped": 5
+    },
+    "local_user_details": {
+      "label": "Local Users",
+      "extracted": 1,
+      "skipped": 0
+    },
+    "micro_segmentation": {
+      "label": "Microsegmentation",
+      "extracted": 6,
+      "skipped": 9
+    },
+    "mnemonics_drilldown": {
+      "label": "Messages by mnemonics",
+      "extracted": 1,
+      "skipped": 0
+    },
+    "mso_overview": {
+      "label": "Orchestrator Overview",
+      "extracted": 12,
+      "skipped": 3
+    },
+    "mso_syslog": {
+      "label": "Orchestrator Syslog",
+      "extracted": 24,
+      "skipped": 0
+    },
+    "multi-pod": {
+      "label": "Multi Pod",
+      "extracted": 19,
+      "skipped": 8
+    },
+    "n9k_syslog": {
+      "label": "N9K Syslog",
+      "extracted": 20,
+      "skipped": 0
+    },
+    "nd_congestion": {
+      "label": "Congestion",
+      "extracted": 5,
+      "skipped": 5
+    },
+    "nd_endpoints": {
+      "label": "Endpoints",
+      "extracted": 4,
+      "skipped": 4
+    },
+    "nd_flow_overview": {
+      "label": "Flow Overview",
+      "extracted": 12,
+      "skipped": 1
+    },
+    "nd_flow_search": {
+      "label": "Flow Search",
+      "extracted": 1,
+      "skipped": 3
+    },
+    "nd_flow_traffic": {
+      "label": "Host Traffics",
+      "extracted": 4,
+      "skipped": 1
+    },
+    "nd_interface_stats": {
+      "label": "Interface Stats",
+      "extracted": 7,
+      "skipped": 1
+    },
+    "nd_syslog": {
+      "label": "ND Syslog",
+      "extracted": 29,
+      "skipped": 0
+    },
+    "networktopology": {
+      "label": "Network Topology",
+      "extracted": 0,
+      "skipped": 1
+    },
+    "nexus9k_power_details": {
+      "label": "Power",
+      "extracted": 6,
+      "skipped": 3
+    },
+    "path_degrade": {
+      "label": "Path Degradation",
+      "extracted": 1,
+      "skipped": 7
+    },
+    "policy": {
+      "label": "Policy",
+      "extracted": 4,
+      "skipped": 2
+    },
+    "remote_user_details": {
+      "label": "Remote User",
+      "extracted": 1,
+      "skipped": 0
+    },
+    "resource_summary": {
+      "label": "Resource Summary",
+      "extracted": 3,
+      "skipped": 2
+    },
+    "schemas": {
+      "label": "Schemas",
+      "extracted": 19,
+      "skipped": 4
+    },
+    "setup_guide": {
+      "label": "Setup Guide",
+      "extracted": 0,
+      "skipped": 0
+    },
+    "severity_level_drilldown": {
+      "label": "Messages by severity level",
+      "extracted": 1,
+      "skipped": 0
+    },
+    "single_interface": {
+      "label": "Single interface details",
+      "extracted": 4,
+      "skipped": 4
+    },
+    "sites": {
+      "label": "Sites",
+      "extracted": 8,
+      "skipped": 3
+    },
+    "temperature": {
+      "label": "Temperature",
+      "extracted": 1,
+      "skipped": 2
+    },
+    "tenant_counters": {
+      "label": "Atomic Counters",
+      "extracted": 2,
+      "skipped": 8
+    },
+    "tenant_dashboard": {
+      "label": "Tenant Details",
+      "extracted": 10,
+      "skipped": 6
+    },
+    "tenant_details": {
+      "label": "Tenant Details",
+      "extracted": 1,
+      "skipped": 5
+    },
+    "tenant_utilization": {
+      "label": "Tenant Utilization",
+      "extracted": 4,
+      "skipped": 5
+    },
+    "tenants": {
+      "label": "Tenants",
+      "extracted": 8,
+      "skipped": 5
+    },
+    "threshold": {
+      "label": "System Threshold",
+      "extracted": 12,
+      "skipped": 5
+    },
+    "user_details": {
+      "label": "All Users",
+      "extracted": 1,
+      "skipped": 0
+    },
+    "users": {
+      "label": "Users",
+      "extracted": 2,
+      "skipped": 1
+    },
+    "vmware": {
+      "label": "VMware",
+      "extracted": 11,
+      "skipped": 11
+    }
+  },
+  "unique_dashboard_searches": 408,
+  "duplicate_dashboard_occurrences": 25,
+  "data_model_candidates": 67,
+  "data_models": [
+    "Cisco_DCN_Auth",
+    "Cisco_DCN_Counters",
+    "Cisco_DCN_Events",
+    "Cisco_DCN_Fault",
+    "Cisco_DCN_Health",
+    "Cisco_DCN_Statistics",
+    "Cisco_DCN_Systems",
+    "Cisco_DCN_nexus_dashboard.advisories",
+    "Cisco_DCN_nexus_dashboard.anomalies",
+    "Cisco_DCN_nexus_dashboard.congestion",
+    "Cisco_DCN_nexus_dashboard.endpoints",
+    "Cisco_DCN_nexus_dashboard.flows",
+    "Cisco_DCN_nexus_dashboard.protocols"
+  ],
+  "parse_errors": [],
+  "catalog_curation": {
+    "context": "cisco_dc_networking_app_for_splunk",
+    "input_stanzas": 415,
+    "retained_stanzas": 326,
+    "removed_exact_duplicates": 13,
+    "removed_exact_duplicate_stanza_ids": [
+      "dc_networking_events_events_by_cause_detail",
+      "dc_networking_events_events_by_user_detail",
+      "dc_networking_faults_transition_acknowledged_faults_detail",
+      "dc_networking_multi_pod_affected_interfaces",
+      "dc_networking_schemas_no_of_schemas_associated_with_orchestrator",
+      "dc_networking_sites",
+      "dc_networking_system_faults_faults_by_cause_detail",
+      "dc_networking_system_faults_faults_by_domain_detail",
+      "dc_networking_system_faults_faults_by_node_detail",
+      "dc_networking_system_faults_faults_by_rule_detail",
+      "dc_networking_system_faults_faults_by_tenant_detail",
+      "dc_networking_system_faults_faults_by_type_detail",
+      "dc_networking_tenant_details_client_end_point_details_for_tenant"
+    ],
+    "removed_low_value": 76,
+    "removed_low_value_stanza_ids": [
+      "dc_networking_aci_syslog_configuration_events_by_device_ip_name_over_time",
+      "dc_networking_aci_syslog_configuration_events_by_severity_over_time",
+      "dc_networking_aci_syslog_configuration_events_by_user_over_time",
+      "dc_networking_aci_syslog_missing_warning_events_by_device_ip_name_over_time",
+      "dc_networking_aci_syslog_missing_warning_events_by_severity_over_time",
+      "dc_networking_auditing_device_logins",
+      "dc_networking_auditing_unique_devices",
+      "dc_networking_auditing_users",
+      "dc_networking_authentication_local_users",
+      "dc_networking_authentication_remote_users",
+      "dc_networking_authentication_users",
+      "dc_networking_critical_faults_time_chart_critical_fault_30_day_period",
+      "dc_networking_events_events_by_cause_over_time",
+      "dc_networking_events_events_by_severity_over_time",
+      "dc_networking_events_events_by_user_over_time",
+      "dc_networking_home_critical_faults",
+      "dc_networking_home_leafs",
+      "dc_networking_home_spines",
+      "dc_networking_home_tenants",
+      "dc_networking_home_top_mnemonics_by_time",
+      "dc_networking_multi_pod_apics",
+      "dc_networking_n9k_syslog_bfd_events_by_device_ip_name_over_time",
+      "dc_networking_n9k_syslog_bfd_events_by_severity_over_time",
+      "dc_networking_n9k_syslog_configuration_events_by_device_ip_name_over_time",
+      "dc_networking_n9k_syslog_configuration_events_by_severity_over_time",
+      "dc_networking_n9k_syslog_ethernet_related_events_by_device_ip_name_over_time",
+      "dc_networking_n9k_syslog_ethernet_related_events_by_severity_over_time",
+      "dc_networking_n9k_syslog_ospf_events_by_device_ip_name_over_time",
+      "dc_networking_n9k_syslog_ospf_events_by_severity_over_time",
+      "dc_networking_n9k_syslog_pim_events_by_device_ip_name_over_time",
+      "dc_networking_n9k_syslog_pim_events_by_severity_over_time",
+      "dc_networking_n9k_syslog_system_events_by_device_ip_name_over_time",
+      "dc_networking_n9k_syslog_system_events_by_severity_over_time",
+      "dc_networking_nd_syslog_device_connected_events_by_device_syslog_ip_name_over_time",
+      "dc_networking_nd_syslog_device_connected_events_by_ip_of_connected_device_over_time",
+      "dc_networking_nd_syslog_device_connected_events_by_leadership_over_time",
+      "dc_networking_nd_syslog_device_connected_events_by_user_over_time",
+      "dc_networking_nd_syslog_device_disconnected_events_by_device_syslog_ip_name_over_time",
+      "dc_networking_nd_syslog_device_disconnected_events_by_ip_of_disconnected_device_over_time",
+      "dc_networking_nd_syslog_device_disconnected_events_by_leadership_over_time",
+      "dc_networking_nd_syslog_device_disconnected_events_by_user_over_time",
+      "dc_networking_nd_syslog_dns_server_events_by_device_ip_name_over_time",
+      "dc_networking_nd_syslog_dns_server_events_by_dns_ip_over_time",
+      "dc_networking_nd_syslog_ethernet_related_events_by_device_ip_name_over_time",
+      "dc_networking_nd_syslog_ethernet_related_events_by_severity_over_time",
+      "dc_networking_nd_syslog_guestshell_related_events_by_device_ip_name_over_time",
+      "dc_networking_nd_syslog_guestshell_related_events_by_severity_over_time",
+      "dc_networking_nd_syslog_login_attempts_by_user_over_time",
+      "dc_networking_nd_syslog_login_attempts_from_ip_over_time",
+      "dc_networking_nd_syslog_login_events_by_device_ip_name_over_time",
+      "dc_networking_nd_syslog_system_events_by_device_ip_name_over_time",
+      "dc_networking_nd_syslog_system_events_by_severity_over_time",
+      "dc_networking_orchestrator_overview_policy_count",
+      "dc_networking_orchestrator_overview_sites_count",
+      "dc_networking_orchestrator_overview_tenant_count",
+      "dc_networking_orchestrator_overview_user_count",
+      "dc_networking_orchestrator_syslog_accounting_events_by_device_ip_name_over_time",
+      "dc_networking_orchestrator_syslog_accounting_events_by_severity_over_time",
+      "dc_networking_orchestrator_syslog_configuration_events_by_device_ip_name_over_time",
+      "dc_networking_orchestrator_syslog_configuration_events_by_severity_over_time",
+      "dc_networking_orchestrator_syslog_ethernet_related_events_by_device_ip_name_over_time",
+      "dc_networking_orchestrator_syslog_ethernet_related_events_by_severity_over_time",
+      "dc_networking_orchestrator_syslog_guestshell_related_events_by_device_ip_name_over_time",
+      "dc_networking_orchestrator_syslog_guestshell_related_events_by_severity_over_time",
+      "dc_networking_orchestrator_syslog_missing_warning_events_by_device_ip_name_over_time",
+      "dc_networking_orchestrator_syslog_missing_warning_events_by_severity_over_time",
+      "dc_networking_orchestrator_syslog_module_related_events_by_device_ip_name_over_time",
+      "dc_networking_orchestrator_syslog_module_related_events_by_severity_over_time",
+      "dc_networking_orchestrator_syslog_system_events_by_device_ip_name_over_time",
+      "dc_networking_orchestrator_syslog_system_events_by_severity_over_time",
+      "dc_networking_orchestrator_syslog_vdc_state_change_events_by_device_ip_name_over_time",
+      "dc_networking_orchestrator_syslog_vdc_state_change_events_by_severity_over_time",
+      "dc_networking_system_faults_acknowledged_faults",
+      "dc_networking_system_faults_faults_by_severity_over_time",
+      "dc_networking_system_faults_total_faults",
+      "dc_networking_system_faults_unacknowledged_faults"
+    ],
+    "removed_stanza_ids": [
+      "dc_networking_aci_syslog_configuration_events_by_device_ip_name_over_time",
+      "dc_networking_aci_syslog_configuration_events_by_severity_over_time",
+      "dc_networking_aci_syslog_configuration_events_by_user_over_time",
+      "dc_networking_aci_syslog_missing_warning_events_by_device_ip_name_over_time",
+      "dc_networking_aci_syslog_missing_warning_events_by_severity_over_time",
+      "dc_networking_auditing_device_logins",
+      "dc_networking_auditing_unique_devices",
+      "dc_networking_auditing_users",
+      "dc_networking_authentication_local_users",
+      "dc_networking_authentication_remote_users",
+      "dc_networking_authentication_users",
+      "dc_networking_critical_faults_time_chart_critical_fault_30_day_period",
+      "dc_networking_events_events_by_cause_detail",
+      "dc_networking_events_events_by_cause_over_time",
+      "dc_networking_events_events_by_severity_over_time",
+      "dc_networking_events_events_by_user_detail",
+      "dc_networking_events_events_by_user_over_time",
+      "dc_networking_faults_transition_acknowledged_faults_detail",
+      "dc_networking_home_critical_faults",
+      "dc_networking_home_leafs",
+      "dc_networking_home_spines",
+      "dc_networking_home_tenants",
+      "dc_networking_home_top_mnemonics_by_time",
+      "dc_networking_multi_pod_affected_interfaces",
+      "dc_networking_multi_pod_apics",
+      "dc_networking_n9k_syslog_bfd_events_by_device_ip_name_over_time",
+      "dc_networking_n9k_syslog_bfd_events_by_severity_over_time",
+      "dc_networking_n9k_syslog_configuration_events_by_device_ip_name_over_time",
+      "dc_networking_n9k_syslog_configuration_events_by_severity_over_time",
+      "dc_networking_n9k_syslog_ethernet_related_events_by_device_ip_name_over_time",
+      "dc_networking_n9k_syslog_ethernet_related_events_by_severity_over_time",
+      "dc_networking_n9k_syslog_ospf_events_by_device_ip_name_over_time",
+      "dc_networking_n9k_syslog_ospf_events_by_severity_over_time",
+      "dc_networking_n9k_syslog_pim_events_by_device_ip_name_over_time",
+      "dc_networking_n9k_syslog_pim_events_by_severity_over_time",
+      "dc_networking_n9k_syslog_system_events_by_device_ip_name_over_time",
+      "dc_networking_n9k_syslog_system_events_by_severity_over_time",
+      "dc_networking_nd_syslog_device_connected_events_by_device_syslog_ip_name_over_time",
+      "dc_networking_nd_syslog_device_connected_events_by_ip_of_connected_device_over_time",
+      "dc_networking_nd_syslog_device_connected_events_by_leadership_over_time",
+      "dc_networking_nd_syslog_device_connected_events_by_user_over_time",
+      "dc_networking_nd_syslog_device_disconnected_events_by_device_syslog_ip_name_over_time",
+      "dc_networking_nd_syslog_device_disconnected_events_by_ip_of_disconnected_device_over_time",
+      "dc_networking_nd_syslog_device_disconnected_events_by_leadership_over_time",
+      "dc_networking_nd_syslog_device_disconnected_events_by_user_over_time",
+      "dc_networking_nd_syslog_dns_server_events_by_device_ip_name_over_time",
+      "dc_networking_nd_syslog_dns_server_events_by_dns_ip_over_time",
+      "dc_networking_nd_syslog_ethernet_related_events_by_device_ip_name_over_time",
+      "dc_networking_nd_syslog_ethernet_related_events_by_severity_over_time",
+      "dc_networking_nd_syslog_guestshell_related_events_by_device_ip_name_over_time",
+      "dc_networking_nd_syslog_guestshell_related_events_by_severity_over_time",
+      "dc_networking_nd_syslog_login_attempts_by_user_over_time",
+      "dc_networking_nd_syslog_login_attempts_from_ip_over_time",
+      "dc_networking_nd_syslog_login_events_by_device_ip_name_over_time",
+      "dc_networking_nd_syslog_system_events_by_device_ip_name_over_time",
+      "dc_networking_nd_syslog_system_events_by_severity_over_time",
+      "dc_networking_orchestrator_overview_policy_count",
+      "dc_networking_orchestrator_overview_sites_count",
+      "dc_networking_orchestrator_overview_tenant_count",
+      "dc_networking_orchestrator_overview_user_count",
+      "dc_networking_orchestrator_syslog_accounting_events_by_device_ip_name_over_time",
+      "dc_networking_orchestrator_syslog_accounting_events_by_severity_over_time",
+      "dc_networking_orchestrator_syslog_configuration_events_by_device_ip_name_over_time",
+      "dc_networking_orchestrator_syslog_configuration_events_by_severity_over_time",
+      "dc_networking_orchestrator_syslog_ethernet_related_events_by_device_ip_name_over_time",
+      "dc_networking_orchestrator_syslog_ethernet_related_events_by_severity_over_time",
+      "dc_networking_orchestrator_syslog_guestshell_related_events_by_device_ip_name_over_time",
+      "dc_networking_orchestrator_syslog_guestshell_related_events_by_severity_over_time",
+      "dc_networking_orchestrator_syslog_missing_warning_events_by_device_ip_name_over_time",
+      "dc_networking_orchestrator_syslog_missing_warning_events_by_severity_over_time",
+      "dc_networking_orchestrator_syslog_module_related_events_by_device_ip_name_over_time",
+      "dc_networking_orchestrator_syslog_module_related_events_by_severity_over_time",
+      "dc_networking_orchestrator_syslog_system_events_by_device_ip_name_over_time",
+      "dc_networking_orchestrator_syslog_system_events_by_severity_over_time",
+      "dc_networking_orchestrator_syslog_vdc_state_change_events_by_device_ip_name_over_time",
+      "dc_networking_orchestrator_syslog_vdc_state_change_events_by_severity_over_time",
+      "dc_networking_schemas_no_of_schemas_associated_with_orchestrator",
+      "dc_networking_sites",
+      "dc_networking_system_faults_acknowledged_faults",
+      "dc_networking_system_faults_faults_by_cause_detail",
+      "dc_networking_system_faults_faults_by_domain_detail",
+      "dc_networking_system_faults_faults_by_node_detail",
+      "dc_networking_system_faults_faults_by_rule_detail",
+      "dc_networking_system_faults_faults_by_severity_over_time",
+      "dc_networking_system_faults_faults_by_tenant_detail",
+      "dc_networking_system_faults_faults_by_type_detail",
+      "dc_networking_system_faults_total_faults",
+      "dc_networking_system_faults_unacknowledged_faults",
+      "dc_networking_tenant_details_client_end_point_details_for_tenant"
+    ],
+    "match_all_predicates_remaining": 0,
+    "data_model_searches": 62,
+    "data_models": [
+      "Cisco_DCN_Auth",
+      "Cisco_DCN_Counters",
+      "Cisco_DCN_Events",
+      "Cisco_DCN_Fault",
+      "Cisco_DCN_Health",
+      "Cisco_DCN_Statistics",
+      "Cisco_DCN_Systems",
+      "Cisco_DCN_nexus_dashboard.advisories",
+      "Cisco_DCN_nexus_dashboard.anomalies",
+      "Cisco_DCN_nexus_dashboard.congestion",
+      "Cisco_DCN_nexus_dashboard.endpoints",
+      "Cisco_DCN_nexus_dashboard.flows",
+      "Cisco_DCN_nexus_dashboard.protocols"
+    ],
+    "last_run": {
+      "context": "cisco_dc_networking_app_for_splunk",
+      "input_stanzas": 326,
+      "retained_stanzas": 326,
+      "removed_exact_duplicates": 0,
+      "removed_exact_duplicate_stanza_ids": [],
+      "removed_stanza_ids": [],
+      "removed_low_value": 0,
+      "removed_low_value_stanza_ids": [],
+      "match_all_predicates_remaining": 0,
+      "data_model_searches": 62,
+      "data_models": [
+        "Cisco_DCN_Auth",
+        "Cisco_DCN_Counters",
+        "Cisco_DCN_Events",
+        "Cisco_DCN_Fault",
+        "Cisco_DCN_Health",
+        "Cisco_DCN_Statistics",
+        "Cisco_DCN_Systems",
+        "Cisco_DCN_nexus_dashboard.advisories",
+        "Cisco_DCN_nexus_dashboard.anomalies",
+        "Cisco_DCN_nexus_dashboard.congestion",
+        "Cisco_DCN_nexus_dashboard.endpoints",
+        "Cisco_DCN_nexus_dashboard.flows",
+        "Cisco_DCN_nexus_dashboard.protocols"
+      ],
+      "changed": false
+    }
+  }
+}

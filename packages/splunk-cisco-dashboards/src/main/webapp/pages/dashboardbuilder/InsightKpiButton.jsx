@@ -7,11 +7,7 @@ import {
     plainTextFromHtml,
 } from '../../common/services/searchbaseCatalogue';
 import DropdownWithSearch from './DropdownWithSearch';
-
-const GLOBAL_TIME_QUERY_PARAMETERS = {
-    earliest: '$global_time.earliest$',
-    latest: '$global_time.latest$',
-};
+import { getDashboardTimeQueryParameters } from './dashboardTimeUtils';
 
 const LAYOUT_MARGIN = 24;
 const LAYOUT_GAP = 24;
@@ -32,7 +28,9 @@ const generateRandomString = (length = 10) => {
 };
 
 const createDataSourceName = (search) => {
-    const rawName = search.id || search.searchName || generateRandomString();
+    const rawName = [search.ownerApp, search.id || search.searchName]
+        .filter(Boolean)
+        .join('_') || generateRandomString();
     const safeName = rawName.replace(/[^A-Za-z0-9_]/g, '_').replace(/^_+/, '');
     return `ds_${safeName || generateRandomString()}`;
 };
@@ -184,6 +182,9 @@ const InsightKpiButton = (props) => {
         if (selectedKpis && selectedKpis.length > 0) {
             const { dashboardApi } = props;
             const visualizationConfigs = [];
+            const queryParameters = getDashboardTimeQueryParameters(
+                dashboardApi.coreApi.getDefinition(),
+            );
 
             selectedKpis.forEach((selectedKpi) => {
                 const searchName = createDataSourceName(selectedKpi);
@@ -196,7 +197,8 @@ const InsightKpiButton = (props) => {
                         type: 'ds.searchbase',
                         options: {
                             ref: selectedKpi.id,
-                            queryParameters: GLOBAL_TIME_QUERY_PARAMETERS,
+                            ownerApp: selectedKpi.ownerApp,
+                            queryParameters,
                         },
                         name: searchName,
                     });
@@ -228,33 +230,44 @@ const InsightKpiButton = (props) => {
     };
 
     return (
-        <>
-            <Tooltip content="Cisco extension: add Searchbase KPIs">
-                <DropdownWithSearch
-                    onSelect={(selection) => {
-                        if (selection) {
-                            setSelectedKpis(searches.filter((s) => selection.includes(s.id)));
-                        }
-                    }}
-                    appearance="subtle"
-                    icon={
-                        <img
-                            alt=""
-                            className="dashboardbuilder-searchbase-toolbar-icon"
-                            src={SEARCHBASE_ICON_SRC}
-                            style={{
-                                width: 24,
-                                height: 24,
-                            }}
-                        />
+        <Tooltip
+            content={
+                <div className="dashboardbuilder-searchbase-toolbar-tooltip">
+                    <strong>Add visualizations from Searchbase</strong>
+                    <span>
+                        Browse the Cisco Searchbase catalogue and add reusable, centrally managed
+                        searches to this dashboard.
+                    </span>
+                </div>
+            }
+        >
+            <DropdownWithSearch
+                onSelect={(selection) => {
+                    if (selection) {
+                        setSelectedKpis(searches.filter((s) => selection.includes(s.id)));
                     }
-                    style={{ maxWidth: 40, marginLeft: 10 }}
-                    searches={searches.filter(
-                        (s) => s.searchName != undefined && s.id != undefined,
-                    )}
-                ></DropdownWithSearch>
-            </Tooltip>
-        </>
+                }}
+                appearance="primary"
+                ariaLabel="Add visualizations from Searchbase"
+                className="dashboardbuilder-searchbase-toolbar-control"
+                label="Add Searchbase"
+                icon={
+                    <img
+                        alt=""
+                        className="dashboardbuilder-searchbase-toolbar-icon"
+                        src={SEARCHBASE_ICON_SRC}
+                        style={{
+                            width: 24,
+                            height: 24,
+                        }}
+                    />
+                }
+                style={{ marginLeft: 10 }}
+                searches={searches.filter(
+                    (s) => s.searchName != undefined && s.id != undefined,
+                )}
+            />
+        </Tooltip>
     );
 };
 

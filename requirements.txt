@@ -1,0 +1,2 @@
+# Dependencies for repository-level Python scripts.
+defusedxml==0.7.1

@@ -19,21 +19,22 @@ import { createFetchInit } from '@splunk/splunk-utils/fetch';
 
 import type { CustomerTopology } from '@/common/types';
 import {
-    ALL_OVERVIEW_SECTION_IDS,
-    OVERVIEW_PROFILES,
+    ALL_WORKSPACE_SECTION_IDS,
+    WORKSPACE_SOURCES,
     type SectionId,
-} from '@/common/config/overviewProfiles';
+} from '@/common/config/insightsWorkspaces';
 
 import { getSearchAppContext } from './splunkSearchService';
 
 const CONF_BASENAME = 'customer_topology';
-const STANZA_NAME = 'overview_customer_connectivity';
+const BASE_STANZA_NAME = 'overview_customer_connectivity';
+const DEFAULT_TOPOLOGY_ID = 'customer-site-connectivity';
 const CURRENT_SCHEMA_VERSION = 1;
 const PAYLOAD_VERSION = 1;
 const MAX_PAYLOAD_BYTES = 128 * 1024;
 const DEV_STORAGE_KEY = 'splunk-cisco-dashboards.customerTopologyConfig.v1';
 
-export const CUSTOMER_TOPOLOGY_SECTION_IDS = ALL_OVERVIEW_SECTION_IDS;
+export const CUSTOMER_TOPOLOGY_SECTION_IDS = ALL_WORKSPACE_SECTION_IDS;
 
 export type CustomerTopologySectionId =
     SectionId;
@@ -45,7 +46,7 @@ export type CustomerTopologySectionTitles = Record<
 
 export const DEFAULT_CUSTOMER_TOPOLOGY_SECTION_TITLES: CustomerTopologySectionTitles = {
     ...Object.fromEntries(
-        Object.values(OVERVIEW_PROFILES).flatMap((profile) =>
+        Object.values(WORKSPACE_SOURCES).flatMap((profile) =>
             profile.sections.map((section) => [section.id, section.title])
         )
     ),
@@ -75,7 +76,24 @@ interface ConfRestEntry {
     content?: Record<string, unknown>;
 }
 
-let mockPayload: SavedCustomerTopologyPayload | null = null;
+const mockPayloadByStanza = new Map<string, SavedCustomerTopologyPayload>();
+
+const stanzaNameForTopology = (topologyId?: string): string => {
+    const normalized = (topologyId ?? DEFAULT_TOPOLOGY_ID)
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .slice(0, 72);
+    return !normalized || normalized === 'customer_site_connectivity'
+        ? BASE_STANZA_NAME
+        : `${BASE_STANZA_NAME}_${normalized}`;
+};
+
+const devStorageKeyForStanza = (stanzaName: string): string =>
+    stanzaName === BASE_STANZA_NAME
+        ? DEV_STORAGE_KEY
+        : `${DEV_STORAGE_KEY}.${stanzaName}`;
 
 class CustomerTopologyPersistenceError extends Error {
     public readonly status?: number;
@@ -245,10 +263,11 @@ const withRetry = async <T>(fn: () => Promise<T>): Promise<T> => {
     throw lastError;
 };
 
-const readDevPayload = (): SavedCustomerTopologyPayload | null => {
+const readDevPayload = (stanzaName: string): SavedCustomerTopologyPayload | null => {
+    const mockPayload = mockPayloadByStanza.get(stanzaName) ?? null;
     if (typeof window === 'undefined') return mockPayload;
     try {
-        const raw = window.localStorage.getItem(DEV_STORAGE_KEY);
+        const raw = window.localStorage.getItem(devStorageKeyForStanza(stanzaName));
         if (!raw) return mockPayload;
         return sanitizePayload(JSON.parse(raw));
     } catch {
@@ -256,11 +275,17 @@ const readDevPayload = (): SavedCustomerTopologyPayload | null => {
     }
 };
 
-const writeDevPayload = (payload: SavedCustomerTopologyPayload): void => {
-    mockPayload = payload;
+const writeDevPayload = (
+    stanzaName: string,
+    payload: SavedCustomerTopologyPayload
+): void => {
+    mockPayloadByStanza.set(stanzaName, payload);
     if (typeof window === 'undefined') return;
     try {
-        window.localStorage.setItem(DEV_STORAGE_KEY, JSON.stringify(payload));
+        window.localStorage.setItem(
+            devStorageKeyForStanza(stanzaName),
+            JSON.stringify(payload)
+        );
     } catch {
         // Storage can be unavailable in private mode. The module-level
         // mock still keeps the current page session working.
@@ -283,12 +308,12 @@ const coerceRow = (
     payloadJson: optionalString(content.payload_json),
 });
 
-const fetchRow = async (): Promise<CustomerTopologyRow | null> => {
+const fetchRow = async (stanzaName: string): Promise<CustomerTopologyRow | null> => {
     if (!isInSplunkRuntime()) {
-        const payload = readDevPayload();
+        const payload = readDevPayload(stanzaName);
         if (!payload) return null;
         return {
-            name: STANZA_NAME,
+            name: stanzaName,
             title: payload.topology.name,
             description: payload.topology.subtitle,
             updatedAt: '',
@@ -339,14 +364,14 @@ const fetchRow = async (): Promise<CustomerTopologyRow | null> => {
 
     const json = (await response.json()) as { entry?: ConfRestEntry[] };
     const entries = Array.isArray(json.entry) ? json.entry : [];
-    const entry = entries.find((candidate) => candidate.name === STANZA_NAME);
+    const entry = entries.find((candidate) => candidate.name === stanzaName);
     if (!entry) return null;
-    return coerceRow(STANZA_NAME, entry.content ?? {});
+    return coerceRow(stanzaName, entry.content ?? {});
 };
 
 export const loadCustomerTopologyConfig =
-    async (): Promise<SavedCustomerTopologyPayload | null> => {
-        const row = await fetchRow();
+    async (topologyId?: string): Promise<SavedCustomerTopologyPayload | null> => {
+        const row = await fetchRow(stanzaNameForTopology(topologyId));
         if (!row?.payloadJson) return null;
         let parsedPayload: unknown = null;
         try {
@@ -373,6 +398,7 @@ export const saveCustomerTopologyConfig = async (
         );
     }
     const payloadJson = JSON.stringify(safePayload);
+    const stanzaName = stanzaNameForTopology(safePayload.topology.id);
     if (payloadJson.length > MAX_PAYLOAD_BYTES) {
         throw new CustomerTopologyPersistenceError(
             `Customer topology is too large to save (${Math.round(
@@ -382,7 +408,7 @@ export const saveCustomerTopologyConfig = async (
     }
 
     if (!isInSplunkRuntime()) {
-        writeDevPayload(safePayload);
+        writeDevPayload(stanzaName, safePayload);
         return;
     }
 
@@ -402,7 +428,7 @@ export const saveCustomerTopologyConfig = async (
     const postInit = buildMutationInit(body);
 
     const updateUrl = `${buildBaseUrl(appName, true)}/${encodeURIComponent(
-        STANZA_NAME
+        stanzaName
     )}`;
     let response: Response;
     try {
@@ -420,7 +446,7 @@ export const saveCustomerTopologyConfig = async (
 
     if (response.status === 404) {
         const createBody = new URLSearchParams(body);
-        createBody.set('name', STANZA_NAME);
+        createBody.set('name', stanzaName);
         const createInit = buildMutationInit(createBody);
         const createResponse = await withRetry(() =>
             fetch(buildBaseUrl(appName, true), createInit)

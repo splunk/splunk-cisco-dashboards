@@ -2,7 +2,7 @@
 
 > Layer 1 of the SCD framework: **Compass = the QUESTION**, LA28 = the COMPUTATION (see `MATH.md`), Tensor = the CATALOG (see `CONTEXT_TENSOR.md`).
 
-Every panel in the Splunk Cisco Dashboards (SCD) app is specified along **16 chips** drawn from four cardinal points: **N**orth Star, **E**vidence, **S**ituation, **W**ant-back. The 16 chips collectively answer "Why are we asking? What signal proves it? Where, who, when by? What shape of answer?"
+Every panel in the Splunk App for Secure Networking (SCD) app is specified along **16 chips** drawn from four cardinal points: **N**orth Star, **E**vidence, **S**ituation, **W**ant-back. The 16 chips collectively answer "Why are we asking? What signal proves it? Where, who, when by? What shape of answer?"
 
 A panel that cannot answer at least eight of the sixteen chips — covering the four corners listed in **MVC8** below — is not a real executive panel. The audit script (`scripts/audit_compass.py`) flags such panels and fails the build.
 

@@ -375,7 +375,7 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
                     iconClassName
                 )}
             >
-                <Info className="w-3 h-3 stroke-[2.5px]" />
+                <Info className="w-3.5 h-3.5 stroke-[2.4px]" />
             </button>
             {popover}
         </span>

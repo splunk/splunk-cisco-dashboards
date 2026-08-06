@@ -1,0 +1,6 @@
+/*
+ * Splunk loads dashboard.css, rather than application.css, for Simple XML and
+ * Dashboard Studio views. Share the modern navigation overrides with those
+ * native dashboard shells.
+ */
+@import url('application.css');

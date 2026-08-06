@@ -3,7 +3,7 @@
  * from searchbase.conf into a profile section.
  *
  * Factory/discovered tiles remain owned by searchbase.conf and
- * overview_factory_tiles.conf. This hook stores only the lightweight
+ * insights_workspaces.conf. This hook stores only the lightweight
  * local additions: "show searchbase stanza X in section Y for this
  * profile". The Overview page rebuilds normal MetricConfig objects
  * from the live searchbase catalogue on every render, so labels, SPL,
@@ -14,17 +14,17 @@ import { useCallback, useEffect, useState } from 'react';
 import type { SectionId } from '@/common/hooks/useMetric';
 import { ALL_SECTION_IDS } from '@/common/hooks/usePersistedSectionLayout';
 import {
-    DEFAULT_OVERVIEW_PROFILE_ID,
-    profileStorageKey,
-    type OverviewProfileId,
-} from '@/common/config/overviewProfiles';
+    EXECUTIVE_WORKSPACE_SOURCE_ID,
+    workspaceStorageKey,
+    type WorkspaceId,
+} from '@/common/config/insightsWorkspaces';
 
 const STORAGE_KEY = 'splunk-cisco-dashboards.sectionTileAdditions.v1';
 const STORAGE_VERSION = 1;
 const SEARCHBASE_ID_PATTERN = /^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,255}$/;
 
 export interface SectionTileAdditionsOptions {
-    profileId?: OverviewProfileId;
+    workspaceId?: WorkspaceId;
     availableSections?: readonly SectionId[];
 }
 
@@ -35,8 +35,8 @@ interface PersistedShape {
     additions: SectionTileAdditionMap;
 }
 
-const storageKeyForProfile = (profileId?: OverviewProfileId): string =>
-    profileStorageKey(STORAGE_KEY, profileId ?? DEFAULT_OVERVIEW_PROFILE_ID);
+const storageKeyForWorkspace = (workspaceId?: WorkspaceId): string =>
+    workspaceStorageKey(STORAGE_KEY, workspaceId ?? EXECUTIVE_WORKSPACE_SOURCE_ID);
 
 const isSectionId = (
     raw: unknown,
@@ -107,7 +107,7 @@ export interface UsePersistedSectionTileAdditionsResult {
 export const usePersistedSectionTileAdditions = (
     options: SectionTileAdditionsOptions = {}
 ): UsePersistedSectionTileAdditionsResult => {
-    const storageKey = storageKeyForProfile(options.profileId);
+    const storageKey = storageKeyForWorkspace(options.workspaceId);
     const availableSections = options.availableSections ?? ALL_SECTION_IDS;
     const optionsSignature = JSON.stringify({
         storageKey,

@@ -63,6 +63,19 @@
  * animation, so without it they all rasterise at the layer origin).
  * Hide the entire packet group during export and reveal it again in
  * `finally`.
+ *
+ * Leaflet clone geometry guard — Leaflet positions its tiles, marker
+ * icons, and SVG overlay with several nested translate3d transforms.
+ * Browsers compose those transforms correctly, but html2canvas applies
+ * the cloned SVG viewBox and pane transforms in different coordinate
+ * spaces. The exported basemap and markers therefore looked plausible
+ * while the connectivity paths were shifted away from their sites.
+ *
+ * Before capture, record the painted rectangle of each Leaflet visual
+ * relative to its map. In html2canvas's cloned document, remove the pane
+ * transforms and place each visual at that recorded rectangle. This
+ * preserves the exact live viewport without mutating or reinitialising
+ * the interactive Leaflet map.
  */
 
 import { useCallback, useState } from 'react';
@@ -133,6 +146,7 @@ export const useExportPage = ({
                 element: SVGGElement;
                 display: string | null;
             }> = [];
+            let preparedLeafletMaps: PreparedLeafletMaps | null = null;
             try {
                 const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
                     import('html2canvas'),
@@ -174,15 +188,26 @@ export const useExportPage = ({
                 });
                 // Build 1192 — bake topology link <path>s into a solid,
                 // fully-opaque static state so html2canvas's clone has
-                // nothing animated to mis-render. The class
-                // `customer-topology-link-shell` is set by Leaflet's
-                // pathOptions in CustomerTopologyMap → TopologyLinkPath
-                // and uniquely identifies the visible topology lines.
-                const linkPaths = node.querySelectorAll(
-                    'path.customer-topology-link-shell'
-                );
-                linkPaths.forEach((rawPath) => {
-                    const path = rawPath as SVGPathElement;
+                // nothing animated to mis-render. Prefer the semantic
+                // class from TopologyLinkPath, but also discover the
+                // actual parent of each SMIL node.
+                // react-leaflet does not consistently retain a
+                // pathOptions.className when it applies later setStyle
+                // updates, while the animate child is authoritative.
+                const linkPaths = new Set<SVGPathElement>();
+                node.querySelectorAll('path.customer-topology-link-shell')
+                    .forEach((path) => {
+                        linkPaths.add(path as SVGPathElement);
+                    });
+                node.querySelectorAll(
+                    'animate[data-customer-topology-flow]'
+                ).forEach((animate) => {
+                    const parent = animate.parentNode;
+                    if (parent instanceof SVGPathElement) {
+                        linkPaths.add(parent);
+                    }
+                });
+                linkPaths.forEach((path) => {
                     try {
                         const animateNodes = Array.from(
                             path.querySelectorAll(
@@ -245,6 +270,7 @@ export const useExportPage = ({
                         /* See above. */
                     }
                 });
+                preparedLeafletMaps = prepareLeafletMapsForExport(node);
                 const canvas = await html2canvas(node, {
                     /* Build 115.23 — pure white instead of the prior
                      * `#f8fafc` (slate-50). Exports are shareable
@@ -256,6 +282,14 @@ export const useExportPage = ({
                     useCORS: true,
                     logging: false,
                     ignoreElements: shouldIgnoreExportElement,
+                    onclone: (clonedDocument) => {
+                        if (preparedLeafletMaps) {
+                            flattenLeafletCloneGeometry(
+                                clonedDocument,
+                                preparedLeafletMaps.maps
+                            );
+                        }
+                    },
                 });
                 const stamp = new Date().toISOString().replace(/[:.]/g, '-');
                 const base = `${fileName}-${stamp}`;
@@ -356,6 +390,7 @@ export const useExportPage = ({
                         /* No-op. */
                     }
                 });
+                preparedLeafletMaps?.cleanup();
                 // Build 1174 — resume only the SVGs we paused, then
                 // clear the document-level export flag. Order
                 // matters: resuming animations BEFORE removing the
@@ -387,6 +422,160 @@ export const useExportPage = ({
     );
 
     return { exporting, error, exportAs };
+};
+
+const LEAFLET_EXPORT_MAP_ATTRIBUTE = 'data-scd-export-leaflet-map';
+
+/**
+ * Leaflet's map pane supplies one translation while each painted layer
+ * supplies another. Capture the final browser-composited rectangles so
+ * the html2canvas clone can use one unambiguous coordinate system.
+ */
+const LEAFLET_EXPORT_LAYER_SELECTOR = [
+    '.leaflet-tile',
+    '.leaflet-image-layer',
+    '.leaflet-marker-icon',
+    '.leaflet-marker-shadow',
+    '.leaflet-tooltip',
+    '.leaflet-popup',
+    '.leaflet-overlay-pane > svg',
+    '.leaflet-pane > canvas',
+].join(', ');
+
+interface LeafletLayerGeometry {
+    index: number;
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+    isSvg: boolean;
+}
+
+interface LeafletMapGeometry {
+    index: number;
+    width: number;
+    height: number;
+    layers: LeafletLayerGeometry[];
+}
+
+interface PreparedLeafletMaps {
+    maps: LeafletMapGeometry[];
+    cleanup: () => void;
+}
+
+const prepareLeafletMapsForExport = (
+    captureRoot: HTMLElement
+): PreparedLeafletMaps => {
+    const mapElements = Array.from(
+        captureRoot.querySelectorAll<HTMLElement>('.leaflet-container')
+    );
+    const originalMapAttributes = mapElements.map((map) =>
+        map.getAttribute(LEAFLET_EXPORT_MAP_ATTRIBUTE)
+    );
+
+    const maps = mapElements.map((map, mapIndex): LeafletMapGeometry => {
+        map.setAttribute(LEAFLET_EXPORT_MAP_ATTRIBUTE, String(mapIndex));
+        const mapRect = map.getBoundingClientRect();
+        const layers = Array.from(
+            map.querySelectorAll<HTMLElement | SVGElement>(
+                LEAFLET_EXPORT_LAYER_SELECTOR
+            )
+        )
+            .map((layer, index): LeafletLayerGeometry => {
+                const rect = layer.getBoundingClientRect();
+                return {
+                    index,
+                    left: rect.left - mapRect.left,
+                    top: rect.top - mapRect.top,
+                    width: rect.width,
+                    height: rect.height,
+                    isSvg: layer.tagName.toLowerCase() === 'svg',
+                };
+            })
+            .filter((layer) => layer.width > 0 && layer.height > 0);
+
+        return {
+            index: mapIndex,
+            width: mapRect.width,
+            height: mapRect.height,
+            layers,
+        };
+    });
+
+    return {
+        maps,
+        cleanup: () => {
+            mapElements.forEach((map, index) => {
+                const original = originalMapAttributes[index];
+                if (original === null) {
+                    map.removeAttribute(LEAFLET_EXPORT_MAP_ATTRIBUTE);
+                } else {
+                    map.setAttribute(LEAFLET_EXPORT_MAP_ATTRIBUTE, original);
+                }
+            });
+        },
+    };
+};
+
+const flattenLeafletCloneGeometry = (
+    clonedDocument: Document,
+    maps: LeafletMapGeometry[]
+): void => {
+    maps.forEach((snapshot) => {
+        const clonedMap = clonedDocument.querySelector<HTMLElement>(
+            `[${LEAFLET_EXPORT_MAP_ATTRIBUTE}="${snapshot.index}"]`
+        );
+        if (!clonedMap) return;
+
+        // Lock the viewport used by the live map. A ResizeObserver cannot
+        // run inside html2canvas's sandbox clone, so percentage sizing is
+        // otherwise vulnerable to a one-frame relayout.
+        clonedMap.style.width = `${snapshot.width}px`;
+        clonedMap.style.height = `${snapshot.height}px`;
+        clonedMap.style.overflow = 'hidden';
+
+        clonedMap
+            .querySelectorAll<HTMLElement>('.leaflet-map-pane, .leaflet-pane')
+            .forEach((pane) => {
+                pane.style.transform = 'none';
+                pane.style.left = '0px';
+                pane.style.top = '0px';
+            });
+
+        const clonedLayers = Array.from(
+            clonedMap.querySelectorAll<HTMLElement | SVGElement>(
+                LEAFLET_EXPORT_LAYER_SELECTOR
+            )
+        );
+
+        snapshot.layers.forEach((layerSnapshot) => {
+            const clonedLayer = clonedLayers[layerSnapshot.index];
+            if (!clonedLayer) return;
+
+            const { style } = clonedLayer;
+            style.position = 'absolute';
+            style.left = `${layerSnapshot.left}px`;
+            style.top = `${layerSnapshot.top}px`;
+            style.right = 'auto';
+            style.bottom = 'auto';
+            style.width = `${layerSnapshot.width}px`;
+            style.height = `${layerSnapshot.height}px`;
+            style.margin = '0';
+            style.transform = 'none';
+            style.transformOrigin = '0 0';
+
+            // html2canvas reads SVG presentation attributes in addition
+            // to CSS dimensions. Keep both representations in agreement
+            // while retaining Leaflet's viewBox for path coordinates.
+            if (layerSnapshot.isSvg) {
+                clonedLayer.setAttribute('width', String(layerSnapshot.width));
+                clonedLayer.setAttribute(
+                    'height',
+                    String(layerSnapshot.height)
+                );
+            }
+        });
+    });
 };
 
 const EXPORT_EXCLUDE_SELECTOR = [

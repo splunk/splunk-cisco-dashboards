@@ -1,0 +1,530 @@
+<dashboard version="2" theme="dark" stylesheet="application.css">
+    <label>Secure Infrastructure Status</label>
+    <description>Track current infrastructure state, exceptions, and emerging operational risk.</description>
+    <definition><![CDATA[
+{
+	"title": "Secure Infrastructure Status",
+	"description": "Track current infrastructure state, exceptions, and emerging operational risk.",
+	"inputs": {
+		"input_time_range": {
+			"options": {
+				"defaultValue": "-24h@h,now",
+				"token": "time_tok"
+			},
+			"title": "Time Range",
+			"type": "input.timerange"
+		}
+	},
+	"defaults": {
+		"visualizations": {
+			"global": {
+				"showLastUpdated": true,
+				"showProgressBar": true
+			}
+		}
+	},
+	"visualizations": {
+		"viz_header_bg": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#16283c",
+				"strokeColor": "rgba(53,207,245,0.42)"
+			}
+		},
+		"viz_header_icon": {
+			"type": "splunk.image",
+			"title": "Secure Infrastructure",
+			"options": {
+				"preserveAspectRatio": true,
+				"src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/secure-infrastructure.svg"
+			}
+		},
+		"viz_header": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "transparent",
+				"fontColor": "#e8f1fb",
+				"markdown": "# Secure Infrastructure Status\nTrack current infrastructure state, exceptions, and emerging operational risk."
+			}
+		},
+		"viz_secure_networking_meraki_rogue_ap_count": {
+			"type": "splunk.singlevalue",
+			"title": "Meraki Rogue AP Count",
+			"dataSources": {
+				"primary": "ds_secure_networking_meraki_rogue_ap_count"
+			},
+			"options": {
+				"backgroundColor": "#0f1a2a",
+				"majorFontSize": 36,
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
+				"showSparklineAreaGraph": true,
+				"showSparklineTooltip": true,
+				"showTrendIndicator": true,
+				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
+				"trendDisplay": "percent",
+				"majorColor": "#2563EB",
+				"majorValue": "> primary | seriesByName('rogue_ap_count') | lastPoint()"
+			},
+			"description": "Total count of unique rogue access points detected by Cisco Meraki Air Marshal , providing the wireless threat detection KPI for the Secure Infrastructure pillar."
+		},
+		"viz_secure_networking_meraki_rogue_ap_containment": {
+			"type": "splunk.table",
+			"title": "Meraki Rogue AP Containment Status",
+			"dataSources": {
+				"primary": "ds_secure_networking_meraki_rogue_ap_containment"
+			},
+			"options": {
+				"backgroundColor": "#0f1a2a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			},
+			"description": "Per-SSID breakdown of Cisco Meraki Air Marshal rogue AP containment status , showing which networks have contained vs uncontained rogue APs to prioritize manual response where auto-containment is insufficient."
+		},
+		"viz_secure_networking_meraki_ssid_encryption_breakdown": {
+			"type": "splunk.table",
+			"title": "Meraki SSID Encryption Breakdown",
+			"dataSources": {
+				"primary": "ds_secure_networking_meraki_ssid_encryption_breakdown"
+			},
+			"options": {
+				"backgroundColor": "#0f1a2a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			},
+			"description": "Distribution of detected SSIDs by encryption type from Cisco Meraki Air Marshal, enabling quick identification of open or weakly encrypted wireless networks in the vicinity that pose user risk."
+		},
+		"viz_secure_networking_meraki_ap_count": {
+			"type": "splunk.singlevalue",
+			"title": "Meraki Access Point Count",
+			"dataSources": {
+				"primary": "ds_secure_networking_meraki_ap_count"
+			},
+			"options": {
+				"backgroundColor": "#0f1a2a",
+				"majorFontSize": 36,
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
+				"showSparklineAreaGraph": true,
+				"showSparklineTooltip": true,
+				"showTrendIndicator": true,
+				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
+				"trendDisplay": "percent",
+				"majorColor": "#2563EB",
+				"majorValue": "> primary | seriesByName('ap_count') | lastPoint()"
+			},
+			"description": "Total count of unique Cisco Meraki access points in the managed wireless infrastructure, providing the wireless footprint KPI."
+		},
+		"viz_secure_networking_meraki_unencrypted_ssid_count": {
+			"type": "splunk.singlevalue",
+			"title": "Meraki Unencrypted SSID Count",
+			"dataSources": {
+				"primary": "ds_secure_networking_meraki_unencrypted_ssid_count"
+			},
+			"options": {
+				"backgroundColor": "#0f1a2a",
+				"majorFontSize": 36,
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
+				"showSparklineAreaGraph": true,
+				"showSparklineTooltip": true,
+				"showTrendIndicator": true,
+				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
+				"trendDisplay": "percent",
+				"majorColor": "#2563EB",
+				"majorValue": "> primary | seriesByName('unencrypted_ssid_count') | lastPoint()"
+			},
+			"description": "Count of unique open/unencrypted SSIDs detected by Cisco Meraki Air Marshal, providing the wireless compliance KPI for environments with a \"no open wireless\" security policy."
+		},
+		"viz_secure_networking_meraki_wireless_client_count": {
+			"type": "splunk.singlevalue",
+			"title": "Meraki Wireless Client Count",
+			"dataSources": {
+				"primary": "ds_secure_networking_meraki_wireless_client_count"
+			},
+			"options": {
+				"backgroundColor": "#0f1a2a",
+				"majorFontSize": 36,
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
+				"showSparklineAreaGraph": true,
+				"showSparklineTooltip": true,
+				"showTrendIndicator": true,
+				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
+				"trendDisplay": "percent",
+				"majorColor": "#2563EB",
+				"majorValue": "> primary | seriesByName('wireless_client_count') | lastPoint()"
+			},
+			"description": "Total count of unique wireless clients seen authenticating to Cisco Meraki access points, providing a real-time wireless endpoint population KPI."
+		},
+		"viz_secure_networking_infra_fmc_firewall_count": {
+			"type": "splunk.singlevalue",
+			"title": "Infrastructure FMC Managed Firewall Count",
+			"dataSources": {
+				"primary": "ds_secure_networking_infra_fmc_firewall_count"
+			},
+			"options": {
+				"backgroundColor": "#0f1a2a",
+				"majorFontSize": 36,
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
+				"showSparklineAreaGraph": true,
+				"showSparklineTooltip": true,
+				"showTrendIndicator": true,
+				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
+				"trendDisplay": "percent",
+				"majorColor": "#ff7169",
+				"majorValue": "> primary | seriesByName('firewall_count') | lastPoint()"
+			},
+			"description": "Total count of unique Cisco Firepower/FTD firewalls actively reporting to Cisco FMC, based on distinct Device UUIDs seen in FMC syslog, providing the on-premises firewall infrastructure footprint KPI."
+		},
+		"viz_feed_monitor_ftd_firewall_staleness": {
+			"type": "splunk.singlevalue",
+			"title": "FTD Firewall - Stream Staleness (Signal Rail KPI)",
+			"dataSources": {
+				"primary": "ds_feed_monitor_ftd_firewall_staleness"
+			},
+			"options": {
+				"backgroundColor": "#0f1a2a",
+				"majorFontSize": 36,
+				"shouldAbbreviateMajorValue": true,
+				"shouldAbbreviateTrendValue": true,
+				"showSparklineAreaGraph": true,
+				"showSparklineTooltip": true,
+				"showTrendIndicator": true,
+				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
+				"trendDisplay": "percent",
+				"majorColor": "#53bfff",
+				"majorValue": "> primary | seriesByName('age_minutes') | lastPoint()",
+				"unit": "min"
+			},
+			"description": "Staleness monitor for Cisco FTD firewall feeds covering syslog, advanced JSON connection events, and DNS logs. Any production firewall sees continuous traffic - silence beyond 30 minutes means the feed is broken, not the…"
+		},
+		"viz_executive_dashboard_data_source_status": {
+			"type": "splunk.table",
+			"title": "Data Source Status",
+			"dataSources": {
+				"primary": "ds_executive_dashboard_data_source_status"
+			},
+			"options": {
+				"backgroundColor": "#0f1a2a",
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
+			},
+			"description": "Shows which Cisco and IT systems are actively sending data to Splunk and how many events each sent in the last 24 hours. A row appearing here confirms that integration is working — a missing row means that system’s data…"
+		},
+		"viz_design_context": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#111f31",
+				"fontColor": "#e8f1fb",
+				"markdown": "**Audience:** Network operations and wireless-security teams  •  **Sources:** Meraki infrastructure, Air Marshal, and wireless configuration telemetry  •  **Reading guide:** Confirm the managed footprint, then review rogue containment and encryption exceptions.  •  **Freshness:** Uses the dashboard time range"
+			}
+		},
+		"viz_design_section": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#111f31",
+				"fontColor": "#e8f1fb",
+				"markdown": "### Wireless infrastructure state\nConfirm the managed footprint, then review rogue containment and encryption exceptions."
+			}
+		}
+	},
+	"dataSources": {
+		"ds_secure_networking_meraki_rogue_ap_count": {
+			"name": "Secure Networking - Meraki Rogue AP Count",
+			"options": {
+				"ref": "secure_networking_meraki_rogue_ap_count",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_meraki_rogue_ap_containment": {
+			"name": "Secure Networking - Meraki Rogue AP Containment Status",
+			"options": {
+				"ref": "secure_networking_meraki_rogue_ap_containment",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_meraki_ssid_encryption_breakdown": {
+			"name": "Secure Networking - Meraki SSID Encryption Breakdown",
+			"options": {
+				"ref": "secure_networking_meraki_ssid_encryption_breakdown",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_meraki_ap_count": {
+			"name": "Secure Networking - Meraki Access Point Count",
+			"options": {
+				"ref": "secure_networking_meraki_ap_count",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_meraki_unencrypted_ssid_count": {
+			"name": "Secure Networking - Meraki Unencrypted SSID Count",
+			"options": {
+				"ref": "secure_networking_meraki_unencrypted_ssid_count",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_meraki_wireless_client_count": {
+			"name": "Secure Networking - Meraki Wireless Client Count",
+			"options": {
+				"ref": "secure_networking_meraki_wireless_client_count",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_secure_networking_infra_fmc_firewall_count": {
+			"name": "Secure Networking - Infrastructure FMC Managed Firewall Count",
+			"options": {
+				"ref": "secure_networking_infra_fmc_firewall_count",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_feed_monitor_ftd_firewall_staleness": {
+			"name": "Feed Monitor - FTD Firewall - Stream Staleness (Signal Rail KPI)",
+			"options": {
+				"ref": "feed_monitor_ftd_firewall_staleness",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_executive_dashboard_data_source_status": {
+			"name": "Executive - Data Source Status",
+			"options": {
+				"ref": "executive_dashboard_data_source_status",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		}
+	},
+	"layout": {
+		"globalInputs": [
+			"input_time_range"
+		],
+		"layoutDefinitions": {
+			"layout_overview": {
+				"options": {
+					"backgroundColor": "#07101d",
+					"display": "auto-scale",
+					"height": 1606,
+					"width": 1440
+				},
+				"structure": [
+					{
+						"item": "viz_header_bg",
+						"position": {
+							"x": 20,
+							"y": 0,
+							"w": 1400,
+							"h": 88
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_header_icon",
+						"position": {
+							"x": 36,
+							"y": 14,
+							"w": 56,
+							"h": 56
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_header",
+						"position": {
+							"x": 108,
+							"y": 4,
+							"w": 1292,
+							"h": 76
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_design_context",
+						"position": {
+							"x": 20,
+							"y": 100,
+							"w": 1400,
+							"h": 64
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_design_section",
+						"position": {
+							"x": 20,
+							"y": 176,
+							"w": 1400,
+							"h": 54
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_meraki_rogue_ap_count",
+						"position": {
+							"x": 20,
+							"y": 242,
+							"w": 690,
+							"h": 190
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_meraki_rogue_ap_containment",
+						"position": {
+							"x": 730,
+							"y": 242,
+							"w": 690,
+							"h": 300
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_meraki_ssid_encryption_breakdown",
+						"position": {
+							"x": 20,
+							"y": 558,
+							"w": 690,
+							"h": 300
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_meraki_ap_count",
+						"position": {
+							"x": 730,
+							"y": 558,
+							"w": 690,
+							"h": 190
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_meraki_unencrypted_ssid_count",
+						"position": {
+							"x": 20,
+							"y": 874,
+							"w": 690,
+							"h": 190
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_meraki_wireless_client_count",
+						"position": {
+							"x": 730,
+							"y": 874,
+							"w": 690,
+							"h": 190
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_secure_networking_infra_fmc_firewall_count",
+						"position": {
+							"x": 20,
+							"y": 1080,
+							"w": 690,
+							"h": 190
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_feed_monitor_ftd_firewall_staleness",
+						"position": {
+							"x": 730,
+							"y": 1080,
+							"w": 690,
+							"h": 190
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_executive_dashboard_data_source_status",
+						"position": {
+							"x": 20,
+							"y": 1286,
+							"w": 690,
+							"h": 300
+						},
+						"type": "block"
+					}
+				],
+				"type": "absolute"
+			}
+		},
+		"options": {
+			"showTitleAndDescription": false,
+			"submitButton": false,
+			"submitOnDashboardLoad": true
+		},
+		"tabs": {
+			"items": [
+				{
+					"label": "overview",
+					"layoutId": "layout_overview"
+				}
+			]
+		}
+	},
+	"applicationProperties": {
+		"collapseNavigation": false,
+		"hideEdit": false,
+		"hideExport": false
+	}
+}
+    ]]></definition>
+</dashboard>

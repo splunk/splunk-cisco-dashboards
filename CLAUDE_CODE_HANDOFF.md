@@ -8,7 +8,7 @@ Working tree before this handoff file was created: clean
 
 ## Context
 
-This repo contains the Splunk Cisco Dashboards app. The recent work focused on making the Executive Overview page rely on `searchbase.conf` as the central source of truth for factory/default tile metadata and runtime SPL dispatch.
+This repo contains the Splunk App for Secure Networking app. The recent work focused on making the Executive Overview page rely on `searchbase.conf` as the central source of truth for factory/default tile metadata and runtime SPL dispatch.
 
 The user strongly wants `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf` to be the central DB for search metadata. Avoid adding hardcoded search names, search display names, tile labels, value fields, thresholds, or factory bindings directly in React where `searchbase.conf` can own them.
 
@@ -38,13 +38,13 @@ packages/splunk-cisco-dashboards/src/main/webapp/common/components/topology/edge
 packages/splunk-cisco-dashboards/src/main/webapp/common/hooks/useMetric.ts
 packages/splunk-cisco-dashboards/src/main/webapp/common/hooks/usePersistedSectionTileCounts.ts
 packages/splunk-cisco-dashboards/src/main/webapp/common/types.ts
-packages/splunk-cisco-dashboards/src/main/webapp/pages/overview/index.tsx
+packages/splunk-cisco-dashboards/src/main/webapp/pages/executive_insights/index.tsx
 ```
 
 ## Key Decisions
 
 1. `searchbase.conf` is authoritative for Overview factory tile metadata.
-2. `overview_factory_tiles.conf` should only control shared factory order and visible counts. It should not carry search binding metadata.
+2. `insights_workspaces.conf` defines workspace metadata plus shared tile order and visible counts. Search binding metadata remains in `searchbase.conf`.
 3. Overview factory tiles should run literal SPL from `searchbase.conf` with the stanza's `dispatch_context`.
 4. The Overview factory path should not fall back to `| savedsearch "..."` for searchbase-only stanzas.
 5. New `viz_options` keys added to `searchbase.conf` are app-specific JSON metadata, not native Dashboard Studio options.
@@ -78,7 +78,7 @@ App-specific `viz_options` metadata currently includes:
 
 ### Overview factory tiles
 
-`packages/splunk-cisco-dashboards/src/main/webapp/pages/overview/index.tsx`
+`packages/splunk-cisco-dashboards/src/main/webapp/pages/executive_insights/index.tsx`
 
 The old hardcoded `METRIC_CONFIG` fallback catalogue was removed. This matters: the user noticed labels like `label: 'Critical sites available'` still existed in the React file and correctly called out that this violated the central-source rule.
 
@@ -119,7 +119,7 @@ node - <<'NODE'
 const fs=require('fs');
 const readConf=(path)=>{const text=fs.readFileSync(path,'utf8'); const stanzas={}; let cur=null; for(const raw of text.split(/\r?\n/)){const line=raw.trim(); const m=line.match(/^\[([^\]]+)\]$/); if(m){cur=m[1]; stanzas[cur]={}; continue;} if(!cur||!line||line.startsWith('#')) continue; const i=raw.indexOf('='); if(i>=0) stanzas[cur][raw.slice(0,i).trim()]=raw.slice(i+1).trim();} return stanzas;};
 const searchbase=readConf('packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf');
-const factory=readConf('packages/splunk-cisco-dashboards/src/main/resources/splunk/default/overview_factory_tiles.conf');
+const factory=readConf('packages/splunk-cisco-dashboards/src/main/resources/splunk/default/insights_workspaces.conf');
 const overview=[]; const mapFooter=[]; const bad=[];
 for (const [id, stanza] of Object.entries(searchbase)) {
   if (!stanza.viz_options) continue;
@@ -173,8 +173,8 @@ Expected result at commit `7850478`:
 - There are still generic saved-search helpers elsewhere in the app, including dashboard builder, searchbase canvas, and generic metric hooks. Those were intentionally not removed because they support real saved searches and legacy flows outside the Overview factory path.
 - The user specifically objected to Overview factory/default tiles being hardcoded or savedsearch-command driven. Keep that path searchbase-centered.
 - The custom `viz_options.overview`, `mapFooter`, `topologyMap`, and `topologySite` keys are not Dashboard Studio native. They are SCD React metadata.
-- If you add new factory Overview tiles, add the metadata to `searchbase.conf` and the tile ID/order to `overview_factory_tiles.conf`.
-- If a default tile is missing from the page, check both `viz_options.overview` and `overview_factory_tiles.conf`.
+- If you add new Insights tiles, add the search metadata to `searchbase.conf` and the tile ID/order to the matching `layout.<workspace>.<section>` stanza in `insights_workspaces.conf`.
+- If a default tile is missing from the page, check both `viz_options.overview` and `insights_workspaces.conf`.
 
 ## User Preferences / Standing Direction
 
@@ -200,4 +200,4 @@ SPLUNK_HOME=/opt/10 ./build.sh --fast --install
 2. Confirm Open in Search works for tiles with no returned data.
 3. Confirm map footer cards render from `searchbase.conf` metadata.
 4. Confirm searches with `dispatch_context = cisco-catalyst-app` execute in that app context.
-5. Confirm no factory Overview labels remain duplicated in `pages/overview/index.tsx`.
+5. Confirm no factory Overview labels remain duplicated in `pages/executive_insights/index.tsx`.

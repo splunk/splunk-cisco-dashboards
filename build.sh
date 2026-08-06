@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Package the Splunk Cisco Dashboards app into a Splunk .tar.gz.
+# Package the Splunk App for Secure Networking app into a Splunk .tar.gz.
 # By default this script ONLY builds the package -- it does not touch
 # any Splunk instance. Pass --install or --deploy (and optionally
 # --restart) to push the build into a local Splunk.
@@ -137,6 +137,42 @@ run_quietly() {
     err "---- end captured output ----"
     rm -f "$logfile"
     return "$rc"
+}
+
+# Splunk Web translates JavaScript bundles into locale-specific files under
+# var/run/splunk/appserver/i18n. During an in-place app update, a browser can
+# request a large bundle while splunkd is still replacing it; Splunk then
+# persists that partial response in the i18n cache and keeps serving the
+# truncated JavaScript even after the installed file is complete. Remove only
+# the generated cache entries whose basenames belong to this app's page
+# bundles. Splunk regenerates them from the fully installed files on demand.
+clear_appserver_i18n_cache() {
+    local pages_dir="${SPLUNK_HOME}/etc/apps/${APP_NAME}/appserver/static/pages"
+    local cache_dir="${SPLUNK_HOME}/var/run/splunk/appserver/i18n"
+    local page_path page_name cache_path
+    local cleared=0
+
+    if [[ ! -d "$pages_dir" || ! -d "$cache_dir" ]]; then
+        return 0
+    fi
+
+    while IFS= read -r -d '' page_path; do
+        page_name="$(basename "$page_path")"
+        while IFS= read -r -d '' cache_path; do
+            if rm -f -- "$cache_path"; then
+                cleared=$((cleared + 1))
+            else
+                err "WARNING: Could not clear generated appserver cache: ${cache_path}"
+            fi
+        done < <(
+            find "$cache_dir" -maxdepth 1 -type f \
+                -name "${page_name}-*.cache" -print0
+        )
+    done < <(
+        find "$pages_dir" -maxdepth 1 -type f -name '*.js' -print0
+    )
+
+    say "[build] Cleared ${cleared} generated appserver JavaScript cache file(s)."
 }
 
 # Resolve a default SPLUNK_HOME if the caller didn't set one. Matches the
@@ -395,6 +431,9 @@ if [[ "$no_build" -eq 0 ]]; then
         err "ERROR: VERSION file is empty: ${VERSION_FILE}"
         exit 1
     fi
+
+    hdr "Validating canonical Searchbase SPL..."
+    run_quietly python3 "${ROOT_DIR}/scripts/lint_spl_antipatterns.py"
 fi
 
 if [[ "$no_build" -eq 1 ]]; then
@@ -508,6 +547,10 @@ if [[ "$do_deploy" -eq 1 ]]; then
         say "[build] Restoring local/ ..."
         cp -R "${LOCAL_BACKUP}/local" "${TARGET}/local"
     fi
+fi
+
+if [[ "$do_install" -eq 1 || "$do_deploy" -eq 1 ]]; then
+    clear_appserver_i18n_cache
 fi
 
 if [[ "$restart_after_install" -eq 1 ]]; then

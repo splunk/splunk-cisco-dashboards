@@ -34,11 +34,11 @@ import { useCallback, useEffect, useState } from 'react';
 import type { SectionId } from '@/common/hooks/useMetric';
 import { ALL_SECTION_IDS } from '@/common/hooks/usePersistedSectionLayout';
 import {
-    DEFAULT_OVERVIEW_PROFILE_ID,
-    OVERVIEW_PROFILES,
-    profileStorageKey,
-    type OverviewProfileId,
-} from '@/common/config/overviewProfiles';
+    EXECUTIVE_WORKSPACE_SOURCE_ID,
+    WORKSPACE_SOURCES,
+    workspaceStorageKey,
+    type WorkspaceId,
+} from '@/common/config/insightsWorkspaces';
 
 const STORAGE_KEY = 'splunk-cisco-dashboards.sectionTileCounts.v1';
 const STORAGE_VERSION = 1;
@@ -64,7 +64,7 @@ export interface SectionTileCountBounds {
      * to 5 to preserve the historical "all sections start at 5" UX.
      */
     fallbackDefault?: number;
-    profileId?: OverviewProfileId;
+    workspaceId?: WorkspaceId;
     availableSections?: readonly SectionId[];
 }
 
@@ -99,9 +99,9 @@ const buildDefaults = (bounds: SectionTileCountBounds): SectionTileCountMap =>
     ) as SectionTileCountMap;
 
 const storageKeyForBounds = (bounds: SectionTileCountBounds): string =>
-    profileStorageKey(
+    workspaceStorageKey(
         STORAGE_KEY,
-        bounds.profileId ?? DEFAULT_OVERVIEW_PROFILE_ID
+        bounds.workspaceId ?? EXECUTIVE_WORKSPACE_SOURCE_ID
     );
 
 const readFromStorage = (bounds: SectionTileCountBounds): SectionTileCountMap => {
@@ -169,10 +169,10 @@ export interface UsePersistedSectionTileCountsResult {
 
 export const usePersistedSectionTileCounts = (
     bounds: SectionTileCountBounds = {
-        minCount: OVERVIEW_PROFILES[DEFAULT_OVERVIEW_PROFILE_ID].minTileCount,
-        maxCount: OVERVIEW_PROFILES[DEFAULT_OVERVIEW_PROFILE_ID].maxTileCount,
-        defaultCount: OVERVIEW_PROFILES[DEFAULT_OVERVIEW_PROFILE_ID].fallbackTileCount,
-        profileId: DEFAULT_OVERVIEW_PROFILE_ID,
+        minCount: WORKSPACE_SOURCES[EXECUTIVE_WORKSPACE_SOURCE_ID].minTileCount,
+        maxCount: WORKSPACE_SOURCES[EXECUTIVE_WORKSPACE_SOURCE_ID].maxTileCount,
+        defaultCount: WORKSPACE_SOURCES[EXECUTIVE_WORKSPACE_SOURCE_ID].fallbackTileCount,
+        workspaceId: EXECUTIVE_WORKSPACE_SOURCE_ID,
     }
 ): UsePersistedSectionTileCountsResult => {
     const [counts, setCounts] = useState<SectionTileCountMap>(() => readFromStorage(bounds));
@@ -183,7 +183,7 @@ export const usePersistedSectionTileCounts = (
         maxCount: bounds.maxCount,
         defaultSignature,
         fallbackDefault: bounds.fallbackDefault,
-        profileId: bounds.profileId ?? DEFAULT_OVERVIEW_PROFILE_ID,
+        workspaceId: bounds.workspaceId ?? EXECUTIVE_WORKSPACE_SOURCE_ID,
     });
 
     useEffect(() => {

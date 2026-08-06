@@ -32,6 +32,31 @@
  */
 
 import { getSearchAppContext } from './splunkSearchService';
+import { resolveSearchbaseAppContexts } from './searchbaseDispatch';
+
+/**
+ * REST returns an installed app's configured label when present. Keep these
+ * fallbacks for common Cisco packages whose app.conf omits a display label.
+ */
+export const SEARCHBASE_APP_LABEL_FALLBACKS: Readonly<Record<string, string>> = {
+    'cisco-catalyst-app': 'Cisco Enterprise Networking for Splunk Platform',
+    'cisco_dc_networking_app_for_splunk': 'Cisco DC Networking App for Splunk',
+    CiscoSecurityCloud: 'Cisco Security Cloud',
+    Splunk_TA_Cisco_Intersight: 'Cisco Intersight Add-on for Splunk',
+    'Splunk_TA_cisco-esa': 'Splunk Add-on for Cisco ESA',
+    Splunk_TA_cisco_meraki: 'Cisco Meraki Add-on for Splunk',
+    'Splunk_TA_cisco-wsa': 'Splunk Add-on for Cisco WSA',
+    'TA-cisco-cloud-security-addon': 'Cisco Secure Access Add-on for Splunk',
+    TA_cisco_catalyst: 'Cisco Catalyst Add-on for Splunk',
+    ta_cisco_spaces: 'Cisco Spaces Add-on for Splunk',
+    ta_cisco_thousandeyes: 'Cisco ThousandEyes App for Splunk',
+};
+
+/** Prefer an installed app label while retaining the folder name as its ID. */
+export const searchbaseAppLabel = (
+    app: string,
+    labelsByApp: ReadonlyMap<string, string>
+): string => labelsByApp.get(app) ?? SEARCHBASE_APP_LABEL_FALLBACKS[app] ?? app;
 
 export interface SearchbaseCatalogueOptions {
     /**
@@ -61,7 +86,11 @@ export interface SearchbaseRecord {
     tags: string[];
     /** Splunk app namespace that owns/stores this stanza. */
     ownerApp: string;
-    /** Splunk app namespace this stanza must dispatch in. */
+    /** Source-app classification from the stanza's `dispatch_context`. */
+    catalogueApp: string;
+    /** Whether `dispatch_context` is forced for execution. */
+    dispatchContextForce: boolean;
+    /** Effective Splunk app namespace used to execute this stanza. */
     dispatchContext: string;
     /** True when the stanza is marked `search_hidden = 1` in searchbase.conf. */
     searchHidden?: boolean;
@@ -118,6 +147,7 @@ interface SearchbaseEntry {
         sub_category?: string;
         tags?: string;
         dispatch_context?: string;
+        dispatch_context_force?: string;
         description?: string;
         explanation?: string;
         solution?: string;
@@ -166,6 +196,15 @@ interface SearchbaseResponse {
     entry?: SearchbaseEntry[];
 }
 
+interface SplunkAppEntry {
+    name?: string;
+    content?: { label?: string };
+}
+
+interface SplunkAppsResponse {
+    entry?: SplunkAppEntry[];
+}
+
 const APP_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_\-.]{0,127}$/;
 
 const sanitizeAppName = (raw: string | undefined): string | undefined => {
@@ -211,6 +250,30 @@ const getCsrfToken = (): string | null => {
     if (typeof document === 'undefined') return null;
     const match = document.cookie.match(/(?:^|;\s*)splunkweb_csrf_token_\w+=([^;]+)/);
     return match ? decodeURIComponent(match[1]) : null;
+};
+
+/** Resolve installed-app display labels while retaining folder names as IDs. */
+export const getSplunkAppLabels = async (
+    appIds: ReadonlySet<string>
+): Promise<Map<string, string>> => {
+    if (!isInSplunkRuntime() || appIds.size === 0) return new Map();
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    const csrf = getCsrfToken();
+    if (csrf) headers['X-Splunk-Form-Key'] = csrf;
+    const params = new URLSearchParams({ output_mode: 'json', count: '0' });
+    const response = await fetch(
+        `/en-US/splunkd/__raw/services/apps/local?${params.toString()}`,
+        { method: 'GET', credentials: 'include', headers }
+    );
+    if (!response.ok) return new Map();
+    const payload = (await response.json()) as SplunkAppsResponse;
+    const labels = new Map<string, string>();
+    for (const entry of payload.entry ?? []) {
+        const name = sanitizeAppName(entry.name);
+        const label = entry.content?.label?.trim();
+        if (name && appIds.has(name) && label) labels.set(name, label);
+    }
+    return labels;
 };
 
 const splitTags = (raw: string | undefined): string[] => {
@@ -319,21 +382,25 @@ const fetchSearchbase = async (
         if (scopedAppName && aclApp && aclApp !== scopedAppName) continue;
         const searchName = typeof content.search_name === 'string' ? content.search_name.trim() : '';
         if (searchName.length === 0) continue; // Without a join key we can't enrich anything.
+        const ownerApp = sanitizeAppName(aclApp) || appName;
+        const dispatchContextForce = isTruthyConfValue(
+            content.dispatch_context_force
+        );
+        const appContexts = resolveSearchbaseAppContexts(
+            ownerApp,
+            sanitizeAppName(content.dispatch_context),
+            dispatchContextForce
+        );
         out.push({
             id: typeof e.name === 'string' ? e.name : '',
             searchName,
             category: typeof content.category === 'string' ? content.category : '',
             subCategory: typeof content.sub_category === 'string' ? content.sub_category : '',
             tags: splitTags(content.tags),
-            ownerApp: sanitizeAppName(aclApp) || appName,
-            // Runtime dispatch must honor the stanza's requested app
-            // namespace. Some searches live in this app's
-            // searchbase.conf but rely on macros/data models owned by
-            // Cisco add-on apps, so `dispatch_context` is the actual
-            // search execution context; `acl.app` is only where the
-            // stanza is stored.
-            dispatchContext:
-                sanitizeAppName(content.dispatch_context) || aclApp || appName,
+            // `dispatch_context` is useful catalogue provenance. When
+            // force=0, keep that source app available to the App facet while
+            // executing in the stanza-owning app namespace.
+            ...appContexts,
             searchHidden: isTruthyConfValue(content.search_hidden),
             description: typeof content.description === 'string' ? content.description : '',
             explanation: typeof content.explanation === 'string' ? content.explanation : '',

@@ -58,7 +58,9 @@ import { cn } from '@/common/lib/utils';
 import {
     clearSearchbaseCache,
     getSearchbaseCatalogue,
+    getSplunkAppLabels,
     plainTextFromHtml,
+    searchbaseAppLabel,
     type SearchbaseRecord,
 } from '@/common/services/searchbaseCatalogue';
 import type { MetricOverride } from '@/common/hooks/usePersistedMetricOverrides';
@@ -75,48 +77,26 @@ import { VizIcon, resolveVizMapping } from './vizIcons';
 const ALL_CATEGORIES = '__all__';
 const ALL_SUB_CATEGORIES = '__all_sub__';
 
-// Default app scope for the picker. The catalogue REST endpoint pulls
-// from every app namespace (`/servicesNS/-/-/configs/conf-searchbase`),
-// so on a Splunk stack with multiple apps that ship their own
-// `searchbase.conf` the catalogue can grow beyond what this app vetted.
-// To keep the picker scoped to dashboard-pack searches by default, the
-// App facet starts at this value and only shows entries whose dispatch
-// app matches it. Users can select multiple app namespaces or clear the
-// selection to browse all apps.
+// The catalogue REST endpoint pulls from every app namespace
+// (`/servicesNS/-/-/configs/conf-searchbase`). The App facet starts at
+// All apps so operators can discover the complete catalogue immediately,
+// then optionally select one or more app namespaces to narrow it.
 //
-// The UI stores a normalised `dispatchContext` sourced from the stanza's
+// The UI stores a normalised `catalogueApp` sourced from the stanza's
 // `dispatch_context` value; the UI labels it "App" because that's what
 // operators recognise. If a stanza omits `dispatch_context`, the
-// catalogue falls back to the owning ACL app.
+// catalogue falls back to the owning ACL app. Execution separately honors
+// `dispatch_context_force`.
 //
-// Most stanzas shipped in this app's `default/searchbase.conf` dispatch
-// in `splunk-cisco-dashboards`, while dependency data-model searches can
-// dispatch in their owning apps (for example `cisco-catalyst-app`).
-// This default keeps the first browse focused on dashboard-pack searches.
-//
-// Build trail:
-//   - Build 87: dropped the `Cisco` noise tag from every stanza,
-//     which silently collapsed the picker to zero results because the
-//     picker used a hardcoded `tags.includes('Cisco')` gate.
-//   - Build 91: swapped the gate for a hardcoded
-//     `dispatch_context === 'splunk-cisco-dashboards'` check.
-//   - Build 92: promoted the constant to a real user-facing facet
-//     (Dispatch dropdown).
-//   - Build 93: renamed Dispatch → App for clarity, collapsed the
-//     facet block by default to give the result list more room.
-//   - Build 1204: changed App from a single-select dropdown to a
-//     multi-select control so app namespaces can be OR-combined.
-const DEFAULT_APP_SCOPE = 'splunk-cisco-dashboards';
-
-const makeDefaultAppSelection = (): Set<string> => new Set([DEFAULT_APP_SCOPE]);
+const makeDefaultAppSelection = (): Set<string> => new Set();
 
 const isDefaultAppSelection = (selection: ReadonlySet<string>): boolean =>
-    selection.size === 1 && selection.has(DEFAULT_APP_SCOPE);
+    selection.size === 0;
 
 const entryMatchesAppSelection = (
     entry: SearchbaseRecord,
     selection: ReadonlySet<string>
-): boolean => selection.size === 0 || selection.has(entry.dispatchContext);
+): boolean => selection.size === 0 || selection.has(entry.catalogueApp);
 
 const MAX_FIELD_LENGTH = 64;
 const FIELD_NAME_PATTERN = /^[A-Za-z_][\w.]{0,63}$/;
@@ -340,13 +320,12 @@ export interface KpiPickerPanelProps {
      */
     onResetAllCustomizations?: () => void;
     /**
-     * Optional shared-default save handler. Overview uses this to
-     * write the current section tile order/counts to an app-level
-     * config file so the same factory layout applies to every user
-     * who has not chosen a local override.
+     * Optional workspace-layout publish handler. Insights uses this to
+     * write the current section tile order/counts to the active workspace's
+     * app-level layout stanzas.
      */
-    onSaveFactoryDefaults?: () => void | Promise<void>;
-    factoryDefaultsStatus?: 'idle' | 'saving' | 'saved' | 'error';
+    onPublishWorkspaceLayout?: () => void | Promise<void>;
+    workspaceLayoutStatus?: 'idle' | 'saving' | 'saved' | 'error';
     /**
      * True when the current Splunk user holds `admin_all_objects`
      * (see `useCanManageFactoryTileConfig`). Thresholds, Data Mapping,
@@ -505,9 +484,13 @@ const entryIsDrilldownSearch = (
 const entryMatchesBrowseVisibility = (
     entry: SearchbaseRecord,
     drilldownSearchNames: ReadonlySet<string>,
+    includeHiddenSearches: boolean,
     includeDrilldownSearches: boolean,
     includeTableSearches: boolean
 ): boolean => {
+    if (!includeHiddenSearches && entry.searchHidden) {
+        return false;
+    }
     if (
         !includeDrilldownSearches &&
         entryIsDrilldownSearch(entry, drilldownSearchNames)
@@ -546,6 +529,7 @@ const buildSearchbaseEditUrl = (entry: SearchbaseRecord): string | null => {
 interface AppMultiSelectProps {
     apps: string[];
     appCountByName: ReadonlyMap<string, number>;
+    appLabelsById: ReadonlyMap<string, string>;
     selectedApps: ReadonlySet<string>;
     onChange: (next: Set<string>) => void;
     ariaLabel: string;
@@ -556,6 +540,7 @@ interface AppMultiSelectProps {
 const AppMultiSelect: React.FC<AppMultiSelectProps> = ({
     apps,
     appCountByName,
+    appLabelsById,
     selectedApps,
     onChange,
     ariaLabel,
@@ -566,11 +551,7 @@ const AppMultiSelect: React.FC<AppMultiSelectProps> = ({
     const containerRef = useRef<HTMLDivElement | null>(null);
     const isAllApps = selectedApps.size === 0;
     const appOptions = useMemo(() => {
-        const set = new Set(apps);
-        if (!set.has(DEFAULT_APP_SCOPE)) {
-            set.add(DEFAULT_APP_SCOPE);
-        }
-        return Array.from(set).sort((a, b) =>
+        return [...apps].sort((a, b) =>
             a.localeCompare(b, undefined, { sensitivity: 'base' })
         );
     }, [apps]);
@@ -649,7 +630,9 @@ const AppMultiSelect: React.FC<AppMultiSelectProps> = ({
                                         : 'py-0.5 pl-2 pr-1 text-[10px] uppercase tracking-wide'
                                 )}
                             >
-                                <span className="max-w-[210px] truncate">{app}</span>
+                                <span className="max-w-[210px] truncate" title={app}>
+                                    {searchbaseAppLabel(app, appLabelsById)}
+                                </span>
                                 {count > 0 && (
                                     <span className="font-normal opacity-75">{count}</span>
                                 )}
@@ -659,8 +642,8 @@ const AppMultiSelect: React.FC<AppMultiSelectProps> = ({
                                         e.stopPropagation();
                                         removeApp(app);
                                     }}
-                                    title={`Remove ${app} app filter`}
-                                    aria-label={`Remove ${app} app filter`}
+                                    title={`Remove ${searchbaseAppLabel(app, appLabelsById)} app filter`}
+                                    aria-label={`Remove ${searchbaseAppLabel(app, appLabelsById)} app filter`}
                                     className="rounded-full p-0.5 hover:bg-sky-700/40"
                                 >
                                     <X className={compact ? 'h-2 w-2' : 'h-2.5 w-2.5'} />
@@ -752,7 +735,9 @@ const AppMultiSelect: React.FC<AppMultiSelectProps> = ({
                                     >
                                         {selected && <Check className="h-3 w-3" />}
                                     </span>
-                                    <span className="truncate">{app}</span>
+                                    <span className="truncate" title={app}>
+                                        {searchbaseAppLabel(app, appLabelsById)}
+                                    </span>
                                 </span>
                                 <span className="shrink-0 text-[10px] font-bold text-slate-400 dark:text-slate-500">
                                     {count}
@@ -785,8 +770,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     drilldownBindings,
     onTestInSearch,
     onResetAllCustomizations,
-    onSaveFactoryDefaults,
-    factoryDefaultsStatus = 'idle',
+    onPublishWorkspaceLayout,
+    workspaceLayoutStatus = 'idle',
     onApplyDisplayToSection,
     canManageFactoryConfig = false,
     onSaveFactoryTileConfig,
@@ -1039,9 +1024,9 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     // Reset transient form state when the panel opens for a new tile.
     // Sub-category and tag selections start cleared every time so the
     // user always sees the full slice of the chosen category. The App
-    // facet resets to the dashboard-pack default so each new picker
-    // open is scoped to vetted searches by default. Filters block
-    // collapses so the user lands on a clean result list.
+    // facet resets to All apps so every new picker open starts with the
+    // complete catalogue. Filters block collapses so the user lands on a
+    // clean result list.
     useEffect(() => {
         if (!open || !context) return;
         setQuery('');
@@ -1270,29 +1255,39 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         return names;
     }, [catalogue]);
 
-    // Entries the main browse list is allowed to render after App and
-    // Visibility filters. Category / sub-category / tag option lists are
-    // derived from this same slice so hidden drilldown/table-only branches
-    // cannot be selected into an empty result list.
-    const browseVisibleEntries = useMemo(() => {
-        return catalogue.filter((entry) => {
-            if (!entryMatchesAppSelection(entry, selectedApps)) {
-                return false;
-            }
-            return entryMatchesBrowseVisibility(
+    // This is deliberately independent of the App facet. App choices and
+    // counts must reflect the active visibility controls; otherwise an app
+    // containing only hidden searches remains selectable and leads to an
+    // empty result list.
+    const visibilityEligibleEntries = useMemo(() => {
+        return catalogue.filter((entry) =>
+            entryMatchesBrowseVisibility(
                 entry,
                 drilldownSearchNames,
+                includeHiddenSearches,
                 includeDrilldownSearches,
                 includeTableSearches
-            );
-        });
+            )
+        );
     }, [
         catalogue,
         drilldownSearchNames,
+        includeHiddenSearches,
         includeDrilldownSearches,
         includeTableSearches,
-        selectedApps,
     ]);
+
+    // Entries the main browse list is allowed to render after App and
+    // Visibility filters. Category / sub-category / tag option lists are
+    // derived from this same slice so unavailable branches cannot be selected
+    // into an empty result list.
+    const browseVisibleEntries = useMemo(
+        () =>
+            visibilityEligibleEntries.filter((entry) =>
+                entryMatchesAppSelection(entry, selectedApps)
+            ),
+        [selectedApps, visibilityEligibleEntries]
+    );
 
     // Distinct, sorted category list - drives the Category dropdown.
     // Scoped to the active App and Visibility facets so app selections
@@ -1341,28 +1336,53 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         }
     }, [selectedSubCategory, subCategories]);
 
-    // Distinct app namespaces (`dispatch_context` values) present in
-    // the catalogue. Drives the App facet dropdown. Sorted
-    // alphabetically so the order is stable across loads.
+    // Distinct app namespaces (`dispatch_context` values) in the visibility
+    // slice. Drives the App facet dropdown.
     const apps = useMemo(() => {
         const set = new Set<string>();
-        for (const e of catalogue) {
-            if (e.dispatchContext) set.add(e.dispatchContext);
+        for (const e of visibilityEligibleEntries) {
+            if (e.catalogueApp) set.add(e.catalogueApp);
         }
         return Array.from(set).sort((a, b) =>
             a.localeCompare(b, undefined, { sensitivity: 'base' })
         );
-    }, [catalogue]);
+    }, [visibilityEligibleEntries]);
 
     const appCountByName = useMemo(() => {
         const map = new Map<string, number>();
-        for (const entry of catalogue) {
-            if (entry.dispatchContext) {
-                map.set(entry.dispatchContext, (map.get(entry.dispatchContext) ?? 0) + 1);
+        for (const entry of visibilityEligibleEntries) {
+            if (entry.catalogueApp) {
+                map.set(entry.catalogueApp, (map.get(entry.catalogueApp) ?? 0) + 1);
             }
         }
         return map;
-    }, [catalogue]);
+    }, [visibilityEligibleEntries]);
+
+    useEffect(() => {
+        setSelectedApps((current) => {
+            if (current.size === 0) return current;
+            const next = new Set([...current].filter((app) => apps.includes(app)));
+            return next.size === current.size ? current : next;
+        });
+    }, [apps]);
+
+    const [appLabelsById, setAppLabelsById] = useState<Map<string, string>>(
+        () => new Map()
+    );
+
+    useEffect(() => {
+        let cancelled = false;
+        getSplunkAppLabels(new Set(apps))
+            .then((labels) => {
+                if (!cancelled) setAppLabelsById(labels);
+            })
+            .catch(() => {
+                if (!cancelled) setAppLabelsById(new Map());
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [apps]);
 
     const drilldownBaseEntries = useMemo(
         () =>
@@ -1377,7 +1397,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     const drilldownApps = useMemo(() => {
         const set = new Set<string>();
         for (const entry of drilldownBaseEntries) {
-            if (entry.dispatchContext) set.add(entry.dispatchContext);
+            if (entry.catalogueApp) set.add(entry.catalogueApp);
         }
         return Array.from(set).sort((a, b) =>
             a.localeCompare(b, undefined, { sensitivity: 'base' })
@@ -1387,8 +1407,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     const drilldownAppCountByName = useMemo(() => {
         const map = new Map<string, number>();
         for (const entry of drilldownBaseEntries) {
-            if (entry.dispatchContext) {
-                map.set(entry.dispatchContext, (map.get(entry.dispatchContext) ?? 0) + 1);
+            if (entry.catalogueApp) {
+                map.set(entry.catalogueApp, (map.get(entry.catalogueApp) ?? 0) + 1);
             }
         }
         return map;
@@ -1959,8 +1979,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         const drilldownChanged =
             nextDrilldown !== (configuredDrilldownNameFor(selectedEntry, drilldownBindings) || null);
 
-        // Rebinding a tile to a different search is org-wide and
-        // high-blast-radius (every viewer's dashboard changes), but
+        // Rebinding a tile to a different search is shared with the
+        // current workspace's viewers, but
         // `selectedEntry` also drives simple browsing/previewing in
         // the results list above — clicking around to look at other
         // searches while this picker happens to be open for a
@@ -1970,8 +1990,10 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         // actually writes anything, same pattern as Factory Reset.
         if (searchChanged && typeof window !== 'undefined') {
             const confirmed = window.confirm(
-                `Rebind "${context.defaultLabel}" from "${context.currentSavedSearch ?? '(none)'}" to "${selectedEntry.searchName}"?\n\n` +
-                    'This is an org-wide change — every viewer of this dashboard will see the new search, not just you.'
+                `Replace the search for "${context.defaultLabel}"?\n\n` +
+                    `Current: ${context.currentSavedSearch ?? '(none)'}\n` +
+                    `New: ${selectedEntry.searchName}\n\n` +
+                    'This shared workspace tile will show the new search for all viewers of this workspace.'
             );
             if (!confirmed) return;
         }
@@ -2070,21 +2092,21 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                 '  • Section heights and the signal rail selection\n' +
                 '  • Your saved map position and visibility\n' +
                 '  • The map ↔ tiles splitter position\n\n' +
-                'Shared factory defaults, tile configuration, map topology, header branding, and your light/dark theme preference will be kept.\n\n' +
+                'Published workspace layouts, tile configuration, map topology, header branding, and your light/dark theme preference will be kept.\n\n' +
                 'This action cannot be undone.'
         );
         if (!ok) return;
         onResetAllCustomizations();
     };
 
-    const handleSaveFactoryDefaults = () => {
-        if (!onSaveFactoryDefaults) return;
+    const handlePublishWorkspaceLayout = () => {
+        if (!onPublishWorkspaceLayout) return;
         const ok = window.confirm(
-            'Save the current Overview tile order and visible tile counts as the shared factory default?\n\n' +
-                'This updates the app-level defaults for all users. Users with their own local tile layout keep it until they use Factory reset.'
+            'Publish the current tile order and visible tile counts for this workspace?\n\n' +
+                'This updates the shared workspace layout for all users. Personal tile choices remain until a user resets the workspace.'
         );
         if (!ok) return;
-        void onSaveFactoryDefaults();
+        void onPublishWorkspaceLayout();
     };
 
     const handleClearFacets = () => {
@@ -2262,6 +2284,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 <AppMultiSelect
                                     apps={apps}
                                     appCountByName={appCountByName}
+                                    appLabelsById={appLabelsById}
                                     selectedApps={selectedApps}
                                     onChange={setSelectedApps}
                                     ariaLabel="Filter searches by app"
@@ -3279,6 +3302,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                     appCountByName={
                                                                         drilldownAppCountByName
                                                                     }
+                                                                    appLabelsById={appLabelsById}
                                                                     selectedApps={
                                                                         drilldownSelectedApps
                                                                     }
@@ -4314,7 +4338,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 </button>
                             </>
                         )}
-                        {onSaveFactoryDefaults && (
+                        {onPublishWorkspaceLayout && (
                             <>
                                 <span
                                     aria-hidden="true"
@@ -4322,26 +4346,26 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 />
                                 <button
                                     type="button"
-                                    onClick={handleSaveFactoryDefaults}
-                                    disabled={factoryDefaultsStatus === 'saving'}
-                                    title="Save current tile order and counts as the shared Overview factory default"
+                                    onClick={handlePublishWorkspaceLayout}
+                                    disabled={workspaceLayoutStatus === 'saving'}
+                                    title="Publish current tile order and counts as the shared workspace layout"
                                     className={cn(
                                         'inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider flex-shrink-0',
-                                        factoryDefaultsStatus === 'error'
+                                        workspaceLayoutStatus === 'error'
                                             ? 'text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300'
-                                            : factoryDefaultsStatus === 'saved'
+                                            : workspaceLayoutStatus === 'saved'
                                               ? 'text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300'
                                               : 'text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300',
-                                        factoryDefaultsStatus === 'saving' &&
+                                        workspaceLayoutStatus === 'saving' &&
                                             'opacity-60 cursor-wait'
                                     )}
                                 >
                                     <Settings2 className="w-3 h-3" />
-                                    {factoryDefaultsStatus === 'saving'
-                                        ? 'Saving defaults'
-                                        : factoryDefaultsStatus === 'saved'
-                                          ? 'Defaults saved'
-                                          : 'Save defaults'}
+                                    {workspaceLayoutStatus === 'saving'
+                                        ? 'Publishing layout'
+                                        : workspaceLayoutStatus === 'saved'
+                                          ? 'Layout published'
+                                          : 'Publish workspace layout'}
                                 </button>
                             </>
                         )}

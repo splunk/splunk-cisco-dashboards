@@ -7,11 +7,13 @@ import React, {
 } from "react";
 import {
   AlertTriangle,
+  ArrowLeft,
   Check,
   ChevronDown,
   ChevronRight,
   ClipboardCopy,
   ExternalLink,
+  Info,
   Loader2,
   Play,
   RefreshCw,
@@ -19,6 +21,7 @@ import {
   Search,
 } from "lucide-react";
 import { getDefaultFetchInit } from "@splunk/splunk-utils/fetch";
+import { versionLabel } from "@splunk/splunk-utils/config";
 import TimeRangeDropdown from "@splunk/react-time-range/Dropdown";
 
 import {
@@ -31,19 +34,46 @@ import { splunkSearchAppUrl } from "@/common/lib/splunkSearchUrl";
 import timeParser from "../dashboardbuilder/custominput/timeparser";
 
 const APP_NAME = "splunk-cisco-dashboards";
+const APP_HOME_VIEW = "secure_networking_profile";
+const APP_SETUP_VIEW = "start";
 const CIM_APP_NAME = "Splunk_SA_CIM";
 const CISCO_SECURITY_APP_NAME = "CiscoSecurityCloud";
 const THOUSAND_EYES_APP_NAME = "ta_cisco_thousandeyes";
+const CATALYST_APP_NAME = "cisco-catalyst-app";
+const DATA_CENTER_NETWORKING_APP_NAME = "cisco_dc_networking_app_for_splunk";
+const MERAKI_APP_NAME = "Splunk_TA_cisco_meraki";
+const INTERSIGHT_APP_NAME = "Splunk_TA_Cisco_Intersight";
+const SPACES_APP_NAME = "ta_cisco_spaces";
 const TUNING_SEARCHBASE_ID = "admin_macro_index_tuning";
 const TUNING_SEARCH_NAME = "Admin - Macro Index Tuning";
 const ADHOC_MACRO_NAME = "scd_summariesonly";
 const DEFAULT_SUMMARIESONLY_DEFINITION =
-  "summariesonly=false allow_old_summaries=false fillnull_value=null";
+  "summariesonly=false allow_old_summaries=false";
+const ACCELERATED_SUMMARIESONLY_DEFINITION =
+  "summariesonly=true allow_old_summaries=true";
+const DEFAULT_SUMMARIESONLY_DESCRIPTION =
+  "Controls whether data-model searches use only accelerated summaries or may fall back to raw events. Keep summariesonly=false until all required data models are fully accelerated.";
+const SUMMARIESONLY_ACCELERATION_ERROR =
+  "summariesonly=true requires acceleration for Cisco Catalyst, Cisco Security, and Cisco ThousandEyes.";
+const SPLUNK_DOCS_VERSION = versionLabel.match(/^(\d+\.\d+)/)?.[1] || "10.4";
+const DATA_MODEL_ACCELERATION_DOCS_URL = `https://help.splunk.com/en/splunk-enterprise/manage-knowledge-objects/knowledge-management-manual/${SPLUNK_DOCS_VERSION}/use-data-summaries-to-accelerate-searches/accelerate-data-models`;
+const DATA_MODEL_ACCELERATION_SEARCH = `
+| rest splunk_server=local timeout=600 /servicesNS/-/-/data/models
+| rename eai:acl.* AS *, eai:data AS data
+| rename field.* AS *
+| rename acceleration.* AS *
+| stats last(disabled) AS disabled last(acceleration) AS acceleration last(allow_old_summaries) AS allow_old_summaries last(earliest_time) AS earliest_time by app title
+| search (app=Splunk_SA_CIM title IN (Authentication, Network_Traffic)) OR app IN (CiscoSecurityCloud, ta_cisco_thousandeyes, cisco-catalyst-app, cisco_dc_networking_app_for_splunk)
+| sort 0 app title
+| table app title acceleration allow_old_summaries earliest_time disabled
+`;
 const DEFAULT_INDEX_IN_DEFINITION = "index IN (*)";
 const DEFAULT_INDEX_OR_DEFINITION = "(index=*)";
+const DEFAULT_SOURCETYPE_IN_DEFINITION = "sourcetype IN (*)";
 const SCD_INDEX_MACRO_OR_PLACEHOLDER = "__SCD_INDEX_MACRO_OR__";
 const FALLBACK_SCD_INDEX_MACRO_NAMES = [
   "index_catalyst",
+  "index_cloud_native",
   "index_cybervision",
   "index_dc",
   "index_dhcp",
@@ -63,10 +93,190 @@ const FALLBACK_SCD_INDEX_MACRO_NAMES = [
   "index_windows",
   "index_zeek",
 ] as const;
-const CIM_MACRO_NAMES = [
-  "cim_Authentication_indexes",
-  "cim_Network_Traffic_indexes",
+const cimHasTag = (tag: string): string =>
+  `mvfind(cim_tags,"^${tag}$")>=0`;
+const cimAll = (...predicates: string[]): string =>
+  `(${predicates.join(" AND ")})`;
+const cimAny = (...predicates: string[]): string =>
+  `(${predicates.join(" OR ")})`;
+
+const CIM_DATA_MODEL_DISCOVERY_CONFIGS = [
+  {
+    macro: "cim_Alerts_indexes",
+    model: "Alerts",
+    predicate: cimHasTag("alert"),
+  },
+  {
+    macro: "cim_Application_State_indexes",
+    model: "Application State",
+    predicate: cimAny(
+      cimAll(cimHasTag("listening"), cimHasTag("port")),
+      cimAll(cimHasTag("process"), cimHasTag("report")),
+      cimAll(cimHasTag("service"), cimHasTag("report")),
+    ),
+  },
+  {
+    macro: "cim_Authentication_indexes",
+    model: "Authentication",
+    predicate: cimAll(
+      cimHasTag("authentication"),
+      'NOT (action=="success" AND match(user,"\\$$"))',
+    ),
+  },
+  {
+    macro: "cim_Certificates_indexes",
+    model: "Certificates",
+    predicate: cimHasTag("certificate"),
+  },
+  {
+    macro: "cim_Change_Analysis_indexes",
+    model: "Change Analysis",
+    predicate: cimHasTag("change"),
+  },
+  {
+    macro: "cim_Change_indexes",
+    model: "Change",
+    predicate: cimHasTag("change"),
+  },
+  {
+    macro: "cim_Compute_Inventory_indexes",
+    model: "Compute Inventory",
+    predicate: cimAll(
+      cimHasTag("inventory"),
+      cimAny(
+        cimHasTag("cpu"),
+        cimHasTag("memory"),
+        cimHasTag("network"),
+        cimHasTag("storage"),
+        cimAll(cimHasTag("system"), cimHasTag("version")),
+        cimHasTag("user"),
+        cimHasTag("virtual"),
+      ),
+    ),
+  },
+  {
+    macro: "cim_DLP_indexes",
+    model: "Data Loss Prevention",
+    predicate: cimAll(cimHasTag("dlp"), cimHasTag("incident")),
+  },
+  {
+    macro: "cim_Databases_indexes",
+    model: "Databases",
+    predicate: cimHasTag("database"),
+  },
+  {
+    macro: "cim_Data_Access_indexes",
+    model: "Data Access",
+    predicate: cimAll(cimHasTag("data"), cimHasTag("access")),
+  },
+  {
+    macro: "cim_Email_indexes",
+    model: "Email",
+    predicate: cimHasTag("email"),
+  },
+  {
+    macro: "cim_Endpoint_indexes",
+    model: "Endpoint",
+    predicate: cimAny(
+      cimAll(cimHasTag("listening"), cimHasTag("port")),
+      cimAll(cimHasTag("process"), cimHasTag("report")),
+      cimAll(cimHasTag("service"), cimHasTag("report")),
+      cimAll(cimHasTag("endpoint"), cimHasTag("filesystem")),
+      cimAll(cimHasTag("endpoint"), cimHasTag("registry")),
+    ),
+  },
+  {
+    macro: "cim_Event_Signatures_indexes",
+    model: "Event Signatures",
+    predicate: cimAll(
+      cimHasTag("track_event_signatures"),
+      "(isnotnull(signature) OR isnotnull(signature_id))",
+    ),
+  },
+  {
+    macro: "cim_Interprocess_Messaging_indexes",
+    model: "Interprocess Messaging",
+    predicate: cimHasTag("messaging"),
+  },
+  {
+    macro: "cim_Intrusion_Detection_indexes",
+    model: "Intrusion Detection",
+    predicate: cimAll(cimHasTag("ids"), cimHasTag("attack")),
+  },
+  {
+    macro: "cim_JVM_indexes",
+    model: "JVM",
+    predicate: cimHasTag("jvm"),
+  },
+  {
+    macro: "cim_Malware_indexes",
+    model: "Malware",
+    predicate: cimAll(cimHasTag("malware"), cimHasTag("attack")),
+  },
+  {
+    macro: "cim_Network_Resolution_indexes",
+    model: "Network Resolution",
+    predicate: cimAll(
+      cimHasTag("network"),
+      cimHasTag("resolution"),
+      cimHasTag("dns"),
+    ),
+  },
+  {
+    macro: "cim_Network_Sessions_indexes",
+    model: "Network Sessions",
+    predicate: cimAll(cimHasTag("network"), cimHasTag("session")),
+  },
+  {
+    macro: "cim_Network_Traffic_indexes",
+    model: "Network Traffic",
+    predicate: cimAll(cimHasTag("network"), cimHasTag("communicate")),
+  },
+  {
+    macro: "cim_Performance_indexes",
+    model: "Performance",
+    predicate: cimAll(
+      cimHasTag("performance"),
+      cimAny(
+        cimHasTag("cpu"),
+        cimHasTag("facilities"),
+        cimHasTag("memory"),
+        cimHasTag("storage"),
+        cimHasTag("network"),
+        cimAll(
+          cimHasTag("os"),
+          cimAny(
+            cimAll(cimHasTag("time"), cimHasTag("synchronize")),
+            cimHasTag("uptime"),
+          ),
+        ),
+      ),
+    ),
+  },
+  {
+    macro: "cim_Ticket_Management_indexes",
+    model: "Ticket Management",
+    predicate: cimHasTag("ticketing"),
+  },
+  {
+    macro: "cim_Updates_indexes",
+    model: "Updates",
+    predicate: cimAll(cimHasTag("update"), cimHasTag("status")),
+  },
+  {
+    macro: "cim_Vulnerabilities_indexes",
+    model: "Vulnerabilities",
+    predicate: cimAll(cimHasTag("vulnerability"), cimHasTag("report")),
+  },
+  {
+    macro: "cim_Web_indexes",
+    model: "Web",
+    predicate: cimHasTag("web"),
+  },
 ] as const;
+const CIM_MACRO_NAMES = CIM_DATA_MODEL_DISCOVERY_CONFIGS.map(
+  ({ macro }) => macro,
+);
 const CISCO_SECURITY_MODEL_MACRO_NAMES = [
   "nvm_sysdata_index",
   "nvm_process_index",
@@ -81,17 +291,54 @@ const THOUSAND_EYES_MODEL_MACRO_NAMES = [
   "trace_index",
   "alert_index",
 ] as const;
+const CATALYST_APP_MACRO_NAMES = [
+  "cisco_catalyst_app_index",
+  "cisco_catalyst_app_sourcetypes",
+  "cisco_catalyst_sdwan_index",
+] as const;
+const DATA_CENTER_NETWORKING_INDEX_MACRO_NAMES = [
+  "cisco_dc_aci_index",
+  "cisco_dc_nd_index",
+  "cisco_dc_n9k_index",
+] as const;
+const COMPANION_APP_INDEX_MACROS = [
+  {
+    macro: "meraki_index",
+    targetApp: MERAKI_APP_NAME,
+    family: "meraki",
+  },
+  {
+    macro: "cisco_intersight_index",
+    targetApp: INTERSIGHT_APP_NAME,
+    family: "intersight",
+  },
+  {
+    macro: "spaces_index",
+    targetApp: SPACES_APP_NAME,
+    family: "spaces",
+  },
+] as const;
 const TARGET_APP_ORDER = [
   APP_NAME,
+  CATALYST_APP_NAME,
+  DATA_CENTER_NETWORKING_APP_NAME,
+  MERAKI_APP_NAME,
+  INTERSIGHT_APP_NAME,
+  SPACES_APP_NAME,
   CISCO_SECURITY_APP_NAME,
   THOUSAND_EYES_APP_NAME,
   CIM_APP_NAME,
 ] as const;
 const TARGET_APP_LABELS: Record<string, string> = {
-  [APP_NAME]: "SCD",
-  [CIM_APP_NAME]: "CIM",
-  [CISCO_SECURITY_APP_NAME]: "Cisco Security",
-  [THOUSAND_EYES_APP_NAME]: "ThousandEyes",
+  [APP_NAME]: "Splunk App for Secure Networking",
+  [CATALYST_APP_NAME]: "Cisco Enterprise Networking for Splunk Platform",
+  [DATA_CENTER_NETWORKING_APP_NAME]: "Cisco DC Networking App for Splunk",
+  [MERAKI_APP_NAME]: "Cisco Meraki Add-on for Splunk",
+  [INTERSIGHT_APP_NAME]: "Cisco Intersight Add-On for Splunk",
+  [SPACES_APP_NAME]: "Cisco Spaces Add-on for Splunk",
+  [CIM_APP_NAME]: "Splunk Common Information Model",
+  [CISCO_SECURITY_APP_NAME]: "Cisco Security Cloud",
+  [THOUSAND_EYES_APP_NAME]: "Cisco ThousandEyes App for Splunk",
 };
 const CISCO_SECURITY_DEFINITION_SUFFIXES: Record<string, string> = {
   nvm_sysdata_index: 'sourcetype="cisco:nvm:sysdata:v2"',
@@ -100,11 +347,64 @@ const CISCO_SECURITY_DEFINITION_SUFFIXES: Record<string, string> = {
   nvm_combined_index:
     '(sourcetype="cisco:nvm:flowdata:v2" OR sourcetype="cisco:nvm:processinfodata:v2")',
 };
+const EXTERNAL_MACRO_DESCRIPTIONS: Record<string, string> = {
+  nvm_sysdata_index:
+    "Routes Cisco Security Cloud endpoint inventory searches to indexes containing Cisco NVM system-data events.",
+  nvm_process_index:
+    "Routes Cisco Security Cloud process inventory searches to indexes containing Cisco NVM process-information events.",
+  nvm_flowdata_index:
+    "Routes Cisco Security Cloud endpoint network searches to indexes containing Cisco NVM flow-data events.",
+  nvm_combined_index:
+    "Routes Cisco Security Cloud correlation searches across both Cisco NVM flow-data and process-information events.",
+  stream_index:
+    "Routes ThousandEyes metric and stream searches to indexes containing test measurement events.",
+  path_viz_index:
+    "Routes ThousandEyes path visualization searches to indexes containing hop-by-hop path data.",
+  activity_index:
+    "Routes ThousandEyes audit and activity searches to indexes containing account activity events.",
+  event_index:
+    "Routes ThousandEyes event searches to indexes containing outage and test event records.",
+  trace_index:
+    "Routes ThousandEyes trace searches to indexes containing detailed test trace records.",
+  alert_index:
+    "Routes ThousandEyes alert searches to indexes containing active and historical alert events.",
+  cisco_catalyst_app_index:
+    "Routes Cisco Catalyst dashboard searches to indexes containing Catalyst Center, ISE, SD-WAN, CyberVision, Meraki, IOS, ThousandEyes, and related network events.",
+  cisco_catalyst_app_sourcetypes:
+    "Defines the broad app-owned sourcetype allow-list used by the Cisco Catalyst data model and index discovery. Keep it broad; use the index macros for deployment-specific scoping.",
+  cisco_catalyst_sdwan_index:
+    "Routes Cisco Catalyst SD-WAN dashboard searches to indexes containing Cisco SD-WAN events.",
+  cisco_dc_aci_index:
+    "Routes Cisco Data Center Networking ACI searches to indexes containing ACI events.",
+  cisco_dc_nd_index:
+    "Routes Cisco Data Center Networking Nexus Dashboard searches to indexes containing Nexus Dashboard and MSO events.",
+  cisco_dc_n9k_index:
+    "Routes Cisco Data Center Networking Nexus 9000 searches to indexes containing Nexus 9000 events.",
+  meraki_index:
+    "Routes Cisco Meraki Add-on searches to indexes containing Meraki dashboard, appliance, switch, wireless, and security events.",
+  cisco_intersight_index:
+    "Routes Cisco Intersight Add-On searches to indexes containing Cisco Intersight inventory, health, and operations events.",
+  spaces_index:
+    "Routes Cisco Spaces Add-on searches to indexes containing Cisco Spaces firehose events.",
+};
 
 type ScanState = "idle" | "loading" | "ready" | "error";
 type SaveState = "idle" | "saving" | "saved" | "error";
 type CopyState = "idle" | "copied" | "selected" | "error";
-type DefinitionFormat = "indexIn" | "indexOr";
+type DefinitionFormat = "indexIn" | "indexOr" | "sourcetypeIn";
+type DataModelAccelerationState =
+  | "checking"
+  | "enabled"
+  | "disabled"
+  | "missing"
+  | "error";
+type DashboardSectionKey =
+  | "appCoverage"
+  | "performance"
+  | "acceleration"
+  | "dashboardMacros"
+  | "externalMacros"
+  | "diagnostics";
 
 interface SearchTimeRange {
   earliest: string;
@@ -128,7 +428,17 @@ interface TunableMacroConfig {
   targetApp: string;
   definitionFormat: DefinitionFormat;
   definitionSuffix?: string;
-  family: "scd" | "cim" | "ciscoSecurity" | "thousandEyes";
+  preserveCurrentDefinition?: boolean;
+  family:
+    | "scd"
+    | "cim"
+    | "catalyst"
+    | "dataCenterNetworking"
+    | "meraki"
+    | "intersight"
+    | "spaces"
+    | "ciscoSecurity"
+    | "thousandEyes";
 }
 
 const CIM_MACRO_CONFIGS: TunableMacroConfig[] = CIM_MACRO_NAMES.map(
@@ -154,6 +464,32 @@ const THOUSAND_EYES_MODEL_MACRO_CONFIGS: TunableMacroConfig[] =
     definitionFormat: "indexOr",
     family: "thousandEyes",
   }));
+const CATALYST_APP_MACRO_CONFIGS: TunableMacroConfig[] =
+  CATALYST_APP_MACRO_NAMES.map((macro) => ({
+    macro,
+    targetApp: CATALYST_APP_NAME,
+    definitionFormat:
+      macro === "cisco_catalyst_app_sourcetypes"
+        ? "sourcetypeIn"
+        : "indexIn",
+    preserveCurrentDefinition:
+      macro === "cisco_catalyst_app_sourcetypes",
+    family: "catalyst",
+  }));
+const DATA_CENTER_NETWORKING_INDEX_MACRO_CONFIGS: TunableMacroConfig[] =
+  DATA_CENTER_NETWORKING_INDEX_MACRO_NAMES.map((macro) => ({
+    macro,
+    targetApp: DATA_CENTER_NETWORKING_APP_NAME,
+    definitionFormat: "indexIn",
+    family: "dataCenterNetworking",
+  }));
+const COMPANION_APP_INDEX_MACRO_CONFIGS: TunableMacroConfig[] =
+  COMPANION_APP_INDEX_MACROS.map(({ macro, targetApp, family }) => ({
+    macro,
+    targetApp,
+    definitionFormat: "indexIn",
+    family,
+  }));
 
 const buildScdIndexMacroConfigs = (
   macroNames: readonly string[],
@@ -169,6 +505,9 @@ const buildTuningMacroCatalog = (scdIndexMacroNames: readonly string[]) => {
   const indexMacroConfigs = buildScdIndexMacroConfigs(scdIndexMacroNames);
   const fastTuningMacroConfigs: TunableMacroConfig[] = [
     ...indexMacroConfigs,
+    ...CATALYST_APP_MACRO_CONFIGS,
+    ...DATA_CENTER_NETWORKING_INDEX_MACRO_CONFIGS,
+    ...COMPANION_APP_INDEX_MACRO_CONFIGS,
     ...CISCO_SECURITY_MODEL_MACRO_CONFIGS,
     ...THOUSAND_EYES_MODEL_MACRO_CONFIGS,
   ];
@@ -202,6 +541,7 @@ const CIM_MACRO_NAME_SET = new Set<string>(CIM_MACRO_NAMES);
 
 interface MacroRow {
   macro: string;
+  description: string;
   targetApp: string;
   definitionFormat: DefinitionFormat;
   definition: string;
@@ -224,6 +564,95 @@ interface SaveStatus {
   state: SaveState;
   message?: string;
 }
+
+interface MacroDetails {
+  definition: string;
+  description: string;
+}
+
+interface DataModelRequirement {
+  key: string;
+  label: string;
+  app: string;
+  model: string;
+  priority: "required" | "recommended";
+}
+
+interface DataModelAcceleration extends DataModelRequirement {
+  state: DataModelAccelerationState;
+  earliestTime: string;
+  allowOldSummaries: boolean;
+  message: string;
+}
+
+interface DataModelGroup {
+  app: string;
+  label: string;
+  items: DataModelAcceleration[];
+  enabledCount: number;
+  attentionCount: number;
+  checkingCount: number;
+}
+
+const CORE_DATA_MODEL_REQUIREMENTS: readonly DataModelRequirement[] = [
+  {
+    key: "catalyst",
+    label: "Cisco Catalyst",
+    app: CATALYST_APP_NAME,
+    model: "Cisco_Catalyst_App",
+    priority: "required",
+  },
+  {
+    key: "security",
+    label: "Cisco Security",
+    app: CISCO_SECURITY_APP_NAME,
+    model: "Cisco_Security",
+    priority: "required",
+  },
+  {
+    key: "thousandeyes",
+    label: "Cisco ThousandEyes",
+    app: THOUSAND_EYES_APP_NAME,
+    model: "Cisco_ThousandEyes",
+    priority: "required",
+  },
+  {
+    key: "authentication",
+    label: "Authentication",
+    app: CIM_APP_NAME,
+    model: "Authentication",
+    priority: "recommended",
+  },
+  {
+    key: "network-traffic",
+    label: "Network Traffic",
+    app: CIM_APP_NAME,
+    model: "Network_Traffic",
+    priority: "recommended",
+  },
+] as const;
+
+const DATA_MODEL_APP_LABELS: Readonly<Record<string, string>> = {
+  [CATALYST_APP_NAME]: "Cisco Catalyst",
+  [CISCO_SECURITY_APP_NAME]: "Cisco Security Cloud",
+  [THOUSAND_EYES_APP_NAME]: "Cisco ThousandEyes",
+  [DATA_CENTER_NETWORKING_APP_NAME]: "Cisco Data Center Networking",
+  [CIM_APP_NAME]: "Splunk Common Information Model",
+};
+
+const DATA_MODEL_APP_ORDER = [
+  CATALYST_APP_NAME,
+  CISCO_SECURITY_APP_NAME,
+  THOUSAND_EYES_APP_NAME,
+  DATA_CENTER_NETWORKING_APP_NAME,
+  CIM_APP_NAME,
+] as const;
+
+const REQUIRED_DATA_MODEL_KEYS = new Set(
+  CORE_DATA_MODEL_REQUIREMENTS.filter(
+    (requirement) => requirement.priority === "required",
+  ).map((requirement) => `${requirement.app}:${requirement.model}`),
+);
 
 const DEFAULT_FAST_TIME_RANGE: SearchTimeRange = {
   earliest: "-7d@d",
@@ -253,16 +682,44 @@ const TIME_PRESETS = [
   { label: "All time", earliest: "0", latest: "now" },
 ];
 
+const CIM_DISCOVERY_BASE_TAGS = [
+  "alert",
+  "listening",
+  "process",
+  "service",
+  "authentication",
+  "certificate",
+  "change",
+  "inventory",
+  "dlp",
+  "database",
+  "data",
+  "email",
+  "endpoint",
+  "track_event_signatures",
+  "messaging",
+  "ids",
+  "jvm",
+  "malware",
+  "network",
+  "performance",
+  "ticketing",
+  "update",
+  "vulnerability",
+  "web",
+] as const;
 const CIM_DISCOVERY_SEARCH = [
-  "search index=* tag=authentication NOT (action=success user=*$)",
+  `search index=* (${CIM_DISCOVERY_BASE_TAGS.map((tag) => `tag=${tag}`).join(" OR ")})`,
+  "| tags outputfield=cim_tags",
+  `| eval macro=mvappend(${CIM_DATA_MODEL_DISCOVERY_CONFIGS.map(
+    ({ macro, predicate }) =>
+      `if(${predicate},"${macro}",null())`,
+  ).join(",")})`,
+  "| where isnotnull(macro)",
+  "| mvexpand macro",
   '| eval sourcetype=coalesce(sourcetype, "(unknown sourcetype)")',
-  "| stats count by index, sourcetype",
-  `| eval macro="cim_Authentication_indexes", target_app="${CIM_APP_NAME}", definition_format="indexOr"`,
-  "| append [ search index=* tag=network tag=communicate",
-  '| eval sourcetype=coalesce(sourcetype, "(unknown sourcetype)")',
-  "| stats count by index, sourcetype",
-  `| eval macro="cim_Network_Traffic_indexes", target_app="${CIM_APP_NAME}", definition_format="indexOr" ]`,
-  "| stats values(index) as indexes, values(sourcetype) as sourcetypes, dc(sourcetype) as sourcetype_count, sum(count) as events by macro, target_app, definition_format",
+  "| stats values(index) as indexes, values(sourcetype) as sourcetypes, dc(sourcetype) as sourcetype_count, count as events by macro",
+  `| eval target_app="${CIM_APP_NAME}", definition_format="indexOr"`,
   '| eval definition="(index=".mvjoin(indexes, " OR index=").")"',
   "| table macro, target_app, definition_format, definition, indexes, sourcetypes, sourcetype_count, events",
 ].join("\n");
@@ -301,7 +758,10 @@ const normalizeNumber = (value: unknown): number => {
 
 const getMacroConfig = (
   macro: string,
-  macroConfigByName: Map<string, TunableMacroConfig> = DEFAULT_TUNING_MACRO_CATALOG.macroConfigByName,
+  macroConfigByName: Map<
+    string,
+    TunableMacroConfig
+  > = DEFAULT_TUNING_MACRO_CATALOG.macroConfigByName,
 ): TunableMacroConfig | undefined => macroConfigByName.get(macro);
 
 const getTargetAppLabel = (targetApp: string): string =>
@@ -309,12 +769,17 @@ const getTargetAppLabel = (targetApp: string): string =>
 
 const normalizeDefinitionFormat = (value: unknown): DefinitionFormat => {
   const normalized = normalizeText(value).trim();
-  return normalized === "indexOr" ? "indexOr" : "indexIn";
+  if (normalized === "indexOr") return "indexOr";
+  if (normalized === "sourcetypeIn") return "sourcetypeIn";
+  return "indexIn";
 };
 
 const parseSearchResult = (
   row: Record<string, unknown>,
-  macroConfigByName: Map<string, TunableMacroConfig> = DEFAULT_TUNING_MACRO_CATALOG.macroConfigByName,
+  macroConfigByName: Map<
+    string,
+    TunableMacroConfig
+  > = DEFAULT_TUNING_MACRO_CATALOG.macroConfigByName,
 ): MacroRow | null => {
   const macro = normalizeText(row.macro).trim();
   if (!macro) return null;
@@ -322,6 +787,7 @@ const parseSearchResult = (
   const rowTargetApp = normalizeText(row.target_app ?? row.app).trim();
   return {
     macro,
+    description: normalizeText(row.description).trim(),
     targetApp: config?.targetApp || rowTargetApp || APP_NAME,
     definitionFormat:
       config?.definitionFormat ||
@@ -350,6 +816,37 @@ const splunkManagerUrl = (managerPage: string): string =>
 
 const splunkAppManagerUrl = (app: string, managerPage: string): string =>
   `/${getSplunkLocale()}/manager/${encodeURIComponent(app)}/${managerPage}`;
+
+const splunkAppViewUrl = (view: string): string =>
+  `/${getSplunkLocale()}/app/${encodeURIComponent(APP_NAME)}/${view}`;
+
+const initialSetupConfigUrl = (): string =>
+  `/${getSplunkLocale()}/splunkd/__raw/servicesNS/nobody/${encodeURIComponent(
+    APP_NAME,
+  )}/configs/conf-setup/install?output_mode=json`;
+
+const splunkDataModelManagerUrl = ({
+  app,
+  model,
+}: Pick<DataModelRequirement, "app" | "model">): string =>
+  `${splunkAppManagerUrl(app, "data_model_manager")}?${new URLSearchParams({
+    appSearch: app,
+    visible: "0",
+    nameFilter: model,
+  }).toString()}`;
+
+const isInitialSetupMode = (): boolean =>
+  typeof window !== "undefined" &&
+  new URLSearchParams(window.location.search).get("setup") === "1";
+
+const isTrueConfigValue = (value: unknown): boolean =>
+  value === true ||
+  value === 1 ||
+  value === "1" ||
+  normalizeText(value).trim().toLowerCase() === "true";
+
+const usesSummariesOnly = (definition: string): boolean =>
+  /\bsummariesonly\s*=\s*(?:true|1)\b/i.test(definition);
 
 const cleanIndexToken = (value: string): string =>
   value
@@ -380,19 +877,33 @@ const extractIndexTokens = (definition: string): string[] => {
   return Array.from(tokens);
 };
 
-const formatIndexDefinition = (
-  indexes: string[],
+const extractSourcetypeTokens = (definition: string): string[] => {
+  const inMatch = definition.match(/\bsourcetype\s+IN\s*\(([^)]*)\)/i);
+  if (!inMatch) return [];
+  return inMatch[1]
+    .split(",")
+    .map(cleanIndexToken)
+    .filter(Boolean);
+};
+
+const formatMacroDefinition = (
+  values: string[],
   definitionFormat: DefinitionFormat,
   definitionSuffix = "",
 ): string => {
-  const tokens = indexes.map(cleanIndexToken).filter(Boolean);
-  const suffix = definitionSuffix.trim()
-    ? ` ${definitionSuffix.trim()}`
-    : "";
+  const tokens = values.map(cleanIndexToken).filter(Boolean);
+  const suffix = definitionSuffix.trim() ? ` ${definitionSuffix.trim()}` : "";
+  if (definitionFormat === "sourcetypeIn") {
+    const definition = tokens.length
+      ? `sourcetype IN (${tokens.map((token) => `"${token}"`).join(", ")})`
+      : DEFAULT_SOURCETYPE_IN_DEFINITION;
+    return `${definition}${suffix}`;
+  }
   if (!tokens.length) {
-    const defaultDefinition = definitionFormat === "indexOr"
-      ? DEFAULT_INDEX_OR_DEFINITION
-      : DEFAULT_INDEX_IN_DEFINITION;
+    const defaultDefinition =
+      definitionFormat === "indexOr"
+        ? DEFAULT_INDEX_OR_DEFINITION
+        : DEFAULT_INDEX_IN_DEFINITION;
     return `${defaultDefinition}${suffix}`;
   }
   if (definitionFormat === "indexOr") {
@@ -413,15 +924,22 @@ const buildMacroStanzas = (
         tunableMacroNameSet.has(row.macro) &&
         row.draftDefinition.trim(),
     )
-    .map(
-      (row) =>
-        `[${row.macro}]\ndefinition = ${row.draftDefinition.trim()}\niseval = 0`,
-    )
+    .map((row) => {
+      if (targetApp === CIM_APP_NAME) {
+        return `[${row.macro}]\ndefinition = ${row.draftDefinition.trim()}`;
+      }
+      const description = row.description.replace(/\s+/g, " ").trim();
+      return `[${row.macro}]\ndefinition = ${row.draftDefinition.trim()}\niseval = 0\ndescription = ${description}`;
+    })
     .join("\n\n");
 
-const buildMacroStanza = (macro: string, definition: string): string =>
+const buildMacroStanza = (
+  macro: string,
+  definition: string,
+  description: string,
+): string =>
   definition.trim()
-    ? `[${macro}]\ndefinition = ${definition.trim()}\niseval = 0`
+    ? `[${macro}]\ndefinition = ${definition.trim()}\niseval = 0\ndescription = ${description.replace(/\s+/g, " ").trim()}`
     : "";
 
 const macroStatusKey = (row: Pick<EditableMacroRow, "targetApp" | "macro">) =>
@@ -430,7 +948,7 @@ const macroStatusKey = (row: Pick<EditableMacroRow, "targetApp" | "macro">) =>
 const buildExpectedEditableRows = (
   configs: readonly TunableMacroConfig[],
   parsedRows: readonly MacroRow[],
-  currentDefinitions: Record<string, string>,
+  currentDetails: Record<string, MacroDetails>,
 ): EditableMacroRow[] => {
   const scannedByMacro = new Map(
     parsedRows.map((row) => [macroStatusKey(row), row]),
@@ -438,25 +956,40 @@ const buildExpectedEditableRows = (
 
   return configs.map((config) => {
     const scanned = scannedByMacro.get(`${config.targetApp}:${config.macro}`);
+    const details = currentDetails[`${config.targetApp}:${config.macro}`];
     const fallbackDefinition =
-      currentDefinitions[`${config.targetApp}:${config.macro}`] ||
+      details?.definition ||
       scanned?.definition ||
-      formatIndexDefinition(
+      formatMacroDefinition(
         [],
         config.definitionFormat,
         config.definitionSuffix,
       );
-    const draftDefinition = scanned?.definition || fallbackDefinition;
+    const draftDefinition =
+      config.preserveCurrentDefinition && details?.definition
+        ? details.definition
+        : scanned?.definition || fallbackDefinition;
 
     return {
       macro: config.macro,
+      description:
+        config.family === "cim"
+          ? ""
+          : details?.description ||
+            scanned?.description ||
+            EXTERNAL_MACRO_DESCRIPTIONS[config.macro] ||
+            `Controls index routing for ${config.macro} searches in ${getTargetAppLabel(config.targetApp)}.`,
       targetApp: config.targetApp,
       definitionFormat: config.definitionFormat,
       definition: draftDefinition,
       indexes: scanned?.indexes?.length
         ? scanned.indexes
         : extractIndexTokens(fallbackDefinition),
-      sourcetypes: scanned?.sourcetypes || [],
+      sourcetypes: scanned?.sourcetypes?.length
+        ? scanned.sourcetypes
+        : config.definitionFormat === "sourcetypeIn"
+          ? extractSourcetypeTokens(fallbackDefinition)
+          : [],
       sourcetypeCount: scanned?.sourcetypeCount || 0,
       events: scanned?.events || 0,
       draftDefinition,
@@ -491,6 +1024,7 @@ const rowMatchesFilter = (row: EditableMacroRow, terms: string[]): boolean => {
   if (!terms.length) return true;
   const haystack = [
     row.macro,
+    row.description,
     row.targetApp,
     row.definition,
     row.draftDefinition,
@@ -525,6 +1059,50 @@ const macroConfigUrl = (
   return `/en-US/splunkd/__raw/servicesNS/nobody/${app}/configs/conf-macros/${encodeURIComponent(
     macro,
   )}?output_mode=json`;
+};
+
+const macroPropertyUrl = (
+  macro: string,
+  property: string,
+  targetApp: string,
+): string => {
+  const app = encodeURIComponent(targetApp);
+  return `/${getSplunkLocale()}/splunkd/__raw/servicesNS/nobody/${app}/properties/macros/${encodeURIComponent(
+    macro,
+  )}/${encodeURIComponent(property)}?local_only=true&output_mode=json`;
+};
+
+interface SplunkAppInventoryEntry {
+  name?: unknown;
+  content?: { disabled?: unknown };
+}
+
+const installedAppsUrl = (): string =>
+  `/${getSplunkLocale()}/splunkd/__raw/services/apps/local?count=0&output_mode=json`;
+
+const loadInstalledAppIds = async (): Promise<Set<string>> => {
+  const response = await fetch(installedAppsUrl(), {
+    ...getDefaultFetchInit(),
+    method: "GET",
+  });
+  let payload: { entry?: SplunkAppInventoryEntry[] } | null = null;
+  try {
+    payload = (await response.json()) as { entry?: SplunkAppInventoryEntry[] };
+  } catch {
+    payload = null;
+  }
+  if (!response.ok) {
+    throw new Error(`Could not list installed apps (HTTP ${response.status}).`);
+  }
+
+  const appIds = new Set<string>([APP_NAME]);
+  (payload?.entry || []).forEach((entry) => {
+    const appId = normalizeText(entry.name).trim();
+    if (appId && !isTrueConfigValue(entry.content?.disabled)) {
+      appIds.add(appId);
+    }
+  });
+  return appIds;
 };
 
 const scdMacrosCatalogUrl = (): string => {
@@ -577,28 +1155,33 @@ const loadScdIndexMacroNames = async (): Promise<string[]> => {
     );
   }
 
-  const entries = (
-    payload as { entry?: Array<{ name?: unknown }> } | null
-  )?.entry;
+  const entries = (payload as { entry?: Array<{ name?: unknown }> } | null)
+    ?.entry;
   const names = (entries ?? [])
     .map((entry) => normalizeText(entry?.name).trim())
     .filter((name) => name.startsWith("index_"));
 
-  return names.length ? Array.from(new Set(names)).sort() : [...FALLBACK_SCD_INDEX_MACRO_NAMES];
+  return names.length
+    ? Array.from(new Set(names)).sort()
+    : [...FALLBACK_SCD_INDEX_MACRO_NAMES];
 };
 
 const saveMacroDefinition = async (
   macro: string,
   definition: string,
+  description: string,
   targetApp = APP_NAME,
 ): Promise<void> => {
+  const definitionOnly = targetApp === CIM_APP_NAME;
+  const requestBody = new URLSearchParams({ definition });
+  if (!definitionOnly) {
+    requestBody.set("description", description);
+    requestBody.set("iseval", "0");
+  }
   const response = await fetch(macroConfigUrl(macro, targetApp), {
     ...getDefaultFetchInit(),
     method: "POST",
-    body: new URLSearchParams({
-      definition,
-      iseval: "0",
-    }).toString(),
+    body: requestBody.toString(),
   });
 
   let payload: unknown = null;
@@ -614,12 +1197,127 @@ const saveMacroDefinition = async (
         `Save failed with HTTP ${response.status}.`,
     );
   }
+
+  if (definitionOnly) {
+    await Promise.all(
+      ["description", "iseval"].map(async (property) => {
+        const deleteResponse = await fetch(
+          macroPropertyUrl(macro, property, targetApp),
+          {
+            ...getDefaultFetchInit(),
+            method: "DELETE",
+          },
+        );
+        if (deleteResponse.ok || deleteResponse.status === 404) return;
+        throw new Error(
+          `Saved ${macro}, but could not remove its local ${property} setting (HTTP ${deleteResponse.status}).`,
+        );
+      }),
+    );
+  }
 };
 
-const loadMacroDefinition = async (
+const completeInitialSetup = async (): Promise<void> => {
+  const response = await fetch(initialSetupConfigUrl(), {
+    ...getDefaultFetchInit(),
+    method: "POST",
+    body: new URLSearchParams({ is_configured: "1" }).toString(),
+  });
+
+  let payload: unknown = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      extractSplunkError(payload) ||
+        `Setup could not be completed (HTTP ${response.status}).`,
+    );
+  }
+};
+
+const dataModelRequirementId = ({
+  app,
+  model,
+}: Pick<DataModelRequirement, "app" | "model">): string => `${app}:${model}`;
+
+const CORE_DATA_MODEL_REQUIREMENTS_BY_ID = new Map(
+  CORE_DATA_MODEL_REQUIREMENTS.map((requirement) => [
+    dataModelRequirementId(requirement),
+    requirement,
+  ]),
+);
+
+const dataModelLabel = (app: string, model: string): string =>
+  CORE_DATA_MODEL_REQUIREMENTS_BY_ID.get(`${app}:${model}`)?.label ||
+  model.replace(/_/g, " ").replace(/\bnexus\b/gi, "Nexus");
+
+const parseDataModelAcceleration = (
+  row: Record<string, unknown>,
+): DataModelAcceleration | null => {
+  const app = normalizeText(row.app).trim();
+  const model = normalizeText(row.title).trim();
+  if (!app || !model) return null;
+
+  const id = `${app}:${model}`;
+  const disabled = isTrueConfigValue(row.disabled);
+  const enabled = isTrueConfigValue(row.acceleration) && !disabled;
+  return {
+    key: id,
+    label: dataModelLabel(app, model),
+    app,
+    model,
+    priority: REQUIRED_DATA_MODEL_KEYS.has(id) ? "required" : "recommended",
+    state: enabled ? "enabled" : "disabled",
+    earliestTime: normalizeText(row.earliest_time).trim(),
+    allowOldSummaries: isTrueConfigValue(row.allow_old_summaries),
+    message: disabled
+      ? "Data model is disabled"
+      : enabled
+        ? "Acceleration enabled"
+        : "Acceleration is not enabled",
+  };
+};
+
+const buildDataModelAccelerationInventory = (
+  rows: Record<string, unknown>[],
+): DataModelAcceleration[] => {
+  const inventoryById = new Map<string, DataModelAcceleration>();
+  rows.forEach((row) => {
+    const item = parseDataModelAcceleration(row);
+    if (item) inventoryById.set(dataModelRequirementId(item), item);
+  });
+
+  CORE_DATA_MODEL_REQUIREMENTS.forEach((requirement) => {
+    const id = dataModelRequirementId(requirement);
+    if (inventoryById.has(id)) return;
+    inventoryById.set(id, {
+      ...requirement,
+      state: "missing",
+      earliestTime: "",
+      allowOldSummaries: false,
+      message: "Data model was not found",
+    });
+  });
+
+  const appRank = new Map<string, number>(
+    DATA_MODEL_APP_ORDER.map((app, index) => [app, index]),
+  );
+  return Array.from(inventoryById.values()).sort((left, right) => {
+    const appDifference =
+      (appRank.get(left.app) ?? DATA_MODEL_APP_ORDER.length) -
+      (appRank.get(right.app) ?? DATA_MODEL_APP_ORDER.length);
+    return appDifference || left.model.localeCompare(right.model);
+  });
+};
+
+const loadMacroDetails = async (
   macro: string,
   targetApp = APP_NAME,
-): Promise<string> => {
+): Promise<MacroDetails> => {
   const response = await fetch(macroConfigUrl(macro, targetApp), {
     ...getDefaultFetchInit(),
     method: "GET",
@@ -640,24 +1338,34 @@ const loadMacroDefinition = async (
   }
 
   const entries = (
-    payload as { entry?: Array<{ content?: { definition?: unknown } }> } | null
+    payload as {
+      entry?: Array<{
+        content?: { definition?: unknown; description?: unknown };
+      }>;
+    } | null
   )?.entry;
-  const definition = entries?.[0]?.content?.definition;
-  return typeof definition === "string" ? definition : "";
+  const content = entries?.[0]?.content;
+  return {
+    definition: normalizeText(content?.definition).trim(),
+    description: normalizeText(content?.description).trim(),
+  };
 };
 
-const loadMacroDefinitions = async (
+const loadMacroDetailsByConfig = async (
   configs: readonly TunableMacroConfig[],
-): Promise<Record<string, string>> => {
+): Promise<Record<string, MacroDetails>> => {
   const pairs = await Promise.all(
     configs.map(async (config) => {
       try {
         return [
           `${config.targetApp}:${config.macro}`,
-          await loadMacroDefinition(config.macro, config.targetApp),
+          await loadMacroDetails(config.macro, config.targetApp),
         ] as const;
       } catch {
-        return [`${config.targetApp}:${config.macro}`, ""] as const;
+        return [
+          `${config.targetApp}:${config.macro}`,
+          { definition: "", description: "" },
+        ] as const;
       }
     }),
   );
@@ -829,6 +1537,42 @@ function FieldPills({
   );
 }
 
+function MacroInfoBox({
+  macro,
+  description,
+}: {
+  macro: string;
+  description: string;
+}): JSX.Element {
+  const [open, setOpen] = useState(false);
+  const boxId = `macro-info-${macro.replace(/[^a-z0-9_-]/gi, "-")}`;
+
+  return (
+    <div className="mt-1">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        aria-expanded={open}
+        aria-controls={boxId}
+        title={`About ${macro}`}
+        className="inline-flex h-7 w-7 items-center justify-center rounded border border-slate-300 bg-white text-slate-600 hover:border-sky-400 hover:bg-sky-50 hover:text-sky-700"
+      >
+        <Info size={15} aria-hidden="true" />
+        <span className="sr-only">About {macro}</span>
+      </button>
+      {open && (
+        <div
+          id={boxId}
+          role="note"
+          className="mt-2 max-w-sm border border-sky-200 bg-sky-50 px-3 py-2 text-xs leading-5 text-slate-700"
+        >
+          {description || "No description is available for this macro."}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function useTimeRangeParser(): {
   parseEarliest: TimeParseResult | undefined;
   parseLatest: TimeParseResult | undefined;
@@ -898,6 +1642,7 @@ function useTimeRangeParser(): {
 }
 
 export default function MacroIndexTuningPage(): JSX.Element {
+  const setupMode = isInitialSetupMode();
   const [rows, setRows] = useState<EditableMacroRow[]>([]);
   const [cimRows, setCimRows] = useState<EditableMacroRow[]>([]);
   const [scanState, setScanState] = useState<ScanState>("idle");
@@ -914,14 +1659,43 @@ export default function MacroIndexTuningPage(): JSX.Element {
   const [filterText, setFilterText] = useState("");
   const [collapsedRowGroups, setCollapsedRowGroups] = useState<
     Record<string, boolean>
-  >({});
+  >(() => Object.fromEntries(TARGET_APP_ORDER.map((app) => [app, true])));
+  const [expandedDashboardSections, setExpandedDashboardSections] = useState<
+    Record<DashboardSectionKey, boolean>
+  >({
+    appCoverage: false,
+    performance: true,
+    acceleration: false,
+    dashboardMacros: true,
+    externalMacros: false,
+    diagnostics: false,
+  });
+  const [installedAppIds, setInstalledAppIds] = useState<Set<string>>(
+    () => new Set([APP_NAME]),
+  );
+  const [appInventoryError, setAppInventoryError] = useState("");
   const [saveStatuses, setSaveStatuses] = useState<Record<string, SaveStatus>>(
     {},
   );
   const [adhocDefinition, setAdhocDefinition] = useState(
     DEFAULT_SUMMARIESONLY_DEFINITION,
   );
+  const [adhocDescription, setAdhocDescription] = useState(
+    DEFAULT_SUMMARIESONLY_DESCRIPTION,
+  );
   const [adhocStatus, setAdhocStatus] = useState<SaveStatus>({ state: "idle" });
+  const [dataModelReadiness, setDataModelReadiness] = useState<
+    DataModelAcceleration[]
+  >(() =>
+    CORE_DATA_MODEL_REQUIREMENTS.map((requirement) => ({
+      ...requirement,
+      state: "checking",
+      earliestTime: "",
+      allowOldSummaries: false,
+      message: "Checking acceleration",
+    })),
+  );
+  const [setupStatus, setSetupStatus] = useState<SaveStatus>({ state: "idle" });
   const abortRef = useRef<AbortController | null>(null);
   const cimAbortRef = useRef<AbortController | null>(null);
   const searchSplRef = useRef<string>("");
@@ -944,39 +1718,79 @@ export default function MacroIndexTuningPage(): JSX.Element {
     macroConfigByName,
   } = tuningMacroCatalog;
 
+  const installedTargetApps = useMemo(
+    () =>
+      TARGET_APP_ORDER.filter((targetApp) => installedAppIds.has(targetApp)),
+    [installedAppIds],
+  );
+  const isTargetAppInstalled = useCallback(
+    (targetApp: string): boolean => installedAppIds.has(targetApp),
+    [installedAppIds],
+  );
+
+  useEffect(() => {
+    let disposed = false;
+    void loadInstalledAppIds()
+      .then((appIds) => {
+        if (disposed) return;
+        setInstalledAppIds(appIds);
+        setAppInventoryError("");
+      })
+      .catch(() => {
+        if (disposed) return;
+        setInstalledAppIds(new Set([APP_NAME]));
+        setAppInventoryError(
+          "Companion apps could not be verified, so their macro definitions are hidden.",
+        );
+      });
+    return () => {
+      disposed = true;
+    };
+  }, []);
+
   const generatedMacroStanzasByApp = useMemo<Record<string, string>>(
     () =>
       Object.fromEntries(
-        TARGET_APP_ORDER.map((targetApp) => [
+        installedTargetApps.map((targetApp) => [
           targetApp,
           buildMacroStanzas(allRows, targetApp, tunableMacroNameSet),
         ]),
       ),
-    [allRows, tunableMacroNameSet],
+    [allRows, installedTargetApps, tunableMacroNameSet],
   );
-  const macroStanzas = useMemo(
-    () => {
-      const sections = TARGET_APP_ORDER.flatMap((targetApp) => {
-        const parts = [
-          targetApp === APP_NAME
-            ? buildMacroStanza(ADHOC_MACRO_NAME, adhocDefinition)
-            : "",
-          generatedMacroStanzasByApp[targetApp] || "",
-        ].filter(Boolean);
-        return parts.length
-          ? [`# ${targetApp}/local/macros.conf\n${parts.join("\n\n")}`]
-          : [];
-      });
-      return sections.join("\n\n");
-    },
-    [adhocDefinition, generatedMacroStanzasByApp],
-  );
+  const macroStanzas = useMemo(() => {
+    const sections = installedTargetApps.flatMap((targetApp) => {
+      const parts = [
+        targetApp === APP_NAME
+          ? buildMacroStanza(
+              ADHOC_MACRO_NAME,
+              adhocDefinition,
+              adhocDescription,
+            )
+          : "",
+        generatedMacroStanzasByApp[targetApp] || "",
+      ].filter(Boolean);
+      return parts.length
+        ? [`# ${targetApp}/local/macros.conf\n${parts.join("\n\n")}`]
+        : [];
+    });
+    return sections.join("\n\n");
+  }, [
+    adhocDefinition,
+    adhocDescription,
+    generatedMacroStanzasByApp,
+    installedTargetApps,
+  ]);
   const hasUnknown = rows.some((row) => row.macro === "unknown");
-  const fastTunableRows = rows.filter((row) =>
-    fastTuningMacroNameSet.has(row.macro),
+  const fastTunableRows = rows.filter(
+    (row) =>
+      fastTuningMacroNameSet.has(row.macro) &&
+      isTargetAppInstalled(row.targetApp),
   );
-  const cimMacroRows = cimRows.filter((row) =>
-    CIM_MACRO_NAME_SET.has(row.macro),
+  const cimMacroRows = cimRows.filter(
+    (row) =>
+      CIM_MACRO_NAME_SET.has(row.macro) &&
+      isTargetAppInstalled(row.targetApp),
   );
   const tunableRows = [...fastTunableRows, ...cimMacroRows];
   const indexMacroRows = tunableRows.filter((row) =>
@@ -984,10 +1798,46 @@ export default function MacroIndexTuningPage(): JSX.Element {
   );
   const modelMacroRows = tunableRows.filter(
     (row) =>
-      row.targetApp === CISCO_SECURITY_APP_NAME ||
-      row.targetApp === THOUSAND_EYES_APP_NAME,
+      row.targetApp !== APP_NAME &&
+      row.targetApp !== CIM_APP_NAME &&
+      isTargetAppInstalled(row.targetApp),
   );
-  const rowsToSave = tunableRows.filter((row) => row.draftDefinition.trim());
+  const rowsToSave = tunableRows.filter(
+    (row) => isTargetAppInstalled(row.targetApp) && row.draftDefinition.trim(),
+  );
+  const cimRowsToSave = rowsToSave.filter(
+    (row) => row.targetApp === CIM_APP_NAME,
+  );
+  const setupScdRowsToSave = rows.filter(
+    (row) =>
+      row.targetApp === APP_NAME &&
+      row.macro.startsWith("index_") &&
+      row.events > 0 &&
+      row.draftDefinition.trim(),
+  );
+  const setupExternalRowsToSave = rows.filter(
+    (row) =>
+      row.targetApp !== APP_NAME &&
+      row.targetApp !== CIM_APP_NAME &&
+      isTargetAppInstalled(row.targetApp) &&
+      row.events > 0 &&
+      row.draftDefinition.trim(),
+  );
+  const setupRowsToSave = [...setupScdRowsToSave, ...setupExternalRowsToSave];
+  const summariesOnlyEnabled = usesSummariesOnly(adhocDefinition);
+  const requiredDataModels = dataModelReadiness.filter(
+    (item) => item.priority === "required",
+  );
+  const allRequiredDataModelsAccelerated =
+    requiredDataModels.length ===
+      CORE_DATA_MODEL_REQUIREMENTS.filter(
+        (requirement) => requirement.priority === "required",
+      ).length && requiredDataModels.every((item) => item.state === "enabled");
+  const accelerationCheckInProgress = dataModelReadiness.some(
+    (item) => item.state === "checking",
+  );
+  const summariesOnlyBlocked =
+    summariesOnlyEnabled && !allRequiredDataModelsAccelerated;
   const filterTerms = useMemo(
     () => filterText.trim().toLowerCase().split(/\s+/).filter(Boolean),
     [filterText],
@@ -996,13 +1846,38 @@ export default function MacroIndexTuningPage(): JSX.Element {
     () => rows.filter((row) => rowMatchesFilter(row, filterTerms)),
     [filterTerms, rows],
   );
-  const filteredCimRows = useMemo(
-    () => cimRows.filter((row) => rowMatchesFilter(row, filterTerms)),
-    [cimRows, filterTerms],
+  const dashboardMacroRows = rows.filter((row) => row.targetApp === APP_NAME);
+  const externalAppMacroRows = rows.filter(
+    (row) =>
+      row.targetApp !== APP_NAME &&
+      row.targetApp !== CIM_APP_NAME &&
+      isTargetAppInstalled(row.targetApp),
   );
-  const filteredRowGroups = useMemo(
-    () => groupRowsByTargetApp(filteredRows),
-    [filteredRows],
+  const filteredDashboardMacroRows = filteredRows.filter(
+    (row) => row.targetApp === APP_NAME,
+  );
+  const filteredExternalAppMacroRows = filteredRows.filter(
+    (row) =>
+      row.targetApp !== APP_NAME &&
+      row.targetApp !== CIM_APP_NAME &&
+      isTargetAppInstalled(row.targetApp),
+  );
+  const filteredCimRows = useMemo(
+    () =>
+      cimRows.filter(
+        (row) =>
+          isTargetAppInstalled(row.targetApp) &&
+          rowMatchesFilter(row, filterTerms),
+      ),
+    [cimRows, filterTerms, isTargetAppInstalled],
+  );
+  const filteredDashboardMacroGroups = useMemo(
+    () => groupRowsByTargetApp(filteredDashboardMacroRows),
+    [filteredDashboardMacroRows],
+  );
+  const filteredExternalAppMacroGroups = useMemo(
+    () => groupRowsByTargetApp(filteredExternalAppMacroRows),
+    [filteredExternalAppMacroRows],
   );
   const isCimGroupCollapsed = Boolean(collapsedRowGroups[CIM_APP_NAME]);
   const totalEvents = rows
@@ -1012,24 +1887,89 @@ export default function MacroIndexTuningPage(): JSX.Element {
     (sum, row) => sum + extractIndexTokens(row.draftDefinition).length,
     0,
   );
-  const totalCimIndexValues = cimMacroRows.reduce(
-    (sum, row) => sum + extractIndexTokens(row.draftDefinition).length,
-    0,
-  );
-  const totalModelIndexValues = modelMacroRows.reduce(
-    (sum, row) => sum + extractIndexTokens(row.draftDefinition).length,
-    0,
-  );
+  const externalAppMacroSummaries = installedTargetApps.filter(
+    (targetApp) => targetApp !== APP_NAME && targetApp !== CIM_APP_NAME,
+  ).map((targetApp) => {
+    const appRows = modelMacroRows.filter((row) => row.targetApp === targetApp);
+    return {
+      targetApp,
+      label: getTargetAppLabel(targetApp),
+      rows: appRows,
+      matchedMacroCount: appRows.filter((row) => row.events > 0).length,
+      indexCount: appRows.reduce(
+        (sum, row) => sum + extractIndexTokens(row.draftDefinition).length,
+        0,
+      ),
+      eventCount: appRows.reduce((sum, row) => sum + row.events, 0),
+    };
+  });
   const isLoading = scanState === "loading";
   const isCimLoading = cimScanState === "loading";
   const isSavingAll = Object.values(saveStatuses).some(
     (status) => status.state === "saving",
   );
+  const isSavingCim = cimRowsToSave.some(
+    (row) => saveStatuses[macroStatusKey(row)]?.state === "saving",
+  );
+  const setupIndexValueCount = setupRowsToSave.reduce(
+    (sum, row) => sum + extractIndexTokens(row.draftDefinition).length,
+    0,
+  );
+  const unknownSourcetypeGroups = rows.filter(
+    (row) => row.macro === "unknown",
+  ).length;
+  const acceleratedRequiredModels = requiredDataModels.filter(
+    (item) => item.state === "enabled",
+  ).length;
+  const acceleratedDataModelCount = dataModelReadiness.filter(
+    (item) => item.state === "enabled",
+  ).length;
+  const dataModelsNeedingAttention = dataModelReadiness.filter(
+    (item) =>
+      item.state === "disabled" ||
+      item.state === "missing" ||
+      item.state === "error",
+  );
+  const dataModelGroups = useMemo<DataModelGroup[]>(() => {
+    const groupsByApp = new Map<string, DataModelAcceleration[]>();
+    dataModelReadiness.forEach((item) => {
+      const appItems = groupsByApp.get(item.app) || [];
+      appItems.push(item);
+      groupsByApp.set(item.app, appItems);
+    });
+
+    return DATA_MODEL_APP_ORDER.flatMap((app) => {
+      const items = groupsByApp.get(app);
+      if (!items?.length) return [];
+      return [
+        {
+          app,
+          label: DATA_MODEL_APP_LABELS[app] || app,
+          items,
+          enabledCount: items.filter((item) => item.state === "enabled").length,
+          attentionCount: items.filter(
+            (item) =>
+              item.state === "disabled" ||
+              item.state === "missing" ||
+              item.state === "error",
+          ).length,
+          checkingCount: items.filter((item) => item.state === "checking")
+            .length,
+        },
+      ];
+    });
+  }, [dataModelReadiness]);
+  const selectSetupPerformanceMode = (acceleratedOnly: boolean) => {
+    setAdhocDefinition(
+      acceleratedOnly
+        ? ACCELERATED_SUMMARIESONLY_DEFINITION
+        : DEFAULT_SUMMARIESONLY_DEFINITION,
+    );
+    setAdhocStatus({ state: "idle" });
+  };
   const resolvedSearchSpl = useMemo(
     () =>
-      searchSpl
-        ? injectIndexMacroOrClause(searchSpl, scdIndexMacroNames)
-        : "",
+      searchSpl ? injectIndexMacroOrClause(searchSpl, scdIndexMacroNames) : "",
     [scdIndexMacroNames, searchSpl],
   );
   const openSearchUrl = resolvedSearchSpl
@@ -1039,13 +1979,18 @@ export default function MacroIndexTuningPage(): JSX.Element {
     CIM_DISCOVERY_SEARCH,
     cimTimeRange,
   );
+  const openAccelerationSearchUrl = splunkSearchAppUrl(
+    DATA_MODEL_ACCELERATION_SEARCH,
+    { earliest: "0", latest: "now" },
+  );
   const macrosManagerUrl = splunkManagerUrl("data/macros");
-  const externalMacroManagerLinks = TARGET_APP_ORDER.filter(
-    (targetApp) => targetApp !== APP_NAME,
+  const externalAppMacroManagerLinks = installedTargetApps.filter(
+    (targetApp) => targetApp !== APP_NAME && targetApp !== CIM_APP_NAME,
   ).map((targetApp) => ({
     targetApp,
     href: splunkAppManagerUrl(targetApp, "data/macros"),
   }));
+  const cimMacrosManagerUrl = splunkAppManagerUrl(CIM_APP_NAME, "data/macros");
 
   const handleFastTimeRangeChange = useCallback(
     (_event: React.SyntheticEvent, data?: TimeRangeChange) => {
@@ -1098,6 +2043,9 @@ export default function MacroIndexTuningPage(): JSX.Element {
       const discoveredIndexMacroNames = await loadScdIndexMacroNames();
       setScdIndexMacroNames(discoveredIndexMacroNames);
       const catalog = buildTuningMacroCatalog(discoveredIndexMacroNames);
+      const availableMacroConfigs = catalog.fastTuningMacroConfigs.filter(
+        (config) => isTargetAppInstalled(config.targetApp),
+      );
       const spl = injectIndexMacroOrClause(rawSpl, discoveredIndexMacroNames);
       const result = await runSearch({
         spl,
@@ -1107,16 +2055,16 @@ export default function MacroIndexTuningPage(): JSX.Element {
         tag: TUNING_SEARCHBASE_ID,
         signal: controller.signal,
       });
-      const currentDefinitions = await loadMacroDefinitions(
-        catalog.fastTuningMacroConfigs,
+      const currentDetails = await loadMacroDetailsByConfig(
+        availableMacroConfigs,
       );
       const parsed = ((result.results || []) as Record<string, unknown>[])
         .map((row) => parseSearchResult(row, catalog.macroConfigByName))
         .filter((row): row is MacroRow => Boolean(row));
       const expectedRows = buildExpectedEditableRows(
-        catalog.fastTuningMacroConfigs,
+        availableMacroConfigs,
         parsed,
-        currentDefinitions,
+        currentDetails,
       );
       const extraRows = parsed
         .filter(
@@ -1136,7 +2084,12 @@ export default function MacroIndexTuningPage(): JSX.Element {
       setRows([]);
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [loadTuningSearch, timeRange.earliest, timeRange.latest]);
+  }, [
+    isTargetAppInstalled,
+    loadTuningSearch,
+    timeRange.earliest,
+    timeRange.latest,
+  ]);
 
   useEffect(() => {
     void runScan();
@@ -1146,13 +2099,19 @@ export default function MacroIndexTuningPage(): JSX.Element {
   }, [runScan]);
 
   const loadCimMacroRows = useCallback(async () => {
-    const currentDefinitions = await loadMacroDefinitions(CIM_MACRO_CONFIGS);
+    if (!isTargetAppInstalled(CIM_APP_NAME)) {
+      setCimRows([]);
+      setCimScanState("idle");
+      return;
+    }
+    const currentDetails = await loadMacroDetailsByConfig(CIM_MACRO_CONFIGS);
     setCimRows(
-      buildExpectedEditableRows(CIM_MACRO_CONFIGS, [], currentDefinitions),
+      buildExpectedEditableRows(CIM_MACRO_CONFIGS, [], currentDetails),
     );
-  }, []);
+  }, [isTargetAppInstalled]);
 
   const runCimDiscovery = useCallback(async () => {
+    if (!isTargetAppInstalled(CIM_APP_NAME)) return;
     cimAbortRef.current?.abort();
     const controller = new AbortController();
     cimAbortRef.current = controller;
@@ -1169,16 +2128,12 @@ export default function MacroIndexTuningPage(): JSX.Element {
         tag: `${TUNING_SEARCHBASE_ID}:cim`,
         signal: controller.signal,
       });
-      const currentDefinitions = await loadMacroDefinitions(CIM_MACRO_CONFIGS);
+      const currentDetails = await loadMacroDetailsByConfig(CIM_MACRO_CONFIGS);
       const parsed = ((result.results || []) as Record<string, unknown>[])
         .map((row) => parseSearchResult(row, macroConfigByName))
         .filter((row): row is MacroRow => Boolean(row));
       setCimRows(
-        buildExpectedEditableRows(
-          CIM_MACRO_CONFIGS,
-          parsed,
-          currentDefinitions,
-        ),
+        buildExpectedEditableRows(CIM_MACRO_CONFIGS, parsed, currentDetails),
       );
       setCimScanState("ready");
     } catch (err) {
@@ -1186,7 +2141,12 @@ export default function MacroIndexTuningPage(): JSX.Element {
       setCimScanState("error");
       setCimError(err instanceof Error ? err.message : String(err));
     }
-  }, [cimTimeRange.earliest, cimTimeRange.latest, macroConfigByName]);
+  }, [
+    cimTimeRange.earliest,
+    cimTimeRange.latest,
+    isTargetAppInstalled,
+    macroConfigByName,
+  ]);
 
   useEffect(() => {
     void loadCimMacroRows();
@@ -1198,11 +2158,17 @@ export default function MacroIndexTuningPage(): JSX.Element {
   const loadAdhocMacro = useCallback(async () => {
     setAdhocStatus({ state: "saving", message: "Loading current macro" });
     try {
-      const definition = await loadMacroDefinition(ADHOC_MACRO_NAME, APP_NAME);
-      setAdhocDefinition(definition || DEFAULT_SUMMARIESONLY_DEFINITION);
+      const details = await loadMacroDetails(ADHOC_MACRO_NAME, APP_NAME);
+      setAdhocDefinition(
+        details.definition || DEFAULT_SUMMARIESONLY_DEFINITION,
+      );
+      setAdhocDescription(
+        details.description || DEFAULT_SUMMARIESONLY_DESCRIPTION,
+      );
       setAdhocStatus({ state: "idle" });
     } catch (err) {
       setAdhocDefinition(DEFAULT_SUMMARIESONLY_DEFINITION);
+      setAdhocDescription(DEFAULT_SUMMARIESONLY_DESCRIPTION);
       setAdhocStatus({
         state: "error",
         message: err instanceof Error ? err.message : String(err),
@@ -1213,6 +2179,48 @@ export default function MacroIndexTuningPage(): JSX.Element {
   useEffect(() => {
     void loadAdhocMacro();
   }, [loadAdhocMacro]);
+
+  const checkDataModelAcceleration = useCallback(async () => {
+    setDataModelReadiness(
+      CORE_DATA_MODEL_REQUIREMENTS.map((requirement) => ({
+        ...requirement,
+        state: "checking",
+        earliestTime: "",
+        allowOldSummaries: false,
+        message: "Checking acceleration",
+      })),
+    );
+
+    try {
+      const result = await runSearch({
+        spl: DATA_MODEL_ACCELERATION_SEARCH,
+        earliestTime: "0",
+        latestTime: "now",
+        count: 0,
+        tag: "data-model-acceleration-readiness",
+      });
+      setDataModelReadiness(
+        buildDataModelAccelerationInventory(
+          (result.results || []) as Record<string, unknown>[],
+        ),
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setDataModelReadiness(
+        CORE_DATA_MODEL_REQUIREMENTS.map((requirement) => ({
+          ...requirement,
+          state: "error" as const,
+          earliestTime: "",
+          allowOldSummaries: false,
+          message,
+        })),
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    void checkDataModelAcceleration();
+  }, [checkDataModelAcceleration]);
 
   const updateDraftDefinition = useCallback(
     (rowKey: string, definition: string) => {
@@ -1244,7 +2252,12 @@ export default function MacroIndexTuningPage(): JSX.Element {
       [macroStatusKey(row)]: { state: "saving" },
     }));
     try {
-      await saveMacroDefinition(row.macro, definition, row.targetApp);
+      await saveMacroDefinition(
+        row.macro,
+        definition,
+        row.description,
+        row.targetApp,
+      );
       setSaveStatuses((current) => ({
         ...current,
         [macroStatusKey(row)]: { state: "saved", message: "Saved" },
@@ -1268,12 +2281,129 @@ export default function MacroIndexTuningPage(): JSX.Element {
     }
   }, [rowsToSave, saveOne]);
 
+  const saveAllCim = useCallback(async () => {
+    for (const row of cimRowsToSave) {
+      // Keep macros.conf writes ordered; at most 25 CIM macros are supported.
+      // eslint-disable-next-line no-await-in-loop
+      await saveOne(row);
+    }
+  }, [cimRowsToSave, saveOne]);
+
+  const finishInitialSetup = useCallback(async () => {
+    if (summariesOnlyBlocked) {
+      setSetupStatus({
+        state: "error",
+        message: SUMMARIESONLY_ACCELERATION_ERROR,
+      });
+      return;
+    }
+    setSetupStatus({
+      state: "saving",
+      message: "Saving detected routing macros",
+    });
+
+    try {
+      setSetupStatus({
+        state: "saving",
+        message: "Saving acceleration mode",
+      });
+      try {
+        await saveMacroDefinition(
+          ADHOC_MACRO_NAME,
+          adhocDefinition.trim(),
+          adhocDescription,
+          APP_NAME,
+        );
+        setAdhocStatus({ state: "saved", message: "Saved" });
+      } catch (saveError) {
+        setAdhocStatus({
+          state: "error",
+          message:
+            saveError instanceof Error ? saveError.message : String(saveError),
+        });
+      }
+
+      setSetupStatus({
+        state: "saving",
+        message:
+          scanState === "ready"
+            ? "Saving detected routing macros"
+            : "Skipping routing macro tuning",
+      });
+      for (const row of setupRowsToSave) {
+        const rowKey = macroStatusKey(row);
+        setSaveStatuses((current) => ({
+          ...current,
+          [rowKey]: { state: "saving" },
+        }));
+        try {
+          // Save sequentially so Splunk configuration writes remain ordered.
+          // eslint-disable-next-line no-await-in-loop
+          await saveMacroDefinition(
+            row.macro,
+            row.draftDefinition.trim(),
+            row.description,
+            row.targetApp,
+          );
+          setSaveStatuses((current) => ({
+            ...current,
+            [rowKey]: { state: "saved", message: "Saved" },
+          }));
+        } catch (saveError) {
+          setSaveStatuses((current) => ({
+            ...current,
+            [rowKey]: {
+              state: "error",
+              message:
+                saveError instanceof Error
+                  ? saveError.message
+                  : String(saveError),
+            },
+          }));
+          // Macro tuning is optional during setup. A failed write must not
+          // prevent the user from unlocking the dashboard and retrying later.
+        }
+      }
+
+      setSetupStatus({
+        state: "saving",
+        message: "Unlocking the app",
+      });
+      await completeInitialSetup();
+      window.location.assign(splunkAppViewUrl(APP_HOME_VIEW));
+    } catch (setupError) {
+      setSetupStatus({
+        state: "error",
+        message:
+          setupError instanceof Error ? setupError.message : String(setupError),
+      });
+    }
+  }, [
+    adhocDefinition,
+    adhocDescription,
+    scanState,
+    setupRowsToSave,
+    summariesOnlyBlocked,
+  ]);
+
   const saveAdhocMacro = useCallback(async () => {
     const definition = adhocDefinition.trim();
     if (!definition) return;
+    if (summariesOnlyBlocked) {
+      setAdhocStatus({
+        state: "error",
+        message: SUMMARIESONLY_ACCELERATION_ERROR,
+      });
+      return;
+    }
     setAdhocStatus({ state: "saving" });
     try {
-      await saveMacroDefinition(ADHOC_MACRO_NAME, definition, APP_NAME);
+      await saveMacroDefinition(
+        ADHOC_MACRO_NAME,
+        definition,
+        adhocDescription,
+        APP_NAME,
+      );
       setAdhocStatus({ state: "saved", message: "Saved" });
     } catch (err) {
       setAdhocStatus({
@@ -1281,13 +2411,34 @@ export default function MacroIndexTuningPage(): JSX.Element {
         message: err instanceof Error ? err.message : String(err),
       });
     }
-  }, [adhocDefinition]);
+  }, [adhocDefinition, adhocDescription, summariesOnlyBlocked]);
 
   const toggleRowGroup = useCallback((targetApp: string) => {
     setCollapsedRowGroups((current) => ({
       ...current,
       [targetApp]: !current[targetApp],
     }));
+  }, []);
+
+  const toggleDashboardSection = useCallback((section: DashboardSectionKey) => {
+    setExpandedDashboardSections((current) => ({
+      ...current,
+      [section]: !current[section],
+    }));
+  }, []);
+
+  const setAllDashboardSections = useCallback((expanded: boolean) => {
+    setExpandedDashboardSections({
+      appCoverage: expanded,
+      performance: expanded,
+      acceleration: expanded,
+      dashboardMacros: expanded,
+      externalMacros: expanded,
+      diagnostics: expanded,
+    });
+    setCollapsedRowGroups(
+      Object.fromEntries(TARGET_APP_ORDER.map((app) => [app, !expanded])),
+    );
   }, []);
 
   const renderEditableRow = (row: EditableMacroRow) => {
@@ -1309,6 +2460,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
           >
             {row.macro}
           </div>
+          <MacroInfoBox macro={row.macro} description={row.description} />
           <div className="mt-1 text-xs text-slate-500">
             {row.sourcetypeCount
               ? `${formatNumber(row.sourcetypeCount)} sourcetypes`
@@ -1391,8 +2543,13 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 ) : (
                   <ChevronDown size={15} className="shrink-0" />
                 )}
-                <span className="min-w-0 truncate">
-                  {targetApp}/local/macros.conf
+                <span className="flex min-w-0 items-center gap-2 normal-case tracking-normal">
+                  <span className="truncate text-sm font-semibold text-slate-700">
+                    {getTargetAppLabel(targetApp)}
+                  </span>
+                  <code className="shrink-0 font-mono text-[11px] font-medium text-slate-500">
+                    {targetApp}/local/macros.conf
+                  </code>
                 </span>
                 <span className="ml-auto shrink-0 rounded bg-white px-2 py-0.5 text-[11px] font-semibold normal-case tracking-normal text-slate-500">
                   {formatNumber(appRows.length)} macros
@@ -1405,30 +2562,822 @@ export default function MacroIndexTuningPage(): JSX.Element {
       );
     });
 
+  if (setupMode) {
+    const setupScdRowGroups = groupRowsByTargetApp(setupScdRowsToSave);
+    const setupExternalRowGroups = groupRowsByTargetApp(
+      setupExternalRowsToSave,
+    );
+    const setupScanReady = scanState === "ready";
+    const setupMacroCountLabel =
+      setupRowsToSave.length === 1 ? "routing macro is" : "routing macros are";
+    const setupMacroNoun =
+      setupRowsToSave.length === 1 ? "routing macro" : "routing macros";
+    const setupMetrics = [
+      {
+        value: setupRowsToSave.length,
+        label: "Macros",
+        colorClass: "text-sky-700",
+      },
+      {
+        value: setupIndexValueCount,
+        label: "Indexes",
+        colorClass: "text-emerald-700",
+      },
+      {
+        value: unknownSourcetypeGroups,
+        label: "Unmapped",
+        colorClass:
+          unknownSourcetypeGroups > 0 ? "text-amber-700" : "text-emerald-700",
+      },
+    ];
+    let scanEyebrow = "Automatic scan complete";
+    let scanHeading = `${setupRowsToSave.length} ${setupMacroCountLabel} ready to save`;
+    if (isLoading) {
+      scanEyebrow = "Automatic scan in progress";
+      scanHeading = "Finding Cisco routing macros…";
+    } else if (error) {
+      scanEyebrow = "Automatic scan needs attention";
+      scanHeading = "The index scan could not complete";
+    }
+    let performanceStatusClass = "bg-slate-100 text-slate-600";
+    let performanceStatusMessage =
+      "Balanced mode is ready with no extra action.";
+    if (summariesOnlyEnabled && accelerationCheckInProgress) {
+      performanceStatusClass = "bg-sky-50 text-sky-800";
+      performanceStatusMessage = "Checking required data-model acceleration…";
+    } else if (summariesOnlyBlocked) {
+      performanceStatusClass = "bg-red-50 text-red-800";
+      performanceStatusMessage = `${acceleratedRequiredModels} of ${requiredDataModels.length} required data models are accelerated.`;
+    } else if (summariesOnlyEnabled) {
+      performanceStatusClass = "bg-emerald-50 text-emerald-800";
+      performanceStatusMessage =
+        "All required Cisco data models are accelerated.";
+    }
+    let setupActionMessage = `${setupRowsToSave.length} detected ${setupMacroNoun} and the selected performance mode will be saved.`;
+    if (summariesOnlyBlocked) {
+      setupActionMessage =
+        "Choose Balanced or accelerate all three required Cisco data models.";
+    } else if (scanState === "loading") {
+      setupActionMessage = "Waiting for the automatic index scan to finish.";
+    } else if (scanState === "error") {
+      setupActionMessage =
+        "The index scan did not complete. Finish setup now and retry macro tuning later.";
+    }
+
+    return (
+      <main className="min-h-screen bg-[#f4f8fa] pb-28 text-slate-800">
+        <section className="bg-[#102a43] text-white">
+          <div className="mx-auto grid max-w-[1180px] gap-6 px-7 py-5 md:grid-cols-[minmax(0,1fr)_400px] md:items-center">
+            <div className="min-w-0">
+              <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-cyan-300">
+                Splunk App for Secure Networking · Setup · Step 3 of 3
+              </div>
+              <h1 className="mt-1 text-2xl font-bold leading-tight text-white">
+                Finish setup with the detected routing macros
+              </h1>
+              <p className="mt-1.5 max-w-3xl text-sm text-slate-300">
+                Review exceptions, choose a search-performance mode, then save
+                and unlock the dashboards.
+              </p>
+            </div>
+            <ol className="grid grid-cols-3 overflow-hidden rounded-md bg-white/10 text-[11px] font-bold">
+              <li className="flex min-h-10 items-center gap-2 bg-emerald-900 px-3 text-emerald-50">
+                <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-600 text-[10px]">
+                  <Check size={12} />
+                </span>
+                Check data
+              </li>
+              <li className="flex min-h-10 items-center gap-2 bg-emerald-900 px-3 text-emerald-50">
+                <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-600 text-[10px]">
+                  <Check size={12} />
+                </span>
+                Packages
+              </li>
+              <li className="flex min-h-10 items-center gap-2 bg-sky-800 px-3 text-white">
+                <span className="grid h-5 w-5 place-items-center rounded-full bg-cyan-500 text-[10px]">
+                  3
+                </span>
+                Tune indexes
+              </li>
+            </ol>
+          </div>
+        </section>
+
+        <div className="mx-auto max-w-[1180px] px-6 py-5">
+          <section
+            aria-live="polite"
+            className={`mb-4 grid gap-4 rounded-lg border px-5 py-3.5 md:grid-cols-[minmax(0,1fr)_auto] md:items-center ${
+              error
+                ? "border-red-200 bg-red-50"
+                : "border-emerald-200 bg-emerald-50"
+            }`}
+          >
+            <div>
+              <div
+                className={`text-[10px] font-bold uppercase tracking-wide ${
+                  error ? "text-red-700" : "text-emerald-700"
+                }`}
+              >
+                {scanEyebrow}
+              </div>
+              <h2 className="mt-0.5 text-lg font-bold text-slate-900">
+                {scanHeading}
+              </h2>
+              <p className="mt-0.5 text-xs text-slate-600">
+                {error ||
+                  "Only review definitions when an index looks unexpected."}
+              </p>
+              <a
+                href="#setup-data-model-readiness"
+                className="mt-1.5 inline-flex items-center gap-1 text-xs font-bold text-sky-800 hover:text-sky-950"
+              >
+                {accelerationCheckInProgress
+                  ? "Checking recommended data-model acceleration…"
+                  : `${acceleratedDataModelCount} of ${dataModelReadiness.length} recommended data models accelerated`}
+                <ChevronRight size={13} />
+              </a>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {setupMetrics.map(({ value, label, colorClass }) => (
+                <div
+                  key={label}
+                  className="min-w-[72px] rounded-md bg-white px-3 py-2 text-center"
+                >
+                  <div className={`text-lg font-bold ${colorClass}`}>
+                    {formatNumber(value)}
+                  </div>
+                  <div className="text-[9px] font-bold uppercase tracking-wide text-slate-500">
+                    {label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_330px]">
+            <section className="rounded-lg border border-slate-200 bg-white p-5">
+              <div className="text-[10px] font-bold uppercase tracking-wide text-sky-700">
+                Index macro plan
+              </div>
+              <h2 className="mt-1 text-lg font-bold text-slate-900">
+                Review only what needs attention
+              </h2>
+              <p className="mt-1 text-xs text-slate-600">
+                Detected definitions are saved together when setup finishes.
+              </p>
+
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <div className="flex min-h-9 items-center gap-2 rounded-md bg-slate-100 px-3 text-xs text-slate-600">
+                  <span className="font-semibold">Range</span>
+                  <TimeRangeDropdown
+                    earliest={timeRange.earliest}
+                    latest={timeRange.latest}
+                    onChange={handleFastTimeRangeChange}
+                    realTimeDisabled
+                    presets={TIME_PRESETS}
+                    onRequestParseEarliest={
+                      fastTimeParser.handleRequestParseEarliest
+                    }
+                    onRequestParseLatest={
+                      fastTimeParser.handleRequestParseLatest
+                    }
+                    parseEarliest={fastTimeParser.parseEarliest}
+                    parseLatest={fastTimeParser.parseLatest}
+                    labelMaxChars={26}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={runScan}
+                  disabled={isLoading}
+                  className={`${compactButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
+                >
+                  {isLoading ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <RefreshCw size={14} />
+                  )}
+                  {isLoading ? "Scanning" : "Run scan again"}
+                </button>
+              </div>
+
+              {setupScanReady && (
+                <div
+                  className={`mt-4 flex items-start gap-3 rounded-md border px-3 py-3 ${
+                    hasUnknown
+                      ? "border-amber-200 bg-amber-50"
+                      : "border-emerald-200 bg-emerald-50"
+                  }`}
+                >
+                  {hasUnknown ? (
+                    <AlertTriangle
+                      className="mt-0.5 shrink-0 text-amber-700"
+                      size={18}
+                    />
+                  ) : (
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-emerald-600 text-white">
+                      <Check size={14} />
+                    </span>
+                  )}
+                  <div>
+                    <div className="text-sm font-bold text-slate-900">
+                      {hasUnknown
+                        ? `${unknownSourcetypeGroups} unmapped sourcetype group${
+                            unknownSourcetypeGroups === 1 ? "" : "s"
+                          } need review`
+                        : "No unmapped sourcetypes found"}
+                    </div>
+                    <div className="mt-0.5 text-xs text-slate-600">
+                      {hasUnknown
+                        ? "Open the definitions below and map unexpected data before finishing."
+                        : "All detected Cisco data maps to a known routing macro."}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <details className="group mt-4 overflow-hidden rounded-md border border-slate-200 bg-slate-50">
+                <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 px-4 text-sm font-bold text-slate-800 hover:bg-slate-100 [&::-webkit-details-marker]:hidden">
+                  <span>
+                    Review {setupScdRowsToSave.length} dashboard macro
+                    {setupScdRowsToSave.length === 1 ? "" : "s"}
+                  </span>
+                  <ChevronDown
+                    size={16}
+                    className="ml-auto transition-transform group-open:rotate-180"
+                  />
+                </summary>
+                <div className="border-t border-slate-200 bg-white">
+                  {setupScdRowsToSave.length ? (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full border-collapse text-left text-sm">
+                        <thead>
+                          <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                            <th className="w-[190px] px-4 py-3 font-bold">
+                              Macro
+                            </th>
+                            <th className="min-w-[330px] px-4 py-3 font-bold">
+                              Definition
+                            </th>
+                            <th className="min-w-[220px] px-4 py-3 font-bold">
+                              Indexes
+                            </th>
+                            <th className="min-w-[260px] px-4 py-3 font-bold">
+                              Sourcetypes
+                            </th>
+                            <th className="w-[110px] px-4 py-3 text-right font-bold">
+                              Events
+                            </th>
+                            <th className="w-[130px] px-4 py-3 text-right font-bold">
+                              Action
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>{renderTableRows(setupScdRowGroups)}</tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="px-4 py-8 text-center text-sm text-slate-500">
+                      No detected index macro definitions are ready yet.
+                    </div>
+                  )}
+                </div>
+              </details>
+
+              <section
+                aria-labelledby="setup-external-app-macros-heading"
+                className="mt-5 overflow-hidden rounded-lg border border-sky-200 bg-sky-50/50"
+              >
+                <div className="px-4 py-4">
+                  <div className="text-[10px] font-bold uppercase tracking-wide text-sky-700">
+                    Installed Cisco apps
+                  </div>
+                  <h3
+                    id="setup-external-app-macros-heading"
+                    className="mt-1 text-base font-bold text-slate-900"
+                  >
+                    Tune app-owned routing macros
+                  </h3>
+                  <p className="mt-1 text-xs text-slate-600">
+                    Save detected indexes directly to each app&apos;s
+                    local/macros.conf so its dashboards are ready when you open
+                    them.
+                  </p>
+                </div>
+
+                <details className="group border-t border-sky-200 bg-white">
+                  <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 px-4 text-sm font-bold text-slate-800 hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+                    <span>
+                      Review {setupExternalRowsToSave.length} app macro
+                      {setupExternalRowsToSave.length === 1 ? "" : "s"}
+                    </span>
+                    <ChevronDown
+                      size={16}
+                      className="ml-auto transition-transform group-open:rotate-180"
+                    />
+                  </summary>
+                  <div className="border-t border-slate-200">
+                    {setupExternalRowsToSave.length ? (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full border-collapse text-left text-sm">
+                          <thead>
+                            <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                              <th className="w-[190px] px-4 py-3 font-bold">
+                                Macro
+                              </th>
+                              <th className="min-w-[330px] px-4 py-3 font-bold">
+                                Definition
+                              </th>
+                              <th className="min-w-[220px] px-4 py-3 font-bold">
+                                Indexes
+                              </th>
+                              <th className="min-w-[260px] px-4 py-3 font-bold">
+                                Sourcetypes
+                              </th>
+                              <th className="w-[110px] px-4 py-3 text-right font-bold">
+                                Events
+                              </th>
+                              <th className="w-[130px] px-4 py-3 text-right font-bold">
+                                Action
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {renderTableRows(setupExternalRowGroups)}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="px-4 py-6 text-center text-sm text-slate-500">
+                        No installed Cisco app macros have matching data in this
+                        range yet.
+                      </div>
+                    )}
+                  </div>
+                </details>
+              </section>
+
+              <p className="mt-3 text-xs text-slate-500">
+                All CIM data-model macros remain optional and can be tuned
+                after setup.
+              </p>
+            </section>
+
+            <aside className="grid gap-4">
+              <section
+                id="setup-data-model-readiness"
+                className="scroll-mt-4 rounded-lg border border-slate-200 bg-white p-5"
+              >
+                <div className="text-[10px] font-bold uppercase tracking-wide text-sky-700">
+                  Search performance
+                </div>
+                <h2 className="mt-1 text-lg font-bold text-slate-900">
+                  Choose how searches run
+                </h2>
+                <p className="mt-1 text-xs text-slate-600">
+                  You can change this later from Macro Index Tuning.
+                </p>
+
+                <div className="mt-4 grid gap-3">
+                  <label
+                    htmlFor="setup-performance-balanced"
+                    className="flex cursor-pointer items-start gap-3 rounded-md border border-slate-200 p-3 hover:border-sky-300"
+                  >
+                    <input
+                      id="setup-performance-balanced"
+                      type="radio"
+                      name="setup-search-performance"
+                      checked={!summariesOnlyEnabled}
+                      onChange={() => selectSetupPerformanceMode(false)}
+                      className="mt-0.5 h-4 w-4 accent-sky-700"
+                    />
+                    <span>
+                      <span className="block text-sm font-bold text-slate-900">
+                        Balanced (recommended)
+                      </span>
+                      <span className="mt-0.5 block text-xs leading-5 text-slate-600">
+                        Use acceleration when available and fall back to raw
+                        events.
+                      </span>
+                    </span>
+                  </label>
+                  <label
+                    htmlFor="setup-performance-accelerated"
+                    className="flex cursor-pointer items-start gap-3 rounded-md border border-slate-200 p-3 hover:border-sky-300"
+                  >
+                    <input
+                      id="setup-performance-accelerated"
+                      type="radio"
+                      name="setup-search-performance"
+                      checked={summariesOnlyEnabled}
+                      onChange={() => selectSetupPerformanceMode(true)}
+                      className="mt-0.5 h-4 w-4 accent-sky-700"
+                    />
+                    <span>
+                      <span className="block text-sm font-bold text-slate-900">
+                        Accelerated summaries only
+                      </span>
+                      <span className="mt-0.5 block text-xs leading-5 text-slate-600">
+                        Fastest, but requires all three Cisco data models to be
+                        accelerated.
+                      </span>
+                    </span>
+                  </label>
+                </div>
+
+                <div
+                  className={`mt-3 rounded-md px-3 py-2 text-xs ${performanceStatusClass}`}
+                >
+                  {performanceStatusMessage}
+                </div>
+              </section>
+
+              <section className="rounded-lg border border-slate-200 bg-white p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wide text-sky-700">
+                      Performance readiness
+                    </div>
+                    <h2 className="mt-1 text-lg font-bold text-slate-900">
+                      Accelerate recommended data models
+                    </h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={checkDataModelAcceleration}
+                    disabled={accelerationCheckInProgress}
+                    aria-label="Check data model acceleration again"
+                    className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-slate-300 bg-white text-slate-600 hover:border-sky-400 hover:text-sky-700 disabled:cursor-wait disabled:opacity-60"
+                  >
+                    <RefreshCw
+                      size={14}
+                      className={
+                        accelerationCheckInProgress ? "animate-spin" : ""
+                      }
+                    />
+                  </button>
+                </div>
+                <p className="mt-1 text-xs leading-5 text-slate-600">
+                  Acceleration makes the app&apos;s data-model searches return
+                  faster. Setup can finish in Balanced mode while you complete
+                  these recommendations.
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <a
+                    href={openAccelerationSearchUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Open acceleration check in Search"
+                    className="inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 text-xs font-bold text-sky-700 hover:border-sky-400 hover:text-sky-900"
+                  >
+                    <ExternalLink size={12} />
+                    Open in Search
+                  </a>
+                  <a
+                    href={DATA_MODEL_ACCELERATION_DOCS_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Open Splunk ${SPLUNK_DOCS_VERSION} data model acceleration documentation`}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 text-xs font-bold text-sky-700 hover:border-sky-400 hover:text-sky-900"
+                  >
+                    <ExternalLink size={12} />
+                    Splunk acceleration guide
+                  </a>
+                </div>
+
+                <div
+                  className={`mt-3 rounded-md px-3 py-2 text-xs font-semibold ${
+                    accelerationCheckInProgress
+                      ? "bg-sky-50 text-sky-800"
+                      : dataModelsNeedingAttention.length
+                        ? "bg-amber-50 text-amber-900"
+                        : "bg-emerald-50 text-emerald-800"
+                  }`}
+                  role="status"
+                >
+                  {accelerationCheckInProgress
+                    ? "Checking recommended data models…"
+                    : dataModelsNeedingAttention.length
+                      ? `${acceleratedDataModelCount} of ${dataModelReadiness.length} accelerated · ${dataModelsNeedingAttention.length} need attention`
+                      : `All ${dataModelReadiness.length} recommended data models are accelerated.`}
+                </div>
+
+                <div
+                  className="mt-3 grid gap-2"
+                  aria-label="Recommended data model acceleration status"
+                >
+                  {dataModelGroups.map((group) => (
+                    <details
+                      key={`${group.app}:${group.enabledCount}:${group.attentionCount}:${group.checkingCount}`}
+                      open={group.attentionCount > 0}
+                      className="group overflow-hidden rounded-md border border-slate-200"
+                    >
+                      <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-xs [&::-webkit-details-marker]:hidden">
+                        {group.checkingCount ? (
+                          <Loader2
+                            size={14}
+                            className="shrink-0 animate-spin text-sky-700"
+                          />
+                        ) : group.attentionCount ? (
+                          <AlertTriangle
+                            size={14}
+                            className="shrink-0 text-amber-700"
+                          />
+                        ) : (
+                          <Check
+                            size={14}
+                            className="shrink-0 text-emerald-700"
+                          />
+                        )}
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-bold text-slate-900">
+                            {group.label}
+                          </span>
+                          <span className="block text-[11px] text-slate-500">
+                            {group.checkingCount
+                              ? "Checking acceleration"
+                              : `${group.enabledCount} of ${group.items.length} accelerated`}
+                          </span>
+                        </span>
+                        <ChevronDown
+                          size={14}
+                          className="shrink-0 text-slate-500 transition-transform group-open:rotate-180"
+                        />
+                      </summary>
+                      <div className="divide-y divide-slate-100 border-t border-slate-200 bg-slate-50">
+                        {group.items.map((item) => {
+                          const enabled = item.state === "enabled";
+                          const checking = item.state === "checking";
+                          return (
+                            <div
+                              key={item.key}
+                              className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 px-3 py-2.5 text-xs"
+                            >
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  {checking ? (
+                                    <Loader2
+                                      size={12}
+                                      className="shrink-0 animate-spin text-sky-700"
+                                    />
+                                  ) : enabled ? (
+                                    <Check
+                                      size={12}
+                                      className="shrink-0 text-emerald-700"
+                                    />
+                                  ) : (
+                                    <AlertTriangle
+                                      size={12}
+                                      className="shrink-0 text-amber-700"
+                                    />
+                                  )}
+                                  <span className="truncate font-bold text-slate-800">
+                                    {item.label}
+                                  </span>
+                                </div>
+                                <code className="mt-0.5 block truncate font-mono text-[10px] text-slate-500">
+                                  {item.model}
+                                </code>
+                                <div
+                                  className={`mt-0.5 text-[11px] ${
+                                    enabled
+                                      ? "text-emerald-700"
+                                      : checking
+                                        ? "text-slate-500"
+                                        : "text-amber-800"
+                                  }`}
+                                >
+                                  {item.message}
+                                  {enabled && item.earliestTime
+                                    ? ` · ${item.earliestTime}`
+                                    : ""}
+                                </div>
+                              </div>
+                              <a
+                                href={splunkDataModelManagerUrl(item)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label={`${
+                                  enabled ? "Open" : "Accelerate"
+                                } ${item.label} data model`}
+                                className="mt-0.5 inline-flex h-7 items-center gap-1 rounded border border-slate-300 bg-white px-2 font-bold text-sky-700 hover:border-sky-400 hover:text-sky-900"
+                              >
+                                {enabled ? "Open" : "Accelerate"}
+                                <ExternalLink size={11} />
+                              </a>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </details>
+                  ))}
+                </div>
+              </section>
+
+              <details className="group overflow-hidden rounded-lg border border-slate-200 bg-white">
+                <summary className="flex min-h-14 cursor-pointer list-none items-center px-4 text-sm font-bold text-slate-800 hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+                  <span>
+                    <span className="block text-[10px] uppercase tracking-wide text-slate-500">
+                      Optional
+                    </span>
+                    Advanced tuning
+                  </span>
+                  <ChevronDown
+                    size={16}
+                    className="ml-auto transition-transform group-open:rotate-180"
+                  />
+                </summary>
+                <div className="grid gap-2 border-t border-slate-200 p-4 text-xs text-slate-600">
+                  <p>
+                    Run CIM discovery, tune external-app macros, inspect raw
+                    SPL, or use per-macro diagnostics after setup.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <a
+                      href={splunkAppViewUrl("macro_index_tuning")}
+                      className={`${compactButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
+                    >
+                      Open full tuner
+                    </a>
+                    <a
+                      href={openSearchUrl || undefined}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-disabled={!openSearchUrl}
+                      className={`${compactButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700 ${
+                        openSearchUrl ? "" : "pointer-events-none opacity-55"
+                      }`}
+                    >
+                      <ExternalLink size={14} />
+                      Open in Search
+                    </a>
+                  </div>
+                </div>
+              </details>
+            </aside>
+          </div>
+        </div>
+
+        <section
+          aria-label="Initial setup actions"
+          className="fixed bottom-0 left-0 right-0 z-[80] flex flex-wrap items-center justify-between gap-3 border-t border-slate-300 bg-white/95 px-6 py-3 shadow-[0_-8px_24px_rgba(15,23,42,0.14)] backdrop-blur md:left-[72px]"
+        >
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-wide text-sky-800">
+              Step 3 of 3 · {setupScanReady ? "Ready to finish" : scanState === "error" ? "Ready to finish without tuning" : "Scanning"}
+            </div>
+            <div className="mt-0.5 text-xs text-slate-600">
+              {setupActionMessage}
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <a
+              href={splunkAppViewUrl(APP_SETUP_VIEW)}
+              className={`${lightButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
+            >
+              <ArrowLeft size={16} />
+              Back
+            </a>
+            <button
+              type="button"
+              onClick={finishInitialSetup}
+              disabled={
+                setupStatus.state === "saving" ||
+                isSavingAll ||
+                summariesOnlyBlocked
+              }
+              className={`${lightButtonBase} border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700`}
+            >
+              {setupStatus.state === "saving" ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Check size={16} />
+              )}
+              {setupStatus.state === "saving"
+                ? setupStatus.message || "Finishing setup"
+                : "Save and finish setup"}
+            </button>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   return (
-    <main className="min-h-screen bg-[#f4f6f8] px-6 py-5 text-slate-800">
-      <section className="mb-4 border-b border-slate-200 pb-4">
+    <main
+      className={`min-h-screen bg-[#f4f6f8] px-6 py-5 text-slate-800 ${
+        setupMode ? "pb-28" : ""
+      }`}
+    >
+      {setupMode && (
+        <section className="mb-4 border border-sky-300 bg-sky-50">
+          <div className="px-5 py-4">
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wide text-sky-800">
+                Initial setup · Step 3 of 3
+              </div>
+              <h1 className="mt-1 text-lg font-bold text-slate-900">
+                Tune the indexes discovered for your Cisco data
+              </h1>
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-700">
+                The fast scan runs automatically. Review the proposed{" "}
+                <code className="rounded bg-white px-1 py-0.5 font-mono text-xs">
+                  index_*
+                </code>{" "}
+                definitions, edit them if needed, then finish setup. Finishing
+                saves detected SCD and installed-app routing macros and unlocks
+                the landing page; optional CIM macros can be tuned later.
+              </p>
+              {setupStatus.state === "error" && setupStatus.message && (
+                <div
+                  role="alert"
+                  className="mt-3 flex items-start gap-2 border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+                >
+                  <AlertTriangle className="mt-0.5 shrink-0" size={16} />
+                  <span>{setupStatus.message}</span>
+                </div>
+              )}
+            </div>
+          </div>
+          <ol className="grid grid-cols-3 border-t border-sky-200 text-xs font-bold text-slate-600">
+            <li className="flex min-h-10 items-center gap-2 border-r border-sky-200 bg-emerald-50 px-4 text-emerald-800">
+              <Check size={14} /> Discover data
+            </li>
+            <li className="flex min-h-10 items-center gap-2 border-r border-sky-200 bg-emerald-50 px-4 text-emerald-800">
+              <Check size={14} /> Validate add-ons
+            </li>
+            <li className="flex min-h-10 items-center gap-2 bg-sky-100 px-4 text-sky-900">
+              <span className="grid h-5 w-5 place-items-center rounded-full bg-sky-700 text-[10px] text-white">
+                3
+              </span>
+              Tune indexes
+            </li>
+          </ol>
+        </section>
+      )}
+      {setupMode && (
+        <section
+          aria-label="Initial setup actions"
+          className="fixed bottom-0 left-0 right-0 z-[80] flex flex-wrap items-center justify-between gap-3 border-t border-slate-300 bg-white px-6 py-3 shadow-[0_-8px_24px_rgba(15,23,42,0.16)] md:left-[72px]"
+        >
+          <div>
+            <div className="text-xs font-bold uppercase tracking-wide text-sky-800">
+              Step 3 of 3 · Tune indexes
+            </div>
+            <div className="mt-0.5 text-sm text-slate-600">
+              {summariesOnlyBlocked
+                ? "Enable acceleration for the required Cisco data models before finishing."
+                : scanState === "loading"
+                  ? "Waiting for the automatic index scan to finish."
+                  : scanState === "error"
+                    ? "The index scan did not complete. Finish setup now and retry macro tuning later."
+                  : `${setupRowsToSave.length} detected routing macro${
+                      setupRowsToSave.length === 1 ? "" : "s"
+                    } will be saved when setup finishes.`}
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <a
+              href={splunkAppViewUrl(APP_SETUP_VIEW)}
+              className={`${lightButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
+            >
+              <ArrowLeft size={16} />
+              Back
+            </a>
+            <button
+              type="button"
+              onClick={finishInitialSetup}
+              disabled={
+                setupStatus.state === "saving" ||
+                isSavingAll ||
+                summariesOnlyBlocked
+              }
+              className={`${lightButtonBase} border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700`}
+            >
+              {setupStatus.state === "saving" ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Check size={16} />
+              )}
+              {setupStatus.state === "saving"
+                ? setupStatus.message || "Finishing setup"
+                : "Finish setup"}
+            </button>
+          </div>
+        </section>
+      )}
+      <section className="mb-4 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="m-0 text-xl font-bold tracking-normal text-slate-900">
               Macro Index Tuning
             </h1>
             <p className="mt-1 max-w-3xl text-sm text-slate-600">
-              Scan known Cisco sourcetypes for fast dashboard macro tuning.
-              SCD <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">index_*</code>{" "}
-              macros are discovered from this app at runtime, so new index
-              macros are picked up automatically. Run CIM data model discovery
-              separately when you need the slower tag-based index search.
-            </p>
-            <p className="mt-1 max-w-3xl text-xs text-slate-500">
-              Powered by searchbase entry{" "}
-              <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">
-                {TUNING_SEARCHBASE_ID}
-              </code>
-              .
+              Scan known Cisco sourcetypes, review routing coverage, and save
+              only the macro changes you need.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="flex h-10 items-center gap-3 text-sm font-semibold text-slate-700">
               <span>Range</span>
               <TimeRangeDropdown
@@ -1474,6 +3423,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
             <button
               type="button"
               onClick={saveAll}
+              title="Save dashboard, companion app, and loaded CIM macros"
               disabled={
                 !rowsToSave.length || isLoading || isCimLoading || isSavingAll
               }
@@ -1490,44 +3440,255 @@ export default function MacroIndexTuningPage(): JSX.Element {
         </div>
       </section>
 
-      <section className="mb-4 border border-slate-200 bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
+      <section
+        aria-labelledby="scan-overview-heading"
+        className="mb-4 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="m-0 text-base font-bold text-slate-900">
-              Ad hoc macro
+            <h2
+              id="scan-overview-heading"
+              className="m-0 text-base font-bold text-slate-900"
+            >
+              Scan overview
             </h2>
-            <p className="mt-1 text-sm text-slate-600">
-              Update{" "}
-              <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">
-                {ADHOC_MACRO_NAME}
-              </code>{" "}
-              before saving generated index macros.
+            <p className="mt-1 text-xs text-slate-500">
+              One quick read on routing coverage, events, and acceleration.
             </p>
           </div>
+          <div className="flex items-center gap-2 text-xs font-semibold">
+            <button
+              type="button"
+              onClick={() => setAllDashboardSections(true)}
+              className="text-sky-700 hover:text-sky-900"
+            >
+              Expand all
+            </button>
+            <span className="text-slate-300">·</span>
+            <button
+              type="button"
+              onClick={() => setAllDashboardSections(false)}
+              className="text-slate-600 hover:text-slate-900"
+            >
+              Collapse all
+            </button>
+          </div>
+        </div>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-lg bg-sky-50 px-4 py-3">
+            <div className="text-lg font-bold text-sky-700">
+              {formatNumber(externalAppMacroSummaries.length)} apps
+            </div>
+            <div className="text-xs text-slate-500">Cisco app coverage</div>
+          </div>
+          <div className="rounded-lg bg-slate-100 px-4 py-3">
+            <div className="text-lg font-bold text-slate-900">
+              {formatNumber(totalIndexValues)} indexes
+            </div>
+            <div className="text-xs text-slate-500">Known routing targets</div>
+          </div>
+          <div className="rounded-lg bg-emerald-50 px-4 py-3">
+            <div className="text-lg font-bold text-emerald-700">
+              {formatNumber(totalEvents)} events
+            </div>
+            <div className="text-xs text-slate-500">Selected range</div>
+          </div>
+          <div className="rounded-lg bg-emerald-50 px-4 py-3">
+            <div className="text-lg font-bold text-emerald-700">
+              {formatNumber(acceleratedDataModelCount)} /{" "}
+              {formatNumber(dataModelReadiness.length)}
+            </div>
+            <div className="text-xs text-slate-500">
+              Data models accelerated
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section
+        aria-labelledby="external-app-macro-readiness-heading"
+        className="mb-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-4">
           <button
             type="button"
-            onClick={loadAdhocMacro}
-            disabled={adhocStatus.state === "saving"}
-            className={`${lightButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
+            onClick={() => toggleDashboardSection("appCoverage")}
+            aria-expanded={expandedDashboardSections.appCoverage}
+            aria-controls="external-app-macro-readiness-content"
+            className="flex min-w-0 flex-1 items-start gap-2 text-left"
           >
-            <RefreshCw
-              size={16}
-              className={adhocStatus.state === "saving" ? "animate-spin" : ""}
-            />
-            Reload
+            {expandedDashboardSections.appCoverage ? (
+              <ChevronDown size={18} className="mt-0.5 shrink-0 text-slate-500" />
+            ) : (
+              <ChevronRight size={18} className="mt-0.5 shrink-0 text-slate-500" />
+            )}
+            <span>
+              <span
+                id="external-app-macro-readiness-heading"
+                className="block text-sm font-bold text-slate-900"
+              >
+                Cisco app macro coverage
+              </span>
+              <span className="mt-1 block text-xs text-slate-500">
+                {formatNumber(externalAppMacroSummaries.length)} companion apps ·{" "}
+                {formatNumber(externalAppMacroRows.length)} macros ·{" "}
+                {formatNumber(
+                  externalAppMacroSummaries.filter(
+                    (summary) => summary.matchedMacroCount > 0,
+                  ).length,
+                )}{" "}
+                apps with detected data
+              </span>
+            </span>
           </button>
+          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+            Ready to review
+          </span>
         </div>
+
+        {expandedDashboardSections.appCoverage && (
+          <div id="external-app-macro-readiness-content">
+            {isLoading && externalAppMacroRows.length === 0 ? (
+              <div className="flex min-h-24 items-center justify-center gap-3 border-t border-slate-200 text-sm text-slate-600">
+                <Loader2 size={18} className="animate-spin text-sky-700" />
+                Checking Cisco app macro coverage...
+              </div>
+            ) : (
+              <div
+                className="divide-y divide-slate-100 border-t border-slate-200"
+                role="list"
+                aria-label="Cisco app-owned routing macro coverage"
+              >
+                {externalAppMacroSummaries.map((summary) => {
+                  const managerLink = externalAppMacroManagerLinks.find(
+                    (item) => item.targetApp === summary.targetApp,
+                  );
+                  const hasMatchingData = summary.matchedMacroCount > 0;
+                  return (
+                    <article
+                      key={summary.targetApp}
+                      role="listitem"
+                      className="flex flex-wrap items-center gap-3 px-4 py-3 text-xs"
+                    >
+                      {hasMatchingData ? (
+                        <Check size={15} className="shrink-0 text-emerald-700" />
+                      ) : (
+                        <Info size={15} className="shrink-0 text-slate-500" />
+                      )}
+                      <div className="min-w-[240px] flex-1">
+                        <div className="font-bold text-slate-900">{summary.label}</div>
+                        <code className="font-mono text-[10px] text-slate-500">
+                          {summary.targetApp}
+                        </code>
+                      </div>
+                      <div className="text-slate-600">
+                        <strong className="text-slate-900">
+                          {formatNumber(summary.rows.length)}
+                        </strong>{" "}
+                        macros · <strong>{formatNumber(summary.indexCount)}</strong>{" "}
+                        indexes · <strong>{formatNumber(summary.eventCount)}</strong>{" "}
+                        events
+                      </div>
+                      {managerLink && (
+                        <a
+                          href={managerLink.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 font-bold text-sky-700 hover:text-sky-900"
+                        >
+                          Manage
+                          <ExternalLink size={11} />
+                        </a>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+            {appInventoryError && (
+              <div className="border-t border-slate-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                {appInventoryError}
+              </div>
+            )}
+          </div>
+        )}
+      </section>
+
+      <section className="mb-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
+          <button
+            type="button"
+            onClick={() => toggleDashboardSection("performance")}
+            aria-expanded={expandedDashboardSections.performance}
+            aria-controls="search-performance-content"
+            className="flex min-w-0 flex-1 items-start gap-2 text-left"
+          >
+            {expandedDashboardSections.performance ? (
+              <ChevronDown size={18} className="mt-0.5 shrink-0 text-slate-500" />
+            ) : (
+              <ChevronRight size={18} className="mt-0.5 shrink-0 text-slate-500" />
+            )}
+            <span>
+              <span className="block text-sm font-bold text-slate-900">
+                Search performance
+              </span>
+              <span className="mt-1 block text-xs text-slate-500">
+                Control ad hoc search mode and inspect acceleration only when needed.
+              </span>
+            </span>
+          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                dataModelsNeedingAttention.length
+                  ? "bg-amber-50 text-amber-800"
+                  : "bg-emerald-50 text-emerald-700"
+              }`}
+            >
+              {formatNumber(acceleratedDataModelCount)} /{" "}
+              {formatNumber(dataModelReadiness.length)} accelerated
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                void loadAdhocMacro();
+                void checkDataModelAcceleration();
+              }}
+              disabled={
+                adhocStatus.state === "saving" || accelerationCheckInProgress
+              }
+              className={`${compactButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
+            >
+              <RefreshCw
+                size={14}
+                className={
+                  adhocStatus.state === "saving" || accelerationCheckInProgress
+                    ? "animate-spin"
+                    : ""
+                }
+              />
+              Refresh
+            </button>
+          </div>
+        </div>
+        {expandedDashboardSections.performance && (
+          <div id="search-performance-content">
         <div className="grid gap-3 px-4 py-4 lg:grid-cols-[180px_minmax(0,1fr)_auto] lg:items-start">
           <div>
             <div className="font-mono text-sm font-bold text-sky-800">
               {ADHOC_MACRO_NAME}
             </div>
+            <MacroInfoBox
+              macro={ADHOC_MACRO_NAME}
+              description={adhocDescription}
+            />
             <div className="mt-1 text-xs text-slate-500">
               tstats acceleration options
             </div>
           </div>
           <div>
             <input
+              aria-label={`${ADHOC_MACRO_NAME} definition`}
               value={adhocDefinition}
               onChange={(event) => {
                 setAdhocDefinition(event.target.value);
@@ -1549,7 +3710,11 @@ export default function MacroIndexTuningPage(): JSX.Element {
           <button
             type="button"
             onClick={saveAdhocMacro}
-            disabled={adhocStatus.state === "saving" || !adhocDefinition.trim()}
+            disabled={
+              adhocStatus.state === "saving" ||
+              !adhocDefinition.trim() ||
+              summariesOnlyBlocked
+            }
             className={`${lightButtonBase} border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700`}
           >
             {adhocStatus.state === "saving" ? (
@@ -1560,75 +3725,218 @@ export default function MacroIndexTuningPage(): JSX.Element {
             Save
           </button>
         </div>
-      </section>
+        <div className="border-t border-slate-200 bg-slate-50 px-4 py-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => toggleDashboardSection("acceleration")}
+              aria-expanded={expandedDashboardSections.acceleration}
+              aria-controls="data-model-acceleration-content"
+              className="flex min-w-0 flex-1 items-start gap-2 text-left"
+            >
+              {expandedDashboardSections.acceleration ? (
+                <ChevronDown size={17} className="mt-0.5 shrink-0 text-slate-500" />
+              ) : (
+                <ChevronRight size={17} className="mt-0.5 shrink-0 text-slate-500" />
+              )}
+              <span>
+                <span className="block text-sm font-bold text-slate-900">
+                  Data model acceleration readiness
+                </span>
+                <span className="mt-1 block text-xs text-slate-600">
+                  {accelerationCheckInProgress
+                    ? "Checking recommended models…"
+                    : `${acceleratedDataModelCount} of ${dataModelReadiness.length} accelerated`}
+                </span>
+              </span>
+            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <a
+                href={openAccelerationSearchUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Open acceleration check in Search"
+                className={`${compactButtonBase} border-slate-300 bg-white text-sky-700 hover:border-sky-400 hover:text-sky-900`}
+              >
+                <ExternalLink size={13} />
+                Open in Search
+              </a>
+              <a
+                href={DATA_MODEL_ACCELERATION_DOCS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`Open Splunk ${SPLUNK_DOCS_VERSION} data model acceleration documentation`}
+                className={`${compactButtonBase} border-slate-300 bg-white text-sky-700 hover:border-sky-400 hover:text-sky-900`}
+              >
+                <ExternalLink size={13} />
+                Acceleration guide
+              </a>
+              <button
+                type="button"
+                onClick={checkDataModelAcceleration}
+                disabled={accelerationCheckInProgress}
+                className={`${compactButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
+              >
+                <RefreshCw
+                  size={14}
+                  className={accelerationCheckInProgress ? "animate-spin" : ""}
+                />
+                Check again
+              </button>
+            </div>
+          </div>
 
-      <section className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-        <div className="border border-slate-200 bg-white px-4 py-3">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Macros
-          </div>
-          <div className="mt-1 text-2xl font-bold text-slate-900">
-            {formatNumber(tunableRows.length)}
-          </div>
-          <div className="mt-1 text-xs text-slate-500">
-            tunable index macros
-          </div>
-        </div>
-        <div className="border border-slate-200 bg-white px-4 py-3">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Index values
-          </div>
-          <div className="mt-1 text-2xl font-bold text-slate-900">
-            {formatNumber(totalIndexValues)}
-          </div>
-          <div className="mt-1 text-xs text-slate-500">
-            SCD macro definitions
-          </div>
-        </div>
-        <div className="border border-slate-200 bg-white px-4 py-3">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            CIM indexes
-          </div>
-          <div className="mt-1 text-2xl font-bold text-slate-900">
-            {formatNumber(totalCimIndexValues)}
-          </div>
-          <div className="mt-1 text-xs text-slate-500">
-            Splunk_SA_CIM definitions
-          </div>
-        </div>
-        <div className="border border-slate-200 bg-white px-4 py-3">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Model indexes
-          </div>
-          <div className="mt-1 text-2xl font-bold text-slate-900">
-            {formatNumber(totalModelIndexValues)}
-          </div>
-          <div className="mt-1 text-xs text-slate-500">
-            Cisco model app definitions
-          </div>
-        </div>
-        <div className="border border-slate-200 bg-white px-4 py-3">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Events
-          </div>
-          <div className="mt-1 text-2xl font-bold text-slate-900">
-            {formatNumber(totalEvents)}
-          </div>
-          <div className="mt-1 text-xs text-slate-500">matched by the scan</div>
-        </div>
-        <div className="border border-slate-200 bg-white px-4 py-3">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Unknown
-          </div>
+          {expandedDashboardSections.acceleration && (
+            <div id="data-model-acceleration-content">
           <div
-            className={`mt-1 text-2xl font-bold ${hasUnknown ? "text-amber-700" : "text-emerald-700"}`}
+            className={`mt-3 rounded-md px-3 py-2 text-xs font-semibold ${
+              accelerationCheckInProgress
+                ? "bg-sky-100 text-sky-800"
+                : dataModelsNeedingAttention.length
+                  ? "bg-amber-100 text-amber-900"
+                  : "bg-emerald-100 text-emerald-800"
+            }`}
+            role="status"
           >
-            {formatNumber(rows.filter((row) => row.macro === "unknown").length)}
+            {accelerationCheckInProgress
+              ? "Checking recommended data models…"
+              : dataModelsNeedingAttention.length
+                ? `${acceleratedDataModelCount} of ${dataModelReadiness.length} accelerated · ${dataModelsNeedingAttention.length} need attention`
+                : `All ${dataModelReadiness.length} recommended data models are accelerated.`}
           </div>
-          <div className="mt-1 text-xs text-slate-500">
-            unmapped sourcetype groups
+
+          <div
+            className="mt-3 grid gap-2"
+            aria-label="Data model acceleration requirements grouped by app"
+          >
+            {dataModelGroups.map((group) => (
+              <details
+                key={group.app}
+                open={group.attentionCount > 0}
+                className="group overflow-hidden rounded-md border border-slate-200 bg-white"
+              >
+                <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-xs [&::-webkit-details-marker]:hidden">
+                  {group.checkingCount ? (
+                    <Loader2 size={14} className="shrink-0 animate-spin text-sky-700" />
+                  ) : group.attentionCount ? (
+                    <AlertTriangle size={14} className="shrink-0 text-amber-700" />
+                  ) : (
+                    <Check size={14} className="shrink-0 text-emerald-700" />
+                  )}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-bold text-slate-900">
+                      {group.label}
+                    </span>
+                    <span className="block text-[11px] text-slate-500">
+                      {group.checkingCount
+                        ? "Checking acceleration"
+                        : `${group.enabledCount} of ${group.items.length} accelerated`}
+                    </span>
+                  </span>
+                  <ChevronDown
+                    size={14}
+                    className="shrink-0 text-slate-500 transition-transform group-open:rotate-180"
+                  />
+                </summary>
+                <div className="divide-y divide-slate-100 border-t border-slate-200 bg-slate-50">
+                  {group.items.map((item) => {
+                    const enabled = item.state === "enabled";
+                    const checking = item.state === "checking";
+                    return (
+                      <div
+                        key={item.key}
+                        className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 px-3 py-2.5 text-xs"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            {checking ? (
+                              <Loader2 size={12} className="shrink-0 animate-spin text-sky-700" />
+                            ) : enabled ? (
+                              <Check size={12} className="shrink-0 text-emerald-700" />
+                            ) : (
+                              <AlertTriangle size={12} className="shrink-0 text-amber-700" />
+                            )}
+                            <span className="truncate font-bold text-slate-800">
+                              {item.label}
+                            </span>
+                          </div>
+                          <code className="mt-0.5 block truncate font-mono text-[10px] text-slate-500">
+                            {item.model}
+                          </code>
+                          <div
+                            className={`mt-0.5 text-[11px] ${
+                              enabled
+                                ? "text-emerald-700"
+                                : checking
+                                  ? "text-slate-500"
+                                  : "text-amber-800"
+                            }`}
+                          >
+                            {item.message}
+                            {enabled && item.earliestTime
+                              ? ` · ${item.earliestTime}`
+                              : ""}
+                          </div>
+                        </div>
+                        <a
+                          href={splunkDataModelManagerUrl(item)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-0.5 inline-flex h-7 items-center gap-1 rounded border border-slate-300 bg-white px-2 font-bold text-sky-700 hover:border-sky-400 hover:text-sky-900"
+                        >
+                          {enabled ? "Open" : "Accelerate"}
+                          <ExternalLink size={11} />
+                        </a>
+                      </div>
+                    );
+                  })}
+                </div>
+              </details>
+            ))}
           </div>
+
+          {summariesOnlyEnabled && accelerationCheckInProgress ? (
+            <div
+              role="status"
+              className="mt-3 flex items-start gap-2 border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-800"
+            >
+              <Loader2 className="mt-0.5 shrink-0 animate-spin" size={16} />
+              Checking the required data-model acceleration settings.
+            </div>
+          ) : summariesOnlyBlocked ? (
+            <div
+              role="alert"
+              className="mt-3 flex items-start gap-2 border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+            >
+              <AlertTriangle className="mt-0.5 shrink-0" size={16} />
+              <span>
+                <code className="font-mono">summariesonly=true</code> cannot be
+                saved yet. Enable acceleration for all three required Cisco data
+                models, then check again.
+              </span>
+            </div>
+          ) : summariesOnlyEnabled ? (
+            <div
+              role="status"
+              className="mt-3 flex items-start gap-2 border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800"
+            >
+              <Check className="mt-0.5 shrink-0" size={16} />
+              All required Cisco data models have acceleration enabled.
+            </div>
+          ) : (
+            <div className="mt-3 flex items-start gap-2 border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+              <Info className="mt-0.5 shrink-0 text-sky-700" size={16} />
+              <span>
+                <code className="font-mono">summariesonly=false</code> may fall
+                back to raw events while acceleration is being prepared.
+              </span>
+            </div>
+          )}
+            </div>
+          )}
         </div>
+          </div>
+        )}
       </section>
 
       {error && (
@@ -1656,18 +3964,41 @@ export default function MacroIndexTuningPage(): JSX.Element {
         </section>
       )}
 
-      <section className="mb-4 border border-slate-200 bg-white">
-        <div className="grid gap-3 border-b border-slate-200 px-4 py-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
-          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="flex shrink-0 items-center gap-2">
-              <Search size={17} className="text-sky-700" />
-              <h2 className="m-0 text-base font-bold text-slate-900">
-                Fast macro definitions
-              </h2>
-            </div>
+      <section className="mb-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div
+          className={`px-4 py-3 ${
+            expandedDashboardSections.dashboardMacros
+              ? "border-b border-slate-200"
+              : ""
+          }`}
+        >
+          <button
+            type="button"
+            onClick={() => toggleDashboardSection("dashboardMacros")}
+            aria-expanded={expandedDashboardSections.dashboardMacros}
+            aria-controls="dashboard-macro-definitions-content"
+            className="flex w-full items-start gap-2 text-left"
+          >
+            {expandedDashboardSections.dashboardMacros ? (
+              <ChevronDown size={18} className="mt-0.5 shrink-0 text-slate-500" />
+            ) : (
+              <ChevronRight size={18} className="mt-0.5 shrink-0 text-slate-500" />
+            )}
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold text-slate-900">
+                Dashboard index macros
+              </span>
+              <span className="mt-0.5 block text-xs text-slate-500">
+                {formatNumber(dashboardMacroRows.length)} macros ·{" "}
+                {formatNumber(totalIndexValues)} indexes · owned by {APP_NAME}
+              </span>
+            </span>
+          </button>
+          {expandedDashboardSections.dashboardMacros && (
+          <div className="mt-3 grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
             <label
               htmlFor="macro-index-tuning-search"
-              className="relative min-w-0 w-full sm:min-w-[260px] sm:max-w-[420px]"
+              className="relative min-w-0 w-full lg:max-w-2xl"
             >
               <span className="sr-only">
                 Search macro, definition, indexes, and sourcetypes
@@ -1685,49 +4016,40 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 className={tableSearchInputBase}
               />
             </label>
-          </div>
-          <div className="flex min-w-0 flex-wrap items-center gap-2 xl:justify-end">
-            <CopyButton
-              text={macroStanzas}
-              label="Copy macros.conf"
-              targetRef={macroPreviewRef}
-            />
-            <a
-              href={macrosManagerUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`${lightButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
-            >
-              <ExternalLink size={16} />
-              Open SCD macros
-            </a>
-            {externalMacroManagerLinks.map(({ targetApp, href }) => (
+            <div className="flex min-w-0 flex-wrap items-center gap-2 lg:justify-end">
+              <CopyButton
+                text={macroStanzas}
+                label="Copy macros.conf"
+                targetRef={macroPreviewRef}
+              />
               <a
-                key={targetApp}
-                href={href}
+                href={macrosManagerUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={`${lightButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
               >
                 <ExternalLink size={16} />
-                Open {getTargetAppLabel(targetApp)} macros
+                Open SCD macros
               </a>
-            ))}
+            </div>
           </div>
+          )}
         </div>
 
-        {isLoading && rows.length === 0 ? (
+        {expandedDashboardSections.dashboardMacros && (
+          <div id="dashboard-macro-definitions-content">
+        {isLoading && dashboardMacroRows.length === 0 ? (
           <div className="flex min-h-[260px] items-center justify-center gap-3 text-sm text-slate-600">
             <Loader2 size={18} className="animate-spin text-sky-700" />
             Scanning indexes and sourcetypes...
           </div>
-        ) : rows.length === 0 ? (
+        ) : dashboardMacroRows.length === 0 ? (
           <div className="min-h-[220px] px-4 py-12 text-center text-sm text-slate-500">
-            No macro rows returned for the selected range.
+            No dashboard macro rows returned for the selected range.
           </div>
-        ) : filteredRows.length === 0 ? (
+        ) : filteredDashboardMacroRows.length === 0 ? (
           <div className="min-h-[220px] px-4 py-12 text-center text-sm text-slate-500">
-            No macro rows match the current search.
+            No dashboard macro rows match the current search.
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -1750,16 +4072,106 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   </th>
                 </tr>
               </thead>
-              <tbody>{renderTableRows(filteredRowGroups)}</tbody>
+              <tbody>{renderTableRows(filteredDashboardMacroGroups)}</tbody>
             </table>
+          </div>
+        )}
           </div>
         )}
       </section>
 
-      <section className="mb-4 border border-slate-200 bg-white">
-        <div className="grid gap-3 border-b border-slate-200 px-4 py-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
-          <div className="min-w-0">
-            <button
+      <section
+        id="external-app-macro-definitions"
+        aria-labelledby="external-app-macro-definitions-heading"
+        className="mb-4 scroll-mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+      >
+        <div
+          className={`px-4 py-3 ${
+            expandedDashboardSections.externalMacros
+              ? "border-b border-slate-200"
+              : ""
+          }`}
+        >
+          <button
+            type="button"
+            onClick={() => toggleDashboardSection("externalMacros")}
+            aria-expanded={expandedDashboardSections.externalMacros}
+            aria-controls="external-app-macro-definitions-content"
+            className="flex w-full items-start gap-2 text-left"
+          >
+            {expandedDashboardSections.externalMacros ? (
+              <ChevronDown size={18} className="mt-0.5 shrink-0 text-slate-500" />
+            ) : (
+              <ChevronRight size={18} className="mt-0.5 shrink-0 text-slate-500" />
+            )}
+            <span className="min-w-0 flex-1">
+              <span
+                id="external-app-macro-definitions-heading"
+                className="block text-sm font-bold text-slate-900"
+              >
+                Cisco app macros
+              </span>
+              <span className="mt-0.5 block text-xs text-slate-500">
+                {formatNumber(externalAppMacroRows.length)} macros across{" "}
+                {formatNumber(externalAppMacroSummaries.length)} companion apps
+              </span>
+            </span>
+          </button>
+        </div>
+
+        {expandedDashboardSections.externalMacros && (
+          <div id="external-app-macro-definitions-content">
+        {isLoading && externalAppMacroRows.length === 0 ? (
+          <div className="flex min-h-[220px] items-center justify-center gap-3 text-sm text-slate-600">
+            <Loader2 size={18} className="animate-spin text-sky-700" />
+            Scanning app-owned macros...
+          </div>
+        ) : externalAppMacroRows.length === 0 ? (
+          <div className="min-h-[180px] px-4 py-12 text-center text-sm text-slate-500">
+            No supported Cisco app macro definitions are available.
+          </div>
+        ) : filteredExternalAppMacroRows.length === 0 ? (
+          <div className="min-h-[180px] px-4 py-12 text-center text-sm text-slate-500">
+            No Cisco app macro rows match the current search.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full border-collapse text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                  <th className="w-[190px] px-4 py-3 font-bold">Macro</th>
+                  <th className="min-w-[330px] px-4 py-3 font-bold">
+                    Definition
+                  </th>
+                  <th className="min-w-[220px] px-4 py-3 font-bold">Indexes</th>
+                  <th className="min-w-[260px] px-4 py-3 font-bold">
+                    Sourcetypes
+                  </th>
+                  <th className="w-[110px] px-4 py-3 text-right font-bold">
+                    Events
+                  </th>
+                  <th className="w-[130px] px-4 py-3 text-right font-bold">
+                    Action
+                  </th>
+                </tr>
+              </thead>
+              <tbody>{renderTableRows(filteredExternalAppMacroGroups)}</tbody>
+            </table>
+          </div>
+        )}
+          </div>
+        )}
+      </section>
+
+      {isTargetAppInstalled(CIM_APP_NAME) && (
+        <section className="mb-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div
+            className={`grid gap-3 px-4 py-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center ${
+              isCimGroupCollapsed ? "" : "border-b border-slate-200"
+            }`}
+          >
+            <div className="min-w-0">
+              <button
               type="button"
               onClick={() => toggleRowGroup(CIM_APP_NAME)}
               aria-expanded={!isCimGroupCollapsed}
@@ -1770,8 +4182,13 @@ export default function MacroIndexTuningPage(): JSX.Element {
               ) : (
                 <ChevronDown size={15} className="shrink-0" />
               )}
-              <span className="min-w-0 truncate">
-                {CIM_APP_NAME}/local/macros.conf
+              <span className="flex min-w-0 items-center gap-2 normal-case tracking-normal">
+                <span className="truncate text-sm font-semibold text-slate-700">
+                  {getTargetAppLabel(CIM_APP_NAME)}
+                </span>
+                <code className="shrink-0 font-mono text-[11px] font-medium text-slate-500">
+                  {CIM_APP_NAME}/local/macros.conf
+                </code>
               </span>
               <span className="shrink-0 rounded bg-slate-100 px-2 py-0.5 text-[11px] font-semibold normal-case tracking-normal text-slate-500">
                 {formatNumber(cimMacroRows.length)} macros
@@ -1779,11 +4196,13 @@ export default function MacroIndexTuningPage(): JSX.Element {
             </button>
             {!isCimGroupCollapsed && (
               <p className="mt-1 text-sm text-slate-600">
-                CIM data model discovery. Discover Splunk_SA_CIM index macros
-                with tag-based searches only when needed.
+                CIM data model discovery. Discover all {CIM_MACRO_NAMES.length}{" "}
+                Splunk_SA_CIM index macros with their shipped tag-based
+                constraints only when needed.
               </p>
             )}
           </div>
+          {!isCimGroupCollapsed && (
           <div className="flex min-w-0 flex-wrap items-center gap-2 xl:justify-end">
             <div className="flex h-10 items-center gap-2 text-sm font-semibold text-slate-700">
               <span>CIM range</span>
@@ -1793,7 +4212,9 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 onChange={handleCimTimeRangeChange}
                 realTimeDisabled
                 presets={TIME_PRESETS}
-                onRequestParseEarliest={cimTimeParser.handleRequestParseEarliest}
+                onRequestParseEarliest={
+                  cimTimeParser.handleRequestParseEarliest
+                }
                 onRequestParseLatest={cimTimeParser.handleRequestParseLatest}
                 parseEarliest={cimTimeParser.parseEarliest}
                 parseLatest={cimTimeParser.parseLatest}
@@ -1811,7 +4232,23 @@ export default function MacroIndexTuningPage(): JSX.Element {
               ) : (
                 <Play size={16} />
               )}
-              {isCimLoading ? "Running" : "Run CIM discovery"}
+              {isCimLoading ? "Running" : "Run all CIM discovery"}
+            </button>
+            <button
+              type="button"
+              onClick={saveAllCim}
+              disabled={
+                !cimRowsToSave.length || isCimLoading || isSavingCim
+              }
+              title="Save all loaded CIM definitions without description or iseval settings"
+              className={`${lightButtonBase} border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700`}
+            >
+              {isSavingCim ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Save size={16} />
+              )}
+              {isSavingCim ? "Saving CIM" : "Save all CIM"}
             </button>
             <a
               href={openCimSearchUrl}
@@ -1822,7 +4259,17 @@ export default function MacroIndexTuningPage(): JSX.Element {
               <ExternalLink size={16} />
               Open CIM Search
             </a>
+            <a
+              href={cimMacrosManagerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`${lightButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
+            >
+              <ExternalLink size={16} />
+              Open CIM macros
+            </a>
           </div>
+          )}
         </div>
 
         {!isCimGroupCollapsed && (
@@ -1840,7 +4287,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
             {isCimLoading && cimRows.length === 0 ? (
               <div className="flex min-h-[180px] items-center justify-center gap-3 text-sm text-slate-600">
                 <Loader2 size={18} className="animate-spin text-sky-700" />
-                Discovering CIM indexes...
+                Discovering indexes for all CIM data models...
               </div>
             ) : cimRows.length === 0 ? (
               <div className="min-h-[160px] px-4 py-12 text-center text-sm text-slate-500">
@@ -1879,15 +4326,40 @@ export default function MacroIndexTuningPage(): JSX.Element {
             )}
           </>
         )}
-      </section>
+        </section>
+      )}
 
-      <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
-        <div className="border border-slate-200 bg-white">
-          <div className="border-b border-slate-200 px-4 py-3">
-            <h2 className="m-0 text-base font-bold text-slate-900">
-              macros.conf preview
-            </h2>
-          </div>
+      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <button
+          type="button"
+          onClick={() => toggleDashboardSection("diagnostics")}
+          aria-expanded={expandedDashboardSections.diagnostics}
+          aria-controls="macro-diagnostics-content"
+          className="flex w-full items-start gap-2 px-4 py-3 text-left"
+        >
+          {expandedDashboardSections.diagnostics ? (
+            <ChevronDown size={18} className="mt-0.5 shrink-0 text-slate-500" />
+          ) : (
+            <ChevronRight size={18} className="mt-0.5 shrink-0 text-slate-500" />
+          )}
+          <span>
+            <span className="block text-sm font-bold text-slate-900">
+              Preview & diagnostics
+            </span>
+            <span className="mt-0.5 block text-xs text-slate-500">
+              macros.conf preview, fast scan SPL, and CIM discovery SPL
+            </span>
+          </span>
+        </button>
+        {expandedDashboardSections.diagnostics && (
+        <div
+          id="macro-diagnostics-content"
+          className="grid gap-4 border-t border-slate-200 bg-slate-50 p-4 lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]"
+        >
+        <details className="rounded-lg border border-slate-200 bg-white">
+          <summary className="cursor-pointer border-b border-slate-200 px-4 py-3 text-base font-bold text-slate-900">
+            macros.conf preview
+          </summary>
           <textarea
             ref={macroPreviewRef}
             readOnly
@@ -1897,10 +4369,10 @@ export default function MacroIndexTuningPage(): JSX.Element {
             aria-label="macros.conf preview"
             className="m-0 h-[320px] w-full resize-y overflow-auto border-0 bg-white p-4 font-mono text-xs leading-relaxed text-slate-800 outline-none"
           />
-        </div>
+        </details>
 
         <div className="grid gap-4">
-          <details className="border border-slate-200 bg-white">
+          <details className="rounded-lg border border-slate-200 bg-white">
             <summary className="cursor-pointer border-b border-slate-200 px-4 py-3 text-base font-bold text-slate-900">
               Fast scan SPL
             </summary>
@@ -1909,7 +4381,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
             </pre>
           </details>
 
-          <details className="border border-slate-200 bg-white">
+          <details className="rounded-lg border border-slate-200 bg-white">
             <summary className="cursor-pointer border-b border-slate-200 px-4 py-3 text-base font-bold text-slate-900">
               CIM discovery SPL
             </summary>
@@ -1918,6 +4390,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
             </pre>
           </details>
         </div>
+        </div>
+        )}
       </section>
     </main>
   );

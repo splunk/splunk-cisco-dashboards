@@ -6,6 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const vm = require('vm');
 
 const APP_ROOT = path.resolve(__dirname, '..');
 const STAGE_DIR = process.argv[2]
@@ -16,7 +17,7 @@ const APACHE_LICENSE_SHA256 =
     'cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30';
 
 const ENTRY_NAMES = [
-    'overview',
+    'executive_insights',
     'health_monitoring',
     'topology_canvas_v1',
     'network_diagram',
@@ -92,6 +93,7 @@ if (leakedSourceFiles.length > 0) {
 
 const missingEntries = [];
 const developmentEntries = [];
+const invalidEntries = [];
 
 ENTRY_NAMES.forEach((entryName) => {
     const bundlePath = path.join(PAGES_DIR, `${entryName}.js`);
@@ -107,6 +109,13 @@ ENTRY_NAMES.forEach((entryName) => {
     if (matchedMarker) {
         developmentEntries.push(`${entryName}.js (${matchedMarker})`);
     }
+
+    try {
+        new vm.Script(bundle, { filename: bundlePath });
+    } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        invalidEntries.push(`${entryName}.js (${detail})`);
+    }
 });
 
 if (missingEntries.length > 0) {
@@ -117,6 +126,10 @@ if (developmentEntries.length > 0) {
     fail('Development React code was found in production bundles.', developmentEntries);
 }
 
+if (invalidEntries.length > 0) {
+    fail('Production entry bundles contain invalid or truncated JavaScript.', invalidEntries);
+}
+
 console.log(
-    `✓ Verified ${ENTRY_NAMES.length} production bundles: compiled JavaScript only, no source maps`
+    `✓ Verified ${ENTRY_NAMES.length} production bundles: valid compiled JavaScript only, no source maps`
 );

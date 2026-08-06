@@ -37,15 +37,15 @@ import { createFetchInit } from '@splunk/splunk-utils/fetch';
 import { getSearchAppContext } from './splunkSearchService';
 import { clearSearchbaseCache } from './searchbaseCatalogue';
 import {
-    DEFAULT_OVERVIEW_PROFILE_ID,
-    isOverviewProfileId,
-    type OverviewProfileId,
-} from '@/common/config/overviewProfiles';
+    EXECUTIVE_WORKSPACE_SOURCE_ID,
+    isWorkspaceSourceId,
+    type WorkspaceSourceId,
+} from '@/common/config/insightsWorkspaces';
 
 const APP_NAME = 'splunk-cisco-dashboards';
 const CONF_BASENAME = 'searchbase';
 
-const DEFAULT_OVERVIEW_FACTORY_STANZA_IDS = [
+const DEFAULT_EXECUTIVE_WORKSPACE_STANZA_IDS = [
     'building_resilience_environmental_health_index',
     'building_resilience_water_leak_detection',
     'building_resilience_wireless_devices_to_review_count',
@@ -83,28 +83,31 @@ const DEFAULT_OVERVIEW_FACTORY_STANZA_IDS = [
 
 const STANZA_ID_PATTERN = /^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,255}$/;
 
-const entryProfile = (entry: Record<string, unknown>): OverviewProfileId => {
-    const raw = entry.profile;
-    return isOverviewProfileId(raw) ? raw : DEFAULT_OVERVIEW_PROFILE_ID;
+const entryWorkspace = (entry: Record<string, unknown>): WorkspaceSourceId => {
+    const raw = entry.workspace ?? entry.profile;
+    return isWorkspaceSourceId(raw) ? raw : EXECUTIVE_WORKSPACE_SOURCE_ID;
 };
 
 const entryMatchesTile = (
     entry: Record<string, unknown>,
     tileId: string,
-    profileId: OverviewProfileId
+    workspaceId: WorkspaceSourceId
 ): boolean =>
-    entry.tileId === tileId && entryProfile(entry) === profileId;
+    entry.tileId === tileId && entryWorkspace(entry) === workspaceId;
 
-const withProfile = (
+const withWorkspace = (
     entry: Record<string, unknown>,
-    profileId: OverviewProfileId
+    workspaceId: WorkspaceSourceId
 ): Record<string, unknown> => {
-    if (profileId === DEFAULT_OVERVIEW_PROFILE_ID) {
+    if (workspaceId === EXECUTIVE_WORKSPACE_SOURCE_ID) {
         const rest = { ...entry };
+        delete rest.workspace;
         delete rest.profile;
         return rest;
     }
-    return { ...entry, profile: profileId };
+    const rest: Record<string, unknown> = { ...entry, workspace: workspaceId };
+    delete rest.profile;
+    return rest;
 };
 
 export interface TileThresholdsPatch {
@@ -259,7 +262,7 @@ const deleteStanzaLocalOverride = async (stanza: string): Promise<void> => {
 const patchOverviewEntry = (
     vizOptions: Record<string, unknown>,
     tileId: string,
-    profileId: OverviewProfileId,
+    workspaceId: WorkspaceSourceId,
     patch: (entry: Record<string, unknown>) => Record<string, unknown>
 ): Record<string, unknown> => {
     const next: Record<string, unknown> = { ...vizOptions };
@@ -272,32 +275,32 @@ const patchOverviewEntry = (
                 entry &&
                 typeof entry === 'object' &&
                 !Array.isArray(entry) &&
-                entryMatchesTile(entry as Record<string, unknown>, tileId, profileId)
+                entryMatchesTile(entry as Record<string, unknown>, tileId, workspaceId)
             ) {
                 matched = true;
-                return withProfile(
+                return withWorkspace(
                     patch({ ...(entry as Record<string, unknown>) }),
-                    profileId
+                    workspaceId
                 );
             }
             return entry;
         });
         next.overview = matched
             ? nextArray
-            : [...raw, withProfile(patch({ tileId }), profileId)];
+            : [...raw, withWorkspace(patch({ tileId }), workspaceId)];
         return next;
     }
 
     if (raw && typeof raw === 'object') {
         const entry = raw as Record<string, unknown>;
         next.overview =
-            entryMatchesTile(entry, tileId, profileId) || entry.tileId === undefined
-                ? withProfile(patch({ ...entry, tileId }), profileId)
-                : [entry, withProfile(patch({ tileId }), profileId)];
+            entryMatchesTile(entry, tileId, workspaceId) || entry.tileId === undefined
+                ? withWorkspace(patch({ ...entry, tileId }), workspaceId)
+                : [entry, withWorkspace(patch({ tileId }), workspaceId)];
         return next;
     }
 
-    next.overview = [withProfile(patch({ tileId }), profileId)];
+    next.overview = [withWorkspace(patch({ tileId }), workspaceId)];
     return next;
 };
 
@@ -305,7 +308,7 @@ const patchOverviewEntry = (
 const removeOverviewEntry = (
     vizOptions: Record<string, unknown>,
     tileId: string,
-    profileId: OverviewProfileId
+    workspaceId: WorkspaceSourceId
 ): Record<string, unknown> => {
     const next: Record<string, unknown> = { ...vizOptions };
     const raw = next.overview;
@@ -319,14 +322,14 @@ const removeOverviewEntry = (
                     entryMatchesTile(
                         entry as Record<string, unknown>,
                         tileId,
-                        profileId
+                        workspaceId
                     )
                 )
         );
     } else if (
         raw &&
         typeof raw === 'object' &&
-        entryMatchesTile(raw as Record<string, unknown>, tileId, profileId)
+        entryMatchesTile(raw as Record<string, unknown>, tileId, workspaceId)
     ) {
         delete next.overview;
     }
@@ -338,10 +341,10 @@ export const saveTileThresholds = async (
     stanzaId: string,
     tileId: string,
     thresholds: TileThresholdsPatch,
-    profileId: OverviewProfileId = DEFAULT_OVERVIEW_PROFILE_ID
+    workspaceId: WorkspaceSourceId = EXECUTIVE_WORKSPACE_SOURCE_ID
 ): Promise<void> => {
     const { vizOptions } = await loadEffectiveStanza(stanzaId);
-    const patched = patchOverviewEntry(vizOptions, tileId, profileId, (entry) => ({
+    const patched = patchOverviewEntry(vizOptions, tileId, workspaceId, (entry) => ({
         ...entry,
         thresholds: {
             ...(entry.thresholds && typeof entry.thresholds === 'object' ? entry.thresholds : {}),
@@ -359,10 +362,10 @@ export const saveTileDataMapping = async (
     stanzaId: string,
     tileId: string,
     mapping: TileDataMappingPatch,
-    profileId: OverviewProfileId = DEFAULT_OVERVIEW_PROFILE_ID
+    workspaceId: WorkspaceSourceId = EXECUTIVE_WORKSPACE_SOURCE_ID
 ): Promise<void> => {
     const { vizOptions } = await loadEffectiveStanza(stanzaId);
-    const patched = patchOverviewEntry(vizOptions, tileId, profileId, (entry) => ({
+    const patched = patchOverviewEntry(vizOptions, tileId, workspaceId, (entry) => ({
         ...entry,
         ...(mapping.label !== undefined ? { label: mapping.label } : {}),
         ...(mapping.valueField !== undefined ? { valueField: mapping.valueField } : {}),
@@ -389,12 +392,12 @@ export const saveTileSearchBinding = async (
     tileId: string,
     section: string,
     carryForward: { label?: string; valueField?: string; thresholds?: TileThresholdsPatch },
-    profileId: OverviewProfileId = DEFAULT_OVERVIEW_PROFILE_ID
+    workspaceId: WorkspaceSourceId = EXECUTIVE_WORKSPACE_SOURCE_ID
 ): Promise<void> => {
     if (fromStanzaId === toStanzaId) return;
 
     const { vizOptions: toVizOptions } = await loadEffectiveStanza(toStanzaId);
-    const patchedTo = patchOverviewEntry(toVizOptions, tileId, profileId, (entry) => ({
+    const patchedTo = patchOverviewEntry(toVizOptions, tileId, workspaceId, (entry) => ({
         ...entry,
         tileId,
         section,
@@ -413,7 +416,7 @@ export const saveTileSearchBinding = async (
     clearSearchbaseCache();
 
     const { vizOptions: fromVizOptions } = await loadEffectiveStanza(fromStanzaId);
-    const patchedFrom = removeOverviewEntry(fromVizOptions, tileId, profileId);
+    const patchedFrom = removeOverviewEntry(fromVizOptions, tileId, workspaceId);
     await writeStanzaKeys(fromStanzaId, { viz_options: JSON.stringify(patchedFrom) });
     clearSearchbaseCache();
 };
@@ -431,7 +434,7 @@ export const saveTileDrilldown = async (
 
 export interface FactoryTileConfigPatch {
     tileId: string;
-    profileId?: OverviewProfileId;
+    workspaceId?: WorkspaceSourceId;
     section: string;
     /** Current stanza id the tile is defined on (before this save). */
     fromStanzaId: string;
@@ -458,7 +461,7 @@ export interface FactoryTileConfigPatch {
  */
 export const saveFactoryTileConfig = async (patch: FactoryTileConfigPatch): Promise<void> => {
     let ownerStanzaId = patch.fromStanzaId;
-    const profileId = patch.profileId ?? DEFAULT_OVERVIEW_PROFILE_ID;
+    const workspaceId = patch.workspaceId ?? EXECUTIVE_WORKSPACE_SOURCE_ID;
 
     if (patch.searchRebind && patch.searchRebind.toStanzaId !== patch.fromStanzaId) {
         await saveTileSearchBinding(
@@ -467,15 +470,15 @@ export const saveFactoryTileConfig = async (patch: FactoryTileConfigPatch): Prom
             patch.tileId,
             patch.section,
             { label: patch.dataMapping?.label, valueField: patch.dataMapping?.valueField, thresholds: patch.thresholds },
-            profileId
+            workspaceId
         );
         ownerStanzaId = patch.searchRebind.toStanzaId;
     } else {
         if (patch.thresholds && Object.keys(patch.thresholds).length > 0) {
-            await saveTileThresholds(ownerStanzaId, patch.tileId, patch.thresholds, profileId);
+            await saveTileThresholds(ownerStanzaId, patch.tileId, patch.thresholds, workspaceId);
         }
         if (patch.dataMapping && Object.keys(patch.dataMapping).length > 0) {
-            await saveTileDataMapping(ownerStanzaId, patch.tileId, patch.dataMapping, profileId);
+            await saveTileDataMapping(ownerStanzaId, patch.tileId, patch.dataMapping, workspaceId);
         }
     }
 
@@ -484,15 +487,15 @@ export const saveFactoryTileConfig = async (patch: FactoryTileConfigPatch): Prom
     }
 };
 
-export const resetOverviewSearchbaseTileConfig = async (
+export const resetInsightsWorkspaceTileConfig = async (
     currentOwnerStanzaIds: readonly (string | undefined | null)[],
-    profileId: OverviewProfileId = DEFAULT_OVERVIEW_PROFILE_ID
+    workspaceId: WorkspaceSourceId = EXECUTIVE_WORKSPACE_SOURCE_ID
 ): Promise<void> => {
     if (!isInSplunkRuntime()) return;
 
     const stanzaIds = new Set<string>(
-        profileId === DEFAULT_OVERVIEW_PROFILE_ID
-            ? DEFAULT_OVERVIEW_FACTORY_STANZA_IDS
+        workspaceId === EXECUTIVE_WORKSPACE_SOURCE_ID
+            ? DEFAULT_EXECUTIVE_WORKSPACE_STANZA_IDS
             : []
     );
     currentOwnerStanzaIds.forEach((raw) => {

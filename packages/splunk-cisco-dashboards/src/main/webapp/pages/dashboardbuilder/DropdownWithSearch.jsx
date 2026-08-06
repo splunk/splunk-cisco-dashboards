@@ -14,14 +14,16 @@ import TableList from '@splunk/react-icons/TableList';
 import ChartSingleValueRadial from '@splunk/react-icons/ChartSingleValueRadial';
 import ChartColumn from '@splunk/react-icons/ChartColumn';
 import Modal from '@splunk/react-ui/Modal';
+import useSplunkTheme from '@splunk/themes/useSplunkTheme';
 import { plainTextFromHtml } from '../../common/services/searchbaseCatalogue';
 
 const ALL_APPS = '__all_apps__';
 const ALL_CATEGORIES = '__all_categories__';
 const ALL_SUB_CATEGORIES = '__all_sub_categories__';
-const DEFAULT_APP_SCOPE = 'splunk-cisco-dashboards';
 const KPI_MENU_WIDTH = 620;
 const MENU_VIEWPORT_MARGIN = 12;
+const KPI_MENU_MAX_HEIGHT = 640;
+const KPI_MENU_MIN_HEIGHT = 260;
 const CONFIG_PANEL_MIN_WIDTH = 240;
 const CONFIG_PANEL_MIN_HEIGHT = 300;
 
@@ -85,20 +87,49 @@ export default function DropdownWithSearch({
     label,
     icon,
     appearance,
+    ariaLabel,
+    className,
     style,
     onSelect,
     searches,
 }) {
+    const splunkTheme = useSplunkTheme();
+    const colorScheme = splunkTheme.colorScheme === 'dark' ? 'dark' : 'light';
+    const dropdownThemeStyle = {
+        '--dashboard-builder-background-page': splunkTheme.backgroundColorPage,
+        '--dashboard-builder-background-section': splunkTheme.backgroundColorSection,
+        '--dashboard-builder-background-popup': splunkTheme.backgroundColorPopup,
+        '--dashboard-builder-content-active': splunkTheme.contentColorActive,
+        '--dashboard-builder-content-default': splunkTheme.contentColorDefault,
+        '--dashboard-builder-content-inverted': splunkTheme.contentColorInverted,
+        '--dashboard-builder-content-muted': splunkTheme.contentColorMuted,
+        '--dashboard-builder-border': splunkTheme.borderColor,
+        '--dashboard-builder-border-strong': splunkTheme.borderColorStrong,
+        '--dashboard-builder-border-weak': splunkTheme.borderColorWeak,
+        '--dashboard-builder-accent': splunkTheme.interactiveColorPrimary,
+        '--dashboard-builder-overlay-hover': splunkTheme.interactiveColorOverlayHover,
+        '--dashboard-builder-overlay-selected': splunkTheme.interactiveColorOverlaySelected,
+        '--dashboard-builder-modal-background': splunkTheme.backgroundColorPopup,
+        '--dashboard-builder-modal-background-section': splunkTheme.backgroundColorSection,
+        '--dashboard-builder-modal-content-active': splunkTheme.contentColorActive,
+        '--dashboard-builder-modal-content-default': splunkTheme.contentColorDefault,
+        '--dashboard-builder-modal-content-muted': splunkTheme.contentColorMuted,
+        '--dashboard-builder-modal-border': splunkTheme.borderColor,
+        '--dashboard-builder-modal-border-strong': splunkTheme.borderColorStrong,
+        '--dashboard-builder-modal-border-weak': splunkTheme.borderColorWeak,
+        '--dashboard-builder-modal-overlay-hover': splunkTheme.interactiveColorOverlayHover,
+        '--dashboard-builder-modal-overlay-selected': splunkTheme.interactiveColorOverlaySelected,
+    };
     const dropdownRef = useRef(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedApp, setSelectedApp] = useState(DEFAULT_APP_SCOPE);
+    const [selectedApp, setSelectedApp] = useState(ALL_APPS);
     const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES);
     const [selectedSubCategory, setSelectedSubCategory] = useState(ALL_SUB_CATEGORIES);
     const [selectedTags, setSelectedTags] = useState([]);
     const [includeHiddenSearches, setIncludeHiddenSearches] = useState(false);
     const [includeDrilldownSearches, setIncludeDrilldownSearches] = useState(false);
     const [includeTableSearches, setIncludeTableSearches] = useState(false);
-    const [filtersOpen, setFiltersOpen] = useState(true);
+    const [filtersOpen, setFiltersOpen] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
     const [menuPosition, setMenuPosition] = useState(undefined);
     const [selection, setSelection] = useState([]);
@@ -109,6 +140,7 @@ export default function DropdownWithSearch({
 
         const rect = dropdownRef.current.getBoundingClientRect();
         const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
         const maxMenuWidth = Math.max(320, viewportWidth - MENU_VIEWPORT_MARGIN * 2);
         const menuWidth = Math.min(KPI_MENU_WIDTH, maxMenuWidth);
         const configurationPanelLeft = getConfigurationPanelLeft();
@@ -124,11 +156,17 @@ export default function DropdownWithSearch({
             MENU_VIEWPORT_MARGIN,
             Math.min(preferredLeft, availableRight - menuWidth),
         );
+        const spaceBelow = viewportHeight - rect.bottom - MENU_VIEWPORT_MARGIN;
+        const spaceAbove = rect.top - MENU_VIEWPORT_MARGIN;
+        const openAbove = spaceBelow < KPI_MENU_MIN_HEIGHT && spaceAbove > spaceBelow;
+        const availableHeight = openAbove ? spaceAbove : spaceBelow;
+        const height = Math.max(180, Math.min(KPI_MENU_MAX_HEIGHT, availableHeight));
 
         setMenuPosition({
             left,
-            top: rect.bottom + 5,
+            top: openAbove ? Math.max(MENU_VIEWPORT_MARGIN, rect.top - height - 5) : rect.bottom + 5,
             width: menuWidth,
+            height,
         });
     }, [isOpen]);
 
@@ -155,7 +193,7 @@ export default function DropdownWithSearch({
 
     const resetFilters = () => {
         setSearchTerm('');
-        setSelectedApp(DEFAULT_APP_SCOPE);
+        setSelectedApp(ALL_APPS);
         setSelectedCategory(ALL_CATEGORIES);
         setSelectedSubCategory(ALL_SUB_CATEGORIES);
         setSelectedTags([]);
@@ -190,10 +228,10 @@ export default function DropdownWithSearch({
         return true;
     });
 
-    const apps = sortedUnique(visibilityFilteredSearches.map((search) => search.dispatchContext));
+    const apps = sortedUnique(visibilityFilteredSearches.map((search) => search.catalogueApp));
 
     const appScopedSearches = visibilityFilteredSearches.filter(
-        (search) => selectedApp === ALL_APPS || search.dispatchContext === selectedApp,
+        (search) => selectedApp === ALL_APPS || search.catalogueApp === selectedApp,
     );
 
     const categories = sortedUnique(appScopedSearches.map((search) => search.category));
@@ -218,22 +256,17 @@ export default function DropdownWithSearch({
         return true;
     });
 
-    const availableTags = sortedUnique(
-        facetFilteredSearches.flatMap((search) => search.tags || []),
-    );
-
-    const filteredSearches = facetFilteredSearches.filter((search) => {
-        if (selectedTags.some((tag) => !(search.tags || []).includes(tag))) return false;
-
-        const query = searchTerm.trim().toLowerCase();
-        if (!query) return true;
-
+    const query = searchTerm.trim().toLowerCase();
+    const queryFilteredSearches = facetFilteredSearches.filter((search) => {
+        if (!query) {
+            return true;
+        }
         const haystack = [
             search.searchName,
             search.id,
             search.category,
             search.subCategory,
-            search.dispatchContext,
+            search.catalogueApp,
             plainTextFromHtml(search.description || ''),
             plainTextFromHtml(search.explanation || ''),
             search.search,
@@ -247,6 +280,18 @@ export default function DropdownWithSearch({
         return haystack.includes(query);
     });
 
+    // Tags are an AND facet. Build their choices from the searches that match
+    // every filter already applied, including the currently selected tags.
+    // This prevents the picker from offering a next tag that would reduce the
+    // result set to zero, while removing a tag immediately broadens the list.
+    const filteredSearches = queryFilteredSearches.filter(
+        (search) => !selectedTags.some((tag) => !(search.tags || []).includes(tag)),
+    );
+
+    const availableTags = sortedUnique(
+        filteredSearches.flatMap((search) => search.tags || []),
+    );
+
     const sortedSearches = [...filteredSearches].sort((left, right) =>
         left.searchName.localeCompare(right.searchName, undefined, { sensitivity: 'base' }),
     );
@@ -254,7 +299,7 @@ export default function DropdownWithSearch({
     const selectedFilteredSearches = sortedSearches.map((search) => search.id);
     const hasActiveFilters =
         searchTerm.trim() ||
-        selectedApp !== DEFAULT_APP_SCOPE ||
+        selectedApp !== ALL_APPS ||
         selectedCategory !== ALL_CATEGORIES ||
         selectedSubCategory !== ALL_SUB_CATEGORIES ||
         selectedTags.length > 0 ||
@@ -264,7 +309,7 @@ export default function DropdownWithSearch({
 
     const activeFilterCount = [
         searchTerm.trim(),
-        selectedApp !== DEFAULT_APP_SCOPE,
+        selectedApp !== ALL_APPS,
         selectedCategory !== ALL_CATEGORIES,
         selectedSubCategory !== ALL_SUB_CATEGORIES,
         selectedTags.length > 0,
@@ -273,9 +318,29 @@ export default function DropdownWithSearch({
         includeTableSearches,
     ].filter(Boolean).length;
 
+    const applySelection = () => {
+        resetFilters();
+        onSelect(selection);
+        setSelection([]);
+        setIsOpen(false);
+    };
+
+    const commitSelection = () => {
+        if (selection.length === 0) return;
+        if (selection.length < 20) {
+            applySelection();
+            return;
+        }
+        setConfirmationOpen(true);
+    };
+
     return (
         <>
-            <Modal open={confirmationOpen}>
+            <Modal
+                open={confirmationOpen}
+                className={`dashboard-builder-themed-modal dashboard-builder-themed-modal-${colorScheme}`}
+                style={dropdownThemeStyle}
+            >
                 <Modal.Header title="Large KPI Selection - Confirmation Required" />
                 <Modal.Body>
                     <div>
@@ -306,36 +371,40 @@ export default function DropdownWithSearch({
                             style={{ maxWidth: 125 }}
                             onClick={() => {
                                 setConfirmationOpen(false);
-                                resetFilters();
-                                onSelect(selection);
-                                setSelection([]);
-                                setIsOpen(false);
+                                applySelection();
                             }}
                         />
                     </div>
                 </Modal.Footer>
             </Modal>
-            <div ref={dropdownRef} className="dropdown" style={style}>
+            <div
+                ref={dropdownRef}
+                className={['dropdown', className].filter(Boolean).join(' ')}
+                style={style}
+            >
                 <Button
                     appearance={appearance}
                     onClick={() => setIsOpen(!isOpen)}
                     label={label}
                     icon={icon}
+                    aria-label={ariaLabel || label}
                 />
 
                 {isOpen && (
                     <div
-                        className="dropdown-menu dropdown-kpi-menu"
+                        className={`dropdown-menu dropdown-kpi-menu dropdown-kpi-menu-${colorScheme}`}
                         style={
                             menuPosition
                                 ? {
+                                      ...dropdownThemeStyle,
                                       left: menuPosition.left,
                                       marginLeft: 0,
                                       position: 'fixed',
                                       top: menuPosition.top,
                                       width: menuPosition.width,
+                                      height: menuPosition.height,
                                   }
-                                : undefined
+                                : dropdownThemeStyle
                         }
                     >
                         <div className="dropdown-kpi-filter-shell">
@@ -381,12 +450,6 @@ export default function DropdownWithSearch({
                                             {apps.map((app) => (
                                                 <Select.Option key={app} label={app} value={app} />
                                             ))}
-                                            {!apps.includes(DEFAULT_APP_SCOPE) && (
-                                                <Select.Option
-                                                    label={DEFAULT_APP_SCOPE}
-                                                    value={DEFAULT_APP_SCOPE}
-                                                />
-                                            )}
                                         </Select>
                                     </label>
 
@@ -399,9 +462,10 @@ export default function DropdownWithSearch({
                                                 <input
                                                     type="checkbox"
                                                     checked={includeHiddenSearches}
-                                                    onChange={(e) =>
-                                                        setIncludeHiddenSearches(e.target.checked)
-                                                    }
+                                                    onChange={(e) => {
+                                                        setIncludeHiddenSearches(e.target.checked);
+                                                        setSelectedTags([]);
+                                                    }}
                                                 />
                                                 <span>Show hidden searches</span>
                                             </label>
@@ -409,9 +473,12 @@ export default function DropdownWithSearch({
                                                 <input
                                                     type="checkbox"
                                                     checked={includeDrilldownSearches}
-                                                    onChange={(e) =>
-                                                        setIncludeDrilldownSearches(e.target.checked)
-                                                    }
+                                                    onChange={(e) => {
+                                                        setIncludeDrilldownSearches(
+                                                            e.target.checked,
+                                                        );
+                                                        setSelectedTags([]);
+                                                    }}
                                                 />
                                                 <span>Show drill-down searches</span>
                                             </label>
@@ -419,9 +486,10 @@ export default function DropdownWithSearch({
                                                 <input
                                                     type="checkbox"
                                                     checked={includeTableSearches}
-                                                    onChange={(e) =>
-                                                        setIncludeTableSearches(e.target.checked)
-                                                    }
+                                                    onChange={(e) => {
+                                                        setIncludeTableSearches(e.target.checked);
+                                                        setSelectedTags([]);
+                                                    }}
                                                 />
                                                 <span>Show table searches</span>
                                             </label>
@@ -542,7 +610,32 @@ export default function DropdownWithSearch({
                             </div>
                         )}
 
-                        <div style={{ maxHeight: 500, overflowY: 'auto' }}>
+                        <div className="dropdown-kpi-selection-bar">
+                            <span className="dropdown-kpi-selection-count">
+                                {selection.length === 0
+                                    ? 'Select one or more KPIs to add'
+                                    : `${selection.length} KPI${
+                                          selection.length === 1 ? '' : 's'
+                                      } selected`}
+                            </span>
+                            <div className="dropdown-kpi-selection-actions">
+                                <Button
+                                    style={{ minWidth: 80 }}
+                                    label="Cancel"
+                                    appearance="default"
+                                    onClick={clearSelectionAndClose}
+                                />
+                                <Button
+                                    disabled={selection.length === 0}
+                                    style={{ minWidth: 112 }}
+                                    label="Add selected"
+                                    appearance="primary"
+                                    onClick={commitSelection}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="dropdown-kpi-results">
                             <ul className="dropdown-list">
                                 {sortedSearches.map((search) => (
                                     <DropdownItem
@@ -551,7 +644,7 @@ export default function DropdownWithSearch({
                                         value={search.id}
                                         category={search.category}
                                         subCategory={search.subCategory}
-                                        app={search.dispatchContext}
+                                        app={search.catalogueApp}
                                         tags={search.tags || []}
                                         icon={getVizIcon(search.defaultViz)}
                                         updateSelection={updateSelection}
@@ -564,30 +657,6 @@ export default function DropdownWithSearch({
                                     </li>
                                 )}
                             </ul>
-                        </div>
-                        <div className="dropdown-kpi-footer">
-                            <Button
-                                style={{ minWidth: 80, marginRight: 10 }}
-                                label="Cancel"
-                                appearance="default"
-                                onClick={clearSelectionAndClose}
-                            />
-                            <Button
-                                disabled={selection.length === 0}
-                                style={{ minWidth: 80 }}
-                                label="Add"
-                                appearance="primary"
-                                onClick={() => {
-                                    if (selection.length < 20) {
-                                        resetFilters();
-                                        onSelect(selection);
-                                        setSelection([]);
-                                        setIsOpen(false);
-                                    } else {
-                                        setConfirmationOpen(true);
-                                    }
-                                }}
-                            />
                         </div>
                     </div>
                 )}

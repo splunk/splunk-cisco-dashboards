@@ -1,31 +1,31 @@
 /**
  * usePersistedSectionLayout — per-user section visibility for the
- * Overview page. Factory defaults show the original three executive
- * sections; users may reveal one optional custom section or hide
- * sections they do not care about.
+ * Insights workspace. Each workspace supplies its own available and default
+ * sections; the Executive source remains the no-argument compatibility
+ * fallback for callers outside the workspace runtime.
  */
 
 import { useCallback, useEffect, useState } from 'react';
 import type { SectionId } from '@/common/hooks/useMetric';
 import {
-    ALL_OVERVIEW_SECTION_IDS,
-    DEFAULT_OVERVIEW_PROFILE_ID,
-    OVERVIEW_PROFILES,
-    profileStorageKey,
-    type OverviewProfileId,
-} from '@/common/config/overviewProfiles';
+    ALL_WORKSPACE_SECTION_IDS,
+    EXECUTIVE_WORKSPACE_SOURCE_ID,
+    WORKSPACE_SOURCES,
+    workspaceStorageKey,
+    type WorkspaceId,
+} from '@/common/config/insightsWorkspaces';
 
 const STORAGE_KEY = 'splunk-cisco-dashboards.sectionLayout.v1';
 const STORAGE_VERSION = 1;
 
-export const ALL_SECTION_IDS: readonly SectionId[] = ALL_OVERVIEW_SECTION_IDS;
+export const ALL_SECTION_IDS: readonly SectionId[] = ALL_WORKSPACE_SECTION_IDS;
 export const DEFAULT_SECTION_LAYOUT: readonly SectionId[] =
-    OVERVIEW_PROFILES[DEFAULT_OVERVIEW_PROFILE_ID].defaultVisibleSections;
+    WORKSPACE_SOURCES[EXECUTIVE_WORKSPACE_SOURCE_ID].defaultVisibleSections;
 
 const MIN_VISIBLE_SECTIONS = 1;
 
 export interface SectionLayoutOptions {
-    profileId?: OverviewProfileId;
+    workspaceId?: WorkspaceId;
     availableSections?: readonly SectionId[];
     defaultSections?: readonly SectionId[];
     maxSections?: number;
@@ -38,20 +38,23 @@ interface PersistedShape {
 }
 
 const buildOptions = (options: SectionLayoutOptions = {}) => {
-    const profile = OVERVIEW_PROFILES[options.profileId ?? DEFAULT_OVERVIEW_PROFILE_ID];
-    const availableSections = options.availableSections ?? profile.sections.map((s) => s.id);
-    const defaultSections = options.defaultSections ?? profile.defaultVisibleSections;
-    const maxSections = options.maxSections ?? profile.maxVisibleSections;
+    const fallback = WORKSPACE_SOURCES[EXECUTIVE_WORKSPACE_SOURCE_ID];
+    const availableSections =
+        options.availableSections ?? fallback.sections.map((section) => section.id);
+    const defaultSections = options.defaultSections ?? fallback.defaultVisibleSections;
+    const maxSections = options.maxSections ?? fallback.maxVisibleSections;
     const minSections = options.minSections ?? MIN_VISIBLE_SECTIONS;
     const availableSet = new Set(availableSections);
     return {
-        profile,
         availableSections,
         defaultSections,
         maxSections,
         minSections,
         availableSet,
-        storageKey: profileStorageKey(STORAGE_KEY, profile.id),
+        storageKey: workspaceStorageKey(
+            STORAGE_KEY,
+            options.workspaceId ?? EXECUTIVE_WORKSPACE_SOURCE_ID
+        ),
     };
 };
 

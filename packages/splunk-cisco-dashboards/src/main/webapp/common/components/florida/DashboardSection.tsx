@@ -252,9 +252,9 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
             {icon && (
                 <span
                     className={cn(
-                        'inline-flex h-5 w-5 items-center justify-center rounded-md',
-                        'bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-200',
-                        'border border-sky-100 dark:border-sky-900/70'
+                        'inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg',
+                        'bg-sky-50/90 text-sky-800 dark:bg-sky-950/70 dark:text-sky-200',
+                        'border border-sky-200/80 dark:border-sky-800/80 shadow-sm'
                     )}
                     aria-hidden="true"
                 >

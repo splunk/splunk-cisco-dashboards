@@ -127,8 +127,8 @@ Each Simple XML view contains:
 
 ```xml
 <dashboard version="1.1" hideEdit="true" hideExport="true" hideTitle="true"
-           script="overview_bootstrap.js">
-    <label>Overview</label>
+           script="executive_insights_bootstrap.js">
+    <label>Executive Briefing</label>
     <row>
         <panel>
             <html>
@@ -139,15 +139,15 @@ Each Simple XML view contains:
 </dashboard>
 ```
 
-`overview_bootstrap.js` is a 4-line RequireJS shim:
+`executive_insights_bootstrap.js` waits for the first-run setup gate and then
+loads the shared profile-driven React experience:
 
 ```js
-require(['/static/app/splunk-cisco-dashboards/pages/overview.js'], function () {});
+script.src = '/static/app/splunk-cisco-dashboards/pages/executive_insights.js';
 ```
 
-That bundle calls `mountPage(<PageComponent>)`, which retries until
-`#scan-root` exists (Splunk Web's RequireJS sometimes runs ahead of the
-panel) and then renders inside a `SplunkThemeProvider`.
+That bundle mounts into `#scan-root` and selects either the Executive Briefing
+or Secure Networking profile from the current Splunk view name.
 
 ## Splunk runtime detection
 

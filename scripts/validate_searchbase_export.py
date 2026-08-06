@@ -11,6 +11,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build_searchbase_export import parse_stanzas, format_stanza
 from audit_searchbase_quality import split_spl_commands
+from lint_spl_antipatterns import lint_search
 
 # Export artifacts live outside the Splunk app's default/ tree so they are
 # never bundled into the shipped package; this validator reads/writes them in
@@ -60,14 +61,6 @@ PII_HARDCODED = re.compile(
     r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b",
     re.I,
 )
-
-# SPL syntax anti-patterns (from splunk-spl-field-syntax.mdc)
-QUOTED_AGG = re.compile(
-    r"\b(?:first|last|avg|sum|count|min|max|dc|values|latest|earliest)"
-    r"\(\s*'[a-zA-Z_]\w*\.",
-    re.I,
-)
-QUOTED_BY = re.compile(r"\b(?:by|BY)\s+'[a-zA-Z_]\w*\.", re.I)
 
 SIDE_EFFECT = re.compile(
     r"\b(?:outputlookup|collect|sendemail|delete)\b", re.I
@@ -169,21 +162,12 @@ def is_trivial(spl: str) -> tuple[bool, str]:
 
 def check_spl_syntax(spl: str) -> list[CheckFailure]:
     failures: list[CheckFailure] = []
-    if QUOTED_AGG.search(spl):
+    for violation in lint_search(spl):
         failures.append(
             CheckFailure(
                 "spl_syntax",
-                "Single-quoted dotted field inside stats/timechart aggregate function.",
-                "Use bare dotted field names in aggregate args (Class A commands). "
-                "Single-quote only inside eval/where.",
-            )
-        )
-    if QUOTED_BY.search(spl):
-        failures.append(
-            CheckFailure(
-                "spl_syntax",
-                "Single-quoted dotted field in by clause.",
-                "Use bare field names in `by` clauses, e.g. `by connection.ssid`.",
+                f"{violation.rule_id}: {violation.snippet}",
+                violation.detail,
             )
         )
     for part in split_spl_commands(normalize_spl(spl)):
@@ -384,8 +368,8 @@ def format_fail_stanza(stanza_id: str, fields: dict[str, str], failures: list[Ch
         f"# EXPORT VALIDATION FAILED: [{stanza_id}]",
     ]
     for i, f in enumerate(failures, 1):
-        comment_lines.append(f"# {i}. [{f.category}] {f.detail}")
-        comment_lines.append(f"#    Suggestion: {f.suggestion}")
+        comment_lines.append(f"# {i}. [{f.category}] {f.detail}".rstrip())
+        comment_lines.append(f"#    Suggestion: {f.suggestion}".rstrip())
     comment_lines.append("")
     body = format_stanza(stanza_id, fields)
     return "\n".join(comment_lines) + "\n" + body

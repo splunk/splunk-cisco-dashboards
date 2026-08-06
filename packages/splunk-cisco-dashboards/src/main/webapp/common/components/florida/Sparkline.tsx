@@ -883,7 +883,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
               * three `<Line dataKey="previous">` elements below. The
               * Tailwind arbitrary-property syntax flips the value when
               * any ancestor carries the `.dark` class (set on the page
-              * root by `pages/overview` from `useTheme()`), so the same
+              * root by `pages/executive_insights` from `useTheme()`), so the same
               * Sparkline instance reads its own theme without prop
               * plumbing or hook reordering — important because Sparkline
               * has an `if (vizType === 'singlevalue') return null` early

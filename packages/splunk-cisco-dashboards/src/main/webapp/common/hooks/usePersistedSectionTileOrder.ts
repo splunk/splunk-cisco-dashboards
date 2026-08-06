@@ -41,21 +41,21 @@ import { useCallback, useEffect, useState } from 'react';
 import type { SectionId } from '@/common/hooks/useMetric';
 import { ALL_SECTION_IDS } from '@/common/hooks/usePersistedSectionLayout';
 import {
-    DEFAULT_OVERVIEW_PROFILE_ID,
-    profileStorageKey,
-    type OverviewProfileId,
-} from '@/common/config/overviewProfiles';
+    EXECUTIVE_WORKSPACE_SOURCE_ID,
+    workspaceStorageKey,
+    type WorkspaceId,
+} from '@/common/config/insightsWorkspaces';
 
 const STORAGE_KEY = 'splunk-cisco-dashboards.sectionTileOrder.v1';
 const STORAGE_VERSION = 1;
 
 export interface SectionTileOrderOptions {
-    profileId?: OverviewProfileId;
+    workspaceId?: WorkspaceId;
     availableSections?: readonly SectionId[];
 }
 
-const storageKeyForProfile = (profileId?: OverviewProfileId): string =>
-    profileStorageKey(STORAGE_KEY, profileId ?? DEFAULT_OVERVIEW_PROFILE_ID);
+const storageKeyForWorkspace = (workspaceId?: WorkspaceId): string =>
+    workspaceStorageKey(STORAGE_KEY, workspaceId ?? EXECUTIVE_WORKSPACE_SOURCE_ID);
 
 const isSectionId = (
     raw: unknown,
@@ -174,7 +174,7 @@ export interface UsePersistedSectionTileOrderResult {
 export const usePersistedSectionTileOrder = (
     options: SectionTileOrderOptions = {}
 ): UsePersistedSectionTileOrderResult => {
-    const storageKey = storageKeyForProfile(options.profileId);
+    const storageKey = storageKeyForWorkspace(options.workspaceId);
     const availableSections = options.availableSections ?? ALL_SECTION_IDS;
     const optionsSignature = JSON.stringify({
         storageKey,

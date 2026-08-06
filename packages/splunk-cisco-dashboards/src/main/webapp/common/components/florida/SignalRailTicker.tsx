@@ -603,7 +603,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
     return (
         <section
             className={cn(
-                'scd-signal-rail-ticker group/signal-rail relative z-40 flex-shrink-0 border-b',
+                'scd-signal-rail-ticker group/signal-rail relative z-40 w-full min-w-0 max-w-full flex-shrink-0 overflow-hidden border-b',
                 variant === 'original' &&
                     'border-slate-200 bg-white/[0.82] px-1.5 py-1 dark:border-slate-800 dark:bg-slate-950/95',
                 variant === 'bloomberg' &&
@@ -632,7 +632,12 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
             }}
         >
             <style>{signalRailTickerCss}</style>
-            <div className={cn('relative z-[70] flex items-center', density === 'compact' ? 'gap-2' : 'gap-3')}>
+            <div
+                className={cn(
+                    'relative z-[70] flex w-full min-w-0 max-w-full items-center overflow-hidden',
+                    density === 'compact' ? 'gap-2' : 'gap-3'
+                )}
+            >
                 <div
                     className={cn(
                         'absolute left-1.5 top-1/2 z-[80] hidden shrink-0 -translate-y-1/2 items-center gap-2 rounded-lg border shadow-sm transition-all duration-150 lg:flex',
@@ -663,12 +668,15 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
 
                 <div
                     className={cn(
-                        'min-w-0 flex-1 overflow-hidden select-none',
+                        'w-full min-w-0 max-w-full flex-1 overflow-hidden select-none',
                         density === 'compact' ? 'space-y-0.5' : 'space-y-1'
                     )}
                 >
                     {tickerRows.map((row, rowIndex) => (
-                        <div key={`row-${rowIndex}`} className="overflow-hidden py-0.5">
+                        <div
+                            key={`row-${rowIndex}`}
+                            className="w-full min-w-0 max-w-full overflow-hidden py-0.5"
+                        >
                             <div
                                 className="scd-signal-rail-marquee-track flex"
                                 data-paused={effectivePaused}

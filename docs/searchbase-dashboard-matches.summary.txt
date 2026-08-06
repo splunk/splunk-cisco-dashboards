@@ -1,7 +1,7 @@
-Total potential matches: 618
+Total potential matches: 732
 Unique apps matched: 1
-Unmatched stanzas: 779
-Total stanzas: 906
+Unmatched stanzas: 1194
+Total stanzas: 1345
 Dashboard queries scanned: 256
 Max matches per stanza: 5
 Provenance source: dCloud (/opt/10/etc/apps/splunk-cisco-dashboards/local/data/ui/views)

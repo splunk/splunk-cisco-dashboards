@@ -6,7 +6,7 @@ Single entry point for the **Splunk for Secure Networking** effort (Cisco GSX, *
 
 | File | What it holds | Authoritative for |
 |---|---|---|
-| `SN_EVENT_SCOPING.md` | Stakeholders, timeline (GSX Aug 24–27), org/ownership, distribution plan, risks, the full app/TA inventory, C3 clarification, the Overview-engine (`viz_options.overview` + `overview_factory_tiles.conf`) integration, decision log, open questions | **Project context & decisions** |
+| `SN_EVENT_SCOPING.md` | Stakeholders, timeline (GSX Aug 24–27), org/ownership, distribution plan, risks, the full app/TA inventory, C3 clarification, the Overview-engine (`viz_options.overview` + `insights_workspaces.conf`) integration, decision log, open questions | **Project context & decisions** |
 | `SN_SEARCH_BUILD_LIST.md` | The 98 candidate searches decomposed from all 4 xlsx tabs, cross-checked against SCAN, with build status per item | **"What to build" master inventory** |
 | `SN_SEARCHBASE_BUILD_LOG.md` | Running record of what's actually been added to `searchbase.conf` (29 `secure_networking_` stanzas) + the ~60-panel field-reference dashboard inventory (reverse-engineered from screenshots, scrubbed) + the buildability audit corrections | **Build status + panel catalog** |
 | `SN_SEARCHBASE_NEXT_BUILD_PLAN.md` | Next working build queue (P0/P1) translating meeting/launch-doc guidance into a prioritized order. **Note: not authored in the main build session — likely a parallel workstream; reconcile with the others if they diverge.** | **Prioritized build queue** |
@@ -25,7 +25,7 @@ Also present: `Splunk and SN Personas and Pillars.pptx`, `SN Splunk Use Case map
 - SCAN product catalog + the pillar-taxonomy-mismatch finding → `SN_SOURCETYPE_REFERENCE.md` + `SN_EVENT_SCOPING.md`
 - Standup + exec thread (TA-ownership risk, org decisions, GSX/9-9 timeline, distribution) → `SN_EVENT_SCOPING.md`
 - TA remediation PDF + Novo Nordisk customer story → `SN_EVENT_SCOPING.md`
-- Overview-engine Secure Networking profile (21 explicit overview entries + 5 factory-tile sections) → `SN_EVENT_SCOPING.md`
+- Insights Secure Networking workspace (21 explicit tile entries + 5 shared layout sections) → `SN_EVENT_SCOPING.md`
 - Searches actually built (29 stanzas) + field-dashboard panel inventory (~60) + demo-data asks + buildability audit → `SN_SEARCHBASE_BUILD_LOG.md`
 - `app_cisco_common#19` bug (broken SGT lookup) → `SN_SEARCH_BUILD_LIST.md` + `SN_SEARCHBASE_BUILD_LOG.md`
 

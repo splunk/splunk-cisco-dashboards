@@ -94,8 +94,9 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
     name: 'Customer Site Connectivity',
     subtitle: 'Editable customer site connectivity',
     map: {
-        center: [39.5, -98.35],
-        zoom: 4.2,
+        center: [37.5, -98.5],
+        zoom: 4.1,
+        fitSitesOnLoad: true,
         minZoom: 3,
         maxZoom: 11,
         bounds: [
@@ -103,22 +104,9 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
             [50.5, -66.0],
         ],
     },
-    // `internetEdgeMbps` is intentionally left undefined on every site.
-    // The earlier 1000 / 500 / 500 placeholders were initial estimates
-    // from a design-of-record conversation that was never confirmed
-    // against real circuit records. Shipping them on a customer-facing
-    // exec dashboard meant the popup was claiming a number we did not
-    // actually know. The site-level "Design of Record" block in the
-    // popup is conditional on the value being defined, so leaving it
-    // unset hides the block cleanly and matches the rest of the
-    // popup's "Awaiting"-pattern for empty fields. Customers who want
-    // to surface a real number can enter it through the existing
-    // topology editor pencil-tool ("Internet edge Mbps" field), which
-    // writes to the shared customer_topology.conf payload and immediately
-    // repopulates the popup for every user. If the customer's network
-    // team ever confirms actual circuit bandwidths, the values can be
-    // restored here as a packaged default and the shared config entry
-    // will override them at runtime.
+    // Factory topology is intentionally self-contained for product demos.
+    // These values are illustrative only; a customer-saved topology or
+    // bound telemetry search continues to override them at runtime.
     sites: [
         {
             id: 'nyc',
@@ -127,31 +115,11 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
             role: 'state_hq',
             lat: 40.7128,
             lng: -74.006,
-            status: 'unknown',
-            metrics: {},
-            telemetrySource: 'Configured topology item',
-        },
-        {
-            id: 'chicago',
-            name: 'Chicago',
-            shortName: 'CHI',
-            role: 'regional_hub',
-            lat: 41.8781,
-            lng: -87.6298,
-            status: 'unknown',
-            metrics: {},
-            telemetrySource: 'Configured topology item',
-        },
-        {
-            id: 'austin',
-            name: 'Austin',
-            shortName: 'AUS',
-            role: 'branch',
-            lat: 30.2672,
-            lng: -97.7431,
-            status: 'unknown',
-            metrics: {},
-            telemetrySource: 'Configured topology item',
+            status: 'stable',
+            metrics: { healthPct: 99, activeDevices: 84, alerts: 1, latencyMs: 14 },
+            internetEdgeMbps: 1000,
+            dataState: 'static',
+            telemetrySource: 'Factory demo telemetry (healthy)',
         },
         {
             id: 'san-francisco',
@@ -160,62 +128,89 @@ export const CUSTOMER_TOPOLOGY: CustomerTopology = {
             role: 'datacenter',
             lat: 37.7749,
             lng: -122.4194,
-            status: 'unknown',
-            metrics: {},
-            telemetrySource: 'Configured topology item',
+            status: 'stable',
+            metrics: { healthPct: 98, activeDevices: 67, alerts: 0, latencyMs: 18 },
+            internetEdgeMbps: 1000,
+            dataState: 'static',
+            telemetrySource: 'Factory demo telemetry (healthy)',
         },
         {
-            id: 'seattle',
-            name: 'Seattle',
-            shortName: 'SEA',
+            id: 'houston',
+            name: 'Houston',
+            shortName: 'HOU',
             role: 'branch',
-            lat: 47.6062,
-            lng: -122.3321,
-            status: 'unknown',
-            metrics: {},
-            telemetrySource: 'Configured topology item',
+            lat: 29.7604,
+            lng: -95.3698,
+            status: 'warning',
+            metrics: { healthPct: 87, activeDevices: 52, alerts: 3, latencyMs: 48 },
+            internetEdgeMbps: 500,
+            dataState: 'static',
+            telemetrySource: 'Factory demo telemetry (attention)',
         },
     ],
     links: [
         {
-            id: 'nyc-chicago',
-            name: 'New York City to Chicago',
+            id: 'nyc-san-francisco',
+            name: 'New York City to San Francisco',
             sourceSiteId: 'nyc',
-            targetSiteId: 'chicago',
-            status: 'unknown',
-            telemetrySource: 'Configured topology item',
-        },
-        {
-            id: 'chicago-austin',
-            name: 'Chicago to Austin',
-            sourceSiteId: 'chicago',
-            targetSiteId: 'austin',
-            status: 'unknown',
-            telemetrySource: 'Configured topology item',
-        },
-        {
-            id: 'austin-san-francisco',
-            name: 'Austin to San Francisco',
-            sourceSiteId: 'austin',
             targetSiteId: 'san-francisco',
-            status: 'unknown',
-            telemetrySource: 'Configured topology item',
+            status: 'stable',
+            capacityMbps: 1000,
+            throughputMbps: 620,
+            peakThroughputMbps: 760,
+            utilizationPct: 62,
+            peakUtilizationPct: 76,
+            latencyMs: 22,
+            lossPct: 0.02,
+            jitterMs: 3,
+            endpointHealthPct: 99,
+            endpointDevices: 151,
+            searchName: 'Overview - Link Demo (Healthy)',
+            teLink: 'https://app.thousandeyes.com/',
+            dataState: 'static',
+            telemetrySource: 'Demo synthetic SD-WAN feed (healthy)',
         },
         {
-            id: 'san-francisco-seattle',
-            name: 'San Francisco to Seattle',
+            id: 'san-francisco-houston',
+            name: 'San Francisco to Houston',
             sourceSiteId: 'san-francisco',
-            targetSiteId: 'seattle',
-            status: 'unknown',
-            telemetrySource: 'Configured topology item',
+            targetSiteId: 'houston',
+            status: 'warning',
+            capacityMbps: 500,
+            throughputMbps: 420,
+            peakThroughputMbps: 460,
+            utilizationPct: 84,
+            peakUtilizationPct: 92,
+            latencyMs: 86,
+            lossPct: 0.7,
+            jitterMs: 18,
+            endpointHealthPct: 89,
+            endpointDevices: 119,
+            searchName: 'Overview - Link Demo (Warning)',
+            teLink: 'https://app.thousandeyes.com/',
+            dataState: 'static',
+            telemetrySource: 'Demo synthetic SD-WAN feed (degraded)',
         },
         {
-            id: 'seattle-chicago',
-            name: 'Seattle to Chicago',
-            sourceSiteId: 'seattle',
-            targetSiteId: 'chicago',
-            status: 'unknown',
-            telemetrySource: 'Configured topology item',
+            id: 'houston-nyc',
+            name: 'Houston to New York City',
+            sourceSiteId: 'houston',
+            targetSiteId: 'nyc',
+            status: 'stable',
+            capacityMbps: 1000,
+            throughputMbps: 320,
+            peakThroughputMbps: 480,
+            utilizationPct: 32,
+            peakUtilizationPct: 48,
+            latencyMs: 31,
+            lossPct: 0.04,
+            jitterMs: 5,
+            endpointHealthPct: 97,
+            endpointDevices: 136,
+            searchName: 'Overview - Link Demo (Healthy)',
+            teLink: 'https://app.thousandeyes.com/',
+            dataState: 'static',
+            telemetrySource: 'Demo synthetic SD-WAN feed (healthy)',
         },
     ],
 };
@@ -1553,11 +1548,61 @@ const selectAutoTeMatch = (
     return best;
 };
 
+const THOUSAND_EYES_APP_URL = 'https://app.thousandeyes.com/';
+
 const buildThousandEyesTestLink = (teTestId?: string): string | undefined => {
     if (!teTestId) return undefined;
     return `https://app.thousandeyes.com/network-app-synthetics/views/?testId=${encodeURIComponent(
         teTestId
     )}`;
+};
+
+interface ThousandEyesA2AEndpointOption {
+    key: string;
+    label: string;
+}
+
+const thousandEyesA2AEndpointValue = (
+    candidate: ThousandEyesA2ACandidate,
+    side: 'source' | 'target'
+): string => {
+    const location =
+        side === 'source' ? candidate.sourceLocation : candidate.targetLocation;
+    const agent = side === 'source' ? candidate.sourceAgent : candidate.targetAgent;
+    return textValue(location ?? agent);
+};
+
+const thousandEyesA2AEndpointKey = (
+    candidate: ThousandEyesA2ACandidate,
+    side: 'source' | 'target'
+): string => compactA2AMatchText(thousandEyesA2AEndpointValue(candidate, side));
+
+const thousandEyesA2AEndpointLabel = (
+    candidate: ThousandEyesA2ACandidate,
+    side: 'source' | 'target'
+): string => {
+    const location =
+        side === 'source' ? candidate.sourceLocation : candidate.targetLocation;
+    const agent = side === 'source' ? candidate.sourceAgent : candidate.targetAgent;
+    if (location && agent && normalizeA2AMatchText(location) !== normalizeA2AMatchText(agent)) {
+        return `${location} — ${agent}`;
+    }
+    return textValue(location ?? agent, side === 'source' ? 'Source agent' : 'Target agent');
+};
+
+const thousandEyesA2AEndpointOptions = (
+    candidates: ThousandEyesA2ACandidate[],
+    side: 'source' | 'target'
+): ThousandEyesA2AEndpointOption[] => {
+    const options = new Map<string, ThousandEyesA2AEndpointOption>();
+    for (const candidate of candidates) {
+        const key = thousandEyesA2AEndpointKey(candidate, side);
+        if (!key || options.has(key)) continue;
+        options.set(key, { key, label: thousandEyesA2AEndpointLabel(candidate, side) });
+    }
+    return [...options.values()].sort((a, b) =>
+        a.label.localeCompare(b.label, undefined, { sensitivity: 'base' })
+    );
 };
 
 const teBindingFromCandidate = (
@@ -1629,6 +1674,13 @@ const sanitizeTopology = (
         const fallbackAliases = optionalTextArray(fallbackSite?.aliases);
         const resolvedAliases =
             aliases.length > 0 ? aliases : fallbackAliases.length > 0 ? fallbackAliases : [];
+        const hasConfiguredSiteMetric = Object.values(site.metrics ?? {}).some(
+            (value) => finiteOptionalNumber(value) !== undefined
+        );
+        const isLegacyFactorySite =
+            !hasConfiguredSiteMetric &&
+            optionalText(site.telemetrySource) === 'Configured topology item' &&
+            fallbackSite?.telemetrySource?.startsWith('Factory demo telemetry');
         return {
             id,
             name: textValue(site.name, fallbackSite?.name ?? shortName),
@@ -1644,16 +1696,27 @@ const sanitizeTopology = (
                 ? site.status
                 : fallbackSite?.status ?? 'unknown',
             metrics: {
-                activeDevices: finiteOptionalNumber(site.metrics?.activeDevices),
-                alerts: finiteOptionalNumber(site.metrics?.alerts),
-                healthPct: finiteOptionalNumber(site.metrics?.healthPct),
-                latencyMs: finiteOptionalNumber(site.metrics?.latencyMs),
+                activeDevices:
+                    finiteOptionalNumber(site.metrics?.activeDevices) ??
+                    fallbackSite?.metrics.activeDevices,
+                alerts:
+                    finiteOptionalNumber(site.metrics?.alerts) ??
+                    fallbackSite?.metrics.alerts,
+                healthPct:
+                    finiteOptionalNumber(site.metrics?.healthPct) ??
+                    fallbackSite?.metrics.healthPct,
+                latencyMs:
+                    finiteOptionalNumber(site.metrics?.latencyMs) ??
+                    fallbackSite?.metrics.latencyMs,
             },
             lastUpdated: optionalText(site.lastUpdated),
-            dataState: resolvedSiteSearchName ? 'loading' : site.dataState ?? 'static',
+            dataState:
+                site.dataState ?? (resolvedSiteSearchName ? 'loading' : 'static'),
             dataError: optionalText(site.dataError),
             telemetrySource:
-                optionalText(site.telemetrySource) ??
+                (isLegacyFactorySite
+                    ? fallbackSite?.telemetrySource
+                    : optionalText(site.telemetrySource)) ??
                 (resolvedSiteSearchName
                     ? 'Awaiting normalized site telemetry'
                     : 'Configured topology item'),
@@ -1685,6 +1748,10 @@ const sanitizeTopology = (
                 normalizeId(link.id, `${sourceSiteId}-${targetSiteId}`),
                 usedLinkIds
             );
+            const fallbackLinkById = fallbackLinksById.get(id) ?? fallbackLink;
+            const isLegacyFactoryLink =
+                optionalText(link.telemetrySource)?.startsWith('Demo synthetic SD-WAN feed') &&
+                fallbackLinkById?.telemetrySource?.startsWith('Demo synthetic SD-WAN feed');
             const searchName = normalizeSearchBinding(
                 link,
                 fallbackLinksById.get(id)?.searchName
@@ -1702,9 +1769,8 @@ const sanitizeTopology = (
                     ? link.status
                     : fallbackLink?.status ?? 'unknown',
                 dataState:
-                    searchName || thousandEyesA2A
-                        ? 'loading'
-                        : link.dataState ?? 'static',
+                    link.dataState ??
+                    (searchName || thousandEyesA2A ? 'loading' : 'static'),
                 telemetrySource:
                     optionalText(link.telemetrySource) ??
                     'Awaiting topology link telemetry',
@@ -1731,6 +1797,10 @@ const sanitizeTopology = (
             if (latencyMs !== undefined) normalized.latencyMs = latencyMs;
             const lossPct = finiteOptionalNumber(link.lossPct);
             if (lossPct !== undefined) normalized.lossPct = lossPct;
+            const jitterMs =
+                finiteOptionalNumber(link.jitterMs) ??
+                (isLegacyFactoryLink ? fallbackLinkById?.jitterMs : undefined);
+            if (jitterMs !== undefined) normalized.jitterMs = jitterMs;
             const endpointHealthPct = finiteOptionalNumber(link.endpointHealthPct);
             if (endpointHealthPct !== undefined) {
                 normalized.endpointHealthPct = endpointHealthPct;
@@ -1739,6 +1809,10 @@ const sanitizeTopology = (
             if (endpointDevices !== undefined) {
                 normalized.endpointDevices = endpointDevices;
             }
+            const teLink =
+                optionalText(link.teLink) ??
+                (isLegacyFactoryLink ? fallbackLinkById?.teLink : undefined);
+            if (teLink) normalized.teLink = teLink;
             const lastUpdated = optionalText(link.lastUpdated);
             if (lastUpdated) normalized.lastUpdated = lastUpdated;
             const dataError = optionalText(link.dataError);
@@ -1763,6 +1837,13 @@ const sanitizeTopology = (
                 numberValue(source.map?.center?.[1], fallbackMap.center[1], -180, 180),
             ],
             zoom: numberValue(source.map?.zoom, fallbackMap.zoom, 1, 16),
+            fitSitesOnLoad:
+                source.map?.fitSitesOnLoad === true ||
+                (source.map?.fitSitesOnLoad === undefined &&
+                    fallbackMap.fitSitesOnLoad === true &&
+                    source.map?.center?.[0] === 37.5 &&
+                    source.map?.center?.[1] === -98.5 &&
+                    source.map?.zoom === 4.1),
             minZoom: numberValue(source.map?.minZoom, fallbackMap.minZoom, 1, 16),
             maxZoom: numberValue(source.map?.maxZoom, fallbackMap.maxZoom, 1, 20),
             bounds: [
@@ -2277,7 +2358,7 @@ export const usePersistedTopology = (
     const reload = useCallback(async () => {
         setIsLoading(true);
         try {
-            const payload = await loadCustomerTopologyConfig();
+            const payload = await loadCustomerTopologyConfig(fallback.id);
             if (payload) {
                 applyPayload(payload);
             } else {
@@ -2951,7 +3032,15 @@ const TILE_LAYER_PRESETS: TileLayerPreset[] = [
     },
 ];
 
-const DEFAULT_TILE_LAYER_PRESET_ID: TileLayerPreset['id'] = 'terrain';
+const DEFAULT_LIGHT_TILE_LAYER_PRESET_ID: TileLayerPreset['id'] = 'terrain';
+const DEFAULT_DARK_TILE_LAYER_PRESET_ID: TileLayerPreset['id'] = 'street';
+
+const defaultTileLayerPresetId = (
+    isDark: boolean
+): TileLayerPreset['id'] =>
+    isDark
+        ? DEFAULT_DARK_TILE_LAYER_PRESET_ID
+        : DEFAULT_LIGHT_TILE_LAYER_PRESET_ID;
 
 const escapeHtml = (value: string): string =>
     value.replace(/[&<>"']/g, (ch) => {
@@ -3404,8 +3493,8 @@ const parseTeA2ACandidateRow = (
     const status =
         normalizeStatus(textFromRow(row, ['status', 'linkStatus'])) ?? 'unknown';
     const teLink =
-        buildThousandEyesTestLink(teTestId) ??
-        textFromRow(row, ['teLink', 'te_link', 'thousandeyes.permalink']);
+        textFromRow(row, ['teLink', 'te_link', 'thousandeyes.permalink']) ??
+        buildThousandEyesTestLink(teTestId);
 
     return {
         candidateId,
@@ -4788,8 +4877,9 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     const [roleLegendMode, setRoleLegendMode] =
         useState<TopologyRoleLegendMode>(readStoredRoleLegendMode);
     const [tilePresetId, setTilePresetId] = useState<TileLayerPreset['id']>(
-        DEFAULT_TILE_LAYER_PRESET_ID
+        () => defaultTileLayerPresetId(isDark)
     );
+    const previousTileThemeRef = useRef(isDark);
     const [catalogueByName, setCatalogueByName] = useState<Record<
         string,
         SearchbaseRecord
@@ -4823,6 +4913,12 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     >({});
     const pauseUntilRef = useRef<number>(0);
 
+    useEffect(() => {
+        if (previousTileThemeRef.current === isDark) return;
+        previousTileThemeRef.current = isDark;
+        setTilePresetId(defaultTileLayerPresetId(isDark));
+    }, [isDark]);
+
     // Animation level (controls marker entrance, link hover, packet streams).
     const {
         level: animationLevel,
@@ -4853,6 +4949,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 ...current.map,
                 center: currentMapView.center,
                 zoom: currentMapView.zoom,
+                fitSitesOnLoad: false,
             },
         }));
     }, [currentMapView]);
@@ -5707,7 +5804,9 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
 
     const tilePreset =
         TILE_LAYER_PRESETS.find((preset) => preset.id === tilePresetId) ??
-        TILE_LAYER_PRESETS.find((preset) => preset.id === DEFAULT_TILE_LAYER_PRESET_ID) ??
+        TILE_LAYER_PRESETS.find(
+            (preset) => preset.id === defaultTileLayerPresetId(isDark)
+        ) ??
         TILE_LAYER_PRESETS[0];
     const tileUrl = isDark ? tilePreset.dark : tilePreset.light;
     const effectiveMapBounds = boundsForTopologySites(
@@ -5720,7 +5819,9 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     );
     const resolvedSiteSpread = topologySiteSpread(resolvedTopology.sites);
     const shouldAutoFitGlobalTopology =
-        resolvedSiteSpread.latSpan > 45 || resolvedSiteSpread.lngSpan > 120;
+        resolvedTopology.map.fitSitesOnLoad === true ||
+        resolvedSiteSpread.latSpan > 45 ||
+        resolvedSiteSpread.lngSpan > 120;
     const bounds = L.latLngBounds(effectiveMapBounds[0], effectiveMapBounds[1]);
     const roleLegendExpanded = roleLegendMode === 'expanded';
     const roleLegendPreviewSites = resolvedTopology.sites.slice(0, 6);
@@ -7262,6 +7363,9 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
     const [placingSiteIds, setPlacingSiteIds] = useState<Record<string, boolean>>(
         {}
     );
+    const [teEndpointSelectionsByLinkId, setTeEndpointSelectionsByLinkId] = useState<
+        Record<string, { source?: string; target?: string }>
+    >({});
 
     useEffect(() => {
         if (!open) return undefined;
@@ -7274,28 +7378,32 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
         return () => document.removeEventListener('keydown', onKeyDown, true);
     }, [open, onClose]);
 
-    // The editor's per-card pickers browse the full dashboard-pack
+    // The editor's per-card pickers browse the complete Searchbase
     // catalogue, identical to the in-popup `TopologySearchBrowser`.
     // Tag-narrowing (Topology_Site / Topology_Link) is a *sort
     // hint*, not a filter — those entries float to the top of the
-    // list, but every dashboard-pack stanza is reachable via search.
+    // list, but every installed app's stanza is reachable via search.
     // This matches the KpiPickerPanel browsing model so editing a
     // tile and editing a topology element feel like the same
     // operation.
     //
-    // Scope by owner app, not dispatch app. Some stanzas live in this
-    // app's searchbase.conf but intentionally run in another app context
-    // such as cisco-catalyst-app so macros/data models resolve correctly.
     const editorSearchOptions = useMemo(() => {
         if (!catalogueByName) return [] as SearchbaseRecord[];
         return Object.values(catalogueByName)
-            .filter((record) => record.ownerApp === 'splunk-cisco-dashboards')
             .sort((a, b) =>
                 a.searchName.localeCompare(b.searchName, undefined, {
                     sensitivity: 'base',
                 })
             );
     }, [catalogueByName]);
+
+    const teA2AInventorySearchName = useMemo(
+        () =>
+            catalogueByName
+                ? findTeA2AInventorySearchbase(catalogueByName)?.searchName
+                : undefined,
+        [catalogueByName]
+    );
 
     const editorSiteById = useMemo(() => {
         const map: Record<string, TopologySite> = {};
@@ -7349,7 +7457,10 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
     // baseline. Without this, a long editing session can leave a
     // dozen cards expanded across multiple sessions.
     useEffect(() => {
-        if (!open) setExpandedCardKeys(new Set());
+        if (!open) {
+            setExpandedCardKeys(new Set());
+            setTeEndpointSelectionsByLinkId({});
+        }
     }, [open]);
 
     // SPL lookup helper for the per-card "Open in Search" button.
@@ -7514,6 +7625,13 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
         linkId: string,
         candidate: ThousandEyesA2ACandidate
     ) => {
+        setTeEndpointSelectionsByLinkId((current) => ({
+            ...current,
+            [linkId]: {
+                source: thousandEyesA2AEndpointKey(candidate, 'source'),
+                target: thousandEyesA2AEndpointKey(candidate, 'target'),
+            },
+        }));
         updateLink(linkId, {
             thousandEyesA2A: teBindingFromCandidate(candidate),
             searchName: '',
@@ -7532,6 +7650,20 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
             dataError: undefined,
             telemetrySource: 'Awaiting topology link telemetry',
         });
+    };
+
+    const updateThousandEyesEndpointSelection = (
+        linkId: string,
+        side: 'source' | 'target',
+        value: string
+    ) => {
+        setTeEndpointSelectionsByLinkId((current) => ({
+            ...current,
+            [linkId]: {
+                ...current[linkId],
+                [side]: value || undefined,
+            },
+        }));
     };
 
     const updateLinkEndpoints = (
@@ -7645,6 +7777,9 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
             map: {
                 ...current.map,
                 ...patch,
+                ...(patch.center !== undefined || patch.zoom !== undefined
+                    ? { fitSitesOnLoad: false }
+                    : {}),
             },
         }));
     };
@@ -8522,12 +8657,50 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                     } to ${
                                         targetSite?.shortName ?? link.targetSiteId
                                     }`;
+                                    const selection = teEndpointSelectionsByLinkId[link.id];
+                                    const sourceSelection = selection?.source ?? '';
+                                    const targetSelection = selection?.target ?? '';
+                                    const sourceEndpointOptions = teA2ACandidates
+                                        ? thousandEyesA2AEndpointOptions(
+                                              teA2ACandidates,
+                                              'source'
+                                          )
+                                        : [];
+                                    const targetEndpointOptions = teA2ACandidates
+                                        ? thousandEyesA2AEndpointOptions(
+                                              sourceSelection
+                                                  ? teA2ACandidates.filter(
+                                                        (candidate) =>
+                                                            thousandEyesA2AEndpointKey(
+                                                                candidate,
+                                                                'source'
+                                                            ) === sourceSelection
+                                                    )
+                                                  : teA2ACandidates,
+                                              'target'
+                                          )
+                                        : [];
+                                    const teCandidatesForEndpoints = teA2ACandidates
+                                        ? teA2ACandidates.filter(
+                                              (candidate) =>
+                                                  (!sourceSelection ||
+                                                      thousandEyesA2AEndpointKey(
+                                                          candidate,
+                                                          'source'
+                                                      ) === sourceSelection) &&
+                                                  (!targetSelection ||
+                                                      thousandEyesA2AEndpointKey(
+                                                          candidate,
+                                                          'target'
+                                                      ) === targetSelection)
+                                          )
+                                        : [];
                                     const teMatches = teA2ACandidates
                                         ? rankTeCandidatesForLink(
                                               link,
                                               sourceSite,
                                               targetSite,
-                                              teA2ACandidates
+                                              teCandidatesForEndpoints
                                           )
                                         : [];
                                     const boundTeMatch = teMatches.find(
@@ -8942,6 +9115,111 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                 </div>
                                             </div>
                                             <div className="mt-2">
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <label className="space-y-1">
+                                                        <span
+                                                            className={cn(
+                                                                editorLabelClass,
+                                                                isDark
+                                                                    ? 'text-slate-500'
+                                                                    : 'text-slate-400'
+                                                            )}
+                                                        >
+                                                            Observed source site
+                                                        </span>
+                                                        <select
+                                                            aria-label={`Observed ThousandEyes source site for link ${link.id}`}
+                                                            className={editorInputClass(isDark)}
+                                                            value={sourceSelection}
+                                                            disabled={teA2ACandidates === null}
+                                                            onChange={(event) =>
+                                                                updateThousandEyesEndpointSelection(
+                                                                    link.id,
+                                                                    'source',
+                                                                    event.target.value
+                                                                )
+                                                            }
+                                                        >
+                                                            <option value="">
+                                                                {teA2ACandidates === null
+                                                                    ? 'Loading observed sites'
+                                                                    : 'Any observed source'}
+                                                            </option>
+                                                            {sourceEndpointOptions.map((option) => (
+                                                                <option
+                                                                    key={option.key}
+                                                                    value={option.key}
+                                                                >
+                                                                    {option.label}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </label>
+                                                    <label className="space-y-1">
+                                                        <span
+                                                            className={cn(
+                                                                editorLabelClass,
+                                                                isDark
+                                                                    ? 'text-slate-500'
+                                                                    : 'text-slate-400'
+                                                            )}
+                                                        >
+                                                            Observed target site
+                                                        </span>
+                                                        <select
+                                                            aria-label={`Observed ThousandEyes target site for link ${link.id}`}
+                                                            className={editorInputClass(isDark)}
+                                                            value={targetSelection}
+                                                            disabled={teA2ACandidates === null}
+                                                            onChange={(event) =>
+                                                                updateThousandEyesEndpointSelection(
+                                                                    link.id,
+                                                                    'target',
+                                                                    event.target.value
+                                                                )
+                                                            }
+                                                        >
+                                                            <option value="">
+                                                                {teA2ACandidates === null
+                                                                    ? 'Loading observed sites'
+                                                                    : 'Any observed target'}
+                                                            </option>
+                                                            {targetEndpointOptions.map((option) => (
+                                                                <option
+                                                                    key={option.key}
+                                                                    value={option.key}
+                                                                >
+                                                                    {option.label}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </label>
+                                                </div>
+                                                <div
+                                                    className={cn(
+                                                        'mt-1 flex items-center justify-between gap-2 text-[9px] font-semibold',
+                                                        isDark
+                                                            ? 'text-slate-500'
+                                                            : 'text-slate-400'
+                                                    )}
+                                                >
+                                                    <span>
+                                                        Select values observed in Splunk to narrow the A2A tests below.
+                                                    </span>
+                                                    {teA2AInventorySearchName && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                handleOpenInSearch(
+                                                                    teA2AInventorySearchName
+                                                                )
+                                                            }
+                                                            className="shrink-0 text-sky-600 hover:text-sky-700 dark:text-sky-300 dark:hover:text-sky-200"
+                                                        >
+                                                            Open inventory
+                                                        </button>
+                                                    )}
+                                                </div>
                                                 <select
                                                     aria-label={`ThousandEyes A2A binding for link ${link.id}`}
                                                     className={editorInputClass(isDark)}
@@ -9500,6 +9778,7 @@ const LinkDetails: React.FC<LinkDetailsProps> = ({ link, siteById, isDark }) => 
     const isLoading = link.dataState === 'loading';
     const thousandEyesLink =
         buildThousandEyesTestLink(link.thousandEyesA2A?.teTestId) ?? link.teLink;
+    const isGenericThousandEyesLink = thousandEyesLink === THOUSAND_EYES_APP_URL;
     return (
         <>
             <div className="grid grid-cols-2 gap-2">
@@ -9689,7 +9968,9 @@ const LinkDetails: React.FC<LinkDetailsProps> = ({ link, siteById, isDark }) => 
                         )}
                     >
                         <ExternalLink className="w-3 h-3" />
-                        View in ThousandEyes
+                        {isGenericThousandEyesLink
+                            ? 'Open ThousandEyes'
+                            : 'View in ThousandEyes'}
                     </a>
                 )}
             </div>

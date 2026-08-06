@@ -9,7 +9,7 @@ import { cloneDeep, isEqual } from 'lodash-es';
 import Dashboard from '@splunk/dashboard';
 import { DrilldownEditors } from '@splunk/dashboard-editors';
 import { DashboardContextProvider } from '@splunk/dashboard-context';
-import { serverTimezoneInfo, versionLabel } from '@splunk/splunk-utils/config';
+import { app as splunkApp, serverTimezoneInfo, versionLabel } from '@splunk/splunk-utils/config';
 import ItemGroup from '@splunk/dashboard-toolbar/ItemGroup';
 import ExportDashboardButton from '@splunk/dashboard-toolbar/buttons/ExportDashboardButton';
 import DashboardSourceEditor from '@splunk/dashboard/DashboardSourceEditor';
@@ -35,6 +35,7 @@ import LayoutOverview from '@splunk/react-icons/LayoutOverview';
 
 import { default as SplunkControlGroup } from '@splunk/react-ui/ControlGroup';
 import Modal from '@splunk/react-ui/Modal';
+import Message from '@splunk/react-ui/Message';
 import Tooltip from '@splunk/react-ui/Tooltip';
 import Select from '@splunk/react-ui/Select';
 import Text from '@splunk/react-ui/Text';
@@ -44,7 +45,7 @@ import Input from '@splunk/react-search/components/Input';
 import defaultSPLSyntax from '@splunk/dashboard-utils/defaultSPLSyntax.json';
 import {
     VisualizationGroup,
-    ControlGroup,
+    Zoom,
     HistoryGroup,
     SidebarControlGroup,
     GridLineSwitch,
@@ -56,7 +57,11 @@ import {
 import Cog from '@splunk/react-icons/Cog';
 
 import Card from '@splunk/react-ui/Card';
-import { getDashboards, syncDashboardManagerNavigation } from '../../common/lib/splunk';
+import {
+    getDashboards,
+    normalizeDashboardTheme,
+    syncDashboardManagerNavigation,
+} from '../../common/lib/splunk';
 import { defaultFetchInit } from '@splunk/splunk-utils/fetch';
 import { INSIGHTS_APP_ID } from '../../common/lib/constants';
 import { getDashboard } from '../../common/lib/splunk';
@@ -75,15 +80,23 @@ import DOMPurify from 'dompurify';
 import Link from '@splunk/react-ui/Link';
 import ButtonGroup from '@splunk/react-ui/ButtonGroup';
 import styled from 'styled-components';
-import { variables } from '@splunk/themes';
+import prismaDarkTheme from '@splunk/themes/prisma/dark';
+import prismaLightTheme from '@splunk/themes/prisma/light';
 import SplunkThemeProvider from '@splunk/themes/SplunkThemeProvider';
+import useSplunkTheme from '@splunk/themes/useSplunkTheme';
 import { isVersionLower, getServerInfo } from '../../common/lib/splunk';
 import Paintbrush from '@splunk/react-icons/Paintbrush';
 import BackgroundButton from './BackgroundButton';
 import SpaceManagerButton from './SpaceManager/SpaceManagerButton';
 import useDashboardStore from '../../common/state/dashboardStore';
 import createSEIIconRegistry from '../../common/udf/IconProviders/createSEIIconRegistry';
-import { resolveSearchbaseDefinitionForNativeStudio } from './searchbaseDefinitionUtils';
+import {
+    hasSearchbaseDataSources,
+    resolveSearchbaseDefinitionForNativeStudio,
+} from './searchbaseDefinitionUtils';
+import { repairSearchbaseTimeQueryParameters } from './dashboardTimeUtils';
+
+const ENABLE_EXPERIMENTAL_SPACE_MANAGER = false;
 
 const StyledCardContent = styled.div`
     height: 160px;
@@ -140,6 +153,7 @@ const toDashboardRecord = (dashboard) => {
             label: dashboard.label,
             description: dashboard.description,
             tag: dashboard.tag,
+            theme: normalizeDashboardTheme(dashboard.theme),
         };
     }
 
@@ -157,6 +171,7 @@ const toDashboardRecord = (dashboard) => {
         label: dashboard.label,
         description: dashboard.description,
         tag: dashboard.tag,
+        theme: normalizeDashboardTheme(dashboard.theme),
     };
 };
 
@@ -247,8 +262,18 @@ export const initialDefinition = {
     title: '',
 };
 
-async function updateDash(dashName, jsonDefinition, app, owner, description, label, tag = '') {
-    let definition = `<dashboard version="2" theme="light">
+async function updateDash(
+    dashName,
+    jsonDefinition,
+    app,
+    owner,
+    description,
+    label,
+    tag = '',
+    theme = 'light',
+) {
+    const dashboardTheme = normalizeDashboardTheme(theme, 'light');
+    let definition = `<dashboard version="2" theme="${dashboardTheme}">
     <label>${escapeXml(label)}</label>
     <description>${escapeXml(description)}</description>
     <tag>${escapeXml(tag)}</tag>
@@ -287,6 +312,121 @@ const getDefinitionTextValue = (definition, key, fallback = '') => {
 
     const trimmedValue = value.trim();
     return trimmedValue || fallback;
+};
+
+const formatSasnDashboardTitle = (title) => {
+    const dashboardName = String(title || 'Dashboard Manager')
+        .replace(/^(?:SASN\s*\|\s*)+/i, '')
+        .replace(/\s*\|\s*Splunk(?:\s+Enterprise)?\s+[\w.-]+\s*$/i, '')
+        .trim();
+
+    return `SASN | ${dashboardName || 'Dashboard Manager'}`;
+};
+
+const ViewDisplayMenu = ({ dashboardApi }) => {
+    const [open, setOpen] = useState(false);
+    const [navigationHidden, setNavigationHidden] = useState(false);
+
+    useEffect(() => {
+        document.body.classList.toggle('dashboardbuilder-navigation-hidden', navigationHidden);
+        return () => document.body.classList.remove('dashboardbuilder-navigation-hidden');
+    }, [navigationHidden]);
+
+    const toggle = (
+        <Button
+            appearance="default"
+            data-test="dashboardbuilder-display-button"
+            label={_('Display')}
+            isMenu
+        />
+    );
+
+    return (
+        <Dropdown
+            open={open}
+            onRequestOpen={() => setOpen(true)}
+            onRequestClose={() => setOpen(false)}
+            toggle={toggle}
+        >
+            <Menu style={{ minWidth: 170 }}>
+                <Menu.Item
+                    data-test="dashboardbuilder-fullscreen-action"
+                    onClick={() => {
+                        setOpen(false);
+                        dashboardApi?.enterFullscreen?.();
+                    }}
+                >
+                    {_('Fullscreen')}
+                </Menu.Item>
+                <Menu.Item
+                    data-test="dashboardbuilder-hide-navigation-action"
+                    selectable
+                    selected={navigationHidden}
+                    onClick={() => {
+                        setOpen(false);
+                        setNavigationHidden((hidden) => !hidden);
+                    }}
+                >
+                    {_('Hide navigation')}
+                </Menu.Item>
+            </Menu>
+        </Dropdown>
+    );
+};
+
+ViewDisplayMenu.propTypes = {
+    dashboardApi: PropTypes.shape({
+        enterFullscreen: PropTypes.func,
+    }),
+};
+
+ViewDisplayMenu.defaultProps = {
+    dashboardApi: undefined,
+};
+
+const ViewActionsMenu = ({ onClone, onExportJson }) => {
+    const [open, setOpen] = useState(false);
+    const runAction = (handler) => () => {
+        setOpen(false);
+        handler();
+    };
+    const toggle = (
+        <Button
+            appearance="default"
+            data-test="dashboardbuilder-actions-button"
+            label={_('Actions')}
+            isMenu
+        />
+    );
+
+    return (
+        <Dropdown
+            open={open}
+            onRequestOpen={() => setOpen(true)}
+            onRequestClose={() => setOpen(false)}
+            toggle={toggle}
+        >
+            <Menu style={{ minWidth: 220 }}>
+                <Menu.Item
+                    data-test="dashboardbuilder-export-json-action"
+                    onClick={runAction(onExportJson)}
+                >
+                    {_('Export JSON')}
+                </Menu.Item>
+                <Menu.Item
+                    data-test="dashboardbuilder-clone-action"
+                    onClick={runAction(onClone)}
+                >
+                    {_('Clone dashboard')}
+                </Menu.Item>
+            </Menu>
+        </Dropdown>
+    );
+};
+
+ViewActionsMenu.propTypes = {
+    onClone: PropTypes.func.isRequired,
+    onExportJson: PropTypes.func.isRequired,
 };
 
 export const AbsolutSVG = () => {
@@ -515,7 +655,7 @@ const SearchbaseDataSourceEditor = (props) => {
     useEffect(() => {
         if (options.ref) {
             const getSearchDefinition = async () => {
-                const data = await getSearchBaseConfStanza(options.ref);
+                const data = await getSearchBaseConfStanza(options.ref, options.ownerApp);
                 setSearch(data.entry[0]);
             };
             getSearchDefinition();
@@ -702,11 +842,15 @@ const DashboardStudioEditor = ({
     //hasCloneSharingPermission,
 }) => {
     const navigate = useNavigate();
+    const splunkTheme = useSplunkTheme();
+    const dashboardBuilderColorScheme =
+        splunkTheme.colorScheme === 'dark' ? 'dark' : 'light';
 
     const [isCodeEditable, setIsCodeEditable] = useState(false);
 
     const dashboardApiElem = useRef(null);
     const [apiRef, setApiRef] = useState();
+    const repairedTimeDefinitionRef = useRef();
 
     const [isDashboardMounted, setIsDashboardMounted] = useState(false);
 
@@ -720,9 +864,6 @@ const DashboardStudioEditor = ({
 
     const [dashboardHeightDifference, setDashboardHeightDifference] = useState('79');
 
-    const [openCloneModal, setOpenCloneModal] = useState(false);
-
-    const cloneModalToggle = useRef();
     const [openDashboardModal, setOpenDashboardModal] = useState(false);
     const [openConvertModal, setOpenConvertModal] = useState(false);
     const [openBackToManagerModal, setOpenBackToManagerModal] = useState(false);
@@ -735,9 +876,86 @@ const DashboardStudioEditor = ({
     const [currentDashboard, setCurrentDashboard] = useState(() =>
         toDashboardRecord(initialDashboard),
     );
+    const dashboardColorScheme = normalizeDashboardTheme(
+        currentDashboard?.theme,
+        dashboardBuilderColorScheme,
+    );
+    const hasThemedPortalModal =
+        openConvertModal || openBackToManagerModal || openDashboardModal;
+
+    // Splunk React UI mounts modal backdrops in a portal outside the Dashboard
+    // Studio root. Mark the document while one of our dialogs is open so the
+    // portal uses the dashboard theme rather than the surrounding Splunk shell.
+    useEffect(() => {
+        const portalThemeClasses = [
+            'dashboard-builder-modal-portal-light',
+            'dashboard-builder-modal-portal-dark',
+        ];
+        const activePortalThemeClass = `dashboard-builder-modal-portal-${dashboardColorScheme}`;
+
+        document.body.classList.remove(...portalThemeClasses);
+        if (!hasThemedPortalModal) {
+            return undefined;
+        }
+
+        document.body.classList.add(activePortalThemeClass);
+        return () => document.body.classList.remove(activePortalThemeClass);
+    }, [dashboardColorScheme, hasThemedPortalModal]);
+
+    const editorTheme =
+        dashboardColorScheme === 'dark' ? prismaDarkTheme : prismaLightTheme;
+    const dashboardBuilderThemeStyle = {
+        '--dashboard-builder-background-page': editorTheme.backgroundColorPage,
+        '--dashboard-builder-background-section': editorTheme.backgroundColorSection,
+        '--dashboard-builder-background-popup': editorTheme.backgroundColorPopup,
+        '--dashboard-builder-background-sidebar': editorTheme.backgroundColorSidebar,
+        '--dashboard-builder-content-active': editorTheme.contentColorActive,
+        '--dashboard-builder-content-default': editorTheme.contentColorDefault,
+        '--dashboard-builder-content-inverted': editorTheme.contentColorInverted,
+        '--dashboard-builder-content-muted': editorTheme.contentColorMuted,
+        '--dashboard-builder-border': editorTheme.borderColor,
+        '--dashboard-builder-border-strong': editorTheme.borderColorStrong,
+        '--dashboard-builder-border-weak': editorTheme.borderColorWeak,
+        '--dashboard-builder-accent': editorTheme.interactiveColorPrimary,
+        '--dashboard-builder-overlay-hover': editorTheme.interactiveColorOverlayHover,
+        '--dashboard-builder-overlay-selected': editorTheme.interactiveColorOverlaySelected,
+    };
+    const dashboardBuilderModalThemeStyle = {
+        '--dashboard-builder-modal-background': editorTheme.backgroundColorPopup,
+        '--dashboard-builder-modal-background-section': editorTheme.backgroundColorSection,
+        '--dashboard-builder-modal-content-active': editorTheme.contentColorActive,
+        '--dashboard-builder-modal-content-default': editorTheme.contentColorDefault,
+        '--dashboard-builder-modal-content-muted': editorTheme.contentColorMuted,
+        '--dashboard-builder-modal-border': editorTheme.borderColor,
+        '--dashboard-builder-modal-border-strong': editorTheme.borderColorStrong,
+        '--dashboard-builder-modal-border-weak': editorTheme.borderColorWeak,
+        '--dashboard-builder-modal-overlay-hover': editorTheme.interactiveColorOverlayHover,
+        '--dashboard-builder-modal-overlay-selected': editorTheme.interactiveColorOverlaySelected,
+    };
     const [dashID, setDashID] = useState(openID);
     const [dashMode, setDashMode] = useState(readOnly ? 'view' : openID ? 'edit' : 'view');
+    const [showEditContextNotice, setShowEditContextNotice] = useState(false);
+    const previousDashModeRef = useRef();
     const [serverInfo, setServerInfo] = useState();
+
+    const dashboardUsesSearchbase = useMemo(() => {
+        if (editedDefinition) {
+            return hasSearchbaseDataSources(editedDefinition);
+        }
+
+        try {
+            return hasSearchbaseDataSources(JSON.parse(currentDashboard?.data || '{}'));
+        } catch {
+            return false;
+        }
+    }, [currentDashboard?.data, editedDefinition]);
+
+    useEffect(() => {
+        if (dashMode === 'edit' && previousDashModeRef.current !== 'edit') {
+            setShowEditContextNotice(true);
+        }
+        previousDashModeRef.current = dashMode;
+    }, [dashMode]);
 
     // This fix was provided by UDF team.
     delete self.requirejs;
@@ -745,6 +963,15 @@ const DashboardStudioEditor = ({
     const mapTileConfig = { defaultTileConfig: testTileConfig };
 
     const { dashboardid, currentmode } = useParams();
+
+    useEffect(() => {
+        const activeDashboardTitle = getDefinitionTextValue(
+            editedDefinition,
+            'title',
+            currentDashboard?.label || dashID || 'Dashboard Manager',
+        );
+        document.title = formatSasnDashboardTitle(activeDashboardTitle);
+    }, [currentDashboard?.label, dashID, editedDefinition]);
 
     useEffect(() => {
         if (!openID && !readOnly) setDashMode(currentmode);
@@ -764,7 +991,10 @@ const DashboardStudioEditor = ({
                         .filter((c) => c.content.isDashboard && c.content.version == '2')
                         .map((r) => {
                             const { XMLParser } = require('fast-xml-parser');
-                            const parser = new XMLParser();
+                            const parser = new XMLParser({
+                                ignoreAttributes: false,
+                                attributeNamePrefix: '',
+                            });
                             try {
                                 let jObj = parser.parse(r.content['eai:data']);
                                 const normalizedDefinition = jObj.dashboard.definition.replace(/\n/g, '');
@@ -782,6 +1012,7 @@ const DashboardStudioEditor = ({
                                     title: r.name,
                                     label: r.content['label'],
                                     tag: jObj.dashboard.tag || r.content['tag'] || '',
+                                    theme: normalizeDashboardTheme(jObj.dashboard.theme),
                                     template: data.template ? data.template : false,
                                 };
                             } catch (error) {
@@ -826,7 +1057,10 @@ const DashboardStudioEditor = ({
             getDashboard(dashID).then((response) => {
                 if (response.status >= 200 && response.status <= 299) {
                     const { XMLParser } = require('fast-xml-parser');
-                    const parser = new XMLParser();
+                    const parser = new XMLParser({
+                        ignoreAttributes: false,
+                        attributeNamePrefix: '',
+                    });
                     let jObj = parser.parse(response.entry[0].content['eai:data']);
 
                     try {
@@ -853,6 +1087,7 @@ const DashboardStudioEditor = ({
                             label: response.entry[0].content['label'],
                             description: response.entry[0].content['description'],
                             tag: jObj.dashboard.tag || response.entry[0].content['tag'] || '',
+                            theme: normalizeDashboardTheme(jObj.dashboard.theme),
                         });
                     } catch (e) {
                         console.error(e);
@@ -909,6 +1144,7 @@ const DashboardStudioEditor = ({
                 dashboardDescription,
                 dashboardLabel,
                 currentDashboard.tag,
+                dashboardColorScheme,
             );
 
             if (response.status >= 200 && response.status <= 299) {
@@ -944,7 +1180,13 @@ const DashboardStudioEditor = ({
                 type: TOAST_TYPES.ERROR,
             });
         });
-    }, [currentDashboard, dashID, editedDefinition, onDashboardSaved]);
+    }, [
+        currentDashboard,
+        dashboardColorScheme,
+        dashID,
+        editedDefinition,
+        onDashboardSaved,
+    ]);
 
     const handleModeChange = useCallback(
         (newMode) => {
@@ -1101,9 +1343,81 @@ const DashboardStudioEditor = ({
         if (dashboardCoreApi == null && apiRef) setDashboardCoreApi(apiRef);
     }, [apiRef]);
 
-    const toggleButton = (
-        <Button data-test="clone-dashboard-toolbar-button" label={_('Actions')} isMenu />
-    );
+    useEffect(() => {
+        const dashboardApi = dashboardApiElem.current ?? apiRef;
+        const definition = dashboardApi?.getDefinition?.();
+
+        if (!definition) {
+            return;
+        }
+
+        const repairedDefinition = repairSearchbaseTimeQueryParameters(definition);
+        if (repairedDefinition === definition || repairedTimeDefinitionRef.current === definition) {
+            return;
+        }
+
+        repairedTimeDefinitionRef.current = repairedDefinition;
+        dashboardApi.updateDefinition?.(repairedDefinition);
+    }, [apiRef, isDashboardMounted]);
+
+    const handleExportDashboardJson = useCallback(() => {
+        const dashboardDefinition =
+            dashboardApiElem.current?.getDefinition?.() ?? editedDefinition ?? {};
+        const blob = new Blob([JSON.stringify(dashboardDefinition, null, 2)], {
+            type: 'application/json;charset=utf-8',
+        });
+        const objectUrl = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = objectUrl;
+        anchor.download = `${dashID || 'dashboard'}.json`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(objectUrl);
+    }, [dashID, editedDefinition]);
+
+    const handleCloneDashboard = useCallback(async () => {
+        const dashboardDefinition = cloneDeep(
+            dashboardApiElem.current?.getDefinition?.() ?? editedDefinition ?? {},
+        );
+        const sourceTitle = getDefinitionTextValue(
+            dashboardDefinition,
+            'title',
+            currentDashboard?.label || dashID || 'Dashboard',
+        );
+        const cloneTitle = `${sourceTitle} Copy`;
+        const cloneId = `${dashID || 'dashboard'}_copy_${Date.now()}`;
+        dashboardDefinition.title = cloneTitle;
+
+        try {
+            const response = await addDash(
+                cloneId,
+                JSON.stringify(dashboardDefinition),
+                cloneTitle,
+                dashboardDefinition.description || currentDashboard?.description || '',
+                dashboardDefinition.tag || currentDashboard?.tag || '',
+                currentDashboard?.theme || dashboardColorScheme,
+            );
+            if (response.status < 200 || response.status > 299) {
+                throw new Error(getSplunkResponseErrorMessage(response, 'Clone failed.'));
+            }
+
+            makeCreateToast(Toaster)({
+                message: `Created ${cloneTitle}.`,
+                type: TOAST_TYPES.SUCCESS,
+            });
+            window.location.assign(
+                `/app/${encodeURIComponent(
+                    splunkApp || 'splunk-cisco-dashboards',
+                )}/dashboardbuilder#/${encodeURIComponent(cloneId)}/edit`,
+            );
+        } catch (error) {
+            makeCreateToast(Toaster)({
+                message: `Unable to clone the dashboard. ${getSafeErrorMessage(error)}`,
+                type: TOAST_TYPES.ERROR,
+            });
+        }
+    }, [currentDashboard, dashID, dashboardColorScheme, editedDefinition]);
 
     useEffect(() => {
         if (currentDashboard && currentDashboard.data) {
@@ -1115,10 +1429,15 @@ const DashboardStudioEditor = ({
         () => ({
             viewReadOnly: [],
             view: [
-                <ControlGroup key="controlGroup" />,
-
-                <ItemGroup key="sideToolbar" align="right">
+                <ItemGroup key="sideToolbar" align="right" borders={false}>
                     <ExportDashboardButton key="export-dashboard" />
+                    <ViewDisplayMenu key="display" />
+                    <Zoom key="zoom" mode="view" showSeparator={false} />
+                    <ViewActionsMenu
+                        key="actions"
+                        onClone={handleCloneDashboard}
+                        onExportJson={handleExportDashboardJson}
+                    />
                     <ModeSwitch key="modeSwitch" />
                 </ItemGroup>,
             ],
@@ -1134,7 +1453,9 @@ const DashboardStudioEditor = ({
                     />
                     <BackgroundButton key="backgroundButton" iconColor="#26afac" />
                     <InsightKpiButton key="insightKpi" />
-                    <SpaceManagerButton key="spaceManager" />
+                    {ENABLE_EXPERIMENTAL_SPACE_MANAGER && (
+                        <SpaceManagerButton key="spaceManager" />
+                    )}
                 </ItemGroup>,
                 <ItemGroup key="sideToolbar" align="right" borders={false}>
                     <ModeSwitch key="modeSwitch" />
@@ -1167,7 +1488,9 @@ const DashboardStudioEditor = ({
                     />
                     <BackgroundButton key="backgroundButton" iconColor="#26afac" />
                     <InsightKpiButton key="insightKpi" />
-                    <SpaceManagerButton key="spaceManager" />
+                    {ENABLE_EXPERIMENTAL_SPACE_MANAGER && (
+                        <SpaceManagerButton key="spaceManager" />
+                    )}
                 </ItemGroup>,
                 <ItemGroup key="sideToolbar" align="right" borders={false}>
                     <Button
@@ -1194,6 +1517,8 @@ const DashboardStudioEditor = ({
             editedDefinition,
             handleBackToManagerClick,
             handleEnterSourceMode,
+            handleCloneDashboard,
+            handleExportDashboardJson,
             handleSaveClick,
             isDirty,
             setIsCodeEditable,
@@ -1410,6 +1735,31 @@ const DashboardStudioEditor = ({
     const uiEditorPanel = useMemo(() => {
         return isCodeEditable ? null : (
             <div>
+                {dashMode === 'edit' && dashboardUsesSearchbase && showEditContextNotice && (
+                    <Message
+                        appearance="fill"
+                        className="dashboardbuilder-edit-context-message"
+                        type="info"
+                        onRequestRemove={() => setShowEditContextNotice(false)}
+                    >
+                        <Message.Title>Editing a Searchbase-wired dashboard</Message.Title>
+                        <div className="dashboardbuilder-edit-context-message-copy">
+                            <span>
+                                Open this dashboard from the <b>SASN app menu</b>, or open{' '}
+                                <b>Dashboard Manager</b> first and select it there. Dashboard Manager
+                                registers the Cisco Searchbase data source and keeps its SPL
+                                synchronized; opening the saved view directly in native Dashboard
+                                Studio can display custom data-source errors.
+                            </span>
+                            <span>
+                                <b>Convert</b> replaces the custom data sources with native Studio
+                                searches for direct Studio editing. It does not bundle required apps,
+                                macros, lookups, data models, or indexed data, so conversion alone does
+                                not make the dashboard deploy-anywhere.
+                            </span>
+                        </div>
+                    </Message>
+                )}
                 <Dashboard
                     key="DashboardStudioEditorUi"
                     width="100%"
@@ -1454,6 +1804,8 @@ const DashboardStudioEditor = ({
     }, [
         isCodeEditable,
         dashMode,
+        dashboardUsesSearchbase,
+        showEditContextNotice,
         handleModeChange,
         handleDefinitionChange,
         toolbarMenus,
@@ -1524,7 +1876,11 @@ const DashboardStudioEditor = ({
 
     const convertDashboard = async () => {
         try {
-            const { definition: def } = await resolveSearchbaseDefinitionForNativeStudio(
+            const {
+                definition: def,
+                convertedDataSources,
+                convertedInputs,
+            } = await resolveSearchbaseDefinitionForNativeStudio(
                 dashboardApiElem.current.getDefinition(),
             );
 
@@ -1532,7 +1888,11 @@ const DashboardStudioEditor = ({
 
             setOpenConvertModal(false);
             makeCreateToast(Toaster)({
-                message: `The dashboard has been migrated, and all custom items have been converted to standard Splunk Studio items. Please review the changes and save the dashboard to apply them.`,
+                message: `Converted ${convertedDataSources} Searchbase data source${
+                    convertedDataSources === 1 ? '' : 's'
+                } and ${convertedInputs} custom time input${
+                    convertedInputs === 1 ? '' : 's'
+                } to native Studio definitions. Review and save to apply the changes.`,
                 type: TOAST_TYPES.SUCCESS,
             });
         } catch (error) {
@@ -1552,26 +1912,115 @@ const DashboardStudioEditor = ({
         }
     };
 
+    useEffect(() => {
+        const usesDarkSurface = (element) => {
+            let ancestor = element.parentElement;
+
+            while (ancestor) {
+                const background = window.getComputedStyle(ancestor).backgroundColor;
+                const values = background.match(
+                    /rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/,
+                );
+                const opacity = values?.[4] == null ? 1 : Number(values[4]);
+
+                if (values && opacity > 0) {
+                    const [, red, green, blue] = values;
+                    return (
+                        Number(red) * 0.2126 +
+                            Number(green) * 0.7152 +
+                            Number(blue) * 0.0722 <
+                        140
+                    );
+                }
+
+                ancestor = ancestor.parentElement;
+            }
+
+            return false;
+        };
+
+        const replaceGenericEmptyState = (root = document) => {
+            const elements = [
+                ...(root instanceof Element ? [root] : []),
+                ...root.querySelectorAll('*'),
+            ];
+
+            elements.forEach((element) => {
+                if (
+                    element.children.length > 0 ||
+                    element.dataset.scdContextualEmptyState === 'true' ||
+                    element.textContent?.trim() !== 'No search results returned'
+                ) {
+                    return;
+                }
+
+                element.textContent =
+                    'No matching telemetry was found in the selected time range. The condition this panel detects may not have occurred; confirm its data source is onboarded, or widen the time range.';
+                element.style.setProperty(
+                    'color',
+                    usesDarkSurface(element) ? '#e2e8f0' : '#334155',
+                    'important',
+                );
+                element.style.lineHeight = '1.4';
+                element.style.maxWidth = '32rem';
+                element.setAttribute('aria-label', 'No matching telemetry was found');
+                element.dataset.scdContextualEmptyState = 'true';
+            });
+        };
+
+        replaceGenericEmptyState();
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.target instanceof Element) {
+                    replaceGenericEmptyState(mutation.target);
+                }
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        replaceGenericEmptyState(node);
+                    }
+                });
+            });
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        return () => observer.disconnect();
+    }, []);
+
     return (
         <>
             <ToastMessages />
-            <Modal open={openConvertModal} style={{ width: '600px' }}>
+            <SplunkThemeProvider
+                family="prisma"
+                density="comfortable"
+                colorScheme={dashboardColorScheme}
+            >
+            <Modal
+                open={openConvertModal}
+                className={`dashboard-builder-themed-modal dashboard-builder-themed-modal-${dashboardColorScheme}`}
+                style={{ width: '600px', ...dashboardBuilderModalThemeStyle }}
+            >
                 <Modal.Header title="Convert dashboard definition" icon={<Cog width="30px" />} />
                 <Modal.Body>
-                    This dashboard contains custom data sources that work{' '}
-                    <b>exclusively within the Cisco dashboards application context.</b> <br />
-                    These custom data sources ensure a{' '}
-                    <b>seamless and transparent synchronization</b> with the search SPL definitions
-                    defined in the search base, eliminating the need for manual synchronization.
-                    <br />
-                    However, if you want this dashboard to function in Dashboard Studio without
-                    custom data sources, you can click "Convert" button to standardize its
-                    definition. Once converted, you will be able to open it in Dashboard Studio from
-                    any context,{' '}
-                    <b>
-                        but you will lose automatic synchronization with the search base
-                        definitions.
-                    </b>
+                    <div className="dashboardbuilder-convert-explanation">
+                        <p>
+                            This dashboard uses Cisco Searchbase data sources. Dashboard Manager
+                            registers those data sources and keeps their SPL synchronized with{' '}
+                            <code>searchbase.conf</code>. Opening the saved view directly in native
+                            Dashboard Studio can therefore display custom data-source errors.
+                        </p>
+                        <p>
+                            <b>Convert</b> copies the current Searchbase SPL into native{' '}
+                            <code>ds.search</code> data sources and converts the custom time picker to
+                            its native Studio equivalent. The converted definition can then open
+                            directly in Dashboard Studio, but it no longer receives Searchbase SPL
+                            updates automatically.
+                        </p>
+                        <p>
+                            Conversion does <b>not</b> package or remove environmental dependencies.
+                            Any required apps, macros, lookups, data models, custom commands, and
+                            indexed data must still exist in the destination environment.
+                        </p>
+                    </div>
                 </Modal.Body>
                 <Modal.Footer>
                     <Button
@@ -1584,7 +2033,8 @@ const DashboardStudioEditor = ({
             </Modal>
             <Modal
                 open={openBackToManagerModal}
-                style={{ width: '460px' }}
+                className={`dashboard-builder-themed-modal dashboard-builder-themed-modal-${dashboardColorScheme}`}
+                style={{ width: '460px', ...dashboardBuilderModalThemeStyle }}
                 onRequestClose={() => setOpenBackToManagerModal(false)}
             >
                 <Modal.Header title="Back to Dashboard Manager?" />
@@ -1608,7 +2058,8 @@ const DashboardStudioEditor = ({
             </Modal>
             <Modal
                 open={openDashboardModal}
-                style={{ width: '700px' }}
+                className={`dashboard-builder-themed-modal dashboard-builder-themed-modal-${dashboardColorScheme}`}
+                style={{ width: '700px', ...dashboardBuilderModalThemeStyle }}
                 onRequestClose={goBackOrClose}
             >
                 <Modal.Header
@@ -1619,6 +2070,7 @@ const DashboardStudioEditor = ({
 
                 <Modal.Body style={{ padding: 0 }}>
                     <TabLayout
+                        className="dashboard-builder-tablayout"
                         defaultActivePanelId="create"
                         onChange={(e, { activePanelId: panelId }) => {
                             setActiveModeId(panelId);
@@ -1757,21 +2209,26 @@ const DashboardStudioEditor = ({
                     <Button appearance="secondary" label="Cancel" onClick={goBackOrClose} />
                 </Modal.Footer>
             </Modal>
+            </SplunkThemeProvider>
             {currentDashboard == undefined ? (
                 <></>
             ) : (
                 <div
                     className={
                         serverInfo?.isSplunkCloud
-                            ? 'dashboardbuilderview'
+                            ? `dashboardbuilderview dashboardbuilderview-${dashboardColorScheme}`
                             : isVersionLower(versionLabel, '9.4.0')
-                              ? 'dashboardbuilderview hidetabs'
-                              : 'dashboardbuilderview'
+                              ? `dashboardbuilderview dashboardbuilderview-${dashboardColorScheme} hidetabs`
+                              : `dashboardbuilderview dashboardbuilderview-${dashboardColorScheme}`
                     }
-                    style={{ minHeight: '100%' }}
+                    style={{ minHeight: '100%', ...dashboardBuilderThemeStyle }}
                     id="collection_container"
                 >
-                    <SplunkThemeProvider family="prisma" density="comfortable" colorScheme="light">
+                    <SplunkThemeProvider
+                        family="prisma"
+                        density="comfortable"
+                        colorScheme={dashboardColorScheme}
+                    >
                         <DashboardContextProvider
                             key="DashboardStudioEditorContext"
                             iconRegistry={iconRegistry}

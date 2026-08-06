@@ -6,15 +6,10 @@
  * = slice label, second = numeric value).
  */
 
-import React, { useMemo } from 'react';
-import { ExternalLink, Settings2, Table2 } from 'lucide-react';
-import {
-    Cell,
-    Pie,
-    PieChart,
-    ResponsiveContainer,
-    Tooltip,
-} from 'recharts';
+import React, { useMemo, useState } from 'react';
+import StudioPie from '@splunk/visualizations/Pie';
+import { ExternalLink, Maximize2, PanelRightOpen, Settings2 } from 'lucide-react';
+import { ChartFocusDialog } from './ChartFocusDialog';
 import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
 import { cn } from '@/common/lib/utils';
 import type { DataSource, NoDataReason } from '@/common/hooks/useMetric';
@@ -39,6 +34,8 @@ interface PieTileProps {
     noDataReason?: NoDataReason;
     rangeLabel?: string;
     visibleSliceCap?: number;
+    /** Selects the matching Dashboard Studio chart theme. */
+    isDark?: boolean;
     className?: string;
 }
 
@@ -98,30 +95,6 @@ const NoDataState: React.FC<{
     );
 };
 
-interface PieTooltipProps {
-    active?: boolean;
-    payload?: Array<{ payload?: { name: string; value: number } }>;
-}
-
-const PieTooltipContent: React.FC<PieTooltipProps> = ({ active, payload }) => {
-    if (!active || !payload?.length) return null;
-    const point = payload[0]?.payload;
-    if (!point) return null;
-    return (
-        <div
-            role="tooltip"
-            className="pointer-events-none rounded-md border border-slate-200 bg-white/95 px-2 py-1 text-[10px] shadow-lg dark:border-slate-700 dark:bg-slate-900/95"
-        >
-            <span className="font-semibold text-slate-700 dark:text-slate-200">
-                {point.name}
-            </span>
-            <span className="ml-1.5 tabular-nums text-slate-500 dark:text-slate-400">
-                {formatCount(point.value)}
-            </span>
-        </div>
-    );
-};
-
 export const PieTile: React.FC<PieTileProps> = ({
     label,
     subLabel,
@@ -141,8 +114,10 @@ export const PieTile: React.FC<PieTileProps> = ({
     noDataReason,
     rangeLabel,
     visibleSliceCap = DEFAULT_SLICE_CAP,
+    isDark = false,
     className,
 }) => {
+    const [isFocusOpen, setIsFocusOpen] = useState(false);
     const dimensionCol = columns[0];
     const valueCol = columns[1];
 
@@ -165,7 +140,10 @@ export const PieTile: React.FC<PieTileProps> = ({
             .sort((a, b) => b.value - a.value);
     }, [rows, dimensionCol, valueCol]);
 
-    const visibleSlices = chartData.slice(0, visibleSliceCap);
+    const visibleSlices = useMemo(
+        () => chartData.slice(0, visibleSliceCap),
+        [chartData, visibleSliceCap]
+    );
     const overflowCount = Math.max(0, chartData.length - visibleSlices.length);
     const hasData = visibleSlices.length > 0;
     const total = chartData.reduce((acc, e) => acc + e.value, 0);
@@ -178,6 +156,58 @@ export const PieTile: React.FC<PieTileProps> = ({
         return PIE_FALLBACK_COLORS;
     }, [seriesColors]);
 
+    // Dashboard Studio visualizations consume columnar search results rather
+    // than Recharts' row objects. Keeping this adapter here lets the profile,
+    // Searchbase Canvas, and any future overview reuse the same native
+    // `splunk.pie` renderer that Studio itself ships.
+    const studioDataSources = useMemo(
+        () => ({
+            primary: {
+                requestParams: { offset: 0, count: visibleSlices.length },
+                data: {
+                    fields: [
+                        { name: dimensionCol || 'Label', type: 'string' },
+                        {
+                            name: valueCol || 'Value',
+                            type: 'number',
+                            type_special: 'count',
+                        },
+                    ],
+                    columns: [
+                        visibleSlices.map((slice) => slice.name),
+                        visibleSlices.map((slice) => String(slice.value)),
+                    ],
+                },
+                meta: { totalCount: visibleSlices.length },
+            },
+        }),
+        [dimensionCol, valueCol, visibleSlices]
+    );
+
+    const studioOptions = useMemo(
+        () => ({
+            // Dashboard Studio resolves visualization fields through its
+            // dynamic-options evaluator. Supplying a bare field name causes
+            // the native component to show its placeholder icon instead of
+            // the chart, even when the datasource contains valid values.
+            label: '> primary | seriesByIndex(0)',
+            value: '> primary | seriesByIndex(1)',
+            showDonutHole: false,
+            labelDisplay: 'valuesAndPercentage',
+            percentagePrecision: 1,
+            collapseThreshold: 0,
+            collapseExcludeZero: true,
+            collapseLabel: 'Other',
+            legendDisplay: 'right',
+            seriesColors: colors,
+            backgroundColor: isDark ? '#0f172a' : '#ffffff',
+        }),
+        [colors, isDark]
+    );
+    const focusStudioOptions = useMemo(
+        () => ({ ...studioOptions, backgroundColor: '#0e1a2b' }),
+        [studioOptions]
+    );
     return (
         <div
             className={cn(
@@ -228,19 +258,35 @@ export const PieTile: React.FC<PieTileProps> = ({
                                 data-tile-control="true"
                                 className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
                             >
-                                <ExternalLink className="w-3 h-3 stroke-[2.5px]" />
+                                <ExternalLink className="w-3.5 h-3.5 stroke-[2.4px]" />
                             </button>
                         )}
                         {onOpenDetailTable && (
                             <button
                                 type="button"
                                 onClick={onOpenDetailTable}
-                                title={detailTableTitle ?? 'View detail table'}
-                                aria-label={detailTableTitle ?? `View ${label} detail table`}
+                                title={
+                                    detailTableTitle
+                                        ? `Drill down: ${detailTableTitle}`
+                                        : 'Drill down to details'
+                                }
+                                aria-label={`Drill down from ${label} to details`}
                                 data-tile-control="true"
                                 className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
                             >
-                                <Table2 className="w-3 h-3 stroke-[2.5px]" />
+                                <PanelRightOpen className="w-3.5 h-3.5 stroke-[2.4px]" />
+                            </button>
+                        )}
+                        {hasData && (
+                            <button
+                                type="button"
+                                onClick={() => setIsFocusOpen(true)}
+                                title={`Expand ${label}`}
+                                aria-label={`Expand ${label}`}
+                                data-tile-control="true"
+                                className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
+                            >
+                                <Maximize2 className="w-3.5 h-3.5 stroke-[2.4px]" />
                             </button>
                         )}
                         {onConfigure && (
@@ -256,7 +302,7 @@ export const PieTile: React.FC<PieTileProps> = ({
                                 data-tile-control="true"
                                 className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400 relative"
                             >
-                                <Settings2 className="w-3 h-3 stroke-[2.5px]" />
+                                <Settings2 className="w-3.5 h-3.5 stroke-[2.4px]" />
                                 {isCustomized && (
                                     <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-sky-500 border border-white dark:border-slate-900" />
                                 )}
@@ -272,49 +318,29 @@ export const PieTile: React.FC<PieTileProps> = ({
             </div>
 
             {hasData ? (
-                <>
-                    <div className="flex items-baseline gap-2 mb-1">
-                        <span className="text-4xl font-black tracking-tighter leading-none text-slate-700 dark:text-slate-100">
-                            {formatCount(total)}
+                <div
+                    role="img"
+                    aria-label={`${label} pie chart. Total ${formatCount(total)}.`}
+                    title="Values and percentages are shown on the chart"
+                    data-tile-control="true"
+                    className="relative mt-0.5 flex min-h-[118px] flex-1"
+                >
+                    <StudioPie
+                        width="100%"
+                        height="100%"
+                        themeKey={isDark ? 'enterpriseDark' : 'enterpriseLight'}
+                        options={studioOptions}
+                        dataSources={studioDataSources}
+                    />
+                    <span className="pointer-events-none absolute left-1 top-1 rounded bg-white/90 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-slate-600 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-950/90 dark:text-slate-200 dark:ring-slate-700/80">
+                        Total {formatCount(total)}
+                    </span>
+                    {overflowCount > 0 && (
+                        <span className="pointer-events-none absolute bottom-0 left-1 z-10 rounded bg-white/85 px-1 text-[9px] italic text-slate-400 dark:bg-slate-950/85 dark:text-slate-500">
+                            +{overflowCount} more
                         </span>
-                    </div>
-                    <div
-                        data-tile-control="true"
-                        className="flex-1 min-h-[72px] max-h-28 mt-1 flex flex-col gap-1"
-                    >
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Tooltip
-                                    content={<PieTooltipContent />}
-                                    wrapperStyle={{ zIndex: 50, outline: 'none' }}
-                                />
-                                <Pie
-                                    data={visibleSlices}
-                                    dataKey="value"
-                                    nameKey="name"
-                                    innerRadius="42%"
-                                    outerRadius="88%"
-                                    paddingAngle={1}
-                                    stroke="#ffffff"
-                                    strokeWidth={1}
-                                    isAnimationActive={false}
-                                >
-                                    {visibleSlices.map((entry, index) => (
-                                        <Cell
-                                            key={entry.name}
-                                            fill={colors[index % colors.length]}
-                                        />
-                                    ))}
-                                </Pie>
-                            </PieChart>
-                        </ResponsiveContainer>
-                        {overflowCount > 0 && (
-                            <span className="text-[9px] text-slate-400 dark:text-slate-500 italic text-center">
-                                +{overflowCount} more
-                            </span>
-                        )}
-                    </div>
-                </>
+                    )}
+                </div>
             ) : (
                 <NoDataState
                     noDataReason={noDataReason}
@@ -322,6 +348,38 @@ export const PieTile: React.FC<PieTileProps> = ({
                     source={source}
                 />
             )}
+
+            <ChartFocusDialog
+                isOpen={isFocusOpen && hasData}
+                label={label}
+                subLabel={subLabel}
+                onClose={() => setIsFocusOpen(false)}
+                onOpenInSearch={onOpenInSearch}
+                onOpenDetailTable={onOpenDetailTable}
+                detailTableTitle={detailTableTitle}
+            >
+                <div
+                    role="img"
+                    aria-label={`Expanded ${label} pie chart. Total ${formatCount(total)}.`}
+                    className="relative h-full min-h-[320px] rounded-[10px] border border-[#1e3449] bg-[#0e1a2b] p-3"
+                >
+                    <StudioPie
+                        width="100%"
+                        height="100%"
+                        themeKey="enterpriseDark"
+                        options={focusStudioOptions}
+                        dataSources={studioDataSources}
+                    />
+                    <span className="pointer-events-none absolute left-4 top-4 rounded bg-slate-950/90 px-2 py-1 text-xs font-bold tabular-nums text-slate-200 shadow-sm ring-1 ring-slate-700/80">
+                        Total {formatCount(total)}
+                    </span>
+                    {overflowCount > 0 && (
+                        <span className="pointer-events-none absolute bottom-3 left-4 rounded bg-slate-950/85 px-1.5 py-0.5 text-xs italic text-slate-500">
+                            +{overflowCount} more
+                        </span>
+                    )}
+                </div>
+            </ChartFocusDialog>
         </div>
     );
 };

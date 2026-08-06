@@ -1,10 +1,10 @@
-<dashboard version="2" theme="light">
+<dashboard version="2" theme="dark" stylesheet="application.css">
     <label>Hybrid Mesh Firewalling</label>
-    <description>Secure Networking drill-down dashboard for Hybrid Mesh Firewalling.</description>
+    <description>Unify firewall posture, enforcement, and workload protection across the hybrid mesh.</description>
     <definition><![CDATA[
 {
 	"title": "Hybrid Mesh Firewalling",
-	"description": "Secure Networking drill-down dashboard for Hybrid Mesh Firewalling.",
+	"description": "Unify firewall posture, enforcement, and workload protection across the hybrid mesh.",
 	"inputs": {
 		"input_time_range": {
 			"options": {
@@ -16,24 +16,6 @@
 		}
 	},
 	"defaults": {
-		"dataSources": {
-			"ds.search": {
-				"options": {
-					"queryParameters": {
-						"earliest": "$time_tok.earliest$",
-						"latest": "$time_tok.latest$"
-					}
-				}
-			},
-			"ds.spl2": {
-				"options": {
-					"queryParameters": {
-						"earliest": "$time_tok.earliest$",
-						"latest": "$time_tok.latest$"
-					}
-				}
-			}
-		},
 		"visualizations": {
 			"global": {
 				"showLastUpdated": true,
@@ -42,15 +24,30 @@
 		}
 	},
 	"visualizations": {
+		"viz_header_bg": {
+			"type": "splunk.rectangle",
+			"options": {
+				"fillColor": "#16283c",
+				"strokeColor": "rgba(53,207,245,0.42)"
+			}
+		},
+		"viz_header_icon": {
+			"type": "splunk.image",
+			"title": "Hybrid Mesh Firewalling",
+			"options": {
+				"preserveAspectRatio": true,
+				"src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/hybrid-mesh-firewalling.svg"
+			}
+		},
 		"viz_header": {
 			"type": "splunk.markdown",
 			"title": "",
 			"showLastUpdated": false,
 			"showProgressBar": false,
 			"options": {
-				"backgroundColor": "#ffffff",
-				"fontColor": "#111827",
-				"markdown": "# Hybrid Mesh Firewalling\nFirewall enforcement, SSE controls, FMC policy activity, and data-loss findings across the hybrid mesh."
+				"backgroundColor": "transparent",
+				"fontColor": "#e8f1fb",
+				"markdown": "# Hybrid Mesh Firewalling\nUnify firewall posture, enforcement, and workload protection across the hybrid mesh."
 			}
 		},
 		"viz_hmf_fw_blocked": {
@@ -60,14 +57,15 @@
 				"primary": "ds_hmf_fw_blocked"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('blocked') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"sparklineDisplay": "off",
 				"trendDisplay": "off",
-				"majorColor": "#f59e0b"
-			}
+				"majorColor": "#ff9a4a"
+			},
+			"description": "Counts how many unique connection attempts were blocked by the firewall, treating repeated blocks of the same connection as one."
 		},
 		"viz_hmf_ftd_feed": {
 			"type": "splunk.singlevalueradial",
@@ -76,7 +74,7 @@
 				"primary": "ds_hmf_ftd_feed"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('age_minutes') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -89,19 +87,20 @@
 				"staleness": [
 					{
 						"to": 30,
-						"value": "#16a34a"
+						"value": "#8bd45b"
 					},
 					{
 						"from": 30,
 						"to": 90,
-						"value": "#eab308"
+						"value": "#ff9a4a"
 					},
 					{
 						"from": 90,
-						"value": "#dc2626"
+						"value": "#ff7169"
 					}
 				]
-			}
+			},
+			"description": "Staleness monitor for Cisco FTD firewall feeds covering syslog, advanced JSON connection events, and DNS logs. Any production firewall sees continuous traffic - silence beyond 30 minutes means the feed is broken, not the…"
 		},
 		"viz_hmf_fmc_count": {
 			"type": "splunk.singlevalue",
@@ -110,14 +109,15 @@
 				"primary": "ds_hmf_fmc_count"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('firewall_count') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"sparklineDisplay": "off",
 				"trendDisplay": "off",
-				"majorColor": "#0ea5e9"
-			}
+				"majorColor": "#53bfff"
+			},
+			"description": "Total count of unique Cisco Firepower/FTD firewalls actively reporting to Cisco FMC, based on distinct Device UUIDs seen in FMC syslog, providing the on-premises firewall infrastructure footprint KPI."
 		},
 		"viz_hmf_sse_total": {
 			"type": "splunk.singlevalue",
@@ -126,14 +126,15 @@
 				"primary": "ds_hmf_sse_total"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f1a2a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('total_events') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"sparklineDisplay": "off",
 				"trendDisplay": "off",
 				"majorColor": "#14b8a6"
-			}
+			},
+			"description": "Total count of all security events across Cisco Secure Service Edge (SSE) , combining cloud firewall, DNS security, and web proxy telemetry into a single top-level KPI."
 		},
 		"viz_hmf_unified_blocks": {
 			"type": "splunk.line",
@@ -142,20 +143,21 @@
 				"primary": "ds_hmf_unified_blocks"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f1a2a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#dc2626",
-					"#f59e0b",
-					"#0ea5e9",
+					"#ff7169",
+					"#ff9a4a",
+					"#53bfff",
 					"#7c3aed"
 				],
 				"lineWidth": 2,
 				"nullValueDisplay": "gaps"
-			}
+			},
+			"description": "Creates a unified block trend across Meraki security events, SD-WAN UTD, Secure Access firewall events, and Secure Firewall/ASA-style feeds."
 		},
 		"viz_hmf_fmc_activity": {
 			"type": "splunk.area",
@@ -164,21 +166,22 @@
 				"primary": "ds_hmf_fmc_activity"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f1a2a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#16a34a",
-					"#dc2626",
-					"#0ea5e9",
+					"#8bd45b",
+					"#ff7169",
+					"#53bfff",
 					"#64748b"
 				],
 				"stackMode": "stacked",
 				"lineWidth": 2,
 				"nullValueDisplay": "gaps"
-			}
+			},
+			"description": "Hourly time-series trend of Cisco FMC firewall actions and advanced connection observations , enabling operators to correlate enforcement spikes with overall flow activity."
 		},
 		"viz_hmf_dns_categories": {
 			"type": "splunk.bar",
@@ -187,17 +190,18 @@
 				"primary": "ds_hmf_dns_categories"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f1a2a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#dc2626",
-					"#f59e0b",
+					"#ff7169",
+					"#ff9a4a",
 					"#7c3aed"
 				]
-			}
+			},
+			"description": "Top DNS content categories responsible for blocked queries in Cisco Umbrella/SSE, showing which threat categories and policy-driven classifications are generating the most DNS enforcement activity."
 		},
 		"viz_hmf_enforcement_coverage": {
 			"type": "splunk.table",
@@ -206,11 +210,12 @@
 				"primary": "ds_hmf_enforcement_coverage"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
-			}
+			},
+			"description": "Shows Hybrid Mesh Firewalling enforcement coverage by site using Meraki device inventory and SD-WAN UTD activity."
 		},
 		"viz_hmf_fmc_top_rules": {
 			"type": "splunk.bar",
@@ -219,16 +224,17 @@
 				"primary": "ds_hmf_fmc_top_rules"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f1a2a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#f59e0b",
-					"#0ea5e9"
+					"#ff9a4a",
+					"#53bfff"
 				]
-			}
+			},
+			"description": "Top Cisco FMC access control rules by hit count , exposing which rules are handling the highest traffic volumes and whether those rules are permitting or denying connections."
 		},
 		"viz_hmf_dlp_findings": {
 			"type": "splunk.table",
@@ -237,10 +243,33 @@
 				"primary": "ds_hmf_dlp_findings"
 			},
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#0f1a2a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
+			},
+			"description": "Summarizes Secure Access DLP findings by severity, action, rule, data classification, application, and traffic direction."
+		},
+		"viz_design_context": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#111f31",
+				"fontColor": "#e8f1fb",
+				"markdown": "**Audience:** Firewall, network-security, and SOC teams  •  **Sources:** Secure Firewall, Meraki, SD-WAN UTD, Secure Access, and ASA telemetry  •  **Reading guide:** Start with block volume and feed freshness, then compare trends and site coverage.  •  **Freshness:** Uses the dashboard time range"
+			}
+		},
+		"viz_design_section": {
+			"type": "splunk.markdown",
+			"title": "",
+			"showLastUpdated": false,
+			"showProgressBar": false,
+			"options": {
+				"backgroundColor": "#111f31",
+				"fontColor": "#e8f1fb",
+				"markdown": "### Enforcement posture\nStart with block volume and feed freshness, then compare trends and site coverage."
 			}
 		}
 	},
@@ -248,125 +277,112 @@
 		"ds_hmf_fw_blocked": {
 			"name": "Executive - Firewall Blocked Count",
 			"options": {
-				"query": "| tstats `scd_summariesonly` count FROM DATAMODEL=Network_Traffic where nodename=All_Traffic.Traffic_By_Action.Blocked_Traffic All_Traffic.src!=\"\" All_Traffic.dest!=\"\" All_Traffic.src!=\"-\" All_Traffic.dest!=\"-\" by All_Traffic.src, All_Traffic.dest, All_Traffic.dest_port\n| where NOT match('All_Traffic.src', \"(?i)^(unknown|null|none)$\") AND NOT match('All_Traffic.dest', \"(?i)^(unknown|null|none)$\")\n| stats count as blocked",
+				"ref": "executive_dashboard_firewall_blocked_count",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
 				}
 			},
-			"type": "ds.search"
+			"type": "ds.searchbase"
 		},
 		"ds_hmf_ftd_feed": {
-			"name": "Feed Monitor - FTD Firewall - Stream Staleness (Signal Rail KPI)",
+			"name": "Feed Monitor - FTD Firewall - Stream Staleness - Signal Rail KPI",
 			"options": {
-				"query": "| makeresults\n| eval count_24h=0, last_ts=0\n| append [| tstats count as count_24h latest(_time) as last_ts WHERE `index_firewall` AND (sourcetype=\"cisco:ftd\" OR sourcetype=\"cisco:ftd:syslog\" OR sourcetype=\"cisco:ftd:adv:conn\" OR sourcetype=\"cisco:ftd:connection\")]\n| stats sum(count_24h) as count_24h max(last_ts) as last_ts\n| eval age_minutes=if(last_ts>0, round((now()-last_ts)/60, 0), 9999)\n| eval readiness=case(count_24h=0 OR last_ts=0,\"NOT ONBOARDED - configure FTD syslog or HEC forwarding\", age_minutes<=30,\"Active - last event \".tostring(age_minutes).\" min ago\", age_minutes<=90,\"WARNING - stale \".tostring(age_minutes).\" min - check HEC token and syslog connectivity\", 1==1,\"CRITICAL - STALE \".tostring(age_minutes).\" min - verify HEC token and FMC eStreamer client status\")\n| eval last_seen=if(last_ts>0, strftime(last_ts,\"%Y-%m-%d %H:%M:%S\"), \"Never\")\n| fields count_24h age_minutes readiness last_seen",
+				"ref": "feed_monitor_ftd_firewall_staleness",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
 				}
 			},
-			"type": "ds.search"
-		},
-		"ds_hmf_sse_total": {
-			"name": "Secure Networking - SSE Total Security Events",
-			"options": {
-				"query": "`index_security` (sourcetype=\"cisco:cloud_security:firewall\" OR sourcetype=\"cisco:cloud_security:dns\" OR sourcetype=\"cisco:cloud_security:proxy\")\n| stats count as total_events\n| eval label=\"Total SSE Security Events\"\n| table label, total_events",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_hmf_cloud_blocks": {
-			"name": "Secure Networking - SSE Cloud Firewall Blocks Count",
-			"options": {
-				"query": "`index_security` sourcetype=\"cisco:cloud_security:firewall\" (action=\"block\" OR action=\"BLOCK\" OR action=\"Block\" OR verdict=\"block\" OR verdict=\"BLOCK\" OR verdict=\"Block\")\n| stats count as blocked_events\n| eval label=\"Cloud Firewall Blocks\"\n| table label, blocked_events",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_hmf_unified_blocks": {
-			"name": "Secure Networking - HMF Unified Blocks Trend",
-			"options": {
-				"query": "`index_meraki` sourcetype=\"meraki:organizationsecurity\" action=\"blocked\"\n| eval platform=\"Meraki MX\", blocked=1\n| table _time platform blocked\n| append [ search `index_sdwan` sourcetype=\"cisco:sdwan:utd:logs\" (action=\"Drop\" OR action=\"Block\" OR action=\"Deny\") | eval platform=\"SD-WAN UTD\", blocked=1 | table _time platform blocked ]\n| append [ search `index_security` (sourcetype=\"cisco:cloud_security:firewall\" OR sourcetype=\"cisco:secure_access:security_events_firewall\") (action=\"blocked\" OR action=\"block\" OR action=\"deny\" OR verdict=\"blocked\") | eval platform=\"Secure Access\", blocked=1 | table _time platform blocked ]\n| append [ search `index_firewall` (sourcetype=\"cisco:asa\" OR sourcetype=\"cisco:ftd\" OR sourcetype=\"cisco:ftd:syslog\" OR sourcetype=\"cisco:sfw:estreamer\") (action=\"blocked\" OR action=\"Block\" OR action=\"Deny\" OR action=\"deny\" OR action=\"Drop\" OR action=\"drop\") | eval platform=\"Secure Firewall / ASA\", blocked=1 | table _time platform blocked ]\n| timechart span=1h sum(blocked) as Blocks by platform",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_hmf_enforcement_coverage": {
-			"name": "Secure Networking - HMF Enforcement Coverage by Site",
-			"options": {
-				"query": "`index_meraki` sourcetype=\"meraki:devices\"\n| dedup serial\n| eval site=coalesce(address, networkName, organizationName, \"Unknown\"), enforcement=case(match(model,\"^MX\"),\"Meraki MX Firewall\", match(model,\"^C8[0-9]\"),\"Secure Router\", match(model,\"^Z\"),\"Teleworker Firewall\", productType=\"appliance\",\"Meraki Security Appliance\", 1==1,\"Non-firewall inventory\")\n| stats count as devices by site, enforcement\n| append [ search `index_sdwan` sourcetype=\"cisco:sdwan:utd:logs\" | eval site=coalesce(site_name, Hostname, host, \"Unknown\"), enforcement=\"SD-WAN UTD Active\" | stats count as devices by site, enforcement ]\n| stats sum(devices) as \"Evidence Count\" values(enforcement) as \"Enforcement Types\" by site\n| eval \"Enforcement Types\"=mvjoin('Enforcement Types', \", \"), \"Coverage Status\"=if(match('Enforcement Types',\"Firewall|UTD|Security Appliance\"),\"Has enforcement evidence\",\"Inventory only / verify coverage\")\n| rename site as \"Site\"\n| table \"Site\", \"Coverage Status\", \"Enforcement Types\", \"Evidence Count\"\n| sort \"Coverage Status\", \"Site\"",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_hmf_dlp_findings": {
-			"name": "Secure Networking - Secure Access DLP Findings",
-			"options": {
-				"query": "`index_security` sourcetype=\"cisco:cloud_security:dlp\"\n| eval identity=coalesce(identity, identities, user, \"Unknown\"), app=coalesce(application, Application_Entity_Name, \"Unknown\"), destination=coalesce(destination, dest, url, \"Unknown\"), action=upper(coalesce(action, verdict, \"UNKNOWN\")), severity=upper(coalesce(severity, \"UNKNOWN\")), rule=coalesce(rule, rule_id, \"Unknown\"), data_classification=coalesce(dataClassification, dlp_status, category, \"Unknown\"), data_identifier=coalesce(dataIdentifier, \"Unknown\"), direction=upper(coalesce(direction, traffic_direction, \"UNKNOWN\")), file_name=coalesce(name, filename, \"Unknown\"), file_size_bytes=tonumber(file_size)\n| stats count as Events, dc(identity) as Identities, dc(destination) as Destinations, values(file_name) as files, sum(file_size_bytes) as bytes, latest(_time) as last_seen by severity, action, rule, data_classification, data_identifier, app, direction\n| eval \"Data MB\"=round(bytes/1024/1024, 2), \"Sample Files\"=mvjoin(mvindex(files,0,4), \", \"), \"Last Seen\"=strftime(last_seen,\"%Y-%m-%d %H:%M:%S\")\n| rename severity as \"Severity\", action as \"Action\", rule as \"Rule\", data_classification as \"Data Classification\", data_identifier as \"Data Identifier\", app as \"Application\", direction as \"Direction\"\n| table \"Severity\", \"Action\", \"Rule\", \"Data Classification\", \"Data Identifier\", \"Application\", \"Direction\", Events, Identities, Destinations, \"Data MB\", \"Sample Files\", \"Last Seen\"\n| sort - Events",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_hmf_dns_categories": {
-			"name": "Secure Networking - SSE DNS Blocked Categories",
-			"options": {
-				"query": "`index_security` sourcetype=\"cisco:cloud_security:dns\" action=\"Blocked\"\n| eval category=if(isnotnull(categories) AND categories!=\"\", categories, \"Uncategorized\")\n| mvexpand category\n| stats count by category\n| sort - count\n| head 15\n| rename category as \"Category\", count as \"Block Count\"",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.search"
-		},
-		"ds_base_hmf_fmc": {
-			"name": "Secure Networking base - FMC firewall syslog",
-			"options": {
-				"query": "`index_firewall` sourcetype=\"cisco:ftd:syslog\"\n| eval normalized_action=case(AC_RuleAction=\"Allow\",\"Allow\", AC_RuleAction=\"Block\" OR AC_RuleAction=\"Block with reset\",\"Block\", AC_RuleAction=\"Trust\",\"Trust\", 1==1,\"Other\")",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.search"
+			"type": "ds.searchbase"
 		},
 		"ds_hmf_fmc_count": {
 			"name": "Secure Networking chain - FMC firewall count",
 			"options": {
-				"extend": "ds_base_hmf_fmc",
-				"query": "| stats dc(DeviceUUID) as firewall_count\n| eval label=\"FMC Managed Firewalls\"\n| fields label firewall_count"
+				"ref": "secure_networking_infra_fmc_firewall_count",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
 			},
-			"type": "ds.chain"
+			"type": "ds.searchbase"
+		},
+		"ds_hmf_sse_total": {
+			"name": "Secure Networking - SSE Total Security Events",
+			"options": {
+				"ref": "secure_networking_sse_total_security_events",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_hmf_unified_blocks": {
+			"name": "Secure Networking - HMF Unified Blocks Trend",
+			"options": {
+				"ref": "secure_networking_hmf_unified_blocks_trend",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
 		},
 		"ds_hmf_fmc_activity": {
 			"name": "Secure Networking chain - FMC activity trend",
 			"options": {
-				"extend": "ds_base_hmf_fmc",
-				"query": "| timechart span=1h count by normalized_action"
+				"ref": "secure_networking_fmc_activity_trend",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
 			},
-			"type": "ds.chain"
+			"type": "ds.searchbase"
+		},
+		"ds_hmf_dns_categories": {
+			"name": "Secure Networking - SSE DNS Blocked Categories",
+			"options": {
+				"ref": "secure_networking_sse_dns_blocked_categories",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
+		},
+		"ds_hmf_enforcement_coverage": {
+			"name": "Secure Networking - HMF Enforcement Coverage by Site",
+			"options": {
+				"ref": "secure_networking_hmf_enforcement_coverage_by_site",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
 		},
 		"ds_hmf_fmc_top_rules": {
 			"name": "Secure Networking chain - FMC top rules",
 			"options": {
-				"extend": "ds_base_hmf_fmc",
-				"query": "| search FirewallRule!=\"\" FirewallRule!=\"N/A\"\n| stats count as \"Hit Count\", dc(src_ip) as \"Unique Sources\" by FirewallRule\n| sort - \"Hit Count\"\n| head 20\n| rename FirewallRule as \"Firewall Rule\"\n| table \"Firewall Rule\", \"Hit Count\", \"Unique Sources\""
+				"ref": "secure_networking_fmc_top_rules_hit",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
 			},
-			"type": "ds.chain"
+			"type": "ds.searchbase"
+		},
+		"ds_hmf_dlp_findings": {
+			"name": "Secure Networking - Secure Access DLP Findings",
+			"options": {
+				"ref": "secure_networking_secure_access_dlp_findings",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			},
+			"type": "ds.searchbase"
 		}
 	},
 	"layout": {
@@ -376,19 +392,59 @@
 		"layoutDefinitions": {
 			"layout_overview": {
 				"options": {
-					"backgroundColor": "#f5f7fb",
+					"backgroundColor": "#07101d",
 					"display": "auto-scale",
-					"height": 1490,
+					"height": 1390,
 					"width": 1440
 				},
 				"structure": [
 					{
-						"item": "viz_header",
+						"item": "viz_header_bg",
 						"position": {
 							"x": 20,
 							"y": 0,
 							"w": 1400,
-							"h": 90
+							"h": 88
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_header_icon",
+						"position": {
+							"x": 36,
+							"y": 14,
+							"w": 56,
+							"h": 56
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_header",
+						"position": {
+							"x": 108,
+							"y": 4,
+							"w": 1292,
+							"h": 76
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_design_context",
+						"position": {
+							"x": 20,
+							"y": 100,
+							"w": 1400,
+							"h": 64
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_design_section",
+						"position": {
+							"x": 20,
+							"y": 176,
+							"w": 1400,
+							"h": 54
 						},
 						"type": "block"
 					},
@@ -396,9 +452,9 @@
 						"item": "viz_hmf_fw_blocked",
 						"position": {
 							"x": 20,
-							"y": 110,
+							"y": 242,
 							"w": 335,
-							"h": 180
+							"h": 200
 						},
 						"type": "block"
 					},
@@ -406,9 +462,9 @@
 						"item": "viz_hmf_ftd_feed",
 						"position": {
 							"x": 375,
-							"y": 110,
+							"y": 242,
 							"w": 335,
-							"h": 180
+							"h": 200
 						},
 						"type": "block"
 					},
@@ -416,9 +472,9 @@
 						"item": "viz_hmf_fmc_count",
 						"position": {
 							"x": 730,
-							"y": 110,
+							"y": 242,
 							"w": 335,
-							"h": 180
+							"h": 200
 						},
 						"type": "block"
 					},
@@ -426,9 +482,9 @@
 						"item": "viz_hmf_sse_total",
 						"position": {
 							"x": 1085,
-							"y": 110,
+							"y": 242,
 							"w": 335,
-							"h": 180
+							"h": 200
 						},
 						"type": "block"
 					},
@@ -436,9 +492,9 @@
 						"item": "viz_hmf_unified_blocks",
 						"position": {
 							"x": 20,
-							"y": 310,
+							"y": 458,
 							"w": 690,
-							"h": 340
+							"h": 280
 						},
 						"type": "block"
 					},
@@ -446,9 +502,9 @@
 						"item": "viz_hmf_fmc_activity",
 						"position": {
 							"x": 730,
-							"y": 310,
+							"y": 458,
 							"w": 690,
-							"h": 340
+							"h": 280
 						},
 						"type": "block"
 					},
@@ -456,9 +512,9 @@
 						"item": "viz_hmf_dns_categories",
 						"position": {
 							"x": 20,
-							"y": 670,
+							"y": 754,
 							"w": 690,
-							"h": 390
+							"h": 280
 						},
 						"type": "block"
 					},
@@ -466,9 +522,9 @@
 						"item": "viz_hmf_enforcement_coverage",
 						"position": {
 							"x": 730,
-							"y": 670,
+							"y": 754,
 							"w": 690,
-							"h": 390
+							"h": 300
 						},
 						"type": "block"
 					},
@@ -476,9 +532,9 @@
 						"item": "viz_hmf_fmc_top_rules",
 						"position": {
 							"x": 20,
-							"y": 1080,
+							"y": 1070,
 							"w": 690,
-							"h": 390
+							"h": 280
 						},
 						"type": "block"
 					},
@@ -486,9 +542,9 @@
 						"item": "viz_hmf_dlp_findings",
 						"position": {
 							"x": 730,
-							"y": 1080,
+							"y": 1070,
 							"w": 690,
-							"h": 390
+							"h": 300
 						},
 						"type": "block"
 					}
@@ -512,7 +568,7 @@
 	},
 	"applicationProperties": {
 		"collapseNavigation": false,
-		"hideEdit": true,
+		"hideEdit": false,
 		"hideExport": false
 	}
 }

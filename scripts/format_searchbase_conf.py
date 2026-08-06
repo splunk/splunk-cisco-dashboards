@@ -63,6 +63,23 @@ REQUIRED_FOR_GAP_REPORT = (
     "related_info",
 )
 
+UNBOUNDED_SORT_CONTRACT_STANZAS = frozenset(
+    {
+        "building_resilience_webex_devices",
+        "client_summary_client_health_by_location",
+        "dashboard_workplace_spog_v1_issues",
+        "dashboard_workplace_spog_v1_persite",
+        "it_critical_systems_compliance_report",
+        "it_critical_systems_stp_reconvergence",
+        "it_critical_systems_top_issue_devices",
+        "it_health_thousandeyes_alerts_summary",
+        "secure_networking_sdwan_site_health_breakdown",
+        "secure_networking_sdwan_tunnel_health_log",
+        "spaces_room_utilization_league_table",
+        "spaces_space_idle_cost_ranking",
+    }
+)
+
 
 def parse_stanzas(text: str) -> list[tuple[str, dict[str, str]]]:
     stanzas: list[tuple[str, dict[str, str]]] = []
@@ -285,7 +302,201 @@ def _normalize_for_compare(s: str) -> str:
     ).strip()
 
 
-def format_search(search: str) -> tuple[str, bool]:
+def _stage_command(stage: str) -> str:
+    match = re.match(r"^\s*([A-Za-z][\w-]*)\b", stage)
+    return match.group(1).lower() if match else ""
+
+
+def _is_bounded_sort(stage: str) -> bool:
+    return bool(re.match(r"^\s*sort\s+(?:limit\s*=\s*)?[1-9]\d*\b", stage, re.I))
+
+
+def _pipe_command_at(text: str, pipe_index: int) -> str:
+    match = re.match(r"\s*([A-Za-z][\w-]*)\b", text[pipe_index + 1 :])
+    return match.group(1).lower() if match else ""
+
+
+def _contains_aggregate_command(text: str) -> bool:
+    if _stage_command(text) in {"stats", "tstats"}:
+        return True
+    quote: str | None = None
+    escaped = False
+    for idx, char in enumerate(text):
+        if escaped:
+            escaped = False
+        elif char == "\\":
+            escaped = True
+        elif quote:
+            if char == quote:
+                quote = None
+        elif char in {"'", '"', "`"}:
+            quote = char
+        elif char == "|" and _pipe_command_at(text, idx) in {"stats", "tstats"}:
+            return True
+    return False
+
+
+def remove_sorts_from_aggregate_search(text: str) -> str:
+    """Remove every executable sort when stats or tstats occurs anywhere."""
+    if not _contains_aggregate_command(text):
+        return text
+
+    out: list[str] = []
+    last = 0
+    idx = 0
+    quote: str | None = None
+    escaped = False
+    bracket_depth = 0
+    paren_depth = 0
+    while idx < len(text):
+        char = text[idx]
+        if escaped:
+            escaped = False
+            idx += 1
+            continue
+        if char == "\\":
+            escaped = True
+            idx += 1
+            continue
+        if quote:
+            if char == quote:
+                quote = None
+            idx += 1
+            continue
+        if char in {"'", '"', "`"}:
+            quote = char
+            idx += 1
+            continue
+        if char == "[":
+            bracket_depth += 1
+        elif char == "]":
+            bracket_depth = max(0, bracket_depth - 1)
+        elif char == "(":
+            paren_depth += 1
+        elif char == ")":
+            paren_depth = max(0, paren_depth - 1)
+        elif char == "|" and _pipe_command_at(text, idx) == "sort":
+            out.append(text[last:idx])
+            cursor = idx + 1
+            local_quote: str | None = None
+            local_escaped = False
+            local_bracket_depth = bracket_depth
+            local_paren_depth = paren_depth
+            while cursor < len(text):
+                current = text[cursor]
+                if local_escaped:
+                    local_escaped = False
+                elif current == "\\":
+                    local_escaped = True
+                elif local_quote:
+                    if current == local_quote:
+                        local_quote = None
+                elif current in {"'", '"', "`"}:
+                    local_quote = current
+                elif current == "[":
+                    local_bracket_depth += 1
+                elif current == "]":
+                    if local_bracket_depth == bracket_depth:
+                        break
+                    local_bracket_depth = max(0, local_bracket_depth - 1)
+                elif current == "(":
+                    local_paren_depth += 1
+                elif current == ")":
+                    local_paren_depth = max(0, local_paren_depth - 1)
+                elif (
+                    current == "|"
+                    and local_bracket_depth == bracket_depth
+                    and local_paren_depth == paren_depth
+                ):
+                    break
+                cursor += 1
+            idx = cursor
+            last = cursor
+            continue
+        idx += 1
+    out.append(text[last:])
+    return "".join(out)
+
+
+def sanitize_aggregate_sort_metadata(value: str) -> str:
+    """Remove stale sort-command language from aggregate-search prose."""
+    value = re.sub(
+        r"<code>\s*sort\b[^<]*</code>",
+        "<code>result ranking</code>",
+        value,
+        flags=re.I,
+    )
+    replacements = (
+        (r"\bsorted\s+descending\b", "ranked by descending value"),
+        (r"\bsorted\s+ascending\b", "ranked by ascending value"),
+        (r"\bsorted\s+by\b", "prioritized by"),
+        (r"\bsorting\s+by\b", "prioritizing"),
+        (r"\bsort\s+by\b", "prioritize"),
+        (r"\bsort\s+command\b", "ranking step"),
+        (r"\bsort\s+syntax\b", "ranking convention"),
+        (r"\bsorting\b", "ranking"),
+        (r"\bsorted\b", "ranked"),
+        (r"\bsort\b", "ranking"),
+    )
+    for pattern, replacement in replacements:
+        value = re.sub(pattern, replacement, value, flags=re.I)
+    return value
+
+
+def remove_redundant_stats_stages(stages: list[str]) -> list[str]:
+    """Remove top-level table/fields stages made redundant by stats."""
+    commands = [_stage_command(stage) for stage in stages]
+    stats_indexes = [idx for idx, command in enumerate(commands) if command == "stats"]
+    if not stats_indexes:
+        return stages
+
+    kept = [
+        stage
+        for idx, stage in enumerate(stages)
+        if not (
+            commands[idx] in {"table", "fields"}
+            and any(stats_idx > idx for stats_idx in stats_indexes)
+        )
+    ]
+
+    kept_commands = [_stage_command(stage) for stage in kept]
+    adjusted_last_stats = max(
+        idx for idx, command in enumerate(kept_commands) if command == "stats"
+    )
+    suffix_commands = kept_commands[adjusted_last_stats + 1 :]
+    if suffix_commands and all(command in {"fields", "sort"} for command in suffix_commands):
+        return [
+            stage
+            for idx, stage in enumerate(kept)
+            if not (idx > adjusted_last_stats and kept_commands[idx] == "fields")
+        ]
+    return kept
+
+
+def remove_cosmetic_sort_stages(
+    stages: list[str], *, preserve_unbounded_sort: bool = False
+) -> list[str]:
+    """Remove unbounded top-level sorts that do not feed order-sensitive logic."""
+    if preserve_unbounded_sort:
+        return stages
+    commands = [_stage_command(stage) for stage in stages]
+    order_sensitive = {"streamstats", "delta", "autoregress", "transaction", "head", "tail", "dedup"}
+    remove_indexes: set[int] = set()
+    for idx, (stage, command) in enumerate(zip(stages, commands)):
+        if command != "sort" or _is_bounded_sort(stage):
+            continue
+        downstream = commands[idx + 1 :]
+        if any(command in order_sensitive for command in downstream):
+            continue
+        remove_indexes.add(idx)
+        if idx + 1 < len(commands) and commands[idx + 1] == "reverse":
+            remove_indexes.add(idx + 1)
+    return [stage for idx, stage in enumerate(stages) if idx not in remove_indexes]
+
+
+def format_search(
+    search: str, *, preserve_unbounded_sort: bool = False
+) -> tuple[str, bool]:
     """Reformat a search field per the rules. Returns (new_search, changed)."""
     original = search
     text = search.replace("\t", " ")
@@ -296,13 +507,17 @@ def format_search(search: str) -> tuple[str, bool]:
     if not raw_lines:
         return original, False
 
-    glued = "\n".join(raw_lines)
+    glued = remove_sorts_from_aggregate_search("\n".join(raw_lines))
     spans = _scan_top_level_pipes(glued)
     if not spans:
         return original, False
+    stage_texts = remove_redundant_stats_stages([stage for _s, _e, stage in spans])
+    stage_texts = remove_cosmetic_sort_stages(
+        stage_texts, preserve_unbounded_sort=preserve_unbounded_sort
+    )
 
     out_lines: list[str] = []
-    for idx, (_s, _e, stage_text) in enumerate(spans):
+    for idx, stage_text in enumerate(stage_texts):
         is_first = idx == 0
         if _stage_has_top_level_subsearch(stage_text):
             stage_lines = [
@@ -402,6 +617,43 @@ def emit_search_field(search: str) -> list[str]:
     return lines
 
 
+def find_unterminated_search_lines(text: str) -> list[tuple[int, str, str]]:
+    """Return non-final physical search lines missing a continuation backslash."""
+    failures: list[tuple[int, str, str]] = []
+    current: str | None = None
+    search_lines: list[tuple[int, str]] = []
+
+    def check_search() -> None:
+        if len(search_lines) < 2 or current is None:
+            return
+        for line_number, line in search_lines[:-1]:
+            if not line.rstrip().endswith("\\"):
+                failures.append((line_number, current, line))
+
+    for line_number, line in enumerate(text.splitlines(), 1):
+        match = re.match(r"^\[([a-z0-9_]+)\]$", line)
+        if match:
+            check_search()
+            current = match.group(1)
+            search_lines = []
+            continue
+        if current is None:
+            continue
+        if line.startswith("search = "):
+            check_search()
+            search_lines = [(line_number, line)]
+            continue
+        if search_lines:
+            if line.startswith("|") or line.startswith(" ") or line.endswith("\\"):
+                search_lines.append((line_number, line))
+                continue
+            check_search()
+            search_lines = []
+
+    check_search()
+    return failures
+
+
 def _field_order_lists(fields: dict[str, str]) -> tuple[list[str], list[str]]:
     """Return (known_pre_search_order, unknown_extras) for a stanza."""
     known: list[str] = list(FIELD_ORDER_BEFORE_VIZ)
@@ -428,10 +680,24 @@ def metadata_needs_reorder(fields: dict[str, str]) -> bool:
 
 def format_stanza(stanza_id: str, fields: dict[str, str]) -> tuple[str, bool, bool]:
     search_changed = False
+    prose_changed = False
 
     if "search" in fields:
-        new_search, search_changed = format_search(fields["search"])
+        new_search, search_changed = format_search(
+            fields["search"],
+            preserve_unbounded_sort=stanza_id in UNBOUNDED_SORT_CONTRACT_STANZAS,
+        )
         fields = {**fields, "search": new_search}
+        if _contains_aggregate_command(new_search):
+            updated_fields = dict(fields)
+            for key in PROSE_FIELDS:
+                if key not in fields:
+                    continue
+                updated = sanitize_aggregate_sort_metadata(fields[key])
+                if updated != fields[key]:
+                    prose_changed = True
+                    updated_fields[key] = updated
+            fields = updated_fields
 
     known_keys, extras = _field_order_lists(fields)
     if extras:
@@ -447,7 +713,7 @@ def format_stanza(stanza_id: str, fields: dict[str, str]) -> tuple[str, bool, bo
 
     old_keys = list(fields.keys())
     target_keys = [k for k in full_order if k in fields]
-    meta_changed = old_keys != target_keys
+    meta_changed = old_keys != target_keys or prose_changed
 
     lines = [f"[{stanza_id}]"]
     for key in full_order:
@@ -547,8 +813,17 @@ def main() -> int:
             preview = content if len(content) <= 72 else content[:69] + "..."
             print(f"  line {lineno} [{sid}]: {preview}")
 
+    unterminated = find_unterminated_search_lines(text)
+    if unterminated:
+        print(f"Unterminated multiline search lines: {len(unterminated)}")
+        for lineno, sid, content in unterminated[:20]:
+            preview = content if len(content) <= 72 else content[:69] + "..."
+            print(f"  line {lineno} [{sid}]: {preview}")
+        if len(unterminated) > 20:
+            print(f"  ... and {len(unterminated) - 20} more")
+
     if args.check:
-        return 1 if leaked else 0
+        return 1 if leaked or unterminated else 0
 
     args.source.write_text(out_text, encoding="utf-8")
     return 0

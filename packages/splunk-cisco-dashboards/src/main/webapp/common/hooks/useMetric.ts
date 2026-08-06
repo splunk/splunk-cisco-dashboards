@@ -22,7 +22,7 @@ import {
     isAbortError,
     runSearch,
 } from '../services/splunkSearchService';
-import type { SectionId } from '@/common/config/overviewProfiles';
+import type { SectionId } from '@/common/config/insightsWorkspaces';
 
 export type { SectionId };
 

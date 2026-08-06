@@ -32,6 +32,7 @@ import {
     type SignalTickerConfig,
     type SignalTickerDensity,
     type SignalTickerItem,
+    type SignalTickerPersistenceStatus,
     type SignalTickerRows,
     type SignalTickerThresholdDirection,
 } from '@/common/hooks/usePersistedSignalTicker';
@@ -47,7 +48,6 @@ const MAX_SIGNAL_SPEED = 10;
 const ALL_CATEGORIES = '__all__';
 const ALL_SUB_CATEGORIES = '__all_sub__';
 const ALL_APPS = '__all_apps__';
-const DEFAULT_APP_SCOPE = 'splunk-cisco-dashboards';
 const TAG_CHIP_LIMIT = 24;
 
 const TILE_SIZE_CLASS: Record<SignalTickerDensity, string> = {
@@ -623,6 +623,8 @@ interface SignalTickerEditorProps {
     onIncludeTableSearchesChange?: (includeTables: boolean) => void;
     onChange: (config: SignalTickerConfig) => void;
     onReset: () => void;
+    persistenceStatus?: SignalTickerPersistenceStatus;
+    persistenceError?: string;
     onClose: () => void;
 }
 
@@ -661,10 +663,12 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
     onIncludeTableSearchesChange,
     onChange,
     onReset,
+    persistenceStatus = 'account',
+    persistenceError,
     onClose,
 }) => {
     const [query, setQuery] = useState('');
-    const [selectedApp, setSelectedApp] = useState(DEFAULT_APP_SCOPE);
+    const [selectedApp, setSelectedApp] = useState(ALL_APPS);
     const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES);
     const [selectedSubCategory, setSelectedSubCategory] =
         useState(ALL_SUB_CATEGORIES);
@@ -681,21 +685,61 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
         () => new Set(config.items.map((item) => item.searchName)),
         [config.items]
     );
+    // Keep every facet aligned with the visibility controls. The catalogue can
+    // briefly retain hidden entries while an async refresh is in flight, so
+    // applying this locally prevents an app with zero eligible searches from
+    // appearing in the App selector.
+    const drilldownSearchNames = useMemo(
+        () =>
+            new Set(
+                catalogue
+                    .map((entry) => entry.drilldownSearchName?.trim().toLowerCase())
+                    .filter((name): name is string => Boolean(name))
+            ),
+        [catalogue]
+    );
+    const visibilityCatalogue = useMemo(
+        () =>
+            catalogue.filter((entry) => {
+                if (!includeHiddenSearches && entry.searchHidden) return false;
+                const key = entry.searchName.trim().toLowerCase();
+                const id = entry.id.trim().toLowerCase();
+                if (
+                    !includeDrilldownSearches &&
+                    (drilldownSearchNames.has(key) || drilldownSearchNames.has(id))
+                ) {
+                    return false;
+                }
+                return includeTableSearches || entry.defaultViz !== 'splunk.table';
+            }),
+        [
+            catalogue,
+            drilldownSearchNames,
+            includeDrilldownSearches,
+            includeHiddenSearches,
+            includeTableSearches,
+        ]
+    );
     const apps = useMemo(() => {
         const set = new Set<string>();
-        for (const entry of catalogue) {
-            if (entry.dispatchContext) set.add(entry.dispatchContext);
+        for (const entry of visibilityCatalogue) {
+            if (entry.catalogueApp) set.add(entry.catalogueApp);
         }
         return Array.from(set).sort((a, b) =>
             a.localeCompare(b, undefined, { sensitivity: 'base' })
         );
-    }, [catalogue]);
+    }, [visibilityCatalogue]);
+    useEffect(() => {
+        if (selectedApp !== ALL_APPS && !apps.includes(selectedApp)) {
+            setSelectedApp(ALL_APPS);
+        }
+    }, [apps, selectedApp]);
     const categories = useMemo(() => {
         const set = new Set<string>();
-        for (const entry of catalogue) {
+        for (const entry of visibilityCatalogue) {
             if (
                 selectedApp !== ALL_APPS &&
-                entry.dispatchContext !== selectedApp
+                entry.catalogueApp !== selectedApp
             ) {
                 continue;
             }
@@ -704,14 +748,14 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
         return Array.from(set).sort((a, b) =>
             a.localeCompare(b, undefined, { sensitivity: 'base' })
         );
-    }, [catalogue, selectedApp]);
+    }, [visibilityCatalogue, selectedApp]);
     const subCategories = useMemo(() => {
         if (selectedCategory === ALL_CATEGORIES) return [];
         const set = new Set<string>();
-        for (const entry of catalogue) {
+        for (const entry of visibilityCatalogue) {
             if (
                 selectedApp !== ALL_APPS &&
-                entry.dispatchContext !== selectedApp
+                entry.catalogueApp !== selectedApp
             ) {
                 continue;
             }
@@ -721,13 +765,13 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
         return Array.from(set).sort((a, b) =>
             a.localeCompare(b, undefined, { sensitivity: 'base' })
         );
-    }, [catalogue, selectedApp, selectedCategory]);
+    }, [visibilityCatalogue, selectedApp, selectedCategory]);
     const tagFacetEntries = useMemo(() => {
         const q = query.trim().toLowerCase();
-        return catalogue.filter((entry) => {
+        return visibilityCatalogue.filter((entry) => {
             if (
                 selectedApp !== ALL_APPS &&
-                entry.dispatchContext !== selectedApp
+                entry.catalogueApp !== selectedApp
             ) {
                 return false;
             }
@@ -761,7 +805,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
         });
     }, [
         activeTags,
-        catalogue,
+        visibilityCatalogue,
         query,
         selectedApp,
         selectedCategory,
@@ -790,7 +834,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
         return map;
     }, [allTagsWithCounts]);
     const activeFilterCount =
-        (selectedApp !== DEFAULT_APP_SCOPE ? 1 : 0) +
+        (selectedApp !== ALL_APPS ? 1 : 0) +
         (includeHiddenSearches ? 1 : 0) +
         (includeDrilldownSearches ? 1 : 0) +
         (includeTableSearches ? 1 : 0) +
@@ -868,7 +912,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
         });
     };
     const clearFilters = () => {
-        setSelectedApp(DEFAULT_APP_SCOPE);
+        setSelectedApp(ALL_APPS);
         onIncludeHiddenSearchesChange?.(false);
         onIncludeDrilldownSearchesChange?.(false);
         onIncludeTableSearchesChange?.(false);
@@ -901,6 +945,13 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
     };
 
     if (!open) return null;
+
+    const persistenceCopy: Record<SignalTickerPersistenceStatus, string> = {
+        loading: 'Loading your private workspace preferences…',
+        saving: 'Saving privately to your Splunk account…',
+        account: 'Private to your Splunk account and this workspace',
+        browser: 'Browser-only fallback — account storage is unavailable',
+    };
 
     const updateConfig = (patch: Partial<SignalTickerConfig>) =>
         onChange({ ...config, ...patch });
@@ -961,6 +1012,18 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                             </h3>
                             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                                 Pick the KPIs that should move through the executive view.
+                            </p>
+                            <p
+                                className={cn(
+                                    'mt-1 text-[11px] font-semibold',
+                                    persistenceStatus === 'browser'
+                                        ? 'text-amber-600 dark:text-amber-300'
+                                        : 'text-emerald-600 dark:text-emerald-300'
+                                )}
+                                aria-live="polite"
+                                title={persistenceError}
+                            >
+                                {persistenceCopy[persistenceStatus]}
                             </p>
                         </div>
                     </div>
@@ -1393,11 +1456,6 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                                     {app}
                                                 </option>
                                             ))}
-                                            {!apps.includes(DEFAULT_APP_SCOPE) && (
-                                                <option value={DEFAULT_APP_SCOPE}>
-                                                    {DEFAULT_APP_SCOPE}
-                                                </option>
-                                            )}
                                         </select>
                                     </label>
 
@@ -1829,7 +1887,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                         className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-600 transition-colors hover:bg-red-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-300 dark:border-red-900/70 dark:bg-red-950/40 dark:text-red-300"
                     >
                         <RotateCcw className="h-4 w-4" />
-                        Factory rail
+                        Workspace default
                     </button>
                     <button
                         type="button"

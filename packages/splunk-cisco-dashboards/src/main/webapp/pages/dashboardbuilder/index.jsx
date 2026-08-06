@@ -1,44 +1,34 @@
 import React from 'react';
 
-import DashboardStudioEditor from './DashboardStudioEditor';
-import { initialDefinition } from './DashboardStudioEditor';
+import EnterprisePreset from '@splunk/dashboard-presets/EnterprisePreset';
 import {
     Route,
     RouterProvider,
     createHashRouter,
     createRoutesFromElements,
 } from 'react-router-dom';
-import { Outlet } from 'react-router-dom';
-import SearchBaseDataSource from './SearchBaseDataSource';
-import EnterprisePreset from '@splunk/dashboard-presets/EnterprisePreset';
-import { renderAsPage } from '../../common/render';
-import SimpleTimePicker from './custominput/SimpleTimePicker';
+
+import '../../common/shims/requirejs-emotion-shim';
 import VizKpi from '../../common/components/templatewizard/viz-kpi/VizKpi';
 import VizOther from '../../common/components/templatewizard/viz-other/VizOther';
+import { renderAsPage } from '../../common/render';
 import { actionMenus } from '../../common/udf/presets';
 import DBHomePage from './DBHomePage';
+import DashboardStudioEditor, { initialDefinition } from './DashboardStudioEditor';
+import SearchBaseDataSource from './SearchBaseDataSource';
 import SpaceManagerViz from './SpaceManager/SpaceManagerViz';
+import SimpleTimePicker from './custominput/SimpleTimePicker';
 
 const router = createHashRouter(
-    //<Route path="/:dashboardid/:currentmode" element={<DashbiardStudioEditor />} />
     createRoutesFromElements([
-        <Route path="/" element={<Outlet />}>
-            {/*
-            <Route path="/" element={<DashboardStudioEditorPage />} />
-            */}
-            <Route path="/" element={<DBHomePage />} />
-            <Route path="/:dashboardid" element={<DashboardStudioEditorPage />} />
-            <Route path="/:dashboardid/:currentmode" element={<DashboardStudioEditorPage />} />
-        </Route>,
+        <Route index element={<DBHomePage />} />,
+        <Route path=":dashboardid" element={<DashboardStudioEditorPage />} />,
+        <Route path=":dashboardid/:currentmode" element={<DashboardStudioEditorPage />} />,
     ]),
 );
 
 function CustomDSEditorPage() {
-    return (
-        <RouterProvider router={router}>
-            <Outlet />
-        </RouterProvider>
-    );
+    return <RouterProvider router={router} />;
 }
 
 const customPresets = {
@@ -63,10 +53,13 @@ function DashboardStudioEditorPage() {
     return (
         <DashboardStudioEditor
             definition={initialDefinition}
-            pageName="Cisco Dashboard Builder"
+            pageName="SASN | Dashboard Manager"
             actionMenus={actionMenus}
             preset={customPresets}
         />
     );
 }
-renderAsPage(<CustomDSEditorPage />);
+
+renderAsPage(<CustomDSEditorPage />, {
+    pageTitle: 'SASN | Dashboard Manager',
+});

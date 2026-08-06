@@ -7,9 +7,103 @@ export = none
 access = read : [ * ], write : [ admin, power, sc_admin ]
 export = system
 
-[overview_factory_tiles]
+# The index abstraction is a shared contract used by searches harvested from
+# companion Cisco apps. Keep the definitions owned here, but make every
+# no-argument index_* macro resolve from any dispatch context.
+[macros/scd_summariesonly]
 access = read : [ * ], write : [ admin, power, sc_admin ]
 export = system
+
+[macros/index_catalyst]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
+[macros/index_firewall]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
+[macros/index_identity]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
+[macros/index_windows]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
+[macros/index_network]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
+[macros/index_zeek]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
+[macros/index_meraki]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
+[macros/index_spaces]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
+[macros/index_security]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
+[macros/index_dhcp]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
+[macros/index_thousandeyes]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
+[macros/index_f5]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
+[macros/index_duo]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
+[macros/index_cybervision]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
+[macros/index_ucs]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
+[macros/index_intersight]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
+[macros/index_sdwan]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
+[macros/index_dc]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
+[macros/index_nvm]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
+[macros/index_cloud_native]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
+[insights_workspaces]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
+# Signal Rail deltas are written into the authenticated user's namespace.
+# Every signed-in role may manage its own stanza; the service never accepts an
+# arbitrary owner, and export=none keeps these preferences app-private.
+[insights_workspace_preferences]
+access = read : [ * ], write : [ * ]
+export = none
 
 # Overview tile settings that must read the same for every viewer
 # (Thresholds, Data Mapping, Drilldown) live in searchbase.conf's

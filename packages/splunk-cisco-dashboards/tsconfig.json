@@ -17,9 +17,8 @@
         "isolatedModules": true,
         "skipLibCheck": true,
         "noEmit": true,
-        "baseUrl": ".",
         "paths": {
-            "@/*": ["src/main/webapp/*"]
+            "@/*": ["./src/main/webapp/*"]
         }
     },
     "include": ["src/main/webapp/**/*.ts", "src/main/webapp/**/*.tsx", "src/main/webapp/**/*.js", "src/main/webapp/**/*.jsx"],

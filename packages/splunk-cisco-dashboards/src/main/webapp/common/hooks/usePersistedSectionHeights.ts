@@ -12,10 +12,10 @@ import { useCallback, useEffect, useState } from 'react';
 import type { SectionId } from '@/common/hooks/useMetric';
 import { ALL_SECTION_IDS } from '@/common/hooks/usePersistedSectionLayout';
 import {
-    DEFAULT_OVERVIEW_PROFILE_ID,
-    profileStorageKey,
-    type OverviewProfileId,
-} from '@/common/config/overviewProfiles';
+    EXECUTIVE_WORKSPACE_SOURCE_ID,
+    workspaceStorageKey,
+    type WorkspaceId,
+} from '@/common/config/insightsWorkspaces';
 
 const STORAGE_KEY = 'splunk-cisco-dashboards.sectionHeights.v1';
 const STORAGE_VERSION = 1;
@@ -34,7 +34,7 @@ export interface SectionHeightBounds {
     maxLevel: number;
     /** Initial height level for every section. */
     defaultLevel: number;
-    profileId?: OverviewProfileId;
+    workspaceId?: WorkspaceId;
     availableSections?: readonly SectionId[];
 }
 
@@ -56,9 +56,9 @@ const buildDefaults = (bounds: SectionHeightBounds): SectionHeightMap => {
 };
 
 const storageKeyForBounds = (bounds: SectionHeightBounds): string =>
-    profileStorageKey(
+    workspaceStorageKey(
         STORAGE_KEY,
-        bounds.profileId ?? DEFAULT_OVERVIEW_PROFILE_ID
+        bounds.workspaceId ?? EXECUTIVE_WORKSPACE_SOURCE_ID
     );
 
 const readFromStorage = (bounds: SectionHeightBounds): SectionHeightMap => {
@@ -115,7 +115,7 @@ export const usePersistedSectionHeights = (
         minLevel: bounds.minLevel,
         maxLevel: bounds.maxLevel,
         defaultLevel: bounds.defaultLevel,
-        profileId: bounds.profileId ?? DEFAULT_OVERVIEW_PROFILE_ID,
+        workspaceId: bounds.workspaceId ?? EXECUTIVE_WORKSPACE_SOURCE_ID,
         availableSections: bounds.availableSections ?? ALL_SECTION_IDS,
     });
 

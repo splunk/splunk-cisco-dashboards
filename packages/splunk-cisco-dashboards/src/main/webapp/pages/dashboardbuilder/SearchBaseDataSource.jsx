@@ -83,6 +83,36 @@ const normalizeDispatchContext = (content = {}) => {
     return APP_NAME_PATTERN.test(dispatchContext) ? dispatchContext : undefined;
 };
 
+const isDispatchContextForced = (content = {}) =>
+    typeof content.dispatch_context_force === 'string' &&
+    /^(1|true|yes)$/i.test(content.dispatch_context_force.trim());
+
+const getEmptyResultMessage = (content = {}, ref = '') => {
+    const configuredMessage =
+        typeof content.empty_message === 'string' ? content.empty_message.trim() : '';
+
+    if (configuredMessage) {
+        return configuredMessage;
+    }
+
+    const searchName =
+        typeof content.search_name === 'string' && content.search_name.trim()
+            ? content.search_name.trim()
+            : ref || 'this panel';
+    const tags =
+        typeof content.tags === 'string'
+            ? content.tags
+                  .split(',')
+                  .map((tag) => tag.trim())
+                  .filter(Boolean)
+            : [];
+    const sourceHint = tags.length
+        ? ` Confirm the ${tags.join(', ')} data source is onboarded and enabled, or widen the time range.`
+        : ' Confirm the relevant data source is onboarded and enabled, or widen the time range.';
+
+    return `No matching telemetry was found for ${searchName} in the selected time range. This can be expected when the condition this panel detects did not occur.${sourceHint}`;
+};
+
 const previewFetchPredicate = (searchState) => {
     if (get(searchState, ['content', 'isRealTimeSearch'], false)) {
         return true;
@@ -96,7 +126,7 @@ const previewFetchPredicate = (searchState) => {
     );
 };
 
-const getStatusMessage = ({ status, isRealTimeSearch, totalCount }) => {
+const getStatusMessage = ({ status, isRealTimeSearch, totalCount, emptyResultMessage }) => {
     if (status === 'running') {
         if (isRealTimeSearch) {
             return _('Real-time search is running');
@@ -112,13 +142,13 @@ const getStatusMessage = ({ status, isRealTimeSearch, totalCount }) => {
         return _('Search is not yet running, queued on server');
     }
     if (status === 'done' && totalCount === 0) {
-        return _('Search ran successfully, but no results were returned');
+        return emptyResultMessage || _('Search ran successfully, but no results were returned');
     }
 
     return '';
 };
 
-const projectFunc = (results, progress, search) => {
+const projectFunc = (results, progress, search, emptyResultMessage) => {
     const {
         fields,
         columns,
@@ -164,6 +194,7 @@ const projectFunc = (results, progress, search) => {
                 status,
                 isRealTimeSearch,
                 totalCount,
+                emptyResultMessage,
             }),
             // need to manually convert progress from [0, 1] to [0, 100]
             percentComplete:
@@ -192,11 +223,13 @@ class SearchBaseSearch extends DataSource {
             throw Error('ref search id required!');
         }
 
+        const { ownerApp, ...searchbaseOptions } = options;
+        this.ownerApp = ownerApp;
         this.context = getEnterpriseSearchContext(this.context);
         this.options = {
-            ...parseQueryParameters(this.options),
-            ref: this.options.ref,
-            check_risky_command: this.options.checkRiskyCommand,
+            ...parseQueryParameters(searchbaseOptions),
+            ref: searchbaseOptions.ref,
+            check_risky_command: searchbaseOptions.checkRiskyCommand,
             label: this.context.id,
         };
 
@@ -222,15 +255,17 @@ class SearchBaseSearch extends DataSource {
             }
 
             this.isPaused = false;
-            let data = await getSearchBaseConfStanza(this.options.ref);
+            let data = await getSearchBaseConfStanza(this.options.ref, this.ownerApp);
             if (data.status >= 200 && data.status < 300) {
+                const content = data.entry[0].content || {};
+                this.emptyResultMessage = getEmptyResultMessage(content, this.options.ref);
                 this.options = {
                     ...this.options,
-                    search: data.entry[0].content.search,
+                    search: content.search,
                 };
 
-                const dispatchContext = normalizeDispatchContext(data.entry[0].content);
-                if (dispatchContext) {
+                const dispatchContext = normalizeDispatchContext(content);
+                if (dispatchContext && isDispatchContextForced(content)) {
                     this.context.app = dispatchContext;
                 }
 
@@ -478,7 +513,7 @@ class SearchBaseSearch extends DataSource {
     combineResultCallback = (search = '') => {
         return (results, progress) => {
             this.isRealTimeSearch = isRealTimeProgress(progress);
-            return projectFunc(results, progress, search);
+            return projectFunc(results, progress, search, this.emptyResultMessage);
         };
     };
 

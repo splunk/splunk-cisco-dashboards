@@ -22,12 +22,56 @@
 }
 
 #scan-root {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     color: rgb(15 23 42); /* slate-900 */
     font-family:
         ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
         'Helvetica Neue', Arial, sans-serif;
+}
+
+/*
+ * Splunk 10's modern navigation renders the page body inside nested flex
+ * containers. A max-content descendant (the overview Signal Rail marquee)
+ * can otherwise become the flex item's automatic minimum width and make the
+ * whole document several viewports wide. The Insights runtime applies this
+ * lifecycle class while it is mounted. Avoid a document-wide `*:has(...)`
+ * selector here: it is re-evaluated on every DOM change and causes visible
+ * repaint/flicker during ordinary dashboard interactions.
+ */
+html.scd-overview-active,
+body.scd-overview-active {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+body.scd-overview-active .dashboard,
+body.scd-overview-active .dashboard-body,
+body.scd-overview-active .dashboard-layout-row-column,
+body.scd-overview-active .dashboard-element,
+body.scd-overview-active .panel-element-row,
+body.scd-overview-active .dashboard-row,
+body.scd-overview-active .dashboard-cell,
+body.scd-overview-active .dashboard-panel,
+body.scd-overview-active .panel-body,
+#scan-root .scd-overview-page,
+#scan-root .scd-signal-rail-ticker {
+    min-width: 0;
+}
+
+#scan-root .scd-overview-page,
+#scan-root .scd-signal-rail-ticker {
+    width: 100%;
+    max-width: 100%;
+}
+
+#scan-root .scd-signal-rail-ticker {
+    overflow: hidden;
+    contain: inline-size;
 }
 
 /*
