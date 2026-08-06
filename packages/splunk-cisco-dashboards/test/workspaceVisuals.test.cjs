@@ -13,8 +13,12 @@ const topologyConfig = read(
 const persistence = read(
   "../src/main/webapp/common/services/customerTopologyPersistenceService.ts",
 );
-const ticker = read(
-  "../src/main/webapp/common/hooks/usePersistedSignalTicker.ts",
+const ticker = read("../src/main/webapp/common/config/signalTicker.ts");
+const tickerPersistence = read(
+  "../src/main/webapp/common/services/signalTickerPreferenceService.ts",
+);
+const workspacesConf = read(
+  "../src/main/resources/splunk/default/insights_workspaces.conf",
 );
 const profile = read("../src/main/webapp/pages/executive_insights/index.tsx");
 const metricItem = read(
@@ -34,11 +38,22 @@ for (const workspaceId of [
     `${workspaceId} must own a topology preset`,
   );
   assert.match(
-    ticker,
-    new RegExp(`${workspaceId}:\\s*\\[`),
-    `${workspaceId} must own a signal rail preset`,
+    workspacesConf,
+    new RegExp(`^\\[signal_rail\\.${workspaceId}\\]$`, "m"),
+    `${workspaceId} must own a central signal rail preset`,
   );
 }
+
+assert.match(
+  tickerPersistence,
+  /servicesNS\/\$\{encodeURIComponent\(owner\)\}/,
+  "Signal Rail preferences must use the authenticated user's namespace",
+);
+assert.doesNotMatch(
+  tickerPersistence,
+  /servicesNS\/nobody/,
+  "Signal Rail preferences must never write to the shared nobody namespace",
+);
 
 assert.match(topologyConfig, /'London to Paris'/, "Europe story must include London to Paris");
 assert.match(topologyConfig, /'Singapore to Tokyo'/, "APAC story must be distinct");

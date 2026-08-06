@@ -1328,11 +1328,13 @@ iseval = 0`}</CodeBlock>
                 <InfoCard title="Workspace-owned configuration">
                   A workspace stores its own section layout, selected tiles,
                   signal rail, map visibility and placement, map presentation,
-                  and light, dark, or system theme. Changes remain isolated to
-                  that workspace. When adding a search, choose <strong>For
-                  me</strong> for a browser-local tile or <strong>Shared
-                  workspace</strong> to show it to every viewer; the shared
-                  choice is available only to workspace managers.
+                  and light, dark, or system theme. Shared Signal Rail defaults
+                  are centrally governed, while each signed-in user&apos;s rail
+                  differences are private to that user and workspace and follow
+                  the account across browsers. When adding a search, choose
+                  <strong> For me</strong> for a browser-local tile or
+                  <strong> Shared workspace</strong> to show it to every viewer;
+                  the shared choice is available only to workspace managers.
                 </InfoCard>
                 <InfoCard title="Start with a template, then make it yours">
                   Templates are only a starting point for a new workspace.
@@ -1580,8 +1582,10 @@ iseval = 0`}</CodeBlock>
                 <InfoCard title="Insights Workspaces">
                   Workspaces now own their layout and presentation choices,
                   including sections, tiles, signal rail, map configuration,
-                  and theme. A template helps create the initial workspace but
-                  does not constrain future customization.
+                  and theme. Signal Rail defaults are centrally managed, with
+                  private account-and-workspace overrides for each signed-in
+                  user. A template helps create the initial workspace but does
+                  not constrain future customization.
                 </InfoCard>
                 <InfoCard title="Dashboard Studio editing">
                   Dashboard Manager confirmation dialogs now use the edited

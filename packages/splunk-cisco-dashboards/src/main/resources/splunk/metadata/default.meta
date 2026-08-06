@@ -98,6 +98,13 @@ export = system
 access = read : [ * ], write : [ admin, power, sc_admin ]
 export = system
 
+# Signal Rail deltas are written into the authenticated user's namespace.
+# Every signed-in role may manage its own stanza; the service never accepts an
+# arbitrary owner, and export=none keeps these preferences app-private.
+[insights_workspace_preferences]
+access = read : [ * ], write : [ * ]
+export = none
+
 # Overview tile settings that must read the same for every viewer
 # (Thresholds, Data Mapping, Drilldown) live in searchbase.conf's
 # viz_options / drilldown_search_name fields. Deliberately narrower

@@ -153,7 +153,11 @@ import { usePersistedSectionHiddenTiles } from "@/common/hooks/usePersistedSecti
 import { usePersistedSectionLayout } from "@/common/hooks/usePersistedSectionLayout";
 import { usePersistedSectionTileOrder } from "@/common/hooks/usePersistedSectionTileOrder";
 import { usePersistedSectionHeights } from "@/common/hooks/usePersistedSectionHeights";
-import { usePersistedSignalTicker } from "@/common/hooks/usePersistedSignalTicker";
+import {
+  getDefaultSignalTickerConfig,
+  usePersistedSignalTicker,
+  type SignalTickerConfig,
+} from "@/common/hooks/usePersistedSignalTicker";
 import {
   EXECUTIVE_WORKSPACE_SOURCE_ID,
   PACKAGED_WORKSPACE_FALLBACKS,
@@ -2092,6 +2096,7 @@ interface InsightsWorkspaceRuntimeProps {
   workspaces: readonly InsightsWorkspace[];
   initialLayout: WorkspaceLayoutConfig;
   layouts: Record<WorkspaceId, WorkspaceLayoutConfig>;
+  signalTickerDefault: SignalTickerConfig;
 }
 
 const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
@@ -2099,6 +2104,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   workspaces,
   initialLayout,
   layouts,
+  signalTickerDefault,
 }) => {
   // ------------------------------ Theme ------------------------------
   const { theme, resolvedTheme, setTheme, cycle: cycleTheme } = useTheme();
@@ -2649,16 +2655,17 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   }, []);
 
   // ------------------------------ Signal rail ------------------------------
-  // A configurable, moving executive KPI rail. This first slice follows the
-  // page's existing per-browser customization model for KPI bindings; the
-  // selected entries still come from `searchbase.conf` so the content model
-  // stays app-owned and familiar to operators.
+  // Shared defaults come from insights_workspaces.conf. The hook layers the
+  // authenticated user's sparse, workspace-specific preference over that
+  // baseline and migrates older browser settings once when necessary.
   const {
     config: signalTickerConfig,
     setConfig: setSignalTickerConfig,
     resetAll: resetSignalTickerConfig,
     itemCount: signalTickerItemCount,
-  } = usePersistedSignalTicker(insightsWorkspace.id);
+    persistenceStatus: signalTickerPersistenceStatus,
+    persistenceError: signalTickerPersistenceError,
+  } = usePersistedSignalTicker(insightsWorkspace.id, signalTickerDefault);
   const [signalTickerEditorOpen, setSignalTickerEditorOpen] = useState(false);
   const searchbaseCatalogue = useMemo(() => {
     if (!visibleSearchbaseCatalogue) return [];
@@ -3816,7 +3823,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   //   • scd_overview_map_pos          — map position (right / below / above)
   //   • scd_overview_map_visible      — topology map visibility
   //   • priorityDrilldown.v1          — pinned app-local drill-down target
-  //   • signalTicker.v1               — moving KPI rail selection
+  //   • insights_workspace_preferences.conf — private Signal Rail delta;
+  //                                      retired signalTicker.v1 browser data
+  //                                      is cleared after migration
   //
   // What is intentionally NOT reset:
   //   • header branding (title / subtitle / logo) — identity, not
@@ -5234,6 +5243,8 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         onIncludeTableSearchesChange={setSignalTickerIncludeTableSearches}
         onChange={setSignalTickerConfig}
         onReset={resetSignalTickerConfig}
+        persistenceStatus={signalTickerPersistenceStatus}
+        persistenceError={signalTickerPersistenceError}
         onClose={() => setSignalTickerEditorOpen(false)}
       />
 
@@ -7935,6 +7946,12 @@ const InsightsWorkspacePage: React.FC = () => {
           setBundle({
             workspaces: [...PACKAGED_WORKSPACE_FALLBACKS],
             layouts: {},
+            signalRails: Object.fromEntries(
+              PACKAGED_WORKSPACE_FALLBACKS.map((workspace) => [
+                workspace.id,
+                getDefaultSignalTickerConfig(workspace.id),
+              ]),
+            ),
           });
         }
       });
@@ -7959,6 +7976,10 @@ const InsightsWorkspacePage: React.FC = () => {
       workspaces={bundle.workspaces}
       initialLayout={bundle.layouts[workspace.id] ?? {}}
       layouts={bundle.layouts}
+      signalTickerDefault={
+        bundle.signalRails[workspace.id] ??
+        getDefaultSignalTickerConfig(workspace.id)
+      }
     />
   );
 };

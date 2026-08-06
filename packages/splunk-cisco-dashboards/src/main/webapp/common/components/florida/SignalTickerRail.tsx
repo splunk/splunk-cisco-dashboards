@@ -32,6 +32,7 @@ import {
     type SignalTickerConfig,
     type SignalTickerDensity,
     type SignalTickerItem,
+    type SignalTickerPersistenceStatus,
     type SignalTickerRows,
     type SignalTickerThresholdDirection,
 } from '@/common/hooks/usePersistedSignalTicker';
@@ -622,6 +623,8 @@ interface SignalTickerEditorProps {
     onIncludeTableSearchesChange?: (includeTables: boolean) => void;
     onChange: (config: SignalTickerConfig) => void;
     onReset: () => void;
+    persistenceStatus?: SignalTickerPersistenceStatus;
+    persistenceError?: string;
     onClose: () => void;
 }
 
@@ -660,6 +663,8 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
     onIncludeTableSearchesChange,
     onChange,
     onReset,
+    persistenceStatus = 'account',
+    persistenceError,
     onClose,
 }) => {
     const [query, setQuery] = useState('');
@@ -941,6 +946,13 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
 
     if (!open) return null;
 
+    const persistenceCopy: Record<SignalTickerPersistenceStatus, string> = {
+        loading: 'Loading your private workspace preferences…',
+        saving: 'Saving privately to your Splunk account…',
+        account: 'Private to your Splunk account and this workspace',
+        browser: 'Browser-only fallback — account storage is unavailable',
+    };
+
     const updateConfig = (patch: Partial<SignalTickerConfig>) =>
         onChange({ ...config, ...patch });
     const addEntry = (entry: SearchbaseRecord) => {
@@ -1000,6 +1012,18 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                             </h3>
                             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                                 Pick the KPIs that should move through the executive view.
+                            </p>
+                            <p
+                                className={cn(
+                                    'mt-1 text-[11px] font-semibold',
+                                    persistenceStatus === 'browser'
+                                        ? 'text-amber-600 dark:text-amber-300'
+                                        : 'text-emerald-600 dark:text-emerald-300'
+                                )}
+                                aria-live="polite"
+                                title={persistenceError}
+                            >
+                                {persistenceCopy[persistenceStatus]}
                             </p>
                         </div>
                     </div>
@@ -1863,7 +1887,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                         className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-600 transition-colors hover:bg-red-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-300 dark:border-red-900/70 dark:bg-red-950/40 dark:text-red-300"
                     >
                         <RotateCcw className="h-4 w-4" />
-                        Factory rail
+                        Workspace default
                     </button>
                     <button
                         type="button"

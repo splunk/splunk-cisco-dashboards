@@ -12,6 +12,13 @@ import {
     type WorkspaceDefinitionInput,
     type WorkspaceId,
 } from '@/common/config/insightsWorkspaces';
+import {
+    getDefaultSignalTickerConfig,
+    sanitizeSignalTickerConfig,
+    sanitizeSignalTickerItem,
+    type SignalTickerConfig,
+    type SignalTickerItem,
+} from '@/common/config/signalTicker';
 
 const APP_NAME = 'splunk-cisco-dashboards';
 export const INSIGHTS_WORKSPACES_CONF_BASENAME = 'insights_workspaces';
@@ -20,6 +27,8 @@ const SEARCHBASE_ID_PATTERN = /^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,255}$/;
 
 const WORKSPACE_STANZA_PREFIX = 'workspace.';
 const LAYOUT_STANZA_PREFIX = 'layout.';
+const SIGNAL_ITEM_STANZA_PREFIX = 'signal_item.';
+const SIGNAL_RAIL_STANZA_PREFIX = 'signal_rail.';
 
 export interface WorkspaceLayoutSection {
     tiles: string[];
@@ -35,6 +44,7 @@ export type WorkspaceLayoutConfig = Partial<
 export interface InsightsWorkspaceBundle {
     workspaces: InsightsWorkspace[];
     layouts: Record<WorkspaceId, WorkspaceLayoutConfig>;
+    signalRails: Record<WorkspaceId, SignalTickerConfig>;
 }
 
 interface ConfRestEntry {
@@ -68,6 +78,12 @@ const optionalString = (raw: unknown): string | undefined =>
 const optionalInt = (raw: unknown): number | undefined => {
     if (raw === undefined || raw === null || raw === '') return undefined;
     const parsed = Number.parseInt(String(raw), 10);
+    return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const optionalNumber = (raw: unknown): number | undefined => {
+    if (raw === undefined || raw === null || raw === '') return undefined;
+    const parsed = Number(raw);
     return Number.isFinite(parsed) ? parsed : undefined;
 };
 
@@ -109,6 +125,87 @@ const splitTiles = (raw: unknown): string[] =>
 
 const splitSearchbaseAdditions = (raw: unknown): string[] =>
     splitCsv(raw).filter((searchbaseId) => SEARCHBASE_ID_PATTERN.test(searchbaseId));
+
+const fallbackSignalRails = (
+    workspaces: readonly InsightsWorkspace[],
+): Record<WorkspaceId, SignalTickerConfig> =>
+    Object.fromEntries(
+        workspaces.map((workspace) => [
+            workspace.id,
+            getDefaultSignalTickerConfig(workspace.id),
+        ]),
+    );
+
+const parseSignalItemEntries = (
+    entries: readonly ConfRestEntry[],
+): Map<string, SignalTickerItem> => {
+    const items = new Map<string, SignalTickerItem>();
+    for (const entry of entries) {
+        const name = entry.name;
+        if (typeof name !== 'string' || !name.startsWith(SIGNAL_ITEM_STANZA_PREFIX)) {
+            continue;
+        }
+        const id = name.slice(SIGNAL_ITEM_STANZA_PREFIX.length);
+        const content = entry.content ?? {};
+        const item = sanitizeSignalTickerItem({
+            id,
+            searchName: content.search_name,
+            label: content.label,
+            valueField: content.value_field,
+            thresholdWarning: optionalNumber(content.threshold_warning),
+            thresholdCritical: optionalNumber(content.threshold_critical),
+            thresholdDirection: content.threshold_direction,
+            thresholdUnit: content.threshold_unit,
+        });
+        if (item) items.set(item.id, item);
+    }
+    return items;
+};
+
+const parseSignalRailEntries = (
+    entries: readonly ConfRestEntry[],
+    workspaces: readonly InsightsWorkspace[],
+): Record<WorkspaceId, SignalTickerConfig> => {
+    const signalRails = fallbackSignalRails(workspaces);
+    const workspaceIds = new Set(workspaces.map((workspace) => workspace.id));
+    const itemsById = parseSignalItemEntries(entries);
+
+    for (const entry of entries) {
+        const name = entry.name;
+        if (typeof name !== 'string' || !name.startsWith(SIGNAL_RAIL_STANZA_PREFIX)) {
+            continue;
+        }
+        const workspaceId = name.slice(SIGNAL_RAIL_STANZA_PREFIX.length);
+        if (!isWorkspaceId(workspaceId) || !workspaceIds.has(workspaceId)) continue;
+
+        const fallback = signalRails[workspaceId] ??
+            getDefaultSignalTickerConfig(workspaceId);
+        const content = entry.content ?? {};
+        const configuredItems = splitCsv(content.items)
+            .map((itemId) => itemsById.get(itemId))
+            .filter((item): item is SignalTickerItem => Boolean(item))
+            .map((item) => ({ ...item }));
+        const hasItemsField = typeof content.items === 'string';
+        const rows = optionalInt(content.rows);
+        const parsed = sanitizeSignalTickerConfig({
+            enabled: readBoolean(content.enabled, fallback.enabled),
+            showPriorityDrilldown: readBoolean(
+                content.show_priority_drilldown,
+                fallback.showPriorityDrilldown,
+            ),
+            rows: rows === 1 || rows === 2 ? rows : fallback.rows,
+            speed: optionalNumber(content.speed) ?? fallback.speed,
+            density:
+                content.density === 'compact' || content.density === 'comfortable'
+                    ? content.density
+                    : fallback.density,
+            items: hasItemsField ? configuredItems : fallback.items,
+        });
+        if (parsed) signalRails[workspaceId] = parsed;
+    }
+
+    return signalRails;
+};
 
 const extractErrorMessage = async (
     response: Response,
@@ -226,12 +323,21 @@ export const parseInsightsWorkspaceEntries = (
         layouts[workspaceId] = config;
     }
 
-    return { workspaces: effectiveWorkspaces, layouts };
+    return {
+        workspaces: effectiveWorkspaces,
+        layouts,
+        signalRails: parseSignalRailEntries(entries, effectiveWorkspaces),
+    };
 };
 
 export const loadInsightsWorkspaces = async (): Promise<InsightsWorkspaceBundle> => {
     if (!isInSplunkRuntime()) {
-        return { workspaces: [...PACKAGED_WORKSPACE_FALLBACKS], layouts: {} };
+        const workspaces = [...PACKAGED_WORKSPACE_FALLBACKS];
+        return {
+            workspaces,
+            layouts: {},
+            signalRails: fallbackSignalRails(workspaces),
+        };
     }
 
     const response = await fetch(`${buildBaseUrl(false)}?output_mode=json&count=0`, {

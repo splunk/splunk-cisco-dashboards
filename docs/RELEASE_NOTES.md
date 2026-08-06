@@ -17,6 +17,11 @@
   rail preset, including London-Paris-Frankfurt, APAC resilience, Americas SOC,
   and global executive connectivity stories. Saved topology edits are scoped
   to the owning workspace.
+- Signal Rail presets are now centrally governed in
+  `insights_workspaces.conf`, while sparse personal differences are saved in
+  the authenticated Splunk user's workspace namespace. Rapid editor changes
+  are coalesced, preferences are capped at 24 items, and reset returns to the
+  latest shared workspace default.
 - Hybrid Mesh Firewalling now includes bounded Palo Alto policy-outcome and
   per-SGT traffic timecharts in its shared workspace layout. Each trend drills
   into its corresponding effectiveness rollup or correlated flow table, and
