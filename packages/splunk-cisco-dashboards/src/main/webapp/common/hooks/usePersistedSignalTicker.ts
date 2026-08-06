@@ -116,6 +116,56 @@ const DEFAULT_SIGNAL_TICKER_CONFIG: SignalTickerConfig = {
     ],
 };
 
+const WORKSPACE_SIGNAL_ITEM_IDS: Record<string, readonly string[]> = {
+    secure_networking: [
+        'thousandeyes_stream_age',
+        'ftd_firewall_age',
+        'fmc_estreamer_age',
+        'ise_syslog_age',
+        'catalyst_center_age',
+        'spaces_firehose_age',
+    ],
+    zero_trust_access_demo: [
+        'ise_syslog_age',
+        'catalyst_center_age',
+        'thousandeyes_stream_age',
+        'spaces_firehose_age',
+    ],
+    network_resilience_demo: [
+        'catalyst_center_age',
+        'thousandeyes_stream_age',
+        'spaces_firehose_age',
+        'ftd_firewall_age',
+    ],
+    security_operations_demo: [
+        'ftd_firewall_age',
+        'fmc_estreamer_age',
+        'ise_syslog_age',
+        'thousandeyes_stream_age',
+    ],
+    executive: [
+        'catalyst_center_age',
+        'spaces_firehose_age',
+        'thousandeyes_stream_age',
+        'ftd_firewall_age',
+    ],
+};
+
+export const getDefaultSignalTickerConfig = (
+    workspaceId: WorkspaceId
+): SignalTickerConfig => {
+    const itemIds = WORKSPACE_SIGNAL_ITEM_IDS[workspaceId];
+    const items = itemIds
+        ? itemIds
+              .map((id) =>
+                  DEFAULT_SIGNAL_TICKER_CONFIG.items.find((item) => item.id === id)
+              )
+              .filter((item): item is SignalTickerItem => Boolean(item))
+              .map((item) => ({ ...item }))
+        : DEFAULT_SIGNAL_TICKER_CONFIG.items.map((item) => ({ ...item }));
+    return { ...DEFAULT_SIGNAL_TICKER_CONFIG, items };
+};
+
 const LEGACY_FACTORY_SIGNAL_TICKER_ID_SETS = [
     new Set([
         'event_ops_feeds_active',
@@ -291,10 +341,11 @@ const isLegacyFactorySignalTickerConfig = (config: SignalTickerConfig): boolean 
     );
 
 const migrateSignalTickerConfig = (
-    config: SignalTickerConfig
+    config: SignalTickerConfig,
+    factoryConfig: SignalTickerConfig
 ): SignalTickerConfig => {
     if (isLegacyFactorySignalTickerConfig(config)) {
-        return DEFAULT_SIGNAL_TICKER_CONFIG;
+        return factoryConfig;
     }
 
     let changed = false;
@@ -311,23 +362,27 @@ const migrateSignalTickerConfig = (
 const storageKeyForWorkspace = (workspaceId?: WorkspaceId): string =>
     workspaceStorageKey(STORAGE_KEY, workspaceId ?? EXECUTIVE_WORKSPACE_SOURCE_ID);
 
-const readFromStorage = (storageKey: string): SignalTickerConfig => {
+const readFromStorage = (
+    storageKey: string,
+    workspaceId: WorkspaceId
+): SignalTickerConfig => {
+    const factoryConfig = getDefaultSignalTickerConfig(workspaceId);
     if (typeof window === 'undefined' || !window.localStorage) {
-        return DEFAULT_SIGNAL_TICKER_CONFIG;
+        return factoryConfig;
     }
     try {
         const raw = window.localStorage.getItem(storageKey);
-        if (!raw) return DEFAULT_SIGNAL_TICKER_CONFIG;
+        if (!raw) return factoryConfig;
         const parsed = JSON.parse(raw) as Partial<PersistedShape>;
         if (!parsed || parsed.v !== STORAGE_VERSION) {
-            return DEFAULT_SIGNAL_TICKER_CONFIG;
+            return factoryConfig;
         }
         const sanitized = sanitizeConfig(parsed.config);
         return sanitized
-            ? migrateSignalTickerConfig(sanitized)
-            : DEFAULT_SIGNAL_TICKER_CONFIG;
+            ? migrateSignalTickerConfig(sanitized, factoryConfig)
+            : factoryConfig;
     } catch {
-        return DEFAULT_SIGNAL_TICKER_CONFIG;
+        return factoryConfig;
     }
 };
 
@@ -353,19 +408,27 @@ export const usePersistedSignalTicker =
         workspaceId: WorkspaceId = EXECUTIVE_WORKSPACE_SOURCE_ID
     ): UsePersistedSignalTickerResult => {
         const storageKey = storageKeyForWorkspace(workspaceId);
-        const [config, setConfigState] = useState<SignalTickerConfig>(() =>
-            readFromStorage(storageKey)
+        const factoryConfig = useMemo(
+            () => getDefaultSignalTickerConfig(workspaceId),
+            [workspaceId]
         );
+        const [config, setConfigState] = useState<SignalTickerConfig>(() =>
+            readFromStorage(storageKey, workspaceId)
+        );
+
+        useEffect(() => {
+            setConfigState(readFromStorage(storageKey, workspaceId));
+        }, [storageKey, workspaceId]);
 
         useEffect(() => {
             if (typeof window === 'undefined') return undefined;
             const onStorage = (event: StorageEvent) => {
                 if (event.key !== storageKey) return;
-                setConfigState(readFromStorage(storageKey));
+                setConfigState(readFromStorage(storageKey, workspaceId));
             };
             window.addEventListener('storage', onStorage);
             return () => window.removeEventListener('storage', onStorage);
-        }, [storageKey]);
+        }, [storageKey, workspaceId]);
 
         const setConfig = useCallback((nextConfig: SignalTickerConfig) => {
             const sanitized = sanitizeConfig(nextConfig);
@@ -375,9 +438,9 @@ export const usePersistedSignalTicker =
         }, [storageKey]);
 
         const resetAll = useCallback(() => {
-            writeToStorage(storageKey, DEFAULT_SIGNAL_TICKER_CONFIG);
-            setConfigState(DEFAULT_SIGNAL_TICKER_CONFIG);
-        }, [storageKey]);
+            writeToStorage(storageKey, factoryConfig);
+            setConfigState(factoryConfig);
+        }, [factoryConfig, storageKey]);
 
         const itemCount = useMemo(
             () => config.items.length,

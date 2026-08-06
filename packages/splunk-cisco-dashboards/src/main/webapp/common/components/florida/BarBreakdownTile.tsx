@@ -30,7 +30,8 @@
  */
 
 import React, { useMemo } from 'react';
-import { ExternalLink, Settings2, Table2 } from 'lucide-react';
+import { ExternalLink, PanelRightOpen, Settings2 } from 'lucide-react';
+import { HoverZoomFrame } from './HoverZoomFrame';
 import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
 import { cn } from '@/common/lib/utils';
 import type { DataSource, NoDataReason } from '@/common/hooks/useMetric';
@@ -290,19 +291,23 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                                 data-tile-control="true"
                                 className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
                             >
-                                <ExternalLink className="w-3 h-3 stroke-[2.5px]" />
+                                <ExternalLink className="w-3.5 h-3.5 stroke-[2.4px]" />
                             </button>
                         )}
                         {onOpenDetailTable && (
                             <button
                                 type="button"
                                 onClick={onOpenDetailTable}
-                                title={detailTableTitle ?? 'View detail table'}
-                                aria-label={detailTableTitle ?? `View ${label} detail table`}
+                                title={
+                                    detailTableTitle
+                                        ? `Drill down: ${detailTableTitle}`
+                                        : 'Drill down to details'
+                                }
+                                aria-label={`Drill down from ${label} to details`}
                                 data-tile-control="true"
                                 className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
                             >
-                                <Table2 className="w-3 h-3 stroke-[2.5px]" />
+                                <PanelRightOpen className="w-3.5 h-3.5 stroke-[2.4px]" />
                             </button>
                         )}
                         {onConfigure && (
@@ -318,7 +323,7 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                                 data-tile-control="true"
                                 className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400 relative"
                             >
-                                <Settings2 className="w-3 h-3 stroke-[2.5px]" />
+                                <Settings2 className="w-3.5 h-3.5 stroke-[2.4px]" />
                                 {isCustomized && (
                                     <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-sky-500 border border-white dark:border-slate-900" />
                                 )}
@@ -334,7 +339,16 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
             </div>
 
             {hasData ? (
-                <>
+                <HoverZoomFrame
+                    ariaLabel={`${label} bar chart. Total ${formatCount(
+                        aggregated.total
+                    )}. Hover or focus to enlarge.`}
+                    title="Category values are shown beside each bar · Hover to enlarge"
+                    anchor={infoAnchor}
+                    scale={1.35}
+                    className="mt-0.5 flex min-h-[116px] max-h-36 flex-1"
+                    contentClassName="flex flex-col p-1"
+                >
                     {/* Headline = sum across all rows. Same big-number
                         shape as MetricItem so a row of mixed sparkline
                         and bar-breakdown tiles aligns vertically. The
@@ -360,7 +374,7 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                         handle just like the sparkline canvas does. */}
                     <div
                         data-tile-control="true"
-                        className="flex-1 min-h-[72px] max-h-28 mt-1 pt-0.5 overflow-hidden flex flex-col gap-1"
+                        className="flex-1 min-h-[72px] mt-1 pt-0.5 overflow-hidden flex flex-col gap-1"
                     >
                         {visibleEntries.map((entry) => {
                             const widthPct =
@@ -394,7 +408,7 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                             </span>
                         )}
                     </div>
-                </>
+                </HoverZoomFrame>
             ) : (
                 <NoDataState
                     noDataReason={noDataReason}

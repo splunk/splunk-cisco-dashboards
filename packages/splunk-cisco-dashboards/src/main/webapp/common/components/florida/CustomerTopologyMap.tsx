@@ -2358,7 +2358,7 @@ export const usePersistedTopology = (
     const reload = useCallback(async () => {
         setIsLoading(true);
         try {
-            const payload = await loadCustomerTopologyConfig();
+            const payload = await loadCustomerTopologyConfig(fallback.id);
             if (payload) {
                 applyPayload(payload);
             } else {

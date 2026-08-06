@@ -9,7 +9,7 @@ import {
     ExternalLink,
     Maximize2,
     Settings2,
-    Table2,
+    PanelRightOpen,
     X,
 } from 'lucide-react';
 import {
@@ -424,19 +424,23 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                                 data-tile-control="true"
                                 className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-400 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
                             >
-                                <ExternalLink className="w-3 h-3 stroke-[2.5px]" />
+                                <ExternalLink className="w-3.5 h-3.5 stroke-[2.4px]" />
                             </button>
                         )}
                         {onOpenDetailTable && (
                             <button
                                 type="button"
                                 onClick={onOpenDetailTable}
-                                title={detailTableTitle ?? 'View detail table'}
-                                aria-label={detailTableTitle ?? `View ${label} detail table`}
+                                title={
+                                    detailTableTitle
+                                        ? `Drill down: ${detailTableTitle}`
+                                        : 'Drill down to details'
+                                }
+                                aria-label={`Drill down from ${label} to details`}
                                 data-tile-control="true"
                                 className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-400 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
                             >
-                                <Table2 className="w-3 h-3 stroke-[2.5px]" />
+                                <PanelRightOpen className="w-3.5 h-3.5 stroke-[2.4px]" />
                             </button>
                         )}
                         {hasExpandableChart && (
@@ -448,7 +452,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                                 data-tile-control="true"
                                 className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-400 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
                             >
-                                <Maximize2 className="w-3 h-3 stroke-[2.5px]" />
+                                <Maximize2 className="w-3.5 h-3.5 stroke-[2.4px]" />
                             </button>
                         )}
                         {onConfigure && (
@@ -464,7 +468,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                                 data-tile-control="true"
                                 className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-400 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400 relative"
                             >
-                                <Settings2 className="w-3 h-3 stroke-[2.5px]" />
+                                <Settings2 className="w-3.5 h-3.5 stroke-[2.4px]" />
                                 {isCustomized && (
                                     <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-sky-500 border border-white dark:border-slate-900" />
                                 )}
@@ -723,11 +727,15 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                                         <button
                                             type="button"
                                             onClick={openDetailFromFocus}
-                                            title={detailTableTitle ?? 'View detail table'}
-                                            aria-label={detailTableTitle ?? `View ${label} detail table`}
+                                            title={
+                                                detailTableTitle
+                                                    ? `Drill down: ${detailTableTitle}`
+                                                    : 'Drill down to details'
+                                            }
+                                            aria-label={`Drill down from ${label} to details`}
                                             className="inline-flex items-center gap-1.5 rounded border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-slate-600 transition-colors hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:border-slate-700 dark:text-slate-300 dark:hover:border-sky-600 dark:hover:bg-sky-950/40 dark:hover:text-sky-200"
                                         >
-                                            <Table2 className="h-3.5 w-3.5" />
+                                            <PanelRightOpen className="h-4 w-4" />
                                             Details
                                         </button>
                                     )}

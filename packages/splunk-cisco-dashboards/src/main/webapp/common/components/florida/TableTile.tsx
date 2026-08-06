@@ -21,7 +21,7 @@ import {
     ArrowUpDown,
     ExternalLink,
     Settings2,
-    Table2,
+    PanelRightOpen,
 } from 'lucide-react';
 import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
 import { cn } from '@/common/lib/utils';
@@ -299,19 +299,23 @@ export const TableTile: React.FC<TableTileProps> = ({
                                 data-tile-control="true"
                                 className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
                             >
-                                <ExternalLink className="w-3 h-3 stroke-[2.5px]" />
+                                <ExternalLink className="w-3.5 h-3.5 stroke-[2.4px]" />
                             </button>
                         )}
                         {onOpenDetailTable && (
                             <button
                                 type="button"
                                 onClick={onOpenDetailTable}
-                                title={detailTableTitle ?? 'View detail table'}
-                                aria-label={detailTableTitle ?? `View ${label} detail table`}
+                                title={
+                                    detailTableTitle
+                                        ? `Drill down: ${detailTableTitle}`
+                                        : 'Drill down to details'
+                                }
+                                aria-label={`Drill down from ${label} to details`}
                                 data-tile-control="true"
                                 className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
                             >
-                                <Table2 className="w-3 h-3 stroke-[2.5px]" />
+                                <PanelRightOpen className="w-3.5 h-3.5 stroke-[2.4px]" />
                             </button>
                         )}
                         {onConfigure && (
@@ -327,7 +331,7 @@ export const TableTile: React.FC<TableTileProps> = ({
                                 data-tile-control="true"
                                 className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400 relative"
                             >
-                                <Settings2 className="w-3 h-3 stroke-[2.5px]" />
+                                <Settings2 className="w-3.5 h-3.5 stroke-[2.4px]" />
                                 {isCustomized && (
                                     <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-sky-500 border border-white dark:border-slate-900" />
                                 )}

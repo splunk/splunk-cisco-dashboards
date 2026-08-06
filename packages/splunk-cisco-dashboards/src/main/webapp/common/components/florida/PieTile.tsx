@@ -6,9 +6,10 @@
  * = slice label, second = numeric value).
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import StudioPie from '@splunk/visualizations/Pie';
-import { ExternalLink, Settings2, Table2 } from 'lucide-react';
+import { ExternalLink, PanelRightOpen, Settings2 } from 'lucide-react';
+import { HoverZoomFrame } from './HoverZoomFrame';
 import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
 import { cn } from '@/common/lib/utils';
 import type { DataSource, NoDataReason } from '@/common/hooks/useMetric';
@@ -118,7 +119,6 @@ export const PieTile: React.FC<PieTileProps> = ({
 }) => {
     const dimensionCol = columns[0];
     const valueCol = columns[1];
-    const [isZoomed, setIsZoomed] = useState(false);
 
     const chartData = useMemo(() => {
         if (!dimensionCol || !valueCol) return [];
@@ -203,13 +203,6 @@ export const PieTile: React.FC<PieTileProps> = ({
         }),
         [colors, isDark]
     );
-    const zoomOrigin =
-        infoAnchor === 'right'
-            ? 'right bottom'
-            : infoAnchor === 'left'
-            ? 'left bottom'
-            : 'center bottom';
-
     return (
         <div
             className={cn(
@@ -260,19 +253,23 @@ export const PieTile: React.FC<PieTileProps> = ({
                                 data-tile-control="true"
                                 className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
                             >
-                                <ExternalLink className="w-3 h-3 stroke-[2.5px]" />
+                                <ExternalLink className="w-3.5 h-3.5 stroke-[2.4px]" />
                             </button>
                         )}
                         {onOpenDetailTable && (
                             <button
                                 type="button"
                                 onClick={onOpenDetailTable}
-                                title={detailTableTitle ?? 'View detail table'}
-                                aria-label={detailTableTitle ?? `View ${label} detail table`}
+                                title={
+                                    detailTableTitle
+                                        ? `Drill down: ${detailTableTitle}`
+                                        : 'Drill down to details'
+                                }
+                                aria-label={`Drill down from ${label} to details`}
                                 data-tile-control="true"
                                 className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400"
                             >
-                                <Table2 className="w-3 h-3 stroke-[2.5px]" />
+                                <PanelRightOpen className="w-3.5 h-3.5 stroke-[2.4px]" />
                             </button>
                         )}
                         {onConfigure && (
@@ -288,7 +285,7 @@ export const PieTile: React.FC<PieTileProps> = ({
                                 data-tile-control="true"
                                 className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400 relative"
                             >
-                                <Settings2 className="w-3 h-3 stroke-[2.5px]" />
+                                <Settings2 className="w-3.5 h-3.5 stroke-[2.4px]" />
                                 {isCustomized && (
                                     <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-sky-500 border border-white dark:border-slate-900" />
                                 )}
@@ -304,51 +301,29 @@ export const PieTile: React.FC<PieTileProps> = ({
             </div>
 
             {hasData ? (
-                <div
-                    role="img"
-                    data-tile-control="true"
-                    tabIndex={0}
-                    onPointerEnter={() => setIsZoomed(true)}
-                    onPointerLeave={() => setIsZoomed(false)}
-                    onFocus={() => setIsZoomed(true)}
-                    onBlur={() => setIsZoomed(false)}
-                    aria-label={`${label} pie chart. Total ${formatCount(total)}. Hover or focus to enlarge.`}
+                <HoverZoomFrame
+                    ariaLabel={`${label} pie chart. Total ${formatCount(total)}. Hover or focus to enlarge.`}
                     title="Values and percentages are shown on the chart · Hover to enlarge"
-                    style={{ zIndex: isZoomed ? 30 : 0 }}
-                    className={cn(
-                        'relative mt-0.5 flex min-h-[118px] flex-1 overflow-visible rounded-md',
-                        'focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
-                        isZoomed && 'z-30'
-                    )}
+                    anchor={infoAnchor}
+                    scale={1.45}
+                    className="mt-0.5 flex min-h-[118px] flex-1"
                 >
-                    <div
-                        style={{
-                            transform: `scale(${isZoomed ? 1.45 : 1})`,
-                            transformOrigin: zoomOrigin,
-                        }}
-                        className={cn(
-                            'absolute inset-0 transform-gpu rounded-md transition-[transform,box-shadow,background-color] duration-200 ease-out',
-                            isZoomed &&
-                                'bg-white shadow-2xl ring-1 ring-sky-300 dark:bg-slate-900 dark:ring-sky-700'
-                        )}
-                    >
-                        <StudioPie
-                            width="100%"
-                            height="100%"
-                            themeKey={isDark ? 'enterpriseDark' : 'enterpriseLight'}
-                            options={studioOptions}
-                            dataSources={studioDataSources}
-                        />
-                        <span className="pointer-events-none absolute left-1 top-1 rounded bg-white/90 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-slate-600 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-950/90 dark:text-slate-200 dark:ring-slate-700/80">
-                            Total {formatCount(total)}
-                        </span>
-                    </div>
+                    <StudioPie
+                        width="100%"
+                        height="100%"
+                        themeKey={isDark ? 'enterpriseDark' : 'enterpriseLight'}
+                        options={studioOptions}
+                        dataSources={studioDataSources}
+                    />
+                    <span className="pointer-events-none absolute left-1 top-1 rounded bg-white/90 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-slate-600 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-950/90 dark:text-slate-200 dark:ring-slate-700/80">
+                        Total {formatCount(total)}
+                    </span>
                     {overflowCount > 0 && (
                         <span className="pointer-events-none absolute bottom-0 left-1 z-10 rounded bg-white/85 px-1 text-[9px] italic text-slate-400 dark:bg-slate-950/85 dark:text-slate-500">
                             +{overflowCount} more
                         </span>
                     )}
-                </div>
+                </HoverZoomFrame>
             ) : (
                 <NoDataState
                     noDataReason={noDataReason}

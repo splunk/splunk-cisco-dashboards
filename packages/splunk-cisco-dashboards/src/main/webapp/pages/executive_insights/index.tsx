@@ -96,11 +96,11 @@ import {
 } from "@/common/components/florida/canvasVizPredicates";
 import {
   CustomerTopologyMap,
-  CUSTOMER_TOPOLOGY,
   clearCustomerTopologyStorage,
   TopologySiteTable,
   usePersistedTopology,
 } from "@/common/components/florida/CustomerTopologyMap";
+import { getWorkspaceTopology } from "@/common/config/workspaceTopologies";
 import {
   DEFAULT_CUSTOMER_TOPOLOGY_SECTION_TITLES,
   type CustomerTopologySectionTitles,
@@ -3431,6 +3431,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   // gets the hook to re-read storage (now empty) and fall back to
   // the canonical CUSTOMER_TOPOLOGY factory.
   const [topologyResetKey, setTopologyResetKey] = useState(0);
+  const workspaceTopology = getWorkspaceTopology(insightsWorkspace.id);
 
   // Read the persisted topology so the dashboard header can show the
   // user's edited name / subtitle from the topology editor (instead of
@@ -3441,7 +3442,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     topology: persistedTopology,
     sectionTitles,
     saveSectionTitles,
-  } = usePersistedTopology(CUSTOMER_TOPOLOGY);
+  } = usePersistedTopology(workspaceTopology);
   const topologyHeaderName =
     persistedTopology.name?.trim() || "Network Topology";
   const topologyHeaderSubtitle =
@@ -5024,8 +5025,8 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                                        to the same swap pattern in the
                                        future. */
                     <CustomerTopologyMap
-                      key={topologyResetKey}
-                      topology={CUSTOMER_TOPOLOGY}
+                      key={`${insightsWorkspace.id}-${topologyResetKey}`}
+                      topology={workspaceTopology}
                       isDark={resolvedTheme === "dark"}
                       earliestTime={timeRange.earliest}
                       latestTime={timeRange.latest}
@@ -5042,7 +5043,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                       }}
                     />
                   ) : (
-                    <TopologySiteTable topology={CUSTOMER_TOPOLOGY} />
+                    <TopologySiteTable topology={workspaceTopology} />
                   )}
                 </div>
 

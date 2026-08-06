@@ -20,6 +20,7 @@
         "test:dashboard-searchbase-time": "node test/dashboardSearchbaseTime.test.cjs",
         "test:dashboard-theme": "node test/dashboardTheme.test.cjs",
         "test:pie-tile": "node test/pieTile.test.cjs",
+        "test:workspace-visuals": "node test/workspaceVisuals.test.cjs",
         "test:auto-advance": "node test/autoAdvance.test.cjs",
         "test:tile-result-status": "node test/tileResultStatus.test.cjs",
         "test:insights-workspaces": "node test/insightsWorkspaces.test.cjs",

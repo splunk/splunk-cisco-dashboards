@@ -3,8 +3,16 @@
 ## 1.0.36
 
 - Executive Insights pie tiles now use Splunk's native Dashboard Studio pie
-  renderer with larger charts, visible values and percentages, matching dark
-  theme colors, and hover or keyboard-focus magnification.
+  renderer with larger charts, visible values and percentages, and matching
+  dark theme colors. Pie and categorical bar charts share hover or
+  keyboard-focus magnification for closer inspection.
+- Executive Insights tile actions are slightly larger, and drilldowns now use
+  an open-details-panel icon with explicit drilldown tooltips instead of an
+  ambiguous table glyph.
+- Every built-in Insights Workspace now ships a distinct topology and signal
+  rail preset, including London-Paris-Frankfurt, APAC resilience, Americas SOC,
+  and global executive connectivity stories. Saved topology edits are scoped
+  to the owning workspace.
 - Secure Network Segmentation now includes bounded Palo Alto policy-outcome
   and per-SGT traffic timecharts that drill into the existing effectiveness
   rollup and correlated flow table; policy actions normalize both PAN and CIM
