@@ -36,6 +36,9 @@ const profile = read("../src/main/webapp/pages/executive_insights/index.tsx");
 const metricItem = read(
   "../src/main/webapp/common/components/florida/MetricItem.tsx",
 );
+const infoTooltip = read(
+  "../src/main/webapp/common/components/florida/InfoTooltip.tsx",
+);
 const sortableMetricCard = read(
   "../src/main/webapp/common/components/florida/SortableMetricCard.tsx",
 );
@@ -158,6 +161,11 @@ assert.match(
   "Dark command-bar SUI selectors must keep their labels and carets visible in either Splunk theme",
 );
 assert.match(
+  tailwindStyles,
+  /\.scd-toolbar-select\[data-test='select'\] \{[\s\S]*?border-color: transparent !important;[\s\S]*?background: transparent !important;[\s\S]*?box-shadow: none !important;/,
+  "Command-bar selectors must remain borderless on the dark dashboard header",
+);
+assert.match(
   profile,
   /max-\[1399px\]:\[&>span\]:hidden/,
   "The health badge must collapse to its status icon before truncating the title",
@@ -201,6 +209,21 @@ assert.match(
   metricItem,
   /Drill down from \$\{label\} to details/,
   "Tile drilldowns must have an explicit accessible label",
+);
+assert.match(
+  metricItem,
+  /iconAriaLabel=\{`What does \$\{label\} measure\?`\}/,
+  "Metric information controls must retain a descriptive accessible label",
+);
+assert.match(
+  infoTooltip,
+  /<Info variant="filled" className="h-4 w-4" aria-hidden="true" \/>/,
+  "Metric information controls must use the legible filled Splunk React icon",
+);
+assert.match(
+  signalRail,
+  /relative z-\[90\] flex shrink-0 items-center gap-1[\s\S]*?lg:opacity-0[\s\S]*?lg:group-hover\/signal-rail:opacity-100[\s\S]*?lg:group-focus-within\/signal-rail:opacity-100/,
+  "Signal Rail controls must reveal on desktop hover or keyboard focus",
 );
 assert.match(
   signalRail,

@@ -371,11 +371,11 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
                 type="button"
                 aria-label={iconAriaLabel}
                 className={cn(
-                    'p-0.5 -my-0.5 text-slate-300 hover:text-sky-600 focus:text-sky-600 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400',
+                    'p-0.5 -my-0.5 text-slate-400 dark:text-slate-400 hover:text-sky-600 dark:hover:text-sky-300 focus:text-sky-600 dark:focus:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400',
                     iconClassName
                 )}
             >
-                <Info className="w-3.5 h-3.5 stroke-[2.4px]" />
+                <Info variant="filled" className="h-4 w-4" aria-hidden="true" />
             </button>
             {popover}
         </span>

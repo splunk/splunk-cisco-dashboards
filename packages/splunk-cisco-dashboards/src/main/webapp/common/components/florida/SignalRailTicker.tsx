@@ -759,7 +759,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
 
                 <div
                     className={cn(
-                        'relative z-[90] flex shrink-0 items-center gap-1'
+                        'relative z-[90] flex shrink-0 items-center gap-1 transition-[opacity,transform] duration-150 ease-out motion-reduce:transition-none lg:pointer-events-none lg:translate-x-1 lg:opacity-0 lg:group-hover/signal-rail:pointer-events-auto lg:group-hover/signal-rail:translate-x-0 lg:group-hover/signal-rail:opacity-100 lg:group-focus-within/signal-rail:pointer-events-auto lg:group-focus-within/signal-rail:translate-x-0 lg:group-focus-within/signal-rail:opacity-100'
                     )}
                     ref={pickerRef}
                 >

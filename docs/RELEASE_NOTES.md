@@ -2,6 +2,10 @@
 
 ## 1.0.36
 
+- Insights Workspace headers now present time-range and auto-refresh selectors
+  without box borders. Signal Rail pause, style, and configuration controls
+  reveal on desktop hover or keyboard focus while remaining visible on compact
+  layouts, and metric help uses a larger filled Splunk React information icon.
 - Secure Networking factory KPIs now use explicit time-series contracts wherever
   the metric has a meaningful temporal grain. Window-level headline values are
   broadcast alongside bounded per-bucket spark fields for anomaly, TrustSec,

@@ -79,14 +79,15 @@
  * interaction states while making this dark-surface exception explicit.
  */
 #scan-root .scd-toolbar-select[data-test='select'] {
-    border: 1px solid rgb(71 85 105 / 90%) !important;
-    background: rgb(30 41 59 / 82%) !important;
+    border-color: transparent !important;
+    background: transparent !important;
+    box-shadow: none !important;
     color: rgb(241 245 249) !important;
 }
 
 #scan-root .scd-toolbar-select[data-test='select']:hover {
-    border-color: rgb(14 165 233 / 85%) !important;
-    background: rgb(51 65 85 / 92%) !important;
+    border-color: transparent !important;
+    background: rgb(255 255 255 / 8%) !important;
 }
 
 #scan-root .scd-toolbar-select[data-test='select'] [data-test='label'] {
