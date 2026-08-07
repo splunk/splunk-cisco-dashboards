@@ -331,7 +331,7 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
             <button
                 type="button"
                 tabIndex={-1}
-                aria-label={`Close ${title}`}
+                aria-hidden="true"
                 className="absolute inset-0 cursor-default border-0 bg-transparent p-0"
                 onClick={() => onCloseRef.current()}
             />

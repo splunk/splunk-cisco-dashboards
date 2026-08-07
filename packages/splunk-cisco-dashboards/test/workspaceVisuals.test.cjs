@@ -39,8 +39,32 @@ const metricItem = read(
 const sortableMetricCard = read(
   "../src/main/webapp/common/components/florida/SortableMetricCard.tsx",
 );
+const sparkline = read(
+  "../src/main/webapp/common/components/florida/Sparkline.tsx",
+);
 const dashboardSection = read(
   "../src/main/webapp/common/components/florida/DashboardSection.tsx",
+);
+
+assert.match(
+  dashboardSection,
+  /<h2 className="leading-none">\{title\}<\/h2>/,
+  "Dashboard section titles must follow the page h1 with level-two headings",
+);
+assert.match(
+  profile,
+  /<h2 className="text-base font-bold text-sky-900[\s\S]*?\{topologyHeaderName\}[\s\S]*?<\/h2>/,
+  "The connectivity panel title must use the page's level-two section hierarchy",
+);
+assert.match(
+  sparkline,
+  /sparkline-gradient-\$\{React\.useId\(\)\.replace/,
+  "Every sparkline must use a unique SVG gradient id",
+);
+assert.doesNotMatch(
+  sparkline,
+  /id=\{`gradient-\$\{color\}`\}/,
+  "Sparkline gradient ids must not collide when tiles share a color",
 );
 
 for (const workspaceId of [

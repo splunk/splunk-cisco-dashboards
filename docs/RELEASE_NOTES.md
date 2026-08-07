@@ -44,6 +44,12 @@
   double-click reset. Loading, empty, and failure states now use one accessible
   treatment across every detail drill-down, including a consistent recovery
   path for empty and failed searches.
+- Insights Workspace accessibility now uses a continuous `h1`/`h2` page and
+  section hierarchy. Pointer-only modal backdrops are excluded from the
+  accessibility tree so screen readers announce one Close control while the
+  visible Close button, Escape handling, focus trapping, and focus restoration
+  remain available to keyboard users. Sparkline gradients now use unique SVG
+  identifiers so repeated tile colors cannot create duplicate DOM references.
 - Executive Insights composition tiles now use Splunk's native Dashboard
   Studio ranked-bar renderer with explicit category/value bindings, visible
   values, matching dark-theme colors, and lazy loading so the optional native

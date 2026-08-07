@@ -72,6 +72,11 @@ assert.match(
 );
 assert.match(
   shell,
+  /tabIndex=\{-1\}[\s\S]*aria-hidden="true"[\s\S]*absolute inset-0/,
+  "The pointer-only modal backdrop must stay out of the accessibility tree",
+);
+assert.match(
+  shell,
   /previouslyFocused\?\.isConnected[\s\S]*previouslyFocused\.focus/,
   "Shared modal shell must restore focus after closing",
 );

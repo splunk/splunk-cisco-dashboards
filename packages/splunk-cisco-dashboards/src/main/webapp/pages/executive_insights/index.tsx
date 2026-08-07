@@ -4973,9 +4973,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-3 shadow-sm flex flex-col overflow-hidden">
                 <div className="flex items-center justify-between mb-2 flex-shrink-0">
                   <div>
-                    <h3 className="text-base font-bold text-sky-900 dark:text-sky-200 uppercase tracking-wide leading-none">
+                    <h2 className="text-base font-bold text-sky-900 dark:text-sky-200 uppercase tracking-wide leading-none">
                       {topologyHeaderName}
-                    </h3>
+                    </h2>
                     <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mt-0.5">
                       {topologyHeaderSubtitle}
                     </p>

@@ -257,7 +257,7 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
                     {icon}
                 </span>
             )}
-            <h3 className="leading-none">{title}</h3>
+            <h2 className="leading-none">{title}</h2>
         </>
     );
 
@@ -268,7 +268,7 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
             rel="noopener noreferrer"
             title={`${linkText} (new tab)`}
             // The whole title row is the hit target. We keep the
-            // `<h3>` semantic underneath via aria-label so screen
+            // `<h2>` semantic underneath via aria-label so screen
             // readers still announce it as the section heading
             // first, then read the link role as secondary.
             className={cn(
