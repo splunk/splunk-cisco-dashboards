@@ -666,6 +666,13 @@ const buildOverviewMetricConfig = (
         record,
         definition,
         profile,
+        {
+          // Factory workspaces must never disguise an empty live search as
+          // synthetic telemetry.  Added tiles already use this contract;
+          // applying it here keeps every workspace tile honest and makes the
+          // existing no-data reason visible to the operator.
+          suppressMockOnEmpty: true,
+        },
       );
       if (!metric || discovered.has(metric.id)) continue;
       discovered.set(metric.id, metric);
