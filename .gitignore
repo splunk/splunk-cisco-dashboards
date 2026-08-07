@@ -100,6 +100,9 @@ FDEM.gif
 .cursor/playwright-state.json
 .cursor/playwright-output/
 /.tmp
+
+# Scratch space for SPL validation queries and data-model dumps
+/tmp/
 packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase_fdem.conf
 
 # Standalone FDEM prototype (never built/shipped) - kept locally, not tracked
