@@ -2,6 +2,12 @@
 
 ## 1.0.36
 
+- Topology Editor site roles now use the SUI 5.13 Select component with a
+  persistent color swatch for every option and selected value. All 12 factory
+  roles have unique colors shared by the editor, map beacons, and role legend.
+- Dashboard Manager now passes numeric canvas dimensions to Dashboard
+  Framework 29.8, preventing managed Studio dashboards from falling back to a
+  600-pixel canvas with a premature scrollbar and empty page area below it.
 - Insights Workspace headers now present time-range and auto-refresh selectors
   without box borders. Signal Rail pause, style, and configuration controls
   reveal on desktop hover or keyboard focus while remaining visible on compact
