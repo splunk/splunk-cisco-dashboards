@@ -31,6 +31,7 @@ import {
     makeSignalTickerItemId,
     type SignalTickerConfig,
     type SignalTickerDensity,
+    type SignalTickerFontSize,
     type SignalTickerItem,
     type SignalTickerPersistenceStatus,
     type SignalTickerRows,
@@ -523,7 +524,8 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
         },
         []
     );
-    const density = config.density ?? 'compact';
+    const density = config.density ?? 'comfortable';
+    const fontSize = config.fontSize ?? 'standard';
     const durationSeconds = useMemo(() => {
         if (paused || config.speed <= 0) return 0;
         const clamped = Math.min(MAX_SIGNAL_SPEED, Math.max(MIN_SIGNAL_SPEED, config.speed));
@@ -569,11 +571,6 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
 
     if (!config.enabled || config.items.length === 0) return null;
 
-    const labelCopy =
-        density === 'compact'
-            ? `${config.items.length} KPIs`
-            : `${config.items.length} live KPIs`;
-
     return (
         <>
             {config.items.map((item, index) => {
@@ -599,9 +596,9 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
             <SignalRailTicker
                 kpis={tickerKpis}
                 density={density}
+                fontSize={fontSize}
                 rows={config.rows}
                 durationSeconds={durationSeconds}
-                subtitle={labelCopy}
                 onOpenEditor={onOpenEditor}
             />
         </>
@@ -631,6 +628,18 @@ interface SignalTickerEditorProps {
 const DENSITY_LABELS: Record<SignalTickerDensity, string> = {
     compact: 'Compact',
     comfortable: 'Comfortable',
+};
+
+const FONT_SIZE_LABELS: Record<SignalTickerFontSize, string> = {
+    small: 'Small',
+    standard: 'Standard',
+    large: 'Large',
+};
+
+const nextFontSize = (current: SignalTickerFontSize): SignalTickerFontSize => {
+    if (current === 'small') return 'standard';
+    if (current === 'standard') return 'large';
+    return 'small';
 };
 
 const optionalNumberFromInput = (value: string): number | undefined => {
@@ -1039,7 +1048,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
 
                 <div className="grid min-h-0 flex-1 grid-cols-1 gap-0 overflow-hidden lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
                     <section className="min-h-0 overflow-y-auto border-b border-slate-200 p-4 dark:border-slate-800 lg:border-b-0 lg:border-r">
-                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                             <button
                                 type="button"
                                 onClick={() =>
@@ -1075,7 +1084,26 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                     Density
                                 </span>
                                 <span className="mt-1 block text-sm font-bold">
-                                    {DENSITY_LABELS[config.density ?? 'compact']}
+                                    {DENSITY_LABELS[config.density ?? 'comfortable']}
+                                </span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    updateConfig({
+                                        fontSize: nextFontSize(
+                                            config.fontSize ?? 'standard'
+                                        ),
+                                    })
+                                }
+                                className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left text-slate-700 transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                                title="Cycle Signal Rail tile font size"
+                            >
+                                <span className="block text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                                    Font size
+                                </span>
+                                <span className="mt-1 block text-sm font-bold">
+                                    {FONT_SIZE_LABELS[config.fontSize ?? 'standard']}
                                 </span>
                             </button>
                             <button

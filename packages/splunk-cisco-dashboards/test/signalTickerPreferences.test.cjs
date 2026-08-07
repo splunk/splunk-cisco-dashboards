@@ -108,6 +108,8 @@ for (const workspaceId of workspaceIds) {
 }
 
 const base = getDefaultSignalTickerConfig("secure_networking");
+assert.equal(base.density, "comfortable");
+assert.equal(base.fontSize, "standard");
 const customized = {
   ...base,
   rows: 2,
@@ -123,6 +125,11 @@ assert.deepEqual(
 );
 assert.deepEqual(applySignalTickerPreferencePatch(base, patch), customized);
 assert.equal(createSignalTickerPreferencePatch(base, base), null);
+assert.deepEqual(
+  createSignalTickerPreferencePatch(base, { ...base, fontSize: "small" }),
+  { fontSize: "small" },
+  "font size must persist as a sparse workspace preference",
+);
 
 const updatedCentral = {
   ...base,
@@ -146,6 +153,11 @@ assert.equal(bounded.items.length, MAX_SIGNAL_TICKER_ITEMS);
 assert.deepEqual(
   sanitizeSignalTickerPreferencePatch({ rows: 3, speed: 999, enabled: false }),
   { speed: 10, enabled: false },
+);
+assert.equal(
+  sanitizeSignalTickerConfig({ ...base, density: undefined }).density,
+  "comfortable",
+  "missing density must retain the comfortable factory default",
 );
 
 const conf = fs.readFileSync(
@@ -209,6 +221,8 @@ for (const workspaceId of workspaceIds) {
     candidate.startsWith(`[signal_rail.${workspaceId}]`),
   );
   assert.ok(block, `missing central Signal Rail preset for ${workspaceId}`);
+  assert.match(block, /^density = comfortable$/m);
+  assert.match(block, /^font_size = standard$/m);
   const itemIds = block.match(/^items = (.*)$/m)?.[1].split(",") ?? [];
   assert.ok(itemIds.length > 0 && itemIds.length <= MAX_SIGNAL_TICKER_ITEMS);
   assert.deepEqual(

@@ -2,6 +2,11 @@
 
 ## 1.0.36
 
+- Insights Workspace signal rails now default to comfortable density, support
+  small, standard, and large KPI text, and use the full rail width instead of
+  reserving a fixed label block. Tile drag and remove actions appear only from
+  the top-left action corner, and the theme control uses compact icon-only
+  spacing.
 - Signal Rail style choices are usable again: the compact rail keeps its KPI
   marquee clipped without clipping the style picker, so users can switch among
   all five visual treatments.

@@ -3,6 +3,7 @@ import type { WorkspaceId } from '@/common/config/insightsWorkspaces';
 export type SignalTickerSpeed = number;
 export type SignalTickerRows = 1 | 2;
 export type SignalTickerDensity = 'compact' | 'comfortable';
+export type SignalTickerFontSize = 'small' | 'standard' | 'large';
 export type SignalTickerThresholdDirection =
     | 'higher_is_better'
     | 'lower_is_better';
@@ -24,6 +25,7 @@ export interface SignalTickerConfig {
     rows: SignalTickerRows;
     speed: SignalTickerSpeed;
     density: SignalTickerDensity;
+    fontSize: SignalTickerFontSize;
     items: SignalTickerItem[];
 }
 
@@ -44,6 +46,7 @@ export interface SignalTickerPreferencePatch {
     rows?: SignalTickerRows;
     speed?: SignalTickerSpeed;
     density?: SignalTickerDensity;
+    fontSize?: SignalTickerFontSize;
     /** Ordered selection with per-item deltas; shared item definitions are inherited by ID. */
     items?: SignalTickerPreferenceItem[];
 }
@@ -60,7 +63,8 @@ export const DEFAULT_SIGNAL_TICKER_CONFIG: SignalTickerConfig = {
     showPriorityDrilldown: false,
     rows: 1,
     speed: 5,
-    density: 'compact',
+    density: 'comfortable',
+    fontSize: 'standard',
     items: [
         {
             id: 'thousandeyes_stream_age',
@@ -598,13 +602,20 @@ export const sanitizeSignalTickerConfig = (
     const rows: SignalTickerRows = source.rows === 2 ? 2 : 1;
     const speed = parseSpeed(source.speed) ?? DEFAULT_SIGNAL_TICKER_CONFIG.speed;
     const density: SignalTickerDensity =
-        source.density === 'comfortable' ? 'comfortable' : 'compact';
+        source.density === 'compact' || source.density === 'comfortable'
+            ? source.density
+            : DEFAULT_SIGNAL_TICKER_CONFIG.density;
+    const fontSize: SignalTickerFontSize =
+        source.fontSize === 'small' || source.fontSize === 'large'
+            ? source.fontSize
+            : 'standard';
     return {
         enabled,
         showPriorityDrilldown,
         rows,
         speed,
         density,
+        fontSize,
         items: sanitizeItems(source.items),
     };
 };
@@ -624,6 +635,13 @@ export const sanitizeSignalTickerPreferencePatch = (
     if (speed !== undefined) patch.speed = speed;
     if (source.density === 'compact' || source.density === 'comfortable') {
         patch.density = source.density;
+    }
+    if (
+        source.fontSize === 'small' ||
+        source.fontSize === 'standard' ||
+        source.fontSize === 'large'
+    ) {
+        patch.fontSize = source.fontSize;
     }
     if (Array.isArray(source.items)) {
         patch.items = sanitizePreferenceItems(source.items);
@@ -645,6 +663,7 @@ export const signalTickerConfigsEqual = (
     left.rows === right.rows &&
     left.speed === right.speed &&
     left.density === right.density &&
+    left.fontSize === right.fontSize &&
     sameItems(left.items, right.items);
 
 export const createSignalTickerPreferencePatch = (
@@ -659,6 +678,7 @@ export const createSignalTickerPreferencePatch = (
     if (current.rows !== base.rows) patch.rows = current.rows;
     if (current.speed !== base.speed) patch.speed = current.speed;
     if (current.density !== base.density) patch.density = current.density;
+    if (current.fontSize !== base.fontSize) patch.fontSize = current.fontSize;
     if (!sameItems(current.items, base.items)) {
         const baseById = new Map(base.items.map((item) => [item.id, item]));
         patch.items = current.items.map((item) => {

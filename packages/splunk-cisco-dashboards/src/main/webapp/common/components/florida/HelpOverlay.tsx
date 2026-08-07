@@ -67,7 +67,7 @@ const CUSTOMIZATION_SCOPE: ScopeRow[] = [
     },
     {
         action: 'Signal Rail settings',
-        scope: 'Rail selection, speed, rows, and density only',
+        scope: 'Rail selection, speed, rows, density, and font size only',
     },
 ];
 

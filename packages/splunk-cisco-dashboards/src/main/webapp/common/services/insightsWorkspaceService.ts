@@ -199,6 +199,12 @@ const parseSignalRailEntries = (
                 content.density === 'compact' || content.density === 'comfortable'
                     ? content.density
                     : fallback.density,
+            fontSize:
+                content.font_size === 'small' ||
+                content.font_size === 'standard' ||
+                content.font_size === 'large'
+                    ? content.font_size
+                    : fallback.fontSize,
             items: hasItemsField ? configuredItems : fallback.items,
         });
         if (parsed) signalRails[workspaceId] = parsed;

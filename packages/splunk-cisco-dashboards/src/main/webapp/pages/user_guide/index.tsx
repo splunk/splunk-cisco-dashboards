@@ -1587,9 +1587,12 @@ iseval = 0`}</CodeBlock>
                   user. Headers prioritize the workspace title with compact
                   range and refresh controls, responsive health status, and
                   clear globe and layers iconography without duplicating
-                  Splunk Web&apos;s account control. A template helps create the
-                  initial workspace but does not constrain future
-                  customization.
+                  Splunk Web&apos;s account control. Signal Rails default to
+                  comfortable density, offer small, standard, and large KPI
+                  text, and use the full width without a fixed label block.
+                  Tile drag and remove controls appear only from the top-left
+                  action corner. A template helps create the initial workspace
+                  but does not constrain future customization.
                 </InfoCard>
                 <InfoCard title="Dashboard Studio editing">
                   Dashboard Manager confirmation dialogs now use the edited

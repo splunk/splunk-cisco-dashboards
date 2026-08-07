@@ -23,6 +23,9 @@ const tickerPersistence = read(
 const signalRail = read(
   "../src/main/webapp/common/components/florida/SignalRailTicker.tsx",
 );
+const signalTickerRail = read(
+  "../src/main/webapp/common/components/florida/SignalTickerRail.tsx",
+);
 const tailwindStyles = read(
   "../src/main/webapp/common/styles/tailwind.css",
 );
@@ -32,6 +35,9 @@ const workspacesConf = read(
 const profile = read("../src/main/webapp/pages/executive_insights/index.tsx");
 const metricItem = read(
   "../src/main/webapp/common/components/florida/MetricItem.tsx",
+);
+const sortableMetricCard = read(
+  "../src/main/webapp/common/components/florida/SortableMetricCard.tsx",
 );
 
 for (const workspaceId of [
@@ -129,6 +135,11 @@ assert.match(
   /<Layers3 className="h-4 w-4 flex-shrink-0"/,
   "Workspace switching must use the SUI layers metaphor",
 );
+assert.match(
+  profile,
+  /<ThemeToggle theme=\{theme\} onCycle=\{cycleTheme\} iconOnly \/>/,
+  "The crowded overview header must use the compact icon-only theme control",
+);
 assert.doesNotMatch(
   profile,
   /<User className=/,
@@ -173,6 +184,36 @@ assert.match(
   signalRail,
   /aria-label=\{`Ticker style:/,
   "Signal Rail's icon-only style control must have an accessible label",
+);
+assert.doesNotMatch(
+  signalRail,
+  /relative z-\[80\] hidden shrink-0 items-center/,
+  "Signal Rail must not reserve a fixed leading label block",
+);
+assert.match(
+  signalRail,
+  /aria-label=\{`Signal Rail with \$\{kpis\.length\} KPIs`\}/,
+  "Signal Rail must retain an accessible name after removing the visible label block",
+);
+assert.match(
+  signalRail,
+  /data-font-size=\{fontSize\}/,
+  "Signal Rail must expose its selected tile font size",
+);
+assert.match(
+  signalTickerRail,
+  />\s*Font size\s*</,
+  "Signal Rail settings must expose a tile font-size control",
+);
+assert.match(
+  sortableMetricCard,
+  /group\/tile-actions/,
+  "Tile reorder and hide controls must use a dedicated action-corner hover target",
+);
+assert.doesNotMatch(
+  sortableMetricCard,
+  /group-hover\/sortable:opacity-100/,
+  "Hovering the full tile must not reveal reorder or hide controls",
 );
 
 console.log("✓ Workspace topology, signal rail, and drilldown affordance tests passed");

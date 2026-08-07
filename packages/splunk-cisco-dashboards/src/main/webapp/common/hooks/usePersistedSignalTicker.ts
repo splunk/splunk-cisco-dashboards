@@ -31,6 +31,7 @@ export {
 export type {
     SignalTickerConfig,
     SignalTickerDensity,
+    SignalTickerFontSize,
     SignalTickerItem,
     SignalTickerRows,
     SignalTickerSpeed,
