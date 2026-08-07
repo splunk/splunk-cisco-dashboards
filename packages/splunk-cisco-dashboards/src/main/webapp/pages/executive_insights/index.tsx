@@ -4229,6 +4229,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               Range
             </span>
             <Select
+              className="scd-toolbar-select"
               data-shortcut-search
               value={timeRange.label}
               onChange={(_event, { value }) => {
@@ -4252,6 +4253,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               Auto
             </span>
             <Select
+              className="scd-toolbar-select"
               value={autoRefreshSeconds}
               onChange={(_event, { value }) =>
                 setAutoRefreshSeconds(Number(value))

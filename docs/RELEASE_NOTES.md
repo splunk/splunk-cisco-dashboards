@@ -20,12 +20,14 @@
   the workspace switcher uses the SUI layers metaphor and no longer duplicates
   Splunk Web's signed-in user control.
 - The time-range and auto-refresh controls now use SUI 5.13 `Select`
-  components, and H1 is a real compact section layout with tighter headline,
-  chart, and wrapped-row floors rather than a cosmetic height label.
-- Customer connectivity now opens on an animated command topology that makes
-  sites, paths, health, and critical relationships immediately scannable. The
-  geographic Leaflet view remains available as an explicit Geo tab and opens
-  automatically when editing coordinates.
+  components with an explicit high-contrast dark-toolbar treatment so their
+  labels and carets remain visible regardless of Splunk's outer theme. H1 is a
+  real compact section layout with tighter headline, chart, and wrapped-row
+  floors rather than a cosmetic height label.
+- Customer connectivity now opens on the geographic topology by default. The
+  animated Command view remains available for quickly scanning sites, paths,
+  health, and critical relationships, while Geo also opens automatically when
+  editing coordinates.
 - The Secure Networking factory layout is now an exact five-by-nine contract:
   45 unique active tiles, 45 uniquely resolved drill-down links, explicit
   headline fields on every tile, explicit spark fields on time-series tiles,

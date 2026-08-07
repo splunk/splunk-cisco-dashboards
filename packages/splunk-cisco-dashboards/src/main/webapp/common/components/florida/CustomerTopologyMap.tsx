@@ -5092,7 +5092,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     onSummaryMetricsChange,
 }) => {
     const [selected, setSelected] = useState<SelectedTarget | null>(null);
-    const [surfaceMode, setSurfaceMode] = useState<TopologySurfaceMode>('command');
+    const [surfaceMode, setSurfaceMode] = useState<TopologySurfaceMode>('geo');
     const [spotlightSite, setSpotlightSite] = useState<TopologySite | null>(null);
     const [paused, setPaused] = useState(false);
     const { topology: storedTopology, saveTopology, resetTopology } =

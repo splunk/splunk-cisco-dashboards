@@ -72,6 +72,32 @@
 }
 
 /*
+ * The workspace command bar is deliberately dark even when Splunk Web is
+ * using its light theme. SUI Select correctly follows the surrounding Splunk
+ * theme, so without a local surface override its dark text and transparent
+ * toggle disappear against this bar. Keep the actual SUI control and its
+ * interaction states while making this dark-surface exception explicit.
+ */
+#scan-root .scd-toolbar-select[data-test='select'] {
+    border: 1px solid rgb(71 85 105 / 90%) !important;
+    background: rgb(30 41 59 / 82%) !important;
+    color: rgb(241 245 249) !important;
+}
+
+#scan-root .scd-toolbar-select[data-test='select']:hover {
+    border-color: rgb(14 165 233 / 85%) !important;
+    background: rgb(51 65 85 / 92%) !important;
+}
+
+#scan-root .scd-toolbar-select[data-test='select'] [data-test='label'] {
+    color: inherit !important;
+}
+
+#scan-root .scd-toolbar-select[data-test='select'] svg {
+    fill: currentColor !important;
+}
+
+/*
  * Splunk 10's modern navigation renders the page body inside nested flex
  * containers. A max-content descendant (the overview Signal Rail marquee)
  * can otherwise become the flex item's automatic minimum width and make the

@@ -95,8 +95,8 @@ assert.match(
 );
 assert.match(
   topologyMap,
-  /useState<TopologySurfaceMode>\('command'\)/,
-  "The abstract command topology must be the factory connectivity view",
+  /useState<TopologySurfaceMode>\('geo'\)/,
+  "The geographic topology must be the factory connectivity view",
 );
 assert.match(
   topologyMap,
@@ -106,7 +106,7 @@ assert.match(
 assert.match(
   topologyMap,
   /\['geo', 'Geo'\]/,
-  "The geographic topology must remain available as an explicit secondary view",
+  "The geographic topology must remain available as an explicit presentation",
 );
 assert.match(
   topologyMap,
@@ -125,8 +125,13 @@ assert.match(
 );
 assert.match(
   profile,
-  /<Select[\s\S]*?labelText="Dashboard time range"[\s\S]*?style=\{\{ width: 124 \}\}/,
+  /<Select[\s\S]*?className="scd-toolbar-select"[\s\S]*?labelText="Dashboard time range"[\s\S]*?style=\{\{ width: 124 \}\}/,
   "The time-range selector must use SUI Select at a compact width",
+);
+assert.match(
+  tailwindStyles,
+  /\.scd-toolbar-select\[data-test='select'\][\s\S]*?color: rgb\(241 245 249\) !important/,
+  "Dark command-bar SUI selectors must keep their labels and carets visible in either Splunk theme",
 );
 assert.match(
   profile,
@@ -135,7 +140,7 @@ assert.match(
 );
 assert.match(
   profile,
-  /<Select[\s\S]*?labelText="Auto-refresh interval"[\s\S]*?style=\{\{ width: 72 \}\}/,
+  /<Select[\s\S]*?className="scd-toolbar-select"[\s\S]*?labelText="Auto-refresh interval"[\s\S]*?style=\{\{ width: 72 \}\}/,
   "The auto-refresh selector must use SUI Select at a compact width",
 );
 assert.match(
