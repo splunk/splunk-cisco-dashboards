@@ -34,7 +34,7 @@
  */
 
 import React from 'react';
-import { GripVertical, X } from 'lucide-react';
+import { GripVertical, X } from '@/common/icons/SuiIcon';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/common/lib/utils';

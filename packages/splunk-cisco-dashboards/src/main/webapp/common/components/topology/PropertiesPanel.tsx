@@ -30,18 +30,18 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-    X,
-    Trash2,
-    Save,
-    Minus,
-    ArrowRight,
+    Activity,
     ArrowLeft,
     ArrowLeftRight,
+    ArrowRight,
     Bold,
     Italic,
-    Activity,
-    type LucideIcon,
-} from 'lucide-react';
+    Minus,
+    Save,
+    Trash2,
+    X,
+    type SuiIcon,
+} from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
 import type {
     Node as RFNode,
@@ -319,14 +319,14 @@ const EDGE_KIND_OPTIONS: Array<{ id: EdgeUpdate['kind']; label: string; hint: st
 ];
 
 const SectionHeader: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-    <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-3 pt-3 pb-1">
+    <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-3 pt-3 pb-1">
         {children}
     </div>
 );
 
 const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
     <div className="px-3 py-1.5">
-        <label className="block text-[10px] font-medium text-slate-600 dark:text-slate-400 mb-1">
+        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
             {label}
         </label>
         {children}
@@ -425,9 +425,9 @@ const BindToHostField: React.FC<{
 
     return (
         <div className="px-3 py-1.5" ref={containerRef}>
-            <label className="block text-[10px] font-medium text-slate-600 dark:text-slate-400 mb-1">
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                 Bind to host
-                <span className="ml-1 text-[9px] font-normal text-slate-400">
+                <span className="ml-1 text-xs font-normal text-slate-400">
                     {assetIndex.size.toLocaleString()} known hosts
                 </span>
             </label>
@@ -437,7 +437,7 @@ const BindToHostField: React.FC<{
                         <div className="text-[12px] font-medium text-emerald-800 dark:text-emerald-200 truncate">
                             {boundAsset.label ?? boundAsset.id}
                         </div>
-                        <div className="text-[10px] text-emerald-700 dark:text-emerald-300 truncate">
+                        <div className="text-xs text-emerald-700 dark:text-emerald-300 truncate">
                             {boundAsset.shortLabel ?? boundAsset.id}
                             {boundAsset.vendor ? ` · ${boundAsset.vendor}` : ''}
                             {boundAsset.model ? ` ${boundAsset.model}` : ''}
@@ -445,7 +445,7 @@ const BindToHostField: React.FC<{
                     </div>
                     <button
                         type="button"
-                        className="text-[10px] px-2 py-1 rounded border border-emerald-300 dark:border-emerald-600 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+                        className="text-xs px-2 py-1 rounded border border-emerald-300 dark:border-emerald-600 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
                         onClick={() => {
                             onUnbind();
                             setQuery('');
@@ -491,7 +491,7 @@ const BindToHostField: React.FC<{
                                         <div className="text-[12px] text-slate-900 dark:text-slate-100 truncate">
                                             {a.label ?? a.id}
                                         </div>
-                                        <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                                        <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
                                             {a.shortLabel ?? a.id}
                                             {a.vendor ? ` · ${a.vendor}` : ''}
                                             {a.model ? ` ${a.model}` : ''}
@@ -501,15 +501,15 @@ const BindToHostField: React.FC<{
                             ))}
                         </ul>
                     ) : open && query.length > 0 ? (
-                        <div className="absolute z-30 mt-1 left-0 right-0 px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-[11px] text-slate-500 shadow-sm">
+                        <div className="absolute z-30 mt-1 left-0 right-0 px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-500 shadow-sm">
                             No hosts match “{query}”.
                         </div>
                     ) : null}
                 </div>
             )}
-            <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400 leading-tight">
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-tight">
                 Binding pulls vendor, model, and live host status from{' '}
-                <code className="text-[10px]">asset_inventory</code>. The shape is auto-
+                <code className="text-xs">asset_inventory</code>. The shape is auto-
                 reshaped to match the host&apos;s device family.
             </p>
         </div>
@@ -810,7 +810,7 @@ const NodePropertiesForm: React.FC<{
                 />
             </Field>
             {data.node?.serialNumber ? (
-                <div className="px-3 pb-2 text-[10px] text-slate-500 dark:text-slate-400">
+                <div className="px-3 pb-2 text-xs text-slate-500 dark:text-slate-400">
                     Serial:{' '}
                     <code className="font-mono">{data.node.serialNumber}</code>
                 </div>
@@ -827,7 +827,7 @@ const NodePropertiesForm: React.FC<{
             </Field>
 
             <SectionHeader>Provenance</SectionHeader>
-            <div className="px-3 pb-2 space-y-1 text-[10px] text-slate-500 dark:text-slate-400">
+            <div className="px-3 pb-2 space-y-1 text-xs text-slate-500 dark:text-slate-400">
                 <div>
                     <span className="font-medium">ID:</span>{' '}
                     <code className="font-mono">{node.id}</code>
@@ -837,7 +837,7 @@ const NodePropertiesForm: React.FC<{
                         <span className="font-medium">Source:</span> {data.node.managementSource}
                     </div>
                 )}
-                <div className="text-[9px] italic pt-1">
+                <div className="text-xs italic pt-1">
                     Edits stay local until Build 107 ships{' '}
                     <code className="font-mono">network_topology_views.csv</code>.
                 </div>
@@ -938,7 +938,7 @@ const RegionPropertiesForm: React.FC<{
                                 onClick={() => setAccent(opt.id)}
                                 title={opt.label}
                                 className={cn(
-                                    'flex flex-col items-center justify-center gap-1 rounded border py-1.5 text-[9px] transition-colors',
+                                    'flex flex-col items-center justify-center gap-1 rounded border py-1.5 text-xs transition-colors',
                                     isActive
                                         ? 'border-sky-500 bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300'
                                         : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-500 dark:text-slate-400'
@@ -956,12 +956,12 @@ const RegionPropertiesForm: React.FC<{
             </Field>
 
             <SectionHeader>Stats</SectionHeader>
-            <div className="px-3 pb-2 text-[10px] text-slate-500 dark:text-slate-400">
+            <div className="px-3 pb-2 text-xs text-slate-500 dark:text-slate-400">
                 Devices in this region:{' '}
                 <span className="font-semibold text-slate-700 dark:text-slate-200">
                     {typeof data.deviceCount === 'number' ? data.deviceCount : 0}
                 </span>
-                <div className="text-[9px] italic pt-1">
+                <div className="text-xs italic pt-1">
                     Drag the corner / side handles on the canvas to resize the
                     region. Devices dropped inside snap to it automatically.
                 </div>
@@ -1067,7 +1067,7 @@ const TitlePropertiesForm: React.FC<{
                         title="Toggle bold"
                         aria-pressed={bold}
                         className={cn(
-                            'flex items-center justify-center w-8 h-7 rounded border text-[11px] font-medium transition-colors',
+                            'flex items-center justify-center w-8 h-7 rounded border text-xs font-medium transition-colors',
                             bold
                                 ? 'bg-sky-50 dark:bg-sky-900/30 border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-300'
                                 : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300'
@@ -1081,7 +1081,7 @@ const TitlePropertiesForm: React.FC<{
                         title="Toggle italic"
                         aria-pressed={italic}
                         className={cn(
-                            'flex items-center justify-center w-8 h-7 rounded border text-[11px] font-medium transition-colors',
+                            'flex items-center justify-center w-8 h-7 rounded border text-xs font-medium transition-colors',
                             italic
                                 ? 'bg-sky-50 dark:bg-sky-900/30 border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-300'
                                 : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300'
@@ -1135,12 +1135,12 @@ const TitlePropertiesForm: React.FC<{
             </Field>
 
             <SectionHeader>Provenance</SectionHeader>
-            <div className="px-3 pb-2 space-y-1 text-[10px] text-slate-500 dark:text-slate-400">
+            <div className="px-3 pb-2 space-y-1 text-xs text-slate-500 dark:text-slate-400">
                 <div>
                     <span className="font-medium">ID:</span>{' '}
                     <code className="font-mono">{node.id}</code>
                 </div>
-                <div className="text-[9px] italic pt-1">
+                <div className="text-xs italic pt-1">
                     Persists with the diagram to{' '}
                     <code className="font-mono">network_diagrams.csv</code> on Save.
                 </div>
@@ -1315,7 +1315,7 @@ const TextBoxPropertiesForm: React.FC<{
                         title="Toggle bold"
                         aria-pressed={bold}
                         className={cn(
-                            'flex items-center justify-center w-8 h-7 rounded border text-[11px] font-medium transition-colors',
+                            'flex items-center justify-center w-8 h-7 rounded border text-xs font-medium transition-colors',
                             bold
                                 ? 'bg-sky-50 dark:bg-sky-900/30 border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-300'
                                 : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300'
@@ -1329,7 +1329,7 @@ const TextBoxPropertiesForm: React.FC<{
                         title="Toggle italic"
                         aria-pressed={italic}
                         className={cn(
-                            'flex items-center justify-center w-8 h-7 rounded border text-[11px] font-medium transition-colors',
+                            'flex items-center justify-center w-8 h-7 rounded border text-xs font-medium transition-colors',
                             italic
                                 ? 'bg-sky-50 dark:bg-sky-900/30 border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-300'
                                 : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300'
@@ -1348,7 +1348,7 @@ const TextBoxPropertiesForm: React.FC<{
                             onClick={() => setAlign(opt.id)}
                             aria-pressed={align === opt.id}
                             className={cn(
-                                'flex-1 px-2 py-1 rounded border text-[11px] font-medium transition-colors',
+                                'flex-1 px-2 py-1 rounded border text-xs font-medium transition-colors',
                                 align === opt.id
                                     ? 'bg-sky-50 dark:bg-sky-900/30 border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-300'
                                     : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300'
@@ -1470,7 +1470,7 @@ const TextBoxPropertiesForm: React.FC<{
 const EDGE_DIRECTION_OPTIONS: Array<{
     id: EdgeDirection;
     label: string;
-    icon: LucideIcon;
+    icon: SuiIcon;
     hint: string;
 }> = [
     { id: 'none', label: 'No arrow', icon: Minus, hint: 'Plain line' },
@@ -1624,7 +1624,7 @@ const EdgePropertiesForm: React.FC<{
     return (
         <>
             <SectionHeader>Endpoints</SectionHeader>
-            <div className="px-3 pb-1 space-y-1 text-[11px] text-slate-700 dark:text-slate-300">
+            <div className="px-3 pb-1 space-y-1 text-xs text-slate-700 dark:text-slate-300">
                 <div>
                     <span className="font-medium text-slate-500 dark:text-slate-400">Source:</span>{' '}
                     <code className="font-mono">{edge.source}</code>
@@ -1652,7 +1652,7 @@ const EdgePropertiesForm: React.FC<{
                         </option>
                     ))}
                 </select>
-                <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                     {EDGE_KIND_OPTIONS.find((o) => o.id === kind)?.hint}
                 </p>
             </Field>
@@ -1679,7 +1679,7 @@ const EdgePropertiesForm: React.FC<{
                                     commit({ direction: opt.id });
                                 }}
                                 className={cn(
-                                    'flex-1 flex items-center justify-center px-2 py-1 rounded text-[11px] font-medium transition-colors',
+                                    'flex-1 flex items-center justify-center px-2 py-1 rounded text-xs font-medium transition-colors',
                                     active
                                         ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm border border-sky-200 dark:border-sky-700'
                                         : 'text-slate-600 dark:text-slate-300 hover:bg-white/70 dark:hover:bg-slate-900/40 border border-transparent'
@@ -1690,7 +1690,7 @@ const EdgePropertiesForm: React.FC<{
                         );
                     })}
                 </div>
-                <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                     {EDGE_DIRECTION_OPTIONS.find((o) => o.id === direction)?.hint}
                 </p>
             </Field>
@@ -1720,7 +1720,7 @@ const EdgePropertiesForm: React.FC<{
                         </option>
                     ))}
                 </select>
-                <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                     {ARROW_STYLE_OPTIONS.find((o) => o.id === arrowStyle)
                         ?.hint ?? ''}
                 </p>
@@ -1744,7 +1744,7 @@ const EdgePropertiesForm: React.FC<{
                         commit({ liveStatus: next });
                     }}
                     className={cn(
-                        'inline-flex items-center gap-2 px-2.5 py-1.5 rounded-md border text-[11px] transition-colors w-full justify-start',
+                        'inline-flex items-center gap-2 px-2.5 py-1.5 rounded-md border text-xs transition-colors w-full justify-start',
                         liveStatus
                             ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300'
                             : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
@@ -1768,7 +1768,7 @@ const EdgePropertiesForm: React.FC<{
                         {liveStatus ? 'Reporting from hosts' : 'Static colour'}
                     </span>
                 </button>
-                <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                     Recolour the line based on live <code>| metadata</code> activity for bound endpoints — green when reporting, red when stale.
                 </p>
             </Field>
@@ -1814,7 +1814,7 @@ const EdgePropertiesForm: React.FC<{
                         }}
                         title="Use the per-kind default line colour"
                         className={cn(
-                            'h-6 px-2 rounded-full text-[10px] font-medium border transition-colors',
+                            'h-6 px-2 rounded-full text-xs font-medium border transition-colors',
                             lineColor === ''
                                 ? 'bg-sky-50 dark:bg-sky-900/30 border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-300'
                                 : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300'
@@ -1823,7 +1823,7 @@ const EdgePropertiesForm: React.FC<{
                         Auto
                     </button>
                 </div>
-                <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                     {lineColor
                         ? `Custom colour ${lineColor}`
                         : 'Auto — colour matches the edge kind.'}
@@ -1871,7 +1871,7 @@ const EdgePropertiesForm: React.FC<{
                         }}
                         title="Use the per-kind default colour"
                         className={cn(
-                            'h-6 px-2 rounded-full text-[10px] font-medium border transition-colors',
+                            'h-6 px-2 rounded-full text-xs font-medium border transition-colors',
                             animationColor === ''
                                 ? 'bg-sky-50 dark:bg-sky-900/30 border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-300'
                                 : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300'
@@ -1880,7 +1880,7 @@ const EdgePropertiesForm: React.FC<{
                         Auto
                     </button>
                 </div>
-                <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                     {animationActive
                         ? animationColor
                             ? `Custom colour ${animationColor}`
@@ -1912,12 +1912,12 @@ const EdgePropertiesForm: React.FC<{
             </Field>
 
             <SectionHeader>Provenance</SectionHeader>
-            <div className="px-3 pb-2 space-y-1 text-[10px] text-slate-500 dark:text-slate-400">
+            <div className="px-3 pb-2 space-y-1 text-xs text-slate-500 dark:text-slate-400">
                 <div>
                     <span className="font-medium">ID:</span>{' '}
                     <code className="font-mono">{edge.id}</code>
                 </div>
-                <div className="text-[9px] italic pt-1">
+                <div className="text-xs italic pt-1">
                     {/* Build 115.5 — edge changes preview live on
                         the canvas; the page header's Save still
                         controls persistence to the conf file. */}

@@ -25,12 +25,10 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    Network,
     Save,
     FolderOpen,
     Plus,
     Upload,
-    Presentation,
     Trash2,
     Loader2,
     ChevronDown,
@@ -45,9 +43,11 @@ import {
     Search,
     X,
     AlertTriangle,
+    Network,
+    Presentation,
     RefreshCw,
-    type LucideIcon,
-} from 'lucide-react';
+    type SuiIcon,
+} from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
 // Build 115.11 — alias the helper so it doesn't collide with the
 // boolean prop of the same name on this component (the picker
@@ -368,7 +368,7 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                          *  "Saved 'foo' at 3:21:05 PM") fit fine on a
                          *  single line and stay where they were. */}
                         {statusMessage && statusMessage.kind === 'info' && (
-                            <span className="text-[10px] truncate text-slate-500 dark:text-slate-400">
+                            <span className="text-xs truncate text-slate-500 dark:text-slate-400">
                                 {statusMessage.text}
                             </span>
                         )}
@@ -607,7 +607,7 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                                                 type="button"
                                                 onClick={() => onExport('png')}
                                                 disabled={exporting === true}
-                                                className="px-3 py-1.5 text-[11px] text-left font-semibold text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-slate-800 disabled:opacity-50"
+                                                className="px-3 py-1.5 text-xs text-left font-semibold text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-slate-800 disabled:opacity-50"
                                             >
                                                 Save as PNG
                                             </button>
@@ -615,7 +615,7 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                                                 type="button"
                                                 onClick={() => onExport('pdf')}
                                                 disabled={exporting === true}
-                                                className="px-3 py-1.5 text-[11px] text-left font-semibold text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-slate-800 border-t border-slate-100 dark:border-slate-700 disabled:opacity-50"
+                                                className="px-3 py-1.5 text-xs text-left font-semibold text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-slate-800 border-t border-slate-100 dark:border-slate-700 disabled:opacity-50"
                                             >
                                                 Save as PDF
                                             </button>
@@ -654,7 +654,7 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                         'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700'
                     )}
                 >
-                    <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-slate-800 text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-slate-800 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                         <span>Saved diagrams</span>
                         <button
                             type="button"
@@ -662,7 +662,7 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                                 setPickerOpen(false);
                                 onNew();
                             }}
-                            className="flex items-center gap-1 text-sky-600 dark:text-sky-400 normal-case tracking-normal text-[11px] hover:underline"
+                            className="flex items-center gap-1 text-sky-600 dark:text-sky-400 normal-case tracking-normal text-xs hover:underline"
                         >
                             <Plus className="w-3 h-3" aria-hidden />
                             New
@@ -787,7 +787,7 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                                             {d.name}
                                         </span>
                                     </span>
-                                    <span className="text-[9px] text-slate-400 flex-shrink-0 whitespace-nowrap">
+                                    <span className="text-xs text-slate-400 flex-shrink-0 whitespace-nowrap">
                                         {d.updatedAt
                                             ? new Date(d.updatedAt).toLocaleString()
                                             : ''}
@@ -818,7 +818,7 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                                     )}
                                 {factory.length > 0 && (
                                     <>
-                                        <div className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wide text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
+                                        <div className="px-3 pt-2 pb-1 text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
                                             <FolderOpen
                                                 className="w-3 h-3 opacity-70"
                                                 aria-hidden
@@ -832,7 +832,7 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                                 )}
                                 {custom.length > 0 && (
                                     <>
-                                        <div className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wide text-slate-400 dark:text-slate-500 border-t border-slate-100 dark:border-slate-800 mt-1 flex items-center gap-1.5">
+                                        <div className="px-3 pt-2 pb-1 text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500 border-t border-slate-100 dark:border-slate-800 mt-1 flex items-center gap-1.5">
                                             <FolderOpen
                                                 className="w-3 h-3 opacity-70"
                                                 aria-hidden
@@ -913,7 +913,7 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
 };
 
 interface HeaderButtonProps {
-    icon: LucideIcon;
+    icon: SuiIcon;
     label: string;
     onClick: () => void;
     disabled?: boolean;

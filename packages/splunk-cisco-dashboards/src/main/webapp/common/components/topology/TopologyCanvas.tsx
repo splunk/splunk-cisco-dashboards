@@ -52,11 +52,18 @@ import {
     type Node as RFNode,
     type Edge as RFEdge,
     type Connection,
+    type OnNodeDrag,
     useReactFlow,
     type NodeTypes,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Loader2, RefreshCw, RotateCcw, Network as NetworkIcon, Save } from 'lucide-react';
+import {
+    Loader2,
+    Network as NetworkIcon,
+    RefreshCw,
+    RotateCcw,
+    Save,
+} from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
 import {
     discoverTopology,
@@ -307,8 +314,8 @@ const TopologyCanvasInner: React.FC<TopologyCanvasProps> = ({
     }, [fetchEdges, recomputeLayout]);
 
     /** Drag-stop persistence — same as Build 104. */
-    const handleNodeDragStop = useCallback(
-        (_event: React.MouseEvent, node: RFNode) => {
+    const handleNodeDragStop = useCallback<OnNodeDrag<RFNode>>(
+        (_event, node) => {
             if (!node.draggable) return;
             const next: OverrideMap = {
                 ...overridesRef.current,
@@ -627,7 +634,7 @@ const TopologyCanvasInner: React.FC<TopologyCanvasProps> = ({
             </div>
 
             {/* Hint banner: tells operators how to draw edges */}
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 px-3 py-1 rounded-full text-[10px] font-medium bg-slate-900/80 dark:bg-slate-100/90 text-slate-100 dark:text-slate-900 shadow-sm pointer-events-none">
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 px-3 py-1 rounded-full text-xs font-medium bg-slate-900/80 dark:bg-slate-100/90 text-slate-100 dark:text-slate-900 shadow-sm pointer-events-none">
                 Hover a device to reveal its 4 ports · drag from a port to another device to draw a link · click any node or edge to edit
             </div>
 

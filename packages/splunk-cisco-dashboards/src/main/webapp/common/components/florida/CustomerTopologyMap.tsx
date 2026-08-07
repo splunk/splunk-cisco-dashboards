@@ -50,11 +50,11 @@ import {
     Search,
     Sparkles,
     Tag,
-    Terminal,
     Trash2,
+    Terminal,
     Upload,
     X,
-} from 'lucide-react';
+} from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
 import {
     getSearchbaseCatalogue,
@@ -91,8 +91,8 @@ L.Icon.Default.mergeOptions({
 
 export const CUSTOMER_TOPOLOGY: CustomerTopology = {
     id: 'customer-site-connectivity',
-    name: 'Customer Site Connectivity',
-    subtitle: 'Editable customer site connectivity',
+    name: 'Secure Network Command Map',
+    subtitle: 'Live sites, trust paths, and policy-enforcement health',
     map: {
         center: [37.5, -98.5],
         zoom: 4.1,
@@ -2892,7 +2892,7 @@ const topologyAnimationCss = `
         position: relative;
         z-index: 2;
         color: var(--site-text);
-        font-size: 11px;
+        font-size: var(--sui-font-size-small);
         font-weight: 950;
         letter-spacing: 0;
         text-shadow: var(--site-text-shadow);
@@ -4028,7 +4028,7 @@ const createSiteIcon = (
           </span>
           <span class="customer-topology-site-led" aria-hidden="true"></span>
         </div>
-        <div class="mt-1 whitespace-nowrap font-semibold px-2.5 py-0.5 rounded-md shadow-sm border text-[11px] ${labelChrome} ${roleChrome.label}" style="border-color:${markerAccentColor}66;">
+        <div class="mt-1 whitespace-nowrap font-semibold px-2.5 py-0.5 rounded-md shadow-sm border text-xs ${labelChrome} ${roleChrome.label}" style="border-color:${markerAccentColor}66;">
           ${safeName}
         </div>
       </div>
@@ -5961,7 +5961,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 spotlightSite && (
                 <div
                     className={cn(
-                        'absolute top-3 left-3 z-[999] px-2 py-1 rounded-md border text-[9px] font-bold uppercase tracking-widest pointer-events-none',
+                        'absolute top-3 left-3 z-[999] px-2 py-1 rounded-md border text-xs font-bold uppercase tracking-widest pointer-events-none',
                         isDark
                             ? 'bg-slate-900/70 border-slate-700 text-slate-300 backdrop-blur'
                             : 'bg-white/85 border-slate-200 text-slate-500 backdrop-blur'
@@ -6130,7 +6130,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                         )}
                     >
                         <div className="mb-3 flex items-center justify-between gap-3">
-                            <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                            <h5 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
                                 Site Roles
                             </h5>
                             <button
@@ -6172,7 +6172,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                             overlayChrome
                         )}
                     >
-                        <span className="text-[9px] font-black uppercase tracking-[0.18em] text-sky-700 dark:text-sky-300">
+                        <span className="text-xs font-black uppercase tracking-[0.18em] text-sky-700 dark:text-sky-300">
                             Roles
                         </span>
                         <span className="flex -space-x-1">
@@ -6189,7 +6189,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                                 />
                             ))}
                         </span>
-                        <span className="rounded-full bg-sky-500/12 px-1.5 py-0.5 text-[9px] font-black text-sky-700 dark:bg-sky-400/15 dark:text-sky-200">
+                        <span className="rounded-full bg-sky-500/12 px-1.5 py-0.5 text-xs font-black text-sky-700 dark:bg-sky-400/15 dark:text-sky-200">
                             {resolvedTopology.sites.length}
                         </span>
                         <ChevronRight className="h-3.5 w-3.5 text-slate-400 transition-transform group-hover:translate-x-0.5" />
@@ -6450,7 +6450,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
             <div className="flex items-center justify-between gap-2">
                 <span
                     className={cn(
-                        'text-[10px] font-black uppercase tracking-widest',
+                        'text-xs font-black uppercase tracking-widest',
                         isDark ? 'text-sky-300' : 'text-sky-700'
                     )}
                 >
@@ -6458,7 +6458,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                 </span>
                 <span
                     className={cn(
-                        'text-[8px] font-mono uppercase tracking-wider',
+                        'text-xs font-mono uppercase tracking-wider',
                         isDark ? 'text-sky-400/70' : 'text-sky-600/80'
                     )}
                 >
@@ -6472,7 +6472,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                             onPick('');
                         }}
                         className={cn(
-                            'inline-flex items-center gap-1 rounded-md border px-1.5 py-1 text-[9px] font-black uppercase tracking-wider transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                            'inline-flex items-center gap-1 rounded-md border px-1.5 py-1 text-xs font-black uppercase tracking-wider transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
                             isDark
                                 ? 'border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800'
                                 : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-100'
@@ -6485,7 +6485,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                 ) : (
                     <span
                         className={cn(
-                            'rounded-md border px-1.5 py-1 text-[9px] font-black uppercase tracking-wider',
+                            'rounded-md border px-1.5 py-1 text-xs font-black uppercase tracking-wider',
                             isDark
                                 ? 'border-slate-800 text-slate-500'
                                 : 'border-slate-200 text-slate-400'
@@ -6519,7 +6519,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                     // picker.
                     placeholder={`Search ${catalogue.length} entries by name, category, or tag…`}
                     className={cn(
-                        'w-full rounded-md border-2 px-2 py-1.5 pl-7 pr-7 text-[11px] outline-none transition-colors focus:ring-2 focus:ring-sky-400',
+                        'w-full rounded-md border-2 px-2 py-1.5 pl-7 pr-7 text-xs outline-none transition-colors focus:ring-2 focus:ring-sky-400',
                         isDark
                             ? 'bg-slate-950 border-sky-500/50 text-slate-100 placeholder:text-slate-600'
                             : 'bg-white border-sky-400 text-slate-800 placeholder:text-slate-400'
@@ -6589,7 +6589,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                                     tagsAvailableAll.length === 1 ? '' : 's'
                                 }… (Enter applies first match)`}
                                 className={cn(
-                                    'w-full rounded border px-2 py-1 pl-6 pr-6 text-[10px] outline-none transition-colors focus:ring-1 focus:ring-sky-400',
+                                    'w-full rounded border px-2 py-1 pl-6 pr-6 text-xs outline-none transition-colors focus:ring-1 focus:ring-sky-400',
                                     isDark
                                         ? 'bg-slate-950 border-slate-700 text-slate-200 placeholder:text-slate-600'
                                         : 'bg-white border-slate-300 text-slate-700 placeholder:text-slate-400'
@@ -6625,7 +6625,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                                 });
                             }}
                             className={cn(
-                                'inline-flex items-center gap-0.5 rounded-full border px-2 py-0.5 text-[9px] font-semibold transition-colors',
+                                'inline-flex items-center gap-0.5 rounded-full border px-2 py-0.5 text-xs font-semibold transition-colors',
                                 isDark
                                     ? 'bg-sky-500/20 border-sky-500/50 text-sky-200 hover:bg-sky-500/30'
                                     : 'bg-sky-100 border-sky-300 text-sky-800 hover:bg-sky-200'
@@ -6648,7 +6648,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                                     setTagPickerOpen(false);
                                 }}
                                 className={cn(
-                                    'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] transition-colors',
+                                    'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors',
                                     isDark
                                         ? 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
                                         : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
@@ -6658,7 +6658,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                                 {tag}
                                 <span
                                     className={cn(
-                                        'text-[8px]',
+                                        'text-xs',
                                         isDark
                                             ? 'text-slate-500'
                                             : 'text-slate-400'
@@ -6673,7 +6673,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                             type="button"
                             onClick={() => setTagPickerOpen(true)}
                             className={cn(
-                                'inline-flex items-center gap-0.5 rounded-full border border-dashed px-2 py-0.5 text-[9px] transition-colors',
+                                'inline-flex items-center gap-0.5 rounded-full border border-dashed px-2 py-0.5 text-xs transition-colors',
                                 isDark
                                     ? 'border-slate-700 text-slate-500 hover:text-slate-300 hover:border-slate-500'
                                     : 'border-slate-300 text-slate-500 hover:text-slate-700 hover:border-slate-400'
@@ -6689,7 +6689,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                             type="button"
                             onClick={() => setTagPickerOpen(false)}
                             className={cn(
-                                'inline-flex items-center gap-0.5 rounded-full border px-2 py-0.5 text-[9px] transition-colors',
+                                'inline-flex items-center gap-0.5 rounded-full border px-2 py-0.5 text-xs transition-colors',
                                 isDark
                                     ? 'border-slate-700 text-slate-500 hover:text-slate-300'
                                     : 'border-slate-300 text-slate-500 hover:text-slate-700'
@@ -6715,7 +6715,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                 {sorted.length === 0 && (
                     <li
                         className={cn(
-                            'px-2 py-3 text-center text-[10px] italic',
+                            'px-2 py-3 text-center text-xs italic',
                             isDark ? 'text-slate-500' : 'text-slate-400'
                         )}
                     >
@@ -6767,7 +6767,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                                     <div className="min-w-0 flex-1">
                                         <div
                                             className={cn(
-                                                'text-[11px] font-semibold truncate',
+                                                'text-xs font-semibold truncate',
                                                 isSelected &&
                                                     (isDark
                                                         ? 'text-sky-200'
@@ -6784,7 +6784,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                                             {entry.category && (
                                                 <span
                                                     className={cn(
-                                                        'text-[9px] font-mono',
+                                                        'text-xs font-mono',
                                                         isDark
                                                             ? 'text-slate-500'
                                                             : 'text-slate-500'
@@ -6796,7 +6796,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                                             {entry.subCategory && (
                                                 <span
                                                     className={cn(
-                                                        'text-[9px]',
+                                                        'text-xs',
                                                         isDark
                                                             ? 'text-slate-600'
                                                             : 'text-slate-400'
@@ -6808,7 +6808,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                                             {isPreferred && (
                                                 <span
                                                     className={cn(
-                                                        'inline-flex rounded px-1 text-[8px] font-bold uppercase tracking-wider',
+                                                        'inline-flex rounded px-1 text-xs font-bold uppercase tracking-wider',
                                                         isDark
                                                             ? 'bg-sky-500/20 text-sky-300'
                                                             : 'bg-sky-100 text-sky-700'
@@ -6831,7 +6831,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                 <div className="space-y-1">
                     <label
                         className={cn(
-                            'block text-[8px] font-black uppercase tracking-widest',
+                            'block text-xs font-black uppercase tracking-widest',
                             isDark ? 'text-slate-500' : 'text-slate-500'
                         )}
                     >
@@ -6852,7 +6852,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                             }}
                             placeholder="e.g. Overview - Site Health"
                             className={cn(
-                                'flex-1 rounded-md border px-2 py-1.5 text-[11px] outline-none transition-colors focus:ring-2 focus:ring-sky-400',
+                                'flex-1 rounded-md border px-2 py-1.5 text-xs outline-none transition-colors focus:ring-2 focus:ring-sky-400',
                                 isDark
                                     ? 'bg-slate-950 border-slate-700 text-slate-100 placeholder:text-slate-600'
                                     : 'bg-white border-slate-200 text-slate-800 placeholder:text-slate-400'
@@ -6866,7 +6866,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                                 (currentSearchName ?? '').trim()
                             }
                             className={cn(
-                                'rounded-md border px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors',
+                                'rounded-md border px-2 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors',
                                 isDark
                                     ? 'bg-sky-500/20 border-sky-500/50 text-sky-200 hover:bg-sky-500/30 disabled:opacity-40 disabled:cursor-not-allowed'
                                     : 'bg-sky-100 border-sky-300 text-sky-800 hover:bg-sky-200 disabled:opacity-40 disabled:cursor-not-allowed'
@@ -6881,7 +6881,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
 
             <p
                 className={cn(
-                    'text-[9px] leading-relaxed',
+                    'text-xs leading-relaxed',
                     isDark ? 'text-sky-200/80' : 'text-sky-800/80'
                 )}
             >
@@ -7064,13 +7064,13 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
                             <div className="min-w-0">
                                 <p
                                     className={cn(
-                                        'text-[10px] font-mono font-bold tracking-tight uppercase truncate',
+                                        'text-xs font-mono font-bold tracking-tight uppercase truncate',
                                         isDark ? 'text-slate-400' : 'text-slate-700'
                                     )}
                                 >
                                     {title}
                                 </p>
-                                <p className="text-[9px] text-slate-500 truncate">
+                                <p className="text-xs text-slate-500 truncate">
                                     {subtitle}
                                 </p>
                             </div>
@@ -7138,7 +7138,7 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
                                             : 'Show the literal SPL from searchbase.conf'
                                     }
                                     className={cn(
-                                        'inline-flex min-w-0 items-center gap-1 rounded px-1 py-0.5 text-[9px] font-bold uppercase tracking-widest transition-colors focus:outline-none focus:ring-1 focus:ring-sky-500',
+                                        'inline-flex min-w-0 items-center gap-1 rounded px-1 py-0.5 text-xs font-bold uppercase tracking-widest transition-colors focus:outline-none focus:ring-1 focus:ring-sky-500',
                                         isDark
                                             ? 'text-slate-500 hover:text-slate-200'
                                             : 'text-slate-500 hover:text-slate-700'
@@ -7152,7 +7152,7 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
                                     />
                                     {showSpl ? 'Hide SPL' : 'Show SPL'}
                                     {!showSpl && selectedSearchName && (
-                                        <span className="ml-1 min-w-0 max-w-[12rem] truncate font-mono text-[9px] normal-case tracking-normal text-slate-600">
+                                        <span className="ml-1 min-w-0 max-w-[12rem] truncate font-mono text-xs normal-case tracking-normal text-slate-600">
                                             · {selectedSearchName}
                                         </span>
                                     )}
@@ -7192,7 +7192,7 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
                                     )}
                                 >
                                     {!catalogueLoaded ? (
-                                        <p className="text-[11px] text-slate-400 italic leading-relaxed">
+                                        <p className="text-xs text-slate-400 italic leading-relaxed">
                                             Loading searchbase SPL...
                                         </p>
                                     ) : selectedSpl && onOpenInSearch ? (
@@ -7230,7 +7230,7 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
                                             {renderSplBlock(selectedSpl)}
                                         </pre>
                                     ) : (
-                                        <p className="text-[11px] text-slate-400 leading-relaxed">
+                                        <p className="text-xs text-slate-400 leading-relaxed">
                                             No searchbase binding for this topology item.
                                         </p>
                                     )}
@@ -7238,7 +7238,7 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
                             )}
                             {selectedSearchName && (
                                 <p
-                                    className="text-[9px] font-mono text-slate-500 truncate"
+                                    className="text-xs font-mono text-slate-500 truncate"
                                     title={`Source: searchbase.conf search_name "${selectedSearchName}"`}
                                 >
                                     search_name &quot;{selectedSearchName}&quot;
@@ -7251,7 +7251,7 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
                                 onClick={onOpenInSearch}
                                 disabled={!onOpenInSearch || !selectedSpl}
                                 className={cn(
-                                    'inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold transition-colors focus:outline-none focus:ring-1 focus:ring-sky-500',
+                                    'inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold transition-colors focus:outline-none focus:ring-1 focus:ring-sky-500',
                                     onOpenInSearch && selectedSpl
                                         ? isDark
                                             ? 'text-sky-400 hover:text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 cursor-pointer'
@@ -7308,13 +7308,13 @@ interface TopologyEditorPanelProps {
 
 const editorInputClass = (isDark: boolean): string =>
     cn(
-        'w-full rounded-md border px-2 py-1.5 text-[11px] font-semibold outline-none transition-colors focus:ring-1 focus:ring-sky-400',
+        'w-full rounded-md border px-2 py-1.5 text-xs font-semibold outline-none transition-colors focus:ring-1 focus:ring-sky-400',
         isDark
             ? 'bg-slate-950 border-slate-700 text-slate-100 placeholder:text-slate-600'
             : 'bg-white border-slate-200 text-slate-800 placeholder:text-slate-400'
     );
 
-const editorLabelClass = 'text-[8px] font-black uppercase tracking-widest';
+const editorLabelClass = 'text-xs font-black uppercase tracking-widest';
 
 const editorBindingSummaryClass = (
     isDark: boolean,
@@ -7861,12 +7861,12 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                         )}
                     >
                         <div className="min-w-0">
-                            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-sky-500">
+                            <p className="text-xs font-black uppercase tracking-[0.18em] text-sky-500">
                                 Topology Editor
                             </p>
                             <p
                                 className={cn(
-                                    'text-[10px] font-semibold truncate',
+                                    'text-xs font-semibold truncate',
                                     isDark ? 'text-slate-400' : 'text-slate-500'
                                 )}
                             >
@@ -7959,7 +7959,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                     onClick={onApplyCurrentMapView}
                                     title={`Copy current map view: ${currentMapView.center[0]}, ${currentMapView.center[1]} at zoom ${currentMapView.zoom}`}
                                     className={cn(
-                                        'inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-black uppercase tracking-wider transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                                        'inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-black uppercase tracking-wider transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
                                         isDark
                                             ? 'border-sky-500/40 bg-sky-500/10 text-sky-200 hover:bg-sky-500/20'
                                             : 'border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100'
@@ -8042,14 +8042,14 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
 
                         <section className="space-y-2">
                             <div className="flex items-center justify-between gap-2">
-                                <h4 className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+                                <h4 className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
                                     Sites
                                 </h4>
                                 <button
                                     type="button"
                                     onClick={addSite}
                                     title="Add site"
-                                    className="inline-flex items-center gap-1 rounded-md bg-sky-500 px-2 py-1 text-[10px] font-black text-white hover:bg-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-300"
+                                    className="inline-flex items-center gap-1 rounded-md bg-sky-500 px-2 py-1 text-xs font-black text-white hover:bg-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-300"
                                 >
                                     <Plus className="w-3.5 h-3.5" />
                                     Add
@@ -8121,7 +8121,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                 <input
                                                     aria-label={`Rename site ${site.id}`}
                                                     className={cn(
-                                                        'w-full rounded border border-transparent bg-transparent px-1 py-0.5 text-[11px] font-semibold outline-none transition-colors focus:border-sky-400 focus:bg-white focus:ring-1 focus:ring-sky-400',
+                                                        'w-full rounded border border-transparent bg-transparent px-1 py-0.5 text-xs font-semibold outline-none transition-colors focus:border-sky-400 focus:bg-white focus:ring-1 focus:ring-sky-400',
                                                         isDark
                                                             ? 'text-slate-100 focus:bg-slate-950'
                                                             : 'text-slate-800'
@@ -8133,7 +8133,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                         })
                                                     }
                                                 />
-                                                <div className="flex min-w-0 items-center gap-1 px-1 text-[10px]">
+                                                <div className="flex min-w-0 items-center gap-1 px-1 text-xs">
                                                     <span
                                                         className="max-w-[5rem] truncate font-mono uppercase text-slate-400"
                                                         title={`Internal ID: ${site.id}`}
@@ -8270,7 +8270,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                     onClick={() => void placeSite(site.id)}
                                                     disabled={isPlacingSite}
                                                     className={cn(
-                                                        'inline-flex items-center justify-center gap-1 rounded-md border px-2 py-1.5 text-[10px] font-black uppercase tracking-wider transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400 disabled:cursor-wait disabled:opacity-60',
+                                                        'inline-flex items-center justify-center gap-1 rounded-md border px-2 py-1.5 text-xs font-black uppercase tracking-wider transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400 disabled:cursor-wait disabled:opacity-60',
                                                         isDark
                                                             ? 'border-sky-500/50 bg-sky-500/20 text-sky-200 hover:bg-sky-500/30'
                                                             : 'border-sky-300 bg-sky-100 text-sky-800 hover:bg-sky-200'
@@ -8283,7 +8283,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                 </button>
                                             </div>
                                             {sitePlacementErrors[site.id] && (
-                                                <span className="block text-[9px] font-semibold text-red-500">
+                                                <span className="block text-xs font-semibold text-red-500">
                                                     {sitePlacementErrors[site.id]}
                                                 </span>
                                             )}
@@ -8515,7 +8515,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                             />
                                             <span
                                                 className={cn(
-                                                    'block text-[9px] tracking-wide',
+                                                    'block text-xs tracking-wide',
                                                     isDark
                                                         ? 'text-slate-500'
                                                         : 'text-slate-400'
@@ -8550,7 +8550,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                     </span>
                                                     <div
                                                         className={cn(
-                                                            'mt-1 truncate text-[11px] font-semibold',
+                                                            'mt-1 truncate text-xs font-semibold',
                                                             isDark
                                                                 ? boundSearch
                                                                     ? 'text-slate-200'
@@ -8580,7 +8580,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                             shouldShowSearchPicker
                                                         }
                                                         className={cn(
-                                                            'inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[9px] font-black uppercase tracking-wider transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                                                            'inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-black uppercase tracking-wider transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
                                                             isDark
                                                                 ? 'border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800'
                                                                 : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
@@ -8626,7 +8626,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
 
                         <section className="space-y-2">
                             <div className="flex items-center justify-between gap-2">
-                                <h4 className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+                                <h4 className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
                                     Links
                                 </h4>
                                 <button
@@ -8634,7 +8634,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                     onClick={addLink}
                                     disabled={topology.sites.length < 2}
                                     title="Add connection"
-                                    className="inline-flex items-center gap-1 rounded-md bg-sky-500 px-2 py-1 text-[10px] font-black text-white hover:bg-sky-600 disabled:opacity-40 disabled:hover:bg-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-300"
+                                    className="inline-flex items-center gap-1 rounded-md bg-sky-500 px-2 py-1 text-xs font-black text-white hover:bg-sky-600 disabled:opacity-40 disabled:hover:bg-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-300"
                                 >
                                     <Plus className="w-3.5 h-3.5" />
                                     Add connection
@@ -8765,7 +8765,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                 <input
                                                     aria-label={`Rename link ${link.id}`}
                                                     className={cn(
-                                                        'w-full rounded border border-transparent bg-transparent px-1 py-0.5 text-[11px] font-semibold outline-none transition-colors focus:border-sky-400 focus:bg-white focus:ring-1 focus:ring-sky-400',
+                                                        'w-full rounded border border-transparent bg-transparent px-1 py-0.5 text-xs font-semibold outline-none transition-colors focus:border-sky-400 focus:bg-white focus:ring-1 focus:ring-sky-400',
                                                         isDark
                                                             ? 'text-slate-100 focus:bg-slate-950'
                                                             : 'text-slate-800'
@@ -8777,7 +8777,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                         })
                                                     }
                                                 />
-                                                <div className="flex min-w-0 items-center gap-1 px-1 text-[10px]">
+                                                <div className="flex min-w-0 items-center gap-1 px-1 text-xs">
                                                     <span
                                                         className="max-w-[5rem] truncate font-mono uppercase text-slate-400"
                                                         title={`Internal ID: ${link.id}`}
@@ -9048,7 +9048,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                     </span>
                                                     <div
                                                         className={cn(
-                                                            'mt-1 truncate text-[11px] font-semibold',
+                                                            'mt-1 truncate text-xs font-semibold',
                                                             isDark
                                                                 ? hasTeBinding
                                                                     ? 'text-slate-200'
@@ -9069,7 +9069,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                     </div>
                                                     {teA2AInventoryError && (
                                                         <p
-                                                            className="mt-1 truncate text-[9px] font-semibold text-red-500"
+                                                            className="mt-1 truncate text-xs font-semibold text-red-500"
                                                             title={teA2AInventoryError}
                                                         >
                                                             {teA2AInventoryError}
@@ -9197,7 +9197,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                 </div>
                                                 <div
                                                     className={cn(
-                                                        'mt-1 flex items-center justify-between gap-2 text-[9px] font-semibold',
+                                                        'mt-1 flex items-center justify-between gap-2 text-xs font-semibold',
                                                         isDark
                                                             ? 'text-slate-500'
                                                             : 'text-slate-400'
@@ -9279,7 +9279,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                 {teMatches[0]?.ambiguous && (
                                                     <p
                                                         className={cn(
-                                                            'mt-1 text-[9px] font-semibold',
+                                                            'mt-1 text-xs font-semibold',
                                                             isDark
                                                                 ? 'text-amber-300'
                                                                 : 'text-amber-700'
@@ -9293,7 +9293,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                     teA2ACandidates.length === 0 && (
                                                         <p
                                                             className={cn(
-                                                                'mt-1 text-[9px] font-semibold',
+                                                                'mt-1 text-xs font-semibold',
                                                                 isDark
                                                                     ? 'text-slate-500'
                                                                     : 'text-slate-400'
@@ -9327,7 +9327,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                     </span>
                                                     <div
                                                         className={cn(
-                                                            'mt-1 truncate text-[11px] font-semibold',
+                                                            'mt-1 truncate text-xs font-semibold',
                                                             isDark
                                                                 ? boundSearch
                                                                     ? 'text-slate-200'
@@ -9354,7 +9354,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                     }
                                                     aria-expanded={isSearchPickerOpen}
                                                     className={cn(
-                                                        'inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[9px] font-black uppercase tracking-wider transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                                                        'inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-black uppercase tracking-wider transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
                                                         isDark
                                                             ? 'border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800'
                                                             : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
@@ -9400,7 +9400,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
 
                         <section className="space-y-2">
                             <div className="flex items-center justify-between gap-2">
-                                <h4 className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+                                <h4 className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
                                     JSON
                                 </h4>
                                 <div className="flex items-center gap-1">
@@ -9442,7 +9442,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                 placeholder="Export or paste topology JSON"
                             />
                             {jsonError && (
-                                <p className="text-[10px] font-semibold text-red-500">
+                                <p className="text-xs font-semibold text-red-500">
                                     {jsonError}
                                 </p>
                             )}
@@ -9457,7 +9457,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                     >
                         <div className="min-w-0 flex-1">
                             {saveError && (
-                                <p className="truncate text-[10px] font-semibold text-red-500" title={saveError}>
+                                <p className="truncate text-xs font-semibold text-red-500" title={saveError}>
                                     {saveError}
                                 </p>
                             )}
@@ -9467,7 +9467,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                             onClick={onResetFactory}
                             disabled={isSaving}
                             className={cn(
-                                'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[10px] font-black transition-colors focus:outline-none focus:ring-1 focus:ring-red-400',
+                                'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-black transition-colors focus:outline-none focus:ring-1 focus:ring-red-400',
                                 isSaving
                                     ? 'cursor-not-allowed opacity-50'
                                     : isDark
@@ -9487,7 +9487,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                             onClick={onSave}
                             disabled={isSaving}
                             className={cn(
-                                'inline-flex items-center gap-1.5 rounded-md bg-sky-500 px-3 py-1.5 text-[10px] font-black text-white hover:bg-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-300',
+                                'inline-flex items-center gap-1.5 rounded-md bg-sky-500 px-3 py-1.5 text-xs font-black text-white hover:bg-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-300',
                                 isSaving && 'cursor-not-allowed opacity-60'
                             )}
                         >
@@ -9565,21 +9565,21 @@ const SiteDetails: React.FC<SiteDetailsProps> = ({
                             : 'bg-slate-50 border-slate-200'
                     )}
                 >
-                    <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-slate-500">
+                    <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-slate-500">
                         <MapPin className="w-3 h-3" />
                         Address & Location
                     </div>
                     {enrichment?.address && (
                         <p
                             className={cn(
-                                'text-[10px] leading-relaxed',
+                                'text-xs leading-relaxed',
                                 isDark ? 'text-slate-300' : 'text-slate-700'
                             )}
                         >
                             {enrichment.address}
                         </p>
                     )}
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[9px] text-slate-500 leading-relaxed">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-slate-500 leading-relaxed">
                         {enrichment?.country && (
                             <span>{enrichment.country}</span>
                         )}
@@ -9594,7 +9594,7 @@ const SiteDetails: React.FC<SiteDetailsProps> = ({
                             </span>
                         )}
                     </div>
-                    <p className="text-[9px] text-slate-500 leading-relaxed">
+                    <p className="text-xs text-slate-500 leading-relaxed">
                         Source: cisco:dnac:site:topology
                         {enrichment?.lastUpdated
                             ? ` - Updated ${enrichment.lastUpdated}`
@@ -9611,11 +9611,11 @@ const SiteDetails: React.FC<SiteDetailsProps> = ({
                             : 'bg-slate-50 border-slate-200'
                     )}
                 >
-                    <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-slate-500">
+                    <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-slate-500">
                         <Globe className="w-3 h-3" />
                         Design of Record
                     </div>
-                    <div className="flex items-center justify-between gap-2 text-[10px] leading-relaxed">
+                    <div className="flex items-center justify-between gap-2 text-xs leading-relaxed">
                         <span
                             className={cn(
                                 isDark ? 'text-slate-300' : 'text-slate-700'
@@ -9632,7 +9632,7 @@ const SiteDetails: React.FC<SiteDetailsProps> = ({
                             {formatMbps(site.internetEdgeMbps)}
                         </span>
                     </div>
-                    <p className="text-[9px] text-slate-500 leading-relaxed">
+                    <p className="text-xs text-slate-500 leading-relaxed">
                         Static configuration value &mdash; will be overridden
                         when per-site Internet uplink telemetry is wired in.
                     </p>
@@ -9646,13 +9646,13 @@ const SiteDetails: React.FC<SiteDetailsProps> = ({
                         : 'bg-slate-50 border-slate-200'
                 )}
             >
-                <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-slate-500">
+                <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-slate-500">
                     <Code2 className="w-3 h-3" />
                     Telemetry Source
                 </div>
                 <p
                     className={cn(
-                        'text-[10px] leading-relaxed',
+                        'text-xs leading-relaxed',
                         isDark ? 'text-slate-300' : 'text-slate-700'
                     )}
                 >
@@ -9666,7 +9666,7 @@ const SiteDetails: React.FC<SiteDetailsProps> = ({
                     a visual affordance not just textual. Mirrors the
                     treatment in the link-popup TELEMETRY SOURCE
                     block above. */}
-                <p className="flex items-center gap-1 text-[9px] text-slate-500 leading-relaxed">
+                <p className="flex items-center gap-1 text-xs text-slate-500 leading-relaxed">
                     {site.dataState === 'loading' && (
                         <Loader2
                             className="w-2.5 h-2.5 animate-spin flex-shrink-0"
@@ -9692,7 +9692,7 @@ const SiteDetails: React.FC<SiteDetailsProps> = ({
             </div>
             {links.length > 0 && (
                 <div className="space-y-1">
-                    <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-slate-500">
+                    <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-slate-500">
                         <Link2 className="w-3 h-3" />
                         Connected Paths
                     </div>
@@ -9717,7 +9717,7 @@ const SiteDetails: React.FC<SiteDetailsProps> = ({
                                 <div className="min-w-0">
                                     <span
                                         className={cn(
-                                            'block text-[10px] font-bold truncate',
+                                            'block text-xs font-bold truncate',
                                             isDark
                                                 ? 'text-slate-300'
                                                 : 'text-slate-700'
@@ -9834,7 +9834,7 @@ const LinkDetails: React.FC<LinkDetailsProps> = ({ link, siteById, isDark }) => 
                     isDark ? 'bg-white/5 border-white/5' : 'bg-slate-50 border-slate-200'
                 )}
             >
-                <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-slate-500">
+                <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-slate-500">
                     <Code2 className="w-3 h-3" />
                     Telemetry Source
                 </div>
@@ -9859,7 +9859,7 @@ const LinkDetails: React.FC<LinkDetailsProps> = ({ link, siteById, isDark }) => 
                 {link.dataState === 'loading' ? (
                     <p
                         className={cn(
-                            'flex items-center gap-1.5 text-[10px] leading-relaxed',
+                            'flex items-center gap-1.5 text-xs leading-relaxed',
                             isDark ? 'text-slate-400' : 'text-slate-500'
                         )}
                     >
@@ -9883,7 +9883,7 @@ const LinkDetails: React.FC<LinkDetailsProps> = ({ link, siteById, isDark }) => 
                 ) : (
                     <p
                         className={cn(
-                            'text-[10px] leading-relaxed',
+                            'text-xs leading-relaxed',
                             isDark ? 'text-slate-300' : 'text-slate-700'
                         )}
                     >
@@ -9893,7 +9893,7 @@ const LinkDetails: React.FC<LinkDetailsProps> = ({ link, siteById, isDark }) => 
                 {showAgentPair && (
                     <p
                         className={cn(
-                            'text-[10px] leading-relaxed font-mono',
+                            'text-xs leading-relaxed font-mono',
                             isDark ? 'text-slate-400' : 'text-slate-600'
                         )}
                     >
@@ -9929,7 +9929,7 @@ const LinkDetails: React.FC<LinkDetailsProps> = ({ link, siteById, isDark }) => 
                 {(link.sourceLocation || link.targetLocation) && (
                     <p
                         className={cn(
-                            'text-[9px] leading-relaxed',
+                            'text-xs leading-relaxed',
                             isDark ? 'text-slate-400' : 'text-slate-600'
                         )}
                         title="The TE-registered geographic location of each measuring agent (which can differ from the customer site name when TE aggregates agents by metro). The customer site name is shown on the row below."
@@ -9947,7 +9947,7 @@ const LinkDetails: React.FC<LinkDetailsProps> = ({ link, siteById, isDark }) => 
                         {link.targetLocation ?? '\u2014'}
                     </p>
                 )}
-                <p className="text-[9px] text-slate-500 leading-relaxed">
+                <p className="text-xs text-slate-500 leading-relaxed">
                     {siteById[link.sourceSiteId]?.name ?? link.sourceSiteId} to{' '}
                     {siteById[link.targetSiteId]?.name ?? link.targetSiteId}
                     {link.lastUpdated ? ` - Updated ${link.lastUpdated}` : ''}
@@ -9961,7 +9961,7 @@ const LinkDetails: React.FC<LinkDetailsProps> = ({ link, siteById, isDark }) => 
                         target="_blank"
                         rel="noopener noreferrer"
                         className={cn(
-                            'mt-1 inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold transition-colors',
+                            'mt-1 inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-bold transition-colors',
                             isDark
                                 ? 'bg-sky-500/10 text-sky-300 hover:bg-sky-500/20'
                                 : 'bg-sky-50 text-sky-700 hover:bg-sky-100'
@@ -9991,7 +9991,7 @@ const MetricPill: React.FC<MetricPillProps> = ({ label, value, isDark }) => (
             isDark ? 'bg-white/5 border-white/5' : 'bg-slate-50 border-slate-200'
         )}
     >
-        <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-1">
+        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">
             {label}
         </span>
         <span
@@ -10018,7 +10018,7 @@ const LegendRow: React.FC<LegendRowProps> = ({ color, label, id, isDark }) => (
             <div className={cn('w-2 h-2 rounded-full flex-shrink-0', color)} />
             <span
                 className={cn(
-                    'text-[10px] font-bold truncate',
+                    'text-xs font-bold truncate',
                     isDark ? 'text-slate-300' : 'text-slate-600'
                 )}
             >
@@ -10027,7 +10027,7 @@ const LegendRow: React.FC<LegendRowProps> = ({ color, label, id, isDark }) => (
         </div>
         <span
             className={cn(
-                'text-[10px] font-mono flex-shrink-0',
+                'text-xs font-mono flex-shrink-0',
                 isDark ? 'text-slate-500' : 'text-slate-400'
             )}
         >
@@ -10056,9 +10056,9 @@ export const TopologySiteTable: React.FC<TopologySiteTableProps> = ({
 
     return (
         <div className="h-full w-full overflow-auto rounded-xl border border-slate-200 dark:border-slate-800">
-            <table className="w-full text-left text-[11px] tabular-nums">
+            <table className="w-full text-left text-xs tabular-nums">
                 <thead className="sticky top-0 bg-slate-50 dark:bg-slate-900/95 backdrop-blur-sm">
-                    <tr className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                    <tr className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
                         <th className="px-3 py-2 font-black">Site</th>
                         <th className="px-3 py-2 font-black">Role</th>
                         <th className="px-3 py-2 font-black text-right">Health</th>
@@ -10090,16 +10090,16 @@ export const TopologySiteTable: React.FC<TopologySiteTableProps> = ({
                                             title={site.status}
                                         />
                                         <div className="flex flex-col leading-tight min-w-0">
-                                            <span className="text-[11px] font-bold text-slate-700 dark:text-slate-100 truncate">
+                                            <span className="text-xs font-bold text-slate-700 dark:text-slate-100 truncate">
                                                 {site.name}
                                             </span>
-                                            <span className="text-[9px] font-mono text-slate-400 dark:text-slate-500 uppercase">
+                                            <span className="text-xs font-mono text-slate-400 dark:text-slate-500 uppercase">
                                                 {site.shortName}
                                             </span>
                                         </div>
                                     </div>
                                 </td>
-                                <td className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                                <td className="px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
                                     {topologyRoleLabel(site.role)}
                                 </td>
                                 <td className="px-3 py-1.5 text-right font-mono text-slate-700 dark:text-slate-200">

@@ -34,7 +34,7 @@ import {
     Table2,
     Trash2,
     X,
-} from 'lucide-react';
+} from '@/common/icons/SuiIcon';
 import {
     DndContext,
     KeyboardSensor,
@@ -570,7 +570,7 @@ const TileVizSelect: React.FC<{
                             : event.target.value
                     )
                 }
-                className="h-6 max-w-[132px] rounded border border-transparent bg-transparent px-1 text-[10px] font-black uppercase text-slate-500 outline-none transition hover:border-slate-300 hover:bg-white focus:border-sky-300 focus:bg-white focus:ring-1 focus:ring-sky-300 dark:text-slate-300 dark:hover:border-slate-700 dark:hover:bg-slate-900 dark:focus:border-sky-700 dark:focus:bg-slate-900 dark:focus:ring-sky-800"
+                className="h-6 max-w-[132px] rounded border border-transparent bg-transparent px-1 text-xs font-black uppercase text-slate-500 outline-none transition hover:border-slate-300 hover:bg-white focus:border-sky-300 focus:bg-white focus:ring-1 focus:ring-sky-300 dark:text-slate-300 dark:hover:border-slate-700 dark:hover:bg-slate-900 dark:focus:border-sky-700 dark:focus:bg-slate-900 dark:focus:ring-sky-800"
             >
                 <option value={DEFAULT_TILE_VIZ}>Default ({defaultLabel})</option>
                 {TILE_VIZ_OPTIONS.map((option) => (
@@ -637,7 +637,7 @@ const TileOverlaySelect: React.FC<{
                     }
                     onChangeOverlay(tile.id, next);
                 }}
-                className="h-6 max-w-[152px] rounded border border-transparent bg-transparent px-1 text-[10px] font-black uppercase text-slate-500 outline-none transition hover:border-slate-300 hover:bg-white focus:border-sky-300 focus:bg-white focus:ring-1 focus:ring-sky-300 dark:text-slate-300 dark:hover:border-slate-700 dark:hover:bg-slate-900 dark:focus:border-sky-700 dark:focus:bg-slate-900 dark:focus:ring-sky-800"
+                className="h-6 max-w-[152px] rounded border border-transparent bg-transparent px-1 text-xs font-black uppercase text-slate-500 outline-none transition hover:border-slate-300 hover:bg-white focus:border-sky-300 focus:bg-white focus:ring-1 focus:ring-sky-300 dark:text-slate-300 dark:hover:border-slate-700 dark:hover:bg-slate-900 dark:focus:border-sky-700 dark:focus:bg-slate-900 dark:focus:ring-sky-800"
             >
                 {defaultOverlayField && (
                     <option value={DEFAULT_OVERLAY_FIELD}>
@@ -1836,7 +1836,7 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                 )}
             </div>
             {!presentationMode && (
-                <div className="flex items-center gap-2 border-t border-slate-100 px-2 py-1.5 text-[10px] font-semibold text-slate-500 dark:border-slate-700 dark:text-slate-300">
+                <div className="flex items-center gap-2 border-t border-slate-100 px-2 py-1.5 text-xs font-semibold text-slate-500 dark:border-slate-700 dark:text-slate-300">
                     <TileVizSelect
                         tile={tile}
                         record={record}
@@ -1952,7 +1952,7 @@ const SearchbasePreviewTile: React.FC<ResolvedSearchbaseCanvasTileProps> = ({
                         <h3 className="line-clamp-2 text-sm font-black uppercase leading-tight tracking-tight text-slate-900 dark:text-slate-50">
                             {record.searchName}
                         </h3>
-                        <div className="mt-1 truncate text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                        <div className="mt-1 truncate text-xs font-semibold uppercase tracking-wide text-slate-400">
                             {[record.category, record.subCategory]
                                 .filter(Boolean)
                                 .join(' / ')}
@@ -1965,23 +1965,23 @@ const SearchbasePreviewTile: React.FC<ResolvedSearchbaseCanvasTileProps> = ({
                 </p>
 
                 <div className="mt-3 flex flex-wrap gap-1">
-                    <span className="rounded bg-slate-100 px-2 py-1 text-[10px] font-black uppercase text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                    <span className="rounded bg-slate-100 px-2 py-1 text-xs font-black uppercase text-slate-500 dark:bg-slate-800 dark:text-slate-300">
                         {formatVizLabel(viz)}
                     </span>
                     {tile.vizOverride && (
-                        <span className="rounded bg-sky-50 px-2 py-1 text-[10px] font-black uppercase text-sky-700 dark:bg-sky-950 dark:text-sky-200">
+                        <span className="rounded bg-sky-50 px-2 py-1 text-xs font-black uppercase text-sky-700 dark:bg-sky-950 dark:text-sky-200">
                             Override
                         </span>
                     )}
                     {record.drilldownSearchName && (
-                        <span className="rounded bg-sky-50 px-2 py-1 text-[10px] font-black uppercase text-sky-700 dark:bg-sky-950 dark:text-sky-200">
+                        <span className="rounded bg-sky-50 px-2 py-1 text-xs font-black uppercase text-sky-700 dark:bg-sky-950 dark:text-sky-200">
                             Drilldown
                         </span>
                     )}
                     {record.tags.slice(0, 3).map((tag) => (
                         <span
                             key={tag}
-                            className="rounded bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-500 dark:bg-slate-900 dark:text-slate-400"
+                            className="rounded bg-slate-50 px-2 py-1 text-xs font-bold text-slate-500 dark:bg-slate-900 dark:text-slate-400"
                         >
                             {tag}
                         </span>
@@ -2000,7 +2000,7 @@ const SearchbasePreviewTile: React.FC<ResolvedSearchbaseCanvasTileProps> = ({
                 )}
             </div>
 
-            <div className="flex items-center gap-2 border-t border-slate-100 px-2 py-1.5 text-[10px] font-semibold text-slate-500 dark:border-slate-700 dark:text-slate-300">
+            <div className="flex items-center gap-2 border-t border-slate-100 px-2 py-1.5 text-xs font-semibold text-slate-500 dark:border-slate-700 dark:text-slate-300">
                 {!presentationMode && (
                     <TileVizSelect
                         tile={tile}
@@ -2684,13 +2684,13 @@ const NoDataReportModal: React.FC<{
                                                         {tags.slice(0, 4).map((tag) => (
                                                             <span
                                                                 key={tag}
-                                                                className="rounded border border-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 dark:border-slate-700 dark:text-slate-300"
+                                                                className="rounded border border-slate-200 px-1.5 py-0.5 text-xs font-semibold text-slate-500 dark:border-slate-700 dark:text-slate-300"
                                                             >
                                                                 {tag}
                                                             </span>
                                                         ))}
                                                         {tags.length > 4 && (
-                                                            <span className="rounded border border-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 dark:border-slate-700 dark:text-slate-500">
+                                                            <span className="rounded border border-slate-200 px-1.5 py-0.5 text-xs font-semibold text-slate-400 dark:border-slate-700 dark:text-slate-500">
                                                                 +{tags.length - 4}
                                                             </span>
                                                         )}
@@ -3697,7 +3697,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                     <SlidersHorizontal className="h-5 w-5" />
                 </div>
                 <div className="min-w-0">
-                    <div className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">
+                    <div className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">
                         {replaceMode ? 'Replace tile' : 'Add tiles'}
                     </div>
                     <h2 className="truncate text-lg font-black text-slate-900 dark:text-slate-50">
@@ -3735,7 +3735,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                     >
                         <span>Filters</span>
                         {hasActiveFilters && (
-                            <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] tracking-normal text-sky-700 dark:bg-sky-900 dark:text-sky-200">
+                            <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs tracking-normal text-sky-700 dark:bg-sky-900 dark:text-sky-200">
                                 active
                             </span>
                         )}
@@ -3769,13 +3769,13 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                             {activeFilterChips.slice(0, 10).map((chip) => (
                                 <span
                                     key={chip.id}
-                                    className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-[11px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                                    className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                                 >
                                     {chip.label}
                                 </span>
                             ))}
                             {activeFilterChips.length > 10 && (
-                                <span className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-[11px] font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                                <span className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                                     +{activeFilterChips.length - 10}
                                 </span>
                             )}
@@ -3784,7 +3784,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                 ) : (
                     <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/80 p-3 dark:border-slate-800 dark:bg-slate-900/60">
                         <div className="grid grid-cols-[76px_minmax(0,1fr)] gap-x-3 gap-y-3">
-                            <span className="self-center text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                            <span className="self-center text-xs font-black uppercase tracking-[0.16em] text-slate-400">
                                 App
                             </span>
                             <SearchableAppMultiSelect
@@ -3803,7 +3803,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                 }}
                             />
 
-                            <span className="self-start pt-4 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                            <span className="self-start pt-4 text-xs font-black uppercase tracking-[0.16em] text-slate-400">
                                 Visibility
                             </span>
                             <div className="grid gap-2 sm:grid-cols-3">
@@ -3846,7 +3846,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                 </label>
                             </div>
 
-                            <label className="self-center text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                            <label className="self-center text-xs font-black uppercase tracking-[0.16em] text-slate-400">
                                 Category
                             </label>
                             <SearchableFilterSelect
@@ -3866,7 +3866,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
 
                             {category !== ALL && subCategoryOptions.length > 0 && (
                                 <>
-                                    <label className="self-center text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                                    <label className="self-center text-xs font-black uppercase tracking-[0.16em] text-slate-400">
                                         Sub-cat
                                     </label>
                                     <SearchableFilterSelect
@@ -3885,7 +3885,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                 </>
                             )}
 
-                            <label className="self-center text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                            <label className="self-center text-xs font-black uppercase tracking-[0.16em] text-slate-400">
                                 Viz
                             </label>
                             <select
@@ -3905,7 +3905,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                 ))}
                             </select>
 
-                            <label className="self-center text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                            <label className="self-center text-xs font-black uppercase tracking-[0.16em] text-slate-400">
                                 Tags
                             </label>
                             <div>
@@ -3928,7 +3928,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                                         )
                                                     )
                                                 }
-                                                className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-1 text-[11px] font-bold text-sky-700 hover:bg-sky-200 dark:bg-sky-900 dark:text-sky-100 dark:hover:bg-sky-800"
+                                                className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-1 text-xs font-bold text-sky-700 hover:bg-sky-200 dark:bg-sky-900 dark:text-sky-100 dark:hover:bg-sky-800"
                                             >
                                                 {tag}
                                                 <X className="h-3 w-3" />
@@ -3939,7 +3939,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                                 key={tag}
                                                 type="button"
                                                 onClick={() => selectTag(tag)}
-                                                className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-500 hover:border-sky-300 hover:text-sky-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:border-sky-700 dark:hover:text-sky-300"
+                                                className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-500 hover:border-sky-300 hover:text-sky-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:border-sky-700 dark:hover:text-sky-300"
                                             >
                                                 {tag}
                                                 <span className="text-slate-400">{count}</span>
@@ -4051,11 +4051,11 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                                 <h3 className="truncate text-sm font-black text-slate-900 dark:text-slate-50">
                                                     {record.searchName}
                                                 </h3>
-                                                <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-black uppercase text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                                                <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-black uppercase text-slate-500 dark:bg-slate-800 dark:text-slate-300">
                                                     {formatVizLabel(record.defaultViz)}
                                                 </span>
                                             </div>
-                                            <div className="mt-0.5 truncate text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                                            <div className="mt-0.5 truncate text-xs font-semibold uppercase tracking-wide text-slate-400">
                                                 {[
                                                     record.category,
                                                     record.subCategory,
@@ -4074,7 +4074,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                                             key={tag}
                                                             type="button"
                                                             onClick={() => selectTag(tag)}
-                                                            className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500 hover:bg-sky-100 hover:text-sky-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-sky-900 dark:hover:text-sky-100"
+                                                            className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-500 hover:bg-sky-100 hover:text-sky-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-sky-900 dark:hover:text-sky-100"
                                                         >
                                                             {tag}
                                                         </button>
@@ -4104,7 +4104,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                         </button>
                                     </div>
                                     {canvasCount > 0 && (
-                                        <div className="mt-2 text-[11px] font-semibold text-sky-600 dark:text-sky-300">
+                                        <div className="mt-2 text-xs font-semibold text-sky-600 dark:text-sky-300">
                                             In canvas: {canvasCount}
                                         </div>
                                     )}
@@ -5542,7 +5542,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 Auto advance
                                 <span
                                     className={cn(
-                                        'rounded-full px-1.5 py-0.5 text-[10px] leading-none',
+                                        'rounded-full px-1.5 py-0.5 text-xs leading-none',
                                         autoAdvanceActive
                                             ? 'bg-white/20 text-white'
                                             : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300'
@@ -5790,7 +5790,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                         <span className="truncate">{option.label}</span>
                                         <span
                                             className={cn(
-                                                'rounded-full px-1.5 py-0.5 text-[10px] leading-none',
+                                                'rounded-full px-1.5 py-0.5 text-xs leading-none',
                                                 selected
                                                     ? 'bg-white/20 text-current dark:bg-slate-950/10'
                                                     : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300'
@@ -5956,7 +5956,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                 <div className="absolute inset-0 z-[70] min-h-screen overflow-y-auto bg-[#f5f7fb] p-4 text-slate-950 dark:bg-slate-950 dark:text-slate-50">
                     <div className="mb-4 flex min-w-0 items-center gap-3 rounded-md border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                         <div className="min-w-0 flex-1">
-                            <div className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
+                            <div className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
                                 Presenting
                             </div>
                             <h1 className="truncate text-2xl font-black leading-tight text-slate-950 dark:text-slate-50">

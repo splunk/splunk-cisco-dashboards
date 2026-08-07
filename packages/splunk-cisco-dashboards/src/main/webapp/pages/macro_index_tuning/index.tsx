@@ -6,20 +6,20 @@ import React, {
   useState,
 } from "react";
 import {
-  AlertTriangle,
-  ArrowLeft,
-  Check,
-  ChevronDown,
-  ChevronRight,
-  ClipboardCopy,
-  ExternalLink,
-  Info,
-  Loader2,
-  Play,
-  RefreshCw,
-  Save,
-  Search,
-} from "lucide-react";
+    AlertTriangle,
+    ArrowLeft,
+    Check,
+    ChevronDown,
+    ChevronRight,
+    ClipboardCopy,
+    ExternalLink,
+    Info,
+    Loader2,
+    Play,
+    RefreshCw,
+    Save,
+    Search,
+} from '@/common/icons/SuiIcon';
 import { getDefaultFetchInit } from "@splunk/splunk-utils/fetch";
 import { versionLabel } from "@splunk/splunk-utils/config";
 import TimeRangeDropdown from "@splunk/react-time-range/Dropdown";
@@ -2547,11 +2547,11 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   <span className="truncate text-sm font-semibold text-slate-700">
                     {getTargetAppLabel(targetApp)}
                   </span>
-                  <code className="shrink-0 font-mono text-[11px] font-medium text-slate-500">
+                  <code className="shrink-0 font-mono text-xs font-medium text-slate-500">
                     {targetApp}/local/macros.conf
                   </code>
                 </span>
-                <span className="ml-auto shrink-0 rounded bg-white px-2 py-0.5 text-[11px] font-semibold normal-case tracking-normal text-slate-500">
+                <span className="ml-auto shrink-0 rounded bg-white px-2 py-0.5 text-xs font-semibold normal-case tracking-normal text-slate-500">
                   {formatNumber(appRows.length)} macros
                 </span>
               </button>
@@ -2629,7 +2629,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
         <section className="bg-[#102a43] text-white">
           <div className="mx-auto grid max-w-[1180px] gap-6 px-7 py-5 md:grid-cols-[minmax(0,1fr)_400px] md:items-center">
             <div className="min-w-0">
-              <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-cyan-300">
+              <div className="text-xs font-bold uppercase tracking-[0.08em] text-cyan-300">
                 Splunk App for Secure Networking · Setup · Step 3 of 3
               </div>
               <h1 className="mt-1 text-2xl font-bold leading-tight text-white">
@@ -2640,21 +2640,21 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 and unlock the dashboards.
               </p>
             </div>
-            <ol className="grid grid-cols-3 overflow-hidden rounded-md bg-white/10 text-[11px] font-bold">
+            <ol className="grid grid-cols-3 overflow-hidden rounded-md bg-white/10 text-xs font-bold">
               <li className="flex min-h-10 items-center gap-2 bg-emerald-900 px-3 text-emerald-50">
-                <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-600 text-[10px]">
+                <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-600 text-xs">
                   <Check size={12} />
                 </span>
                 Check data
               </li>
               <li className="flex min-h-10 items-center gap-2 bg-emerald-900 px-3 text-emerald-50">
-                <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-600 text-[10px]">
+                <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-600 text-xs">
                   <Check size={12} />
                 </span>
                 Packages
               </li>
               <li className="flex min-h-10 items-center gap-2 bg-sky-800 px-3 text-white">
-                <span className="grid h-5 w-5 place-items-center rounded-full bg-cyan-500 text-[10px]">
+                <span className="grid h-5 w-5 place-items-center rounded-full bg-cyan-500 text-xs">
                   3
                 </span>
                 Tune indexes
@@ -2674,7 +2674,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
           >
             <div>
               <div
-                className={`text-[10px] font-bold uppercase tracking-wide ${
+                className={`text-xs font-bold uppercase tracking-wide ${
                   error ? "text-red-700" : "text-emerald-700"
                 }`}
               >
@@ -2706,7 +2706,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   <div className={`text-lg font-bold ${colorClass}`}>
                     {formatNumber(value)}
                   </div>
-                  <div className="text-[9px] font-bold uppercase tracking-wide text-slate-500">
+                  <div className="text-xs font-bold uppercase tracking-wide text-slate-500">
                     {label}
                   </div>
                 </div>
@@ -2716,7 +2716,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
 
           <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_330px]">
             <section className="rounded-lg border border-slate-200 bg-white p-5">
-              <div className="text-[10px] font-bold uppercase tracking-wide text-sky-700">
+              <div className="text-xs font-bold uppercase tracking-wide text-sky-700">
                 Index macro plan
               </div>
               <h2 className="mt-1 text-lg font-bold text-slate-900">
@@ -2849,7 +2849,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 className="mt-5 overflow-hidden rounded-lg border border-sky-200 bg-sky-50/50"
               >
                 <div className="px-4 py-4">
-                  <div className="text-[10px] font-bold uppercase tracking-wide text-sky-700">
+                  <div className="text-xs font-bold uppercase tracking-wide text-sky-700">
                     Installed Cisco apps
                   </div>
                   <h3
@@ -2928,7 +2928,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 id="setup-data-model-readiness"
                 className="scroll-mt-4 rounded-lg border border-slate-200 bg-white p-5"
               >
-                <div className="text-[10px] font-bold uppercase tracking-wide text-sky-700">
+                <div className="text-xs font-bold uppercase tracking-wide text-sky-700">
                   Search performance
                 </div>
                 <h2 className="mt-1 text-lg font-bold text-slate-900">
@@ -2995,7 +2995,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               <section className="rounded-lg border border-slate-200 bg-white p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="text-[10px] font-bold uppercase tracking-wide text-sky-700">
+                    <div className="text-xs font-bold uppercase tracking-wide text-sky-700">
                       Performance readiness
                     </div>
                     <h2 className="mt-1 text-lg font-bold text-slate-900">
@@ -3093,7 +3093,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                           <span className="block truncate font-bold text-slate-900">
                             {group.label}
                           </span>
-                          <span className="block text-[11px] text-slate-500">
+                          <span className="block text-xs text-slate-500">
                             {group.checkingCount
                               ? "Checking acceleration"
                               : `${group.enabledCount} of ${group.items.length} accelerated`}
@@ -3135,11 +3135,11 @@ export default function MacroIndexTuningPage(): JSX.Element {
                                     {item.label}
                                   </span>
                                 </div>
-                                <code className="mt-0.5 block truncate font-mono text-[10px] text-slate-500">
+                                <code className="mt-0.5 block truncate font-mono text-xs text-slate-500">
                                   {item.model}
                                 </code>
                                 <div
-                                  className={`mt-0.5 text-[11px] ${
+                                  className={`mt-0.5 text-xs ${
                                     enabled
                                       ? "text-emerald-700"
                                       : checking
@@ -3177,7 +3177,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               <details className="group overflow-hidden rounded-lg border border-slate-200 bg-white">
                 <summary className="flex min-h-14 cursor-pointer list-none items-center px-4 text-sm font-bold text-slate-800 hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
                   <span>
-                    <span className="block text-[10px] uppercase tracking-wide text-slate-500">
+                    <span className="block text-xs uppercase tracking-wide text-slate-500">
                       Optional
                     </span>
                     Advanced tuning
@@ -3223,7 +3223,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
           className="fixed bottom-0 left-0 right-0 z-[80] flex flex-wrap items-center justify-between gap-3 border-t border-slate-300 bg-white/95 px-6 py-3 shadow-[0_-8px_24px_rgba(15,23,42,0.14)] backdrop-blur md:left-[72px]"
         >
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-wide text-sky-800">
+            <div className="text-xs font-bold uppercase tracking-wide text-sky-800">
               Step 3 of 3 · {setupScanReady ? "Ready to finish" : scanState === "error" ? "Ready to finish without tuning" : "Scanning"}
             </div>
             <div className="mt-0.5 text-xs text-slate-600">
@@ -3307,7 +3307,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               <Check size={14} /> Validate add-ons
             </li>
             <li className="flex min-h-10 items-center gap-2 bg-sky-100 px-4 text-sky-900">
-              <span className="grid h-5 w-5 place-items-center rounded-full bg-sky-700 text-[10px] text-white">
+              <span className="grid h-5 w-5 place-items-center rounded-full bg-sky-700 text-xs text-white">
                 3
               </span>
               Tune indexes
@@ -3577,7 +3577,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                       )}
                       <div className="min-w-[240px] flex-1">
                         <div className="font-bold text-slate-900">{summary.label}</div>
-                        <code className="font-mono text-[10px] text-slate-500">
+                        <code className="font-mono text-xs text-slate-500">
                           {summary.targetApp}
                         </code>
                       </div>
@@ -3827,7 +3827,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                     <span className="block truncate font-bold text-slate-900">
                       {group.label}
                     </span>
-                    <span className="block text-[11px] text-slate-500">
+                    <span className="block text-xs text-slate-500">
                       {group.checkingCount
                         ? "Checking acceleration"
                         : `${group.enabledCount} of ${group.items.length} accelerated`}
@@ -3860,11 +3860,11 @@ export default function MacroIndexTuningPage(): JSX.Element {
                               {item.label}
                             </span>
                           </div>
-                          <code className="mt-0.5 block truncate font-mono text-[10px] text-slate-500">
+                          <code className="mt-0.5 block truncate font-mono text-xs text-slate-500">
                             {item.model}
                           </code>
                           <div
-                            className={`mt-0.5 text-[11px] ${
+                            className={`mt-0.5 text-xs ${
                               enabled
                                 ? "text-emerald-700"
                                 : checking
@@ -4186,11 +4186,11 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 <span className="truncate text-sm font-semibold text-slate-700">
                   {getTargetAppLabel(CIM_APP_NAME)}
                 </span>
-                <code className="shrink-0 font-mono text-[11px] font-medium text-slate-500">
+                <code className="shrink-0 font-mono text-xs font-medium text-slate-500">
                   {CIM_APP_NAME}/local/macros.conf
                 </code>
               </span>
-              <span className="shrink-0 rounded bg-slate-100 px-2 py-0.5 text-[11px] font-semibold normal-case tracking-normal text-slate-500">
+              <span className="shrink-0 rounded bg-slate-100 px-2 py-0.5 text-xs font-semibold normal-case tracking-normal text-slate-500">
                 {formatNumber(cimMacroRows.length)} macros
               </span>
             </button>

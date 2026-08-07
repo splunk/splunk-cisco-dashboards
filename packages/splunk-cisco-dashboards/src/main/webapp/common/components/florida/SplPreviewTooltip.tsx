@@ -6,7 +6,7 @@ import React, {
     useState,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { Code2, X } from 'lucide-react';
+import { Code2, X } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
 
 type SplPreviewTooltipAnchor = 'auto' | 'left' | 'right';
@@ -500,7 +500,7 @@ export const SplPreviewTooltip: React.FC<SplPreviewTooltipProps> = ({
                                   SPL preview
                               </p>
                               <p
-                                  className="truncate font-mono text-[11px]"
+                                  className="truncate font-mono text-xs"
                                   style={{ color: SPLUNK_EDITOR_COLORS.muted }}
                               >
                                   {title}
@@ -553,7 +553,7 @@ export const SplPreviewTooltip: React.FC<SplPreviewTooltipProps> = ({
                       </div>
                       {footnote && (
                           <div
-                              className="border-t px-3 py-2 font-mono text-[11px]"
+                              className="border-t px-3 py-2 font-mono text-xs"
                               style={{
                                   borderColor: SPLUNK_EDITOR_COLORS.borderSoft,
                                   color: SPLUNK_EDITOR_COLORS.muted,

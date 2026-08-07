@@ -19,13 +19,13 @@ import {
     MoreVertical,
     Search,
     Settings,
-    Share2,
     Shield,
     ShieldAlert,
     ShieldCheck,
+    Share2,
     SlidersHorizontal,
     Users,
-} from 'lucide-react';
+} from '@/common/icons/SuiIcon';
 import {
     Area,
     AreaChart,
@@ -182,7 +182,7 @@ const Metric: React.FC<MetricProps> = ({
         >
             <div className="flex items-center gap-2 text-slate-400">
                 <Icon className="h-4 w-4" />
-                <span className="text-[11px] font-black uppercase tracking-[0.16em]">
+                <span className="text-xs font-black uppercase tracking-[0.16em]">
                     {title}
                 </span>
             </div>

@@ -1,5 +1,4 @@
 import React from 'react';
-import { Copyright } from 'lucide-react';
 
 const markStyle: React.CSSProperties = {
     position: 'fixed',
@@ -10,13 +9,13 @@ const markStyle: React.CSSProperties = {
     alignItems: 'center',
     gap: 4,
     padding: '4px 7px',
-    border: '1px solid rgba(148, 163, 184, 0.24)',
+    border: '1px solid var(--sui-border)',
     borderRadius: 999,
-    background: 'rgba(15, 23, 42, 0.72)',
+    background: 'var(--sui-background-floating)',
     boxShadow: '0 2px 8px rgba(15, 23, 42, 0.14)',
-    color: '#f8fafc',
-    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    fontSize: 10,
+    color: 'var(--sui-content-default)',
+    fontFamily: 'var(--sui-font-family)',
+    fontSize: 'var(--sui-font-size-small)',
     fontWeight: 600,
     lineHeight: 1,
     letterSpacing: '0.02em',
@@ -31,8 +30,7 @@ export default function CopyrightMark(): JSX.Element {
 
     return (
         <div aria-label={label} title={label} style={markStyle}>
-            <Copyright aria-hidden="true" focusable="false" size={12} strokeWidth={2} />
-            <span aria-hidden="true">{year} Splunk Inc.</span>
+            <span aria-hidden="true">© {year} Splunk Inc.</span>
         </div>
     );
 }

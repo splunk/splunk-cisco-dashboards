@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Map, Table2 } from 'lucide-react';
+import { Map, Table2 } from '@/common/icons/SuiIcon';
 import {
     CustomerTopologyMap,
     CUSTOMER_TOPOLOGY,
@@ -37,7 +37,7 @@ const RegionalViewToggle: React.FC<{
                     aria-selected={active}
                     onClick={() => onChange(option.value)}
                     className={cn(
-                        'inline-flex h-8 items-center gap-1.5 rounded px-3 text-[10px] font-black uppercase tracking-wider transition focus:outline-none focus:ring-1 focus:ring-sky-400',
+                        'inline-flex h-8 items-center gap-1.5 rounded px-3 text-xs font-black uppercase tracking-wider transition focus:outline-none focus:ring-1 focus:ring-sky-400',
                         active
                             ? 'border border-slate-200 bg-white text-sky-600 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-sky-300'
                             : 'text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200'
@@ -65,7 +65,7 @@ export const SiteMap: React.FC<SiteMapProps> = ({
                     <h2 className="truncate text-[17px] font-black uppercase tracking-wide text-sky-900 dark:text-sky-200">
                         Customer Site Connectivity
                     </h2>
-                    <p className="mt-1 truncate text-[11px] font-semibold text-slate-400 dark:text-slate-500">
+                    <p className="mt-1 truncate text-xs font-semibold text-slate-400 dark:text-slate-500">
                         Editable customer site connectivity
                     </p>
                 </div>

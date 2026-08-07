@@ -49,50 +49,47 @@
 
 import React from 'react';
 import {
+    Layers,
+    Shield,
+    Wifi,
+    Database,
+    Cloud,
+    Users,
+    SquareArrowRight,
+    ShieldAlert,
+    Globe,
+    Settings2,
+    MonitorSmartphone,
+    Container,
+    Printer,
+    Activity,
+    LineChart,
+    BadgeCheck,
+    Lock,
+} from '@/common/icons/SuiIcon';
+import {
     Router,
     Network,
     Boxes,
-    Layers,
-    Shield,
     KeyRound,
     Radar,
     RadioTower,
-    Wifi,
     Server,
-    Database,
     HardDrive,
     Phone,
-    Cloud,
     Globe2,
     Box,
-    Users,
-    // Build 115.5 — new shape additions. Each was picked from
-    // lucide-react's icon set on the criterion "is this read at
-    // 36–40px without a caption?". Ones that didn't pass that
-    // bar (e.g. Iot, which reads as a generic chip at small
-    // sizes) get a custom SVG below the lucide section.
-    Cable, // hub — multi-port concentrator
-    Waypoints, // gateway / SD-WAN edge — branch path icon
-    SquareArrowRight, // proxy — request relay
-    ShieldAlert, // waf — shield with alert tick
-    Globe, // dns_server — DNS lookups touch the world
-    Settings2, // dhcp_server — config knob
-    MonitorSmartphone, // web_server — UI presence
-    Code2, // app_server — code-running server
-    Container, // container — stylised crate
-    Cpu, // vm — hypervisor / VM
-    Server as MainframeServer, // mainframe — heavier server (also used for siem)
-    HardDriveDownload, // backup — store-then-restore
-    Laptop, // laptop
-    Smartphone, // mobile_phone
-    Printer, // printer
-    Camera, // camera
-    Activity, // iot_sensor — telemetry pulse
-    LineChart, // siem — analytics-on-events glyph
-    BadgeCheck, // ca / cert authority — verified badge
-    Lock, // bastion — gatekeeper
-    Building2, // branch_office
-    Warehouse, // datacenter
+    Cable,
+    Waypoints,
+    Code2,
+    Cpu,
+    Server as MainframeServer,
+    HardDriveDownload,
+    Laptop,
+    Smartphone,
+    Camera,
+    Building2,
+    Warehouse,
     type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/common/lib/utils';

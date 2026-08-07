@@ -10,58 +10,34 @@
 }
 
 #scan-root .scd-glass {
-    --glass-accent: #00bceb;
-    --glass-accent-strong: #049fd9;
-    --glass-accent-text: #00749a;
-    --glass-accent-soft: #e6f8fd;
-    --glass-bg: #eef3f8;
-    --glass-panel: #ffffff;
-    --glass-panel-subtle: #f7f9fc;
-    --glass-panel-strong: #e8eff7;
-    --glass-border: #d5e0ec;
-    --glass-border-strong: #9ddff2;
-    --glass-text: #152238;
-    --glass-muted: #63758d;
-    --glass-faint: #8ca0ba;
-    --glass-good: #65bd3e;
-    --glass-warning: #f58220;
-    --glass-critical: #e5534b;
-    --glass-info: #0875d1;
+    --glass-accent: var(--sui-interactive-accent);
+    --glass-accent-strong: var(--sui-content-link);
+    --glass-accent-text: var(--sui-content-link);
+    --glass-accent-soft: var(--sui-interactive-selected);
+    --glass-bg: var(--sui-background-page);
+    --glass-panel: var(--sui-background-section);
+    --glass-panel-subtle: var(--sui-background-popup);
+    --glass-panel-strong: var(--sui-interactive-hover);
+    --glass-border: var(--sui-border);
+    --glass-border-strong: var(--sui-interactive-border);
+    --glass-text: var(--sui-content-active);
+    --glass-muted: var(--sui-content-muted);
+    --glass-faint: var(--sui-content-disabled);
+    --glass-good: var(--sui-content-positive);
+    --glass-warning: var(--sui-content-warning);
+    --glass-critical: var(--sui-content-negative);
+    --glass-info: var(--sui-content-info);
     --glass-shadow: 0 7px 20px rgba(35, 56, 85, 0.08);
     background: var(--glass-bg);
     color: var(--glass-text);
     display: flex;
     flex-direction: column;
-    font-family:
-        Inter,
-        ui-sans-serif,
-        system-ui,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        sans-serif;
+    font-family: var(--sui-font-family);
     height: 100%;
     min-width: 0;
 }
 
 #scan-root .scd-glass[data-theme="dark"] {
-    --glass-accent: #35cff5;
-    --glass-accent-strong: #00a7d0;
-    --glass-accent-text: #35cff5;
-    --glass-accent-soft: #0c3043;
-    --glass-bg: #07101d;
-    --glass-panel: #0f1a2a;
-    --glass-panel-subtle: #111f31;
-    --glass-panel-strong: #16283c;
-    --glass-border: #22364d;
-    --glass-border-strong: #216a84;
-    --glass-text: #e8f1fb;
-    --glass-muted: #9aacc1;
-    --glass-faint: #6f849e;
-    --glass-good: #8bd45b;
-    --glass-warning: #ff9a4a;
-    --glass-critical: #ff7169;
-    --glass-info: #53bfff;
     --glass-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
@@ -102,8 +78,8 @@
 
 #scan-root .scd-glass-title-row h1 {
     color: var(--glass-text);
-    font-size: 19px;
-    font-weight: 760;
+    font-size: 20px;
+    font-weight: 700;
     letter-spacing: -0.02em;
     line-height: 1.25;
     margin: 0;
@@ -111,7 +87,7 @@
 
 #scan-root .scd-glass-title-row p {
     color: var(--glass-faint);
-    font-size: 11px;
+    font-size: var(--sui-font-size-small);
     font-weight: 600;
     margin: 4px 0 0;
 }
@@ -121,7 +97,7 @@
     align-items: center;
     background: transparent;
     border: 0;
-    border-radius: 7px;
+    border-radius: var(--sui-border-radius);
     cursor: pointer;
     display: inline-flex;
     justify-content: center;
@@ -140,7 +116,7 @@
     align-items: center;
     color: var(--glass-muted);
     display: flex;
-    font-size: 11px;
+    font-size: var(--sui-font-size-small);
     font-weight: 650;
     gap: 8px;
     width: max-content;
@@ -151,7 +127,7 @@
     appearance: auto;
     background: var(--glass-panel);
     border: 1px solid var(--glass-border);
-    border-radius: 7px;
+    border-radius: var(--sui-border-radius);
     color: var(--glass-text);
     min-height: 31px;
     outline: none;
@@ -178,10 +154,10 @@
     align-items: center;
     background: var(--glass-panel-subtle);
     border: 1px solid var(--glass-border);
-    border-radius: 8px;
+    border-radius: var(--sui-border-radius);
     cursor: pointer;
     display: inline-flex;
-    font-size: 11px;
+    font-size: var(--sui-font-size-small);
     font-weight: 700;
     gap: 6px;
     min-height: 32px;
@@ -251,7 +227,7 @@
     display: flex;
     flex: 0 0 auto;
     flex-wrap: wrap;
-    font-size: 11px;
+    font-size: var(--sui-font-size-small);
     gap: 7px;
     min-height: 42px;
     padding: 6px 22px;
@@ -265,7 +241,7 @@
     color: var(--glass-text);
     cursor: pointer;
     display: inline-flex;
-    font-size: 10px;
+    font-size: var(--sui-font-size-small);
     gap: 4px;
     min-height: 25px;
     padding: 3px 8px;
@@ -357,7 +333,7 @@
     align-items: center;
     color: var(--glass-faint);
     display: flex;
-    font-size: 9px;
+    font-size: var(--sui-font-size-small);
     font-weight: 780;
     gap: 6px;
     letter-spacing: 0.1em;
@@ -390,7 +366,7 @@
     align-items: center;
     color: var(--glass-faint);
     display: flex;
-    font-size: 9px;
+    font-size: var(--sui-font-size-small);
     gap: 7px;
     justify-content: space-between;
     margin-top: auto;
@@ -431,7 +407,7 @@
     border-radius: 999px;
     color: var(--status-color);
     display: inline-flex;
-    font-size: 8px;
+    font-size: var(--sui-font-size-small);
     font-weight: 780;
     gap: 5px;
     letter-spacing: 0.04em;
@@ -619,7 +595,7 @@
 #scan-root .scd-glass-panel-header p,
 #scan-root .scd-glass-policy-panel p {
     color: var(--glass-faint);
-    font-size: 10px;
+    font-size: var(--sui-font-size-small);
     margin: 3px 0 0;
 }
 
@@ -641,7 +617,7 @@
 #scan-root .scd-glass-linked {
     color: var(--glass-accent-text);
     flex: 0 0 auto;
-    font-size: 9px;
+    font-size: var(--sui-font-size-small);
     font-weight: 700;
     letter-spacing: 0.04em;
     white-space: nowrap;
@@ -652,7 +628,7 @@
     color: var(--glass-faint);
     display: flex;
     flex-direction: column;
-    font-size: 11px;
+    font-size: var(--sui-font-size-small);
     gap: 8px;
     height: 100%;
     justify-content: center;
@@ -680,7 +656,7 @@
 #scan-root .scd-glass-table-wrap table {
     border-collapse: collapse;
     color: var(--glass-text);
-    font-size: 10px;
+    font-size: var(--sui-font-size-small);
     min-width: 100%;
     table-layout: auto;
     width: 100%;
@@ -689,7 +665,7 @@
 #scan-root .scd-glass-table-wrap th {
     background: var(--glass-panel-subtle);
     color: var(--glass-faint);
-    font-size: 8px;
+    font-size: var(--sui-font-size-small);
     font-weight: 800;
     letter-spacing: 0.08em;
     padding: 8px 10px;
@@ -731,7 +707,7 @@
     align-items: center;
     color: var(--glass-accent-text);
     display: flex;
-    font-size: 10px;
+    font-size: var(--sui-font-size-small);
     font-weight: 800;
     gap: 7px;
     letter-spacing: 0.1em;
@@ -809,7 +785,7 @@
     border-radius: 7px;
     cursor: pointer;
     display: grid;
-    font-size: 11px;
+    font-size: var(--sui-font-size-small);
     gap: 7px;
     grid-template-columns: minmax(0, 1fr) auto auto;
     min-height: 43px;
@@ -863,7 +839,7 @@
     border: 1px solid var(--glass-border-strong);
     border-radius: 999px;
     color: var(--glass-accent-strong);
-    font-size: 9px;
+    font-size: var(--sui-font-size-small);
     font-weight: 750;
     padding: 5px 9px;
     white-space: nowrap;
@@ -899,7 +875,7 @@
 
 #scan-root .scd-glass-site-map > header span {
     color: var(--glass-accent-strong);
-    font-size: 9px;
+    font-size: var(--sui-font-size-small);
     font-weight: 700;
 }
 
@@ -968,14 +944,14 @@
     color: var(--glass-text);
     display: flex;
     flex-direction: column;
-    font-size: 10px;
+    font-size: var(--sui-font-size-small);
     gap: 2px;
     padding: 6px 8px;
 }
 
 #scan-root .scd-glass-leaflet-map .leaflet-tooltip span {
     color: var(--glass-muted);
-    font-size: 9px;
+    font-size: var(--sui-font-size-small);
 }
 
 #scan-root .scd-glass-map-style-switcher {
@@ -999,7 +975,7 @@
     border-radius: 5px;
     color: var(--glass-muted);
     cursor: pointer;
-    font-size: 8px;
+    font-size: var(--sui-font-size-small);
     font-weight: 760;
     letter-spacing: 0.04em;
     min-height: 24px;
@@ -1026,7 +1002,7 @@
     box-shadow: 0 8px 20px rgba(15, 35, 58, 0.14);
     color: var(--glass-muted);
     display: flex;
-    font-size: 8px;
+    font-size: var(--sui-font-size-small);
     font-weight: 700;
     gap: 10px;
     left: 12px;
@@ -1127,7 +1103,7 @@
         0 0 20px var(--map-marker-soft);
     color: #ffffff;
     display: flex;
-    font-size: 9px;
+    font-size: var(--sui-font-size-small);
     font-weight: 850;
     height: 34px;
     justify-content: center;
@@ -1163,7 +1139,7 @@
 }
 
 #scan-root .scd-glass-map-marker-label strong {
-    font-size: 8px;
+    font-size: var(--sui-font-size-small);
     max-width: 92px;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1216,7 +1192,7 @@
 #scan-root .scd-glass-site-kpis span,
 #scan-root .scd-glass-site-heading span {
     color: var(--glass-faint);
-    font-size: 8px;
+    font-size: var(--sui-font-size-small);
     font-weight: 750;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -1253,7 +1229,7 @@
     border-radius: 6px;
     cursor: pointer;
     display: grid;
-    font-size: 10px;
+    font-size: var(--sui-font-size-small);
     gap: 8px;
     grid-template-columns: minmax(0, 1fr) auto auto;
     min-height: 34px;
@@ -1278,7 +1254,7 @@
     color: var(--glass-accent-strong);
     cursor: pointer;
     display: flex;
-    font-size: 10px;
+    font-size: var(--sui-font-size-small);
     gap: 3px;
     margin: 0 0 15px;
     padding: 0;
@@ -1310,7 +1286,7 @@
 }
 
 #scan-root .scd-glass-site-kpis strong {
-    font-size: 10px;
+    font-size: var(--sui-font-size-small);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1376,7 +1352,7 @@
 
 #scan-root .scd-glass-investigation-hero p {
     color: var(--glass-muted);
-    font-size: 10px;
+    font-size: var(--sui-font-size-small);
     margin: 3px 0 0;
 }
 
@@ -1412,7 +1388,7 @@
     border-radius: 7px;
     color: #ffffff;
     cursor: pointer;
-    font-size: 11px;
+    font-size: var(--sui-font-size-small);
     font-weight: 750;
     min-height: 36px;
     padding: 7px 17px;
@@ -1459,14 +1435,14 @@
     color: var(--glass-accent-strong);
     display: flex;
     font-family: "SFMono-Regular", Consolas, monospace;
-    font-size: 10px;
+    font-size: var(--sui-font-size-small);
     height: 24px;
     justify-content: center;
     width: 24px;
 }
 
 #scan-root .scd-glass-layer-node strong {
-    font-size: 10px;
+    font-size: var(--sui-font-size-small);
 }
 
 #scan-root .scd-glass-sidebar {
@@ -1502,7 +1478,7 @@
     align-items: center;
     color: var(--glass-good);
     display: inline-flex;
-    font-size: 8px;
+    font-size: var(--sui-font-size-small);
     font-weight: 780;
     gap: 4px;
     letter-spacing: 0.06em;
@@ -1549,13 +1525,13 @@
 
 #scan-root .scd-glass-sidebar-filters label > span {
     color: var(--glass-muted);
-    font-size: 10px;
+    font-size: var(--sui-font-size-small);
     font-weight: 650;
 }
 
 #scan-root .scd-glass-sidebar-filters select {
     border: 0;
-    font-size: 10px;
+    font-size: var(--sui-font-size-small);
     min-height: 26px;
     min-width: 0;
     padding-bottom: 3px;
@@ -1588,7 +1564,7 @@
     border-bottom: 1px solid var(--glass-border);
     display: grid;
     font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-    font-size: 9px;
+    font-size: var(--sui-font-size-small);
     gap: 6px;
     grid-template-columns: 54px 48px 48px minmax(0, 1fr);
     padding: 8px 4px;
@@ -1703,7 +1679,7 @@
 
 #scan-root .scd-glass-info-dialog > header span {
     color: var(--glass-accent-strong);
-    font-size: 9px;
+    font-size: var(--sui-font-size-small);
     font-weight: 800;
     letter-spacing: 0.09em;
     text-transform: uppercase;
@@ -1759,7 +1735,7 @@
 
 #scan-root .scd-glass-info-body dt {
     color: var(--glass-faint);
-    font-size: 8px;
+    font-size: var(--sui-font-size-small);
     font-weight: 800;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -1767,7 +1743,7 @@
 
 #scan-root .scd-glass-info-body dd {
     font-family: "SFMono-Regular", Consolas, monospace;
-    font-size: 10px;
+    font-size: var(--sui-font-size-small);
     margin: 4px 0 0;
     overflow-wrap: anywhere;
 }
@@ -1784,7 +1760,7 @@
     border: 1px solid var(--glass-border-strong);
     border-radius: 999px;
     color: var(--glass-accent-strong);
-    font-size: 9px;
+    font-size: var(--sui-font-size-small);
     font-weight: 700;
     padding: 4px 8px;
 }

@@ -1,12 +1,12 @@
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import CopyrightMark from '@/common/components/CopyrightMark';
+import AppThemeProvider from '@/common/theme/AppThemeProvider';
 
 /**
- * Raw mount helper — same retry semantics as `common/render.jsx` but
- * without `SplunkThemeProvider`. Used by dashboards that own their
- * full visual style via Tailwind / custom CSS (e.g. the Florida
- * Executive design) and don't need Splunk's Prisma theme tokens.
+ * Mount helper for custom dashboard surfaces. These pages may own their
+ * layout and visualization styling, but still receive the same Splunk-aware
+ * theme provider and semantic token bridge as standard SUI pages.
  */
 const MAX_RETRIES = 100;
 
@@ -29,10 +29,12 @@ export default function mountPageRaw(PageComponent: React.ComponentType): void {
         }
         reactRoot.render(
             <React.StrictMode>
-                <>
-                    <PageComponent />
-                    <CopyrightMark />
-                </>
+                <AppThemeProvider>
+                    <>
+                        <PageComponent />
+                        <CopyrightMark />
+                    </>
+                </AppThemeProvider>
             </React.StrictMode>
         );
     };

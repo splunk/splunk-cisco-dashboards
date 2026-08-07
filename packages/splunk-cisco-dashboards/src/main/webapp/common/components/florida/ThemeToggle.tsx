@@ -5,12 +5,14 @@
  * We show both an icon AND a text label so the control is impossible
  * to overlook in the dashboard header. The label always reflects the
  * user's *preference* (not the resolved theme), so "AUTO" stays
- * visible when following the OS.
+ * visible when following the Splunk user theme.
  */
 
 import React from 'react';
-import { Sun, Moon, MonitorSmartphone } from 'lucide-react';
-import { cn } from '@/common/lib/utils';
+import Button from '@splunk/react-ui/Button';
+import Sun from '@splunk/react-icons/Sun';
+import Moon from '@splunk/react-icons/Moon';
+import MonitorPhone from '@splunk/react-icons/MonitorPhone';
 import type { ThemePreference } from '@/common/hooks/useTheme';
 
 interface ThemeToggleProps {
@@ -25,30 +27,23 @@ const PRESET: Record<
     {
         label: string;
         nextLabel: string;
-        Icon: React.ComponentType<{ className?: string }>;
-        chrome: string;
+        Icon: React.ComponentType<{ width?: number; height?: number; 'aria-hidden'?: boolean }>;
     }
 > = {
     light: {
         label: 'LIGHT',
         nextLabel: 'Switch to dark mode',
         Icon: Sun,
-        chrome:
-            'bg-amber-100 border-amber-300 text-amber-700 hover:bg-amber-200',
     },
     dark: {
         label: 'DARK',
-        nextLabel: 'Switch to follow system theme',
+        nextLabel: 'Switch to follow Splunk theme',
         Icon: Moon,
-        chrome:
-            'bg-indigo-900/60 border-indigo-700 text-indigo-200 hover:bg-indigo-900',
     },
     system: {
         label: 'AUTO',
         nextLabel: 'Switch to light mode',
-        Icon: MonitorSmartphone,
-        chrome:
-            'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700',
+        Icon: MonitorPhone,
     },
 };
 
@@ -61,21 +56,14 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
     const preset = PRESET[theme];
     const Icon = preset.Icon;
     return (
-        <button
-            type="button"
+        <Button
+            appearance="subtle"
             onClick={onCycle}
             title={preset.nextLabel}
             aria-label={preset.nextLabel}
-            className={cn(
-                iconOnly
-                    ? 'inline-flex items-center justify-center w-10 h-10 rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400'
-                    : 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400',
-                preset.chrome,
-                className
-            )}
-        >
-            <Icon className={iconOnly ? 'w-5 h-5' : 'w-3.5 h-3.5'} />
-            {!iconOnly && preset.label}
-        </button>
+            className={className}
+            icon={<Icon width={iconOnly ? 20 : 16} height={iconOnly ? 20 : 16} aria-hidden />}
+            label={iconOnly ? undefined : preset.label}
+        />
     );
 };

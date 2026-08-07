@@ -61,8 +61,8 @@ import {
     House,
     Maximize2,
     HelpCircle,
-    type LucideIcon,
-} from 'lucide-react';
+} from '@/common/icons/SuiIcon';
+import { type LucideIcon } from 'lucide-react';
 import {
     ReactFlow,
     ReactFlowProvider,
@@ -85,6 +85,7 @@ import {
     type XYPosition,
     type Viewport,
     type OnConnectStartParams,
+    type OnNodeDrag,
     type NodeTypes,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -2059,8 +2060,8 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
      *  reverse could happen at an edge. The shared `findRegionForRect`
      *  rule attaches on meaningful overlap and keeps an existing
      *  parent until the card is clearly outside. */
-    const handleNodeDragStop = useCallback(
-        (_event: React.MouseEvent, node: RFNode) => {
+    const handleNodeDragStop = useCallback<OnNodeDrag<RFNode>>(
+        (_event, node) => {
             // Don't re-parent the region itself, the title node,
             // or anything else that isn't a device. (Title node
             // and region behave fine without parenting.)
@@ -2836,8 +2837,8 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
      *  dragged card rectangle, matching `handleNodeDragStop`, so
      *  the highlight is a faithful preview of "what happens if I
      *  release right now". */
-    const handleNodeDrag = useCallback(
-        (_event: React.MouseEvent, node: RFNode) => {
+    const handleNodeDrag = useCallback<OnNodeDrag<RFNode>>(
+        (_event, node) => {
             if (
                 node.type === REGION_NODE_TYPE ||
                 node.type === DIAGRAM_TITLE_NODE_TYPE
@@ -4126,7 +4127,7 @@ const CanvasHelpPopover: React.FC<{ onClose: () => void }> = ({ onClose }) => (
         }}
     >
         <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-slate-700">
-            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 <Info className="w-3.5 h-3.5" aria-hidden />
                 Canvas tips
             </div>
@@ -4139,9 +4140,9 @@ const CanvasHelpPopover: React.FC<{ onClose: () => void }> = ({ onClose }) => (
                 <XIcon className="w-3.5 h-3.5" aria-hidden />
             </button>
         </div>
-        <div className="px-3 py-2 text-[11px] leading-relaxed space-y-2">
+        <div className="px-3 py-2 text-xs leading-relaxed space-y-2">
             <div>
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5">
+                <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5">
                     Add shapes
                 </div>
                 Drag any tile from <span className="font-semibold">Shapes</span> or a
@@ -4150,14 +4151,14 @@ const CanvasHelpPopover: React.FC<{ onClose: () => void }> = ({ onClose }) => (
                 to group devices.
             </div>
             <div>
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5">
+                <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5">
                     Pan &amp; zoom
                 </div>
                 Wheel or two-finger scroll pans. Hold Cmd / Ctrl while scrolling to
                 zoom, or use the control stack.
             </div>
             <div>
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5">
+                <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5">
                     Shortcuts
                 </div>
                 Del deletes selection, Cmd/Ctrl + Z undoes, Cmd/Ctrl + Shift + Z redoes,
@@ -4291,7 +4292,7 @@ const DeleteConfirmDialog: React.FC<{
                             You can undo this with {(typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform)) ? '⌘Z' : 'Ctrl+Z'}.
                         </div>
                         {targets.length <= 6 ? (
-                            <ul className="mt-2 max-h-32 overflow-auto rounded border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/40 px-2 py-1 text-[11px] text-slate-700 dark:text-slate-300">
+                            <ul className="mt-2 max-h-32 overflow-auto rounded border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/40 px-2 py-1 text-xs text-slate-700 dark:text-slate-300">
                                 {targets.map((t) => (
                                     <li key={`${t.kind}:${t.id}`} className="truncate py-0.5">
                                         <span className="text-slate-400 mr-1">{t.kind === 'edge' ? '↔' : '▢'}</span>
@@ -4300,7 +4301,7 @@ const DeleteConfirmDialog: React.FC<{
                                 ))}
                             </ul>
                         ) : (
-                            <div className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
+                            <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
                                 {targets.length} items will be deleted.
                             </div>
                         )}

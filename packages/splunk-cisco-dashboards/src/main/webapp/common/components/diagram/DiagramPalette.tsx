@@ -17,7 +17,7 @@
  */
 
 import React, { useState } from 'react';
-import { Boxes, ListTree, type LucideIcon } from 'lucide-react';
+import { Boxes, ListTree, type SuiIcon } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
 import { ShapesTab } from './ShapesTab';
 import { InventoryTab } from './InventoryTab';
@@ -27,7 +27,7 @@ type TabId = 'shapes' | 'inventory';
 const TAB_DEFS: Array<{
     id: TabId;
     label: string;
-    Icon: LucideIcon;
+    Icon: SuiIcon;
 }> = [
     { id: 'shapes', label: 'Shapes', Icon: Boxes },
     { id: 'inventory', label: 'Inventory', Icon: ListTree },

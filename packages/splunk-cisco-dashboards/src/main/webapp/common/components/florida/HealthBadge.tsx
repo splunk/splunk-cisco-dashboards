@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldAlert, ShieldCheck, ShieldQuestion, ShieldOff } from 'lucide-react';
+import { ShieldAlert, ShieldCheck, ShieldQuestion, ShieldOff } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
 import type { MetricStatus } from '@/common/hooks/useMetric';
 
@@ -67,7 +67,7 @@ export const HealthBadge: React.FC<HealthBadgeProps> = ({ statuses, className })
     return (
         <div
             className={cn(
-                'inline-flex h-8 items-center gap-1.5 rounded-full border px-2.5 py-0 text-[10px] font-bold uppercase leading-none tracking-widest',
+                'inline-flex h-8 items-center gap-1.5 rounded-full border px-2.5 py-0 text-xs font-bold uppercase leading-none tracking-widest',
                 palette,
                 className
             )}

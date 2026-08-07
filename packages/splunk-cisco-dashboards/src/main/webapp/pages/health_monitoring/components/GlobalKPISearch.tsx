@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, X } from 'lucide-react';
+import { Search, X } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
 
 interface GlobalKPISearchProps {
@@ -48,14 +48,14 @@ export const GlobalKPISearch: React.FC<GlobalKPISearchProps> = ({
             <button
                 type="button"
                 onClick={onOpenLibrary}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 transition hover:text-sky-600 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-black uppercase tracking-wider text-slate-500 transition hover:text-sky-600 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300"
                 title="Open KPI library"
             >
                 Cmd K
             </button>
         )}
         {value && (
-            <span className="absolute -bottom-5 left-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <span className="absolute -bottom-5 left-1 text-xs font-bold uppercase tracking-wider text-slate-400">
                 {resultCount} match{resultCount === 1 ? '' : 'es'}
             </span>
         )}

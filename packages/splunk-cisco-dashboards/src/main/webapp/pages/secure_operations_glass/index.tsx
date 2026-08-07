@@ -2,8 +2,13 @@ import React, {
     useCallback,
     useEffect,
     useMemo,
+    useRef,
     useState,
 } from 'react';
+import Button from '@splunk/react-ui/Button';
+import Modal from '@splunk/react-ui/Modal';
+import Select from '@splunk/react-ui/Select';
+import Text from '@splunk/react-ui/Text';
 import {
     Activity,
     AlertTriangle,
@@ -19,7 +24,6 @@ import {
     Info,
     Menu,
     Minus,
-    Moon,
     Network,
     PanelRightClose,
     PanelRightOpen,
@@ -28,14 +32,13 @@ import {
     Server,
     Shield,
     ShieldAlert,
-    Sun,
     TrendingDown,
     TrendingUp,
     UserRoundSearch,
     Wifi,
     X,
-} from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+    type SuiIcon,
+} from '@/common/icons/SuiIcon';
 import {
     MapContainer,
     Marker,
@@ -63,6 +66,8 @@ import {
 } from 'recharts';
 
 import type { SearchbaseRecord } from '@/common/services/searchbaseCatalogue';
+import { ThemeToggle } from '@/common/components/florida/ThemeToggle';
+import { useTheme } from '@/common/hooks/useTheme';
 import { splunkSearchAppUrl } from '@/common/lib/splunkSearchUrl';
 import {
     asNumber,
@@ -127,7 +132,7 @@ interface SearchMetricProps {
     preferredFields?: string[];
     suffix?: string;
     tone?: Tone;
-    icon?: LucideIcon;
+    icon?: SuiIcon;
 }
 
 interface SearchTableProps {
@@ -141,7 +146,7 @@ interface SearchTableProps {
     transformSearch?: (spl: string) => string;
 }
 
-const TABS: Array<{ id: TabId; label: string; icon: LucideIcon }> = [
+const TABS: Array<{ id: TabId; label: string; icon: SuiIcon }> = [
     { id: 'overview', label: 'Overview', icon: Activity },
     { id: 'identity', label: 'Identity & Access', icon: Shield },
     { id: 'firewall', label: 'Firewall & Threats', icon: ShieldAlert },
@@ -424,23 +429,21 @@ const SearchActions = ({
 
     return (
         <div className="scd-glass-search-actions">
-            <button
-                type="button"
+            <Button
+                appearance="subtle"
                 title={`About ${record.searchName}`}
                 aria-label={`Information about ${record.searchName}`}
                 onClick={() => context.showSearchInfo(record)}
-            >
-                <Info size={14} />
-            </button>
-            <a
-                href={searchUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+                icon={<Info size={16} aria-hidden />}
+            />
+            <Button
+                appearance="subtle"
+                to={searchUrl}
+                openInNewContext
                 title={`Open ${record.searchName} in Search`}
                 aria-label={`Open ${record.searchName} in Search`}
-            >
-                <ExternalLink size={14} />
-            </a>
+                icon={<ExternalLink size={16} aria-hidden />}
+            />
         </div>
     );
 };
@@ -448,50 +451,27 @@ const SearchActions = ({
 const SearchInfoDialog = ({
     record,
     onClose,
+    returnFocus,
 }: {
     record: SearchbaseRecord;
     onClose: () => void;
+    returnFocus: React.MutableRefObject<HTMLElement | null>;
 }): JSX.Element => {
     const description = plainTextFromHtml(
         record.explanation || record.description || record.solution
     );
 
-    useEffect(() => {
-        const closeOnEscape = (event: KeyboardEvent): void => {
-            if (event.key === 'Escape') onClose();
-        };
-        window.addEventListener('keydown', closeOnEscape);
-        return () => window.removeEventListener('keydown', closeOnEscape);
-    }, [onClose]);
-
     return (
-        <div
-            className="scd-glass-info-backdrop"
-            role="presentation"
-            onMouseDown={(event) => {
-                if (event.currentTarget === event.target) onClose();
-            }}
+        <Modal
+            open
+            closeOnClickAway
+            divider="both"
+            onRequestClose={onClose}
+            returnFocus={returnFocus}
+            style={{ width: 'min(680px, calc(100vw - 32px))' }}
         >
-            <section
-                className="scd-glass-info-dialog"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="scd-glass-info-title"
-            >
-                <header>
-                    <div>
-                        <span>Searchbase search</span>
-                        <h2 id="scd-glass-info-title">{record.searchName}</h2>
-                    </div>
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        aria-label="Close search information"
-                    >
-                        <X size={17} />
-                    </button>
-                </header>
-                <div className="scd-glass-info-body">
+            <Modal.Header title={record.searchName} subtitle="Searchbase search" />
+            <Modal.Body className="scd-glass-info-body">
                     <p>{description || 'No description is available.'}</p>
                     <dl>
                         <div>
@@ -518,9 +498,11 @@ const SearchInfoDialog = ({
                             ))}
                         </div>
                     ) : null}
-                </div>
-            </section>
-        </div>
+            </Modal.Body>
+            <Modal.Footer>
+                <Button appearance="primary" label="Done" onClick={onClose} />
+            </Modal.Footer>
+        </Modal>
     );
 };
 
@@ -930,7 +912,7 @@ const SectionBand = ({
     count,
 }: {
     children: React.ReactNode;
-    icon: LucideIcon;
+    icon: SuiIcon;
     count?: React.ReactNode;
 }): JSX.Element => (
     <div className="scd-glass-section-band">
@@ -2095,13 +2077,14 @@ const UserInvestigationTab = ({
                 </div>
                 <form onSubmit={submit}>
                     <Search size={17} />
-                    <input
+                    <Text
+                        inline={false}
                         value={draftUser}
-                        onChange={(event) => setDraftUser(event.target.value)}
+                        onChange={(_event, { value }) => setDraftUser(value)}
                         placeholder="Enter username or wildcard, e.g. user47*…"
                         aria-label="Username to investigate"
                     />
-                    <button type="submit">Search</button>
+                    <Button type="submit" appearance="primary" label="Search" />
                 </form>
             </section>
             <div className="scd-glass-metric-grid scd-glass-metric-grid-five">
@@ -2333,19 +2316,21 @@ const FilterSidebar = ({
                     ? options
                     : [...options, filters[key]];
                 return (
-                    <label key={key}>
+                    <div className="scd-glass-filter-field" key={key}>
                         <span>{FILTER_LABELS[key]}</span>
-                        <select
+                        <Select
+                            inline={false}
+                            labelText={FILTER_LABELS[key]}
                             value={filters[key]}
-                            onChange={(event) => setFilter(key, event.target.value)}
+                            onChange={(_event, { value }) =>
+                                setFilter(key, String(value))
+                            }
                         >
                             {values.map((value) => (
-                                <option key={value} value={value}>
-                                    {value}
-                                </option>
+                                <Select.Option key={value} value={value} label={value} />
                             ))}
-                        </select>
-                    </label>
+                        </Select>
+                    </div>
                 );
             })}
         </section>
@@ -2368,22 +2353,24 @@ const FilterSidebar = ({
 );
 
 const SecureOperationsGlassPage = (): JSX.Element => {
-    const [theme, setTheme] = useState<Theme>('light');
+    const { theme, resolvedTheme, cycle: cycleTheme } = useTheme();
     const [activeTab, setActiveTab] = useState<TabId>('overview');
     const [earliest, setEarliest] = useState('-7d@d');
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
     const [refreshToken, setRefreshToken] = useState(0);
     const [infoRecord, setInfoRecord] = useState<SearchbaseRecord | null>(null);
+    const infoReturnFocusRef = useRef<HTMLElement | null>(null);
     const { catalogue, error: catalogueError } = useSearchbaseCatalogueMap();
 
     const setFilter = useCallback((key: FilterKey, value: string): void => {
         setFilters((current) => ({ ...current, [key]: value }));
     }, []);
-    const showSearchInfo = useCallback(
-        (record: SearchbaseRecord): void => setInfoRecord(record),
-        []
-    );
+    const showSearchInfo = useCallback((record: SearchbaseRecord): void => {
+        infoReturnFocusRef.current =
+            document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        setInfoRecord(record);
+    }, []);
     const clearFilter = (key: FilterKey): void =>
         setFilter(key, DEFAULT_FILTERS[key]);
     const clearFilters = (): void => setFilters(DEFAULT_FILTERS);
@@ -2396,10 +2383,10 @@ const SecureOperationsGlassPage = (): JSX.Element => {
             earliest,
             refreshToken,
             filters,
-            theme,
+            theme: resolvedTheme,
             showSearchInfo,
         }),
-        [catalogue, earliest, refreshToken, filters, theme, showSearchInfo]
+        [catalogue, earliest, refreshToken, filters, resolvedTheme, showSearchInfo]
     );
 
     const renderTab = (): React.ReactNode => {
@@ -2424,17 +2411,16 @@ const SecureOperationsGlassPage = (): JSX.Element => {
     };
 
     return (
-        <div className="scd-glass" data-theme={theme}>
+        <div className="scd-glass" data-theme={resolvedTheme}>
             <header className="scd-glass-header">
                 <div className="scd-glass-title-block">
                     <div className="scd-glass-title-row">
-                        <button
-                            type="button"
+                        <Button
+                            appearance="subtle"
                             className="scd-glass-menu-button"
                             aria-label="Dashboard menu"
-                        >
-                            <Menu size={18} />
-                        </button>
+                            icon={<Menu size={18} aria-hidden />}
+                        />
                         <div>
                             <h1>Cisco Secure Networking — Operations Glass</h1>
                             <p>
@@ -2443,64 +2429,54 @@ const SecureOperationsGlassPage = (): JSX.Element => {
                             </p>
                         </div>
                     </div>
-                    <label className="scd-glass-time">
+                    <div className="scd-glass-time">
                         <span>Time Range</span>
-                        <select
+                        <Select
+                            inline
+                            labelText="Time Range"
                             value={earliest}
-                            onChange={(event) => setEarliest(event.target.value)}
+                            onChange={(_event, { value }) => setEarliest(String(value))}
                         >
                             {TIME_RANGES.map((range) => (
-                                <option key={range.value} value={range.value}>
-                                    {range.label}
-                                </option>
+                                <Select.Option
+                                    key={range.value}
+                                    value={range.value}
+                                    label={range.label}
+                                />
                             ))}
-                        </select>
-                    </label>
+                        </Select>
+                    </div>
                 </div>
                 <div className="scd-glass-header-actions">
-                    <button
-                        type="button"
+                    <ThemeToggle
+                        theme={theme}
+                        onCycle={cycleTheme}
                         className="scd-glass-theme-toggle"
-                        onClick={() =>
-                            setTheme((current) =>
-                                current === 'light' ? 'dark' : 'light'
-                            )
-                        }
-                    >
-                        {theme === 'light' ? (
-                            <Sun size={16} />
-                        ) : (
-                            <Moon size={16} />
-                        )}
-                        <span>{theme === 'light' ? 'Light' : 'Dark'}</span>
-                    </button>
-                    <button
-                        type="button"
+                    />
+                    <Button
+                        appearance="subtle"
                         className="scd-glass-icon-button"
                         onClick={() => setRefreshToken((token) => token + 1)}
                         aria-label="Refresh all dashboard searches"
-                    >
-                        <RefreshCw size={17} />
-                    </button>
-                    <button
-                        type="button"
+                        icon={<RefreshCw size={17} aria-hidden />}
+                    />
+                    <Button
+                        appearance="subtle"
                         className="scd-glass-icon-button"
                         aria-label="Notifications"
-                    >
-                        <Bell size={17} />
-                    </button>
-                    <button
-                        type="button"
+                        icon={<Bell size={17} aria-hidden />}
+                    />
+                    <Button
+                        appearance="subtle"
                         className="scd-glass-panel-toggle"
                         onClick={() => setSidebarOpen((current) => !current)}
-                    >
-                        {sidebarOpen ? (
+                        icon={sidebarOpen ? (
                             <PanelRightClose size={17} />
                         ) : (
                             <PanelRightOpen size={17} />
                         )}
-                        <span>{sidebarOpen ? 'Close Panel' : 'Open Panel'}</span>
-                    </button>
+                        label={sidebarOpen ? 'Close Panel' : 'Open Panel'}
+                    />
                 </div>
             </header>
             <nav className="scd-glass-tabs" aria-label="Dashboard sections">
@@ -2570,6 +2546,7 @@ const SecureOperationsGlassPage = (): JSX.Element => {
                 <SearchInfoDialog
                     record={infoRecord}
                     onClose={() => setInfoRecord(null)}
+                    returnFocus={infoReturnFocusRef}
                 />
             ) : null}
         </div>

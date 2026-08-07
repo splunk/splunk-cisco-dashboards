@@ -83,6 +83,7 @@ import styled from 'styled-components';
 import prismaDarkTheme from '@splunk/themes/prisma/dark';
 import prismaLightTheme from '@splunk/themes/prisma/light';
 import SplunkThemeProvider from '@splunk/themes/SplunkThemeProvider';
+import { unstable_splunk1cdThemeCustomizer } from '@splunk/themes';
 import useSplunkTheme from '@splunk/themes/useSplunkTheme';
 import { isVersionLower, getServerInfo } from '../../common/lib/splunk';
 import Paintbrush from '@splunk/react-icons/Paintbrush';
@@ -1993,6 +1994,7 @@ const DashboardStudioEditor = ({
                 family="prisma"
                 density="comfortable"
                 colorScheme={dashboardColorScheme}
+                customizeTheme={unstable_splunk1cdThemeCustomizer}
             >
             <Modal
                 open={openConvertModal}
@@ -2228,6 +2230,7 @@ const DashboardStudioEditor = ({
                         family="prisma"
                         density="comfortable"
                         colorScheme={dashboardColorScheme}
+                        customizeTheme={unstable_splunk1cdThemeCustomizer}
                     >
                         <DashboardContextProvider
                             key="DashboardStudioEditorContext"

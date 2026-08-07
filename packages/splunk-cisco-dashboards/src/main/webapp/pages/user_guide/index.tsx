@@ -1,27 +1,27 @@
 /* eslint-disable react/jsx-filename-extension */
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Activity,
-  AlertTriangle,
-  Check,
-  CheckCircle2,
-  Copy,
-  Database,
-  Download,
-  ExternalLink,
-  FileSearch,
-  Gauge,
-  GitBranch,
-  Layers,
-  LifeBuoy,
-  Map as MapIcon,
-  PlayCircle,
-  Search,
-  Settings,
-  Shield,
-  SlidersHorizontal,
-  Wifi,
-} from "lucide-react";
+    Activity,
+    AlertTriangle,
+    Check,
+    CheckCircle2,
+    Copy,
+    Database,
+    Download,
+    ExternalLink,
+    FileSearch,
+    Gauge,
+    GitBranch,
+    Layers,
+    LifeBuoy,
+    Map as MapIcon,
+    PlayCircle,
+    Search,
+    Settings,
+    Shield,
+    SlidersHorizontal,
+    Wifi,
+} from '@/common/icons/SuiIcon';
 import { APP_VERSION_LABEL } from "@/common/lib/buildInfo";
 
 import "./user-guide.css";
@@ -143,7 +143,7 @@ function Section({
             {icon}
           </div>
           <div className="min-w-0">
-            <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.12em] text-sky-700">
+            <div className="mb-1 text-xs font-bold uppercase tracking-[0.12em] text-sky-700">
               Section {sectionNumber(id)}
             </div>
             <h2 className="m-0 text-xl font-bold text-slate-950">{title}</h2>
@@ -197,7 +197,7 @@ function CodeBlock({ children }: { children: React.ReactNode }): JSX.Element {
   return (
     <div className="overflow-hidden rounded-lg border border-slate-700 bg-slate-950">
       <div className="scd-guide-no-print flex items-center justify-between border-b border-slate-700 bg-slate-900 px-3 py-2">
-        <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">
+        <span className="text-xs font-bold uppercase tracking-wide text-slate-400">
           Configuration example
         </span>
         <button

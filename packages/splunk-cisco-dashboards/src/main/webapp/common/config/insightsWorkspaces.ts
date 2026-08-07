@@ -56,7 +56,10 @@ export interface WorkspaceAutoDiscoveryConfig {
 
 export interface WorkspaceSource {
     id: WorkspaceSourceId;
+    /** Complete cross-domain catalogue available to workspaces using this template. */
     sections: readonly WorkspaceSectionMeta[];
+    /** Sections selected when a workspace is first created from this template. */
+    defaultSectionIds: readonly SectionId[];
     defaultVisibleSections: readonly SectionId[];
     maxVisibleSections: number;
     minTileCount: number;
@@ -94,31 +97,31 @@ export interface InsightsWorkspace {
 const SECURE_NETWORKING_IMAGE_ROOT =
     '/static/app/splunk-cisco-dashboards/images/overview/secure-networking';
 
-const EXECUTIVE_SECTIONS: readonly WorkspaceSectionMeta[] = [
+const CROSS_DOMAIN_SECTIONS: readonly WorkspaceSectionMeta[] = [
     {
         id: 'it_health',
-        title: 'IT Health',
-        linkText: 'Open IT health',
+        title: 'IT Operations',
+        linkText: 'Open IT Operations',
         href: 'it_health_v1',
         icon: 'activity',
     },
     {
         id: 'security',
-        title: 'Security',
-        linkText: 'Open security',
+        title: 'Security Operations',
+        linkText: 'Open Security Operations',
         href: 'security_v1',
         icon: 'shield',
     },
     {
         id: 'building',
-        title: 'Building Intelligence',
-        linkText: 'Open building intelligence',
+        title: 'Digital Experience',
+        linkText: 'Open Digital Experience',
         href: 'building_v1',
         icon: 'building',
     },
     {
         id: 'custom',
-        title: 'Executive Signals',
+        title: 'Executive Command Signals',
         linkText: 'Open dashboard builder',
         href: 'dashboardbuilder',
         icon: 'sparkles',
@@ -168,10 +171,45 @@ const SECURE_NETWORKING_SECTIONS: readonly WorkspaceSectionMeta[] = [
     },
 ] as const;
 
+/**
+ * Section IDs are stable data contracts. Their owning source tells the runtime
+ * which Searchbase overview definitions supply the factory tile catalogue.
+ * Keeping that ownership separate from workspace templates lets a Secure
+ * Networking workspace add real IT Operations or Security Operations content
+ * (and vice versa) without duplicating searches or creating empty sections.
+ */
+export const WORKSPACE_SECTION_SOURCE: Record<SectionId, WorkspaceSourceId> = {
+    it_health: EXECUTIVE_WORKSPACE_SOURCE_ID,
+    security: EXECUTIVE_WORKSPACE_SOURCE_ID,
+    building: EXECUTIVE_WORKSPACE_SOURCE_ID,
+    custom: EXECUTIVE_WORKSPACE_SOURCE_ID,
+    zta: SECURE_NETWORKING_WORKSPACE_SOURCE_ID,
+    secure_infrastructure: SECURE_NETWORKING_WORKSPACE_SOURCE_ID,
+    scalable_network_segmentation: SECURE_NETWORKING_WORKSPACE_SOURCE_ID,
+    hybrid_mesh_firewalling: SECURE_NETWORKING_WORKSPACE_SOURCE_ID,
+    agentic_ops: SECURE_NETWORKING_WORKSPACE_SOURCE_ID,
+};
+
+export const getWorkspaceSectionSource = (sectionId: SectionId): WorkspaceSourceId =>
+    WORKSPACE_SECTION_SOURCE[sectionId];
+
+const ALL_WORKSPACE_SECTIONS: readonly WorkspaceSectionMeta[] = [
+    ...SECURE_NETWORKING_SECTIONS,
+    ...CROSS_DOMAIN_SECTIONS,
+] as const;
+
+const SECURE_NETWORKING_DEFAULT_SECTION_IDS = SECURE_NETWORKING_SECTIONS.map(
+    (section) => section.id,
+);
+const EXECUTIVE_DEFAULT_SECTION_IDS = CROSS_DOMAIN_SECTIONS.map(
+    (section) => section.id,
+);
+
 export const WORKSPACE_SOURCES: Record<WorkspaceSourceId, WorkspaceSource> = {
     executive: {
         id: EXECUTIVE_WORKSPACE_SOURCE_ID,
-        sections: EXECUTIVE_SECTIONS,
+        sections: ALL_WORKSPACE_SECTIONS,
+        defaultSectionIds: EXECUTIVE_DEFAULT_SECTION_IDS,
         defaultVisibleSections: ['it_health', 'security', 'building'],
         maxVisibleSections: 4,
         minTileCount: 3,
@@ -180,7 +218,8 @@ export const WORKSPACE_SOURCES: Record<WorkspaceSourceId, WorkspaceSource> = {
     },
     secure_networking: {
         id: SECURE_NETWORKING_WORKSPACE_SOURCE_ID,
-        sections: SECURE_NETWORKING_SECTIONS,
+        sections: ALL_WORKSPACE_SECTIONS,
+        defaultSectionIds: SECURE_NETWORKING_DEFAULT_SECTION_IDS,
         defaultVisibleSections: [
             'zta',
             'secure_infrastructure',
@@ -250,12 +289,16 @@ export const createInsightsWorkspace = (
 ): InsightsWorkspace => {
     const source = getWorkspaceSource(input.sourceWorkspace);
     const sourceSectionIds = new Set(source.sections.map((section) => section.id));
-    const requestedSectionIds = input.sectionIds ?? source.sections.map((section) => section.id);
+    const requestedSectionIds = input.sectionIds ?? source.defaultSectionIds;
     const sectionIdSet = new Set(
         requestedSectionIds.filter((sectionId) => sourceSectionIds.has(sectionId)),
     );
     const sections = source.sections.filter((section) => sectionIdSet.has(section.id));
-    const safeSections = sections.length > 0 ? sections : source.sections;
+    const defaultSectionIdSet = new Set(source.defaultSectionIds);
+    const defaultSections = source.sections.filter((section) =>
+        defaultSectionIdSet.has(section.id),
+    );
+    const safeSections = sections.length > 0 ? sections : defaultSections;
     const safeSectionIds = new Set(safeSections.map((section) => section.id));
     const requestedDefaults = input.defaultVisibleSections ?? source.defaultVisibleSections;
     const defaultVisibleSections = requestedDefaults.filter((section) =>

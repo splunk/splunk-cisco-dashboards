@@ -13,7 +13,7 @@ import {
     Tag,
     Trash2,
     X,
-} from 'lucide-react';
+} from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
 import { splunkSearchAppUrl } from '@/common/lib/splunkSearchUrl';
 import {
@@ -61,13 +61,13 @@ const TILE_VALUE_CLASS: Record<SignalTickerDensity, string> = {
 };
 
 const TILE_LABEL_CLASS: Record<SignalTickerDensity, string> = {
-    compact: 'mt-1.5 text-[9px] leading-tight',
-    comfortable: 'mt-2 text-[10px] leading-tight',
+    compact: 'mt-1.5 text-xs leading-tight',
+    comfortable: 'mt-2 text-xs leading-tight',
 };
 
 const TILE_SUBTITLE_CLASS: Record<SignalTickerDensity, string> = {
-    compact: 'mt-0.5 text-[8px]',
-    comfortable: 'mt-1 text-[9px]',
+    compact: 'mt-0.5 text-xs',
+    comfortable: 'mt-1 text-xs',
 };
 
 const STATUS_ACCENT_CLASS = {
@@ -315,7 +315,7 @@ const SignalTickerTileChrome: React.FC<SignalTickerTileChromeProps> = ({
                     <span className="flex items-center gap-0.5">
                         <span
                             className={cn(
-                                'rounded-full px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.12em]',
+                                'rounded-full px-1.5 py-0.5 text-xs font-black uppercase tracking-[0.12em]',
                                 STATUS_PILL_CLASS[visual.status]
                             )}
                         >
@@ -1015,7 +1015,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                             </p>
                             <p
                                 className={cn(
-                                    'mt-1 text-[11px] font-semibold',
+                                    'mt-1 text-xs font-semibold',
                                     persistenceStatus === 'browser'
                                         ? 'text-amber-600 dark:text-amber-300'
                                         : 'text-emerald-600 dark:text-emerald-300'
@@ -1052,7 +1052,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                         : 'border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400'
                                 )}
                             >
-                                <span className="block text-[10px] font-black uppercase tracking-[0.16em]">
+                                <span className="block text-xs font-black uppercase tracking-[0.16em]">
                                     Rail
                                 </span>
                                 <span className="mt-1 block text-sm font-bold">
@@ -1071,7 +1071,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                 }
                                 className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left text-slate-700 transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
                             >
-                                <span className="block text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                                <span className="block text-xs font-black uppercase tracking-[0.16em] text-slate-400">
                                     Density
                                 </span>
                                 <span className="mt-1 block text-sm font-bold">
@@ -1089,7 +1089,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                 }
                                 className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left text-slate-700 transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
                             >
-                                <span className="block text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                                <span className="block text-xs font-black uppercase tracking-[0.16em] text-slate-400">
                                     Rows
                                 </span>
                                 <span className="mt-1 block text-sm font-bold">
@@ -1112,7 +1112,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                 )}
                                 title="Show or hide the Priority Drill-Down row below the Signal Rail"
                             >
-                                <span className="block text-[10px] font-black uppercase tracking-[0.16em]">
+                                <span className="block text-xs font-black uppercase tracking-[0.16em]">
                                     Drill-down
                                 </span>
                                 <span className="mt-1 block text-sm font-bold">
@@ -1125,10 +1125,10 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
 
                         <div className="mt-4">
                             <div className="flex items-center justify-between gap-3">
-                                <span className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                                <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
                                     Speed
                                 </span>
-                                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] text-slate-500 dark:bg-slate-900 dark:text-slate-300">
+                                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-black uppercase tracking-[0.12em] text-slate-500 dark:bg-slate-900 dark:text-slate-300">
                                     {config.speed === 0
                                         ? 'Paused'
                                         : `${config.speed}/10`}
@@ -1149,7 +1149,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                     className="w-full accent-sky-500"
                                     aria-label="Signal rail speed"
                                 />
-                                <div className="mt-1 flex justify-between text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
+                                <div className="mt-1 flex justify-between text-xs font-black uppercase tracking-[0.14em] text-slate-400">
                                     <span>0</span>
                                     <span>10</span>
                                 </div>
@@ -1157,10 +1157,10 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                         </div>
 
                         <div className="mt-5 flex items-center justify-between gap-3">
-                            <h4 className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                            <h4 className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
                                 Selected KPIs
                             </h4>
-                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500 dark:bg-slate-900 dark:text-slate-400">
+                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-500 dark:bg-slate-900 dark:text-slate-400">
                                 {config.items.length}/24
                             </span>
                         </div>
@@ -1235,12 +1235,12 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                                 <Trash2 className="h-3.5 w-3.5" />
                                             </button>
                                         </div>
-                                        <p className="mt-1 truncate pl-6 text-[10px] font-semibold text-slate-400">
+                                        <p className="mt-1 truncate pl-6 text-xs font-semibold text-slate-400">
                                             {item.searchName}
                                         </p>
                                         <div className="mt-2 grid grid-cols-2 gap-2 pl-6">
                                             <label className="block">
-                                                <span className="block text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
+                                                <span className="block text-xs font-black uppercase tracking-[0.14em] text-slate-400">
                                                     Value field
                                                 </span>
                                                 <input
@@ -1263,7 +1263,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                                 />
                                             </label>
                                             <label className="block">
-                                                <span className="block text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
+                                                <span className="block text-xs font-black uppercase tracking-[0.14em] text-slate-400">
                                                     Unit
                                                 </span>
                                                 <input
@@ -1287,7 +1287,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                         </div>
                                         <div className="mt-2 grid grid-cols-3 gap-2 pl-6">
                                             <label className="block">
-                                                <span className="block text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
+                                                <span className="block text-xs font-black uppercase tracking-[0.14em] text-slate-400">
                                                     Warning
                                                 </span>
                                                 <input
@@ -1314,7 +1314,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                                 />
                                             </label>
                                             <label className="block">
-                                                <span className="block text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
+                                                <span className="block text-xs font-black uppercase tracking-[0.14em] text-slate-400">
                                                     Critical
                                                 </span>
                                                 <input
@@ -1341,7 +1341,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                                 />
                                             </label>
                                             <label className="block">
-                                                <span className="block text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
+                                                <span className="block text-xs font-black uppercase tracking-[0.14em] text-slate-400">
                                                     Direction
                                                 </span>
                                                 <select
@@ -1402,7 +1402,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                     }
                                     aria-expanded={filtersOpen}
                                     className={cn(
-                                        'inline-flex items-center gap-2 rounded-lg px-3 py-2 text-[11px] font-black uppercase tracking-[0.16em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
+                                        'inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-black uppercase tracking-[0.16em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
                                         filtersOpen
                                             ? 'bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-100'
                                             : 'bg-slate-50 text-slate-500 hover:bg-slate-100 dark:bg-slate-900/70 dark:text-slate-400 dark:hover:bg-slate-900'
@@ -1416,7 +1416,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                     />
                                     Filters
                                     {activeFilterCount > 0 && (
-                                        <span className="rounded-full bg-sky-500 px-1.5 py-0.5 text-[9px] text-white">
+                                        <span className="rounded-full bg-sky-500 px-1.5 py-0.5 text-xs text-white">
                                             {activeFilterCount}
                                         </span>
                                     )}
@@ -1425,7 +1425,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                     <button
                                         type="button"
                                         onClick={clearFilters}
-                                        className="text-[11px] font-bold text-slate-400 transition-colors hover:text-sky-700 dark:text-slate-500 dark:hover:text-sky-300"
+                                        className="text-xs font-bold text-slate-400 transition-colors hover:text-sky-700 dark:text-slate-500 dark:hover:text-sky-300"
                                     >
                                         Clear filters
                                     </button>
@@ -1436,7 +1436,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                 <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-900/50">
                                     <label className="grid gap-1 sm:grid-cols-[90px_minmax(0,1fr)] sm:items-center">
                                         <span
-                                            className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400"
+                                            className="text-xs font-black uppercase tracking-[0.18em] text-slate-400"
                                             title="Splunk app the search belongs to"
                                         >
                                             App
@@ -1460,7 +1460,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                     </label>
 
                                     <div className="grid gap-1 sm:grid-cols-[90px_minmax(0,1fr)] sm:items-start">
-                                        <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+                                        <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
                                             Visibility
                                         </span>
                                         <div className="grid gap-2 md:grid-cols-3">
@@ -1508,7 +1508,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
 
                                     {categories.length > 0 && (
                                         <label className="grid gap-1 sm:grid-cols-[90px_minmax(0,1fr)] sm:items-center">
-                                            <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+                                            <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
                                                 Category
                                             </span>
                                             <select
@@ -1538,7 +1538,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                     {selectedCategory !== ALL_CATEGORIES &&
                                         subCategories.length > 0 && (
                                             <label className="grid gap-1 sm:grid-cols-[90px_minmax(0,1fr)] sm:items-center">
-                                                <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+                                                <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
                                                     Sub-cat
                                                 </span>
                                                 <select
@@ -1573,7 +1573,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                     {(allTagsWithCounts.length > 0 ||
                                         activeTags.size > 0) && (
                                         <div className="grid gap-1 sm:grid-cols-[90px_minmax(0,1fr)] sm:items-start">
-                                            <span className="pt-2 text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+                                            <span className="pt-2 text-xs font-black uppercase tracking-[0.18em] text-slate-400">
                                                 Tags
                                             </span>
                                             <div
@@ -1602,7 +1602,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                                             return (
                                                                 <span
                                                                     key={tag}
-                                                                    className="inline-flex items-center gap-1 rounded-full bg-sky-500 py-0.5 pl-2 pr-1 text-[10px] font-bold uppercase tracking-wide text-white"
+                                                                    className="inline-flex items-center gap-1 rounded-full bg-sky-500 py-0.5 pl-2 pr-1 text-xs font-bold uppercase tracking-wide text-white"
                                                                 >
                                                                     {tag}
                                                                     {count > 0 && (
@@ -1699,7 +1699,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                                                                     }
                                                                                 </span>
                                                                             </span>
-                                                                            <span className="shrink-0 text-[10px] font-bold text-slate-400 dark:text-slate-500">
+                                                                            <span className="shrink-0 text-xs font-bold text-slate-400 dark:text-slate-500">
                                                                                 {
                                                                                     count
                                                                                 }
@@ -1711,7 +1711,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                                                     allTagsWithCounts.length -
                                                                         activeTags.size >
                                                                         tagDropdownOptions.length && (
-                                                                        <p className="border-t border-slate-100 px-3 py-1.5 text-[10px] text-slate-400 dark:border-slate-800 dark:text-slate-500">
+                                                                        <p className="border-t border-slate-100 px-3 py-1.5 text-xs text-slate-400 dark:border-slate-800 dark:text-slate-500">
                                                                             Top{' '}
                                                                             {
                                                                                 tagDropdownOptions.length
@@ -1861,7 +1861,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                                     {entry.tags.slice(0, 5).map((tag) => (
                                                         <span
                                                             key={tag}
-                                                            className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500 dark:bg-slate-900 dark:text-slate-400"
+                                                            className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500 dark:bg-slate-900 dark:text-slate-400"
                                                         >
                                                             {tag}
                                                         </span>

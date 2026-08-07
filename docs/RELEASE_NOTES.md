@@ -3,9 +3,11 @@
 ## 1.0.36
 
 - Insights Workspace metric, chart, and detail drill-down dialogs now share a
-  responsive Cisco dark-mode shell with content-specific footprints, compact
-  headers, consistent Search/Details/Close actions, keyboard focus trapping,
-  focus restoration, and mobile bottom-sheet behavior.
+  responsive translucent Cisco dark-mode shell with content-specific
+  footprints, compact headers, consistent Search/Details/Close actions,
+  keyboard focus trapping, focus restoration, and mobile bottom-sheet
+  behavior. Detail tables auto-size to the viewport and add accessible width,
+  height, and corner resize controls with double-click reset.
 - Executive Insights pie tiles now use Splunk's native Dashboard Studio pie
   renderer with larger charts, visible values and percentages, and matching
   dark theme colors. Pie and categorical bar charts use the same deliberate
@@ -13,12 +15,18 @@
 - Executive Insights tile actions are slightly larger, and drilldowns now use
   an open-details-panel icon with explicit drilldown tooltips instead of an
   ambiguous table glyph.
-- Every built-in Insights Workspace now ships a distinct topology and
-  audience-specific six-KPI signal rail preset. Secure Networking maps one KPI
-  to each of its five pillars plus a bounded Palo Alto enforcement trend whose
-  drill-down correlates third-party firewall activity with Cisco ISE identity;
-  the other rails focus on zero trust, resilience, SOC, and executive outcomes.
-  Saved topology edits are scoped to the owning workspace.
+- Every built-in Insights Workspace now ships a distinct named topology and
+  audience-specific six-KPI signal rail preset. Secure Network Command Map,
+  Identity Trust Journey, Resilience Path Atlas, Threat Response Theater, and
+  Global Operations Pulse pair with rails focused on secure networking, zero
+  trust, resilience, SOC, and executive outcomes. The Secure Networking rail
+  maps one KPI to each pillar plus a bounded Palo Alto enforcement trend whose
+  drill-down correlates firewall activity with Cisco ISE identity. Saved map
+  edits remain workspace-scoped, and untouched legacy titles migrate safely.
+- Workspace Manager now offers the complete cross-domain section catalogue to
+  every demo workspace. Secure Networking, Security Operations, IT Operations,
+  Digital Experience, and Executive Command Signals retain focused template
+  defaults while sharing their real Searchbase-backed tile catalogues.
 - Signal Rail presets are now centrally governed in
   `insights_workspaces.conf`, while sparse personal differences are saved in
   the authenticated Splunk user's workspace namespace. Rapid editor changes

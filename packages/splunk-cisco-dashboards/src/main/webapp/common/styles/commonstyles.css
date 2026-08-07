@@ -157,7 +157,7 @@
     cursor: default;
 }
 .filter-control [aria-hidden='true'] {
-    font-size: 9px;
+    font-size: var(--sui-font-size-small);
     color: #5c6773;
     cursor: pointer;
 }
@@ -2339,7 +2339,7 @@ div.card-trend-footer [data-test='button'] {
 }
 /* EfS Portion of Grid */
 #efs_home {
-    font-size: 10px;
+    font-size: var(--sui-font-size-small);
     margin-top: 42px;
     margin-left: -13px;
     text-align: center;
@@ -2932,7 +2932,7 @@ div.card-trend-footer [data-test='button'] {
     background: var(--dashboard-builder-overlay-selected, #f1f5f9);
     color: var(--dashboard-builder-content-default, #334155);
     cursor: pointer;
-    font-size: 11px;
+    font-size: var(--sui-font-size-small);
     font-weight: 800;
     letter-spacing: 0.16em;
     line-height: 1;
@@ -2955,7 +2955,7 @@ div.card-trend-footer [data-test='button'] {
     border-radius: 999px;
     background: var(--dashboard-builder-overlay-selected, #dff2ff);
     color: var(--dashboard-builder-accent, #0064a4);
-    font-size: 10px;
+    font-size: var(--sui-font-size-small);
     letter-spacing: 0.08em;
     padding: 3px 7px;
 }
@@ -2983,7 +2983,7 @@ div.card-trend-footer [data-test='button'] {
 
 .dropdown-kpi-filter-label {
     color: var(--dashboard-builder-content-muted, #64748b);
-    font-size: 10px;
+    font-size: var(--sui-font-size-small);
     font-weight: 800;
     letter-spacing: 0.18em;
     line-height: 1.2;
@@ -3032,7 +3032,7 @@ div.card-trend-footer [data-test='button'] {
     gap: 10px;
     margin-top: 8px;
     color: var(--dashboard-builder-content-muted, #5f6b7a);
-    font-size: 11px;
+    font-size: var(--sui-font-size-small);
 }
 
 .dropdown-kpi-clear-button,
@@ -3070,7 +3070,7 @@ div.card-trend-footer [data-test='button'] {
 
 .dropdown-kpi-selection-count {
     color: var(--dashboard-builder-content-muted, #5f6b7a);
-    font-size: 11px;
+    font-size: var(--sui-font-size-small);
     font-weight: 700;
 }
 
@@ -3130,7 +3130,7 @@ div.card-trend-footer [data-test='button'] {
 .dropdown-kpi-item-id,
 .dropdown-kpi-item-meta {
     color: var(--dashboard-builder-content-muted, #5f6b7a);
-    font-size: 11px;
+    font-size: var(--sui-font-size-small);
 }
 
 .dropdown-kpi-row-tags {
@@ -3145,7 +3145,7 @@ div.card-trend-footer [data-test='button'] {
     border-radius: 999px;
     background: var(--dashboard-builder-overlay-selected, #f6f8fa);
     color: var(--dashboard-builder-content-default, #4f5f70);
-    font-size: 10px;
+    font-size: var(--sui-font-size-small);
     line-height: 1;
     padding: 3px 6px;
 }
@@ -5116,7 +5116,7 @@ div[role='main'] {
     width: 100%;
     height: 100px;
     font-family: monospace;
-    font-size: 11px;
+    font-size: var(--sui-font-size-small);
     padding: 6px;
     border-radius: 6px;
     border: 1px solid #ccc;
@@ -5625,7 +5625,7 @@ body.dashboard-builder-modal-portal-light
     border-radius: 999px;
     background: var(--dashboard-builder-modal-overlay-selected, #d7dde4);
     color: var(--dashboard-builder-modal-content-default, #576170);
-    font-size: 10px;
+    font-size: var(--sui-font-size-small);
     font-weight: 700;
     line-height: 1;
     cursor: help;
@@ -5717,7 +5717,7 @@ body.dashboard-builder-modal-portal-light
     border-radius: 999px;
     background: var(--dashboard-builder-modal-overlay-selected, #d7dde4);
     color: var(--dashboard-builder-modal-content-default, #576170);
-    font-size: 10px;
+    font-size: var(--sui-font-size-small);
     font-weight: 700;
     line-height: 1;
     cursor: help;
@@ -6384,7 +6384,7 @@ body.dashboard-builder-modal-portal-light
     border-radius: 999px;
     background: #d7dde4;
     color: #576170;
-    font-size: 10px;
+    font-size: var(--sui-font-size-small);
     font-weight: 700;
     line-height: 1;
     cursor: help;
@@ -6429,7 +6429,7 @@ body.dashboard-builder-modal-portal-light
 }
 .presentation-builder-export-status-banner {
     color: #aab2ba;
-    font-size: 9px;
+    font-size: var(--sui-font-size-small);
     line-height: 1.4;
     margin-top: 10px;
     max-width: 100%;
@@ -6917,7 +6917,7 @@ body.dashboard-builder-modal-portal-light
     border-radius: 999px;
     background: #d7dde4;
     color: #576170;
-    font-size: 10px;
+    font-size: var(--sui-font-size-small);
     font-weight: 700;
     line-height: 1;
     cursor: help;
@@ -6983,7 +6983,7 @@ body.dashboard-builder-modal-portal-light
     border-radius: 999px;
     background: #d7dde4;
     color: #576170;
-    font-size: 10px;
+    font-size: var(--sui-font-size-small);
     font-weight: 700;
     line-height: 1;
     cursor: help;

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Copy, Layers3, Plus, Save, Trash2, X } from 'lucide-react';
+import { Copy, Layers3, Plus, Save, Trash2, X } from '@/common/icons/SuiIcon';
 
 import {
     WORKSPACE_SOURCES,
@@ -81,7 +81,7 @@ const emptyDraft = (sourceWorkspace: WorkspaceSourceId): WorkspaceDraft => {
         id: 'customer_demo',
         label: 'Customer Demo',
         sourceWorkspace,
-        sectionIds: source.sections.map((section) => section.id),
+        sectionIds: [...source.defaultSectionIds],
         headerTitle: 'Customer Demo',
         headerSubtitle: 'Purpose-built customer briefing workspace',
         defaultTileCount: source.fallbackTileCount,
@@ -114,8 +114,8 @@ const sourceLabel = (sourceWorkspace: WorkspaceSourceId): string =>
 
 const sourceDescription = (sourceWorkspace: WorkspaceSourceId): string =>
     sourceWorkspace === 'secure_networking'
-        ? 'Network operations, access, infrastructure, segmentation, and firewalling.'
-        : 'Executive IT, security, building, and cross-domain signals.';
+        ? 'Starts with access, infrastructure, segmentation, firewalling, and agentic operations.'
+        : 'Starts with IT operations, security operations, digital experience, and executive signals.';
 
 export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
     open,
@@ -203,7 +203,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
         setDraft((current) => ({
             ...current,
             sourceWorkspace,
-            sectionIds: nextSource.sections.map((section) => section.id),
+            sectionIds: [...nextSource.defaultSectionIds],
             defaultTileCount: nextSource.fallbackTileCount,
             layoutToCopy: undefined,
         }));
@@ -307,7 +307,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                                 >
                                     Insights workspaces
                                 </h2>
-                                <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+                                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                                     Reusable customer demo views
                                 </p>
                             </div>
@@ -329,7 +329,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                                 <span className="block truncate text-xs font-bold">
                                     {workspace.label}
                                 </span>
-                                <span className="mt-0.5 block truncate text-[10px] text-slate-500 dark:text-slate-400">
+                                <span className="mt-0.5 block truncate text-xs text-slate-500 dark:text-slate-400">
                                     {workspace.id}
                                     {workspace.isBuiltIn ? ' · built in' : ''}
                                 </span>
@@ -340,14 +340,14 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                         <button
                             type="button"
                             onClick={startNew}
-                            className="inline-flex items-center justify-center gap-1 rounded-md bg-sky-600 px-2 py-2 text-[11px] font-bold text-white hover:bg-sky-700"
+                            className="inline-flex items-center justify-center gap-1 rounded-md bg-sky-600 px-2 py-2 text-xs font-bold text-white hover:bg-sky-700"
                         >
                             <Plus className="h-3.5 w-3.5" /> New
                         </button>
                         <button
                             type="button"
                             onClick={startCopy}
-                            className="inline-flex items-center justify-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-2 text-[11px] font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                            className="inline-flex items-center justify-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                         >
                             <Copy className="h-3.5 w-3.5" /> Duplicate
                         </button>
@@ -362,7 +362,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                                     ? `Edit ${draft.existingWorkspace.label}`
                                     : 'Create workspace'}
                             </h3>
-                            <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+                            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                                 Metadata and section choices are stored in insights_workspaces.conf.
                             </p>
                         </div>
@@ -378,7 +378,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
 
                     <div className="flex-1 overflow-y-auto p-5">
                         <div className="grid grid-cols-2 gap-4">
-                            <label className="text-[11px] font-bold text-slate-700 dark:text-slate-200">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-200">
                                 Display name
                                 <input
                                     value={draft.label}
@@ -387,7 +387,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                                     className="mt-1 block h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-xs font-normal text-slate-900 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:focus:ring-sky-900"
                                 />
                             </label>
-                            <label className="text-[11px] font-bold text-slate-700 dark:text-slate-200">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-200">
                                 Workspace ID
                                 <input
                                     value={draft.id}
@@ -410,7 +410,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                                     </span>
                                 )}
                             </label>
-                            <label className="text-[11px] font-bold text-slate-700 dark:text-slate-200">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-200">
                                 Default visible tiles per section
                                 <input
                                     type="number"
@@ -429,10 +429,10 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                             {!draft.existingWorkspace && (
                                 <div className="col-span-2">
                                     <fieldset>
-                                        <legend className="text-[11px] font-bold text-slate-700 dark:text-slate-200">
+                                        <legend className="text-xs font-bold text-slate-700 dark:text-slate-200">
                                             Start from a template
                                         </legend>
-                                        <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                                             Templates only provide a useful first configuration. After creation, this workspace owns its own sections, rail, map, theme, and layouts.
                                         </p>
                                         <div className="mt-3 grid grid-cols-2 gap-3">
@@ -456,11 +456,14 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                                                             <span className="block text-xs font-bold text-slate-900 dark:text-white">
                                                                 {sourceLabel(sourceId)}
                                                             </span>
-                                                            <span className="mt-1 block text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+                                                            <span className="mt-1 block text-xs leading-relaxed text-slate-500 dark:text-slate-400">
                                                                 {sourceDescription(sourceId)}
                                                             </span>
-                                                            <span className="mt-2 block text-[10px] font-semibold text-sky-700 dark:text-sky-300">
-                                                                Includes: {template.sections.map((section) => section.title).join(' · ')}
+                                                            <span className="mt-2 block text-xs font-semibold text-sky-700 dark:text-sky-300">
+                                                                Starts with: {template.sections
+                                                                    .filter((section) => template.defaultSectionIds.includes(section.id))
+                                                                    .map((section) => section.title)
+                                                                    .join(' · ')}
                                                             </span>
                                                         </button>
                                                     );
@@ -470,7 +473,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                                     </fieldset>
                                 </div>
                             )}
-                            <label className="text-[11px] font-bold text-slate-700 dark:text-slate-200">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-200">
                                 Workspace theme
                                 <select
                                     value={draft.themePreference}
@@ -485,7 +488,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                                     <option value="dark">Dark</option>
                                 </select>
                             </label>
-                            <label className="text-[11px] font-bold text-slate-700 dark:text-slate-200">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-200">
                                 Map placement
                                 <select
                                     value={draft.mapPosition}
@@ -500,7 +503,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                                     <option value="above">Above tiles</option>
                                 </select>
                             </label>
-                            <label className="text-[11px] font-bold text-slate-700 dark:text-slate-200">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-200">
                                 Map presentation
                                 <select
                                     value={draft.regionalView}
@@ -514,7 +517,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                                     <option value="table">Site summary table</option>
                                 </select>
                             </label>
-                            <label className="mt-5 flex items-center gap-2 text-[11px] font-bold text-slate-700 dark:text-slate-200">
+                            <label className="mt-5 flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-200">
                                 <input
                                     type="checkbox"
                                     checked={draft.mapVisible}
@@ -523,7 +526,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                                 />
                                 Show customer connectivity map
                             </label>
-                            <label className="col-span-2 text-[11px] font-bold text-slate-700 dark:text-slate-200">
+                            <label className="col-span-2 text-xs font-bold text-slate-700 dark:text-slate-200">
                                 Header title
                                 <input
                                     value={draft.headerTitle}
@@ -537,7 +540,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                                     className="mt-1 block h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-xs font-normal text-slate-900 outline-none focus:border-sky-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
                                 />
                             </label>
-                            <label className="col-span-2 text-[11px] font-bold text-slate-700 dark:text-slate-200">
+                            <label className="col-span-2 text-xs font-bold text-slate-700 dark:text-slate-200">
                                 Header subtitle
                                 <input
                                     value={draft.headerSubtitle}
@@ -554,11 +557,11 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                         </div>
 
                         <fieldset className="mt-5">
-                            <legend className="text-[11px] font-bold text-slate-700 dark:text-slate-200">
+                            <legend className="text-xs font-bold text-slate-700 dark:text-slate-200">
                                 Workspace sections
                             </legend>
-                            <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                                Choose the areas this workspace should emphasize. These selections are owned by this workspace and can be changed at any time.
+                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                Mix Secure Networking, SecOps, ITOps, digital experience, and executive signals. Each selected area uses its real Searchbase tile catalogue and can be changed at any time.
                             </p>
                             <div className="mt-3 grid grid-cols-2 gap-2">
                                 {source.sections.map((section) => (
@@ -583,12 +586,12 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                             </div>
                         </fieldset>
 
-                        <div className="mt-5 rounded-lg border border-sky-200 bg-sky-50 p-3 text-[11px] text-sky-900 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-100">
+                        <div className="mt-5 rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-100">
                             Open the workspace, arrange its tiles, then use <strong>Publish workspace layout</strong>{' '}
                             in the tile editor to update the matching layout stanzas.
                         </div>
                         {errorMessage && (
-                            <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-[11px] text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">
+                            <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">
                                 {errorMessage}
                             </div>
                         )}
@@ -601,7 +604,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                                     type="button"
                                     onClick={handleDelete}
                                     disabled={status !== 'idle'}
-                                    className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-[11px] font-bold text-rose-600 hover:bg-rose-50 disabled:opacity-50 dark:text-rose-400 dark:hover:bg-rose-950/30"
+                                    className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 disabled:opacity-50 dark:text-rose-400 dark:hover:bg-rose-950/30"
                                 >
                                     <Trash2 className="h-3.5 w-3.5" /> Delete workspace
                                 </button>
@@ -612,7 +615,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                                 type="button"
                                 onClick={onClose}
                                 disabled={status === 'saving' || status === 'deleting'}
-                                className="rounded-md px-3 py-2 text-[11px] font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-50 dark:text-slate-300 dark:hover:bg-slate-800"
+                                className="rounded-md px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-50 dark:text-slate-300 dark:hover:bg-slate-800"
                             >
                                 Cancel
                             </button>
@@ -620,7 +623,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                                 type="button"
                                 onClick={handleSave}
                                 disabled={!canSave}
-                                className="inline-flex items-center gap-1 rounded-md bg-sky-600 px-4 py-2 text-[11px] font-bold text-white hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="inline-flex items-center gap-1 rounded-md bg-sky-600 px-4 py-2 text-xs font-bold text-white hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 <Save className="h-3.5 w-3.5" />
                                 {status === 'saving' ? 'Saving…' : 'Save workspace'}

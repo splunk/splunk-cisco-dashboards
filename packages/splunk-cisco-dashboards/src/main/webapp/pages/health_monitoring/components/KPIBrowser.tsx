@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowRight, Filter, Search, X } from 'lucide-react';
+import { ArrowRight, Filter, Search, X } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
 import type {
     KPISectionId,
@@ -176,7 +176,7 @@ export const KPIBrowser: React.FC<KPIBrowserProps> = ({
                             },
                         ].map((filter) => (
                             <label key={filter.label} className="block">
-                                <span className="text-[11px] font-black uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                <span className="text-xs font-black uppercase tracking-wide text-slate-500 dark:text-slate-400">
                                     {filter.label}
                                 </span>
                                 <select
@@ -212,7 +212,7 @@ export const KPIBrowser: React.FC<KPIBrowserProps> = ({
                                 >
                                     {binding && (
                                         <div className="mb-3 flex items-center justify-between gap-3">
-                                            <span className="rounded-full border border-emerald-300 bg-emerald-100 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                                            <span className="rounded-full border border-emerald-300 bg-emerald-100 px-3 py-1 text-xs font-black uppercase tracking-wide text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
                                                 Bound: {KPI_SECTION_TITLES[binding.sectionId]}
                                             </span>
                                             <button
@@ -221,7 +221,7 @@ export const KPIBrowser: React.FC<KPIBrowserProps> = ({
                                                     onJumpTo(binding.instanceId);
                                                     onClose();
                                                 }}
-                                                className="text-[11px] font-black uppercase tracking-wide text-slate-700 transition hover:text-sky-600 dark:text-slate-200 dark:hover:text-sky-300"
+                                                className="text-xs font-black uppercase tracking-wide text-slate-700 transition hover:text-sky-600 dark:text-slate-200 dark:hover:text-sky-300"
                                             >
                                                 Jump To
                                             </button>

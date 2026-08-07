@@ -15,7 +15,7 @@
  */
 
 import React from 'react';
-import { ExternalLink, PanelRightOpen, Settings2 } from 'lucide-react';
+import { ExternalLink, PanelRightOpen, Settings2 } from '@/common/icons/SuiIcon';
 import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
 import { cn } from '@/common/lib/utils';
 import type { DataSource } from '@/common/hooks/useMetric';

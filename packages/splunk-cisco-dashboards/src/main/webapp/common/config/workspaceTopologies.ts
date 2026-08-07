@@ -68,8 +68,8 @@ const link = (
 
 const ZERO_TRUST_EUROPE_TOPOLOGY: CustomerTopology = {
     id: 'workspace-zero-trust-europe',
-    name: 'European Access Fabric',
-    subtitle: 'London, Paris, and Frankfurt identity paths',
+    name: 'Identity Trust Journey',
+    subtitle: 'Follow every access decision from identity to policy enforcement',
     map: {
         center: [50.2, 4.1],
         zoom: 5.2,
@@ -92,8 +92,8 @@ const ZERO_TRUST_EUROPE_TOPOLOGY: CustomerTopology = {
 
 const NETWORK_RESILIENCE_APAC_TOPOLOGY: CustomerTopology = {
     id: 'workspace-network-resilience-apac',
-    name: 'APAC Resilience Fabric',
-    subtitle: 'Singapore, Tokyo, and Sydney service paths',
+    name: 'Resilience Path Atlas',
+    subtitle: 'See service dependencies and failover paths before disruption spreads',
     map: {
         center: [4, 128],
         zoom: 3.2,
@@ -116,8 +116,8 @@ const NETWORK_RESILIENCE_APAC_TOPOLOGY: CustomerTopology = {
 
 const SECURITY_OPERATIONS_AMERICAS_TOPOLOGY: CustomerTopology = {
     id: 'workspace-security-operations-americas',
-    name: 'Americas SOC Connectivity',
-    subtitle: 'Toronto, Washington, and São Paulo response paths',
+    name: 'Threat Response Theater',
+    subtitle: 'Correlate exposure, affected sites, and containment paths',
     map: {
         center: [14, -70],
         zoom: 2.9,
@@ -140,8 +140,8 @@ const SECURITY_OPERATIONS_AMERICAS_TOPOLOGY: CustomerTopology = {
 
 const EXECUTIVE_GLOBAL_TOPOLOGY: CustomerTopology = {
     id: 'workspace-executive-global',
-    name: 'Global Business Connectivity',
-    subtitle: 'London, Dubai, and Singapore executive view',
+    name: 'Global Operations Pulse',
+    subtitle: 'Board-level view of reach, risk, and service continuity',
     map: {
         center: [28, 55],
         zoom: 2.8,

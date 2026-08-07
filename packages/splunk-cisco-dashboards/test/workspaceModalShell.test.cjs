@@ -21,8 +21,8 @@ const profile = read("../src/main/webapp/pages/executive_insights/index.tsx");
 for (const expectedClass of [
   "max-w-[880px]",
   "max-w-[960px]",
-  "max-w-[840px]",
-  "max-w-[1000px]",
+  "max-w-[1120px]",
+  "max-w-[1320px]",
 ]) {
   assert.ok(
     shell.includes(expectedClass),
@@ -32,8 +32,28 @@ for (const expectedClass of [
 
 assert.match(
   shell,
-  /bg-slate-950\/\[0\.56\][\s\S]*backdrop-blur-\[2px\]/,
-  "Shared modal shell must use the approved 56% backdrop and 2px blur",
+  /bg-slate-950\/\[0\.42\][\s\S]*backdrop-blur-md/,
+  "Shared modal shell must use a translucent blurred backdrop",
+);
+for (const accessibleResizeLabel of [
+  "Resize dialog width",
+  "Resize dialog height",
+  "Resize dialog width and height",
+]) {
+  assert.ok(
+    shell.includes(`aria-label="${accessibleResizeLabel}"`),
+    `Detail dialogs must expose the ${accessibleResizeLabel.toLowerCase()} control`,
+  );
+}
+assert.match(
+  shell,
+  /onDoubleClick=\{resetAutoSize\}/,
+  "Resizable detail dialogs must offer a quick return to automatic sizing",
+);
+assert.match(
+  shell,
+  /event\.shiftKey \? 48 : 16/,
+  "Resize controls must support precise and accelerated keyboard resizing",
 );
 assert.match(
   shell,
@@ -58,7 +78,7 @@ assert.match(
 assert.match(
   profile,
   /<WorkspaceModalShell[\s\S]*?variant="detail"[\s\S]*?wide=\{displayColumns\.length > 5\}/,
-  "Detail drilldowns must use the compact variant and widen only for dense tables",
+  "Detail drilldowns must auto-widen further for dense tables",
 );
 
 console.log("✓ Workspace modal shell design and accessibility tests passed");

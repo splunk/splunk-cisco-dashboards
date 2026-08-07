@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowUpRight, Keyboard, Settings2, X } from 'lucide-react';
+import { ArrowUpRight, Keyboard, Settings2, X } from '@/common/icons/SuiIcon';
 
 interface ShortcutRow {
     keys: string;
@@ -16,11 +16,11 @@ interface HelpOverlayProps {
 const renderKeys = (keys: string): React.ReactNode =>
     keys.split(' ').map((k, i, arr) => (
         <React.Fragment key={`${k}-${i}`}>
-            <kbd className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded text-[10px] font-mono font-bold text-slate-700 dark:text-slate-200">
+            <kbd className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded text-xs font-mono font-bold text-slate-700 dark:text-slate-200">
                 {k.length === 1 ? k.toUpperCase() : k}
             </kbd>
             {i < arr.length - 1 && (
-                <span className="text-[10px] text-slate-400 dark:text-slate-500 mx-1">
+                <span className="text-xs text-slate-400 dark:text-slate-500 mx-1">
                     then
                 </span>
             )}
@@ -129,7 +129,7 @@ export const HelpOverlay = React.memo<HelpOverlayProps>(({ open, onClose, shortc
                             <section>
                                 <div className="flex items-center gap-1.5 mb-3">
                                     <Keyboard className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
-                                    <h3 className="text-[11px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-wider">
+                                    <h3 className="text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-wider">
                                         Keyboard shortcuts
                                     </h3>
                                 </div>
@@ -178,11 +178,11 @@ export const HelpOverlay = React.memo<HelpOverlayProps>(({ open, onClose, shortc
                             <section>
                                 <div className="flex items-center gap-1.5 mb-3">
                                     <Settings2 className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
-                                    <h3 className="text-[11px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-wider">
+                                    <h3 className="text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-wider">
                                         Customizing tiles
                                     </h3>
                                 </div>
-                                <p className="text-[11px] text-slate-600 dark:text-slate-300 mb-3 leading-snug">
+                                <p className="text-xs text-slate-600 dark:text-slate-300 mb-3 leading-snug">
                                     Right-click any tile to open the picker. Most
                                     customisations stay scoped to the tile you
                                     opened it from — a few fan out further, summarised
@@ -192,18 +192,18 @@ export const HelpOverlay = React.memo<HelpOverlayProps>(({ open, onClose, shortc
                                     {CUSTOMIZATION_SCOPE.map((row) => (
                                         <li
                                             key={row.action}
-                                            className="text-[11px] leading-snug"
+                                            className="text-xs leading-snug"
                                         >
                                             <div className="text-slate-700 dark:text-slate-200 font-semibold">
                                                 {row.action}
                                             </div>
-                                            <div className="text-slate-500 dark:text-slate-400 text-[10px]">
+                                            <div className="text-slate-500 dark:text-slate-400 text-xs">
                                                 → {row.scope}
                                             </div>
                                         </li>
                                     ))}
                                 </ul>
-                                <p className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 text-[10px] text-slate-500 dark:text-slate-400 leading-snug flex items-start gap-1.5">
+                                <p className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 leading-snug flex items-start gap-1.5">
                                     <ArrowUpRight className="w-3 h-3 mt-0.5 text-sky-500 dark:text-sky-400 flex-shrink-0" />
                                     <span>
                                         KPI tiles stay single-value by design. For
@@ -215,7 +215,7 @@ export const HelpOverlay = React.memo<HelpOverlayProps>(({ open, onClose, shortc
                             </section>
                         </div>
 
-                        <p className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 text-[10px] text-slate-400 dark:text-slate-500">
+                        <p className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-400 dark:text-slate-500">
                             Shortcuts are disabled while typing in inputs. Press{' '}
                             <kbd className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded font-mono">
                                 Esc

@@ -79,13 +79,13 @@ function TemplateCards() {
             : dashboards;
 
     return (
-        <SplunkThemeProvider family="prisma" colorScheme="light" density="compact">
+        <SplunkThemeProvider density="compact">
             <div
                 style={{
                     display: 'flex',
                     height: '100vh',
                     overflow: 'hidden',
-                    backgroundColor: '#fafafa',
+                    backgroundColor: 'var(--sui-background-page)',
                 }}
             >
                 {/* Sidebar - Always visible */}

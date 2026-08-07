@@ -9,7 +9,7 @@ import {
     Maximize2,
     Settings2,
     PanelRightOpen,
-} from 'lucide-react';
+} from '@/common/icons/SuiIcon';
 import {
     Sparkline,
     type SparklineVizType,
@@ -209,13 +209,13 @@ const DemoDataChip: React.FC = () => (
             type="button"
             aria-label={MOCK_DATA_HELP}
             data-tile-control="true"
-            className="px-1.5 py-0.5 rounded-full border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 text-[9px] font-extrabold tracking-normal text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-400"
+            className="px-1.5 py-0.5 rounded-full border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 text-xs font-extrabold tracking-normal text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-400"
         >
             Demo data
         </button>
         <span
             role="tooltip"
-            className="pointer-events-none absolute right-0 top-full z-50 mt-1 w-56 rounded-md bg-slate-900 px-2 py-1.5 text-[11px] leading-snug text-slate-100 shadow-lg ring-1 ring-slate-700 opacity-0 transition-opacity group-hover/demo:opacity-100 group-focus-within/demo:opacity-100"
+            className="pointer-events-none absolute right-0 top-full z-50 mt-1 w-56 rounded-md bg-slate-900 px-2 py-1.5 text-xs leading-snug text-slate-100 shadow-lg ring-1 ring-slate-700 opacity-0 transition-opacity group-hover/demo:opacity-100 group-focus-within/demo:opacity-100"
         >
             {MOCK_DATA_HELP}
         </span>
@@ -507,7 +507,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                                     —
                                 </span>
                             </div>
-                            <span className="text-[9px] font-medium text-slate-400 dark:text-slate-500 mt-0.5 leading-tight">
+                            <span className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5 leading-tight">
                                 {subtext}
                             </span>
                         </div>
@@ -541,7 +541,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                         {showChange && (
                             <div
                                 className={cn(
-                                    'flex items-center text-[10px] font-black',
+                                    'flex items-center text-xs font-black',
                                     STATUS_TREND_COLOR[status]
                                 )}
                             >

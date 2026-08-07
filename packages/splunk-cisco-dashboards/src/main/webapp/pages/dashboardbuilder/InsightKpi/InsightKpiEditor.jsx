@@ -322,7 +322,7 @@ const InsightKpiEditor = (props) => {
                     labelPosition="top"
                     controlsLayout="fillJoin"
                 >
-                    <SplunkThemeProvider family="prisma" density="compact" colorScheme="light">
+                    <SplunkThemeProvider density="compact">
                         <Color
                             value={titleColor}
                             onChange={({ value }) => {
@@ -337,7 +337,7 @@ const InsightKpiEditor = (props) => {
                     labelPosition="top"
                     controlsLayout="fillJoin"
                 >
-                    <SplunkThemeProvider family="prisma" density="compact" colorScheme="light">
+                    <SplunkThemeProvider density="compact">
                         <Color
                             value={bgColor}
                             onChange={({ value }) => {
@@ -359,7 +359,7 @@ const InsightKpiEditor = (props) => {
                             style={{ marginBottom: '10px' }}
                             disabled={selectedKpi == undefined}
                         />
-                        <SplunkThemeProvider family="prisma" density="compact" colorScheme="light">
+                        <SplunkThemeProvider density="compact">
                             <Color
                                 value={borderColor}
                                 onChange={(e, { value }) => {

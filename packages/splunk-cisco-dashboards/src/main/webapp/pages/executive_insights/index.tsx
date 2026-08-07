@@ -31,49 +31,49 @@ import React, {
 } from "react";
 import { createURL } from "@splunk/splunk-utils/url";
 import {
-  Activity,
-  User,
-  RefreshCw,
-  Pause,
-  Download,
-  Keyboard,
-  RotateCcw,
-  Settings2,
-  ExternalLink,
-  PanelRight,
-  PanelBottom,
-  PanelTop,
-  Map as MapIcon,
-  Edit3,
-  Upload,
-  X,
-  Check,
-  CheckCircle2,
-  ChevronDown,
-  ChevronRight,
-  AlertCircle,
-  ClipboardCheck,
-  ArrowRight,
-  ArrowUp,
-  ArrowDown,
-  ArrowUpDown,
-  Sparkles,
-  Layers3,
-  Shield,
-  ShieldCheck,
-  ServerCog,
-  Network,
-  BrickWall,
-  Bot,
-  Building2,
-  Plus,
-  Eye,
-  EyeOff,
-  Search,
-  Tag,
-  Trash2,
-  type LucideIcon,
-} from "lucide-react";
+    Activity,
+    User,
+    RefreshCw,
+    Pause,
+    Download,
+    Keyboard,
+    RotateCcw,
+    Settings2,
+    ExternalLink,
+    Map as MapIcon,
+    Edit3,
+    Upload,
+    X,
+    Check,
+    CheckCircle2,
+    ChevronDown,
+    ChevronRight,
+    AlertCircle,
+    ClipboardCheck,
+    ArrowRight,
+    ArrowUp,
+    ArrowDown,
+    ArrowUpDown,
+    Layers3,
+    Shield,
+    ShieldCheck,
+    Plus,
+    Eye,
+    EyeOff,
+    Search,
+    Tag,
+    Trash2,
+    PanelBottom,
+    PanelRight,
+    PanelTop,
+    Sparkles,
+    ServerCog,
+    Network,
+    BrickWall,
+    Bot,
+    Building2,
+    type SuiIcon,
+} from '@/common/icons/SuiIcon';
 import { DashboardSection } from "@/common/components/florida/DashboardSection";
 import { MetricItem } from "@/common/components/florida/MetricItem";
 import { WorkspaceModalShell } from "@/common/components/florida/WorkspaceModalShell";
@@ -162,6 +162,7 @@ import {
   EXECUTIVE_WORKSPACE_SOURCE_ID,
   PACKAGED_WORKSPACE_FALLBACKS,
   getWorkspaceFromLocation,
+  getWorkspaceSectionSource,
   isWorkspaceSourceId,
   sectionIdsForWorkspace,
   type InsightsWorkspace,
@@ -480,6 +481,18 @@ const parseOverviewSection = (
     : undefined;
 };
 
+const overviewDefinitionMatchesWorkspace = (
+  definition: Record<string, unknown>,
+  profile: InsightsWorkspace,
+): boolean => {
+  const section = parseOverviewSection(definition.section, profile);
+  if (!section) return false;
+  return (
+    parseWorkspaceSource(definition.workspace ?? definition.profile) ===
+    getWorkspaceSectionSource(section)
+  );
+};
+
 const parseOverviewThresholds = (
   raw: unknown,
   fallback?: MetricThresholds,
@@ -641,9 +654,7 @@ const buildOverviewMetricConfig = (
   for (const record of records) {
     if (!record.searchName || !record.search) continue;
     const definitions = overviewDefinitionsFromRecord(record).filter(
-      (definition) =>
-        parseWorkspaceSource(definition.workspace ?? definition.profile) ===
-        profile.sourceWorkspace,
+      (definition) => overviewDefinitionMatchesWorkspace(definition, profile),
     );
     const autoDefinition =
       definitions.length === 0
@@ -714,9 +725,7 @@ const buildAddedOverviewMetricConfig = (
       if (existingIds.has(tileId)) continue;
 
       const definitions = overviewDefinitionsFromRecord(record).filter(
-        (definition) =>
-          parseWorkspaceSource(definition.workspace ?? definition.profile) ===
-          profile.sourceWorkspace,
+        (definition) => overviewDefinitionMatchesWorkspace(definition, profile),
       );
       const autoDefinition =
         definitions.length === 0
@@ -801,7 +810,7 @@ const buildOverviewMapFooterConfig = (
 // Section icon rendering
 // =============================================================================
 
-const SECTION_ICON_COMPONENTS: Record<WorkspaceSectionIcon, LucideIcon> = {
+const SECTION_ICON_COMPONENTS: Record<WorkspaceSectionIcon, SuiIcon> = {
   activity: Activity,
   shield: Shield,
   building: Building2,
@@ -4164,7 +4173,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
 
   // ------------------------------ Render ------------------------------
   const inputClass =
-    "text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 border border-slate-200 " +
+    "text-xs font-semibold bg-slate-100 dark:bg-slate-800 border border-slate-200 " +
     "dark:border-slate-700 rounded-md m-0 h-8 px-2 py-0 text-slate-700 dark:text-slate-200 " +
     "hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 " +
     "focus:ring-sky-500 cursor-pointer";
@@ -4234,7 +4243,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             <h1 className="text-base font-black text-sky-900 dark:text-sky-200 tracking-tight leading-none uppercase truncate">
               {effectiveTitle}
             </h1>
-            <p className="text-[9px] font-bold text-sky-600 dark:text-sky-400 uppercase tracking-[0.3em] mt-1 leading-none truncate">
+            <p className="text-xs font-bold text-sky-600 dark:text-sky-400 uppercase tracking-[0.3em] mt-1 leading-none truncate">
               {effectiveSubtitle}
             </p>
           </div>
@@ -4257,7 +4266,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             aria-live="polite"
           />
           <label className="m-0 flex h-8 items-center gap-1.5">
-            <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest hidden lg:inline">
+            <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest hidden lg:inline">
               Range
             </span>
             <select
@@ -4279,7 +4288,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             </select>
           </label>
           <label className="m-0 flex h-8 items-center gap-1.5">
-            <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest hidden lg:inline">
+            <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest hidden lg:inline">
               Auto
             </span>
             <select
@@ -4330,14 +4339,14 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               <button
                 type="button"
                 onClick={() => exportAs("png")}
-                className="px-3 py-1.5 text-[11px] text-left font-semibold text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-slate-800"
+                className="px-3 py-1.5 text-xs text-left font-semibold text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-slate-800"
               >
                 Save as PNG
               </button>
               <button
                 type="button"
                 onClick={() => exportAs("pdf")}
-                className="px-3 py-1.5 text-[11px] text-left font-semibold text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-slate-800 border-t border-slate-100 dark:border-slate-700"
+                className="px-3 py-1.5 text-xs text-left font-semibold text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-slate-800 border-t border-slate-100 dark:border-slate-700"
               >
                 Save as PDF
               </button>
@@ -4368,7 +4377,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               )}
             >
               <RotateCcw className="w-4 h-4" />
-              <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] rounded-full bg-sky-500 text-white text-[9px] font-black leading-[14px] text-center px-0.5 border border-white dark:border-slate-900">
+              <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] rounded-full bg-sky-500 text-white text-xs font-black leading-[14px] text-center px-0.5 border border-white dark:border-slate-900">
                 {overrideCount}
               </span>
             </button>
@@ -4434,7 +4443,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                 title={`Switch workspace. Current: ${insightsWorkspace.label}`}
               >
                 <Layers3 className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
-                <span className="hidden truncate text-[11px] font-bold leading-none xl:block">
+                <span className="hidden truncate text-xs font-bold leading-none xl:block">
                   {insightsWorkspace.label}
                 </span>
                 <ChevronDown
@@ -4463,7 +4472,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   href={appCatalogUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[9px] text-slate-400 no-underline transition-colors hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+                  className="text-xs text-slate-400 no-underline transition-colors hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
                   title={`Installed: ${appVersionLabel} — click to review Splunk for Secure Networking and upgrades`}
                   aria-label={`Splunk for Secure Networking and upgrades; installed app ${appVersionLabel}`}
                 >
@@ -4534,13 +4543,13 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               <div className="flex-shrink-0 w-7 h-7 rounded bg-sky-600 text-white flex items-center justify-center shadow-sm">
                 <ClipboardCheck className="w-4 h-4 stroke-[2.5px]" />
               </div>
-              <span className="text-[9px] font-black text-sky-700 dark:text-sky-300 uppercase tracking-[0.25em] whitespace-nowrap flex-shrink-0 hidden sm:inline w-[172px]">
+              <span className="text-xs font-black text-sky-700 dark:text-sky-300 uppercase tracking-[0.25em] whitespace-nowrap flex-shrink-0 hidden sm:inline w-[172px]">
                 {PRIORITY_DRILLDOWN_LABEL}
               </span>
               <span className="text-[13px] font-bold text-slate-900 dark:text-slate-100 truncate min-w-0">
                 {selectedPriorityDrilldown.title}
               </span>
-              <span className="text-[11px] text-slate-600 dark:text-slate-400 truncate min-w-0 hidden lg:inline">
+              <span className="text-xs text-slate-600 dark:text-slate-400 truncate min-w-0 hidden lg:inline">
                 {selectedPriorityDrilldown.description}
               </span>
             </a>
@@ -4558,7 +4567,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   }
                   title="Choose priority drill-down dashboard"
                   aria-label="Choose priority drill-down dashboard"
-                  className="h-7 !mb-0 w-[220px] max-w-[22vw] rounded-md border border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 px-2 py-0 text-[11px] leading-none font-semibold text-slate-700 dark:text-slate-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
+                  className="h-7 !mb-0 w-[220px] max-w-[22vw] rounded-md border border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 px-2 py-0 text-xs leading-none font-semibold text-slate-700 dark:text-slate-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
                 >
                   {APP_PRIORITY_DRILLDOWNS.map((item) => (
                     <option key={item.viewName} value={item.viewName}>
@@ -4574,7 +4583,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                 title={`Open ${selectedPriorityDrilldown.title} in a new tab`}
                 aria-label={`Open ${selectedPriorityDrilldown.title} in a new tab`}
                 data-testid="featured-report-cta"
-                className="h-7 flex-shrink-0 inline-flex items-center gap-1.5 px-3 rounded bg-sky-600 group-hover:bg-sky-500 active:bg-sky-700 text-white text-[11px] font-bold tracking-wide uppercase shadow-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+                className="h-7 flex-shrink-0 inline-flex items-center gap-1.5 px-3 rounded bg-sky-600 group-hover:bg-sky-500 active:bg-sky-700 text-white text-xs font-bold tracking-wide uppercase shadow-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
               >
                 {PRIORITY_DRILLDOWN_CTA}
                 <ArrowRight className="w-3.5 h-3.5 stroke-[2.5px]" />
@@ -4988,7 +4997,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                     <h3 className="text-base font-bold text-sky-900 dark:text-sky-200 uppercase tracking-wide leading-none">
                       {topologyHeaderName}
                     </h3>
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium mt-0.5">
+                    <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mt-0.5">
                       {topologyHeaderSubtitle}
                     </p>
                   </div>
@@ -5328,6 +5337,13 @@ const recordMatchesProfileScope = (
   profile: InsightsWorkspace,
 ): boolean => {
   if (!record.search?.trim()) return false;
+  if (
+    overviewDefinitionsFromRecord(record).some((definition) =>
+      overviewDefinitionMatchesWorkspace(definition, profile),
+    )
+  ) {
+    return true;
+  }
   const requiredTag = profile.autoDiscovery?.requiredTag;
   return requiredTag ? recordHasTag(record, requiredTag) : true;
 };
@@ -5339,8 +5355,7 @@ const recordMatchesProfileSection = (
 ): boolean => {
   const explicitOverviewMatch = overviewDefinitionsFromRecord(record).some(
     (definition) =>
-      parseWorkspaceSource(definition.workspace ?? definition.profile) ===
-        profile.sourceWorkspace &&
+      overviewDefinitionMatchesWorkspace(definition, profile) &&
       parseOverviewSection(definition.section, profile) === section,
   );
   if (explicitOverviewMatch) return true;
@@ -5481,7 +5496,7 @@ const OverviewAddTileAppMultiSelect: React.FC<
             return (
               <span
                 key={app}
-                className="inline-flex max-w-full items-center gap-1 rounded-full bg-sky-500 py-0.5 pl-2 pr-1 text-[10px] font-bold uppercase tracking-wide text-white"
+                className="inline-flex max-w-full items-center gap-1 rounded-full bg-sky-500 py-0.5 pl-2 pr-1 text-xs font-bold uppercase tracking-wide text-white"
               >
                 <span className="max-w-[220px] truncate">{app}</span>
                 {count > 0 && (
@@ -5544,7 +5559,7 @@ const OverviewAddTileAppMultiSelect: React.FC<
               </span>
               <span className="truncate">All apps</span>
             </span>
-            <span className="shrink-0 text-[10px] font-bold text-slate-400 dark:text-slate-500">
+            <span className="shrink-0 text-xs font-bold text-slate-400 dark:text-slate-500">
               {appOptions.length}
             </span>
           </button>
@@ -5578,7 +5593,7 @@ const OverviewAddTileAppMultiSelect: React.FC<
                   </span>
                   <span className="truncate">{app}</span>
                 </span>
-                <span className="shrink-0 text-[10px] font-bold text-slate-400 dark:text-slate-500">
+                <span className="shrink-0 text-xs font-bold text-slate-400 dark:text-slate-500">
                   {count}
                 </span>
               </button>
@@ -6070,7 +6085,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
       >
         <div className="flex flex-shrink-0 items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
           <div className="min-w-0">
-            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
               Add search
             </p>
             <p className="truncate text-sm font-black text-slate-800 dark:text-slate-100">
@@ -6081,7 +6096,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
             <span
               title={`${currentVisibleCount} visible, ${currentTileCount} configured, maximum ${maxTileCount}`}
               className={cn(
-                "rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-wider",
+                "rounded-full border px-2 py-1 text-xs font-black uppercase tracking-wider",
                 atVisibleMax
                   ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/40 dark:text-amber-200"
                   : "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/50 dark:text-sky-200",
@@ -6117,7 +6132,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
 
           <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-2.5 dark:border-slate-800 dark:bg-slate-950/50">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+              <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
                 Add to
               </span>
               <div
@@ -6129,7 +6144,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                   type="button"
                   onClick={() => setAddDestination("personal")}
                   className={cn(
-                    "rounded px-2.5 py-1 text-[10px] font-black uppercase tracking-wider transition-colors",
+                    "rounded px-2.5 py-1 text-xs font-black uppercase tracking-wider transition-colors",
                     addDestination === "personal"
                       ? "bg-sky-600 text-white shadow-sm"
                       : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100",
@@ -6142,7 +6157,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                     type="button"
                     onClick={() => setAddDestination("workspace")}
                     className={cn(
-                      "rounded px-2.5 py-1 text-[10px] font-black uppercase tracking-wider transition-colors",
+                      "rounded px-2.5 py-1 text-xs font-black uppercase tracking-wider transition-colors",
                       addDestination === "workspace"
                         ? "bg-sky-600 text-white shadow-sm"
                         : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100",
@@ -6153,7 +6168,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                 )}
               </div>
             </div>
-            <p className="mt-1 text-[10px] leading-snug text-slate-500 dark:text-slate-400">
+            <p className="mt-1 text-xs leading-snug text-slate-500 dark:text-slate-400">
               {addDestination === "workspace"
                 ? "Every viewer of this workspace will see the tile."
                 : "Only you will see the tile in this browser."}
@@ -6171,7 +6186,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                   ? "Hide filters"
                   : "Show filters (App, Visibility, Category, Sub-cat, Tags)"
               }
-              className="flex items-center gap-1.5 rounded px-1.5 py-1 -ml-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-slate-100"
+              className="flex items-center gap-1.5 rounded px-1.5 py-1 -ml-1.5 text-xs font-bold uppercase tracking-widest text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-slate-100"
             >
               {filtersOpen ? (
                 <ChevronDown className="h-3 w-3" />
@@ -6181,7 +6196,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
               <span>Filters</span>
               {activeFilterCount > 0 && (
                 <span
-                  className="ml-1 rounded-full bg-sky-100 px-1.5 py-px text-[9px] font-semibold normal-case tracking-normal text-sky-700 dark:bg-sky-900/50 dark:text-sky-300"
+                  className="ml-1 rounded-full bg-sky-100 px-1.5 py-px text-xs font-semibold normal-case tracking-normal text-sky-700 dark:bg-sky-900/50 dark:text-sky-300"
                   title={`${activeFilterCount} active filter${activeFilterCount === 1 ? "" : "s"}`}
                 >
                   {activeFilterCount} active
@@ -6191,7 +6206,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
             <div className="flex items-center gap-2">
               <span
                 title="Searchbase stanzas matching the current app, visibility, category, sub-category, tag, scope, and text filters"
-                className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-sky-700 shadow-sm dark:border-sky-900/70 dark:bg-sky-950/50 dark:text-sky-200"
+                className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-black uppercase tracking-wider text-sky-700 shadow-sm dark:border-sky-900/70 dark:bg-sky-950/50 dark:text-sky-200"
               >
                 {availableSearchLabel}
               </span>
@@ -6200,7 +6215,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                   type="button"
                   onClick={handleClearFacets}
                   title="Reset every filter to its default"
-                  className="text-[9px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200"
+                  className="text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200"
                 >
                   Clear filters
                 </button>
@@ -6215,7 +6230,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
             >
               {showScopeToggle && (
                 <div className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-center">
-                  <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+                  <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
                     Scope
                   </span>
                   <div
@@ -6227,7 +6242,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                       type="button"
                       onClick={() => setShowAllProfileSearches(false)}
                       className={cn(
-                        "rounded px-2 py-1 text-[10px] font-black uppercase tracking-wider transition-colors",
+                        "rounded px-2 py-1 text-xs font-black uppercase tracking-wider transition-colors",
                         !showAllProfileSearches
                           ? "bg-sky-50 text-sky-700 shadow-sm dark:bg-sky-950/50 dark:text-sky-200"
                           : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100",
@@ -6239,7 +6254,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                       type="button"
                       onClick={() => setShowAllProfileSearches(true)}
                       className={cn(
-                        "rounded px-2 py-1 text-[10px] font-black uppercase tracking-wider transition-colors",
+                        "rounded px-2 py-1 text-xs font-black uppercase tracking-wider transition-colors",
                         showAllProfileSearches
                           ? "bg-sky-50 text-sky-700 shadow-sm dark:bg-sky-950/50 dark:text-sky-200"
                           : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100",
@@ -6253,7 +6268,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
 
               <div className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-center">
                 <span
-                  className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400"
+                  className="text-xs font-black uppercase tracking-[0.18em] text-slate-400"
                   title="Splunk app the search dispatches in"
                 >
                   App
@@ -6267,11 +6282,11 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
               </div>
 
               <div className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-start">
-                <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+                <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
                   Visibility
                 </span>
                 <div className="grid grid-cols-3 gap-2">
-                  <label className="flex min-h-[58px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px] font-bold leading-snug text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                  <label className="flex min-h-[58px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold leading-snug text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
                     <input
                       type="checkbox"
                       checked={includeHiddenSearches}
@@ -6282,7 +6297,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                     />
                     <span>Show hidden searches</span>
                   </label>
-                  <label className="flex min-h-[58px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px] font-bold leading-snug text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                  <label className="flex min-h-[58px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold leading-snug text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
                     <input
                       type="checkbox"
                       checked={includeDrilldownSearches}
@@ -6293,7 +6308,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                     />
                     <span>Show drill-down searches</span>
                   </label>
-                  <label className="flex min-h-[58px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px] font-bold leading-snug text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                  <label className="flex min-h-[58px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold leading-snug text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
                     <input
                       type="checkbox"
                       checked={includeTableSearches}
@@ -6309,7 +6324,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
 
               {categories.length > 0 && (
                 <label className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-center">
-                  <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+                  <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
                     Category
                   </span>
                   <select
@@ -6333,7 +6348,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
               {selectedCategory !== ALL_ADD_TILE_CATEGORIES &&
                 subCategories.length > 0 && (
                   <label className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-center">
-                    <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+                    <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
                       Sub-cat
                     </span>
                     <select
@@ -6356,7 +6371,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
 
               {(allTagsWithCounts.length > 0 || activeTags.size > 0) && (
                 <div className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-start">
-                  <span className="pt-2 text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+                  <span className="pt-2 text-xs font-black uppercase tracking-[0.18em] text-slate-400">
                     Tags
                   </span>
                   <div className="relative" ref={tagSelectRef}>
@@ -6378,7 +6393,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                         return (
                           <span
                             key={tag}
-                            className="inline-flex items-center gap-1 rounded-full bg-sky-500 py-0.5 pl-2 pr-1 text-[10px] font-bold uppercase tracking-wide text-white"
+                            className="inline-flex items-center gap-1 rounded-full bg-sky-500 py-0.5 pl-2 pr-1 text-xs font-bold uppercase tracking-wide text-white"
                           >
                             {tag}
                             {count > 0 && (
@@ -6460,7 +6475,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                                     <Tag className="h-3 w-3 shrink-0 text-slate-400" />
                                     <span className="truncate">{tag}</span>
                                   </span>
-                                  <span className="shrink-0 text-[10px] font-bold text-slate-400 dark:text-slate-500">
+                                  <span className="shrink-0 text-xs font-bold text-slate-400 dark:text-slate-500">
                                     {count}
                                   </span>
                                 </button>
@@ -6469,7 +6484,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                             {!tagFilter.trim() &&
                               allTagsWithCounts.length - activeTags.size >
                                 tagDropdownOptions.length && (
-                                <p className="border-t border-slate-100 px-3 py-1.5 text-[10px] text-slate-400 dark:border-slate-800 dark:text-slate-500">
+                                <p className="border-t border-slate-100 px-3 py-1.5 text-xs text-slate-400 dark:border-slate-800 dark:text-slate-500">
                                   Top {tagDropdownOptions.length} of{" "}
                                   {allTagsWithCounts.length - activeTags.size} -
                                   type to filter.
@@ -6488,7 +6503,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
 
         <div className="min-h-0 flex-1 overflow-auto px-3 pb-3">
           {loading && (
-            <div className="px-3 py-8 text-center text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+            <div className="px-3 py-8 text-center text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
               Loading searchbase.conf
             </div>
           )}
@@ -6534,18 +6549,18 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                           <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-sky-600 dark:text-sky-300" />
                         ) : null}
                         {record.searchHidden && (
-                          <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-slate-400 dark:bg-slate-800 dark:text-slate-500">
+                          <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-xs font-black uppercase tracking-wider text-slate-400 dark:bg-slate-800 dark:text-slate-500">
                             Hidden
                           </span>
                         )}
                       </div>
-                      <p className="mt-0.5 truncate text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                      <p className="mt-0.5 truncate text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                         {[record.category, record.subCategory]
                           .filter(Boolean)
                           .join(" / ") || record.id}
                       </p>
                       {description && (
-                        <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-slate-500 dark:text-slate-400">
+                        <p className="mt-1 line-clamp-2 text-xs leading-snug text-slate-500 dark:text-slate-400">
                           {description}
                         </p>
                       )}
@@ -6554,7 +6569,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                           {tags.map((tag) => (
                             <span
                               key={tag}
-                              className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-300"
+                              className="rounded-full bg-slate-100 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-300"
                             >
                               {tag}
                             </span>
@@ -6568,7 +6583,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                         type="button"
                         onClick={() => onUnhide(record)}
                         title={`Show ${record.searchName} in ${sectionTitle}`}
-                        className="inline-flex h-8 shrink-0 items-center gap-1 rounded-md bg-amber-500 px-2 text-[10px] font-black uppercase tracking-wider text-white transition-colors hover:bg-amber-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+                        className="inline-flex h-8 shrink-0 items-center gap-1 rounded-md bg-amber-500 px-2 text-xs font-black uppercase tracking-wider text-white transition-colors hover:bg-amber-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
                       >
                         <Eye className="h-3.5 w-3.5" />
                         Show
@@ -6578,7 +6593,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                         type="button"
                         onClick={() => onRemove(record)}
                         title={`Remove ${record.searchName} from ${sectionTitle}`}
-                        className="inline-flex h-8 shrink-0 items-center gap-1 rounded-md border border-red-200 bg-white px-2 text-[10px] font-black uppercase tracking-wider text-red-600 transition-colors hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-300 dark:border-red-900/70 dark:bg-slate-950 dark:text-red-300 dark:hover:bg-red-950/30"
+                        className="inline-flex h-8 shrink-0 items-center gap-1 rounded-md border border-red-200 bg-white px-2 text-xs font-black uppercase tracking-wider text-red-600 transition-colors hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-300 dark:border-red-900/70 dark:bg-slate-950 dark:text-red-300 dark:hover:bg-red-950/30"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                         Remove
@@ -6596,7 +6611,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                               : `Add ${record.searchName}`
                         }
                         className={cn(
-                          "inline-flex h-8 shrink-0 items-center gap-1 rounded-md px-2 text-[10px] font-black uppercase tracking-wider transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400",
+                          "inline-flex h-8 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-black uppercase tracking-wider transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400",
                           disabled
                             ? "cursor-not-allowed bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500"
                             : "bg-sky-600 text-white hover:bg-sky-500 active:bg-sky-700",
@@ -6675,7 +6690,7 @@ const RegionalViewToggle: React.FC<RegionalViewToggleProps> = ({
   onChange,
 }) => {
   const baseClass =
-    "px-3 py-1 text-[10px] font-bold transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400";
+    "px-3 py-1 text-xs font-bold transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400";
   const activeClass =
     "bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 text-sky-600 dark:text-sky-300";
   const inactiveClass =
@@ -6947,7 +6962,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
       onClose={onClose}
       openInSearchHref={searchUrl}
       wide={displayColumns.length > 5}
-      contentClassName="overflow-auto bg-[#0b1220]"
+      contentClassName="overflow-auto bg-slate-950/[0.28]"
       headerMeta={
         statusField ? (
           <>
@@ -6963,8 +6978,8 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
         ) : undefined
       }
     >
-          <table className="w-full min-w-[860px] bg-[#0b1220] text-sm">
-            <thead className="sticky top-0 z-10 border-b border-[#1e3449] bg-[#101c2e]">
+          <table className="w-full min-w-[860px] bg-transparent text-sm">
+            <thead className="sticky top-0 z-10 border-b border-white/[0.1] bg-slate-950/[0.72] backdrop-blur-xl">
               <tr className="text-left text-xs font-bold text-[#8ea3b8]">
                 {displayColumns.map((column, index) => {
                   const isSorted = sortState?.field === column.field;
@@ -7059,7 +7074,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
                   return (
                     <tr
                       key={`${rowKey}-${rowIndex}`}
-                      className="odd:bg-[#0d1828] even:bg-[#0b1525] transition-colors hover:bg-[#132238]"
+                      className="odd:bg-slate-900/[0.22] even:bg-slate-950/[0.18] transition-colors hover:bg-sky-900/[0.24]"
                     >
                       {displayColumns.map((column, index) => {
                         const value = row[column.field];
@@ -7251,7 +7266,7 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
     "dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 " +
     "focus:outline-none focus:ring-1 focus:ring-sky-400";
   const labelClass =
-    "block text-[10px] font-bold text-slate-600 dark:text-slate-400 " +
+    "block text-xs font-bold text-slate-600 dark:text-slate-400 " +
     "uppercase tracking-wider mb-1";
 
   return (
@@ -7339,7 +7354,7 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
                       {isVisible
                         ? `Section ${visibleIndex + 1}`
                         : "Hidden section"}
-                      <span className="ml-2 text-[9px] font-black text-slate-400 dark:text-slate-500">
+                      <span className="ml-2 text-xs font-black text-slate-400 dark:text-slate-500">
                         {sectionKeyLabel}
                       </span>
                     </label>
@@ -7631,7 +7646,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
           <div>
             <label
               htmlFor="branding-title-input"
-              className="block text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1"
+              className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1"
             >
               Title
             </label>
@@ -7644,7 +7659,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
               maxLength={120}
               className="w-full px-2 py-1.5 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-400"
             />
-            <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-500">
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-500">
               Leave blank to use the value from the
               <code className="mx-1 px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded">
                 [customer_name]
@@ -7657,7 +7672,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
           <div>
             <label
               htmlFor="branding-subtitle-input"
-              className="block text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1"
+              className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1"
             >
               Subtitle
             </label>
@@ -7670,14 +7685,14 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
               maxLength={120}
               className="w-full px-2 py-1.5 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-400"
             />
-            <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-500">
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-500">
               Leave blank for the default (&ldquo;{subtitlePlaceholder}&rdquo;).
             </p>
           </div>
 
           {/* Logo */}
           <div>
-            <span className="block text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">
+            <span className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">
               Logo
             </span>
             <div className="flex items-center gap-3">
@@ -7689,7 +7704,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
                     className="w-full h-full object-contain"
                   />
                 ) : (
-                  <span className="text-center text-[9px] font-bold leading-tight">
+                  <span className="text-center text-xs font-bold leading-tight">
                     No logo
                   </span>
                 )}
@@ -7698,7 +7713,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex items-center gap-1.5 px-2 py-1 text-[11px] font-bold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-900/30 hover:bg-sky-100 dark:hover:bg-sky-900/50 rounded transition-colors"
+                  className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-900/30 hover:bg-sky-100 dark:hover:bg-sky-900/50 rounded transition-colors"
                 >
                   <Upload className="w-3 h-3" />
                   {logoDataUri ? "Replace logo" : "Upload logo"}
@@ -7707,7 +7722,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
                   <button
                     type="button"
                     onClick={handleClearLogo}
-                    className="text-[10px] text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 underline"
+                    className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 underline"
                   >
                     Clear (use default)
                   </button>
@@ -7721,7 +7736,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
                 />
               </div>
             </div>
-            <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-500">
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-500">
               PNG, SVG, JPEG, WebP, or GIF. Max{" "}
               {Math.round(BRANDING_LOGO_DATA_URI_MAX_BYTES / 1024)} KB after
               encoding. Stored in your browser only.
@@ -7731,7 +7746,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
           {errorMessage ? (
             <div
               role="alert"
-              className="text-[11px] text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 rounded px-2 py-1.5"
+              className="text-xs text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 rounded px-2 py-1.5"
             >
               {errorMessage}
             </div>
@@ -7742,7 +7757,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
           <button
             type="button"
             onClick={onResetToDefaults}
-            className="text-[11px] font-bold text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-300 underline"
+            className="text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-300 underline"
           >
             Reset to defaults
           </button>
@@ -7750,14 +7765,14 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1.5 text-[11px] font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              className="px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={handleSave}
-              className="px-3 py-1.5 text-[11px] font-bold text-white bg-sky-600 hover:bg-sky-700 rounded transition-colors"
+              className="px-3 py-1.5 text-xs font-bold text-white bg-sky-600 hover:bg-sky-700 rounded transition-colors"
             >
               Save
             </button>
@@ -7875,7 +7890,7 @@ const KpiCard: React.FC<KpiCardProps> = ({
     />
     <div className="flex items-center gap-2 mb-0.5">
       <div className={cn("w-1.5 h-1.5 rounded-full", accentClassName)} />
-      <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider truncate flex-1">
+      <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider truncate flex-1">
         {label}
       </span>
       {description && (

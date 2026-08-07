@@ -35,7 +35,7 @@
 
 import React, { useState } from 'react';
 import { Handle, NodeResizer, Position } from '@xyflow/react';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
 import type {
     HealthStatus,
@@ -397,13 +397,13 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
                             )}
                             aria-hidden
                         />
-                        <span className="truncate text-[10px] font-semibold text-slate-900 dark:text-slate-100">
+                        <span className="truncate text-xs font-semibold text-slate-900 dark:text-slate-100">
                             {node.shortLabel}
                         </span>
                     </div>
                     <div
                         className={cn(
-                            'truncate text-[8px] font-mono tracking-tight',
+                            'truncate text-xs font-mono tracking-tight',
                             vendorModelLine
                                 ? 'text-slate-600 dark:text-slate-300'
                                 : 'text-transparent'
@@ -414,7 +414,7 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
                     </div>
                     <div
                         className={cn(
-                            'truncate text-[8px] font-mono tracking-tight',
+                            'truncate text-xs font-mono tracking-tight',
                             showIp
                                 ? 'text-sky-600 dark:text-sky-400'
                                 : 'text-transparent'
@@ -570,7 +570,7 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
                     />
                     {ledHover && candidateHost && (
                         <span
-                            className="absolute top-full right-0 mt-1 z-20 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-900/90 dark:bg-slate-800/95 text-white text-[8px] font-semibold whitespace-nowrap shadow-md pointer-events-none"
+                            className="absolute top-full right-0 mt-1 z-20 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-900/90 dark:bg-slate-800/95 text-white text-xs font-semibold whitespace-nowrap shadow-md pointer-events-none"
                             role="status"
                         >
                             <ExternalLink className="w-2.5 h-2.5" aria-hidden />
@@ -590,15 +590,15 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
                 keeps grid-aligned OOB diagrams from re-flowing
                 when one card has an IP and a neighbour doesn't. */}
             <div className="border-t border-slate-200 dark:border-slate-800 px-2 py-1 leading-tight">
-                <div className="text-[10px] font-semibold text-slate-900 dark:text-slate-100 truncate">
+                <div className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">
                     {node.shortLabel}
                 </div>
-                <div className="text-[8px] text-slate-500 dark:text-slate-400 truncate uppercase tracking-wide">
+                <div className="text-xs text-slate-500 dark:text-slate-400 truncate uppercase tracking-wide">
                     {detail}
                 </div>
                 <div
                     className={cn(
-                        'text-[8px] truncate font-mono tracking-tight',
+                        'text-xs truncate font-mono tracking-tight',
                         vendorModelLine
                             ? 'text-slate-600 dark:text-slate-300'
                             : 'text-transparent'
@@ -609,7 +609,7 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
                 </div>
                 <div
                     className={cn(
-                        'text-[8px] truncate font-mono tracking-tight',
+                        'text-xs truncate font-mono tracking-tight',
                         showIp
                             ? 'text-sky-600 dark:text-sky-400'
                             : 'text-transparent'
@@ -727,9 +727,9 @@ export const TopologyZoneNode: React.FC<{
         )}
         style={{ width: '100%', height: '100%' }}
     >
-        <div className="flex items-center justify-between px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+        <div className="flex items-center justify-between px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
             <span className="truncate">{data.label}</span>
-            <span className="ml-2 px-1.5 py-0.5 rounded bg-slate-200/70 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 text-[9px]">
+            <span className="ml-2 px-1.5 py-0.5 rounded bg-slate-200/70 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 text-xs">
                 {data.deviceCount}
             </span>
         </div>

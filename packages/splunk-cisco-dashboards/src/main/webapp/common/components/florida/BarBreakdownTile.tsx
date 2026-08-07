@@ -30,7 +30,7 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { ExternalLink, Maximize2, PanelRightOpen, Settings2 } from 'lucide-react';
+import { ExternalLink, Maximize2, PanelRightOpen, Settings2 } from '@/common/icons/SuiIcon';
 import { ChartFocusDialog } from './ChartFocusDialog';
 import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
 import { cn } from '@/common/lib/utils';
@@ -156,7 +156,7 @@ const NoDataState: React.FC<{
             <span className="text-4xl font-black tracking-tighter leading-none text-slate-400 dark:text-slate-500">
                 —
             </span>
-            <span className="text-[9px] font-medium text-slate-400 dark:text-slate-500 mt-0.5 leading-tight">
+            <span className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5 leading-tight">
                 {subtext}
             </span>
         </div>
@@ -398,7 +398,7 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                             return (
                                 <div
                                     key={entry.key}
-                                    className="flex items-center gap-1.5 text-[10px] leading-tight"
+                                    className="flex items-center gap-1.5 text-xs leading-tight"
                                     title={`${entry.key}: ${formatCount(entry.value)}`}
                                 >
                                     <span className="w-14 truncate text-slate-500 dark:text-slate-400 font-medium capitalize">
@@ -417,7 +417,7 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                             );
                         })}
                         {overflowCount > 0 && (
-                            <span className="text-[9px] text-slate-400 dark:text-slate-500 italic">
+                            <span className="text-xs text-slate-400 dark:text-slate-500 italic">
                                 +{overflowCount} more
                             </span>
                         )}

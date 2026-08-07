@@ -20,7 +20,7 @@
  */
 
 import React from 'react';
-import { Layers, Sparkles } from 'lucide-react';
+import { Layers, Sparkles } from '@/common/icons/SuiIcon';
 import { TopologyCanvas } from '@/common/components/topology/TopologyCanvas';
 import { fetchAllEdges } from '@/common/components/topology/edgeFetchers';
 
@@ -36,7 +36,7 @@ const TopologyCanvasPage: React.FC = () => (
                         <h1 className="text-base font-semibold tracking-tight truncate">
                             Network Topology Canvas
                         </h1>
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
                             <Sparkles className="w-2.5 h-2.5" aria-hidden />
                             v1 spike
                         </span>

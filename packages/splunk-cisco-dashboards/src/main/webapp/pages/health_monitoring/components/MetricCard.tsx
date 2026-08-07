@@ -20,7 +20,7 @@ import {
     Wifi,
     X,
     Zap,
-} from 'lucide-react';
+} from '@/common/icons/SuiIcon';
 import {
     Area,
     AreaChart,
@@ -363,7 +363,7 @@ const HelpTooltip: React.FC<HelpTooltipProps> = ({ kpi }) => {
                       </div>
                       <p className="text-[12px] leading-5 text-slate-300">{kpi.description}</p>
                       <div className="mt-3">
-                          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-sky-400">
+                          <p className="text-xs font-black uppercase tracking-[0.22em] text-sky-400">
                               Thresholds
                           </p>
                           {(['Healthy', 'Warning', 'Critical'] as const).map((label) => (
@@ -371,7 +371,7 @@ const HelpTooltip: React.FC<HelpTooltipProps> = ({ kpi }) => {
                                   <span className="text-[12px] text-slate-300">{label}</span>
                                   <span
                                       className={cn(
-                                          'rounded-full px-2 py-0.5 text-[11px] font-bold',
+                                          'rounded-full px-2 py-0.5 text-xs font-bold',
                                           label === 'Healthy' && 'bg-emerald-500/20 text-emerald-300',
                                           label === 'Warning' && 'bg-amber-500/20 text-amber-300',
                                           label === 'Critical' && 'bg-red-500/20 text-red-300'
@@ -382,7 +382,7 @@ const HelpTooltip: React.FC<HelpTooltipProps> = ({ kpi }) => {
                               </div>
                           ))}
                       </div>
-                      <div className="mt-3 border-t border-slate-700 pt-2 text-[10px] uppercase tracking-widest text-slate-400">
+                      <div className="mt-3 border-t border-slate-700 pt-2 text-xs uppercase tracking-widest text-slate-400">
                           Current status: <span className={statusTone[status].text}>{status}</span>
                       </div>
                   </div>,

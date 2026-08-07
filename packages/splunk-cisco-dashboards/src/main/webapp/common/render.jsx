@@ -1,9 +1,13 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { SplunkThemeProvider } from '@splunk/themes';
 import layout from '@splunk/react-page/18';
-import { getUserTheme } from '@splunk/splunk-utils/themes';
 import CopyrightMark from './components/CopyrightMark';
+import AppThemeProvider from './theme/AppThemeProvider';
+import {
+    APP_THEME_DENSITY,
+    APP_THEME_FAMILY,
+    resolveThemePreference,
+} from './theme/themePreference';
 
 /**
  * Shared mount helper used by every page entrypoint.
@@ -33,12 +37,12 @@ export default function mountPage(PageComponent) {
             reactRoot = createRoot(el);
         }
         reactRoot.render(
-            <SplunkThemeProvider family="prisma" colorScheme="light" density="comfortable">
+            <AppThemeProvider>
                 <>
                     <PageComponent />
                     <CopyrightMark />
                 </>
-            </SplunkThemeProvider>
+            </AppThemeProvider>
         );
     };
 
@@ -53,29 +57,25 @@ export function renderAsPage(pageElement, options = {}) {
         ...layoutOptions
     } = options;
 
-    getUserTheme()
-        .then((theme) => {
-            const colorScheme = theme === 'dark' ? 'dark' : 'light';
+    resolveThemePreference()
+        .then((colorScheme) => {
+            const theme = colorScheme;
 
             layout(
-                <SplunkThemeProvider
-                    family="prisma"
-                    colorScheme={colorScheme}
-                    density="comfortable"
-                >
+                <AppThemeProvider initialColorScheme={colorScheme}>
                     <>
                         {pageElement}
                         <CopyrightMark />
                     </>
-                </SplunkThemeProvider>,
+                </AppThemeProvider>,
                 {
                     ...layoutOptions,
                     hideAppBar,
                     navLayout,
                     pageTitle,
                     theme,
-                    themeDensity: 'comfortable',
-                    themeFamily: 'prisma',
+                    themeDensity: APP_THEME_DENSITY,
+                    themeFamily: APP_THEME_FAMILY,
                 }
             );
         })

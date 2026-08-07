@@ -15,14 +15,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-    ArrowDown,
-    ArrowUp,
-    ArrowUpDown,
-    ExternalLink,
-    Settings2,
-    PanelRightOpen,
-} from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, ExternalLink, Settings2, PanelRightOpen } from '@/common/icons/SuiIcon';
 import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
 import { cn } from '@/common/lib/utils';
 import type {
@@ -156,7 +149,7 @@ const NoDataState: React.FC<{
             <span className="text-2xl font-black tracking-tighter leading-none text-slate-400 dark:text-slate-500">
                 —
             </span>
-            <span className="text-[9px] font-medium text-slate-400 dark:text-slate-500 mt-0.5 leading-tight">
+            <span className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5 leading-tight">
                 {subtext}
             </span>
         </div>
@@ -364,7 +357,7 @@ export const TableTile: React.FC<TableTileProps> = ({
                         className="overflow-y-auto overflow-x-auto rounded border border-slate-200/60 dark:border-slate-700/60"
                         style={{ maxHeight: `${bodyHeightPx}px` }}
                     >
-                        <table className="w-full text-[11px] leading-tight border-collapse">
+                        <table className="w-full text-xs leading-tight border-collapse">
                             <thead className="bg-slate-50/80 dark:bg-slate-800/40 sticky top-0 z-10">
                                 <tr>
                                     {columns.map((col, idx) => {
@@ -389,7 +382,7 @@ export const TableTile: React.FC<TableTileProps> = ({
                                                         : 'none'
                                                 }
                                                 className={cn(
-                                                    'p-0 font-semibold text-[9px] uppercase tracking-wide text-slate-500 dark:text-slate-400 whitespace-nowrap border-b border-slate-200 dark:border-slate-700',
+                                                    'p-0 font-semibold text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 whitespace-nowrap border-b border-slate-200 dark:border-slate-700',
                                                     alignRight
                                                         ? 'text-right'
                                                         : 'text-left'
@@ -457,7 +450,7 @@ export const TableTile: React.FC<TableTileProps> = ({
                             </tbody>
                         </table>
                     </div>
-                    <div className="flex items-baseline justify-between text-[9px] text-slate-400 dark:text-slate-500 mt-1 px-1 leading-tight">
+                    <div className="flex items-baseline justify-between text-xs text-slate-400 dark:text-slate-500 mt-1 px-1 leading-tight">
                         <span className="tabular-nums">
                             {truncated
                                 ? `${rows.length} of ${reportedTotal} rows`

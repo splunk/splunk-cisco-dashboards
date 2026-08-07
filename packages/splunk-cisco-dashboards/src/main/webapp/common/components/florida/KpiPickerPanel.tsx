@@ -53,7 +53,7 @@ import {
     Table2,
     Tag,
     X,
-} from 'lucide-react';
+} from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
 import {
     clearSearchbaseCache,
@@ -609,7 +609,7 @@ const AppMultiSelect: React.FC<AppMultiSelectProps> = ({
                         ? 'border-sky-400 ring-2 ring-sky-400/25'
                         : 'border-slate-200 dark:border-slate-800',
                     compact
-                        ? 'min-h-[32px] px-1.5 py-1 text-[11px]'
+                        ? 'min-h-[32px] px-1.5 py-1 text-xs'
                         : 'min-h-[42px] px-2 py-1.5 text-sm'
                 )}
             >
@@ -626,8 +626,8 @@ const AppMultiSelect: React.FC<AppMultiSelectProps> = ({
                                 className={cn(
                                     'inline-flex max-w-full items-center gap-1 rounded-full bg-sky-500 font-bold text-white',
                                     compact
-                                        ? 'py-0.5 pl-1.5 pr-0.5 text-[9px]'
-                                        : 'py-0.5 pl-2 pr-1 text-[10px] uppercase tracking-wide'
+                                        ? 'py-0.5 pl-1.5 pr-0.5 text-xs'
+                                        : 'py-0.5 pl-2 pr-1 text-xs uppercase tracking-wide'
                                 )}
                             >
                                 <span className="max-w-[210px] truncate" title={app}>
@@ -683,7 +683,7 @@ const AppMultiSelect: React.FC<AppMultiSelectProps> = ({
                         onClick={() => onChange(new Set())}
                         className={cn(
                             'flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left transition-colors focus:outline-none',
-                            compact ? 'text-[11px]' : 'text-xs',
+                            compact ? 'text-xs' : 'text-xs',
                             isAllApps
                                 ? 'bg-sky-50 dark:bg-sky-900/30'
                                 : 'hover:bg-sky-50 dark:hover:bg-sky-900/30'
@@ -702,7 +702,7 @@ const AppMultiSelect: React.FC<AppMultiSelectProps> = ({
                             </span>
                             <span className="truncate">All apps</span>
                         </span>
-                        <span className="shrink-0 text-[10px] font-bold text-slate-400 dark:text-slate-500">
+                        <span className="shrink-0 text-xs font-bold text-slate-400 dark:text-slate-500">
                             {appOptions.length}
                         </span>
                     </button>
@@ -718,7 +718,7 @@ const AppMultiSelect: React.FC<AppMultiSelectProps> = ({
                                 onClick={() => toggleApp(app)}
                                 className={cn(
                                     'flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left transition-colors focus:outline-none',
-                                    compact ? 'text-[11px]' : 'text-xs',
+                                    compact ? 'text-xs' : 'text-xs',
                                     selected
                                         ? 'bg-sky-50 dark:bg-sky-900/30'
                                         : 'hover:bg-sky-50 dark:hover:bg-sky-900/30'
@@ -739,7 +739,7 @@ const AppMultiSelect: React.FC<AppMultiSelectProps> = ({
                                         {searchbaseAppLabel(app, appLabelsById)}
                                     </span>
                                 </span>
-                                <span className="shrink-0 text-[10px] font-bold text-slate-400 dark:text-slate-500">
+                                <span className="shrink-0 text-xs font-bold text-slate-400 dark:text-slate-500">
                                     {count}
                                 </span>
                             </button>
@@ -2149,7 +2149,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                     <div className="flex items-center gap-2">
                         <Settings2 className="w-4 h-4 text-sky-600 dark:text-sky-300" />
                         <div>
-                            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 leading-none">
+                            <p className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 leading-none">
                                 Configure tile
                             </p>
                             <p className="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight">
@@ -2227,7 +2227,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             aria-expanded={filtersOpen}
                             aria-controls="kpi-picker-filters"
                             title={filtersOpen ? 'Hide filters' : 'Show filters (App, Category, Sub-cat, Tags)'}
-                            className="flex items-center gap-1.5 px-1.5 py-1 -ml-1.5 rounded text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
+                            className="flex items-center gap-1.5 px-1.5 py-1 -ml-1.5 rounded text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
                         >
                             {filtersOpen ? (
                                 <ChevronDown className="w-3 h-3" />
@@ -2237,7 +2237,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             <span>Filters</span>
                             {activeFilterCount > 0 && (
                                 <span
-                                    className="ml-1 px-1.5 py-px rounded-full bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300 text-[9px] tracking-normal normal-case font-semibold"
+                                    className="ml-1 px-1.5 py-px rounded-full bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300 text-xs tracking-normal normal-case font-semibold"
                                     title={`${activeFilterCount} active filter${activeFilterCount === 1 ? '' : 's'}`}
                                 >
                                     {activeFilterCount} active
@@ -2248,7 +2248,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             {loadState === 'idle' && (
                                 <span
                                     title="Searchbase stanzas matching the current app, visibility, category, sub-category, tag, and text filters"
-                                    className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-sky-700 shadow-sm dark:border-sky-900/70 dark:bg-sky-950/50 dark:text-sky-200"
+                                    className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-black uppercase tracking-wider text-sky-700 shadow-sm dark:border-sky-900/70 dark:bg-sky-950/50 dark:text-sky-200"
                                 >
                                     {availableSearchLabel}
                                 </span>
@@ -2258,7 +2258,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     type="button"
                                     onClick={handleClearFacets}
                                     title="Reset every filter to its default"
-                                    className="text-[9px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200"
+                                    className="text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200"
                                 >
                                     Clear filters
                                 </button>
@@ -2276,7 +2276,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 dashboard-pack searches. */}
                             <div className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-center">
                                 <span
-                                    className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400"
+                                    className="text-xs font-black uppercase tracking-[0.18em] text-slate-400"
                                     title="Splunk app the search belongs to"
                                 >
                                     App
@@ -2293,11 +2293,11 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             </div>
 
                             <div className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-start">
-                                <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+                                <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
                                     Visibility
                                 </span>
                                 <div className="grid grid-cols-3 gap-2">
-                                    <label className="flex min-h-[58px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px] font-bold leading-snug text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                                    <label className="flex min-h-[58px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold leading-snug text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
                                         <input
                                             type="checkbox"
                                             checked={includeHiddenSearches}
@@ -2308,7 +2308,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         />
                                         <span>Show hidden searches</span>
                                     </label>
-                                    <label className="flex min-h-[58px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px] font-bold leading-snug text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                                    <label className="flex min-h-[58px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold leading-snug text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
                                         <input
                                             type="checkbox"
                                             checked={includeDrilldownSearches}
@@ -2319,7 +2319,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         />
                                         <span>Show drill-down searches</span>
                                     </label>
-                                    <label className="flex min-h-[58px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px] font-bold leading-snug text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                                    <label className="flex min-h-[58px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold leading-snug text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
                                         <input
                                             type="checkbox"
                                             checked={includeTableSearches}
@@ -2335,7 +2335,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
 
                             {categories.length > 1 && (
                                 <label className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-center">
-                                    <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+                                    <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
                                         Category
                                     </span>
                                     <select
@@ -2356,7 +2356,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             {selectedCategory !== ALL_CATEGORIES &&
                                 subCategories.length > 0 && (
                                     <label className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-center">
-                                        <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+                                        <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
                                             Sub-cat
                                         </span>
                                         <select
@@ -2380,7 +2380,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
 
                             {(allTagsWithCounts.length > 0 || activeTags.size > 0) && (
                                 <div className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-start">
-                                    <span className="pt-2 text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+                                    <span className="pt-2 text-xs font-black uppercase tracking-[0.18em] text-slate-400">
                                         Tags
                                     </span>
                                     <div className="relative" ref={tagSelectRef}>
@@ -2402,7 +2402,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 return (
                                                     <span
                                                         key={tag}
-                                                        className="inline-flex items-center gap-1 rounded-full bg-sky-500 py-0.5 pl-2 pr-1 text-[10px] font-bold uppercase tracking-wide text-white"
+                                                        className="inline-flex items-center gap-1 rounded-full bg-sky-500 py-0.5 pl-2 pr-1 text-xs font-bold uppercase tracking-wide text-white"
                                                     >
                                                         {tag}
                                                         {count > 0 && (
@@ -2489,7 +2489,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                                 : tag}
                                                                         </span>
                                                                     </span>
-                                                                    <span className="shrink-0 text-[10px] font-bold text-slate-400 dark:text-slate-500">
+                                                                    <span className="shrink-0 text-xs font-bold text-slate-400 dark:text-slate-500">
                                                                         {count}
                                                                     </span>
                                                                 </button>
@@ -2499,7 +2499,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                             allTagsWithCounts.length -
                                                                 activeTags.size >
                                                                 tagDropdownOptions.length && (
-                                                                <p className="border-t border-slate-100 px-3 py-1.5 text-[10px] text-slate-400 dark:border-slate-800 dark:text-slate-500">
+                                                                <p className="border-t border-slate-100 px-3 py-1.5 text-xs text-slate-400 dark:border-slate-800 dark:text-slate-500">
                                                                     Top{' '}
                                                                     {tagDropdownOptions.length}{' '}
                                                                     of{' '}
@@ -2544,19 +2544,19 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             title={`Scroll to "${currentBoundEntry.searchName}" and select it`}
                             className="flex-1 min-w-0 flex items-center gap-2 text-left hover:opacity-80 focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded"
                         >
-                            <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-emerald-500 text-white text-[8px] font-black flex-shrink-0">
+                            <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-emerald-500 text-white text-xs font-black flex-shrink-0">
                                 ✓
                             </span>
-                            <span className="text-[9px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-400 flex-shrink-0">
+                            <span className="text-xs font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-400 flex-shrink-0">
                                 Bound:
                             </span>
                             <span
-                                className="flex-1 text-[11px] font-bold text-slate-800 dark:text-slate-100 truncate min-w-0"
+                                className="flex-1 text-xs font-bold text-slate-800 dark:text-slate-100 truncate min-w-0"
                                 title={currentBoundEntry.searchName}
                             >
                                 {currentBoundEntry.searchName}
                             </span>
-                            <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-300 flex-shrink-0">
+                            <span className="text-xs font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-300 flex-shrink-0">
                                 Jump to
                             </span>
                         </button>
@@ -2577,24 +2577,24 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                     {loadState === 'loading' && (
                         <div className="flex items-center justify-center gap-2 py-8 text-slate-400 dark:text-slate-500">
                             <Loader2 className="w-4 h-4 animate-spin" />
-                            <span className="text-[11px] font-bold uppercase tracking-widest">
+                            <span className="text-xs font-bold uppercase tracking-widest">
                                 Loading searchbase.conf
                             </span>
                         </div>
                     )}
 
                     {loadState === 'error' && (
-                        <div className="px-3 py-4 mx-2 rounded-md border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 text-[11px]">
+                        <div className="px-3 py-4 mx-2 rounded-md border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 text-xs">
                             <p className="font-bold mb-1">Couldn't load searchbase.conf.</p>
-                            <p className="break-words font-mono text-[10px]">{errorMsg}</p>
+                            <p className="break-words font-mono text-xs">{errorMsg}</p>
                         </div>
                     )}
 
                     {loadState === 'idle' && (
-                        <div className="mx-1 mb-1 flex items-center justify-between gap-2 px-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                        <div className="mx-1 mb-1 flex items-center justify-between gap-2 px-2 text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
                             <span
                                 title={`${browseVisibleEntries.length.toLocaleString()} searches are in the current app and visibility scope before category, tag, and text filters`}
-                                className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/50 dark:text-sky-200"
+                                className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-xs font-black uppercase tracking-wider text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/50 dark:text-sky-200"
                             >
                                 {availableSearchLabel}
                             </span>
@@ -2607,7 +2607,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                     )}
 
                     {loadState === 'idle' && filtered.length === 0 && (
-                        <div className="px-3 py-8 text-center text-slate-400 dark:text-slate-500 text-[11px]">
+                        <div className="px-3 py-8 text-center text-slate-400 dark:text-slate-500 text-xs">
                             No searches match the current filters.
                         </div>
                     )}
@@ -2681,7 +2681,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 flex-wrap">
                                                 <span
-                                                    className="text-[11px] font-bold text-slate-800 dark:text-slate-100 break-words line-clamp-2 select-text cursor-text"
+                                                    className="text-xs font-bold text-slate-800 dark:text-slate-100 break-words line-clamp-2 select-text cursor-text"
                                                     title={entry.searchName}
                                                 >
                                                     {highlightMatch(entry.searchName, query)}
@@ -2713,13 +2713,13 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                     </button>
                                                 )}
                                                 {isCurrent && (
-                                                    <span className="inline-flex items-center gap-0.5 text-[8px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-400 flex-shrink-0">
+                                                    <span className="inline-flex items-center gap-0.5 text-xs font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-400 flex-shrink-0">
                                                         <span className="inline-block w-1 h-1 rounded-full bg-emerald-500" />
                                                         Current
                                                     </span>
                                                 )}
                                                 {isInUse && !isCurrent && (
-                                                    <span className="text-[8px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400 flex-shrink-0">
+                                                    <span className="text-xs font-black uppercase tracking-widest text-amber-600 dark:text-amber-400 flex-shrink-0">
                                                         In use
                                                     </span>
                                                 )}
@@ -2727,7 +2727,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             {(entry.category || entry.tags.length > 0) && (
                                                 <div className="mt-1 flex flex-wrap items-center gap-1">
                                                     {entry.category && (
-                                                        <span className="inline-flex items-center px-1.5 py-px rounded-sm text-[8px] font-black uppercase tracking-widest bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300">
+                                                        <span className="inline-flex items-center px-1.5 py-px rounded-sm text-xs font-black uppercase tracking-widest bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300">
                                                             {entry.category}
                                                             {entry.subCategory ? (
                                                                 <span className="opacity-70 ml-1">
@@ -2739,20 +2739,20 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                     {entry.tags.slice(0, 4).map((t) => (
                                                         <span
                                                             key={t}
-                                                            className="inline-flex items-center px-1.5 py-px rounded-sm text-[8px] font-bold tracking-wide bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+                                                            className="inline-flex items-center px-1.5 py-px rounded-sm text-xs font-bold tracking-wide bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
                                                         >
                                                             {t}
                                                         </span>
                                                     ))}
                                                     {entry.tags.length > 4 && (
-                                                        <span className="text-[8px] font-bold text-slate-400 dark:text-slate-500">
+                                                        <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
                                                             +{entry.tags.length - 4}
                                                         </span>
                                                     )}
                                                     {entry.drilldownSearchName && (
                                                         <span
                                                             title={`Attached drilldown: ${entry.drilldownSearchName}`}
-                                                            className="inline-flex items-center gap-0.5 px-1.5 py-px rounded-sm text-[8px] font-black uppercase tracking-widest bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300"
+                                                            className="inline-flex items-center gap-0.5 px-1.5 py-px rounded-sm text-xs font-black uppercase tracking-widest bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300"
                                                         >
                                                             <Table2 className="w-2.5 h-2.5" />
                                                             Drilldown
@@ -2761,7 +2761,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 </div>
                                             )}
                                             {plainDesc && descExpanded && (
-                                                <p className="mt-2 rounded-md border border-sky-100 bg-sky-50/70 px-2 py-1.5 text-[10px] leading-relaxed text-slate-600 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-slate-300">
+                                                <p className="mt-2 rounded-md border border-sky-100 bg-sky-50/70 px-2 py-1.5 text-xs leading-relaxed text-slate-600 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-slate-300">
                                                     {highlightMatch(plainDesc, query)}
                                                 </p>
                                             )}
@@ -2801,7 +2801,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 <div className="min-w-0 flex-1">
                                     <div className="mb-0.5 flex min-w-0 items-center gap-1.5">
                                         {selectedEntry.category && (
-                                            <span className="inline-flex max-w-[45%] items-center truncate rounded-sm bg-sky-100 px-1.5 py-px text-[8px] font-black uppercase tracking-widest text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">
+                                            <span className="inline-flex max-w-[45%] items-center truncate rounded-sm bg-sky-100 px-1.5 py-px text-xs font-black uppercase tracking-widest text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">
                                                 {selectedEntry.category}
                                                 {selectedEntry.subCategory ? (
                                                     <span className="ml-1 truncate opacity-70">
@@ -2810,7 +2810,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 ) : null}
                                             </span>
                                         )}
-                                        <span className="ml-auto inline-flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                                        <span className="ml-auto inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
                                             {resolveVizMapping(selectedEntry.defaultViz).label}
                                         </span>
                                     </div>
@@ -2827,7 +2827,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 title={`Open ${selectedEntry.id} in Searchbase`}
-                                                className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-sky-600 hover:text-sky-800 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5 dark:text-sky-300 dark:hover:text-sky-100"
+                                                className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-sky-600 hover:text-sky-800 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5 dark:text-sky-300 dark:hover:text-sky-100"
                                             >
                                                 Searchbase
                                                 <ExternalLink className="w-2.5 h-2.5" />
@@ -2843,7 +2843,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                     )
                                                 }
                                                 title="Run this exact SPL in Search (new tab)"
-                                                className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-sky-600 hover:text-sky-800 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5 dark:text-sky-300 dark:hover:text-sky-100"
+                                                className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-sky-600 hover:text-sky-800 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5 dark:text-sky-300 dark:hover:text-sky-100"
                                             >
                                                 <Play className="w-2.5 h-2.5" />
                                                 Test
@@ -2855,7 +2855,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     type="button"
                                     onClick={() => setDetailsCollapsed(false)}
                                     title="Open tile options"
-                                    className="inline-flex flex-shrink-0 self-start -mt-0.5 items-center gap-1 rounded px-1.5 py-1 text-[9px] font-bold uppercase tracking-widest text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                                    className="inline-flex flex-shrink-0 self-start -mt-0.5 items-center gap-1 rounded px-1.5 py-1 text-xs font-bold uppercase tracking-widest text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                                 >
                                     <Settings2 className="w-3 h-3" />
                                     Options
@@ -2883,7 +2883,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     so nothing is silently clipped. */}
                                 <div className="flex flex-wrap items-center gap-1.5 mb-1">
                                     {selectedEntry.category && (
-                                        <span className="inline-flex items-center px-1.5 py-px rounded-sm text-[9px] font-black uppercase tracking-widest bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300">
+                                        <span className="inline-flex items-center px-1.5 py-px rounded-sm text-xs font-black uppercase tracking-widest bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300">
                                             {selectedEntry.category}
                                             {selectedEntry.subCategory ? (
                                                 <span className="opacity-70 ml-1">
@@ -2895,7 +2895,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     {selectedEntry.tags.map((t) => (
                                         <span
                                             key={t}
-                                            className="inline-flex items-center px-1.5 py-px rounded-sm text-[9px] font-bold tracking-wide bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+                                            className="inline-flex items-center px-1.5 py-px rounded-sm text-xs font-bold tracking-wide bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
                                         >
                                             {t}
                                         </span>
@@ -2905,7 +2905,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         category/tag chips that
                                         accumulate on the same wrap
                                         line. */}
-                                    <span className="ml-auto inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                                    <span className="ml-auto inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
                                         <VizIcon
                                             splunkViz={selectedEntry.defaultViz}
                                             size={12}
@@ -2918,7 +2918,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         type="button"
                                         onClick={() => setDetailsCollapsed(true)}
                                         title="Collapse options and focus the search list"
-                                        className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                                        className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-bold uppercase tracking-widest text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                                     >
                                         <Maximize2 className="w-3 h-3" />
                                         Collapse
@@ -2937,7 +2937,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             title={`Open ${selectedEntry.id} in Searchbase`}
-                                            className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-sky-600 dark:text-sky-300 hover:text-sky-800 dark:hover:text-sky-100 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
+                                            className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-sky-600 dark:text-sky-300 hover:text-sky-800 dark:hover:text-sky-100 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
                                         >
                                             View in Searchbase
                                             <ExternalLink className="w-2.5 h-2.5" />
@@ -2953,7 +2953,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 )
                                             }
                                             title="Run this exact SPL in Search (new tab)"
-                                            className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-sky-600 dark:text-sky-300 hover:text-sky-800 dark:hover:text-sky-100 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
+                                            className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-sky-600 dark:text-sky-300 hover:text-sky-800 dark:hover:text-sky-100 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
                                         >
                                             <Play className="w-2.5 h-2.5" />
                                             Test in Search
@@ -2967,7 +2967,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 title={`Open attached drilldown ${selectedDrilldownEntry?.id ?? ''} in Searchbase`}
-                                                className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-300 hover:text-emerald-800 dark:hover:text-emerald-100 focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded px-1 py-0.5"
+                                                className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-300 hover:text-emerald-800 dark:hover:text-emerald-100 focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded px-1 py-0.5"
                                             >
                                                 <Table2 className="w-2.5 h-2.5" />
                                                 Drilldown table
@@ -2976,7 +2976,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         ) : (
                                             <span
                                                 title="Attached drilldown searchbase entry is not loaded"
-                                                className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-300 rounded px-1 py-0.5"
+                                                className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-300 rounded px-1 py-0.5"
                                             >
                                                 <Table2 className="w-2.5 h-2.5" />
                                                 Drilldown table
@@ -2998,11 +2998,11 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 ? 'Hide data mapping fields'
                                                 : 'Show data mapping fields'
                                         }
-                                        className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 hover:text-sky-700 dark:hover:text-sky-300 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-0.5 py-0.5"
+                                        className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 hover:text-sky-700 dark:hover:text-sky-300 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-0.5 py-0.5"
                                     >
                                         <Settings2 className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400 flex-shrink-0" />
                                         <span className="flex-shrink-0">Data mapping</span>
-                                        <span className="min-w-0 truncate text-[9px] font-semibold normal-case tracking-normal text-slate-400 dark:text-slate-500">
+                                        <span className="min-w-0 truncate text-xs font-semibold normal-case tracking-normal text-slate-400 dark:text-slate-500">
                                             {valueField ? `value: ${valueField}` : 'auto value'}
                                             {labelOverride.trim() ? ' · custom label' : ''}
                                         </span>
@@ -3022,7 +3022,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     >
                                         <div className="grid grid-cols-2 gap-2">
                                 <div>
-                                    <label className="block text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
+                                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
                                         Value field
                                     </label>
                                     <input
@@ -3044,20 +3044,20 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         }
                                         className={cn(
                                             'disabled:opacity-50 disabled:cursor-not-allowed',
-                                            'w-full px-2 py-1 text-[11px] rounded border focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100',
+                                            'w-full px-2 py-1 text-xs rounded border focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100',
                                             fieldNameValid
                                                 ? 'border-slate-200 dark:border-slate-700'
                                                 : 'border-red-400 dark:border-red-600'
                                         )}
                                     />
                                     {!canManageFactoryConfig && (
-                                        <p className="mt-0.5 flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                                        <p className="mt-0.5 flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400">
                                             <Lock className="w-2.5 h-2.5" />
                                             Org-wide — requires admin
                                         </p>
                                     )}
                                     {!fieldNameValid && (
-                                        <p className="mt-0.5 text-[9px] text-red-600 dark:text-red-400">
+                                        <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">
                                             Letters / digits / underscores / dot only.
                                         </p>
                                     )}
@@ -3071,7 +3071,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         Hidden when no aliases parse out. */}
                                     {fieldNameValid && splFieldSuggestions.length > 0 && (
                                         <div className="mt-1 flex flex-wrap gap-1">
-                                            <span className="text-[8px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 self-center">
+                                            <span className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 self-center">
                                                 Use:
                                             </span>
                                             {splFieldSuggestions.map((name) => {
@@ -3083,7 +3083,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                         onClick={() => setValueField(name)}
                                                         title={`Use "${name}" — emitted by this SPL`}
                                                         className={cn(
-                                                            'inline-flex items-center px-1.5 py-px rounded font-mono text-[9px] border transition-colors',
+                                                            'inline-flex items-center px-1.5 py-px rounded font-mono text-xs border transition-colors',
                                                             isPicked
                                                                 ? 'bg-sky-500 text-white border-sky-500'
                                                                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-sky-100 dark:hover:bg-sky-900/40 hover:border-sky-400'
@@ -3099,13 +3099,13 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         valueField &&
                                         splFieldSuggestions.length > 0 &&
                                         !splFieldSuggestions.includes(valueField) && (
-                                            <p className="mt-0.5 text-[9px] text-amber-600 dark:text-amber-400">
+                                            <p className="mt-0.5 text-xs text-amber-600 dark:text-amber-400">
                                                 "{valueField}" doesn't match any column emitted by this SPL.
                                             </p>
                                         )}
                                 </div>
                                 <div>
-                                    <label className="block text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
+                                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
                                         Label override
                                     </label>
                                     <input
@@ -3121,7 +3121,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 ? undefined
                                                 : 'Org-wide setting — requires admin to change'
                                         }
-                                        className="w-full px-2 py-1 text-[11px] rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="w-full px-2 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:opacity-50 disabled:cursor-not-allowed"
                                     />
                                 </div>
                             </div>
@@ -3141,11 +3141,11 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 ? 'Hide drilldown details'
                                                 : 'Show attached drilldown details'
                                         }
-                                        className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 hover:text-sky-700 dark:hover:text-sky-300 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-0.5 py-0.5"
+                                        className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 hover:text-sky-700 dark:hover:text-sky-300 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-0.5 py-0.5"
                                     >
                                         <Table2 className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400 flex-shrink-0" />
                                         <span className="flex-shrink-0">Drilldown</span>
-                                        <span className="min-w-0 truncate text-[9px] font-semibold normal-case tracking-normal text-slate-400 dark:text-slate-500">
+                                        <span className="min-w-0 truncate text-xs font-semibold normal-case tracking-normal text-slate-400 dark:text-slate-500">
                                             {drilldownDraftSearchName
                                                 ? selectedDrilldownEntry?.searchName ??
                                                   drilldownDraftSearchName
@@ -3170,7 +3170,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 {drilldownDraftSearchName ? (
                                                     <div className="space-y-1">
                                                         <div className="flex items-start justify-between gap-2">
-                                                            <p className="min-w-0 text-[11px] font-bold text-slate-700 dark:text-slate-200 leading-snug break-words">
+                                                            <p className="min-w-0 text-xs font-bold text-slate-700 dark:text-slate-200 leading-snug break-words">
                                                                 {selectedDrilldownEntry?.searchName ??
                                                                     drilldownDraftSearchName}
                                                             </p>
@@ -3180,7 +3180,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                     setDrilldownDraftSearchName('')
                                                                 }
                                                                 title="Remove this drilldown binding"
-                                                                className="flex-shrink-0 inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-300 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
+                                                                className="flex-shrink-0 inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-300 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
                                                             >
                                                                 <X className="w-2.5 h-2.5" />
                                                                 Clear
@@ -3193,7 +3193,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                     target="_blank"
                                                                     rel="noopener noreferrer"
                                                                     title={`Open attached drilldown ${selectedDrilldownEntry?.id ?? ''} in Searchbase`}
-                                                                    className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-300 hover:text-emerald-800 dark:hover:text-emerald-100 focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded px-1 py-0.5"
+                                                                    className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-300 hover:text-emerald-800 dark:hover:text-emerald-100 focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded px-1 py-0.5"
                                                                 >
                                                                     View in Searchbase
                                                                     <ExternalLink className="w-2.5 h-2.5" />
@@ -3210,7 +3210,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                             )
                                                                         }
                                                                         title="Run the attached drilldown SPL in Search (new tab)"
-                                                                        className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-300 hover:text-emerald-800 dark:hover:text-emerald-100 focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded px-1 py-0.5"
+                                                                        className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-300 hover:text-emerald-800 dark:hover:text-emerald-100 focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded px-1 py-0.5"
                                                                     >
                                                                         <Play className="w-2.5 h-2.5" />
                                                                         Test drilldown
@@ -3220,7 +3220,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                         </div>
                                                     </div>
                                                 ) : (
-                                                    <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                                                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                                                         No drilldown attached.
                                                     </p>
                                                 )}
@@ -3235,7 +3235,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                         setDrilldownQuery(e.target.value)
                                                     }
                                                     placeholder="Search Searchbase drilldowns..."
-                                                    className="w-full pl-7 pr-2 py-1.5 text-[11px] rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                                                    className="w-full pl-7 pr-2 py-1.5 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-400"
                                                 />
                                             </label>
 
@@ -3253,7 +3253,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                 ? 'Hide drilldown filters'
                                                                 : 'Show drilldown filters'
                                                         }
-                                                        className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-slate-100 dark:bg-slate-800/80 text-[10px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-200 hover:text-sky-700 dark:hover:text-sky-300 focus:outline-none focus:ring-1 focus:ring-sky-400"
+                                                        className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-slate-100 dark:bg-slate-800/80 text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-200 hover:text-sky-700 dark:hover:text-sky-300 focus:outline-none focus:ring-1 focus:ring-sky-400"
                                                     >
                                                         <ChevronDown
                                                             className={cn(
@@ -3265,7 +3265,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                         Filters
                                                         {drilldownActiveFilterCount > 0 && (
                                                             <span
-                                                                className="ml-1 px-1.5 py-px rounded-full bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300 text-[8px] tracking-normal normal-case font-semibold"
+                                                                className="ml-1 px-1.5 py-px rounded-full bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300 text-xs tracking-normal normal-case font-semibold"
                                                                 title={`${drilldownActiveFilterCount} active drilldown filter${drilldownActiveFilterCount === 1 ? '' : 's'}`}
                                                             >
                                                                 {drilldownActiveFilterCount} active
@@ -3277,7 +3277,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                             type="button"
                                                             onClick={handleClearDrilldownFacets}
                                                             title="Reset every drilldown filter to its default"
-                                                            className="text-[9px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200"
+                                                            className="text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200"
                                                         >
                                                             Clear filters
                                                         </button>
@@ -3291,7 +3291,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                     >
                                                         <div className="flex items-center gap-2">
                                                             <span
-                                                                className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex-shrink-0 w-16"
+                                                                className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex-shrink-0 w-16"
                                                                 title="Splunk app the drilldown search belongs to"
                                                             >
                                                                 App
@@ -3318,7 +3318,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
 
                                                         {drilldownCategories.length > 1 && (
                                                             <div className="flex items-center gap-2">
-                                                                <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex-shrink-0 w-16">
+                                                                <span className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex-shrink-0 w-16">
                                                                     Category
                                                                 </span>
                                                                 <select
@@ -3330,7 +3330,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                             e.target.value
                                                                         )
                                                                     }
-                                                                    className="flex-1 px-2 py-1 text-[11px] rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                                                                    className="flex-1 px-2 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
                                                                 >
                                                                     <option
                                                                         value={ALL_CATEGORIES}
@@ -3355,7 +3355,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                             ALL_CATEGORIES &&
                                                             drilldownSubCategories.length > 0 && (
                                                                 <div className="flex items-center gap-2">
-                                                                    <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex-shrink-0 w-16">
+                                                                    <span className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex-shrink-0 w-16">
                                                                         Sub-cat
                                                                     </span>
                                                                     <select
@@ -3367,7 +3367,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                                 e.target.value
                                                                             )
                                                                         }
-                                                                        className="flex-1 px-2 py-1 text-[11px] rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                                                                        className="flex-1 px-2 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
                                                                     >
                                                                         <option
                                                                             value={
@@ -3431,7 +3431,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                         return (
                                                                             <span
                                                                                 key={tag}
-                                                                                className="inline-flex items-center gap-1 pl-1.5 pr-0.5 py-0.5 rounded-full bg-sky-500 text-white text-[9px] font-bold uppercase tracking-wider"
+                                                                                className="inline-flex items-center gap-1 pl-1.5 pr-0.5 py-0.5 rounded-full bg-sky-500 text-white text-xs font-bold uppercase tracking-wider"
                                                                             >
                                                                                 {tag}
                                                                                 {count > 0 && (
@@ -3486,7 +3486,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                         }
                                                                         maxLength={64}
                                                                         aria-label="Filter drilldown results by tag"
-                                                                        className="flex-1 min-w-[80px] bg-transparent border-0 outline-none text-[11px] text-slate-700 dark:text-slate-100 placeholder:text-slate-400 py-0.5"
+                                                                        className="flex-1 min-w-[80px] bg-transparent border-0 outline-none text-xs text-slate-700 dark:text-slate-100 placeholder:text-slate-400 py-0.5"
                                                                     />
                                                                 </div>
 
@@ -3498,7 +3498,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                     >
                                                                         {drilldownTagDropdownOptions.length ===
                                                                         0 ? (
-                                                                            <p className="px-2 py-2 text-[10px] italic text-slate-400 dark:text-slate-500">
+                                                                            <p className="px-2 py-2 text-xs italic text-slate-400 dark:text-slate-500">
                                                                                 {drilldownTagFilter.trim()
                                                                                     ? `No more tags match "${drilldownTagFilter.trim()}".`
                                                                                     : drilldownActiveTags.size >
@@ -3536,7 +3536,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                                                 }
                                                                                                 title={`${count} drilldown search${count === 1 ? '' : 'es'} tagged ${tag}`}
                                                                                                 className={cn(
-                                                                                                    'w-full flex items-center justify-between gap-2 px-2 py-1 text-left text-[11px] focus:outline-none transition-colors',
+                                                                                                    'w-full flex items-center justify-between gap-2 px-2 py-1 text-left text-xs focus:outline-none transition-colors',
                                                                                                     isFirstTyped
                                                                                                         ? 'bg-sky-50 dark:bg-sky-900/30'
                                                                                                         : 'hover:bg-sky-50 dark:hover:bg-sky-900/30'
@@ -3553,7 +3553,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                                                             : tag}
                                                                                                     </span>
                                                                                                 </span>
-                                                                                                <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 flex-shrink-0">
+                                                                                                <span className="text-xs font-bold text-slate-400 dark:text-slate-500 flex-shrink-0">
                                                                                                     {
                                                                                                         count
                                                                                                     }
@@ -3566,7 +3566,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                                     drilldownAllTagsWithCounts.length -
                                                                                         drilldownActiveTags.size >
                                                                                         drilldownTagDropdownOptions.length && (
-                                                                                        <p className="px-2 py-1 text-[9px] text-slate-400 dark:text-slate-500 border-t border-slate-100 dark:border-slate-800">
+                                                                                        <p className="px-2 py-1 text-xs text-slate-400 dark:text-slate-500 border-t border-slate-100 dark:border-slate-800">
                                                                                             Top{' '}
                                                                                             {
                                                                                                 drilldownTagDropdownOptions.length
@@ -3587,7 +3587,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 )}
                                             </div>
 
-                                            <div className="flex items-center justify-between gap-2 px-1 text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                                            <div className="flex items-center justify-between gap-2 px-1 text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
                                                 <span>
                                                     {drilldownCandidates.length.toLocaleString()}{' '}
                                                     {drilldownCandidates.length === 1
@@ -3602,7 +3602,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
 
                                             <div className="max-h-72 overflow-auto space-y-1 pr-1">
                                                 {drilldownCandidates.length === 0 ? (
-                                                    <p className="px-1 py-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                                                    <p className="px-1 py-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
                                                         No matching Searchbase entries.
                                                     </p>
                                                 ) : (
@@ -3652,7 +3652,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                     </span>
                                                                     <span
                                                                         className={cn(
-                                                                            'flex-shrink-0 rounded-sm px-1 py-px text-[8px] font-black uppercase tracking-widest',
+                                                                            'flex-shrink-0 rounded-sm px-1 py-px text-xs font-black uppercase tracking-widest',
                                                                             entry.defaultViz ===
                                                                                 'splunk.table'
                                                                                 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
@@ -3705,14 +3705,14 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 ? 'Hide the chart style picker'
                                                 : 'Show the chart style picker (override how this tile renders)'
                                         }
-                                        className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 hover:text-sky-700 dark:hover:text-sky-300 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-0.5 py-0.5"
+                                        className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 hover:text-sky-700 dark:hover:text-sky-300 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-0.5 py-0.5"
                                     >
                                         <BarChart3 className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
                                         Chart style
                                         {vizOverrideInput && (
                                             <span
                                                 title="This tile has a custom chart style applied (different from the searchbase default)"
-                                                className="ml-1 inline-flex items-center px-1 py-px rounded-sm bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 text-[8px] font-bold tracking-wide normal-case"
+                                                className="ml-1 inline-flex items-center px-1 py-px rounded-sm bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 text-xs font-bold tracking-wide normal-case"
                                             >
                                                 custom
                                             </span>
@@ -3729,7 +3729,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             type="button"
                                             onClick={() => setVizOverrideInput(null)}
                                             title="Restore the chart style to the searchbase default for this tile (still has to be applied)"
-                                            className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
+                                            className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
                                         >
                                             <RotateCcw className="w-2.5 h-2.5" />
                                             Reset to default
@@ -3737,7 +3737,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     )}
                                 </div>
                                 {chartStyleOpen && (
-                                <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
+                                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-snug">
                                     Override how this tile renders. {' '}
                                     <span className="text-slate-400 dark:text-slate-500">
                                         Default uses the searchbase{' '}
@@ -3763,7 +3763,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 onClick={() => setVizOverrideInput(opt.v)}
                                                 title={opt.hint}
                                                 className={cn(
-                                                    'inline-flex min-w-[64px] items-center justify-center gap-1 px-1.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                                                    'inline-flex min-w-[64px] items-center justify-center gap-1 px-1.5 py-1 text-xs font-bold uppercase tracking-wider rounded transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
                                                     active
                                                         ? 'bg-sky-500 text-white'
                                                         : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -3826,14 +3826,14 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 ? 'Hide the display chrome toggles'
                                                 : 'Show the display chrome toggles (hide peak labels, delta pill, comparison overlay)'
                                         }
-                                        className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 hover:text-sky-700 dark:hover:text-sky-300 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-0.5 py-0.5"
+                                        className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 hover:text-sky-700 dark:hover:text-sky-300 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-0.5 py-0.5"
                                     >
                                         <Eye className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
                                         Display
                                         {displayCustomised && (
                                             <span
                                                 title="This tile has display chrome hidden (different from the shipped defaults)"
-                                                className="ml-1 inline-flex items-center px-1 py-px rounded-sm bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 text-[8px] font-bold tracking-wide normal-case"
+                                                className="ml-1 inline-flex items-center px-1 py-px rounded-sm bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 text-xs font-bold tracking-wide normal-case"
                                             >
                                                 custom
                                             </span>
@@ -3850,7 +3850,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             type="button"
                                             onClick={handleResetDisplay}
                                             title="Restore the peak / delta / overlay visibility to the shipped defaults for this tile (still has to be applied)"
-                                            className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
+                                            className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
                                         >
                                             <RotateCcw className="w-2.5 h-2.5" />
                                             Reset to default
@@ -3858,7 +3858,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     )}
                                 </div>
                                 {displayOpen && (
-                                <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
+                                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-snug">
                                     Hide the decoration around the headline value. {' '}
                                     <span className="text-slate-400 dark:text-slate-500">
                                         To collapse the chart entirely, use {' '}
@@ -3883,7 +3883,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             className="mt-0.5 h-3 w-3 rounded border-slate-300 dark:border-slate-600 text-sky-500 focus:ring-1 focus:ring-sky-400 flex-shrink-0"
                                         />
                                         <span className="flex-1 min-w-0">
-                                            <span className="block text-[11px] font-bold text-slate-700 dark:text-slate-200 leading-tight">
+                                            <span className="block text-xs font-bold text-slate-700 dark:text-slate-200 leading-tight">
                                                 Hide peak labels
                                             </span>
                                             <span className="block mt-0.5 text-[9.5px] text-slate-500 dark:text-slate-400 leading-snug">
@@ -3908,7 +3908,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             className="mt-0.5 h-3 w-3 rounded border-slate-300 dark:border-slate-600 text-sky-500 focus:ring-1 focus:ring-sky-400 flex-shrink-0"
                                         />
                                         <span className="flex-1 min-w-0">
-                                            <span className="block text-[11px] font-bold text-slate-700 dark:text-slate-200 leading-tight">
+                                            <span className="block text-xs font-bold text-slate-700 dark:text-slate-200 leading-tight">
                                                 Hide delta vs previous
                                             </span>
                                             <span className="block mt-0.5 text-[9.5px] text-slate-500 dark:text-slate-400 leading-snug">
@@ -3934,7 +3934,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             className="mt-0.5 h-3 w-3 rounded border-slate-300 dark:border-slate-600 text-sky-500 focus:ring-1 focus:ring-sky-400 flex-shrink-0"
                                         />
                                         <span className="flex-1 min-w-0">
-                                            <span className="block text-[11px] font-bold text-slate-700 dark:text-slate-200 leading-tight">
+                                            <span className="block text-xs font-bold text-slate-700 dark:text-slate-200 leading-tight">
                                                 Hide comparison overlay
                                             </span>
                                             <span className="block mt-0.5 text-[9.5px] text-slate-500 dark:text-slate-400 leading-snug">
@@ -3965,7 +3965,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             type="button"
                                             onClick={handleApplyDisplayToSection}
                                             title="Write these Display settings to every tile in this section. Other tile customisations (search binding, value field, chart style, thresholds) are left untouched."
-                                            className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-sky-600 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-200 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
+                                            className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-sky-600 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-200 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
                                         >
                                             <Eye className="w-3 h-3" />
                                             Apply to all tiles in {context.sectionLabel || 'section'}
@@ -4021,14 +4021,14 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 ? 'Hide the thresholds form'
                                                 : 'Show the thresholds form (set custom warning / critical bands for this tile)'
                                         }
-                                        className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 hover:text-sky-700 dark:hover:text-sky-300 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-0.5 py-0.5"
+                                        className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 hover:text-sky-700 dark:hover:text-sky-300 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-0.5 py-0.5"
                                     >
                                         <Gauge className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
                                         Thresholds
                                         {thresholdsCustomised && (
                                             <span
                                                 title="This tile has custom thresholds applied (different from the shipped defaults)"
-                                                className="ml-1 inline-flex items-center px-1 py-px rounded-sm bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 text-[8px] font-bold tracking-wide normal-case"
+                                                className="ml-1 inline-flex items-center px-1 py-px rounded-sm bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 text-xs font-bold tracking-wide normal-case"
                                             >
                                                 custom
                                             </span>
@@ -4045,7 +4045,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             type="button"
                                             onClick={handleResetThresholds}
                                             title="Restore warning / critical / direction to the shipped defaults for this tile (still has to be applied)"
-                                            className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
+                                            className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
                                         >
                                             <RotateCcw className="w-2.5 h-2.5" />
                                             Reset to default
@@ -4060,7 +4060,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     expanded so the collapsed state
                                     remains a single compact row. */}
                                 {thresholdsOpen && (
-                                    <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
+                                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-snug">
                                         Set the warning and critical bands
                                         used to colour the headline value
                                         and the status icon for this tile.
@@ -4070,7 +4070,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 )}
 
                                 {thresholdsOpen && !canManageFactoryConfig && (
-                                    <p className="mt-1 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                                    <p className="mt-1 flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400">
                                         <Lock className="w-2.5 h-2.5" />
                                         Org-wide setting — requires admin to change
                                     </p>
@@ -4089,7 +4089,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             way the bands work for inverted
                                             metrics). */}
                                         <div>
-                                            <label className="block text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
+                                            <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
                                                 Direction
                                             </label>
                                             <div className="grid grid-cols-2 gap-1 p-0.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900">
@@ -4123,7 +4123,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                     : 'Org-wide setting — requires admin to change'
                                                             }
                                                             className={cn(
-                                                                'px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400 disabled:opacity-50 disabled:cursor-not-allowed',
+                                                                'px-2 py-1 text-xs font-bold uppercase tracking-wider rounded transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400 disabled:opacity-50 disabled:cursor-not-allowed',
                                                                 active
                                                                     ? 'bg-sky-500 text-white'
                                                                     : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -4144,7 +4144,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             see what the tile shipped with. */}
                                         <div className="grid grid-cols-2 gap-2">
                                             <div>
-                                                <label className="block text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
+                                                <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
                                                     Warning
                                                 </label>
                                                 <input
@@ -4170,20 +4170,20 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                     }
                                                     className={cn(
                                                         'disabled:opacity-50 disabled:cursor-not-allowed',
-                                                        'w-full px-2 py-1 text-[11px] rounded border focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100',
+                                                        'w-full px-2 py-1 text-xs rounded border focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100',
                                                         warningInputValid
                                                             ? 'border-slate-200 dark:border-slate-700'
                                                             : 'border-red-400 dark:border-red-600'
                                                     )}
                                                 />
-                                                <p className="mt-0.5 text-[9px] text-slate-400 dark:text-slate-500">
+                                                <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
                                                     {def?.warning !== undefined
                                                         ? `default: ${formatThresholdNumber(def.warning, context.thresholdUnit)}`
                                                         : 'no shipped default'}
                                                 </p>
                                             </div>
                                             <div>
-                                                <label className="block text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
+                                                <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
                                                     Critical
                                                 </label>
                                                 <input
@@ -4209,13 +4209,13 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                     }
                                                     className={cn(
                                                         'disabled:opacity-50 disabled:cursor-not-allowed',
-                                                        'w-full px-2 py-1 text-[11px] rounded border focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100',
+                                                        'w-full px-2 py-1 text-xs rounded border focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100',
                                                         criticalInputValid
                                                             ? 'border-slate-200 dark:border-slate-700'
                                                             : 'border-red-400 dark:border-red-600'
                                                     )}
                                                 />
-                                                <p className="mt-0.5 text-[9px] text-slate-400 dark:text-slate-500">
+                                                <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
                                                     {def?.critical !== undefined
                                                         ? `default: ${formatThresholdNumber(def.critical, context.thresholdUnit)}`
                                                         : 'no shipped default'}
@@ -4229,7 +4229,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             colour, so we surface the issue
                                             but don't gate Apply on it. */}
                                         {thresholdRelationshipWarning && (
-                                            <p className="text-[10px] text-amber-600 dark:text-amber-400">
+                                            <p className="text-xs text-amber-600 dark:text-amber-400">
                                                 ⚠ {thresholdRelationshipWarning}
                                             </p>
                                         )}
@@ -4242,14 +4242,14 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             tuple. */}
                                         {previewLines && previewLines.length > 0 && (
                                             <div className="rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-2 py-1.5">
-                                                <p className="text-[8px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
+                                                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
                                                     Preview
                                                 </p>
                                                 <ul className="space-y-0.5">
                                                     {previewLines.map((row) => (
                                                         <li
                                                             key={row.tone}
-                                                            className="flex items-center gap-2 text-[10px]"
+                                                            className="flex items-center gap-2 text-xs"
                                                         >
                                                             <span
                                                                 className={cn(
@@ -4283,7 +4283,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             tell them what the runtime
                                             behaviour will be. */}
                                         {!previewLines && (
-                                            <p className="text-[10px] text-slate-500 dark:text-slate-400 italic">
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 italic">
                                                 No thresholds set — the headline will render in the
                                                 neutral colour with no status icon.
                                             </p>
@@ -4294,7 +4294,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                         </>
                         )
                     ) : (
-                        <p className="text-[11px] text-slate-400 dark:text-slate-500 italic">
+                        <p className="text-xs text-slate-400 dark:text-slate-500 italic">
                             Pick a search above to preview SPL and apply.
                         </p>
                     )}
@@ -4307,7 +4307,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             type="button"
                             onClick={handleResetThisTile}
                             title="Restore this tile to its default saved search"
-                            className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 flex-shrink-0"
+                            className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 flex-shrink-0"
                         >
                             <RotateCcw className="w-3 h-3" />
                             Reset tile
@@ -4331,7 +4331,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     // catches misclicks before
                                     // anything is wiped.
                                     title="Wipe tile, layout, and map customisations; keep header branding"
-                                    className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 flex-shrink-0"
+                                    className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 flex-shrink-0"
                                 >
                                     <RotateCcw className="w-3 h-3" />
                                     Factory reset
@@ -4350,7 +4350,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     disabled={workspaceLayoutStatus === 'saving'}
                                     title="Publish current tile order and counts as the shared workspace layout"
                                     className={cn(
-                                        'inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider flex-shrink-0',
+                                        'inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider flex-shrink-0',
                                         workspaceLayoutStatus === 'error'
                                             ? 'text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300'
                                             : workspaceLayoutStatus === 'saved'
@@ -4374,7 +4374,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors"
+                            className="px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors"
                         >
                             Cancel
                         </button>
@@ -4383,7 +4383,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             onClick={handleApply}
                             disabled={!canApply}
                             className={cn(
-                                'px-3 py-1 text-[11px] font-black uppercase tracking-wider rounded transition-colors',
+                                'px-3 py-1 text-xs font-black uppercase tracking-wider rounded transition-colors',
                                 canApply
                                     ? 'bg-sky-500 hover:bg-sky-600 text-white'
                                     : 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'

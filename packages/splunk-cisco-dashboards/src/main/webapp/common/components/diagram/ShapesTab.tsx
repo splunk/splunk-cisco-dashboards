@@ -28,7 +28,7 @@
  */
 
 import React, { useMemo, useRef, useState } from 'react';
-import { ChevronRight, ExternalLink, Search, Trash2, Upload, X } from 'lucide-react';
+import { ChevronRight, ExternalLink, Search, Trash2, Upload, X } from '@/common/icons/SuiIcon';
 import { strFromU8, unzipSync } from 'fflate';
 import { cn } from '@/common/lib/utils';
 import { CISCO_ICONS } from '@/common/components/topology/ciscoIcons';
@@ -862,12 +862,12 @@ const ShapeTile: React.FC<ShapeTileSpec> = ({ id, label, description }) => {
                         T
                     </div>
                 ) : (
-                    <div className="w-9 h-7 rounded border-2 border-dashed border-slate-400 dark:border-slate-500 flex items-center justify-center text-[8px] uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                    <div className="w-9 h-7 rounded border-2 border-dashed border-slate-400 dark:border-slate-500 flex items-center justify-center text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500">
                         Region
                     </div>
                 )}
             </div>
-            <div className="text-[10px] font-medium text-slate-700 dark:text-slate-200 text-center leading-tight">
+            <div className="text-xs font-medium text-slate-700 dark:text-slate-200 text-center leading-tight">
                 {label}
             </div>
         </div>
@@ -918,7 +918,7 @@ const CustomStencilTile: React.FC<{ asset: CustomStencilAsset }> = ({ asset }) =
                     draggable={false}
                 />
             </div>
-            <div className="text-[10px] font-medium text-slate-700 dark:text-slate-200 text-center leading-tight">
+            <div className="text-xs font-medium text-slate-700 dark:text-slate-200 text-center leading-tight">
                 {asset.label}
             </div>
         </div>
@@ -947,7 +947,7 @@ const CategoryDrawer: React.FC<CategoryDrawerProps> = ({
             onClick={onToggle}
             className={cn(
                 'flex w-full items-center justify-between gap-2 px-2.5 py-2 text-left',
-                'text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400',
+                'text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400',
                 'hover:bg-slate-50 hover:text-sky-700 dark:hover:bg-slate-800/70 dark:hover:text-sky-300'
             )}
         >
@@ -960,7 +960,7 @@ const CategoryDrawer: React.FC<CategoryDrawerProps> = ({
                 />
                 <span className="truncate">{label}</span>
             </span>
-            <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+            <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-xs font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                 {count}
             </span>
         </button>
@@ -1153,11 +1153,11 @@ export const ShapesTab: React.FC = () => {
                 ) : null}
             </div>
             {importMessage ? (
-                <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+                <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
                     {importMessage}
                 </div>
             ) : null}
-            <div className="rounded-md border border-sky-100 bg-sky-50/60 px-2 py-1.5 text-[10px] leading-snug text-slate-600 dark:border-sky-950 dark:bg-sky-950/20 dark:text-slate-300">
+            <div className="rounded-md border border-sky-100 bg-sky-50/60 px-2 py-1.5 text-xs leading-snug text-slate-600 dark:border-sky-950 dark:bg-sky-950/20 dark:text-slate-300">
                 Need Cisco device artwork? Download stencil ZIPs from{' '}
                 <a
                     href={CISCO_VISIO_STENCIL_LIBRARY_URL}
@@ -1172,7 +1172,7 @@ export const ShapesTab: React.FC = () => {
                 browser-readable SVG/PNG media. EMF/WMF-only stencils need
                 conversion first.
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug">
                 {normalizedQuery ? (
                     <>
                         {filteredTiles.length + filteredCustomStencils.length}{' '}
@@ -1196,7 +1196,7 @@ export const ShapesTab: React.FC = () => {
                     type="button"
                     onClick={toggleAllCategories}
                     className={cn(
-                        'self-start rounded-md border border-slate-200 px-2 py-1 text-[10px] font-semibold text-slate-500',
+                        'self-start rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-500',
                         'hover:border-sky-300 hover:text-sky-700 dark:border-slate-800 dark:text-slate-400 dark:hover:border-sky-900 dark:hover:text-sky-300'
                     )}
                 >
@@ -1212,7 +1212,7 @@ export const ShapesTab: React.FC = () => {
             ) : null}
             {filteredCustomStencils.length > 0 ? (
                 <div className="flex flex-col gap-1.5">
-                    <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-0.5">
+                    <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-0.5">
                         Custom Stencils
                     </div>
                     <div className="grid grid-cols-2 gap-2">

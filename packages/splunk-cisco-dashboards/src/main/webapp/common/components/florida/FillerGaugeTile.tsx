@@ -66,7 +66,7 @@ const NoDataBody: React.FC<{
             <span className="text-4xl font-black tracking-tighter leading-none text-slate-400 dark:text-slate-500">
                 —
             </span>
-            <span className="text-[9px] font-medium text-slate-400 dark:text-slate-500 mt-0.5">
+            <span className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5">
                 {subtext}
             </span>
         </div>
@@ -146,7 +146,7 @@ export const FillerGaugeTile: React.FC<FillerGaugeTileProps> = ({
                                 }}
                             />
                         </div>
-                        <div className="flex justify-between text-[9px] tabular-nums text-slate-400 dark:text-slate-500 font-medium">
+                        <div className="flex justify-between text-xs tabular-nums text-slate-400 dark:text-slate-500 font-medium">
                             <span>{gaugeRange.min}</span>
                             <span>{gaugeRange.max}</span>
                         </div>

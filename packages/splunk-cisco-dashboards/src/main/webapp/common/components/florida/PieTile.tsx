@@ -8,7 +8,7 @@
 
 import React, { useMemo, useState } from 'react';
 import StudioPie from '@splunk/visualizations/Pie';
-import { ExternalLink, Maximize2, PanelRightOpen, Settings2 } from 'lucide-react';
+import { ExternalLink, Maximize2, PanelRightOpen, Settings2 } from '@/common/icons/SuiIcon';
 import { ChartFocusDialog } from './ChartFocusDialog';
 import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
 import { cn } from '@/common/lib/utils';
@@ -88,7 +88,7 @@ const NoDataState: React.FC<{
             <span className="text-4xl font-black tracking-tighter leading-none text-slate-400 dark:text-slate-500">
                 —
             </span>
-            <span className="text-[9px] font-medium text-slate-400 dark:text-slate-500 mt-0.5 leading-tight">
+            <span className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5 leading-tight">
                 {subtext}
             </span>
         </div>
@@ -332,11 +332,11 @@ export const PieTile: React.FC<PieTileProps> = ({
                         options={studioOptions}
                         dataSources={studioDataSources}
                     />
-                    <span className="pointer-events-none absolute left-1 top-1 rounded bg-white/90 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-slate-600 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-950/90 dark:text-slate-200 dark:ring-slate-700/80">
+                    <span className="pointer-events-none absolute left-1 top-1 rounded bg-white/90 px-1.5 py-0.5 text-xs font-bold tabular-nums text-slate-600 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-950/90 dark:text-slate-200 dark:ring-slate-700/80">
                         Total {formatCount(total)}
                     </span>
                     {overflowCount > 0 && (
-                        <span className="pointer-events-none absolute bottom-0 left-1 z-10 rounded bg-white/85 px-1 text-[9px] italic text-slate-400 dark:bg-slate-950/85 dark:text-slate-500">
+                        <span className="pointer-events-none absolute bottom-0 left-1 z-10 rounded bg-white/85 px-1 text-xs italic text-slate-400 dark:bg-slate-950/85 dark:text-slate-500">
                             +{overflowCount} more
                         </span>
                     )}

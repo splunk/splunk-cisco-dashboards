@@ -21,23 +21,11 @@ module.exports = {
         extend: {
             fontFamily: {
                 sans: [
-                    'ui-sans-serif',
-                    'system-ui',
-                    '-apple-system',
-                    'BlinkMacSystemFont',
-                    '"Segoe UI"',
-                    'Roboto',
-                    '"Helvetica Neue"',
-                    'Arial',
+                    'var(--sui-font-family)',
                     'sans-serif',
                 ],
                 mono: [
-                    'ui-monospace',
-                    'SFMono-Regular',
-                    'Menlo',
-                    'Monaco',
-                    'Consolas',
-                    '"Liberation Mono"',
+                    'var(--sui-font-family-mono)',
                     'monospace',
                 ],
             },

@@ -47,7 +47,7 @@
  */
 
 import React from 'react';
-import { Layers } from 'lucide-react';
+import { Layers } from '@/common/icons/SuiIcon';
 import { NodeResizer } from '@xyflow/react';
 import { cn } from '@/common/lib/utils';
 
@@ -183,7 +183,7 @@ export const RegionGroupNode: React.FC<{
                     'flex items-center justify-between gap-2 px-3 py-1.5 rounded-t-[10px]',
                     'border-b border-dashed',
                     a.border,
-                    'text-[11px] font-semibold uppercase tracking-wider'
+                    'text-xs font-semibold uppercase tracking-wider'
                 )}
             >
                 <div className="flex items-center gap-1.5 min-w-0">
@@ -194,7 +194,7 @@ export const RegionGroupNode: React.FC<{
                 </div>
                 <span
                     className={cn(
-                        'flex-shrink-0 px-1.5 py-0.5 rounded text-[9px] font-mono normal-case tracking-normal',
+                        'flex-shrink-0 px-1.5 py-0.5 rounded text-xs font-mono normal-case tracking-normal',
                         a.pill
                     )}
                 >

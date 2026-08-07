@@ -44,7 +44,7 @@
 
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Info } from 'lucide-react';
+import { Info } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
 import type { ThresholdLine } from '@/common/hooks/useMetric';
 
@@ -272,7 +272,7 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
                                   the reference design: a tight, sky-
                                   blue label that primes the eye for a
                                   short data block below. */}
-                              <span className="block text-sky-400 text-[11px] font-bold tracking-wider mb-1.5 uppercase">
+                              <span className="block text-sky-400 text-xs font-bold tracking-wider mb-1.5 uppercase">
                                   Thresholds
                               </span>
                               {Array.isArray(thresholdLines) && thresholdLines.length > 0 && (

@@ -18,8 +18,9 @@ import {
     Pause,
     Settings,
     Sun,
-} from 'lucide-react';
+} from '@/common/icons/SuiIcon';
 import { useExportPage } from '@/common/hooks/useExportPage';
+import { useTheme } from '@/common/hooks/useTheme';
 import { cn } from '@/common/lib/utils';
 import {
     createKPIInstance,
@@ -46,41 +47,23 @@ interface ThemeContextValue {
     toggleTheme: () => void;
 }
 
-const THEME_STORAGE_KEY = 'splunk-cisco-dashboards.health-monitoring.theme';
 const SECTION_STORAGE_KEY = 'splunk-cisco-dashboards.health-monitoring.sections.v1';
 const MAP_POSITION_STORAGE_KEY =
     'splunk-cisco-dashboards.health-monitoring.map-position';
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-const readTheme = (): ThemeMode => {
-    if (typeof window === 'undefined') return 'light';
-    try {
-        const saved = window.localStorage.getItem(THEME_STORAGE_KEY);
-        if (saved === 'light' || saved === 'dark') return saved;
-    } catch {
-        // Best-effort persistence only.
-    }
-    return window.matchMedia?.('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light';
-};
-
 const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [theme, setTheme] = useState<ThemeMode>(readTheme);
-    const toggleTheme = useCallback(() => {
-        setTheme((current) => {
-            const next = current === 'dark' ? 'light' : 'dark';
-            try {
-                window.localStorage.setItem(THEME_STORAGE_KEY, next);
-            } catch {
-                // UI still flips for this session.
-            }
-            return next;
-        });
-    }, []);
+    const { resolvedTheme, setTheme } = useTheme();
+    const toggleTheme = useCallback(
+        () => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark'),
+        [resolvedTheme, setTheme]
+    );
 
-    const value = useMemo(() => ({ theme, toggleTheme }), [theme, toggleTheme]);
+    const value = useMemo(
+        () => ({ theme: resolvedTheme as ThemeMode, toggleTheme }),
+        [resolvedTheme, toggleTheme]
+    );
 
     return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 };

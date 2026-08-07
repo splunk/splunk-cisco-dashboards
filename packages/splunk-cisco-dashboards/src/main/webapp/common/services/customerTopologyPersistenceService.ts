@@ -29,6 +29,11 @@ import { getSearchAppContext } from './splunkSearchService';
 const CONF_BASENAME = 'customer_topology';
 const BASE_STANZA_NAME = 'overview_customer_connectivity';
 const DEFAULT_TOPOLOGY_ID = 'customer-site-connectivity';
+const LEGACY_FACTORY_TOPOLOGY_NAME = 'Customer Site Connectivity';
+const LEGACY_FACTORY_TOPOLOGY_SUBTITLE = 'Editable customer site connectivity';
+const FACTORY_TOPOLOGY_NAME = 'Secure Network Command Map';
+const FACTORY_TOPOLOGY_SUBTITLE =
+    'Live sites, trust paths, and policy-enforcement health';
 const CURRENT_SCHEMA_VERSION = 1;
 const PAYLOAD_VERSION = 1;
 const MAX_PAYLOAD_BYTES = 128 * 1024;
@@ -123,11 +128,20 @@ export const sanitizeCustomerTopologySectionTitles = (
             ? (raw as Partial<Record<CustomerTopologySectionId, unknown>>)
             : {};
     const next: CustomerTopologySectionTitles = { ...fallback };
+    const legacyFactoryTitles: Partial<Record<CustomerTopologySectionId, string>> = {
+        it_health: 'IT Health',
+        security: 'Security',
+        building: 'Building Intelligence',
+        custom: 'Executive Signals',
+    };
     for (const id of CUSTOMER_TOPOLOGY_SECTION_IDS) {
         const value = source[id];
         if (typeof value !== 'string') continue;
         const trimmed = value.trim().replace(/\s+/g, ' ');
-        next[id] = trimmed ? trimmed.slice(0, 48) : fallback[id];
+        next[id] =
+            trimmed && trimmed !== legacyFactoryTitles[id]
+                ? trimmed.slice(0, 48)
+                : fallback[id];
     }
     return next;
 };
@@ -136,12 +150,27 @@ const sanitizePayload = (raw: unknown): SavedCustomerTopologyPayload | null => {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
     const payload = raw as Partial<SavedCustomerTopologyPayload>;
     if (!payload.topology || typeof payload.topology !== 'object') return null;
+    const topology = payload.topology as CustomerTopology;
+    const isLegacyFactoryTopology = topology.id === DEFAULT_TOPOLOGY_ID;
+    const migratedTopology = isLegacyFactoryTopology
+        ? {
+              ...topology,
+              name:
+                  topology.name === LEGACY_FACTORY_TOPOLOGY_NAME
+                      ? FACTORY_TOPOLOGY_NAME
+                      : topology.name,
+              subtitle:
+                  topology.subtitle === LEGACY_FACTORY_TOPOLOGY_SUBTITLE
+                      ? FACTORY_TOPOLOGY_SUBTITLE
+                      : topology.subtitle,
+          }
+        : topology;
     return {
         version:
             typeof payload.version === 'number'
                 ? payload.version
                 : PAYLOAD_VERSION,
-        topology: payload.topology as CustomerTopology,
+        topology: migratedTopology,
         sectionTitles: sanitizeCustomerTopologySectionTitles(
             payload.sectionTitles
         ),

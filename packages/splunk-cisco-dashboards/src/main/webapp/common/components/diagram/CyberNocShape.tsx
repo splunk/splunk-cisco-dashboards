@@ -282,10 +282,10 @@ const CyberNocShape: React.FC<{
                     <Icon className="w-[18px] h-[18px] text-sky-400" />
                 </div>
                 <div className="overflow-hidden">
-                    <div className="text-[11px] font-bold text-slate-100 truncate uppercase tracking-wider">
+                    <div className="text-xs font-bold text-slate-100 truncate uppercase tracking-wider">
                         {node.shortLabel ?? node.label}
                     </div>
-                    <div className="text-[9px] text-slate-500 font-mono truncate">
+                    <div className="text-xs text-slate-500 font-mono truncate">
                         {secondaryLine(node)}
                     </div>
                 </div>

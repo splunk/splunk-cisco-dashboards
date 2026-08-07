@@ -1,12 +1,5 @@
 import React from 'react';
-import {
-    ChevronRight,
-    ArrowUpRight,
-    ArrowUpDown,
-    Minus,
-    Pencil,
-    Plus,
-} from 'lucide-react';
+import { ChevronRight, ArrowUpRight, ArrowUpDown, Minus, Pencil, Plus } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
 
 interface TileCountControlConfig {
@@ -122,7 +115,7 @@ const TileCountPill: React.FC<TileCountControlConfig> = ({
                 // tabular-nums keeps the pill width steady as the
                 // user clicks through 3/4/5 — otherwise the +/-
                 // buttons jitter sideways on every press.
-                className="text-[11px] font-semibold tabular-nums leading-none w-3 text-center"
+                className="text-xs font-semibold tabular-nums leading-none w-3 text-center"
                 aria-hidden="true"
             >
                 {value}
@@ -186,7 +179,7 @@ const HeightPill: React.FC<HeightControlConfig> = ({
                 <Minus className="w-3 h-3" />
             </button>
             <span
-                className="inline-flex items-center justify-center gap-0.5 text-[11px] font-semibold tabular-nums leading-none w-9"
+                className="inline-flex items-center justify-center gap-0.5 text-xs font-semibold tabular-nums leading-none w-9"
                 aria-hidden="true"
             >
                 <ArrowUpDown className="w-3 h-3" />

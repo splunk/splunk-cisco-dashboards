@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowDownRight, ArrowUpRight, X } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, X } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
 import type { KPIInstance } from '@/data/kpi-templates';
 import {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus } from 'lucide-react';
+import { Plus } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
 import type { KPIInstance, KPISectionId } from '@/data/kpi-templates';
 import { DraggableKPICard } from './DraggableKPICard';

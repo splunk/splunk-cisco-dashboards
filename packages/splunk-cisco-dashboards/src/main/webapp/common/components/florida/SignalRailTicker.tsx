@@ -1,12 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-    Check,
-    ExternalLink,
-    Palette,
-    Pause,
-    Play,
-    Settings2,
-} from 'lucide-react';
+import { Check, ExternalLink, Palette, Pause, Play, Settings2 } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
 import type { MetricStatus } from '@/common/hooks/useMetric';
 import type { SignalTickerDensity, SignalTickerRows } from '@/common/hooks/usePersistedSignalTicker';
@@ -395,7 +388,7 @@ const KpiItem: React.FC<KpiItemProps> = ({
                 data-status={kpi.status}
             >
                 <div className="min-w-0 flex-1">
-                    <span className="block truncate text-[10px] font-black uppercase tracking-[0.2em] text-white/60">
+                    <span className="block truncate text-xs font-black uppercase tracking-[0.2em] text-white/60">
                         {category}
                     </span>
                     <span className="mt-1 flex min-w-0 items-center gap-4">
@@ -407,7 +400,7 @@ const KpiItem: React.FC<KpiItemProps> = ({
                         </span>
                         <span
                             className={cn(
-                                'shrink-0 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] shadow-[0_0_16px_rgba(255,255,255,0.12)]',
+                                'shrink-0 rounded-full border px-3 py-1 text-xs font-black uppercase tracking-[0.12em] shadow-[0_0_16px_rgba(255,255,255,0.12)]',
                                 status.softOnDark
                             )}
                         >
@@ -431,10 +424,10 @@ const KpiItem: React.FC<KpiItemProps> = ({
             >
                 <span className={cn('absolute inset-y-0 left-0 w-1', status.accent)} />
                 <div className="min-w-0 flex-1 pl-2">
-                    <span className="block truncate text-[10px] font-black uppercase tracking-[0.12em] text-slate-400 dark:text-slate-300">
+                    <span className="block truncate text-xs font-black uppercase tracking-[0.12em] text-slate-400 dark:text-slate-300">
                         {label}
                     </span>
-                    <span className="mt-0.5 block truncate text-[11px] font-semibold text-slate-400 dark:text-slate-500">
+                    <span className="mt-0.5 block truncate text-xs font-semibold text-slate-400 dark:text-slate-500">
                         {kpi.category}
                     </span>
                 </div>
@@ -444,7 +437,7 @@ const KpiItem: React.FC<KpiItemProps> = ({
                 </span>
                 <span className="ml-4 flex shrink-0 items-center gap-1.5">
                     <span className={cn('h-2.5 w-2.5 rounded-full', status.glow)} />
-                    <span className={cn('text-[11px] font-black uppercase tracking-[0.08em]', status.text)}>
+                    <span className={cn('text-xs font-black uppercase tracking-[0.08em]', status.text)}>
                         {STATUS_LABEL[kpi.status]}
                     </span>
                 </span>
@@ -464,7 +457,7 @@ const KpiItem: React.FC<KpiItemProps> = ({
             >
                 <span className={cn('relative z-10 mr-4 h-3 w-3 shrink-0 rounded-full ring-4 ring-cyan-300/10', status.glow)} />
                 <span className="relative z-10 min-w-0 flex-1">
-                    <span className="block truncate text-[9px] font-black uppercase tracking-[0.22em] text-cyan-200/60">
+                    <span className="block truncate text-xs font-black uppercase tracking-[0.22em] text-cyan-200/60">
                         {category}
                     </span>
                     <span className="mt-1 flex min-w-0 items-baseline gap-3">
@@ -477,7 +470,7 @@ const KpiItem: React.FC<KpiItemProps> = ({
                     </span>
                 </span>
                 <span className="relative z-10 ml-4 flex shrink-0 items-center gap-2 pr-1">
-                    <span className={cn('text-[10px] font-black uppercase tracking-[0.16em]', status.textOnDark)}>
+                    <span className={cn('text-xs font-black uppercase tracking-[0.16em]', status.textOnDark)}>
                         {STATUS_LABEL[kpi.status]}
                     </span>
                     {openLink}
@@ -505,14 +498,14 @@ const KpiItem: React.FC<KpiItemProps> = ({
                     <span className="block truncate text-[22px] font-black leading-none tracking-normal text-slate-900 dark:text-white">
                         {valueText(kpi)}
                     </span>
-                    <span className="mt-1.5 block line-clamp-2 text-[9px] font-black uppercase leading-tight tracking-[0.08em] text-slate-600 dark:text-slate-300">
+                    <span className="mt-1.5 block line-clamp-2 text-xs font-black uppercase leading-tight tracking-[0.08em] text-slate-600 dark:text-slate-300">
                         {label}
                     </span>
                 </span>
                 <span className="flex shrink-0 items-center gap-0.5">
                     <span
                         className={cn(
-                            'rounded-full px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.12em]',
+                            'rounded-full px-1.5 py-0.5 text-xs font-black uppercase tracking-[0.12em]',
                             status.soft
                         )}
                     >
@@ -521,7 +514,7 @@ const KpiItem: React.FC<KpiItemProps> = ({
                     {openLink}
                 </span>
             </span>
-            <span className="mt-0.5 block truncate text-[8px] font-semibold text-slate-400 dark:text-slate-500">
+            <span className="mt-0.5 block truncate text-xs font-semibold text-slate-400 dark:text-slate-500">
                 {kpi.category}
             </span>
         </div>
@@ -563,12 +556,6 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
     const tickerRows = useMemo(() => splitRows(kpis, rows), [kpis, rows]);
     const effectivePaused = manualPaused || interactionPaused || durationSeconds <= 0;
     const activeOption = VARIANT_OPTIONS.find((option) => option.id === variant);
-    const leftChromeVisibility = pickerOpen
-        ? 'opacity-100 pointer-events-auto translate-x-0'
-        : 'opacity-0 pointer-events-none -translate-x-1 group-hover/signal-rail:opacity-100 group-hover/signal-rail:pointer-events-auto group-hover/signal-rail:translate-x-0 group-focus-within/signal-rail:opacity-100 group-focus-within/signal-rail:pointer-events-auto group-focus-within/signal-rail:translate-x-0';
-    const rightChromeVisibility = pickerOpen
-        ? 'opacity-100 pointer-events-auto translate-x-0'
-        : 'opacity-0 pointer-events-none translate-x-1 group-hover/signal-rail:opacity-100 group-hover/signal-rail:pointer-events-auto group-hover/signal-rail:translate-x-0 group-focus-within/signal-rail:opacity-100 group-focus-within/signal-rail:pointer-events-auto group-focus-within/signal-rail:translate-x-0';
     const counts = useMemo(() => {
         const map: Record<SignalRailStatus, number> = {
             healthy: 0,
@@ -603,7 +590,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
     return (
         <section
             className={cn(
-                'scd-signal-rail-ticker group/signal-rail relative z-40 w-full min-w-0 max-w-full flex-shrink-0 overflow-hidden border-b',
+                'scd-signal-rail-ticker group/signal-rail relative z-40 w-full min-w-0 max-w-full flex-shrink-0 overflow-visible border-b',
                 variant === 'original' &&
                     'border-slate-200 bg-white/[0.82] px-1.5 py-1 dark:border-slate-800 dark:bg-slate-950/95',
                 variant === 'bloomberg' &&
@@ -640,9 +627,8 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
             >
                 <div
                     className={cn(
-                        'absolute left-1.5 top-1/2 z-[80] hidden shrink-0 -translate-y-1/2 items-center gap-2 rounded-lg border shadow-sm transition-all duration-150 lg:flex',
+                        'relative z-[80] hidden shrink-0 items-center gap-2 rounded-lg border shadow-sm lg:flex',
                         density === 'compact' ? 'px-2.5 py-1.5' : 'px-3 py-2',
-                        leftChromeVisibility,
                         variant === 'original' &&
                             'border-sky-100 bg-white/90 text-sky-700 dark:border-sky-900/70 dark:bg-slate-900/95 dark:text-sky-300',
                         variant === 'bloomberg' &&
@@ -657,10 +643,10 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                 >
                     <span className="h-2.5 w-2.5 rounded-full bg-sky-500 shadow-[0_0_12px_rgba(14,165,233,0.7)]" />
                     <div className="leading-tight">
-                        <p className="text-[9px] font-black uppercase tracking-[0.2em]">
+                        <p className="text-xs font-black uppercase tracking-[0.2em]">
                             {title}
                         </p>
-                        <p className="text-[9px] font-semibold opacity-65">
+                        <p className="text-xs font-semibold opacity-65">
                             {subtitle ?? `${kpis.length} KPIs`}
                         </p>
                     </div>
@@ -692,8 +678,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
 
                 <div
                     className={cn(
-                        'absolute right-1.5 top-1/2 z-[90] flex shrink-0 -translate-y-1/2 items-center gap-1 transition-all duration-150',
-                        rightChromeVisibility
+                        'relative z-[90] flex shrink-0 items-center gap-1'
                     )}
                     ref={pickerRef}
                 >
@@ -701,6 +686,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                         type="button"
                         onClick={() => setManualPaused((current) => !current)}
                         aria-pressed={manualPaused}
+                        aria-label={manualPaused ? 'Resume signal rail' : 'Pause signal rail'}
                         title={manualPaused ? 'Resume signal rail' : 'Pause signal rail'}
                         className={cn(
                             'flex items-center justify-center rounded-lg border shadow-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
@@ -721,6 +707,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                         onClick={() => setPickerOpen((current) => !current)}
                         aria-haspopup="menu"
                         aria-expanded={pickerOpen}
+                        aria-label={`Ticker style: ${activeOption?.label ?? 'Original'}`}
                         title={`Ticker style: ${activeOption?.label ?? 'Original'}`}
                         className={cn(
                             'flex items-center justify-center rounded-lg border shadow-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
@@ -740,6 +727,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                         <button
                             type="button"
                             onClick={onOpenEditor}
+                            aria-label="Configure signal rail"
                             title="Configure signal rail"
                             className={cn(
                                 'flex items-center justify-center rounded-lg border shadow-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
@@ -765,14 +753,14 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                         >
                             <div className="flex items-center justify-between px-2.5 pb-2 pt-1.5">
                                 <div>
-                                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">
+                                    <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">
                                         Ticker style
                                     </p>
-                                    <p className="mt-0.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                                    <p className="mt-0.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
                                         Choose one of five rail treatments
                                     </p>
                                 </div>
-                                <span className="rounded-full bg-sky-50 px-2 py-1 text-[10px] font-black uppercase tracking-[0.1em] text-sky-700 dark:bg-sky-950/50 dark:text-sky-200">
+                                <span className="rounded-full bg-sky-50 px-2 py-1 text-xs font-black uppercase tracking-[0.1em] text-sky-700 dark:bg-sky-950/50 dark:text-sky-200">
                                     {VARIANT_OPTIONS.length} styles
                                 </span>
                             </div>
@@ -803,7 +791,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                                             <span className="block text-[12px] font-black uppercase tracking-[0.12em]">
                                                 {option.label}
                                             </span>
-                                            <span className="mt-0.5 block text-[11px] font-semibold leading-snug text-slate-500 dark:text-slate-400">
+                                            <span className="mt-0.5 block text-xs font-semibold leading-snug text-slate-500 dark:text-slate-400">
                                                 {option.description}
                                             </span>
                                         </span>
@@ -819,18 +807,18 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
             </div>
 
             {variant === 'bloomberg' && (
-                <div className="relative z-10 border-t border-[#1e2d4a] px-8 py-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-blue-300/60">
+                <div className="relative z-10 border-t border-[#1e2d4a] px-8 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-blue-300/60">
                     Signal Rail · Live · {kpis.length} KPIs Monitored
                 </div>
             )}
             {variant === 'cisco-blue-gradient' && (
-                <div className="relative z-10 border-t border-white/10 bg-[#0a2d64]/[0.45] px-8 py-2 text-[11px] font-black uppercase tracking-[0.16em] text-white/60">
+                <div className="relative z-10 border-t border-white/10 bg-[#0a2d64]/[0.45] px-8 py-2 text-xs font-black uppercase tracking-[0.16em] text-white/60">
                     <span className="mr-2 inline-block h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.85)]" />
                     Signal Rail · Live Feed · All Systems Nominal
                 </div>
             )}
             {variant === 'minimal-enterprise' && (
-                <div className="relative z-0 flex items-center justify-between border-t border-slate-200 px-8 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-slate-400 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-500">
+                <div className="relative z-0 flex items-center justify-between border-t border-slate-200 px-8 py-2 text-xs font-black uppercase tracking-[0.12em] text-slate-400 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-500">
                     <span>Signal Rail · {kpis.length} KPIs</span>
                     <span className="normal-case tracking-normal">
                         <span className="text-emerald-500">• {counts.healthy} Healthy</span>
@@ -840,7 +828,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                 </div>
             )}
             {variant === 'telemetry-constellation' && (
-                <div className="relative z-0 flex items-center justify-between border-t border-cyan-300/20 bg-slate-950/25 px-8 py-2 font-mono text-[11px] font-black uppercase tracking-[0.16em] text-cyan-200/60">
+                <div className="relative z-0 flex items-center justify-between border-t border-cyan-300/20 bg-slate-950/25 px-8 py-2 font-mono text-xs font-black uppercase tracking-[0.16em] text-cyan-200/60">
                     <span>
                         <span className="mr-2 inline-block h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_14px_rgba(103,232,249,0.9)]" />
                         Telemetry Constellation

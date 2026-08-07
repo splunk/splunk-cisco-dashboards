@@ -386,7 +386,7 @@ const SparklineTooltip: React.FC<SparklineTooltipProps> = ({
     return (
         <div
             role="tooltip"
-            className="pointer-events-none rounded-md border border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm shadow-lg px-2 py-1 text-[10px] leading-tight"
+            className="pointer-events-none rounded-md border border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm shadow-lg px-2 py-1 text-xs leading-tight"
         >
             <div className="font-semibold text-slate-500 dark:text-slate-400 tabular-nums">
                 {timeLabel}
@@ -861,7 +861,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
     //     with the min/max value bubbles, which live inside the
     //     plot area.
     //
-    // Cost: ~11px stolen from the chart canvas (text-[9px] glyph
+    // Cost: ~11px stolen from the chart canvas (text-xs glyph
     // height + 2px top padding). The trough bubble's clamp logic
     // still keeps it inside the chart inner area, so labels never
     // overlap a value bubble.
@@ -909,7 +909,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
                 </div>
                 {showFooter && (
                     <div
-                        className={`flex items-center pt-0.5 px-3 text-[9px] tabular-nums leading-none text-slate-400 dark:text-slate-400 font-medium select-none ${footerJustify}`}
+                        className={`flex items-center pt-0.5 px-3 text-xs tabular-nums leading-none text-slate-400 dark:text-slate-400 font-medium select-none ${footerJustify}`}
                         aria-hidden="true"
                     >
                         {sameTime ? (

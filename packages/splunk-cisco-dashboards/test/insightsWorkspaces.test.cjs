@@ -39,6 +39,8 @@ const {
   DEFAULT_WORKSPACE_ID,
   PACKAGED_WORKSPACE_FALLBACKS,
   WORKSPACE_SOURCES,
+  createInsightsWorkspace,
+  getWorkspaceSectionSource,
   getWorkspaceFromLocation,
 } = workspacesModule.exports;
 
@@ -48,6 +50,13 @@ const expectedSecureNetworkingSections = [
   ["scalable_network_segmentation", "Scalable Network Segmentation"],
   ["hybrid_mesh_firewalling", "Hybrid Mesh Firewalling"],
   ["agentic_ops", "Agentic Ops"],
+];
+
+const expectedCrossDomainSections = [
+  ["it_health", "IT Operations"],
+  ["security", "Security Operations"],
+  ["building", "Digital Experience"],
+  ["custom", "Executive Command Signals"],
 ];
 
 const expectedWorkspaceIds = [
@@ -65,12 +74,17 @@ assert.deepEqual(
 );
 assert.equal(PACKAGED_WORKSPACE_FALLBACKS[0].label, "Secure Networking");
 assert.deepEqual(
+  WORKSPACE_SOURCES.secure_networking.defaultSectionIds,
+  expectedSecureNetworkingSections.map(([id]) => id),
+  "The Secure Networking template must keep its focused starting sections",
+);
+assert.deepEqual(
   WORKSPACE_SOURCES.secure_networking.sections.map(({ id, title }) => [
     id,
     title,
   ]),
-  expectedSecureNetworkingSections,
-  "Secure Networking sections must match the app menu names and order",
+  [...expectedSecureNetworkingSections, ...expectedCrossDomainSections],
+  "Every workspace template must offer Secure Networking, SecOps, ITOps, digital experience, and executive sections",
 );
 assert.deepEqual(
   PACKAGED_WORKSPACE_FALLBACKS[0].defaultVisibleSections,
@@ -88,6 +102,22 @@ assert.equal(
   ).sourceWorkspace,
   "secure_networking",
 );
+
+const crossDomainSecureWorkspace = createInsightsWorkspace({
+  id: "cross_domain_demo",
+  label: "Cross-domain Demo",
+  sourceWorkspace: "secure_networking",
+  sectionIds: ["security", "it_health"],
+  defaultVisibleSections: ["security", "it_health"],
+});
+assert.deepEqual(
+  crossDomainSecureWorkspace.sections.map(({ id }) => id),
+  ["it_health", "security"],
+  "A Secure Networking template must be able to own real ITOps and SecOps sections",
+);
+assert.equal(getWorkspaceSectionSource("it_health"), "executive");
+assert.equal(getWorkspaceSectionSource("security"), "executive");
+assert.equal(getWorkspaceSectionSource("zta"), "secure_networking");
 
 const originalWindow = global.window;
 try {

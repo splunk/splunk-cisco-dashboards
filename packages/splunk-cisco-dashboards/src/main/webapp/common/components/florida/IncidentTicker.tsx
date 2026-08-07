@@ -13,7 +13,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { AlertTriangle, AlertCircle, Info } from 'lucide-react';
+import { AlertTriangle, AlertCircle, Info } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
 import { runSearch } from '@/common/services/splunkSearchService';
 import type { TimeRange } from '@/common/hooks/useMetric';
@@ -132,13 +132,13 @@ export const IncidentTicker: React.FC<IncidentTickerProps> = ({
 
     return (
         <div
-            className="flex items-center gap-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-1.5 text-[11px] font-medium text-slate-600 dark:text-slate-300 overflow-hidden"
+            className="flex items-center gap-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 overflow-hidden"
             onMouseEnter={() => setPaused(true)}
             onMouseLeave={() => setPaused(false)}
             onFocus={() => setPaused(true)}
             onBlur={() => setPaused(false)}
         >
-            <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex-shrink-0">
+            <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex-shrink-0">
                 Incident Feed
             </span>
             <Icon className={cn('w-3.5 h-3.5 flex-shrink-0', colorClass)} />
@@ -154,7 +154,7 @@ export const IncidentTicker: React.FC<IncidentTickerProps> = ({
                     >
                         <span
                             className={cn(
-                                'font-black uppercase tracking-wider text-[9px]',
+                                'font-black uppercase tracking-wider text-xs',
                                 colorClass
                             )}
                         >
@@ -169,7 +169,7 @@ export const IncidentTicker: React.FC<IncidentTickerProps> = ({
                     </motion.div>
                 </AnimatePresence>
             </div>
-            <span className="text-[9px] text-slate-400 dark:text-slate-500 font-mono flex-shrink-0 ml-2">
+            <span className="text-xs text-slate-400 dark:text-slate-500 font-mono flex-shrink-0 ml-2">
                 {rows.length > 1 ? `${index + 1}/${rows.length}` : '·'}
                 {paused && rows.length > 1 ? ' · paused' : ''}
             </span>

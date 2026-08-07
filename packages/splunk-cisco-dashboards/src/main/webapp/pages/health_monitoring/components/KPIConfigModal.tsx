@@ -11,7 +11,7 @@ import {
     RotateCcw,
     Settings2,
     X,
-} from 'lucide-react';
+} from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
 import type {
     KPIChartType,
@@ -237,7 +237,7 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
                                         type="button"
                                         onClick={() => updateDraft({ chartType: value })}
                                         className={cn(
-                                            'flex h-12 flex-col items-center justify-center gap-0.5 rounded-lg border text-[9px] font-black uppercase transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
+                                            'flex h-12 flex-col items-center justify-center gap-0.5 rounded-lg border text-xs font-black uppercase transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
                                             active
                                                 ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300'
                                                 : 'border-slate-200 text-slate-600 hover:border-sky-300 dark:border-slate-700 dark:text-slate-300'
@@ -298,7 +298,7 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
                                 />
                                 <span>
                                     <span className="block text-xs font-semibold">{option.label}</span>
-                                    <span className="mt-0.5 block text-[11px] leading-4 text-slate-500 dark:text-slate-400">
+                                    <span className="mt-0.5 block text-xs leading-4 text-slate-500 dark:text-slate-400">
                                         {option.body}
                                     </span>
                                 </span>
@@ -313,7 +313,7 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
                                 Thresholds
                             </h3>
                         </div>
-                        <p className="mb-3 text-[11px] leading-4 text-slate-500 dark:text-slate-400">
+                        <p className="mb-3 text-xs leading-4 text-slate-500 dark:text-slate-400">
                             Set the healthy, warning, and critical bands used to colour the headline value and status icon.
                         </p>
                         <div className="grid grid-cols-2 gap-2">
