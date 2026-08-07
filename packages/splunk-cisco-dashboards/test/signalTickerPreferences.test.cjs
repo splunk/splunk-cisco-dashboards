@@ -204,6 +204,35 @@ for (const item of DEFAULT_SIGNAL_TICKER_CONFIG.items) {
   );
 }
 const searchbaseBlocks = searchbase.split(/(?=^\[)/m);
+const deliberateNonTimechartSignalSearches = new Set([
+  "Executive - Security Domain Score",
+  "Executive - Network Health Score Trend",
+  "Executive - IT Domain Score",
+  "Executive - User Experience Score",
+  "Executive - Building Domain Score",
+  "Executive - Issue Summary KPIs",
+  "Feed Monitor - ThousandEyes - Stream Staleness (Signal Rail KPI)",
+  "Feed Monitor - FTD Firewall - Stream Staleness (Signal Rail KPI)",
+  "Feed Monitor - FMC eStreamer - IPS Feed Staleness (Signal Rail KPI)",
+  "Feed Monitor - ISE - RADIUS Syslog Staleness (Signal Rail KPI)",
+  "Feed Monitor - Catalyst Center - API Feed Staleness (Signal Rail KPI)",
+  "Feed Monitor - Cisco Spaces - Firehose Staleness (Signal Rail KPI)",
+]);
+for (const searchName of new Set(
+  DEFAULT_SIGNAL_TICKER_CONFIG.items.map(({ searchName }) => searchName),
+)) {
+  const block = searchbaseBlocks.find(
+    (candidate) =>
+      candidate.match(/^search_name = (.+)$/m)?.[1] === searchName,
+  );
+  assert.ok(block, "missing Signal Rail search " + searchName);
+  if (deliberateNonTimechartSignalSearches.has(searchName)) continue;
+  assert.match(
+    block,
+    /\| timechart /i,
+    searchName + " must expose a Signal Rail timechart",
+  );
+}
 const paloAltoRailSearch = searchbaseBlocks.find((block) =>
   block.startsWith("[secure_networking_palo_alto_policy_enforcement_signal]"),
 );

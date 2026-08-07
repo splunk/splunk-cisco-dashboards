@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 
 from scripts.format_searchbase_conf import format_search, format_stanza
-from scripts.lint_spl_antipatterns import lint_search
+from scripts.lint_spl_antipatterns import lint_search, lint_text
 
 
 class FormatSearchbaseConfTest(unittest.TestCase):
@@ -103,6 +103,24 @@ class FormatSearchbaseConfTest(unittest.TestCase):
             [violation.rule_id.split()[0] for violation in violations],
             ["R008", "R011"],
         )
+
+    def test_allows_explicit_table_ui_sort_guidance(self) -> None:
+        conf = """[table_ui]
+solution = <p>Row order is not defined by the search — the visualization controls presentation, so sort Count in the table when needed.</p>
+search = index=main | stats count as Count by host
+"""
+
+        self.assertEqual(lint_text(conf), [])
+
+    def test_rejects_metadata_claim_that_aggregate_search_sorts_rows(self) -> None:
+        conf = """[stale_claim]
+solution = <p>Results are sorted by Count so the busiest host appears first.</p>
+search = index=main | stats count as Count by host
+"""
+
+        violations = lint_text(conf)
+
+        self.assertEqual([violation.rule_id.split()[0] for violation in violations], ["R012"])
 
 
 if __name__ == "__main__":

@@ -353,6 +353,14 @@ for (const block of searchbaseConf.split(/(?=^\[)/m)) {
   }
 }
 
+const intentionallyCategoricalSecureOverviewStanzas = new Set([
+  "secure_networking_sdwan_apps_health_breakdown",
+  "secure_networking_ip_sgt_bindings_by_group",
+  "secure_networking_sgt_fmc_blocks_by_sgt",
+  "secure_networking_fmc_top_rules_hit",
+  "secure_networking_fmc_top_url_categories_blocked",
+]);
+
 for (const tileId of secureNetworkingLayoutTileIds) {
   const mappings = secureOverviewMappings.filter(
     ({ overview }) => overview.tileId === tileId,
@@ -385,7 +393,19 @@ for (const tileId of secureNetworkingLayoutTileIds) {
     `${tileId} (${stanzaId}) must bind an explicit headline valueField`,
   );
 
-  const search = block.match(/^search = ([\s\S]*?)(?=\n\n|$)/m)?.[1] ?? "";
+  const searchPrefix = "\nsearch = ";
+  const searchStart = block.indexOf(searchPrefix);
+  const search =
+    searchStart === -1
+      ? ""
+      : block.slice(searchStart + searchPrefix.length).trimEnd();
+  if (!intentionallyCategoricalSecureOverviewStanzas.has(stanzaId)) {
+    assert.match(
+      search,
+      /\| timechart /i,
+      tileId + " (" + stanzaId + ") must expose a timechart trend",
+    );
+  }
   const isTimeSeries =
     /^splunk\.(line|area|column)$/.test(defaultViz) &&
     /\| timechart /i.test(search);

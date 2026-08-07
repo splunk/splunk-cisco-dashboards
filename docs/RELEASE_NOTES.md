@@ -2,6 +2,12 @@
 
 ## 1.0.36
 
+- Secure Networking factory KPIs now use explicit time-series contracts wherever
+  the metric has a meaningful temporal grain. Window-level headline values are
+  broadcast alongside bounded per-bucket spark fields for anomaly, TrustSec,
+  firewall, ThousandEyes, AI Defense, and authentication signals. The five
+  categorical breakdowns and all entity-detail drill-down tables deliberately
+  retain their non-timechart schemas.
 - Added a documented SUI 5.13 / Themes 1.10 / Cisco Cloud Control alignment
   matrix, including the deliberate boundary between Splunk global chrome and
   the application content surface.

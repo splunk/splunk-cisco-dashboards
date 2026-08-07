@@ -24,18 +24,12 @@ class PaloIseSgtSearchTest(unittest.TestCase):
     def test_firewall_macro_covers_palo_alto(self):
         self.assertIn("pan:*", self.macros["index_firewall"]["description"])
 
-    def test_searches_have_reciprocal_drilldowns_and_verified_sources(self):
+    def test_searches_have_terminal_details_and_verified_sources(self):
         detail = self.searches[DETAIL]
         rollup = self.searches[ROLLUP]
 
-        self.assertEqual(
-            detail["drilldown_search_name"],
-            rollup["search_name"],
-        )
-        self.assertEqual(
-            rollup["drilldown_search_name"],
-            detail["search_name"],
-        )
+        self.assertNotIn("drilldown_search_name", detail)
+        self.assertNotIn("drilldown_search_name", rollup)
         for stanza_id in (DETAIL, ROLLUP, POLICY_TREND, TRAFFIC_TREND):
             with self.subTest(stanza=stanza_id):
                 fields = self.searches[stanza_id]
