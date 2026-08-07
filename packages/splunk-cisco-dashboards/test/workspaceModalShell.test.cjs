@@ -37,7 +37,7 @@ assert.match(
 );
 assert.match(
   shell,
-  /rounded-\[4px\][\s\S]*border-white\/\[0\.18\][\s\S]*rgba\(42,56,70,0\.72\)[\s\S]*rgba\(10,18,29,0\.58\)[\s\S]*backdrop-blur-\[75px\]/,
+  /rounded-\[4px\][\s\S]*border-white\/\[0\.18\][\s\S]*rgba\(255,255,255,0\.01\)[\s\S]*rgba\(90,101,111,0\.45\)[\s\S]*rgba\(62,73,83,0\.25\)[\s\S]*backdrop-blur-\[75px\]/,
   "Shared modal shell must follow the SUI glass radius, border, tint, and blur treatment",
 );
 assert.match(
@@ -89,6 +89,25 @@ assert.match(
   profile,
   /<WorkspaceModalShell[\s\S]*?variant="detail"[\s\S]*?wide=\{displayColumns\.length > 5\}/,
   "Detail drilldowns must auto-widen further for dense tables",
+);
+for (const stateTitle of [
+  "Loading details",
+  "Details unavailable",
+  "No results in this time range",
+]) {
+  assert.ok(
+    profile.includes(`title="${stateTitle}"`),
+    `Every detail drilldown must use the shared ${stateTitle.toLowerCase()} state`,
+  );
+}
+assert.match(
+  profile,
+  /kind === "error" \? "alert" : "status"[\s\S]*aria-live=/,
+  "Detail drilldown states must announce loading, empty, and failure changes accessibly",
+);
+assert.ok(
+  profile.includes("Try a wider range or open the query in Search."),
+  "Empty drilldowns must offer a consistent recovery action",
 );
 
 console.log("✓ Workspace modal shell design and accessibility tests passed");

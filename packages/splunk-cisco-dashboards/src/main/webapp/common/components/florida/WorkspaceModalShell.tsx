@@ -353,7 +353,7 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
                         : undefined
                 }
                 className={cn(
-                    'relative z-10 flex w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-[4px] border border-white/[0.18] bg-[linear-gradient(145deg,rgba(42,56,70,0.72),rgba(10,18,29,0.58))] text-slate-100 shadow-[0_50px_200px_rgba(0,0,0,0.5),0_29px_66px_rgba(0,0,0,0.41),0_14px_47px_rgba(0,0,0,0.17),0_5px_10px_rgba(0,0,0,0.15),inset_0_1px_4px_rgba(255,255,255,0.14)] backdrop-blur-[75px] outline-none',
+                    'relative z-10 flex w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-[4px] border border-white/[0.18] bg-[linear-gradient(123deg,rgba(255,255,255,0.01)_0.5%,rgba(255,255,255,0)_49.75%,rgba(0,0,0,0.04)_100%),linear-gradient(123deg,rgba(90,101,111,0.45)_1.82%,rgba(62,73,83,0.25)_100%)] text-slate-100 shadow-[0_50px_200px_rgba(0,0,0,0.5),0_29px_66px_rgba(0,0,0,0.41),0_14px_47px_rgba(0,0,0,0.17),0_5px_10px_rgba(0,0,0,0.15),inset_0_1px_4px_rgba(255,255,255,0.14)] backdrop-blur-[75px] outline-none',
                     VARIANT_CLASS[variant],
                     variant === 'detail' && wide && 'max-w-[1320px]',
                     'max-[719px]:h-[calc(100vh-1rem)] max-[719px]:max-h-[calc(100vh-1rem)] max-[719px]:w-full max-[719px]:max-w-none max-[719px]:rounded-b-none max-[719px]:rounded-t-2xl'

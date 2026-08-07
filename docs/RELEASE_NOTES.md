@@ -2,6 +2,9 @@
 
 ## 1.0.36
 
+- Added a documented SUI 5.13 / Themes 1.10 / Cisco Cloud Control alignment
+  matrix, including the deliberate boundary between Splunk global chrome and
+  the application content surface.
 - Insights Workspace signal rails now default to comfortable density, support
   small, standard, and large KPI text, and use the full rail width instead of
   reserving a fixed label block. Tile drag and remove actions appear only from
@@ -16,25 +19,47 @@
   shield icon on narrow screens. The map action uses Splunk's globe icon, while
   the workspace switcher uses the SUI layers metaphor and no longer duplicates
   Splunk Web's signed-in user control.
+- The time-range and auto-refresh controls now use SUI 5.13 `Select`
+  components, and H1 is a real compact section layout with tighter headline,
+  chart, and wrapped-row floors rather than a cosmetic height label.
+- Customer connectivity now opens on an animated command topology that makes
+  sites, paths, health, and critical relationships immediately scannable. The
+  geographic Leaflet view remains available as an explicit Geo tab and opens
+  automatically when editing coordinates.
+- The Secure Networking factory layout is now an exact five-by-nine contract:
+  45 unique active tiles, 45 uniquely resolved drill-down links, explicit
+  headline fields on every tile, explicit spark fields on time-series tiles,
+  and numeric or documented qualitative threshold guidance throughout. Shared
+  detail searches use one bounded empty-result contract without changing their
+  populated schemas.
 - Insights Workspace metric, chart, and detail drill-down dialogs now share a
   responsive translucent Cisco dark-mode shell with content-specific
   footprints, compact headers, consistent Search/Details/Close actions,
   keyboard focus trapping, focus restoration, and mobile bottom-sheet
   behavior. A lighter, softer backdrop keeps the workspace recognizable behind
-  the high-contrast layered-glass surface. Detail tables auto-size to the
+  the exact SUI 5.13 high-glass tint. Detail tables auto-size to the
   viewport and add accessible width, height, and corner resize controls with
-  double-click reset.
+  double-click reset. Loading, empty, and failure states now use one accessible
+  treatment across every detail drill-down, including a consistent recovery
+  path for empty and failed searches.
 - Executive Insights composition tiles now use Splunk's native Dashboard
   Studio ranked-bar renderer with explicit category/value bindings, visible
   values, matching dark-theme colors, and lazy loading so the optional native
   visualization bundle does not inflate the initial workspace entrypoint.
   Composition and categorical bar charts use the same deliberate
   expand-dialog interaction as time-series tiles instead of enlarging on hover.
+- Webpack performance warnings now use measured JavaScript budgets appropriate
+  for self-contained, unminified Splunk watch bundles. `yarn bundle:report`
+  reports every entry and async chunk against its regression budget; lazy
+  loading the native composition renderer reduced the initial Executive
+  Insights and Searchbase Canvas entrypoints by roughly 8 MB each.
 - Executive Insights tile actions are slightly larger, and drilldowns now use
   an open-details-panel icon with explicit drilldown tooltips instead of an
   ambiguous table glyph.
 - Every built-in Insights Workspace now ships a distinct named topology and
-  audience-specific six-KPI signal rail preset. Secure Network Command Map,
+  audience-specific header and six-KPI signal rail preset. The Executive
+  Briefing now opens as Global Operations Command with decision-oriented copy.
+  Secure Network Command Map,
   Identity Trust Journey, Resilience Path Atlas, Threat Response Theater, and
   Global Operations Pulse pair with rails focused on secure networking, zero
   trust, resilience, SOC, and executive outcomes. The Secure Networking rail
@@ -54,7 +79,9 @@
 - Hybrid Mesh Firewalling now includes bounded Palo Alto policy-outcome and
   per-SGT traffic timecharts in its shared workspace layout. Each trend drills
   into its corresponding effectiveness rollup or correlated flow table, and
-  policy actions normalize both PAN and CIM allow/block variants.
+  policy actions normalize both PAN and CIM allow/block variants. The section
+  remains capped at nine distinct factory tiles by replacing redundant HMF
+  summaries instead of appending beyond the workspace contract.
 - Secure Networking Searchbase metadata now uses the five exact app-menu
   section names, keeping workspace discovery and filtering aligned with Zero
   Trust Access, Secure Infrastructure, Scalable Network Segmentation, Hybrid

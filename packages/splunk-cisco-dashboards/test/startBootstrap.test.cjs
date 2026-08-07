@@ -300,12 +300,16 @@ assert.match(macroTuningSource, /Balanced \(recommended\)/);
 assert.match(macroTuningSource, /Tune app-owned routing macros/);
 assert.match(macroTuningSource, /setupExternalRowsToSave/);
 assert.match(macroTuningSource, /loadInstalledAppIds/);
-assert.match(macroTuningSource, /enabled companion apps/);
+assert.match(macroTuningSource, /installedTargetApps/);
+assert.match(
+  macroTuningSource,
+  /Companion apps could not be verified, so their macro definitions are hidden/,
+);
 assert.match(macroTuningSource, /Macro tuning is optional during setup/);
 assert.match(macroTuningSource, /row\.targetApp/);
 assert.match(macroTuningSource, /Cisco app macro coverage/);
-assert.match(macroTuningSource, /Dashboard index macro definitions/);
-assert.match(macroTuningSource, /Cisco app macro definitions/);
+assert.match(macroTuningSource, /Dashboard index macros/);
+assert.match(macroTuningSource, /Cisco app macros/);
 assert.match(macroTuningSource, /external-app-macro-definitions/);
 assert.match(macroTuningSource, /externalAppMacroSummaries/);
 assert.match(macroTuningSource, /Open CIM macros/);

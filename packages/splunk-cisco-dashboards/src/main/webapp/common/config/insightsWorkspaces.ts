@@ -399,6 +399,8 @@ export const PACKAGED_WORKSPACE_FALLBACKS: readonly InsightsWorkspace[] = [
         id: 'executive',
         label: 'Executive Briefing',
         sourceWorkspace: 'executive',
+        headerTitle: 'Global Operations Command',
+        headerSubtitle: 'Enterprise health, risk, and experience at decision speed',
         legacyViewNames: ['executive_briefing_profile'],
         isBuiltIn: true,
         sortOrder: 50,

@@ -6721,6 +6721,57 @@ interface MetricDetailSortState {
   direction: MetricDetailSortDirection;
 }
 
+type MetricDetailTableStateKind = "loading" | "empty" | "error";
+
+interface MetricDetailTableStateRowProps {
+  columnCount: number;
+  kind: MetricDetailTableStateKind;
+  message: string;
+  title: string;
+}
+
+const MetricDetailTableStateRow: React.FC<MetricDetailTableStateRowProps> = ({
+  columnCount,
+  kind,
+  message,
+  title,
+}) => {
+  const Icon =
+    kind === "loading" ? RefreshCw : kind === "error" ? AlertCircle : Search;
+  const iconClasses =
+    kind === "error"
+      ? "border-rose-400/25 bg-rose-500/10 text-rose-300"
+      : "border-sky-400/20 bg-sky-500/10 text-sky-300";
+
+  return (
+    <tr>
+      <td colSpan={columnCount} className="px-5 py-14 text-center">
+        <div
+          className="mx-auto flex max-w-md flex-col items-center gap-2"
+          role={kind === "error" ? "alert" : "status"}
+          aria-live={kind === "error" ? "assertive" : "polite"}
+        >
+          <span
+            className={cn(
+              "inline-flex h-10 w-10 items-center justify-center rounded-full border",
+              iconClasses,
+            )}
+          >
+            <Icon
+              className={cn("h-4 w-4", kind === "loading" && "animate-spin")}
+              aria-hidden="true"
+            />
+          </span>
+          <strong className="text-sm font-semibold text-slate-100">
+            {title}
+          </strong>
+          <span className="text-xs leading-5 text-slate-400">{message}</span>
+        </div>
+      </td>
+    </tr>
+  );
+};
+
 const readRowString = (
   row: Record<string, unknown>,
   field: string,
@@ -7012,32 +7063,26 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
             </thead>
             <tbody className="divide-y divide-[#1e293b]">
               {loading ? (
-                <tr>
-                  <td
-                    colSpan={columnCount}
-                    className="px-5 py-10 text-center text-sm text-slate-500 dark:text-slate-400"
-                  >
-                    Loading {config.title.toLowerCase()}...
-                  </td>
-                </tr>
+                <MetricDetailTableStateRow
+                  columnCount={columnCount}
+                  kind="loading"
+                  title="Loading details"
+                  message={`Running ${config.title.toLowerCase()} for the selected time range.`}
+                />
               ) : errorMessage ? (
-                <tr>
-                  <td
-                    colSpan={columnCount}
-                    className="px-5 py-10 text-center text-sm text-rose-600 dark:text-rose-300"
-                  >
-                    {errorMessage}
-                  </td>
-                </tr>
+                <MetricDetailTableStateRow
+                  columnCount={columnCount}
+                  kind="error"
+                  title="Details unavailable"
+                  message={`${errorMessage} Open the query in Search to inspect the failure.`}
+                />
               ) : rows.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={columnCount}
-                    className="px-5 py-10 text-center text-sm text-slate-500 dark:text-slate-400"
-                  >
-                    {config.emptyMessage}
-                  </td>
-                </tr>
+                <MetricDetailTableStateRow
+                  columnCount={columnCount}
+                  kind="empty"
+                  title="No results in this time range"
+                  message={`${config.emptyMessage} Try a wider range or open the query in Search.`}
+                />
               ) : (
                 sortedRows.map((row, rowIndex) => {
                   const rowStatus = statusField ? row[statusField] : "";
