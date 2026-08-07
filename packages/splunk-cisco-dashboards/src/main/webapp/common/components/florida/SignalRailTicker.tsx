@@ -621,7 +621,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
             <style>{signalRailTickerCss}</style>
             <div
                 className={cn(
-                    'relative z-[70] flex w-full min-w-0 max-w-full items-center overflow-hidden',
+                    'relative z-[70] flex w-full min-w-0 max-w-full items-center overflow-visible',
                     density === 'compact' ? 'gap-2' : 'gap-3'
                 )}
             >

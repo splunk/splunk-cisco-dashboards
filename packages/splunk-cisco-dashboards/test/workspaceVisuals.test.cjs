@@ -23,6 +23,9 @@ const tickerPersistence = read(
 const signalRail = read(
   "../src/main/webapp/common/components/florida/SignalRailTicker.tsx",
 );
+const tailwindStyles = read(
+  "../src/main/webapp/common/styles/tailwind.css",
+);
 const workspacesConf = read(
   "../src/main/resources/splunk/default/insights_workspaces.conf",
 );
@@ -150,6 +153,21 @@ assert.doesNotMatch(
   signalRail,
   /absolute right-1\.5 top-1\/2 z-\[90\]/,
   "Signal Rail controls must not be absolutely positioned over the marquee",
+);
+assert.match(
+  signalRail,
+  /items-center overflow-visible/,
+  "Signal Rail layout shell must allow the style picker to escape the ticker row",
+);
+assert.doesNotMatch(
+  signalRail,
+  /relative z-\[70\] flex w-full min-w-0 max-w-full items-center overflow-hidden/,
+  "Signal Rail layout shell must not clip the style picker",
+);
+assert.match(
+  tailwindStyles,
+  /#scan-root \.scd-signal-rail-ticker \{[\s\S]*?overflow: visible;[\s\S]*?contain: inline-size;[\s\S]*?\}/,
+  "Signal Rail page styles must not clip the style picker",
 );
 assert.match(
   signalRail,

@@ -90,7 +90,9 @@ body.scd-overview-active .panel-body,
 }
 
 #scan-root .scd-signal-rail-ticker {
-    overflow: hidden;
+    /* The KPI viewport owns marquee clipping. Keep the rail visible so its
+     * style picker can extend below the compact ticker row. */
+    overflow: visible;
     contain: inline-size;
 }
 

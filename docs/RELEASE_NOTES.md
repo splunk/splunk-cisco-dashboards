@@ -2,6 +2,9 @@
 
 ## 1.0.36
 
+- Signal Rail style choices are usable again: the compact rail keeps its KPI
+  marquee clipped without clipping the style picker, so users can switch among
+  all five visual treatments.
 - Insights Workspace headers now reserve more room for the workspace title by
   using compact time-range and auto-refresh selectors, quieter manual-refresh
   styling, tighter action spacing, and a status badge that collapses to its
