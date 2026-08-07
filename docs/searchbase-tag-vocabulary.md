@@ -6,7 +6,7 @@ Reference for the `tags` field in
 - **Canonical vocabulary: 138 tags** (target band was 120-150).
 - **Legacy vocabulary collapsed: 588 distinct values** across 1082 stanzas.
 - Every stanza carries **3-6 tags**, all drawn from this vocabulary.
-- Last full retag: **2026-08-07**.
+- Last full retag: **2026-08-07**. Corrected the same day by an evidence audit that removed 302 tags whose only support was the locked `sub_category` — see [Amendments](#amendments).
 
 ## Why the vocabulary is shaped this way
 
@@ -110,30 +110,30 @@ The entity the search counts, groups by, or lists. Derived from the fields the S
 | Tag | Stanzas |
 | --- | ---: |
 | `Access Points` | 15 |
-| `Advisories` | 20 |
-| `Alerts` | 35 |
+| `Advisories` | 13 |
+| `Alerts` | 22 |
 | `Applications` | 42 |
-| `Assets` | 11 |
+| `Assets` | 10 |
 | `Clients` | 110 |
-| `Devices` | 171 |
+| `Devices` | 174 |
 | `Endpoints` | 60 |
-| `Events` | 63 |
+| `Events` | 56 |
 | `Faults` | 18 |
 | `Files` | 7 |
-| `Flows` | 18 |
-| `Hosts` | 6 |
-| `Incidents` | 24 |
-| `Interfaces` | 36 |
-| `Issues` | 39 |
-| `Policies` | 87 |
-| `Rooms` | 28 |
+| `Flows` | 16 |
+| `Hosts` | 5 |
+| `Incidents` | 14 |
+| `Interfaces` | 24 |
+| `Issues` | 43 |
+| `Policies` | 61 |
+| `Rooms` | 27 |
 | `Sensors` | 26 |
-| `Sessions` | 24 |
-| `Sites` | 171 |
-| `Tenants` | 37 |
-| `Threats` | 32 |
-| `Tunnels` | 10 |
-| `Users` | 35 |
+| `Sessions` | 23 |
+| `Sites` | 145 |
+| `Tenants` | 36 |
+| `Threats` | 35 |
+| `Tunnels` | 9 |
+| `Users` | 34 |
 | `Vulnerabilities` | 7 |
 
 ### Topic (51)
@@ -144,55 +144,55 @@ The operational or security concern. Derived from output fields plus base-search
 | --- | ---: |
 | `Audit` | 29 |
 | `Authentication` | 47 |
-| `Availability` | 40 |
+| `Availability` | 36 |
 | `BGP` | 12 |
-| `Bandwidth` | 16 |
-| `Capacity Planning` | 47 |
-| `Cloud Security` | 20 |
-| `Collaboration` | 14 |
-| `Compliance` | 29 |
-| `Configuration` | 16 |
-| `DHCP` | 13 |
-| `DNS` | 25 |
+| `Bandwidth` | 11 |
+| `Capacity Planning` | 41 |
+| `Cloud Security` | 13 |
+| `Collaboration` | 13 |
+| `Compliance` | 13 |
+| `Configuration` | 13 |
+| `DHCP` | 12 |
+| `DNS` | 23 |
 | `Data Loss Prevention` | 4 |
 | `Encryption` | 11 |
 | `Environmental` | 20 |
 | `Errors` | 15 |
-| `Fabric` | 42 |
+| `Fabric` | 39 |
 | `Feed Health` | 34 |
-| `Firewall` | 92 |
-| `Forensics` | 30 |
+| `Firewall` | 79 |
+| `Forensics` | 18 |
 | `HTTP` | 18 |
-| `Identity` | 90 |
-| `Intrusion Prevention` | 22 |
-| `Inventory` | 95 |
+| `Identity` | 83 |
+| `Intrusion Prevention` | 21 |
+| `Inventory` | 92 |
 | `Jitter` | 5 |
-| `Latency` | 60 |
-| `Lifecycle` | 7 |
+| `Latency` | 50 |
+| `Lifecycle` | 6 |
 | `Machine Learning` | 23 |
 | `Malware` | 7 |
-| `Occupancy` | 44 |
-| `Onboarding` | 18 |
+| `Occupancy` | 43 |
+| `Onboarding` | 16 |
 | `Packet Loss` | 15 |
-| `Posture` | 11 |
+| `Posture` | 10 |
 | `Power` | 9 |
 | `Presence` | 16 |
-| `Reachability` | 29 |
-| `Risk` | 11 |
-| `Rogue AP` | 14 |
+| `Reachability` | 20 |
+| `Risk` | 10 |
+| `Rogue AP` | 10 |
 | `Routing` | 11 |
 | `SGT` | 15 |
-| `SSID` | 17 |
+| `SSID` | 16 |
 | `Switching` | 12 |
-| `Syslog` | 37 |
-| `Traffic` | 56 |
-| `User Experience` | 34 |
-| `Utilization` | 55 |
-| `VPN` | 5 |
-| `Voice` | 17 |
-| `Web Filtering` | 11 |
-| `Wired` | 19 |
-| `Wireless` | 61 |
+| `Syslog` | 28 |
+| `Traffic` | 47 |
+| `User Experience` | 25 |
+| `Utilization` | 37 |
+| `VPN` | 3 |
+| `Voice` | 15 |
+| `Web Filtering` | 9 |
+| `Wired` | 18 |
+| `Wireless` | 59 |
 
 ### Shape (14)
 
@@ -200,7 +200,7 @@ What kind of answer the search returns. Derived from the SPL command signature (
 
 | Tag | Stanzas |
 | --- | ---: |
-| `Anomaly` | 42 |
+| `Anomaly` | 43 |
 | `Comparison` | 8 |
 | `Detail` | 25 |
 | `Distribution` | 267 |
@@ -287,7 +287,6 @@ Every one of the 588 legacy tag values maps to exactly one canonical tag or is d
 | `Binding` | `Topology` |
 | `Block` | `Policies` |
 | `Blocked` | `Policies` |
-| `Blocked Access` | `Web Filtering` |
 | `Booking` | `Rooms` |
 | `Branch` | `Sites` |
 | `Break Room` | `Rooms` |
@@ -591,7 +590,6 @@ Every one of the 588 legacy tag values maps to exactly one canonical tag or is d
 | `Response Time` | `Latency` |
 | `Right-Sizing` | `Capacity Planning` |
 | `Rogue` | `Rogue AP` |
-| `Rogue Peer` | `Rogue AP` |
 | `Role` | `Inventory` |
 | `Rollup` | `Feed Health` |
 | `Room` | `Rooms` |
@@ -806,6 +804,34 @@ A previous mechanical pass over-merged and had to be walked back, so each pair b
 | `Sites` | `Site`, `Location`, `Regional`, `Branch`, `Critical Sites`, `Topology Site` |
 | `Authentication` | `AAA`, `RADIUS`, `TACACS`, `RadSec`, `802.1X`, `NAC`, `Authorization`, `Lockout`, `MFA`, `Factors`, `Guest`, `Guest Access` |
 
+## Amendments
+
+Changes to this document after the first full retag. Each entry records what changed and why, so the document stays the single source of truth rather than a snapshot that the file has drifted away from.
+
+### 2026-08-07 — `sub_category` retired as Subject/Topic evidence
+
+The first retag scored the locked `category`/`sub_category` at 80, above output-schema fields and base-search predicates, for **all** facets. That was wrong for Subject and Topic. Those two fields record which dashboard family a stanza was written for; they do not describe what the SPL measures, and in this catalog they diverge constantly — a Cisco Spaces room-optimisation search sat under a `sub_category` that produced a `DHCP` tag, and eleven `dc_networking_*` stanzas carried `Compliance` with zero compliance evidence in their SPL.
+
+A token-footprint audit over all 1082 stanzas surfaced 418 tag/stanza pairs where a Subject or Topic tag had no matching token anywhere in the `search` field. Reading the SPL of each pair individually confirmed **294 unsupported tags**, plus 6 more the audit had missed and 2 removed by the alias amendments below — **302 tags dropped from 257 stanzas**, with 35 substitute tags added where a removal would otherwise have left a stanza with no Subject or Topic. The remaining 124 were audit false positives — real evidence the regex could not see, mostly product-specific field names (`merakiVpnPeers{}` for `VPN`, `%PLATFORM-2-PEM_NOINPUT` for `Power`, `activeCalls` for `Sessions`) and evidence hidden behind upstream macros such as `` `apic-fabric-overview` ``.
+
+The evidence table, the guard list and maintenance rule 3 are amended accordingly. `sub_category` remains the definitional source for Solution and Provenance tags, where it is correct by construction.
+
+### 2026-08-07 — alias `Rogue Peer` -> `Rogue AP` removed
+
+Semantically wrong. An SD-WAN rogue peer is a control-plane trust problem — an unexpected vSmart or vBond peer in a `control-connection-state-change` log — and contains no access point. Folding it into `Rogue AP` filed a routing concern in the wireless-security bucket and, worse, made `Rogue AP` unreliable as a filter, which is the one property the *Near-synonyms deliberately kept separate* table claims for it.
+
+The single affected stanza, `security_resilience_sdwan_hunt_rogue_peer_indicators`, is retagged to `Routing` (already present on it, and reached from the `Control Plane` alias, which is exactly what the SPL parses). A new `Rogue Peer` term was considered and rejected: it would have one stanza behind it, and `SD-WAN` + `Routing` + `Forensics` already locate the search. `Rogue AP` drops from 14 stanzas to 10 and is not orphaned.
+
+### 2026-08-07 — alias `Blocked Access` -> `Web Filtering` removed
+
+Same class of defect. `Blocked Access` is a generic phrase that any deny decision can produce; mapping it to `Web Filtering` put a ZTNA policy-outcome search into the URL-categorisation bucket, contradicting the `DNS` vs `Web Filtering` row in the deliberate-distinctions table. The affected stanza, `secure_networking_zta_blocked_access_reason_trend`, keeps `Policies`, which is what a ZTNA block reason actually is. `Web Filtering` drops from 11 stanzas to 9 (this stanza plus the `URLs` correction below).
+
+The related aliases `URL Filter`, `URL Filtering` and `URLs` are **kept**: they are genuinely about URL categorisation on FTD and Secure Access. One stanza misused `URLs` (`xdr_aa_forensic_urls_context_posture`, where the URLs are detonation artifacts rather than filtered categories); that was corrected as a tagging error, not an alias defect.
+
+### Vocabulary size
+
+No canonical terms were added or removed. The vocabulary stays at **138 terms**, within the agreed 120-150 band. Only two alias rows were deleted.
+
 ## How tags are assigned
 
 Tags are evidence-scored, never inferred from the stanza name. Several stanzas in this catalog have names that disagree with their SPL, and the SPL wins.
@@ -813,7 +839,7 @@ Tags are evidence-scored, never inferred from the stanza name. Several stanzas i
 | Evidence | Score | Example |
 | --- | ---: | --- |
 | `index_*` macro, `sourcetype`, data model | 100 | `sourcetype="cisco:dc:aci:health"` -> `Cisco ACI` |
-| Locked `category` / `sub_category` | 80 | `sub_category="Zero Trust Access"` -> `Zero Trust Access` |
+| Locked `category` / `sub_category` — **Solution and Provenance facets only** | 80 | `sub_category="Zero Trust Access"` -> `Zero Trust Access` |
 | Existing tag, resolved through the alias map | 55 | `DNAC` -> `Catalyst Center` |
 | SPL command signature and `default_viz` | 30-48 | `\| predict` -> `Forecast` |
 | Product-specific lookup join | 45 | `cisco_dc_nexus_hostname_lookup` -> `Nexus 9000` |
@@ -821,8 +847,9 @@ Tags are evidence-scored, never inferred from the stanza name. Several stanzas i
 | Output-schema fields (`BY`, `AS`, `eval`, `table`) | 22-30 | `BY ssid` -> `SSID` |
 | Base-search predicates | 16-22 | `eventType="SPACE_OCCUPANCY"` -> `Occupancy` |
 
-Two guards matter:
+Three guards matter:
 
+- **`category` and `sub_category` are never positive evidence for a Subject or Topic tag.** Those two fields name the dashboard family a stanza was written for, not what its SPL measures, and the two diverge often enough that treating them as evidence produced 294 unsupported tags in the 2026-08-07 retag (see *Amendments*). A Subject tag must name something the SPL groups by, renames, evaluates or tables; a Topic tag must be traceable to an output field or a base-search predicate. `sub_category` may still contribute to Solution and Provenance tags, where it is the definitional source.
 - A stanza that enumerates more than six sourcetypes (or more than eight index macros) gets **no** product tags. Naming two products out of fifty is worse than naming none, so those cross-source admin and feed-monitor searches are described by what they are instead — `Feed Health`, `Configuration`.
 - A single-value tile never receives `Distribution` or `Table`, regardless of the intermediate `stats ... by` stages its SPL uses to get to one number.
 
@@ -832,6 +859,6 @@ When adding a stanza:
 
 1. Pick 3-6 tags from the tables above. Nothing outside them.
 2. At least one Product or Solution tag, and at least one Subject or Topic tag.
-3. Every tag must be justifiable from the `search` field or the locked `category`/`sub_category`. If you cannot point at the evidence, drop the tag.
+3. Every Subject and Topic tag must be justifiable from the `search` field alone. Solution and Provenance tags may come from the locked `category`/`sub_category`. If you cannot point at the evidence, drop the tag.
 4. Prefer an existing tag over proposing a new one. A new tag needs to partition the catalog meaningfully, and the vocabulary is already at 138 of the agreed 150 ceiling.
 5. Bump `date_updated`.
